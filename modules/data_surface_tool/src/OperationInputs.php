@@ -155,6 +155,16 @@ final class OperationInputs {
   protected array $listedTags = [];
 
   /**
+   * The builds one derivation made, by resource, context and kind.
+   *
+   * NULL outside a derivation (derivation()): a tool instance builds for
+   * its own request, which the build step remembers.
+   *
+   * @var array<string, \Drupal\data_surface\DataSurfaceInterface>|null
+   */
+  protected ?array $built = NULL;
+
+  /**
    * Constructs an OperationInputs.
    *
    * @param \Drupal\data_surface\ResourceBuild\ResourcesInterface $resources
@@ -254,7 +264,7 @@ final class OperationInputs {
     $neutral = $this->neutral($resource, $operation, TRUE);
     // Where the secrets are: the neutral build, or, for an operation that
     // takes nothing, its own.
-    $built = $neutral ?? $this->resources->buildDeclared($resource->name(), $this->resources->operation($resource->name(), $operation->id));
+    $built = $neutral ?? $this->listed($resource, $this->resources->operation($resource->name(), $operation->id), TRUE);
     return [
       self::VALUES => $this->inputDefinitions->outputFromInput(
         $this->declaredValues($resource, $operation, $neutral, FALSE, TRUE),
@@ -447,6 +457,50 @@ final class OperationInputs {
   }
 
   /**
+   * Runs one derivation, each resource built once per operation and kind.
+   *
+   * A tool's inputs, its read tool's inputs and outputs, and its outputs
+   * are each made from the same build of the operation's context; inside
+   * this, it is made once and handed to each, and let go when the
+   * derivation ends.
+   *
+   * Decision: see docs/decisions.md#what-is-paid-once-and-what-per-request.
+   *
+   * @param callable(): T $derive
+   *   What derives.
+   *
+   * @return T
+   *   What it answered.
+   *
+   * @template T
+   */
+  public function derivation(callable $derive): mixed {
+    $was = $this->built;
+    $this->built = [];
+    try {
+      return $derive();
+    }
+    finally {
+      $this->built = $was;
+    }
+  }
+
+  /**
+   * Gets the tags of the `values` maps made since, and forgets them.
+   *
+   * What one resource's tool definitions were read from, asked after
+   * deriving them.
+   *
+   * @return string[]
+   *   The tags.
+   */
+  public function takeListedCacheTags(): array {
+    $tags = $this->listedTags;
+    $this->listedTags = [];
+    return $tags;
+  }
+
+  /**
    * Answers whether an operation changes a thing that exists.
    *
    * Whether it does not create, as its attribute says, the same reading
@@ -520,9 +574,16 @@ final class OperationInputs {
    *   The built resource.
    */
   protected function listed(ResourceDefinition $resource, OperationContext $context, bool $declared): DataSurfaceInterface {
-    return $declared
+    $build = fn (): DataSurfaceInterface => $declared
       ? $this->resources->buildDeclared($resource->name(), $context)
       : $this->resources->buildStatic($resource->name(), $context);
+    try {
+      $key = $this->built === NULL ? NULL : serialize([$resource->name(), $context, $declared]);
+    }
+    catch (\Throwable) {
+      $key = NULL;
+    }
+    return $key === NULL ? $build() : ($this->built[$key] ??= $build());
   }
 
   /**
@@ -660,7 +721,7 @@ final class OperationInputs {
     if (!$resource->hasOutputs()) {
       return $outputs;
     }
-    $built = $this->resources->buildDeclared($resource->name(), new OperationContext($operation->id));
+    $built = $this->listed($resource, new OperationContext($operation->id), TRUE);
     return $outputs + $this->inputDefinitions->outputsFromSurface($built);
   }
 

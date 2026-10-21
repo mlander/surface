@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace Drupal\data_surface_entity;
 
+use Drupal\Core\Cache\Cache;
 use Drupal\Core\Entity\ContentEntityInterface;
 use Drupal\Core\Entity\Display\EntityFormDisplayInterface;
 use Drupal\Core\Entity\EntityFieldManagerInterface;
 use Drupal\Core\Entity\EntityTypeBundleInfoInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
+use Drupal\Core\Field\FieldConfigInterface;
 use Drupal\Core\Field\FieldDefinitionInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
@@ -333,7 +335,28 @@ final class FieldItemDerivation {
   }
 
   /**
-   * Gets the cache tags a bundle's derivation depends on.
+   * Gets the cache tags of what decides which bundles and fields there are.
+   *
+   * What the registry's index is kept under: a bundle created or deleted,
+   * any form display saved, any field's definitions changed. Reading the
+   * list again keeps every derivative whose own tags did not fire.
+   *
+   * Decision: see docs/decisions.md#what-is-paid-once-and-what-per-request.
+   *
+   * @return string[]
+   *   The bundle list, the form display list and the field definitions.
+   */
+  public function listCacheTags(): array {
+    return ['entity_field_info', 'entity_bundles', 'config:entity_form_display_list'];
+  }
+
+  /**
+   * Gets the cache tags of what a bundle's resource is read from.
+   *
+   * Its form display, its bundle's configuration entity (its label), and
+   * each field the display shows, carried or left out: no other bundle's,
+   * and none of the site-wide tags, so a field saved on another bundle
+   * leaves it be.
    *
    * @param string $entity_type_id
    *   The entity type id.
@@ -341,15 +364,51 @@ final class FieldItemDerivation {
    *   The bundle.
    *
    * @return string[]
-   *   Its fields, its form display, and the bundle list.
+   *   The tags.
    */
-  public function cacheTags(string $entity_type_id, string $bundle): array {
-    return [
-      'entity_field_info',
-      'entity_bundles',
-      'config:entity_form_display_list',
-      'config:core.entity_form_display.' . $entity_type_id . '.' . $bundle . '.default',
-    ];
+  public function bundleCacheTags(string $entity_type_id, string $bundle): array {
+    $tags = ['config:core.entity_form_display.' . $entity_type_id . '.' . $bundle . '.default'];
+    $bundle_type = $this->entityTypeManager->getDefinition($entity_type_id)->getBundleEntityType();
+    if ($bundle_type !== NULL) {
+      $entity = $this->entityTypeManager->getStorage($bundle_type)->load($bundle);
+      if ($entity !== NULL) {
+        $tags = Cache::mergeTags($tags, $entity->getCacheTags());
+      }
+    }
+    $definitions = $this->entityFieldManager->getFieldDefinitions($entity_type_id, $bundle);
+    foreach (array_keys($this->formDisplay($entity_type_id, $bundle)?->getComponents() ?? []) as $name) {
+      if (isset($definitions[$name])) {
+        $tags = Cache::mergeTags($tags, $this->fieldCacheTags($definitions[$name], $entity_type_id, $bundle));
+      }
+    }
+    return $tags;
+  }
+
+  /**
+   * Gets the cache tags of what one field's item structure is read from.
+   *
+   * The field's configuration and its storage's, or, for a base field, the
+   * override a site may save for it on this bundle, named even before one
+   * exists so that saving the first one clears it.
+   *
+   * @param \Drupal\Core\Field\FieldDefinitionInterface $field
+   *   The field.
+   * @param string $entity_type_id
+   *   The entity type id.
+   * @param string $bundle
+   *   The bundle it is read for.
+   *
+   * @return string[]
+   *   The tags.
+   */
+  public function fieldCacheTags(FieldDefinitionInterface $field, string $entity_type_id, string $bundle): array {
+    // A configured field and its storage name their configuration; a base
+    // field names nothing, being code.
+    $tags = Cache::mergeTags($field->getCacheTags(), $field->getFieldStorageDefinition()->getCacheTags());
+    if (!$field instanceof FieldConfigInterface) {
+      $tags[] = 'config:core.base_field_override.' . $entity_type_id . '.' . $bundle . '.' . $field->getName();
+    }
+    return $tags;
   }
 
   /**

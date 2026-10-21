@@ -16,11 +16,16 @@ the derivation is not enough.
 | `Resource\ContentEntityResources` | `entity.content:<entity type>.<bundle>`, `entity.content:node.page` | bundle of a content entity type with a bundle key and a stored default form display |
 | `Resource\FieldItemStructures` | `field.item:<entity type>.<bundle>.<field>`, `field.item:node.page.body` | field that bundle's resource carries |
 
-Both are read at discovery and cached with the rest of it, under the
-tags of what they were read from: `entity_field_info`, `entity_bundles`,
-the form display list and the bundle's form display. Saving a field or
-a display clears the entry, the registry this request already read with
-it, and the derived tools. They stay derivers, not
+Both are read at discovery, and each derivative is cached as an entry
+of its own under the tags of what it was read from: a field item its
+field's and its storage's configuration (a base field the override a
+site may save for it), a bundle its bundle's configuration, its form
+display and the fields it shows. The index of what there is carries
+`entity_field_info`, `entity_bundles` and the form display list. Saving
+a field clears the index, that field's entries and its bundle's, what
+this request already read of them, and that bundle's derived tools; the
+other bundles' entries and tools are kept
+([decision](decisions.md#what-is-paid-once-and-what-per-request)). They stay derivers, not
 [keys from the site](resources.md#keys-that-come-from-the-site): a bundle
 is a resource of its own, with operations, storage and identity, and a
 field a structure every bundle carrying it shares; keys from the site

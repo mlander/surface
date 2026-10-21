@@ -259,6 +259,23 @@ final class ContractEmitter {
   ];
 
   /**
+   * The surfaces refined during the document being written, by what refined.
+   *
+   * Keyed by the data surface refined, then by the kinds and the values it
+   * was refined against; NULL outside emit() and emitFull().
+   *
+   * @var \WeakMap<\Drupal\data_surface\DataSurfaceInterface, array<string, \Drupal\data_surface\DataSurfaceInterface>>|null
+   */
+  protected ?\WeakMap $refined = NULL;
+
+  /**
+   * How many combinations were refined, and how many were remembered.
+   *
+   * @var array{refined: int, reused: int}
+   */
+  protected array $refineCounts = ['refined' => 0, 'reused' => 0];
+
+  /**
    * Constructs a ContractEmitter.
    *
    * @param \Drupal\data_surface\Options\DataSurfaceOptions $options
@@ -319,30 +336,39 @@ final class ContractEmitter {
    *   The contract, and what it depends on.
    */
   public function emit(DataSurfaceInterface $surface, array $values, string $resource_id, ?string $operation_id = NULL, string|\Stringable|null $label = NULL, bool $widgets = FALSE, array $operation = [], ?string $id = NULL): ServedContract {
-    $cacheability = new CacheableMetadata();
-    $stale = [];
-    $standing = $values[DataSurfaceFormBuilderInterface::STANDING_KEY] ?? [];
-    unset($values[DataSurfaceFormBuilderInterface::STANDING_KEY]);
-    $subschemas = new Subschemas(FALSE, $widgets ? [] : self::WIDGET_HINTS, $this->mixedIn($surface));
-    [$schema, $shown] = $this->frame($surface, $values, '', $resource_id, $cacheability, $stale, $subschemas, is_array($standing) ? $standing : []);
-    $schema += $this->definitions($subschemas);
-    $schema = $this->named($schema);
-    if (!$widgets) {
-      $schema = $this->withoutWidgets($schema);
+    // Refined surfaces are remembered for this one document.
+    // Decision: see docs/decisions.md#what-is-paid-once-and-what-per-request.
+    $was = $this->refined;
+    $this->refined = new \WeakMap();
+    try {
+      $cacheability = new CacheableMetadata();
+      $stale = [];
+      $standing = $values[DataSurfaceFormBuilderInterface::STANDING_KEY] ?? [];
+      unset($values[DataSurfaceFormBuilderInterface::STANDING_KEY]);
+      $subschemas = new Subschemas(FALSE, $widgets ? [] : self::WIDGET_HINTS, $this->mixedIn($surface));
+      [$schema, $shown] = $this->frame($surface, $values, '', $resource_id, $cacheability, $stale, $subschemas, is_array($standing) ? $standing : []);
+      $schema += $this->definitions($subschemas);
+      $schema = $this->named($schema);
+      if (!$widgets) {
+        $schema = $this->withoutWidgets($schema);
+      }
+      $document = [
+        'resource' => $resource_id,
+        'operation' => $operation_id,
+        'label' => $label === NULL ? NULL : PlainText::of($label),
+        'schema' => $this->top($surface, $schema, $label, $operation, $id),
+        'values' => $shown,
+        'stale' => $stale,
+      ];
+      $outputs = $this->outputs($surface, $cacheability);
+      if ($outputs !== NULL) {
+        $document['outputs'] = $outputs;
+      }
+      return new ServedContract($document, $cacheability);
     }
-    $document = [
-      'resource' => $resource_id,
-      'operation' => $operation_id,
-      'label' => $label === NULL ? NULL : PlainText::of($label),
-      'schema' => $this->top($surface, $schema, $label, $operation, $id),
-      'values' => $shown,
-      'stale' => $stale,
-    ];
-    $outputs = $this->outputs($surface, $cacheability);
-    if ($outputs !== NULL) {
-      $document['outputs'] = $outputs;
+    finally {
+      $this->refined = $was;
     }
-    return new ServedContract($document, $cacheability);
   }
 
   /**
@@ -409,27 +435,36 @@ final class ContractEmitter {
    *   value.
    */
   public function emitFull(DataSurfaceInterface $surface, string $resource_id, ?string $operation_id = NULL, string|\Stringable|null $label = NULL, bool $widgets = FALSE, array $operation = [], ?string $id = NULL): ServedContract {
-    $cacheability = new CacheableMetadata();
-    $ignored = [];
-    $subschemas = new Subschemas(TRUE, [...self::PRESENT, ...($widgets ? [] : self::WIDGET_HINTS)], $this->mixedIn($surface));
-    [$schema] = $this->frame($surface, $this->known($surface), '', $resource_id, $cacheability, $ignored, $subschemas);
-    $schema += $this->definitions($subschemas);
-    $schema = $this->named($schema);
-    $schema = $this->withoutPresent($schema);
-    if (!$widgets) {
-      $schema = $this->withoutWidgets($schema);
+    // Refined surfaces are remembered for this one document.
+    // Decision: see docs/decisions.md#what-is-paid-once-and-what-per-request.
+    $was = $this->refined;
+    $this->refined = new \WeakMap();
+    try {
+      $cacheability = new CacheableMetadata();
+      $ignored = [];
+      $subschemas = new Subschemas(TRUE, [...self::PRESENT, ...($widgets ? [] : self::WIDGET_HINTS)], $this->mixedIn($surface));
+      [$schema] = $this->frame($surface, $this->known($surface), '', $resource_id, $cacheability, $ignored, $subschemas);
+      $schema += $this->definitions($subschemas);
+      $schema = $this->named($schema);
+      $schema = $this->withoutPresent($schema);
+      if (!$widgets) {
+        $schema = $this->withoutWidgets($schema);
+      }
+      $document = [
+        'resource' => $resource_id,
+        'operation' => $operation_id,
+        'label' => $label === NULL ? NULL : PlainText::of($label),
+        'schema' => $this->top($surface, $schema, $label, $operation, $id),
+      ];
+      $outputs = $this->outputs($surface, $cacheability);
+      if ($outputs !== NULL) {
+        $document['outputs'] = $outputs;
+      }
+      return new ServedContract($document, $cacheability);
     }
-    $document = [
-      'resource' => $resource_id,
-      'operation' => $operation_id,
-      'label' => $label === NULL ? NULL : PlainText::of($label),
-      'schema' => $this->top($surface, $schema, $label, $operation, $id),
-    ];
-    $outputs = $this->outputs($surface, $cacheability);
-    if ($outputs !== NULL) {
-      $document['outputs'] = $outputs;
+    finally {
+      $this->refined = $was;
     }
-    return new ServedContract($document, $cacheability);
   }
 
   /**
@@ -2518,7 +2553,7 @@ final class ContractEmitter {
         }
       }
       foreach ($next as $i => [$combination]) {
-        $next[$i][1] = $declared->refine(array_replace($values, $combination), $kinds);
+        $next[$i][1] = $this->refinedFor($declared, array_replace($values, $combination), $kinds);
         $cacheability->addCacheableDependency($next[$i][1]);
       }
       $combinations = $next;
@@ -2716,6 +2751,64 @@ final class ContractEmitter {
   public function describeKey(Entry $entry, ?DataDefinitionInterface $definition = NULL): array|false {
     $definition ??= $entry->definition;
     return DoesNotApply::marks($definition) ? FALSE : $this->withoutExtension($this->stated($entry, $definition, $entry->name, new CacheableMetadata()));
+  }
+
+  /**
+   * Refines a surface for one combination, once per document.
+   *
+   * Static refiners are pure functions of what they watch, which
+   * answersAgain() holds them to, so the same surface refined against the
+   * same values by the same kinds answers the same: keys that watch the
+   * same sibling (a field's settings and its storage's settings both watch
+   * its type) share one refine per combination instead of one each.
+   *
+   * Decision: see docs/decisions.md#what-is-paid-once-and-what-per-request.
+   *
+   * @param \Drupal\data_surface\DataSurfaceInterface $declared
+   *   The data surface of the frame, as advertised.
+   * @param array $values
+   *   The values, with the combination over them.
+   * @param int $kinds
+   *   The kinds of refiner.
+   *
+   * @return \Drupal\data_surface\DataSurfaceInterface
+   *   The refined surface.
+   */
+  protected function refinedFor(DataSurfaceInterface $declared, array $values, int $kinds): DataSurfaceInterface {
+    try {
+      $key = serialize([$kinds, $values]);
+    }
+    catch (\Throwable) {
+      $key = NULL;
+    }
+    if ($this->refined === NULL || $key === NULL) {
+      $this->refineCounts['refined']++;
+      return $declared->refine($values, $kinds);
+    }
+    $kept = $this->refined[$declared] ?? [];
+    if (isset($kept[$key])) {
+      $this->refineCounts['reused']++;
+      return $kept[$key];
+    }
+    $this->refineCounts['refined']++;
+    $kept[$key] = $declared->refine($values, $kinds);
+    $this->refined[$declared] = $kept;
+    return $kept[$key];
+  }
+
+  /**
+   * Reports how many combinations were refined and how many remembered.
+   *
+   * For a performance budget, never for behavior: counts since the
+   * service was made.
+   *
+   * @return array{refined: int, reused: int}
+   *   The counts.
+   *
+   * @internal
+   */
+  public function refineCounts(): array {
+    return $this->refineCounts;
   }
 
   /**

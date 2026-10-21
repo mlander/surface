@@ -102,22 +102,25 @@ final class ServedOperationAccessCheck implements AccessInterface {
       // parameter, so saying it says nothing of what one names.
       return DataSurfaceAccess::decisive($permission, $permission instanceof AccessResultReasonInterface ? $permission->getReason() : NULL);
     }
+    // The context alone, built from the parameters: access is answered
+    // from it, and nothing is built for a response the page cache answers.
+    // Decision: see docs/decisions.md#a-build-is-not-cached-across-requests.
     try {
       try {
-        $served = $this->servedOperations->fromRequest($resource, $operation, $request);
+        $context = $this->servedOperations->contextFromRequest($resource, $operation, $request);
       }
       catch (BadRequestHttpException) {
-        $served = $this->servedOperations->fromRequest($resource, $operation, $request, FALSE);
+        $context = $this->servedOperations->contextFromRequest($resource, $operation, $request, FALSE);
       }
     }
     catch (\InvalidArgumentException $e) {
       return $this->refused($e->getMessage());
     }
-    $access = $this->servedOperations->access($served, $account);
+    $access = $this->servedOperations->contextAccess($resource, $context, $account);
     // An account that holds the operation's permission for what the
     // parameters name may hear why the rest refused; any other learns
     // nothing of what they name.
-    if ($access->isAllowed() || ($this->servedOperations->permissionAccess($resource, $operation, $account, $served->context)?->isAllowed() ?? FALSE)) {
+    if ($access->isAllowed() || ($this->servedOperations->permissionAccess($resource, $operation, $account, $context)?->isAllowed() ?? FALSE)) {
       return $access;
     }
     return $this->refused($access instanceof AccessResultReasonInterface ? (string) $access->getReason() : '')->addCacheableDependency($access);

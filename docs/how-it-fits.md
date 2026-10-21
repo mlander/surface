@@ -39,9 +39,10 @@ A class carrying `#[DerivesResources]` is a deriver, registered as an
 autowired service; the registry asks it for its resources and
 structures here, and reads each into a definition with no class,
 `<base>:<derivative>`, whose inputs and operations are methods the
-deriver names. The cache entry carries the tags each derivative was
-read from, so a saved field or form display clears it ([Derived
-resources](resources.md#derived-resources)).
+deriver names. Each derivative is an entry of its own carrying the tags
+it was read from, so a saved field clears that field's entries and no
+other ([Derived resources](resources.md#derived-resources)); the
+section below says what else is kept.
 
 ## The build step
 
@@ -252,6 +253,33 @@ deriver writes a read tool, `ResourceOperationReadTool`, which takes the
 parameters, asks the same access, and answers with what its storage
 loads, less every secret. Nothing in any of these classes names a
 resource or a key.
+
+## What is cached
+
+Everything a request may reuse is kept by what it was read from and
+dropped by tag; nothing is one account's, and nothing holds a stored
+value ([decision](decisions.md#what-is-paid-once-and-what-per-request)).
+
+- **Discovery** is an index in the discovery bin (every resource's and
+  structure's name, id, kind, module and base, and the shapes) and one
+  entry per definition. A request reads the index and the entries of
+  what it asks for. A derivative's entry carries only its own tags (a
+  field item its field's configuration); the index carries what decides
+  which derivatives there are (a bundle created, a form display saved),
+  and reading it again writes only the entries that went.
+- **Tools.** Each resource's tools are an entry of their own, under that
+  resource's tags, each operation built once for all of its tools and
+  the whole rebuilt under core's lock. The Tool API keeps every tool in
+  one item, which a tag of any tool clears; deriving it again reads the
+  entries that are still there.
+- **A sealed build** is kept for the rest of the request, by resource,
+  context, kind and account kind, until a tag it read is invalidated;
+  never one that expires or varies by more than the account
+  ([decision](decisions.md#a-build-is-not-cached-across-requests)). A
+  route's access check asks with the context alone and builds nothing.
+- **One document** refines each combination of watched values once,
+  however many keys watch it, and a static access answer is asked once
+  per context and account kind.
 
 ## So, the context is
 

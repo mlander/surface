@@ -6,6 +6,7 @@ namespace Drupal\data_surface\ResourceBuild;
 
 use Drupal\Core\Access\AccessResult;
 use Drupal\Core\Access\AccessResultInterface;
+use Drupal\Core\Cache\Cache;
 use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\Cache\RefinableCacheableDependencyInterface;
 use Drupal\Core\DependencyInjection\ClassResolverInterface;
@@ -116,13 +117,18 @@ use Drupal\data_surface\Port;
  * 8. The seal.
  *
  * The engine's builder is the whole state of a build. Nothing is cached
- * across builds, because a shape describes live site state; what that
- * state is, a shape or an alter says with addCacheableDependency(). The
- * one thing kept is a static access answer, an access class's or an
- * alter's, which by its own
- * cacheability depends on nothing but the account: asked once per
- * context and account kind (the account's roles and permissions), and
- * reused.
+ * across requests, because a shape describes live site state; what that
+ * state is, a shape or an alter says with addCacheableDependency(). Two
+ * things are kept within one: a static access answer, an access class's
+ * or an alter's, which by its own cacheability depends on nothing but the
+ * account, asked once per context and account kind (the account's roles
+ * and permissions) and reused; and each sealed build asked for at the top,
+ * by resource, context, kind and account kind, reused while none of the
+ * tags it read is invalidated, never when it expires or varies by more
+ * than the account (memo()). Both are bounded, so a worker that outlives a
+ * request keeps only the latest.
+ *
+ * Decision: see docs/decisions.md#a-build-is-not-cached-across-requests.
  */
 final class Resources implements ResourcesInterface {
 
@@ -197,6 +203,49 @@ final class Resources implements ResourcesInterface {
    * @var array<string, \Drupal\data_surface\Resource\AccessAnswer>
    */
   protected array $staticAnswers = [];
+
+  /**
+   * How many sealed builds are kept, the least recently asked let go.
+   */
+  protected const BUILDS_KEPT = 32;
+
+  /**
+   * The cache contexts a kept build may vary by: the account, its kind.
+   *
+   * The memo is keyed by both; a build varying by anything else (the
+   * route, the URL, the time) is built every time it is asked.
+   */
+  protected const KEPT_CONTEXTS = ['user', 'user.permissions', 'user.roles'];
+
+  /**
+   * The sealed builds asked for lately, by memo key, the latest last.
+   *
+   * @var array<string, array{surface: \Drupal\data_surface\DataSurfaceInterface, tags: string[]}>
+   */
+  protected array $builds = [];
+
+  /**
+   * How many builds were made and how many were answered from the memo.
+   *
+   * With the builds made of each resource, by name.
+   *
+   * @var array{built: int, reused: int, resources: array<string, int>}
+   */
+  protected array $buildCounts = ['built' => 0, 'reused' => 0, 'resources' => []];
+
+  /**
+   * What each resource or structure holds, once declared.
+   *
+   * @var array<string, string[]>
+   */
+  protected array $childrenDeclared = [];
+
+  /**
+   * Whether each holds a variant that may refuse it, once asked.
+   *
+   * @var array<string, bool>
+   */
+  protected array $refusing = [];
 
   public function __construct(
     protected readonly ResourceRegistry $registry,
@@ -287,16 +336,149 @@ final class Resources implements ResourcesInterface {
         $resource,
       ));
     }
+    $key = $this->memoKey($resource, $context, $alone, $declaring);
+    if ($key !== NULL && isset($this->builds[$key])) {
+      // The latest asked last, so the oldest is the one let go.
+      $kept = $this->builds[$key];
+      unset($this->builds[$key]);
+      $this->builds[$key] = $kept;
+      $this->buildCounts['reused']++;
+      return $kept['surface'];
+    }
     [$was_alone, $was_declaring] = [$this->accountAlone, $this->declaring];
     [$this->accountAlone, $this->declaring] = [$alone, $declaring];
     try {
       $built = $this->buildResource($resource, $context, [], top: TRUE);
       $this->assertHeldToSchema($resource, $context, $built);
-      return $built;
     }
     finally {
       [$this->accountAlone, $this->declaring] = [$was_alone, $was_declaring];
     }
+    $this->buildCounts['built']++;
+    $name = $this->registry->getDefinition($resource)->name();
+    $this->buildCounts['resources'][$name] = ($this->buildCounts['resources'][$name] ?? 0) + 1;
+    if ($key !== NULL && static::keepable($built)) {
+      $this->builds[$key] = ['surface' => $built, 'tags' => $built->getCacheTags()];
+      if (count($this->builds) > self::BUILDS_KEPT) {
+        unset($this->builds[array_key_first($this->builds)]);
+      }
+    }
+    return $built;
+  }
+
+  /**
+   * Names what a sealed build is kept by within the request.
+   *
+   * The resource's name, everything the context says, the kind of build,
+   * whether it is held to its config schema, and the account kind: none
+   * for a build for no account, the roles and permissions for one for the
+   * account alone, and the account itself beside them for a build with
+   * every answer applied, which a runtime answer may read.
+   *
+   * @param string $resource
+   *   The class, or its id.
+   * @param \Drupal\data_surface\Resource\OperationContext $context
+   *   The context.
+   * @param bool $alone
+   *   Whether runtime answers are set aside.
+   * @param bool $declaring
+   *   Whether every answer is set aside.
+   *
+   * @return string|null
+   *   The key, or NULL when none can be made and the build is not kept.
+   */
+  protected function memoKey(string $resource, OperationContext $context, bool $alone, bool $declaring): ?string {
+    try {
+      $name = $this->registry->getDefinition($resource)->name();
+      $kind = [];
+      if (!$declaring) {
+        if ($this->permissionsHashGenerator === NULL) {
+          return NULL;
+        }
+        $account = $this->currentUser;
+        $roles = $account->getRoles();
+        sort($roles);
+        $kind = [$roles, $this->permissionsHashGenerator->generate($account), $alone ? NULL : (string) $account->id()];
+      }
+      return hash('xxh3', serialize([$name, $context, $alone, $declaring, $this->holdsToSchema, $kind]));
+    }
+    catch (\Throwable) {
+      return NULL;
+    }
+  }
+
+  /**
+   * Answers whether a sealed build may be kept for the rest of the request.
+   *
+   * Only what says it stays true until a tag of it is invalidated, and
+   * varies by nothing but the account the memo is keyed by: a build that
+   * expires, or varies by the route or the time, is built every time.
+   *
+   * @param \Drupal\data_surface\DataSurfaceInterface $built
+   *   The build.
+   *
+   * @return bool
+   *   TRUE when it may be kept.
+   */
+  protected static function keepable(DataSurfaceInterface $built): bool {
+    if ($built->getCacheMaxAge() !== Cache::PERMANENT) {
+      return FALSE;
+    }
+    foreach ($built->getCacheContexts() as $context) {
+      if (!in_array($context, self::KEPT_CONTEXTS, TRUE) && !str_starts_with($context, 'user.roles:')) {
+        return FALSE;
+      }
+    }
+    return TRUE;
+  }
+
+  /**
+   * Forgets the builds that read what is being invalidated.
+   *
+   * ResourceRegistryInvalidator calls this for every invalidation, so a
+   * request that saves a field and then builds the resource builds it
+   * again.
+   *
+   * @param string[] $tags
+   *   The tags being invalidated.
+   *
+   * @internal
+   */
+  public function invalidateTags(array $tags): void {
+    foreach ($this->builds as $key => $kept) {
+      if (array_intersect($tags, $kept['tags']) !== []) {
+        unset($this->builds[$key]);
+      }
+    }
+  }
+
+  /**
+   * Forgets every build kept, when discovery itself was read again.
+   *
+   * With what each resource was found to hold, which a derived resource's
+   * fields decide.
+   *
+   * @internal
+   */
+  public function forgetBuilds(): void {
+    $this->builds = [];
+    $this->childrenDeclared = [];
+    $this->refusing = [];
+  }
+
+  /**
+   * Reports how many builds were made and how many were reused.
+   *
+   * For a performance budget, never for behavior: counts since the
+   * service was made, and the builds made of each resource.
+   *
+   * @return array{built: int, reused: int, resources: array<string, int>}
+   *   The counts.
+   *
+   * @internal
+   */
+  public function buildCounts(): array {
+    return $this->buildCounts;
   }
 
   /**
@@ -2359,31 +2541,117 @@ final class Resources implements ResourcesInterface {
   }
 
   /**
-   * Says whether any variant discovered has an access answer.
+   * Says whether a variant this resource holds may refuse it.
    *
    * Building a resource to find its children costs a build, so it is done
    * only when some child could refuse: a variant chosen by a locked
-   * deciding key is the only child that may (childAnswers()), and
-   * a derived variant has no access class.
+   * deciding key is the only child that may (childAnswers()), and a
+   * derived variant has no access class. Only this resource's own are
+   * looked at: the variants at its keys, and those of every structure it
+   * holds, at any depth, found by declaring each one's keys (a blueprint
+   * filled, nothing built). A variant that answers access elsewhere on
+   * the site costs this resource nothing; where none does, nothing is
+   * declared at all.
+   *
+   * Decision: see docs/decisions.md#a-chosen-variant-may-refuse.
    *
    * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
    *   The resource or structure being asked about.
    *
    * @return bool
-   *   TRUE when some declared variant other than it names an access class
-   *   or has an alter that answers access.
+   *   TRUE when it, or something it holds, holds a declared variant that
+   *   names an access class or has an alter that answers access.
    */
   protected function childrenMayAnswer(ResourceDefinition $definition): bool {
-    foreach ($this->registry->getDefinitions() as $other) {
-      foreach ($other->variants as $variants) {
-        foreach ($variants as $class) {
-          if ($class !== $definition->name() && $this->registry->hasDefinition($class) && $this->registry->getDefinition($class)->answersAccess()) {
-            return TRUE;
+    $holders = $this->registry->getRefusingVariantHolders();
+    if ($holders === []) {
+      return FALSE;
+    }
+    return $this->holdsRefusing($definition->name(), $holders, []);
+  }
+
+  /**
+   * Answers whether one resource or structure holds a refusing variant.
+   *
+   * @param string $name
+   *   Its name.
+   * @param array<string, true> $holders
+   *   The names holding a variant that answers access.
+   * @param array<string, true> $seen
+   *   The names already looked at on this path, so a cycle ends.
+   *
+   * @return bool
+   *   TRUE when it or anything it holds is one of the holders.
+   */
+  protected function holdsRefusing(string $name, array $holders, array $seen): bool {
+    if (isset($holders[$name])) {
+      return TRUE;
+    }
+    if (isset($seen[$name])) {
+      return FALSE;
+    }
+    if (isset($this->refusing[$name])) {
+      return $this->refusing[$name];
+    }
+    $seen[$name] = TRUE;
+    $answer = FALSE;
+    foreach ($this->childrenDeclared[$name] ??= $this->declaredChildren($name) as $child) {
+      if ($this->registry->hasDefinition($child) && $this->holdsRefusing($this->registry->getDefinition($child)->name(), $holders, $seen)) {
+        $answer = TRUE;
+        break;
+      }
+    }
+    return $this->refusing[$name] = $answer;
+  }
+
+  /**
+   * Lists what one resource or structure holds, without building it.
+   *
+   * Its variants as discovery found them, and the structures its own
+   * blueprint and its alters' attach, attach as a collection or attach
+   * per thing the site has: each one's keys are declared into a builder
+   * that is never sealed, so no refiner runs and nothing is asked.
+   *
+   * @param string $name
+   *   Its name.
+   *
+   * @return string[]
+   *   The names or ids of what it holds.
+   */
+  protected function declaredChildren(string $name): array {
+    $definition = $this->registry->getDefinition($name);
+    $children = [];
+    foreach ($definition->variants as $variants) {
+      array_push($children, ...array_values($variants));
+    }
+    $builder = new DataSurfaceBuilder();
+    $inputs = $this->blueprint($builder, $definition);
+    $blueprints = [$inputs];
+    try {
+      $this->fillBlueprints($definition, $inputs);
+      foreach ($definition->alters as $alter) {
+        $instance = $this->classResolver->getInstanceFromDefinition($alter->class);
+        if ($instance instanceof AltersInputsInterface) {
+          $instance->alterInputs($blueprints[] = (new ResourceBlueprintAdditions($builder, $this->typedDataManager, $alter->module))->useShapes($this->shapes()));
+        }
+      }
+    }
+    catch (\Throwable) {
+      // What cannot be declared here is reported when it is built; until
+      // then, it is taken to hold anything.
+      return array_keys($this->registry->getRefusingVariantHolders());
+    }
+    foreach ($blueprints as $blueprint) {
+      array_push($children, ...array_values(array_map('strval', $blueprint->attachments())), ...array_values(array_map('strval', $blueprint->lists())));
+      if ($blueprint instanceof ResourceBlueprint) {
+        foreach ($blueprint->fromSite() as $each) {
+          if ($each['child']) {
+            $children[] = $each['each'];
           }
         }
       }
     }
-    return FALSE;
+    return array_values(array_unique($children));
   }
 
   /**

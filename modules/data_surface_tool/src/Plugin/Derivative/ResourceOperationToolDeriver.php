@@ -6,6 +6,8 @@ namespace Drupal\data_surface_tool\Plugin\Derivative;
 
 use Drupal\Component\Plugin\Derivative\DeriverBase;
 use Drupal\Core\Cache\Cache;
+use Drupal\Core\Cache\CacheBackendInterface;
+use Drupal\Core\Lock\LockBackendInterface;
 use Drupal\Core\Plugin\Discovery\ContainerDeriverInterface;
 use Drupal\Core\Session\AccountSwitcherInterface;
 use Drupal\Core\Session\AnonymousUserSession;
@@ -69,6 +71,17 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * of, so it is declared nowhere and the tool's own access, which fills
  * the placeholder from the parameters, is the only check.
  *
+ * Deriving is paid once per resource, not once per listing. Each
+ * resource's tools are cached in an entry of their own in the discovery
+ * bin, under the tags of what they were read from (the resource's
+ * discovery entry and every build it was made from), each operation built
+ * once for all its tools (OperationInputs::derivation()). The Tool API
+ * keeps every tool as one item, which any of those tags clears
+ * (ToolDefinitionsInvalidator); deriving again then reads every entry
+ * whose tags did not fire and derives only the rest, inside core's lock,
+ * so a burst of requests pays one rebuild and the others wait and read
+ * what it wrote.
+ *
  * A tool's title is its operation's label, and its description the
  * operation's description followed by one line of call rules for its
  * kind (OperationInputs::description()). No two tools share a title:
@@ -113,6 +126,10 @@ final class ResourceOperationToolDeriver extends DeriverBase implements Containe
    *   NULL remembers nothing.
    * @param \Drupal\Core\Session\AccountSwitcherInterface|null $accountSwitcher
    *   What derives as the anonymous account; NULL derives as the current.
+   * @param \Drupal\Core\Cache\CacheBackendInterface|null $cache
+   *   Where each resource's tools are kept; NULL keeps none.
+   * @param \Drupal\Core\Lock\LockBackendInterface|null $lock
+   *   What makes concurrent derivations wait for one; NULL locks nothing.
    */
   public function __construct(
     protected readonly ResourceRegistry $registry,
@@ -123,9 +140,31 @@ final class ResourceOperationToolDeriver extends DeriverBase implements Containe
     protected readonly ResourceCatalog $catalog,
     protected readonly ?ToolDefinitionsInvalidator $invalidator = NULL,
     protected readonly ?AccountSwitcherInterface $accountSwitcher = NULL,
+    protected readonly ?CacheBackendInterface $cache = NULL,
+    protected readonly ?LockBackendInterface $lock = NULL,
   ) {
     $this->stringTranslation = $string_translation;
   }
+
+  /**
+   * The cache id prefix of one resource's tools in the discovery bin.
+   */
+  public const CACHE_PREFIX = 'data_surface_tool:definitions:';
+
+  /**
+   * The lock a derivation holds while it derives what was not cached.
+   */
+  public const LOCK = 'data_surface_tool:derive';
+
+  /**
+   * How long a derivation may hold the lock, in seconds.
+   */
+  protected const LOCK_TIMEOUT = 30.0;
+
+  /**
+   * Whether a resource being derived left an operation out.
+   */
+  protected bool $skipped = FALSE;
 
   /**
    * {@inheritdoc}
@@ -140,6 +179,8 @@ final class ResourceOperationToolDeriver extends DeriverBase implements Containe
       $container->get('data_surface.resource_catalog'),
       $container->get('data_surface_tool.tool_definitions_invalidator'),
       $container->get('account_switcher'),
+      $container->get('cache.discovery'),
+      $container->get('lock'),
     );
   }
 
@@ -164,6 +205,13 @@ final class ResourceOperationToolDeriver extends DeriverBase implements Containe
   /**
    * Derives every tool, as getDerivativeDefinitions() describes.
    *
+   * Each resource's tools come from its entry in the discovery bin when
+   * the entry is there; the rest are derived under the lock, and written.
+   * A request that finds the lock taken waits for it, reads what the
+   * holder wrote, and derives only what is still missing.
+   *
+   * Decision: see docs/decisions.md#what-is-paid-once-and-what-per-request.
+   *
    * @param \Drupal\tool\Tool\ToolDefinition $base_plugin_definition
    *   The base definition.
    *
@@ -172,31 +220,160 @@ final class ResourceOperationToolDeriver extends DeriverBase implements Containe
    */
   protected function derive(ToolDefinition $base_plugin_definition): array {
     $this->derivatives = [];
-    // What the definitions are read from, beside what the Tool API keeps
-    // them by: a derived resource's facts, and every built resource's
-    // cacheability (the keys a provider lists from the site among it).
-    // Decision: see docs/decisions.md#keys-that-come-from-the-site.
-    $tags = [];
-    foreach ($this->registry->getDefinitions() as $resource) {
-      $tags = Cache::mergeTags($tags, $resource->cacheTags);
-    }
-    $shared = $this->sharedLabels();
-    foreach ($this->registry->getDefinitions() as $resource) {
-      // A resource or structure with no storage of its own is stored by
-      // its parent or by its host; one a plugin names with
-      // #[UsesStructure] is configured through that plugin's host, which
-      // holds the instance and supplies the storage. Neither is a tool of
-      // its own.
-      $plugins = $this->plugins->usedBy($resource->name());
-      if ($resource->storage === NULL || $plugins !== []) {
-        continue;
+    // A resource or structure with no storage of its own is stored by
+    // its parent or by its host; one a plugin names with
+    // #[UsesStructure] is configured through that plugin's host, which
+    // holds the instance and supplies the storage. Neither is a tool of
+    // its own, and neither is read from discovery's bin here.
+    $standalone = [];
+    foreach ($this->registry->getIndex() as $name => $indexed) {
+      if ($indexed['stored'] && $this->plugins->usedBy($name) === []) {
+        $standalone[$name] = $this->registry->getDefinition($name);
       }
+    }
+    $shared = $this->sharedLabels($standalone);
+    $cids = [];
+    foreach ($standalone as $name => $resource) {
+      $cids[$name] = $this->cid($resource, $shared);
+    }
+    $entries = $this->cached($cids);
+    $missing = array_diff_key($standalone, $entries);
+    if ($missing !== []) {
+      $locked = $this->lock?->acquire(self::LOCK, self::LOCK_TIMEOUT) ?? FALSE;
+      if ($this->lock !== NULL && !$locked) {
+        // Another request is deriving: wait for it, and read what it wrote.
+        $this->lock->wait(self::LOCK, (int) self::LOCK_TIMEOUT);
+        $entries += $this->cached(array_intersect_key($cids, $missing));
+        $missing = array_diff_key($standalone, $entries);
+      }
+      try {
+        $entries += $this->operationInputs->derivation(fn (): array => $this->deriveEach($base_plugin_definition, $missing, $shared, $cids));
+      }
+      finally {
+        if ($locked) {
+          $this->lock->release(self::LOCK);
+        }
+      }
+    }
+    // What the definitions are read from, beside what the Tool API keeps
+    // them by: what decides which resources there are, then each
+    // resource's own (its discovery entry and every build it was made
+    // from, the keys a provider lists from the site among them).
+    // Decision: see docs/decisions.md#keys-that-come-from-the-site.
+    $tags = $this->registry->getIndexCacheTags();
+    foreach (array_keys($standalone) as $name) {
+      $this->derivatives += $entries[$name]['derivatives'];
+      $tags = Cache::mergeTags($tags, $entries[$name]['tags']);
+    }
+    $this->invalidator?->remember($tags);
+    return $this->derivatives;
+  }
+
+  /**
+   * Reads the tools of some resources from the discovery bin.
+   *
+   * @param array<string, string> $cids
+   *   The cache id of each resource's entry, by name.
+   *
+   * @return array<string, array{derivatives: array<string, \Drupal\tool\Tool\ToolDefinition>, tags: string[]}>
+   *   The entries found, by name.
+   */
+  protected function cached(array $cids): array {
+    if ($this->cache === NULL || $cids === []) {
+      return [];
+    }
+    $asked = array_values($cids);
+    $hits = $this->cache->getMultiple($asked);
+    $found = [];
+    foreach ($cids as $name => $cid) {
+      if (isset($hits[$cid]) && is_array($hits[$cid]->data) && isset($hits[$cid]->data['derivatives'])) {
+        $found[$name] = ['derivatives' => $hits[$cid]->data['derivatives'], 'tags' => $hits[$cid]->tags];
+      }
+    }
+    return $found;
+  }
+
+  /**
+   * Derives the tools of some resources, and writes each one's entry.
+   *
+   * @param \Drupal\tool\Tool\ToolDefinition $base_plugin_definition
+   *   The base definition.
+   * @param array<string, \Drupal\data_surface\ResourceBuild\ResourceDefinition> $resources
+   *   The resources, by name.
+   * @param array<string, true> $shared
+   *   The labels several tools would carry (sharedLabels()).
+   * @param array<string, string> $cids
+   *   The cache id of each resource's entry, by name.
+   *
+   * @return array<string, array{derivatives: array<string, \Drupal\tool\Tool\ToolDefinition>, tags: string[]}>
+   *   Each resource's tools and the tags they were read from, by name.
+   */
+  protected function deriveEach(ToolDefinition $base_plugin_definition, array $resources, array $shared, array $cids): array {
+    $derived = [];
+    foreach ($resources as $name => $resource) {
+      $this->operationInputs->takeListedCacheTags();
+      [$derivatives, $skipped] = $this->deriveResource($base_plugin_definition, $resource, $shared);
+      $tags = Cache::mergeTags($resource->cacheTags, $this->operationInputs->takeListedCacheTags());
+      $derived[$name] = ['derivatives' => $derivatives, 'tags' => $tags];
+      // An operation left out is logged each time it is derived, until the
+      // mistake is fixed: not kept.
+      if (!$skipped) {
+        $this->cache?->set($cids[$name], ['derivatives' => $derivatives], Cache::PERMANENT, $tags);
+      }
+    }
+    return $derived;
+  }
+
+  /**
+   * Gets the cache id of one resource's tools.
+   *
+   * Its name, and which of its operations' labels other tools share, which
+   * its titles say; what decides that is every other resource, so it is
+   * part of the id rather than a tag.
+   *
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $resource
+   *   The resource.
+   * @param array<string, true> $shared
+   *   The labels several tools would carry.
+   *
+   * @return string
+   *   The cache id.
+   */
+  protected function cid(ResourceDefinition $resource, array $shared): string {
+    $sharing = [];
+    foreach ($resource->operations as $operation) {
+      if (isset($shared[(string) $operation->label])) {
+        $sharing[] = $operation->id;
+      }
+    }
+    return self::CACHE_PREFIX . $resource->name() . ':' . hash('xxh3', serialize($sharing));
+  }
+
+  /**
+   * Derives one resource's tools: a write tool per operation, and a read tool.
+   *
+   * @param \Drupal\tool\Tool\ToolDefinition $base_plugin_definition
+   *   The base definition.
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $resource
+   *   A resource that names storage and no plugin uses.
+   * @param array<string, true> $shared
+   *   The labels several tools would carry (sharedLabels()).
+   *
+   * @return array{0: array<string, \Drupal\tool\Tool\ToolDefinition>, 1: bool}
+   *   Its tools, by derivative id, and whether any operation was left out.
+   */
+  protected function deriveResource(ToolDefinition $base_plugin_definition, ResourceDefinition $resource, array $shared): array {
+    $plugins = $this->plugins->usedBy($resource->name());
+    $outer = $this->derivatives;
+    $this->derivatives = [];
+    $this->skipped = FALSE;
+    try {
       try {
         $operations = $this->registry->getOperations($resource->name());
       }
       catch (\LogicException $e) {
         $this->skip($resource->id, $e);
-        continue;
+        return [[], TRUE];
       }
       foreach ($operations as $operation) {
         if (!ResourceCatalog::standalone($resource, $operation, $plugins)) {
@@ -228,9 +405,11 @@ final class ResourceOperationToolDeriver extends DeriverBase implements Containe
           $this->read($base_plugin_definition, $resource, $operation, $title);
         }
       }
+      return [$this->derivatives, $this->skipped];
     }
-    $this->invalidator?->remember(Cache::mergeTags($tags, $this->operationInputs->listedCacheTags()));
-    return $this->derivatives;
+    finally {
+      $this->derivatives = $outer;
+    }
   }
 
   /**
@@ -277,12 +456,16 @@ final class ResourceOperationToolDeriver extends DeriverBase implements Containe
    * registration" in their own module's words, and as tools each says
    * which resource it configures.
    *
+   * @param array<string, \Drupal\data_surface\ResourceBuild\ResourceDefinition> $resources
+   *   The resources, by name; those that name no storage, or that a plugin
+   *   uses, have no tool and are passed over.
+   *
    * @return array<string, true>
    *   The labels, as rendered, that two or more tools would carry.
    */
-  protected function sharedLabels(): array {
+  protected function sharedLabels(array $resources): array {
     $seen = [];
-    foreach ($this->registry->getDefinitions() as $resource) {
+    foreach ($resources as $resource) {
       $plugins = $this->plugins->usedBy($resource->name());
       if ($resource->storage === NULL || $plugins !== []) {
         continue;
@@ -439,6 +622,7 @@ final class ResourceOperationToolDeriver extends DeriverBase implements Containe
    *   Why.
    */
   protected function skip(string $id, \Throwable $e): void {
+    $this->skipped = TRUE;
     $this->logger->warning('No tool for @id: @message', ['@id' => $id, '@message' => $e->getMessage()]);
   }
 

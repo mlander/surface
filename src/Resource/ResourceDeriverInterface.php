@@ -10,9 +10,10 @@ namespace Drupal\data_surface\Resource;
  * The plugin system's derivative, for resources. A class in a module's
  * src/Resource carrying #[DerivesResources] and implementing this is
  * registered as an autowired service, so it may hold services; the
- * registry asks it once, at discovery, and caches what it answers with
- * the rest of discovery, until one of the answer's cache tags is
- * invalidated.
+ * registry asks it at discovery and caches each derivative it answers as
+ * an entry of its own, until one of that derivative's cache tags is
+ * invalidated. What decides which derivatives there are, a deriver says
+ * with KnowsDerivativeListTagsInterface.
  *
  * A derivative is a whole resource (or a structure, when it names
  * neither storage nor identity): the registry ids it

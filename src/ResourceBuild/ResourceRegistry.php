@@ -26,6 +26,7 @@ use Drupal\data_surface\Resource\ResourceInterface;
 use Drupal\data_surface\Resource\ShapeInterface;
 use Drupal\data_surface\Resource\StructureInterface;
 use Drupal\data_surface\Resource\ResourceDeriverInterface;
+use Drupal\data_surface\Resource\KnowsDerivativeListTagsInterface;
 
 /**
  * Every resource, structure and shape, with operations, alters, variants.
@@ -33,19 +34,29 @@ use Drupal\data_surface\Resource\ResourceDeriverInterface;
  * The compiler pass lists the classes in src/Resource, src/Structure,
  * src/Shape and src/Alter; the plugin definitions list the plugins that
  * are their own structure (#[UsesStructure] with no argument). This
- * reads their attributes, once, and caches what it read in the discovery
- * bin the way a plugin manager caches its definitions. The cache id
- * carries a hash of both lists, so a container rebuilt with a module
- * more or less, or a plugin more or less, is a different entry and needs
- * no clearing; an attribute edited in place needs a cache rebuild,
- * exactly as a plugin attribute does.
+ * reads their attributes and caches what it read in the discovery bin,
+ * the way a plugin manager caches its definitions, in two layers: an
+ * index (every name and id, its kind and provider, and the shapes),
+ * and one entry per definition, read by name when it is asked for and
+ * kept for the rest of the request. A request that builds one resource
+ * reads the index and what that resource names, never the whole of
+ * discovery. The cache ids carry a hash of both lists, so a container
+ * rebuilt with a module more or less, or a plugin more or less, is a
+ * different set of entries and needs no clearing; an attribute edited
+ * in place needs a cache rebuild, exactly as a plugin attribute does.
  *
  * A deriver (#[DerivesResources]) is asked for its resources here too,
  * and each is read into a definition with no class, under the id
- * `<base>:<derivative>`. What it derived from is live site state, so the
- * entry carries the cache tags its derivatives name: invalidating one (a
- * field saved, a form display changed) clears the entry, and, through
- * ResourceRegistryInvalidator, what this request already read.
+ * `<base>:<derivative>`. What it derived from is live site state, so
+ * each derivative's entry carries the cache tags it names, and only
+ * those: a field saved clears that field's structure and its bundle's
+ * resource. The index carries what decides which derivatives there are
+ * (KnowsDerivativeListTagsInterface), so a bundle created or a form
+ * display saved reads the list again; reading it again derives
+ * everything, and writes only the entries whose tags fired or whose
+ * content changed, every other one kept as it was cached. Through
+ * ResourceRegistryInvalidator, an invalidation also reaches what this
+ * request already read.
  *
  * Two kinds of refusal, kept apart on purpose:
  * - What is wrong with the attributes themselves (an operation with
@@ -59,6 +70,8 @@ use Drupal\data_surface\Resource\ResourceDeriverInterface;
  *   one id, a refiner watching a key it never declares) is
  *   refused when that one is asked for, naming the offender, so one
  *   module's mistake does not take every other one down with it.
+ *
+ * Decision: see docs/decisions.md#what-is-paid-once-and-what-per-request.
  */
 final class ResourceRegistry {
 
@@ -68,18 +81,47 @@ final class ResourceRegistry {
   protected const CACHE_PREFIX = 'data_surface:resources:';
 
   /**
-   * The definitions, keyed by name, once read.
+   * The index, once read: what there is, by name, and the shapes.
    *
-   * @var array<class-string, \Drupal\data_surface\ResourceBuild\ResourceDefinition>|null
+   * `ids` maps an id to its name where they differ (a class's), `refusing`
+   * names the holders of a variant that answers access.
+   *
+   * @var array{names: array<string, array{id: string, kind: string, module: string, base: string|null, stored: bool}>, ids: array<string, string>, shapes: array<class-string, \Drupal\data_surface\ResourceBuild\ShapeDefinition>, refusing: array<string, true>}|null
    */
-  protected ?array $definitions = NULL;
+  protected ?array $index = NULL;
 
   /**
-   * The shapes, keyed by class, once read.
-   *
-   * @var array<class-string, \Drupal\data_surface\ResourceBuild\ShapeDefinition>|null
+   * The hash both lists give, for the index read now.
    */
-  protected ?array $shapes = NULL;
+  protected string $hash = '';
+
+  /**
+   * The cache tags of the index read now.
+   *
+   * @var string[]
+   */
+  protected array $indexTags = [];
+
+  /**
+   * The definitions read so far in this request, by name.
+   *
+   * @var array<string, \Drupal\data_surface\ResourceBuild\ResourceDefinition>
+   */
+  protected array $definitions = [];
+
+  /**
+   * The cache tags of each definition read so far, by name.
+   *
+   * @var array<string, string[]>
+   */
+  protected array $entryTags = [];
+
+  /**
+   * Every definition, in discovery order, once all were read.
+   *
+   * @var array<string, \Drupal\data_surface\ResourceBuild\ResourceDefinition>|null
+   */
+  protected ?array $all = NULL;
 
   /**
    * What was read while the plugin hosts were being read, by cache id.
@@ -92,11 +134,11 @@ final class ResourceRegistry {
   protected array $provisional = [];
 
   /**
-   * The cache tags what is read depends on, once read.
+   * How discovery was read in this request, for a performance budget.
    *
-   * @var string[]
+   * @var array{index: int, entries: int, rebuilds: int, written: int}
    */
-  protected array $cacheTags = [];
+  protected array $reads = ['index' => 0, 'entries' => 0, 'rebuilds' => 0, 'written' => 0];
 
   /**
    * Constructs a ResourceRegistry.
@@ -125,6 +167,10 @@ final class ResourceRegistry {
   /**
    * Gets every discovered resource and structure.
    *
+   * Reads every entry: what lists the whole site (the catalog, the tool
+   * deriver) asks for this; what builds one resource asks for it by name
+   * (getDefinition()), which reads only its entry.
+   *
    * @return array<string, \Drupal\data_surface\ResourceBuild\ResourceDefinition>
    *   The definitions, keyed by name: a class, or a derived resource's
    *   id.
@@ -135,11 +181,112 @@ final class ResourceRegistry {
    *   colon.
    */
   public function getDefinitions(): array {
-    return $this->read()['resources'];
+    $provisional = $this->provisional();
+    if ($provisional !== NULL) {
+      return $provisional['resources'];
+    }
+    if ($this->all !== NULL) {
+      return $this->all;
+    }
+    $index = $this->index();
+    $missing = array_diff_key($index['names'], $this->definitions);
+    if ($missing !== []) {
+      $cids = [];
+      foreach (array_keys($missing) as $name) {
+        $cids[$this->entryCid((string) $name)] = (string) $name;
+      }
+      $asked = array_keys($cids);
+      $hits = $this->cache->getMultiple($asked);
+      $this->reads['entries'] += count($cids);
+      foreach ($cids as $cid => $name) {
+        if (!isset($hits[$cid]) || !$hits[$cid]->data instanceof ResourceDefinition) {
+          $this->rebuild();
+          return $this->getDefinitions();
+        }
+        $this->remember($name, $hits[$cid]->data, $hits[$cid]->tags);
+      }
+    }
+    $all = [];
+    foreach (array_keys($index['names']) as $name) {
+      $all[$name] = $this->definitions[$name];
+    }
+    return $this->all = $all;
   }
 
   /**
-   * Reads every resource, structure and shape, once.
+   * Gets the index: every resource and structure by name, without reading one.
+   *
+   * What a caller that picks some resources out of all of them reads first
+   * (the tool deriver takes only those that name storage), so it reads the
+   * entries of those alone.
+   *
+   * @return array<string, array{id: string, kind: string, module: string, base: string|null, stored: bool}>
+   *   Each one's id, kind, module, the base it was derived under (NULL for
+   *   a class) and whether it names storage, keyed by name, in discovery
+   *   order.
+   */
+  public function getIndex(): array {
+    $provisional = $this->provisional();
+    if ($provisional !== NULL) {
+      return array_map(static::indexed(...), $provisional['resources']);
+    }
+    return $this->index()['names'];
+  }
+
+  /**
+   * Gets the cache tags of the index: what decides what there is.
+   *
+   * What a listing of every resource (the tool deriver's) is cleared by
+   * beside each resource's own: a bundle created, a form display saved.
+   *
+   * @return string[]
+   *   The tags; none while the plugin hosts are being read.
+   */
+  public function getIndexCacheTags(): array {
+    if ($this->provisional() !== NULL) {
+      return [];
+    }
+    $this->index();
+    return $this->indexTags;
+  }
+
+  /**
+   * Answers whether any variant here names an access answer, by holder.
+   *
+   * The resources and structures that hold, at some key, a variant whose
+   * access may refuse them (Resources::childAnswers()): read off the
+   * index, so asking reads no definition.
+   *
+   * @return array<string, true>
+   *   The names of the holders.
+   */
+  public function getRefusingVariantHolders(): array {
+    $provisional = $this->provisional();
+    if ($provisional !== NULL) {
+      return static::refusing($provisional['resources']);
+    }
+    return $this->index()['refusing'];
+  }
+
+  /**
+   * Reports how discovery was read in this request.
+   *
+   * For a performance budget, never for behavior: how many times the
+   * index was read from the bin, how many entries were, how many times
+   * discovery was read again from the classes and the derivers, and how
+   * many entries that wrote.
+   *
+   * @return array{index: int, entries: int, rebuilds: int, written: int}
+   *   The counts.
+   *
+   * @internal
+   */
+  public function reads(): array {
+    return $this->reads;
+  }
+
+  /**
+   * Answers from a read that is not the whole answer, while hosts are read.
    *
    * Asked while the plugin hosts are being read, from inside a deriver
    * one of them runs (eca_tool's action deriver asks the tool deriver,
@@ -149,55 +296,224 @@ final class ResourceRegistry {
    * memo and the discovery bin only ever hold what every host said,
    * whichever was asked first.
    *
-   * @return array{resources: array<string, \Drupal\data_surface\ResourceBuild\ResourceDefinition>, shapes: array<class-string, \Drupal\data_surface\ResourceBuild\ShapeDefinition>}
-   *   The resources and structures, keyed by name, and the shapes, keyed
-   *   by class.
+   * @return array{resources: array<string, \Drupal\data_surface\ResourceBuild\ResourceDefinition>, shapes: array<class-string, \Drupal\data_surface\ResourceBuild\ShapeDefinition>}|null
+   *   The provisional read, or NULL once every host was read whole.
    */
-  protected function read(): array {
-    if ($this->definitions !== NULL && $this->shapes !== NULL) {
-      return ['resources' => $this->definitions, 'shapes' => $this->shapes];
+  protected function provisional(): ?array {
+    if ($this->index !== NULL || ($this->plugins?->isComplete() ?? TRUE)) {
+      return NULL;
+    }
+    // Asking for the plugins that are their own structure while their
+    // hosts are read may finish reading them, so ask before deciding.
+    $own = $this->plugins->ownStructures();
+    if ($this->plugins->isComplete()) {
+      return NULL;
+    }
+    $cid = static::hashOf($own === [] ? $this->classes : [$this->classes, $own]);
+    return $this->provisional[$cid] ??= $this->discover($own);
+  }
+
+  /**
+   * Reads the index, from the bin or by reading discovery again.
+   *
+   * @return array{names: array<string, array{id: string, kind: string, module: string, base: string|null, stored: bool}>, ids: array<string, string>, shapes: array<class-string, \Drupal\data_surface\ResourceBuild\ShapeDefinition>, refusing: array<string, true>}
+   *   The index.
+   */
+  protected function index(): array {
+    if ($this->index !== NULL) {
+      return $this->index;
     }
     $own = $this->plugins?->ownStructures() ?? [];
-    $complete = $this->plugins?->isComplete() ?? TRUE;
-    $cid = self::CACHE_PREFIX . hash('xxh3', serialize($own === [] ? $this->classes : [$this->classes, $own]));
-    if (!$complete && isset($this->provisional[$cid])) {
-      return $this->provisional[$cid];
-    }
-    $cached = $this->cache->get($cid);
-    $hit = $cached !== FALSE && is_array($cached->data) && isset($cached->data['resources'], $cached->data['shapes']);
-    $read = $hit ? $cached->data : $this->discover($own);
-    if (!$complete) {
-      return $this->provisional[$cid] = $read;
-    }
+    $this->hash = static::hashOf($own === [] ? $this->classes : [$this->classes, $own]);
     $this->provisional = [];
-    $this->cacheTags = [];
-    foreach ($read['resources'] as $definition) {
-      $this->cacheTags = Cache::mergeTags($this->cacheTags, $definition->cacheTags);
+    $cached = $this->cache->get(self::CACHE_PREFIX . 'index:' . $this->hash);
+    $this->reads['index']++;
+    if ($cached !== FALSE && is_array($cached->data) && isset($cached->data['names'], $cached->data['ids'], $cached->data['shapes'], $cached->data['refusing'])) {
+      $this->indexTags = $cached->tags;
+      return $this->index = $cached->data;
     }
-    if (!$hit) {
-      $this->cache->set($cid, $read, Cache::PERMANENT, $this->cacheTags);
+    $this->rebuild($own);
+    assert($this->index !== NULL);
+    return $this->index;
+  }
+
+  /**
+   * Reads discovery again, and writes what the bin no longer holds.
+   *
+   * Every definition is read from the classes and the derivers; the index
+   * is written, and each entry whose cached copy is gone (its tags fired)
+   * or differs from what was read. What the bin still holds unchanged is
+   * left as it is. What was read is kept for the rest of the request.
+   *
+   * @param array<class-string, array{module: string, id: string}>|null $own
+   *   The plugins that are their own structure, when already asked.
+   */
+  protected function rebuild(?array $own = NULL): void {
+    $own ??= $this->plugins?->ownStructures() ?? [];
+    $this->hash = static::hashOf($own === [] ? $this->classes : [$this->classes, $own]);
+    $list_tags = [];
+    $read = $this->discover($own, $list_tags);
+    $this->reads['rebuilds']++;
+    $names = array_map(static::indexed(...), $read['resources']);
+    // A derived resource is named by its id; only a class needs one here.
+    $ids = [];
+    foreach ($read['resources'] as $name => $definition) {
+      if ($definition->id !== $name) {
+        $ids[$definition->id] = $name;
+      }
     }
-    ['resources' => $this->definitions, 'shapes' => $this->shapes] = $read;
-    return $read;
+    $index = [
+      'names' => $names,
+      'ids' => $ids,
+      'shapes' => $read['shapes'],
+      'refusing' => static::refusing($read['resources']),
+    ];
+
+    $cids = [];
+    foreach (array_keys($read['resources']) as $name) {
+      $cids[$this->entryCid((string) $name)] = (string) $name;
+    }
+    $asked = array_keys($cids);
+    $kept = $this->cache->getMultiple($asked);
+    $items = [];
+    foreach ($cids as $cid => $name) {
+      $definition = $read['resources'][$name];
+      if (isset($kept[$cid]) && serialize($kept[$cid]->data) === serialize($definition)) {
+        continue;
+      }
+      $items[$cid] = ['data' => $definition, 'expire' => Cache::PERMANENT, 'tags' => $definition->cacheTags];
+    }
+    if ($items !== []) {
+      $this->cache->setMultiple($items);
+      $this->reads['written'] += count($items);
+    }
+    $this->cache->set(self::CACHE_PREFIX . 'index:' . $this->hash, $index, Cache::PERMANENT, $list_tags);
+
+    $this->index = $index;
+    $this->indexTags = $list_tags;
+    $this->definitions = [];
+    $this->entryTags = [];
+    foreach ($read['resources'] as $name => $definition) {
+      $this->remember((string) $name, $definition, $definition->cacheTags);
+    }
+    $this->all = $read['resources'];
+  }
+
+  /**
+   * Keeps one definition read for the rest of the request.
+   *
+   * @param string $name
+   *   Its name.
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   *   The definition.
+   * @param string[] $tags
+   *   The tags its entry carries.
+   */
+  protected function remember(string $name, ResourceDefinition $definition, array $tags): void {
+    $this->definitions[$name] = $definition;
+    $this->entryTags[$name] = $tags;
+  }
+
+  /**
+   * Gets the cache id of one definition's entry.
+   *
+   * @param string $name
+   *   The definition's name.
+   *
+   * @return string
+   *   The cache id, beside the index of the same lists.
+   */
+  protected function entryCid(string $name): string {
+    return self::CACHE_PREFIX . 'entry:' . $this->hash . ':' . $name;
+  }
+
+  /**
+   * Hashes the lists discovery is read from.
+   *
+   * @param array $lists
+   *   The class lists, with the plugins that are their own structure.
+   *
+   * @return string
+   *   The hash.
+   */
+  protected static function hashOf(array $lists): string {
+    return hash('xxh3', serialize($lists));
+  }
+
+  /**
+   * Says what the index keeps of one definition.
+   *
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   *   The definition.
+   *
+   * @return array{id: string, kind: string, module: string, base: string|null, stored: bool}
+   *   Its id, kind, module, base and whether it names storage.
+   */
+  protected static function indexed(ResourceDefinition $definition): array {
+    return [
+      'id' => $definition->id,
+      'kind' => $definition->kind,
+      'module' => $definition->module,
+      'base' => $definition->base,
+      'stored' => $definition->storage !== NULL,
+    ];
+  }
+
+  /**
+   * Lists the definitions holding a variant that answers access.
+   *
+   * @param array<string, \Drupal\data_surface\ResourceBuild\ResourceDefinition> $resources
+   *   Every definition, by name.
+   *
+   * @return array<string, true>
+   *   The holders' names.
+   */
+  protected static function refusing(array $resources): array {
+    $holders = [];
+    foreach ($resources as $name => $definition) {
+      foreach ($definition->variants as $variants) {
+        foreach ($variants as $class) {
+          if (isset($resources[$class]) && $resources[$class]->answersAccess()) {
+            $holders[$name] = TRUE;
+          }
+        }
+      }
+    }
+    return $holders;
   }
 
   /**
    * Forgets what this request read, when what it was read from changed.
    *
-   * The discovery bin's entry goes with the tags; this is the copy held
-   * since, which a request that saves a field and then builds a resource
-   * would otherwise read stale.
+   * The discovery bin drops its entries by tag on its own; this is the
+   * copy held since, which a request that saves a field and then builds a
+   * resource would otherwise read stale. A tag of the index forgets
+   * everything; a tag of one entry forgets that entry.
    *
    * @param string[] $tags
    *   The tags being invalidated.
+   *
+   * @return bool
+   *   TRUE when the index was forgotten, and so everything read: what was
+   *   built from it may describe a resource that is no longer there.
    */
-  public function invalidateTags(array $tags): void {
-    if ($this->definitions !== NULL && array_intersect($tags, $this->cacheTags) !== []) {
-      $this->definitions = NULL;
-      $this->shapes = NULL;
+  public function invalidateTags(array $tags): bool {
+    if ($this->index !== NULL && array_intersect($tags, $this->indexTags) !== []) {
+      $this->index = NULL;
+      $this->indexTags = [];
+      $this->definitions = [];
+      $this->entryTags = [];
+      $this->all = NULL;
       $this->provisional = [];
-      $this->cacheTags = [];
+      return TRUE;
     }
+    foreach ($this->entryTags as $name => $entry_tags) {
+      if (array_intersect($tags, $entry_tags) !== []) {
+        unset($this->definitions[$name], $this->entryTags[$name]);
+        $this->all = NULL;
+      }
+    }
+    return FALSE;
   }
 
   /**
@@ -243,7 +559,7 @@ final class ResourceRegistry {
    *   The shapes, keyed by class.
    */
   public function getShapes(): array {
-    return $this->read()['shapes'];
+    return $this->provisional()['shapes'] ?? $this->index()['shapes'];
   }
 
   /**
@@ -430,16 +746,39 @@ final class ResourceRegistry {
    *   The definition, or NULL.
    */
   protected function find(string $resource): ?ResourceDefinition {
-    $definitions = $this->getDefinitions();
-    if (isset($definitions[$resource])) {
-      return $definitions[$resource];
-    }
-    foreach ($definitions as $definition) {
-      if ($definition->id === $resource) {
-        return $definition;
+    $provisional = $this->provisional();
+    if ($provisional !== NULL) {
+      if (isset($provisional['resources'][$resource])) {
+        return $provisional['resources'][$resource];
       }
+      foreach ($provisional['resources'] as $definition) {
+        if ($definition->id === $resource) {
+          return $definition;
+        }
+      }
+      return NULL;
     }
-    return NULL;
+    if (isset($this->definitions[$resource])) {
+      return $this->definitions[$resource];
+    }
+    $index = $this->index();
+    $name = isset($index['names'][$resource]) ? $resource : ($index['ids'][$resource] ?? NULL);
+    if ($name === NULL) {
+      return NULL;
+    }
+    if (isset($this->definitions[$name])) {
+      return $this->definitions[$name];
+    }
+    $cached = $this->cache->get($this->entryCid($name));
+    $this->reads['entries']++;
+    if ($cached !== FALSE && $cached->data instanceof ResourceDefinition) {
+      $this->remember($name, $cached->data, $cached->tags);
+      return $cached->data;
+    }
+    // Gone from the bin while the index still names it (its own tags
+    // fired, or the bin let it go): read discovery again, which writes it.
+    $this->rebuild();
+    return isset($this->index['names'][$resource]) || isset($this->index['ids'][$resource]) ? $this->find($resource) : NULL;
   }
 
   /**
@@ -481,12 +820,14 @@ final class ResourceRegistry {
    * @param array<class-string, array{module: string, id: string}> $own
    *   The plugins that are their own structure, with the module and the id
    *   their plugin definitions give them.
+   * @param string[] $list_tags
+   *   Filled with the tags of what decides which derivatives there are.
    *
    * @return array{resources: array<string, \Drupal\data_surface\ResourceBuild\ResourceDefinition>, shapes: array<class-string, \Drupal\data_surface\ResourceBuild\ShapeDefinition>}
    *   The resources and structures, keyed by name, and the shapes, keyed
    *   by class.
    */
-  protected function discover(array $own = []): array {
+  protected function discover(array $own = [], array &$list_tags = []): array {
     $resources = [];
     $ids = [];
     $found = [];
@@ -550,7 +891,7 @@ final class ResourceRegistry {
     }
     $operations = [];
     $bases = [];
-    foreach ($this->derive($ids) as $id => [$definition, $derived_operations]) {
+    foreach ($this->derive($ids, $list_tags) as $id => [$definition, $derived_operations]) {
       $resources[$id] = $definition;
       $operations[$id] = $derived_operations;
       $bases[(string) $definition->base][] = $id;
@@ -753,6 +1094,10 @@ final class ResourceRegistry {
    * @param array<string, class-string> $ids
    *   The ids the classes claimed, which a derived resource may not claim
    *   again; extended with each derived id.
+   * @param string[] $list_tags
+   *   Filled with the tags of what decides which derivatives there are:
+   *   each deriver's own answer (KnowsDerivativeListTagsInterface), or
+   *   every tag its derivatives carry.
    *
    * @return array<string, array{0: \Drupal\data_surface\ResourceBuild\ResourceDefinition, 1: \Drupal\data_surface\ResourceBuild\OperationDefinition[]}>
    *   Each derived resource's definition, and its operations, keyed by id.
@@ -761,7 +1106,7 @@ final class ResourceRegistry {
    *   When a deriver does not implement ResourceDeriverInterface, a
    *   derivative id holds a colon, or an id is claimed twice.
    */
-  protected function derive(array &$ids): array {
+  protected function derive(array &$ids, array &$list_tags = []): array {
     if ($this->classResolver === NULL) {
       return [];
     }
@@ -771,7 +1116,16 @@ final class ResourceRegistry {
       if (!$deriver instanceof ResourceDeriverInterface) {
         throw new \LogicException(sprintf('%s carries #[DerivesResources] but does not implement %s.', $class, ResourceDeriverInterface::class));
       }
-      foreach ($deriver->derivatives($overridden) as $derivative => $declared) {
+      $derivatives = $deriver->derivatives($overridden);
+      if ($deriver instanceof KnowsDerivativeListTagsInterface) {
+        $list_tags = Cache::mergeTags($list_tags, $deriver->listCacheTags());
+      }
+      else {
+        foreach ($derivatives as $declared) {
+          $list_tags = Cache::mergeTags($list_tags, $declared->cacheTags);
+        }
+      }
+      foreach ($derivatives as $derivative => $declared) {
         $id = $base . ':' . $derivative;
         if (str_contains((string) $derivative, ':')) {
           throw new \LogicException(sprintf(

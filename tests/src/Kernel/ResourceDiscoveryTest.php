@@ -135,15 +135,23 @@ class ResourceDiscoveryTest extends DataSurfaceKernelTestBase {
     $this->registry()->getDefinitions();
     $classes = $this->container->getParameter(ResourceCollectorPass::PARAMETER);
     $plugins = $this->container->get('data_surface.resource_plugins');
-    // The id carries both lists: the classes the compiler pass found and
+    // The ids carry both lists: the classes the compiler pass found and
     // the plugins that are their own structure.
-    $cid = 'data_surface:resources:' . hash('xxh3', serialize([$classes, $plugins->ownStructures()]));
-    $cached = $this->container->get('cache.discovery')->get($cid);
-    $this->assertNotFalse($cached);
-    // Resources and structures by name, shapes by class, in one entry.
-    $this->assertArrayHasKey(DemoBlockStructure::class, $cached->data['resources']);
-    $this->assertArrayHasKey(StickyNoteBlock::class, $cached->data['resources']);
-    $this->assertSame('resource_test.sku', $cached->data['shapes'][Sku::class]->id);
+    $hash = hash('xxh3', serialize([$classes, $plugins->ownStructures()]));
+    $bin = $this->container->get('cache.discovery');
+    $index = $bin->get('data_surface:resources:index:' . $hash);
+    $this->assertNotFalse($index);
+    // The index names every resource and structure, and holds the shapes
+    // by class; each definition is an entry of its own.
+    $this->assertArrayHasKey(DemoBlockStructure::class, $index->data['names']);
+    $this->assertArrayHasKey(StickyNoteBlock::class, $index->data['names']);
+    $this->assertSame('resource_test.sku', $index->data['shapes'][Sku::class]->id);
+    $entry = $bin->get('data_surface:resources:entry:' . $hash . ':' . DemoBlockStructure::class);
+    $this->assertNotFalse($entry);
+    $this->assertSame(DemoBlockStructure::class, $entry->data->class);
+    // A class read from code alone carries no tag: a cache rebuild is what
+    // reads it again.
+    $this->assertSame([], $entry->tags);
 
     // A second registry reads the cache rather than the classes.
     $fresh = new ResourceRegistry($classes, $this->container->get('cache.discovery'), $plugins);

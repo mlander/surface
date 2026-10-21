@@ -845,7 +845,10 @@ renames sit in A because they are cheapest before new code exists.
    first override (country narrows subdivisions), path alias as the
    first alter with a storage of its own, and a placed block as a
    config entity resource whose settings are variants chosen by plugin
-   id, each plugin's structure one of them.
+   id, each plugin's structure one of them. And base field items shared
+   across bundles (11 of a basic page's 14 field items are base fields,
+   derived again for every bundle), deferred here from the performance
+   review's H7 because it changes the id shape.
 12. **The core conversation**, bottom-up: the definition-level facts
    first (constraints to JSON Schema keywords, `refined_by` on
    definitions, a setter contract, labels on Choice; drafted), then
@@ -1159,6 +1162,35 @@ renames sit in A because they are cheapest before new code exists.
     Open: `locked: false` and `dependsOn: []` are still on every
     property; no `x-surface` metaschema is published; one `narrowing`
     keyword and a root `exact: false` are left for later.
+
+    Group H, what is paid once and what per request (the performance
+    review, synthesis 2b and 2c,
+    `docs/decisions.md#what-is-paid-once-and-what-per-request`):
+    - **H1, discovery per definition.** DONE 2026-10-20: an index (names,
+      ids, kinds, modules, bases, shapes) and one entry per definition,
+      each tagged with what it read; a request building one bundle reads
+      the index and its entries, a field saved writes two
+      (`DiscoveryPerDefinitionTest`).
+    - **H2, tool definitions per resource.** DONE 2026-10-20: each
+      operation built once per derivation, each resource's tools an
+      entry under its tags, the rebuild under core's lock; one field
+      saved derives one bundle's tools (`ToolDefinitionsPerResourceTest`).
+    - **H3, a build kept for the request.** DONE 2026-10-20: by
+      resource, context, kind and account kind, dropped by tag; the React
+      route's access check builds nothing (`BuildMemoTest`,
+      `docs/decisions.md#a-build-is-not-cached-across-requests`).
+    - **H4, one refine per combination per document.** DONE 2026-10-20
+      (`EmitMemoTest`); the field instance resource no longer repeats any,
+      its settings being variants now, so it pays where keys share a
+      watched sibling.
+    - **H5, a resource's own variants.** DONE 2026-10-20: access builds
+      only for a resource that holds, at any depth, a variant that
+      answers access (`VariantsOfThisResourceTest`).
+    - **H6, assertions in production.** DONE 2026-10-20:
+      `docs/installation.md` says `zend.assertions = -1`, and why.
+    - Held by `PerformanceBudgetTest` (builds counted, entries sized) and
+      `LongLivedWorkerMemoryTest`. Open: the Tool API's single item,
+      read whole by every listing; H7 is ROADMAP item 11.
 
 ## Rejected, on the record
 

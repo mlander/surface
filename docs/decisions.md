@@ -481,14 +481,53 @@ operation. (`Operation`, `ResourceRegistry::discover()`,
 
 ## Context
 
-### A build is not cached
+### A build is not cached across requests
 
-Every `Resources::build()` builds afresh; the pattern's "cache by
-(id, context)" is not done. A build describes live site
-state, and a cache keyed by context alone would serve a stale one; what
-that state is, a blueprint says with `addCacheableDependency()`, for a
-caller that caches. *Not from a code comment; the build step's
-docblock states it.*
+Every request builds afresh; the pattern's "cache by (id, context)" is
+not done across requests. A build describes live site state, and a
+cache keyed by context alone would serve a stale one; what that state
+is, a blueprint says with `addCacheableDependency()`, for a caller that
+caches.
+
+Within one request a sealed build is kept (amended 2026-10-20, from the
+performance review; the entry was "A build is not cached"): by the
+resource, everything the context says, the kind of build (`build()`,
+`buildStatic()`, `buildDeclared()`, and whether it is held to its
+config schema) and the account kind: none for a build for no account,
+the roles and the permissions hash for one for the account alone, and
+the account itself beside them for a build with every answer applied,
+which a runtime answer may read. That is not the cache this entry
+rejected. Its reason was staleness, and a sealed surface carries its
+own cacheability, so within a request staleness is detectable: a kept
+build is dropped when a tag it recorded is invalidated
+(`ResourceRegistryInvalidator` tells the build step as it tells the
+registry), every one when discovery's index is read again, and a build
+that expires (any max-age but permanent) or varies by a context other
+than the account (the route, the URL) is not kept at all. At most 32
+are kept, the latest asked, so a worker serving one call after another
+keeps the latest few. A build that reads state its cacheability does
+not declare is reused within the request; that was already a bug,
+since every caller that caches (the schema route, the tool listing)
+trusts the same cacheability.
+
+What it saves: a dry-run call to a basic page's edit tool built three
+times and builds twice (the account's listing, for the account alone,
+and one build the refined `values` and the run share); a schema request
+built its operation twice and builds it once, beside the build for the
+account alone.
+
+The route access check of the React page and the contract endpoints
+builds nothing: it asks access with the operation's context alone
+(`ServedOperations::contextFromRequest()`), so a response the dynamic
+page cache answers pays the access answer and no build. Not from the
+static permission alone, which `permissionAccess()` now allows: an
+access class or an alter may answer at run time, and only the context
+can ask them; what the permission alone decides, it still decides
+first, before a parameter is read. The operation form's route check
+already asked with the context alone.
+(`Resources::buildAs()`, `Resources::keepable()`,
+`ServedOperationAccessCheck`, `BuildMemoTest`,
+`LongLivedWorkerMemoryTest::testKeptBuildsStayBoundedAcrossContexts()`)
 
 ### Child context
 
@@ -2317,9 +2356,16 @@ parent; it was asked nowhere else, and now that its access answers at
 build, refusing the parent as well would turn a hidden field into a
 refused form. Since only such a variant may refuse, `access()` builds the
 parent to find its variants only when some declared variant names an
-access class, not whenever anything does (decided 2026-10-19).
+access class, not whenever anything does (decided 2026-10-19), and only
+when that variant is the parent's own (decided 2026-10-20, from the
+performance review): one of its keys holds it, or a structure the parent
+holds at any depth does, found by declaring each one's keys into a
+builder that is never sealed, nothing refined and nothing asked. A
+variant that answers access elsewhere on the site costs every other
+resource nothing, and where none does (the index lists the holders),
+nothing is declared at all.
 (`Resources::access()`, `Resources::childAnswers()`,
-`Resources::childrenMayAnswer()`)
+`Resources::childrenMayAnswer()`, `VariantsOfThisResourceTest`)
 
 ### No declared operation, no permission tier
 
@@ -2815,7 +2861,9 @@ targets) is never a privileged account's. A tool instance lists
 runtime answer marked ([Access is static or runtime, read from its
 cacheability](#access-is-static-or-runtime-read-from-its-cacheability));
 and the `values` input is refined for the caller on every call, which
-is what the pipeline holds a payload to.
+is what the pipeline holds a payload to. Each resource's tools are kept
+in an entry of their own and derived the same way, so no entry is any
+account's either.
 
 Why no account's rather than the least privileged one's: built as the
 anonymous account with its static answers applied, the cached
@@ -3256,14 +3304,90 @@ The demo formatter is written this way and the demo block is not, so
 the two spellings sit side by side.
 (`ResourceRegistry::discover()`, `ResourcePluginHooks::usedStructureOf()`)
 
+### What is paid once and what per request
+
+Decided 2026-10-20, from the performance review, measured on this
+site (91 definitions, 65 tools, 22 bundles, PHP 8.4, assertions on).
+Every layer is keyed by what it was read from and dropped by tag; none
+is kept for one account or one language; none holds a stored value.
+
+| Layer | Paid | Kept until |
+| --- | --- | --- |
+| Discovery's index: every name and id, kind, module, base, whether it names storage, the shapes, the holders of a variant that answers access | once, when a tag of it fires | a bundle created, a form display saved, field definitions changed (`entity_field_info`, `entity_bundles`, `config:entity_form_display_list`), or a cache rebuild |
+| One discovery entry per definition | once, and only the entries whose tags fired are written again | its own tags: a field item its field's and storage's configuration (a base field its override's, named before one exists), a bundle resource its bundle's, its form display's and its fields', a class none |
+| One tool entry per resource, every tool of it | once per resource, its operations built once for all its tools, under core's lock | that resource's tags: its discovery entry's and every build it was made from |
+| The Tool API's item, every tool | read on every listing | any tag a tool was read from; derived again from the tool entries |
+| A sealed build | once per request, per kind and account kind | the end of the request, a tag it read, or 32 newer builds ([A build is not cached across requests](#a-build-is-not-cached-across-requests)) |
+| A refined surface | once per combination in one document | the end of the document |
+| A static access answer | once per context and account kind | 256 newer answers |
+
+Reading discovery again derives everything, because no deriver can say
+which bundles exist without being asked; what it no longer pays is
+writing, reading and unserializing what did not change. A deriver says
+what decides which derivatives exist with
+`KnowsDerivativeListTagsInterface`; one that does not has its index
+kept under every tag its derivatives carry, as before. An entry whose
+tags did not fire but whose content changed is written again when the
+index is read again, so a fact a deriver read without a tag is right
+again at the next site-wide change. The risk is a tag left out, which
+leaves an entry stale until then; the field item, the bundle and the
+storage two bundles share are tests for that reason.
+
+Measured, before and after:
+
+| What | Before | After |
+| --- | --- | --- |
+| Discovery in the bin | one item, 294,090 bytes, read whole by every request (0.5 ms to unserialize, 1.38 MB in memory) | an index of 23,951 bytes (0.02 ms), and 91 entries: classes 1,504 bytes on average, bundles 6,262, field items 3,933 (0.005 ms each) |
+| What building a basic page reads | the whole item | the index and 15 entries, 89,630 bytes |
+| Tool listing after one field saved | 240 ms, 106 builds, every tool derived | 149 ms, 3 builds, the page's three tools derived and 62 read from their entries; the rest is the Tool API discovering every other module's tools |
+| Tool listing, warm | 7.6 ms | 6.1 ms |
+| This module's deriver, everything cold | 54 to 58 ms, 106 builds | 45 to 52 ms, 45 builds |
+| A dry-run call to a basic page's edit tool | 3 builds | 2 |
+| A schema request | 2 builds of the operation, and 1 for the account alone | 1, and 1 |
+| The schema route's access check | 1 build | none |
+| A content type saved | every tool and every definition read again | the index, the page's entry and three resources' tools written again (the page, and two whose keys list content types); the other 90 entries and 24 tool entries kept |
+
+At a hundred content types (an estimate at the measured averages:
+about 20 fields shown a bundle, so 2,000 field items and 120 bundles),
+the single item would have been about 7.5 to 9 MB, read whole by every
+request (about 13 ms and 37 MB unserialized), and over memcached's
+default 1 MB item limit, so never stored there. Now the index is about
+480 KB of plain arrays (about 0.4 ms), the largest entry about 12 KB, a
+request for one bundle reads about 0.6 MB, and a field saved writes two
+entries and derives that bundle's three tools, about four builds where
+it was about 650.
+
+Two costs are not this module's to remove. The Tool API keeps every
+tool in one item read by every listing (1.5 MB here, about 6 to 9 MB at
+a hundred content types); the tool entries make deriving it again cheap,
+not reading it. And a field saved clears core's field definitions for
+every bundle (`entity_field_info`), which reading the index again pays
+with core.
+
+Two more were decided with these. Assertions are compiled out in
+production, `zend.assertions = -1`, which [Installation](installation.md)
+says and why; with them on, a full schema costs up to about 11% more
+and a build the same. And base field items shared across bundles (11 of
+a basic page's 14 field items are base fields derived again for every
+bundle) are deferred to the entity side (ROADMAP item 11), since they
+change the id shape.
+
+(`ResourceRegistry::getIndex()`, `ResourceRegistry::rebuild()`,
+`ResourceOperationToolDeriver::derive()`, `OperationInputs::derivation()`,
+`ContractEmitter::refinedFor()`, `DiscoveryPerDefinitionTest`,
+`ToolDefinitionsPerResourceTest`, `EmitMemoTest`,
+`PerformanceBudgetTest`)
+
 ## Derived resources
 
 ### Derived definitions at discovery
 
 A resource or structure whose keys are the site's (one per bundle, one
 per field) is made by a deriver at discovery, `#[DerivesResources]` on a class
-implementing `ResourceDeriverInterface`, and cached with the rest of
-discovery under the cache tags of what it was read from. Not a context
+implementing `ResourceDeriverInterface`, and cached as an entry of its
+own under the cache tags of what it was read from, beside the index of
+what there is ([What is paid once and what per
+request](#what-is-paid-once-and-what-per-request)). Not a context
 handed to `defineInputs()`: it takes nothing but the blueprint, so
 that what it declares is the same wherever it is asked for and a static tool
 definition, a catalog and the full schema can describe it before
@@ -3372,6 +3496,11 @@ coupling the engine to the Tool API: the tool deriver remembers the cache
 tags of every derived definition and of every resource it built, and an
 invalidation of any of them clears the tool definitions, so a field added
 to a bundle reaches the `add` tool's static `values` at the next listing.
+Since 2026-10-20 the listing derived again is made from each resource's
+own entry, kept under that resource's tags, so the field's bundle is
+derived again and every other resource's tools are read as they were
+([What is paid once and what per
+request](#what-is-paid-once-and-what-per-request)).
 (`ToolDefinitionsInvalidator`, `ResourceOperationToolDeriver`)
 
 ### Keys that come from the site
@@ -3426,7 +3555,8 @@ why:
   by it, and a thing added to the site is a key at the next request. The
   tool listing is cleared by `data_surface_tool`'s invalidator when one of
   the tags it was built with is invalidated ([settled
-  above](#tool-definitions-after-a-field-changes)). A list with max-age 0
+  above](#tool-definitions-after-a-field-changes)), and only the
+  resources that read the list are derived again. A list with max-age 0
   is refused when the resource is built, naming the provider, always and
   not only under assertions: it costs one comparison, and a key that
   cannot be cached cannot be listed. A list that varies by the account

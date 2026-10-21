@@ -1819,7 +1819,7 @@ plugin deriver makes plugin derivatives.
 
 ```php
 #[DerivesResources('entity.content', overriddenBy: FieldItemStructure::class)]
-final class ContentEntityResources implements ResourceDeriverInterface {
+final class ContentEntityResources implements ResourceDeriverInterface, KnowsDerivativeListTagsInterface {
 
   public function derivatives(array $overrides): array {
     foreach ($this->derivation->bundles() as $entity_type_id => $bundles) {
@@ -1834,11 +1834,15 @@ final class ContentEntityResources implements ResourceDeriverInterface {
           ],
           storage: ContentEntityStorage::class,
           access: ContentEntityAccess::class,
-          cacheTags: $this->derivation->cacheTags($entity_type_id, $bundle),
+          cacheTags: $this->derivation->bundleCacheTags($entity_type_id, $bundle),
         );
       }
     }
     return $derivatives;
+  }
+
+  public function listCacheTags(): array {
+    return ['entity_field_info', 'entity_bundles', 'config:entity_form_display_list'];
   }
 
   public function defineInputs(BlueprintInterface $inputs, string $entity_type_id, string $bundle): void { /* ... */ }
@@ -1851,8 +1855,8 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
 - **The deriver** is a class carrying `#[DerivesResources(base:)]` and
   implementing `ResourceDeriverInterface`, kept in `src/Resource/`. The
   compiler pass registers it as an autowired service, so it may hold
-  services. The registry asks it once, at discovery, and caches the
-  answer with the rest of discovery.
+  services. The registry asks it at discovery, and caches each
+  derivative as an entry of its own.
 - **A derived resource** is a `DerivedResource`: everything the
   attribute and the class say, said as values. Its kind follows from
   what it names: storage or identity makes it a resource, neither a
@@ -1879,10 +1883,19 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
   the derived tools and read tools, the React app and its API treat it
   as they treat a class ([decision](decisions.md#a-derived-resource-has-no-class)).
 - **Cacheability.** A derived resource names the cache tags of what it
-  was read from; the discovery entry carries them, so saving a field or
-  a form display clears it, `ResourceRegistryInvalidator` clears what
-  the registry already read in this request, and `data_surface_tool`
-  clears the derived tools.
+  was read from, and only those (its bundle's form display and fields,
+  not every field on the site); its discovery entry carries them, so
+  saving a field clears that field's entries and no other.
+  `KnowsDerivativeListTagsInterface` says what decides which
+  derivatives there are (a bundle created, any form display saved),
+  which the index carries; reading the list again keeps every entry
+  whose tags did not fire. `ResourceRegistryInvalidator` clears what the
+  registry already read in this request, and `data_surface_tool`
+  derives again the tools of the resources that read a tag. The tags
+  belong in the build's cacheability too
+  (`$inputs->addCacheableDependency()`), which is what the schema route
+  and the tools are kept by
+  ([decision](decisions.md#what-is-paid-once-and-what-per-request)).
 - **Alters.** `#[Alters]` names a derived resource or structure by its
   id, or every one a deriver makes by the base id:
   `#[Alters('entity.content')]`.

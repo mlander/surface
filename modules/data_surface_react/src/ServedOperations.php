@@ -70,6 +70,56 @@ final class ServedOperations {
    *   When the body is read and is not a JSON object.
    */
   public function fromRequest(string $resource, string $operation, Request $request, bool $read_body = TRUE): ServedOperation {
+    return $this->resolve($resource, $operation, $this->parameters($resource, $operation, $request, $read_body));
+  }
+
+  /**
+   * Gets the context of the operation a request names, building nothing.
+   *
+   * What the access check asks with: the operation's context, its subject
+   * loaded from the parameters, and no build, so a response the page cache
+   * would answer pays no build for its access check.
+   *
+   * Decision: see docs/decisions.md#a-build-is-not-cached-across-requests.
+   *
+   * @param string $resource
+   *   The resource's `#[Resource]` id, or its class.
+   * @param string $operation
+   *   The operation id.
+   * @param \Symfony\Component\HttpFoundation\Request $request
+   *   The request.
+   * @param bool $read_body
+   *   Whether a POST body's `parameters` are read, as fromRequest() says.
+   *
+   * @return \Drupal\data_surface\Resource\OperationContext
+   *   The context.
+   *
+   * @throws \InvalidArgumentException
+   *   As fromRequest() does.
+   * @throws \Symfony\Component\HttpKernel\Exception\BadRequestHttpException
+   *   As fromRequest() does.
+   */
+  public function contextFromRequest(string $resource, string $operation, Request $request, bool $read_body = TRUE): OperationContext {
+    $definition = $this->registry->getDefinition($resource);
+    return $this->resources->operation($definition->name(), $operation, $this->parameters($resource, $operation, $request, $read_body));
+  }
+
+  /**
+   * Reads the operation's parameters off a request.
+   *
+   * @param string $resource
+   *   The resource's `#[Resource]` id, or its class.
+   * @param string $operation
+   *   The operation id.
+   * @param \Symfony\Component\HttpFoundation\Request $request
+   *   The request.
+   * @param bool $read_body
+   *   Whether a POST body's `parameters` are read.
+   *
+   * @return array
+   *   The parameters given, by name, as raw values.
+   */
+  protected function parameters(string $resource, string $operation, Request $request, bool $read_body): array {
     $found = $this->registry->getOperation($resource, $operation);
     $given = [];
     $body = $read_body && $request->isMethod('POST') ? $this->body($request) : [];
@@ -80,7 +130,7 @@ final class ServedOperations {
         $given[$parameter->name] = $value;
       }
     }
-    return $this->resolve($resource, $operation, $given);
+    return $given;
   }
 
   /**
@@ -169,8 +219,27 @@ final class ServedOperations {
    *   Allowed or forbidden, never neutral.
    */
   public function access(ServedOperation $served, ?AccountInterface $account = NULL): AccessResultInterface {
+    return $this->contextAccess($served->definition->name(), $served->context, $account);
+  }
+
+  /**
+   * Answers whether an account may use an operation in a context.
+   *
+   * As access() answers, for a context no build was made for.
+   *
+   * @param string $resource
+   *   The resource's `#[Resource]` id, or its class.
+   * @param \Drupal\data_surface\Resource\OperationContext $context
+   *   The operation's context.
+   * @param \Drupal\Core\Session\AccountInterface|null $account
+   *   The account, or NULL for the current user.
+   *
+   * @return \Drupal\Core\Access\AccessResultInterface
+   *   Allowed or forbidden, never neutral.
+   */
+  public function contextAccess(string $resource, OperationContext $context, ?AccountInterface $account = NULL): AccessResultInterface {
     return DataSurfaceAccess::decisive(
-      $this->resources->access($served->definition->name(), $served->context, $account),
+      $this->resources->access($this->registry->getDefinition($resource)->name(), $context, $account),
       'The resource this page serves may not be written by this account.',
     );
   }

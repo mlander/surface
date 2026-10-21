@@ -120,6 +120,7 @@ refused.
 | `KeyedList` | `use Drupal\data_surface\Resource\KeyedList;` |
 | `KeysFromSiteInterface` | `use Drupal\data_surface\Resource\KeysFromSiteInterface;` |
 | `KnowsClearableKeysInterface` | `use Drupal\data_surface\Resource\KnowsClearableKeysInterface;` |
+| `KnowsDerivativeListTagsInterface` | `use Drupal\data_surface\Resource\KnowsDerivativeListTagsInterface;` |
 | `NotEmitted` | `use Drupal\data_surface\Pipeline\NotEmitted;` |
 | `Operation` | `use Drupal\data_surface\Resource\Attribute\Operation;` |
 | `OperationAccessInterface` | `use Drupal\data_surface\Resource\OperationAccessInterface;` |

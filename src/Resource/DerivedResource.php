@@ -18,9 +18,13 @@ namespace Drupal\data_surface\Resource;
  * `<base>:<derivative>` and treats it like any other from then on:
  * built, altered, refined, routed and derived into tools the same way.
  *
- * A derivative is read once, at discovery, and cached with the rest; the
- * cache tags say when the facts it was read from change (a bundle's
- * fields, its form display), which is when it is read again.
+ * A derivative is read at discovery and cached as an entry of its own;
+ * its cache tags say when the facts it was read from change (its field's
+ * configuration, its bundle's form display), which is when it is read
+ * again, and name only those facts, so another bundle's field saved
+ * leaves it be. The same tags belong in its build's cacheability.
+ *
+ * Decision: see docs/decisions.md#what-is-paid-once-and-what-per-request.
  *
  * @see \Drupal\data_surface\Resource\ResourceDeriverInterface
  */
@@ -54,7 +58,7 @@ final class DerivedResource {
    *   What the derivation could not carry, by the key or field it is
    *   about, for the catalog and for whoever lists it.
    * @param string[] $cacheTags
-   *   The tags of the facts it was derived from.
+   *   The tags of the facts it was derived from, and of nothing else.
    */
   public function __construct(
     public readonly ResourceCallable $inputs,

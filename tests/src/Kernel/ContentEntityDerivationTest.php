@@ -269,39 +269,39 @@ class ContentEntityDerivationTest extends DataSurfaceKernelTestBase {
   /**
    * Tests the derived definitions round-trip through the discovery cache.
    *
-   * The entry carries the tags of what was derived from; saving a field
-   * clears it and what this request already read.
+   * The index carries what decides which derivatives there are; each
+   * definition's entry carries only what it was read from. Saving a field
+   * clears the index, that field's entries and what this request read.
    */
   public function testDerivedDefinitionsRoundTripThroughTheCache(): void {
     $definitions = $this->registry()->getDefinitions();
     $classes = $this->container->getParameter(ResourceCollectorPass::PARAMETER);
     $this->assertSame(['data_surface_entity'], array_values(array_unique($classes['derivers'])));
     $plugins = $this->container->get('data_surface.resource_plugins');
-    // No plugin here is its own structure, so the id hashes the classes.
+    // No plugin here is its own structure, so the ids hash the classes.
     $this->assertSame([], $plugins->ownStructures());
-    $cid = 'data_surface:resources:' . hash('xxh3', serialize($classes));
-    $cached = $this->container->get('cache.discovery')->get($cid);
-    $this->assertNotFalse($cached);
-    $this->assertArrayHasKey('entity.content:node.page', $cached->data['resources']);
-    $tags = [
-      'entity_field_info',
-      'entity_bundles',
-      'config:entity_form_display_list',
-      'config:core.entity_form_display.node.page.default',
-    ];
-    foreach ($tags as $tag) {
-      $this->assertContains($tag, $cached->tags);
-    }
-    $fresh = new ResourceRegistry($classes, $this->container->get('cache.discovery'), $plugins, $this->container->get('class_resolver'));
+    $hash = hash('xxh3', serialize($classes));
+    $bin = $this->container->get('cache.discovery');
+    $index = $bin->get('data_surface:resources:index:' . $hash);
+    $this->assertNotFalse($index);
+    $this->assertArrayHasKey('entity.content:node.page', $index->data['names']);
+    $this->assertEqualsCanonicalizing(['entity_field_info', 'entity_bundles', 'config:entity_form_display_list'], $index->tags);
+    $page = $bin->get('data_surface:resources:entry:' . $hash . ':entity.content:node.page');
+    $this->assertNotFalse($page);
+    $this->assertContains('config:core.entity_form_display.node.page.default', $page->tags);
+    $this->assertContains('config:node.type.page', $page->tags);
+    $this->assertNotContains('entity_field_info', $page->tags);
+    $fresh = new ResourceRegistry($classes, $bin, $plugins, $this->container->get('class_resolver'));
     $this->assertEquals($definitions, $fresh->getDefinitions());
 
-    // A field added to the display clears the entry, and is a structure of
+    // A field added to the display clears the index, and is a structure of
     // its own at once, in this same request.
     $this->addField('page', 'field_subtitle', 'string', [], [], 'Subtitle');
     $display = EntityFormDisplay::load('node.page.default');
     assert($display !== NULL);
     $display->setComponent('field_subtitle', ['weight' => 100])->save();
-    $this->assertFalse($this->container->get('cache.discovery')->get($cid));
+    $this->assertFalse($bin->get('data_surface:resources:index:' . $hash));
+    $this->assertFalse($bin->get('data_surface:resources:entry:' . $hash . ':entity.content:node.page'));
     $this->assertTrue($this->registry()->hasDefinition('field.item:node.page.field_subtitle'));
     $this->assertSame('field.item:node.page.field_subtitle', $this->add('page')->getDefinitions()->entry('field_subtitle')?->attachment?->id);
   }

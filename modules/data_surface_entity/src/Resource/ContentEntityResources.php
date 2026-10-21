@@ -15,6 +15,7 @@ use Drupal\data_surface\Resource\DerivedResource;
 use Drupal\data_surface\Resource\BlueprintInterface;
 use Drupal\data_surface\Resource\ResourceCallable;
 use Drupal\data_surface\Resource\OperationContext;
+use Drupal\data_surface\Resource\KnowsDerivativeListTagsInterface;
 use Drupal\data_surface\Resource\ResourceDeriverInterface;
 use Drupal\data_surface_entity\Access\ContentEntityAccess;
 use Drupal\data_surface_entity\FieldItemDerivation;
@@ -43,7 +44,7 @@ use Drupal\data_surface_entity\Storage\ContentEntityStorage;
  * Decision: see docs/decisions.md#derived-definitions-at-discovery.
  */
 #[DerivesResources('entity.content', overriddenBy: FieldItemStructure::class)]
-final class ContentEntityResources implements ResourceDeriverInterface {
+final class ContentEntityResources implements ResourceDeriverInterface, KnowsDerivativeListTagsInterface {
 
   use StringTranslationTrait;
 
@@ -113,11 +114,18 @@ final class ContentEntityResources implements ResourceDeriverInterface {
             '@count' => count($fields['skipped']),
           ]),
           notes: $fields['skipped'],
-          cacheTags: $this->derivation->cacheTags($entity_type_id, $bundle),
+          cacheTags: $this->derivation->bundleCacheTags($entity_type_id, $bundle),
         );
       }
     }
     return $derivatives;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function listCacheTags(): array {
+    return $this->derivation->listCacheTags();
   }
 
   /**
@@ -147,7 +155,7 @@ final class ContentEntityResources implements ResourceDeriverInterface {
         $child->setDescription($field->getDescription());
       }
     }
-    $inputs->addCacheableDependency((new CacheableMetadata())->addCacheTags($this->derivation->cacheTags($entity_type_id, $bundle)));
+    $inputs->addCacheableDependency((new CacheableMetadata())->addCacheTags($this->derivation->bundleCacheTags($entity_type_id, $bundle)));
   }
 
   /**

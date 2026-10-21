@@ -23,7 +23,9 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * which the options memo kept for good (about 2.5 KB a call), and an
  * edit context per entity added a static access answer per entity id.
  * Both now let go: the options memo is weak, and the static answers keep
- * only the latest.
+ * only the latest. So do the sealed builds the build step keeps for a
+ * request: a worker building in one context after another keeps the
+ * latest few.
  */
 #[Group('data_surface')]
 #[RunTestsInSeparateProcesses]
@@ -140,6 +142,37 @@ class LongLivedWorkerMemoryTest extends DataSurfaceKernelTestBase {
     $kept = count($memo->getValue($resources));
     $this->assertGreaterThan(0, $kept, 'Static answers are kept.');
     $this->assertLessThanOrEqual($limit, $kept);
+  }
+
+  /**
+   * Tests that the sealed builds kept stay bounded across contexts.
+   *
+   * Each context a different one (a worker serving one entity after
+   * another), each build kept until a newer one pushes it out; and a build
+   * that expires (the exhibit's insurance answers access with max-age 0)
+   * is never kept at all.
+   */
+  public function testKeptBuildsStayBoundedAcrossContexts(): void {
+    $resources = $this->container->get('data_surface.resources');
+    $memo = new \ReflectionProperty($resources, 'builds');
+    $limit = (new \ReflectionClassConstant($resources, 'BUILDS_KEPT'))->getValue();
+    $this->assertIsInt($limit);
+    $context = static fn (int $capacity): OperationContext => new OperationContext('configure', constraints: [
+      'capacity' => ['Range' => ['min' => 1, 'max' => $capacity]],
+    ]);
+    for ($capacity = 1; $capacity <= $limit + 300; $capacity++) {
+      $resources->build(RegistrationStep3Resource::class, $context($capacity));
+    }
+    $this->assertCount($limit, $memo->getValue($resources));
+    // The latest is kept, and answered from the memo.
+    $counts = $resources->buildCounts();
+    $resources->build(RegistrationStep3Resource::class, $context($limit + 300));
+    $this->assertSame($counts['reused'] + 1, $resources->buildCounts()['reused']);
+
+    $resources->forgetBuilds();
+    $exhibit = $resources->operation('resource_test.exhibit', 'configure');
+    $this->assertSame(0, $resources->build('resource_test.exhibit', $exhibit)->getCacheMaxAge());
+    $this->assertCount(0, $memo->getValue($resources));
   }
 
 }

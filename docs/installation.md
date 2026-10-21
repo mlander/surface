@@ -21,6 +21,37 @@ storage classes, and the host adoption layer. It adds no resources or
 structures, no routes and no permissions. Those come from the modules
 that declare them.
 
+## In production: compile assertions out
+
+Set `zend.assertions = -1` in the production `php.ini`:
+
+```ini
+zend.assertions = -1
+```
+
+The module checks, under `assert()`, what a declaration promises and
+no type can say: a static refiner runs with the container guarded and
+throws if it asks for a service (`Refinement\StaticRefinerContainer`),
+the emitter asks each enumerated key's static refiners a second time
+and refuses a different answer, and a static access answer is asked a
+second time and held to the first
+([Enforcing the kind](refinement.md#enforcing-the-kind)). These are
+development and test checks. PHP's own default for `zend.assertions`
+is `1`, and a host or container image that ships no `php.ini` (the
+official `php` images among them) runs with it, so on such a host
+every one of them runs in production too, and a refiner that reaches
+for a service throws there, for a visitor, instead of in development.
+With `-1` the calls are not compiled at all and cost nothing; `0`
+compiles them and skips them at run time.
+
+What they cost when they run, measured on this module's examples
+(PHP 8.4, 2026-10-20): a build costs the same, a full schema up to
+about 11% more (example 3 about 11%, the field instance resource about
+1%, a basic page's nothing measurable), and each static access answer
+is asked twice on its first use in a request. Drupal core's own development checks are
+`assert()` calls too, which is the other reason core recommends `-1` in
+production.
+
 ## Optional integrations
 
 Two of the submodules bridge to a contributed module. Both are declared

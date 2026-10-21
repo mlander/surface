@@ -200,9 +200,9 @@ class OperationKindsTest extends DataSurfaceKernelTestBase {
 
     $deriver = ResourceOperationToolDeriver::create($this->container, OperationInputs::TOOL);
     $shared = new \ReflectionMethod($deriver, 'sharedLabels');
-    $this->assertSame([], $shared->invoke($deriver), 'No shipped label is shared.');
-    $title = new \ReflectionMethod($deriver, 'title');
     $registry = $this->container->get('data_surface.resource_registry');
+    $this->assertSame([], $shared->invoke($deriver, $registry->getDefinitions()), 'No shipped label is shared.');
+    $title = new \ReflectionMethod($deriver, 'title');
     $vault = $registry->getDefinition(VaultResource::class);
     $configure = $registry->getOperation(VaultResource::class, 'configure');
     $this->assertSame('Configure the vault', (string) $title->invoke($deriver, $vault, $configure, []));

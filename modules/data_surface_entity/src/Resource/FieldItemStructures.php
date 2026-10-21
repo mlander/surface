@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Drupal\data_surface_entity\Resource;
 
 use Drupal\data_surface_entity\Structure\FieldItemStructureInterface;
+use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\Entity\EntityFieldManagerInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslationInterface;
@@ -14,6 +15,7 @@ use Drupal\data_surface\Resource\DerivedResource;
 use Drupal\data_surface\Resource\BlueprintInterface;
 use Drupal\data_surface\Resource\ResourceCallable;
 use Drupal\data_surface\Resource\OperationContext;
+use Drupal\data_surface\Resource\KnowsDerivativeListTagsInterface;
 use Drupal\data_surface\Resource\ResourceDeriverInterface;
 use Drupal\data_surface_entity\Access\FieldItemAccess;
 use Drupal\data_surface_entity\FieldItemDerivation;
@@ -41,7 +43,7 @@ use Drupal\data_surface_entity\Structure\Attribute\FieldItemStructure;
  * @see \Drupal\data_surface_entity\Resource\ContentEntityResources
  */
 #[DerivesResources('field.item', overriddenBy: FieldItemStructure::class)]
-final class FieldItemStructures implements ResourceDeriverInterface {
+final class FieldItemStructures implements ResourceDeriverInterface, KnowsDerivativeListTagsInterface {
 
   use StringTranslationTrait;
 
@@ -112,12 +114,19 @@ final class FieldItemStructures implements ResourceDeriverInterface {
               '@bundle' => $bundle,
             ]),
             notes: $notes,
-            cacheTags: $this->derivation->cacheTags($entity_type_id, $bundle),
+            cacheTags: $this->derivation->fieldCacheTags($field, $entity_type_id, $bundle),
           );
         }
       }
     }
     return $derivatives;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function listCacheTags(): array {
+    return $this->derivation->listCacheTags();
   }
 
   /**
@@ -139,6 +148,10 @@ final class FieldItemStructures implements ResourceDeriverInterface {
     if ($field === NULL) {
       return;
     }
+    // What it is read from, and nothing site-wide: another field saved
+    // leaves what was built from this one be.
+    // Decision: see docs/decisions.md#what-is-paid-once-and-what-per-request.
+    $inputs->addCacheableDependency((new CacheableMetadata())->addCacheTags($this->derivation->fieldCacheTags($field, $entity_type_id, $bundle)));
     if ($override !== NULL) {
       $override::defineItem($inputs, $field);
       return;
