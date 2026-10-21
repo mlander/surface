@@ -338,6 +338,21 @@ which serves the real contract.
 15. **Deprecation as definition metadata.** `deprecated` and sunset
     keys through `DefinitionMetadata`; widgets flag dying options; a
     report enumerates stored usages before removal.
+15a. **Doors: an OpenAPI document.** DONE 2026-10-21
+    (`docs/decisions.md#an-openapi-document-is-one-more-door`,
+    `docs/served-contract.md#an-openapi-document`): `data_surface_openapi`
+    serves `/surface-api/openapi.json` and `.yaml`, OpenAPI 3.1 for every
+    operation that stands alone and needs no subject, its five endpoints,
+    its full schema as components (an update's bodies its patch), facts as
+    `x-surface-*`, the permission as a security requirement, built for no
+    account and cached under discovery's tags; held by
+    `OpenApiDocumentTest` against the official 3.1 schema. Open: an
+    operation with a subject as a path (listed under
+    `x-surface.withASubject` today); a 3.0 export, which may only widen
+    (the conditionals dropped), judged by the contract diff's
+    compatibility classes; a generator plugin for the contributed
+    `openapi` module once it releases 3.1, and `openapi_ui` on the site;
+    a committed create answering `201`.
 
 ## Phase E: structural, carried forward
 

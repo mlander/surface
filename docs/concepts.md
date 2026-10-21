@@ -50,6 +50,7 @@ React by `data_surface_react`) or the first resource's
 | Stale values | What happens to a stored value a refiner no longer allows? ([Value semantics](semantics.md#stale-values-the-third-state)) | No refiner narrows a key that has a stored value. | `/surface-examples/2` |
 | Tool and read tool | Should an agent, MCP or Drush call it? | You do not enable `data_surface_tool`; there is nothing to write either way. | `/surface-examples/5` |
 | Served contract and React | Will a client with no PHP render or validate it? ([The served contract](served-contract.md)) | The form and the tool are enough. | `/surface-examples/2`; in React, `/surface-react/registration.step2/configure` |
+| OpenAPI document | Will an OpenAPI client, generator or UI call its endpoints? ([An OpenAPI document](served-contract.md#an-openapi-document)) | Nobody reads OpenAPI: leave `data_surface_openapi` off. | `/surface-api/openapi.json` |
 | Pipeline, dry run | Do I submit values from my own code? ([The pipeline](pipeline.md)) | The form and the tool submit for you. | `/surface-examples/5` |
 | Data surface | Do I call the build or the pipeline myself? | You write resources: the build is the module's. | - |
 | Child operations, `withChild()` | Should a parent's operation hand a child a context of its own, or invoke the child's operation? | No child has storage of its own. | - |

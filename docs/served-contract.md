@@ -1245,6 +1245,51 @@ comment, whose selection node grants narrow, so a cached schema is never
 another account's labels
 ([decision](decisions.md#every-door-projects-what-the-read-tool-projects)).
 
+## An OpenAPI document
+
+With `data_surface_openapi` enabled, `GET /surface-api/openapi.json`
+(and `/surface-api/openapi.yaml`) answers an OpenAPI 3.1 document of the
+endpoints above, for every operation that can be asked on its own and
+needs no subject, so an OpenAPI client, a code generator or a UI drives
+a resource from it ([decision](decisions.md#an-openapi-document-is-one-more-door)).
+OpenAPI 3.1, because its schema objects are JSON Schema 2020-12, the
+dialect both documents are written in.
+
+- **Paths.** Each operation's five endpoints, a read only operation's
+  two GETs alone, tagged with the resource's id. The summary is the
+  operation's label and the description its description; how it behaves
+  is `x-surface-kind`, and on the submit `x-surface-idempotent`,
+  `x-surface-destructive` and `x-surface-creates`. Every answer that is
+  not an error carries the `Contract-Version` header; a refusal is a 200
+  with `ok: false`, and a submit answers 200 when it creates too, with
+  `created`.
+- **Components.** Each operation's full schema, as `emitFull()` writes
+  it with no widget hints and no `$id`: each def under `$defs` a
+  component named by its def id, the root the operation's values
+  component (`first.newsletter.configure`), each def pointer, in a
+  `$ref` or `x-surface.variants`, pointing at the component, and every
+  other `x-surface` keyword where it was. A create's validate and submit
+  take the values component; an update's take its patch
+  (`first.newsletter.configure.patch`), the same with every `required`
+  that can be dropped without narrowing dropped, since a key left out
+  keeps what is stored. Beside them, `Contract`, `FullSchema`, `Result`,
+  `ResultEntry` (`{path, code, message}`), `StaleEntry`, `SubmitResult`
+  and `Created`.
+- **For no account.** Built as the tool definitions are, every key as
+  declared and each one an access answer could lock or leave out marked
+  `x-surface.access: "live"`, so it is the same for everyone and
+  cacheable. The GET contract and `/schema` answer for the account that
+  asks; the GET's `x-surface-schema` names the component its schema was
+  built from for no account.
+- **Security.** The session cookie, and basic auth with `basic_auth`
+  on; an operation whose permission the anonymous role holds requires
+  neither. `x-drupal-permission` names the permission; the POSTs take
+  `X-CSRF-Token`.
+- **Examples.** A submit's example is the operation's declared
+  defaults, as the pipeline accepts them with nothing stored.
+- **Not described yet.** An operation that needs a subject is listed
+  under the top `x-surface.withASubject`, with its parameters.
+
 ## A drawing client that narrows locally
 
 The schema for these answers is still what a drawing client loads first:

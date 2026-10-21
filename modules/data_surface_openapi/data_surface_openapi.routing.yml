@@ -1,0 +1,25 @@
+# The OpenAPI document of the endpoints data_surface_react serves, as JSON
+# and as YAML. Open to every account: it is built for no account, from what
+# the code and the site's structure declare, and is the same for everyone;
+# what an account may do is the per-request contract's and schema's to say.
+# Decision: see docs/decisions.md#an-openapi-document-is-one-more-door.
+
+data_surface_openapi.json:
+  path: '/surface-api/openapi.json'
+  defaults:
+    _controller: '\Drupal\data_surface_openapi\Controller\OpenApiController::json'
+  methods: [GET]
+  requirements:
+    # Open: built for no account, the same for everyone; the operations'
+    # own endpoints still answer by their permissions.
+    _access: 'TRUE'
+
+data_surface_openapi.yaml:
+  path: '/surface-api/openapi.yaml'
+  defaults:
+    _controller: '\Drupal\data_surface_openapi\Controller\OpenApiController::yaml'
+  methods: [GET]
+  requirements:
+    # Open: built for no account, the same for everyone; the operations'
+    # own endpoints still answer by their permissions.
+    _access: 'TRUE'
