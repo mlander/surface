@@ -192,8 +192,8 @@ class RuntimeRefinementTest extends DataSurfaceKernelTestBase {
     $after = $this->schema($surface);
     $this->assertSame(json_encode($before), json_encode($after));
 
-    $this->assertSame(['locked' => FALSE, 'dependsOn' => ['aisle'], 'enumerated' => TRUE, 'runtime' => TRUE], $after['properties']['shelf']['x-surface']);
-    $this->assertSame(['locked' => FALSE, 'dependsOn' => [], 'runtime' => TRUE], $after['properties']['tag']['x-surface']);
+    $this->assertSame(['locked' => FALSE, 'dependsOn' => ['aisle'], 'enumerated' => TRUE, 'live' => TRUE], $after['properties']['shelf']['x-surface']);
+    $this->assertSame(['locked' => FALSE, 'dependsOn' => [], 'live' => TRUE], $after['properties']['tag']['x-surface']);
     $this->assertSame(['locked' => FALSE, 'dependsOn' => []], $after['properties']['aisle']['x-surface']);
     $this->assertSame(['north_1', 'north_2', 'south_1', 'south_2'], self::offered($after['properties']['shelf']));
     $this->assertSame(['red', 'green', 'blue'], self::offered($after['properties']['tag']));
@@ -222,7 +222,7 @@ class RuntimeRefinementTest extends DataSurfaceKernelTestBase {
     $this->assertSame(['north_1'], self::offered($schema['properties']['shelf']));
     $this->assertSame(['green', 'blue'], self::offered($schema['properties']['tag']));
     $this->assertTrue($schema['properties']['shelf']['x-surface']['refined']);
-    $this->assertTrue($schema['properties']['shelf']['x-surface']['runtime']);
+    $this->assertTrue($schema['properties']['shelf']['x-surface']['live']);
     $this->assertArrayNotHasKey('enumerated', $schema['properties']['shelf']['x-surface'], 'Refined for the values, so nothing is enumerated.');
     $this->assertTrue($schema['properties']['tag']['x-surface']['refined']);
     $served = $this->container->get('data_surface.contract_emitter')->emit($surface, $values, 'resource_test.stockroom');

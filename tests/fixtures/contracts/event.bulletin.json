@@ -1,27 +1,33 @@
 {
-    "surface": "event.bulletin",
+    "resource": "event.bulletin",
     "module": "data_surface_examples",
+    "contract": 2,
     "documents": [
         {
-            "surface": "event.bulletin",
-            "situation": "configure",
+            "resource": "event.bulletin",
+            "operation": "configure",
             "label": "Configure the bulletin",
             "schema": {
                 "$schema": "https://json-schema.org/draft/2020-12/schema",
                 "title": "Configure the bulletin",
                 "description": "Sets how often the event bulletin goes out, the day it is sent and how many items an issue holds.",
                 "x-surface": {
+                    "contract": 2,
                     "operation": {
                         "id": "configure",
                         "label": "Configure the bulletin",
                         "description": "Sets how often the event bulletin goes out, the day it is sent and how many items an issue holds.",
                         "kind": "update",
                         "creates": false,
-                        "readOnly": false,
                         "destructive": false,
                         "idempotent": true
                     },
-                    "version": 1
+                    "version": 1,
+                    "rules": [
+                        0,
+                        1,
+                        2
+                    ]
                 },
                 "type": "object",
                 "properties": {
@@ -108,9 +114,6 @@
                             "properties": {
                                 "send_day": false
                             }
-                        },
-                        "x-surface": {
-                            "declared": true
                         }
                     },
                     {
@@ -130,9 +133,6 @@
                             "required": [
                                 "send_day"
                             ]
-                        },
-                        "x-surface": {
-                            "declared": true
                         }
                     },
                     {
@@ -149,13 +149,14 @@
                         "then": {
                             "properties": {
                                 "items": {
+                                    "type": [
+                                        "integer",
+                                        "null"
+                                    ],
                                     "description": "Up to 5 in a weekly issue.",
                                     "maximum": 5
                                 }
                             }
-                        },
-                        "x-surface": {
-                            "declared": true
                         }
                     }
                 ]

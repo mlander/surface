@@ -476,13 +476,16 @@ class DeclaredNarrowingTest extends DataSurfaceKernelTestBase {
     ];
     foreach ($declared as $key) {
       $this->assertTrue($full['properties'][$key]['x-surface']['declared'] ?? FALSE, $key . ' is declared.');
-      $this->assertArrayNotHasKey('dynamic', $full['properties'][$key]['x-surface'], $key . ' is exact.');
+      $this->assertArrayNotHasKey('refine', $full['properties'][$key]['x-surface'], $key . ' is exact.');
     }
     $this->assertArrayNotHasKey('required', $full['properties']['third_party_settings']['properties']['data_surface_resource_test']);
+    // Listed by the frame, none marked on the conditional: no x-surface
+    // below an applicator. Decision: see docs/decisions.md#contract-2.
+    $this->assertSame(array_keys($full['allOf']), $full['x-surface']['rules'], 'Every conditional here is a rule\'s.');
     foreach ($full['allOf'] as $condition) {
-      $this->assertSame(['declared' => TRUE], $condition['x-surface'], 'Every conditional here is a rule\'s.');
+      $this->assertArrayNotHasKey('x-surface', $condition);
     }
-    $stated = array_map(static fn (array $condition): array => array_diff_key($condition, ['x-surface' => TRUE]), $full['allOf']);
+    $stated = $full['allOf'];
     $expected = [
       'equals, require, describe' => <<<'JSON'
         {"if": {"properties": {"insured": {"const": true}}, "required": ["insured"]},
@@ -558,8 +561,12 @@ class DeclaredNarrowingTest extends DataSurfaceKernelTestBase {
          "then": {"properties": {"declared_value": {"minimum": 1}}}}
         JSON,
     ];
+    // Less the declared type each narrowing states beside a keyword one
+    // type reads, which narrows nothing. Decision: see
+    // docs/decisions.md#contract-2.
+    $stated = array_map(self::untyped(...), $stated);
     foreach ($expected as $label => $json) {
-      $this->assertContains(self::json($json), $stated, $label);
+      $this->assertContains(self::untyped(self::json($json)), $stated, $label);
     }
     $this->assertCount(count($expected), $stated, 'Nothing else is stated.');
 
@@ -612,6 +619,25 @@ class DeclaredNarrowingTest extends DataSurfaceKernelTestBase {
     $tool->execute();
     $this->assertTrue($tool->getResult()->isSuccess(), (string) $tool->getResult()->getMessage());
     $this->assertSame('Ann', $this->config('data_surface_resource_test.parcel')->get('signature'));
+  }
+
+  /**
+   * Leaves out every `type` a schema states, at any depth.
+   *
+   * @param array $schema
+   *   The schema.
+   *
+   * @return array
+   *   The same, with no `type`.
+   */
+  protected static function untyped(array $schema): array {
+    unset($schema['type']);
+    foreach ($schema as $keyword => $value) {
+      if (is_array($value)) {
+        $schema[$keyword] = self::untyped($value);
+      }
+    }
+    return $schema;
   }
 
 }

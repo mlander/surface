@@ -6,8 +6,10 @@ namespace Drupal\data_surface_react\Controller;
 
 use Drupal\Core\Cache\CacheableJsonResponse;
 use Drupal\Core\DependencyInjection\ContainerInjectionInterface;
+use Drupal\Core\GeneratedUrl;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslationInterface;
+use Drupal\Core\Url;
 use Drupal\data_surface\Contract\ContractEmitter;
 use Drupal\data_surface\Contract\ServedContract;
 use Drupal\data_surface\Form\DataSurfaceFormBuilderInterface;
@@ -55,10 +57,22 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  * Access is the route's requirement, the operation's permission then
  * the resource's access class; the pipeline is handed the same answer, as
  * the operation form hands it to its submit.
+ *
+ * Every answer that is not an error carries the `Contract-Version`
+ * header, the version of the wire format its documents are written in
+ * (ContractEmitter::CONTRACT), so a client refuses a document it does not
+ * know before reading it; a contract and the full schema carry `$id`, the
+ * URI they are served at.
+ * Decision: see docs/decisions.md#contract-2.
  */
 final class ResourceApiController implements ContainerInjectionInterface {
 
   use StringTranslationTrait;
+
+  /**
+   * The header every answer names the contract's version in.
+   */
+  public const VERSION_HEADER = 'Contract-Version';
 
   /**
    * Constructs a ResourceApiController.
@@ -113,7 +127,7 @@ final class ResourceApiController implements ContainerInjectionInterface {
    */
   public function contract(Request $request, string $resource, string $operation): CacheableJsonResponse {
     $served = $this->served($resource, $operation, $request);
-    return $this->respond($served, $this->emit($served, $this->servedOperations->current($served)), [
+    return $this->respond($served, $this->emit($served, $this->servedOperations->current($served), $request), [
       'fingerprint' => $this->servedOperations->fingerprint($served),
     ]);
   }
@@ -127,7 +141,7 @@ final class ResourceApiController implements ContainerInjectionInterface {
    * the answer. Unlike the contract it may be cached: what it depends on
    * is the option lists' and the refined data surfaces' cacheability, the
    * static access answers' (the account's permissions or roles; a runtime
-   * answer is set aside and its key marked `access: runtime`), the
+   * answer is set aside and its key marked `access: live`), the
    * operation's own access, the query string the parameters arrive in and
    * the language its labels are in, never what storage holds.
    *
@@ -141,8 +155,8 @@ final class ResourceApiController implements ContainerInjectionInterface {
    *   The operation id, from the route's {operation} parameter.
    *
    * @return \Drupal\Core\Cache\CacheableJsonResponse
-   *   The full schema document: `surface`, `situation`, `label`, `schema`
-   *   and, when declared, `outputs`; no `values`, `stale` or
+   *   The full schema document: `resource`, `operation`, `label`,
+   *   `schema` and, when declared, `outputs`; no `values`, `stale` or
    *   `fingerprint`.
    */
   public function schema(Request $request, string $resource, string $operation): CacheableJsonResponse {
@@ -151,10 +165,13 @@ final class ResourceApiController implements ContainerInjectionInterface {
     // account's static access answers and by nothing a runtime one read.
     // Decision: see
     // docs/decisions.md#access-is-static-or-runtime-read-from-its-cacheability.
-    $full = $this->emitter->emitFull($this->servedOperations->declared($served), $served->definition->id, $served->operation->id, $served->operation->label, widgets: TRUE, operation: $served->operation->facts());
+    $id = $this->identifier($served, $request, 'data_surface_react.schema');
+    $full = $this->emitter->emitFull($this->servedOperations->declared($served), $served->definition->id, $served->operation->id, $served->operation->label, widgets: TRUE, operation: $served->operation->facts(), id: $id->getGeneratedUrl());
     $response = new CacheableJsonResponse($full->document);
     $response->setEncodingOptions(JsonResponse::DEFAULT_ENCODING_OPTIONS | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+    $response->headers->set(self::VERSION_HEADER, (string) ContractEmitter::CONTRACT);
     $response->addCacheableDependency($full);
+    $response->addCacheableDependency($id);
     $response->addCacheableDependency($this->servedOperations->access($served));
     $response->getCacheableMetadata()->addCacheContexts(['url.query_args', 'languages:language_interface']);
     return $response;
@@ -193,7 +210,7 @@ final class ResourceApiController implements ContainerInjectionInterface {
     // to its fixed point: a key falling back to a stored value this edit
     // orphaned is held unanswered, so nothing below it is refined against
     // it, and is shown stale, standing for that value.
-    $contract = $this->emit($served, $this->formBuilder->refinementOverlay($served->surface, $current, $input));
+    $contract = $this->emit($served, $this->formBuilder->refinementOverlay($served->surface, $current, $input), $request);
     return $this->respond($served, $contract, ['discarded' => array_values($discarded)]);
   }
 
@@ -236,6 +253,7 @@ final class ResourceApiController implements ContainerInjectionInterface {
     // Decision: see docs/decisions.md#one-result-at-every-door.
     $response = new JsonResponse($result->document($this->values($served, $result->values), machine: FALSE));
     $response->setEncodingOptions(JsonResponse::DEFAULT_ENCODING_OPTIONS | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+    $response->headers->set(self::VERSION_HEADER, (string) ContractEmitter::CONTRACT);
     return $response;
   }
 
@@ -298,7 +316,7 @@ final class ResourceApiController implements ContainerInjectionInterface {
     // Built afresh: what was written is what the resource now refines
     // against and what the storage now loads.
     $fresh = $this->served($resource, $operation, $request);
-    $contract = $this->emit($fresh, $this->servedOperations->current($fresh))->document + [
+    $contract = $this->emit($fresh, $this->servedOperations->current($fresh), $request)->document + [
       'fingerprint' => $this->servedOperations->fingerprint($fresh),
     ];
     return $this->submitted($answer + [
@@ -347,6 +365,7 @@ final class ResourceApiController implements ContainerInjectionInterface {
     $answer['outputs'] = (object) $answer['outputs'];
     $response = new JsonResponse($answer);
     $response->setEncodingOptions(JsonResponse::DEFAULT_ENCODING_OPTIONS | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+    $response->headers->set(self::VERSION_HEADER, (string) ContractEmitter::CONTRACT);
     return $response;
   }
 
@@ -386,12 +405,45 @@ final class ResourceApiController implements ContainerInjectionInterface {
    *   The operation.
    * @param array $values
    *   The values.
+   * @param \Symfony\Component\HttpFoundation\Request $request
+   *   The request, whose parameters the contract's `$id` carries.
    *
    * @return \Drupal\data_surface\Contract\ServedContract
-   *   The contract.
+   *   The contract, `$id` the GET route it is served at, and what that
+   *   URI depends on beside what the contract does.
    */
-  protected function emit(ServedOperation $served, array $values): ServedContract {
-    return $this->emitter->emit($served->surface, $values, $served->definition->id, $served->operation->id, $served->operation->label, widgets: TRUE, operation: $served->operation->facts());
+  protected function emit(ServedOperation $served, array $values, Request $request): ServedContract {
+    $id = $this->identifier($served, $request, 'data_surface_react.contract');
+    $contract = $this->emitter->emit($served->surface, $values, $served->definition->id, $served->operation->id, $served->operation->label, widgets: TRUE, operation: $served->operation->facts(), id: $id->getGeneratedUrl());
+    $contract->cacheability->addCacheableDependency($id);
+    return $contract;
+  }
+
+  /**
+   * Names the URI a document is served at, for its `$id`.
+   *
+   * The route, absolute, with the operation's parameters in its query
+   * string, as the request carried them: a document for another subject
+   * is another document.
+   *
+   * @param \Drupal\data_surface_react\ServedOperation $served
+   *   The operation.
+   * @param \Symfony\Component\HttpFoundation\Request $request
+   *   The request.
+   * @param string $route
+   *   The route serving the document.
+   *
+   * @return \Drupal\Core\GeneratedUrl
+   *   The URI, and what it depends on.
+   */
+  protected function identifier(ServedOperation $served, Request $request, string $route): GeneratedUrl {
+    return Url::fromRoute($route, [
+      'resource' => $served->definition->id,
+      'operation' => $served->operation->id,
+    ], [
+      'absolute' => TRUE,
+      'query' => $request->query->all(),
+    ])->toString(TRUE);
   }
 
   /**
@@ -416,6 +468,7 @@ final class ResourceApiController implements ContainerInjectionInterface {
   protected function respond(ServedOperation $served, ServedContract $contract, array $extra = []): CacheableJsonResponse {
     $response = new CacheableJsonResponse($contract->document + $extra);
     $response->setEncodingOptions(JsonResponse::DEFAULT_ENCODING_OPTIONS | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+    $response->headers->set(self::VERSION_HEADER, (string) ContractEmitter::CONTRACT);
     // Decision: see docs/decisions.md#a-served-contract-is-never-stored.
     $response->addCacheableDependency($contract);
     $response->addCacheableDependency($this->servedOperations->access($served));

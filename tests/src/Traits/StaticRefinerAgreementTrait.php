@@ -71,7 +71,9 @@ trait StaticRefinerAgreementTrait {
     $emitter = \Drupal::service('data_surface.contract_emitter');
     assert($emitter instanceof ContractEmitter);
     $served = $values === NULL ? $emitter->emitFull($surface, $label) : $emitter->emit($surface, $values, $label);
-    $schema = self::decoded($served->document['schema']);
+    // Each marker where the emitter's pass wrote it: a declared rule's on
+    // its conditional. Decision: see docs/decisions.md#contract-2.
+    $schema = SchemaResolver::restored(self::decoded($served->document['schema']));
     if (isset($schema['unevaluatedProperties'])) {
       // A frame that mixes structures in, read flat: their members are its
       // keys, and what their defs state, the frame's.
@@ -119,7 +121,7 @@ trait StaticRefinerAgreementTrait {
       foreach ($condition['then']['properties'] ?? [] as $key => $narrowed) {
         // The variants' conditional names the variant; only an enumerated
         // key's is a refiner's answer written down.
-        if (($schema['properties'][$key]['x-surface']['enumerated'] ?? FALSE) !== TRUE || isset($narrowed['x-surface']['variant'])) {
+        if (($schema['properties'][$key]['x-surface']['enumerated'] ?? FALSE) !== TRUE || (is_array($narrowed) && isset($narrowed['$ref']))) {
           continue;
         }
         $entry = $definitions->entry((string) $key);
@@ -134,6 +136,11 @@ trait StaticRefinerAgreementTrait {
           $compared++;
           continue;
         }
+        // A child's site, or a map inside the key, is a reference to its
+        // def, whose type the conditional states beside what it narrows
+        // inside: the def's, not the key's. Decision: see
+        // docs/decisions.md#contract-2.
+        $narrowed = self::defTypesLeftOut($narrowed, $entry->isNested());
         $this->assertEquals(
           self::laidOver(self::decoded($emitter->describeKey($entry, $unanswered->getDefinition((string) $key) ?? $entry->definition)), $narrowed),
           self::decoded($emitter->describeKey($entry, $refined)),
@@ -252,6 +259,8 @@ trait StaticRefinerAgreementTrait {
             $ruled = TRUE;
           }
           elseif (is_array($then)) {
+            // A child's def's type, as above.
+            $then = self::defTypesLeftOut($then, $entry->isNested());
             $expected = self::tightened($expected, $then);
           }
         }
@@ -432,6 +441,10 @@ trait StaticRefinerAgreementTrait {
           return $properties;
         })(),
         $keyword === 'required' => array_values(array_unique([...($base['required'] ?? []), ...$value])),
+        // Every conditional that holds applies: their types meet.
+        $keyword === 'type' && isset($base['type']) => (static function (array $met): string|array {
+          return count($met) === 1 ? $met[0] : $met;
+        })(array_values(array_intersect((array) $base['type'], (array) $value))),
         in_array($keyword, ['maximum', 'maxLength', 'maxItems'], TRUE) && isset($base[$keyword]) => min($base[$keyword], $value),
         in_array($keyword, ['minimum', 'minLength', 'minItems'], TRUE) && isset($base[$keyword]) => max($base[$keyword], $value),
         $keyword === 'oneOf' && isset($base['oneOf']) => array_values(array_filter($base['oneOf'], static fn (array $choice): bool => in_array($choice['const'], array_column($value, 'const'), TRUE))),
@@ -487,6 +500,31 @@ trait StaticRefinerAgreementTrait {
       $base[$keyword] = $value;
     }
     return $base;
+  }
+
+  /**
+   * Leaves out the types a conditional states inside a key, from defs.
+   *
+   * @param array $narrowed
+   *   What a conditional says of a key.
+   * @param bool $whole
+   *   Whether the key's own type is a def's too: a child's site.
+   *
+   * @return array
+   *   The same, with no `type` on a map below the key (nor on the key,
+   *   for a child).
+   */
+  protected static function defTypesLeftOut(array $narrowed, bool $whole): array {
+    if ($whole) {
+      unset($narrowed['type']);
+    }
+    foreach (is_array($narrowed['properties'] ?? NULL) ? $narrowed['properties'] : [] as $name => $property) {
+      if (is_array($property)) {
+        // A map's own type is its def's; a value's is what it narrows.
+        $narrowed['properties'][$name] = self::defTypesLeftOut($property, isset($property['properties']));
+      }
+    }
+    return $narrowed;
   }
 
   /**

@@ -450,7 +450,7 @@ class CollectionTest extends DataSurfaceKernelTestBase {
     $this->assertTrue($racks['x-surface']['enumerated']);
     $this->assertContains([
       'if' => ['properties' => ['size' => ['const' => 'small']], 'required' => ['size']],
-      'then' => ['properties' => ['racks' => ['maxItems' => 2]]],
+      'then' => ['properties' => ['racks' => ['type' => $racks['type'], 'maxItems' => 2]]],
     ], $full['allOf']);
     // Value-independent: another stored cellar emits the same document.
     $this->container->get('state')->set(CellarStorage::key('main'), ['racks' => [['spices' => 40]]] + self::STORED);

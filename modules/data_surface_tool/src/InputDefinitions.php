@@ -922,7 +922,7 @@ final class InputDefinitions {
    * built for the account alone keeps open. The Tool API's normalizer
    * writes JSON Schema from these typed definitions and carries a
    * description, and no extension keyword, so the description says it:
-   * the served contract's `x-surface.access: "runtime"`, in words.
+   * the served contract's `x-surface.access: "live"`, in words.
    *
    * Decision: see
    * docs/decisions.md#access-is-static-or-runtime-read-from-its-cacheability.

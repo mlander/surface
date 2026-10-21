@@ -339,7 +339,8 @@ class ExamplesStepsTest extends DataSurfaceKernelTestBase {
     $this->assertSame(['price', 'currency'], $branches['paid']['required']);
     $this->assertSame(['EUR', 'GBP', 'USD'], array_column($branches['paid']['properties']['currency']['oneOf'], 'title'));
     $ticket = $contract['properties']['ticket']['x-surface'];
-    $this->assertSame(['pricing', ['free', 'paid'], 'free'], [$ticket['by'], $ticket['variants'], $ticket['chosen']]);
+    $said = [$ticket['by'], array_keys($ticket['variants']), $ticket['chosen']];
+    $this->assertSame(['pricing', ['free', 'paid'], 'free'], $said);
     $this->assertArrayNotHasKey('widget', $ticket);
     $this->assertSame(['venue'], $contract['properties']['room']['x-surface']['dependsOn']);
 

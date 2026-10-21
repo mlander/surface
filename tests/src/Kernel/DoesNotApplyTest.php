@@ -240,7 +240,7 @@ class DoesNotApplyTest extends DataSurfaceKernelTestBase {
     $this->assertSame(['frequency'], $monthly['schema']['required']);
     $this->assertSame(['frequency' => 'monthly'], $monthly['values']);
     $this->assertArrayNotHasKey('allOf', $monthly['schema']);
-    $this->assertSame(['version' => 1, 'doesNotApply' => ['send_day' => ['frequency']]], $monthly['schema']['x-surface'], 'Named on the frame, with what to refine on.');
+    $this->assertSame(['contract' => 2, 'version' => 1, 'doesNotApply' => ['send_day' => ['frequency']]], $monthly['schema']['x-surface'], 'Named on the frame, with what to refine on.');
 
     $weekly = $emitter->emit($built, ['frequency' => 'weekly', 'send_day' => 'friday'], 'resource_test.bulletin', 'configure')->document;
     $this->assertSame(['frequency', 'send_day'], array_keys($weekly['schema']['properties']));
@@ -287,7 +287,9 @@ class DoesNotApplyTest extends DataSurfaceKernelTestBase {
     foreach ($full['allOf'] as $condition) {
       $channel = $condition['if']['properties']['channel']['const'] ?? NULL;
       if ($channel !== NULL) {
-        $by_channel[$channel][] = $condition['then'];
+        // Less the declared type each map states beside what it narrows.
+        // Decision: see docs/decisions.md#contract-2.
+        $by_channel[$channel][] = self::untyped($condition['then']);
       }
     }
     $this->assertContains(['properties' => ['address' => FALSE]], $by_channel['email']);
@@ -312,7 +314,7 @@ class DoesNotApplyTest extends DataSurfaceKernelTestBase {
     $this->assertSame([''], $board->getDefinitions()->entry('pinned')->mayNotApply(TRUE));
     $full = $emitter->emitFull($board, 'resource_test.notice_board')->document['schema'];
     $this->assertSame(['title'], $full['required'], 'Nothing says where it applies, so nothing requires it.');
-    $this->assertTrue($full['properties']['pinned']['x-surface']['runtime']);
+    $this->assertTrue($full['properties']['pinned']['x-surface']['live']);
 
     $open = $emitter->emit($board, ['title' => 'Hall'], 'resource_test.notice_board')->document['schema'];
     $this->assertSame(['title', 'pinned'], $open['required'], 'Open, for these values: required.');
@@ -321,7 +323,7 @@ class DoesNotApplyTest extends DataSurfaceKernelTestBase {
     $this->container->get('state')->set(NoticeBoardStructure::CLOSED, TRUE);
     $closed = $emitter->emit($board, ['title' => 'Hall'], 'resource_test.notice_board')->document['schema'];
     $this->assertSame(['title'], array_keys($closed['properties']));
-    $this->assertSame(['version' => 1, 'doesNotApply' => ['pinned' => []]], $closed['x-surface']);
+    $this->assertSame(['contract' => 2, 'version' => 1, 'doesNotApply' => ['pinned' => []]], $closed['x-surface']);
     $accepted = $this->pipeline()->accept($board, ['title' => 'Hall']);
     $this->assertSame(['title' => 'Hall'], $accepted);
     $this->assertTrue($this->pipeline()->validate($board, $accepted)->isEmpty(), 'Closed: not asked for.');
@@ -424,6 +426,25 @@ class DoesNotApplyTest extends DataSurfaceKernelTestBase {
     $this->assertSame('string', $schema['properties']['kind']['type']);
     $this->assertFalse($this->validates($schema, ['badge' => NULL, 'kind' => 'anything']));
     $this->assertFalse($this->validates($schema, ['badge' => 'star']), 'Nothing is allowed but null.');
+  }
+
+  /**
+   * Leaves out every `type` a schema states, at any depth.
+   *
+   * @param array $schema
+   *   The schema.
+   *
+   * @return array
+   *   The same, with no `type`.
+   */
+  protected static function untyped(array $schema): array {
+    unset($schema['type']);
+    foreach ($schema as $keyword => $value) {
+      if (is_array($value)) {
+        $schema[$keyword] = self::untyped($value);
+      }
+    }
+    return $schema;
   }
 
 }

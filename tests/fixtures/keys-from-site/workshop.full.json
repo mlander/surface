@@ -1,12 +1,16 @@
 {
-    "surface": "resource_test.workshop",
-    "situation": "configure",
+    "resource": "resource_test.workshop",
+    "operation": "configure",
     "label": "Configure the workshop",
     "schema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "title": "Configure the workshop",
         "x-surface": {
-            "version": 1
+            "contract": 2,
+            "version": 1,
+            "rules": [
+                0
+            ]
         },
         "type": "object",
         "properties": {
@@ -29,6 +33,7 @@
                         "$ref": "#/$defs/resource_test.workshop.benches"
                     },
                     {
+                        "type": "object",
                         "properties": {
                             "press": {
                                 "allOf": [
@@ -36,39 +41,42 @@
                                         "$ref": "#/$defs/resource_test.workshop.bench"
                                     },
                                     {
+                                        "type": "object",
                                         "properties": {
                                             "enabled": {
-                                                "readOnly": true,
-                                                "x-surface": {
-                                                    "locked": true,
-                                                    "dependsOn": []
-                                                }
+                                                "readOnly": true
                                             },
                                             "hours": {
-                                                "readOnly": true,
-                                                "x-surface": {
-                                                    "locked": true,
-                                                    "dependsOn": [
-                                                        "enabled"
-                                                    ],
-                                                    "declared": true
-                                                }
+                                                "readOnly": true
                                             }
                                         }
                                     }
                                 ],
-                                "readOnly": true,
-                                "x-surface": {
-                                    "locked": true,
-                                    "dependsOn": []
-                                }
+                                "readOnly": true
                             }
                         }
                     }
                 ],
                 "x-surface": {
                     "locked": false,
-                    "dependsOn": []
+                    "dependsOn": [],
+                    "within": {
+                        "/allOf/1/properties/press": {
+                            "locked": true,
+                            "dependsOn": []
+                        },
+                        "/allOf/1/properties/press/allOf/1/properties/enabled": {
+                            "locked": true,
+                            "dependsOn": []
+                        },
+                        "/allOf/1/properties/press/allOf/1/properties/hours": {
+                            "locked": true,
+                            "dependsOn": [
+                                "enabled"
+                            ],
+                            "declared": true
+                        }
+                    }
                 }
             },
             "lights": {
@@ -79,14 +87,11 @@
                         "$ref": "#/$defs/resource_test.workshop.lights"
                     },
                     {
+                        "type": "object",
                         "properties": {
                             "press": {
                                 "default": false,
-                                "readOnly": true,
-                                "x-surface": {
-                                    "locked": true,
-                                    "dependsOn": []
-                                }
+                                "readOnly": true
                             }
                         }
                     }
@@ -96,7 +101,13 @@
                     "dependsOn": [
                         "closed"
                     ],
-                    "declared": true
+                    "declared": true,
+                    "within": {
+                        "/allOf/1/properties/press": {
+                            "locked": true,
+                            "dependsOn": []
+                        }
+                    }
                 }
             },
             "codes": {
@@ -106,21 +117,24 @@
                         "$ref": "#/$defs/resource_test.workshop.codes"
                     },
                     {
+                        "type": "object",
                         "properties": {
                             "press": {
-                                "readOnly": true,
-                                "x-surface": {
-                                    "locked": true,
-                                    "dependsOn": [],
-                                    "patternMessage": "A stock code is two capitals and digits, such as AB12."
-                                }
+                                "readOnly": true
                             }
                         }
                     }
                 ],
                 "x-surface": {
                     "locked": false,
-                    "dependsOn": []
+                    "dependsOn": [],
+                    "within": {
+                        "/allOf/1/properties/press": {
+                            "locked": true,
+                            "dependsOn": [],
+                            "patternMessage": "A stock code is two capitals and digits, such as AB12."
+                        }
+                    }
                 }
             }
         },
@@ -141,14 +155,12 @@
                     "properties": {
                         "lights": false
                     }
-                },
-                "x-surface": {
-                    "declared": true
                 }
             }
         ],
         "$defs": {
             "resource_test.workshop.bench": {
+                "title": "resource_test.workshop.bench",
                 "type": "object",
                 "properties": {
                     "enabled": {
@@ -198,14 +210,17 @@
                             "properties": {
                                 "hours": false
                             }
-                        },
-                        "x-surface": {
-                            "declared": true
                         }
                     }
-                ]
+                ],
+                "x-surface": {
+                    "rules": [
+                        0
+                    ]
+                }
             },
             "resource_test.workshop.benches": {
+                "title": "resource_test.workshop.benches",
                 "type": "object",
                 "properties": {
                     "lathe": {
@@ -236,6 +251,7 @@
                 "additionalProperties": false
             },
             "resource_test.workshop.lights": {
+                "title": "resource_test.workshop.lights",
                 "type": "object",
                 "properties": {
                     "lathe": {
@@ -277,6 +293,7 @@
                 "additionalProperties": false
             },
             "resource_test.workshop.codes": {
+                "title": "resource_test.workshop.codes",
                 "type": "object",
                 "properties": {
                     "lathe": {
@@ -310,7 +327,7 @@
                 "additionalProperties": false
             },
             "resource_test.sku": {
-                "title": "Stock code",
+                "title": "resource_test.sku",
                 "description": "Two capitals and digits, as printed on the shelf.",
                 "type": [
                     "string",

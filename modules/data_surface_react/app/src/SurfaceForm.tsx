@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createApi, pageOf, SEND_FINGERPRINT, type Fetcher, type FullSchema, type Settings } from './api';
 import type { Contract, Narrowed, Schema, Settled, Values, Violation } from './contract';
-import { inlineSchema, narrow, narrowingStatus, watchedPaths, setAt } from './contract';
+import { ContractRefused, inlineSchema, narrow, narrowingStatus, watchedPaths, setAt } from './contract';
 import { ContractPanel } from './ContractPanel';
 import { Properties } from './widgets/Field';
 
@@ -47,8 +47,8 @@ function byPath(violations: Violation[]): Record<string, string[]> {
  * value, are fetched together, once. On a change of any key something
  * depends on, the form narrows itself from the full schema's conditionals
  * when every key that depends on the change is stated there, by the rules
- * /refine applies, with no request. When one is not (`dynamic`,
- * `runtime`, a stale value only the server knows), or anything cannot be
+ * /refine applies, with no request. When one is not (`refine`,
+ * `live`, a stale value only the server knows), or anything cannot be
  * settled here, the current values go to /refine (debounced) and the form
  * re-renders from the contract that comes back, the way the operation
  * form rebuilds over AJAX: a value the person has touched since the
@@ -60,7 +60,8 @@ function byPath(violations: Violation[]): Record<string, string[]> {
  * contract was loaded, to /submit: a refusal shows beside each field and
  * in a summary, with nothing written; a write says so, with any stale value it kept, and re-renders from the
  * contract the answer carries; a write that created something moves to
- * the page where it now lives.
+ * the page where it now lives. A document of any contract but 2 is
+ * refused, and the refusal shown as the form's error.
  */
 export function SurfaceForm({
   settings,
@@ -121,8 +122,16 @@ export function SurfaceForm({
     let live = true;
     // Two requests, once: the contract for the stored values, and the full
     // schema, which is the same whatever is stored or typed and so is never
-    // asked for again. Without it the form asks /refine, as it always did.
-    Promise.all([api.contract(), api.schema().catch(() => null)]).then(
+    // asked for again. Without it the form asks /refine, as it always did;
+    // a full schema of another contract is refused as the contract would be.
+    const loading = api.contract();
+    const full = api.schema().catch((error: Error) => {
+      if (error instanceof ContractRefused) {
+        throw error;
+      }
+      return null;
+    });
+    Promise.all([loading, full]).then(
       ([loaded, loadedFull]) => {
         if (live) {
           fingerprint.current = loaded.fingerprint ?? null;

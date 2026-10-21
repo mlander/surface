@@ -1,23 +1,24 @@
 {
-    "surface": "registration.step2",
+    "resource": "registration.step2",
     "module": "data_surface_examples",
+    "contract": 2,
     "documents": [
         {
-            "surface": "registration.step2",
-            "situation": "configure",
+            "resource": "registration.step2",
+            "operation": "configure",
             "label": "Configure registration (step 2)",
             "schema": {
                 "$schema": "https://json-schema.org/draft/2020-12/schema",
                 "title": "Configure registration (step 2)",
                 "description": "Sets the event title, whether registration is open, the venue, a room at that venue and a capacity the room can hold.",
                 "x-surface": {
+                    "contract": 2,
                     "operation": {
                         "id": "configure",
                         "label": "Configure registration (step 2)",
                         "description": "Sets the event title, whether registration is open, the venue, a room at that venue and a capacity the room can hold.",
                         "kind": "update",
                         "creates": false,
-                        "readOnly": false,
                         "destructive": false,
                         "idempotent": true
                     },
@@ -226,6 +227,10 @@
                         "then": {
                             "properties": {
                                 "capacity": {
+                                    "type": [
+                                        "integer",
+                                        "null"
+                                    ],
                                     "description": "Up to 400 for the Main hall.",
                                     "maximum": 400
                                 }
@@ -246,6 +251,10 @@
                         "then": {
                             "properties": {
                                 "capacity": {
+                                    "type": [
+                                        "integer",
+                                        "null"
+                                    ],
                                     "description": "Up to 120 for the East room.",
                                     "maximum": 120
                                 }
@@ -266,6 +275,10 @@
                         "then": {
                             "properties": {
                                 "capacity": {
+                                    "type": [
+                                        "integer",
+                                        "null"
+                                    ],
                                     "description": "Up to 60 for the Reading room.",
                                     "maximum": 60
                                 }
@@ -286,6 +299,10 @@
                         "then": {
                             "properties": {
                                 "capacity": {
+                                    "type": [
+                                        "integer",
+                                        "null"
+                                    ],
                                     "description": "Up to 30 for the Garden room.",
                                     "maximum": 30
                                 }
@@ -306,6 +323,10 @@
                         "then": {
                             "properties": {
                                 "capacity": {
+                                    "type": [
+                                        "integer",
+                                        "null"
+                                    ],
                                     "description": "Up to 800 for the Auditorium.",
                                     "maximum": 800
                                 }
@@ -326,6 +347,10 @@
                         "then": {
                             "properties": {
                                 "capacity": {
+                                    "type": [
+                                        "integer",
+                                        "null"
+                                    ],
                                     "description": "Up to 150 for the Upper deck.",
                                     "maximum": 150
                                 }

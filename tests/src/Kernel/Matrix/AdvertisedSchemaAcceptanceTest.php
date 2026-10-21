@@ -683,7 +683,7 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
    * stored, so its document is accepted by both. An omitted one posted is
    * an unknown key, refused by both where the omission is static; where
    * it is runtime the full schema has the key, marked
-   * `x-surface.access: "runtime"`, and accepts it: wider, never narrower.
+   * `x-surface.access: "live"`, and accepts it: wider, never narrower.
    *
    * @see docs/decisions.md#access-is-static-or-runtime-read-from-its-cacheability
    */
@@ -948,7 +948,8 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
       $this->assertSame($pattern, $property['pattern'] ?? NULL, $regex);
       $this->assertSame('As it says.', $property['x-surface']['patternMessage'] ?? NULL, $regex . ': the message is carried either way.');
       if ($pattern === NULL) {
-        $this->assertSame(['Regex'], $property['x-surface']['checkedOnServer'], $regex);
+        // Each named with what it checks: here, its own message.
+        $this->assertSame([['constraint' => 'Regex', 'message' => 'As it says.']], $property['x-surface']['checkedOnServer'], $regex);
       }
     }
 
@@ -1231,7 +1232,8 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
     ];
     foreach ($names as $name) {
       $property = $full($this->surface(['k' => DataDefinition::create('string')->setLabel('K')->addConstraint($name, [])]))['properties']['k'];
-      $this->assertSame([$name], $property['x-surface']['checkedOnServer'], $name);
+      $this->assertSame([$name], array_column($property['x-surface']['checkedOnServer'], 'constraint'), $name);
+      $this->assertNotSame('', $property['x-surface']['checkedOnServer'][0]['message'], $name . ': what it checks is said.');
       $this->assertSame(array_diff_key($bare, ['x-surface' => TRUE]), array_diff_key($property, ['x-surface' => TRUE]), $name . ': no keyword.');
     }
 
@@ -1319,7 +1321,7 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
       ['Regex' => ['pattern' => '/^(name|pass|website)$/', 'match' => FALSE, 'message' => $common]],
     ]);
     $property = $this->decoded($emitter->emitFull($as_written, 'audit')->document['schema'])['properties']['element_name'];
-    $this->assertSame(['Sequentially'], $property['x-surface']['checkedOnServer']);
+    $this->assertSame(['Sequentially'], array_column($property['x-surface']['checkedOnServer'], 'constraint'));
     $this->assertArrayNotHasKey('allOf', $property);
 
     $carried = $name([
@@ -1374,7 +1376,7 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
     ]);
     $property = $this->decoded($emitter->emitFull($unstated, 'audit')->document['schema'])['properties']['code'];
     $this->assertArrayNotHasKey('anyOf', $property);
-    $this->assertSame(['AtLeastOneOf'], $property['x-surface']['checkedOnServer']);
+    $this->assertSame(['AtLeastOneOf'], array_column($property['x-surface']['checkedOnServer'], 'constraint'));
   }
 
   /**

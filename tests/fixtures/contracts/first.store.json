@@ -1,23 +1,24 @@
 {
-    "surface": "first.store",
+    "resource": "first.store",
     "module": "data_surface_first",
+    "contract": 2,
     "documents": [
         {
-            "surface": "first.store",
-            "situation": "configure",
+            "resource": "first.store",
+            "operation": "configure",
             "label": "Configure the store location",
             "schema": {
                 "$schema": "https://json-schema.org/draft/2020-12/schema",
                 "title": "Configure the store location",
                 "description": "Sets the store location: its country, and a region of that country.",
                 "x-surface": {
+                    "contract": 2,
                     "operation": {
                         "id": "configure",
                         "label": "Configure the store location",
                         "description": "Sets the store location: its country, and a region of that country.",
                         "kind": "update",
                         "creates": false,
-                        "readOnly": false,
                         "destructive": false,
                         "idempotent": true
                     },

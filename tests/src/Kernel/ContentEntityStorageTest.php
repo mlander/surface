@@ -283,7 +283,7 @@ class ContentEntityStorageTest extends DataSurfaceKernelTestBase {
     $outputs = $operation->storage->outputs($operation->surface, $result->values);
     $node = $this->newest();
     $this->assertSame(
-      ['surface' => self::RESOURCE, 'situation' => 'edit', 'parameters' => ['id' => (int) $node->id()]],
+      ['resource' => self::RESOURCE, 'operation' => 'edit', 'parameters' => ['id' => (int) $node->id()]],
       $served->created($operation, $result->values, $outputs),
     );
   }
@@ -308,7 +308,7 @@ class ContentEntityStorageTest extends DataSurfaceKernelTestBase {
     $this->assertSame($full['First'], $full['Second']);
     // The formats this account may use are a runtime refinement.
     $format = $full['First']['schema']['$defs']['field.item:node.page.body']['properties']['format']['x-surface'] ?? [];
-    $this->assertTrue($format['runtime'] ?? FALSE);
+    $this->assertTrue($format['live'] ?? FALSE);
   }
 
   /**

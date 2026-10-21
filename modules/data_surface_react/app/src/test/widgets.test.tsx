@@ -103,7 +103,7 @@ describe('text, textarea and email', () => {
     render(
       <Form
         schema={object({
-          email: { title: 'Email', type: 'string', format: 'email', 'x-surface': x('email') },
+          email: { title: 'Email', type: 'string', format: 'idn-email', 'x-surface': x('email') },
           token: { title: 'Token', type: ['string', 'null'], writeOnly: true, 'x-surface': x('text') },
         })}
         initial={{ email: 'events@example.com', token: null }}
@@ -382,11 +382,11 @@ describe('locked', () => {
 });
 
 describe('fieldset, variants and list', () => {
-  const ticketVariants: Schema = { title: 'Ticket', type: 'object', 'x-surface': x('slot', { by: 'pricing', variants: ['free', 'paid'], dependsOn: ['pricing'] }) };
+  const ticketVariants: Schema = { title: 'Ticket', type: 'object', 'x-surface': x('variants', { by: 'pricing', variants: { free: '#/$defs/registration.step3.ticket.free', paid: '#/$defs/registration.step3.ticket.paid' }, dependsOn: ['pricing'] }) };
   const branches: Schema['allOf'] = [
     {
       if: { properties: { pricing: { const: 'free' } }, required: ['pricing'] },
-      then: { properties: { ticket: { title: 'Ticket', type: 'object', properties: { note: { title: 'Note', type: ['string', 'null'], 'x-surface': x('text') } }, 'x-surface': x('fieldset') } } },
+      then: { properties: { ticket: { title: 'Ticket', type: 'object', properties: { note: { title: 'Note', type: ['string', 'null'], 'x-surface': x('text') } } } } },
     },
     {
       if: { properties: { pricing: { const: 'paid' } }, required: ['pricing'] },
@@ -397,7 +397,6 @@ describe('fieldset, variants and list', () => {
             type: 'object',
             required: ['price'],
             properties: { price: { title: 'Price', type: 'number', minimum: 0.01, 'x-surface': x('number') } },
-            'x-surface': x('fieldset'),
           },
         },
       },
@@ -413,7 +412,7 @@ describe('fieldset, variants and list', () => {
   it('renders a fieldset with its legend and its properties', () => {
     render(
       <Form
-        schema={object({ contact: { title: 'Contact', type: 'object', required: ['email'], properties: { email: { title: 'Email', type: 'string', format: 'email', 'x-surface': x('email') } }, 'x-surface': x('fieldset') } })}
+        schema={object({ contact: { title: 'Contact', type: 'object', required: ['email'], properties: { email: { title: 'Email', type: 'string', format: 'idn-email', 'x-surface': x('email') } }, 'x-surface': x('fieldset') } })}
         initial={{ contact: { email: 'events@example.com' } }}
       />,
     );
@@ -495,16 +494,16 @@ describe('fieldset, variants and list', () => {
   });
 
   it('renders nothing for a variant that declares no keys, and the other variants as they are', async () => {
-    const schedule: Schema = { title: 'Schedule', type: ['object', 'null'], 'x-surface': x('slot', { by: 'frequency', variants: ['daily', 'weekly'], dependsOn: ['frequency'] }) };
+    const schedule: Schema = { title: 'Schedule', type: ['object', 'null'], 'x-surface': x('variants', { by: 'frequency', variants: { daily: '#/$defs/schedule.daily', weekly: '#/$defs/schedule.weekly' }, dependsOn: ['frequency'] }) };
     const frequency: Schema = { title: 'Frequency', type: 'string', oneOf: [{ const: 'daily', title: 'Daily' }, { const: 'weekly', title: 'Weekly' }], 'x-surface': x('select') };
     const days: Schema['allOf'] = [
       {
         if: { properties: { frequency: { const: 'daily' } }, required: ['frequency'] },
-        then: { properties: { schedule: { title: 'Daily schedule', type: 'object', 'x-surface': x('fieldset') } } },
+        then: { properties: { schedule: { title: 'Daily schedule', type: 'object' } } },
       },
       {
         if: { properties: { frequency: { const: 'weekly' } }, required: ['frequency'] },
-        then: { properties: { schedule: { title: 'Weekly schedule', type: 'object', properties: { send_day: { title: 'Send day', type: 'string', 'x-surface': x('text') } }, 'x-surface': x('fieldset') } } },
+        then: { properties: { schedule: { title: 'Weekly schedule', type: 'object', properties: { send_day: { title: 'Send day', type: 'string', 'x-surface': x('text') } } } } },
       },
     ];
     render(<Form schema={object({ frequency, schedule }, ['frequency'], days)} initial={{ frequency: 'daily', schedule: {} }} />);
@@ -513,6 +512,14 @@ describe('fieldset, variants and list', () => {
     expect(screen.getByRole('group', { name: 'Weekly schedule' })).toBeInTheDocument();
     await userEvent.selectOptions(screen.getByLabelText(/Frequency/), 'Daily');
     expect(screen.queryByRole('group')).not.toBeInTheDocument();
+  });
+
+  it('locks the chosen variant\'s fieldset with the key with variants, which says it', () => {
+    // A variant's conditional carries no `x-surface`: the lock is the key's.
+    const locked: Schema = { ...ticketVariants, 'x-surface': { ...(ticketVariants['x-surface'] as Extension), locked: true } };
+    render(<Form schema={object({ pricing, ticket: locked }, [], branches)} initial={{ pricing: 'free', ticket: { note: 'Donations welcome' } }} />);
+    expect(screen.getByLabelText('Note')).toBeDisabled();
+    expect(screen.getByRole('group', { name: 'Ticket' })).toHaveTextContent('Fixed for this operation.');
   });
 
   it('renders nothing for variants nothing has chosen yet', () => {
@@ -627,7 +634,7 @@ describe('the contract panel', () => {
   it('lists a collection, its bounds, and its item keys once, under a star', () => {
     render(
       <ContractPanel
-        contract={{ surface: 'cellar', situation: 'edit', label: null, stale: [], values: {}, schema: object({}) }}
+        contract={{ resource: 'cellar', operation: 'edit', label: null, stale: [], values: {}, schema: object({}) }}
         schema={object({
           racks: {
             title: 'Spice racks',
@@ -647,13 +654,34 @@ describe('the contract panel', () => {
     expect(document.querySelector('tr[data-surface-key="racks.*.label"]')).not.toBeNull();
   });
 
+  it('says what each constraint only the server checks checks, in its message, and an email by either format', () => {
+    render(
+      <ContractPanel
+        contract={{ resource: 'example', operation: 'configure', label: null, stale: [], values: {}, schema: object({}) }}
+        schema={object({
+          handle: {
+            title: 'Handle',
+            type: 'string',
+            'x-surface': x('text', { checkedOnServer: [{ constraint: 'UniqueHandle', message: 'No other account uses this handle.' }] }),
+          },
+          email: { title: 'Email', type: 'string', format: 'idn-email', 'x-surface': x('email') },
+        })}
+        values={{}}
+      />,
+    );
+    const handle = document.querySelector('tr[data-surface-key="handle"]') as HTMLElement;
+    expect(handle.textContent).toContain('checked on the server: No other account uses this handle.');
+    expect(handle.textContent).not.toContain('UniqueHandle');
+    expect(document.querySelector('tr[data-surface-key="email"]')?.textContent).toContain('an email address');
+  });
+
   it('explains a Regex by its message, and only a Regex without one by its pattern, in code', () => {
     const message = 'A license number is four digits, such as 2048.';
     render(
       <ContractPanel
         contract={{
-          surface: 'example',
-          situation: 'configure',
+          resource: 'example',
+          operation: 'configure',
           label: null,
           stale: [],
           values: {},

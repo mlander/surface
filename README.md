@@ -31,7 +31,7 @@ everything it accepts afterwards, so a caller that read it once, or a
 machine-readable contract emitted from it, is never contradicted later,
 with one qualifier: the schema for a set of answers is exact for them,
 and the full schema, written for any answers, marks what only the
-runtime can settle (`dynamic`, `runtime`, `checkedOnServer`), where the
+runtime can settle (`refine`, `live`, `checkedOnServer`), where the
 pipeline may still refuse what the schema allows
 ([the served contract](docs/served-contract.md#two-documents)).
 That is the property that makes a data surface worth having over a form
@@ -226,7 +226,7 @@ The module uses these twenty-three words in exactly one sense each.
   cacheability and never declared: static varies by the account's
   permissions or roles alone and is stated in the full schema and the
   tool listing for that account; runtime is anything else, marked there
-  `x-surface.access: "runtime"` and settled once the thing is known
+  `x-surface.access: "live"` and settled once the thing is known
   ([Static and runtime access](docs/resources.md#static-and-runtime-access)).
 - **Context**: an `OperationContext`: where a resource or structure is
   being asked for. Its id (the operation id, or a host's own verb such
@@ -266,7 +266,10 @@ The module uses these twenty-three words in exactly one sense each.
   1, counting the breaking changes made to the values stored for it, so a
   compatible change never moves it. Stamped `x-surface.version` in both
   documents, and refused above 1 until stored-value migrations are built
-  ([Evolving a resource](docs/evolution.md#the-version)).
+  ([Evolving a resource](docs/evolution.md#the-version)). Not the
+  contract's own version, `x-surface.contract`, the version of the wire
+  format both documents are written in
+  ([the contract's own version](docs/evolution.md#the-contracts-own-version)).
 
 ## Experimental submodules
 

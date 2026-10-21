@@ -1,15 +1,20 @@
 {
-    "surface": "event.review",
+    "resource": "event.review",
     "module": "data_surface_examples",
+    "contract": 2,
     "documents": [
         {
-            "surface": "event.review",
-            "situation": null,
+            "resource": "event.review",
+            "operation": null,
             "label": null,
             "schema": {
                 "$schema": "https://json-schema.org/draft/2020-12/schema",
                 "x-surface": {
-                    "version": 1
+                    "contract": 2,
+                    "version": 1,
+                    "rules": [
+                        0
+                    ]
                 },
                 "type": "object",
                 "properties": {
@@ -67,9 +72,6 @@
                             "required": [
                                 "reviewed_by"
                             ]
-                        },
-                        "x-surface": {
-                            "declared": true
                         }
                     }
                 ]

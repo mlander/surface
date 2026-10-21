@@ -124,7 +124,11 @@ class EmptyVariantTest extends DataSurfaceKernelTestBase {
     $emitter = $this->container->get('data_surface.contract_emitter');
 
     $answers = $emitter->emit($built, ['frequency' => 'daily', 'schedule' => []], 'resource_test.digest', 'configure')->document['schema'];
-    $this->assertContains('object', (array) $answers['properties']['schedule']['type']);
+    // A union of its variants' defs, each an object: the union says the
+    // type. Decision: see docs/decisions.md#contract-2.
+    $this->assertArrayNotHasKey('type', $answers['properties']['schedule']);
+    $this->assertContains(['$ref' => '#/$defs/resource_test.digest.daily'], $answers['properties']['schedule']['anyOf']);
+    $this->assertContains('object', (array) $answers['$defs']['resource_test.digest.daily']['type']);
     $this->assertSame('daily', $answers['properties']['schedule']['x-surface']['chosen']);
     $this->assertArrayNotHasKey('properties', $answers['properties']['schedule'], 'Nothing to answer.');
 

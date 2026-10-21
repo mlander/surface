@@ -16,7 +16,7 @@ use Drupal\data_surface\ResourceBuild\ResourcesInterface;
  * alone (ResourcesInterface::buildStatic()): each static access answer is
  * applied there, a key it locked `readOnly`, a key it left out absent, and
  * each runtime answer is set aside, its key marked `x-surface.access:
- * "runtime"`. That is only true if a static answer is what its
+ * "live"`. That is only true if a static answer is what its
  * cacheability says, decided by the account alone. So, for each sampled
  * account, this emits the full schema once and then, for each situation
  * (a stored value changed, a State flag set: what a runtime answer reads),
@@ -100,7 +100,7 @@ trait StaticAccessAgreementTrait {
       $property = is_array($properties[$name]) ? $properties[$name] : [];
       $locked = $entry->locked || $frozen;
       $this->assertSame($locked, ($property['readOnly'] ?? FALSE) === TRUE, sprintf('%s: "%s" is read only exactly where it is locked.', $label, $name));
-      $this->assertSame($entry->runtimeAccess, ($property['x-surface']['access'] ?? NULL) === 'runtime', sprintf('%s: "%s" is marked runtime exactly where its answer was set aside.', $label, $name));
+      $this->assertSame($entry->runtimeAccess, ($property['x-surface']['access'] ?? NULL) === 'live', sprintf('%s: "%s" is marked live exactly where its answer was set aside.', $label, $name));
       $compared++;
       if ($entry->attachment !== NULL) {
         $compared += $this->assertSchemaStatesAccess($entry->attachment->child, $property, sprintf('%s.%s', $label, $name), $locked);

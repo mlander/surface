@@ -1,14 +1,16 @@
 {
-    "surface": "event.ticket_limit",
+    "resource": "event.ticket_limit",
     "module": "data_surface_examples",
+    "contract": 2,
     "documents": [
         {
-            "surface": "event.ticket_limit",
-            "situation": null,
+            "resource": "event.ticket_limit",
+            "operation": null,
             "label": null,
             "schema": {
                 "$schema": "https://json-schema.org/draft/2020-12/schema",
                 "x-surface": {
+                    "contract": 2,
                     "version": 1
                 },
                 "type": "object",

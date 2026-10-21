@@ -9,6 +9,7 @@ use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\Session\AccountSwitcherInterface;
 use Drupal\data_surface\Contract\ContractBaselines;
 use Drupal\data_surface\Contract\ContractChange;
+use Drupal\data_surface\Contract\ContractEmitter;
 use Drush\Commands\AutowireTrait;
 use Drush\Style\DrushStyle;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -34,8 +35,10 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
  * reason, which is recorded in the baseline beside each change it
  * accepted. Each baseline records its module, and only the named
  * modules' baselines are compared, written or removed, so several
- * modules may share a directory. `--format=json` prints the same for a
- * program.
+ * modules may share a directory. A baseline written in another version
+ * of the contract's wire format is not compared: the run says so once,
+ * fails, and `--write` re-pins it with no reason asked. `--format=json`
+ * prints the same for a program.
  *
  * Decision: see docs/decisions.md#a-resource-evolves-in-the-open.
  */
@@ -101,6 +104,7 @@ final class ContractDiffCommand extends Command {
       'modules' => [],
       'directory' => NULL,
       'uid' => NULL,
+      'contract' => ContractEmitter::CONTRACT,
       'declarations' => 0,
       'changes' => [],
       'failing' => 0,
@@ -153,7 +157,7 @@ final class ContractDiffCommand extends Command {
     $failing = array_filter($changes, static fn (ContractChange $change): bool => $change->fails());
     $report['declarations'] = count($current);
     $report['changes'] = array_map(static fn (ContractChange $change): array => [
-      'surface' => $change->surface,
+      'resource' => $change->surface,
       'owner' => $change->owner,
       'path' => $change->path,
       'change' => $change->change,
@@ -162,7 +166,7 @@ final class ContractDiffCommand extends Command {
       'fails' => $change->fails(),
     ], $changes);
     $report['failing'] = count($failing);
-    $summary = sprintf('%d resources and structures, emitted for user %d (%s): %d differences, %d failing (breaking with no version raised and no allowance, or with no baseline).', count($current), $report['uid'], $account->getAccountName(), count($changes), count($failing));
+    $summary = sprintf('%d resources and structures in contract %d, emitted for user %d (%s): %d differences, %d failing (breaking with no version raised and no allowance, with no baseline, or written in another contract version).', count($current), ContractEmitter::CONTRACT, $report['uid'], $account->getAccountName(), count($changes), count($failing));
 
     if (!$write) {
       $report['passed'] = $failing === [];

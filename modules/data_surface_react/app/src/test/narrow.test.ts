@@ -81,13 +81,13 @@ describe('narrowing here agrees with /refine', () => {
   it('on example 3 with compliance: the ticket variants here, the room and the stewards by the server', () => {
     // The capacity is stated exactly now, its license rule declared; the
     // stewards, inside the mount, follow the capacity, a number, and are
-    // dynamic, so a change the capacity depends on is still asked.
+    // marked `refine`, so a change the capacity depends on is still asked.
     play(compliance as unknown as Recorded, [
       'local',
-      { key: 'room', marker: 'runtime' },
+      { key: 'room', marker: 'live' },
       'local',
-      { key: 'third_party_settings', marker: 'dynamic' },
-      { key: 'third_party_settings', marker: 'dynamic' },
+      { key: 'third_party_settings', marker: 'refine' },
+      { key: 'third_party_settings', marker: 'refine' },
       'local',
     ]);
   });
@@ -156,8 +156,9 @@ describe('a rule declared as data', () => {
 
   it('is stated in the compliance full schema as written, and read by its own `if`', () => {
     expect(full.properties?.capacity['x-surface']).toMatchObject({ enumerated: true, declared: true });
-    expect(full.properties?.capacity['x-surface']?.dynamic).toBeUndefined();
-    expect(rule?.then).toEqual({ properties: { capacity: { description: 'Up to 100 without an event license.', maximum: 100 } } });
+    expect(full.properties?.capacity['x-surface']?.refine).toBeUndefined();
+    // The declared type beside the bound, which never narrows.
+    expect(rule?.then).toEqual({ properties: { capacity: { type: ['integer', 'null'], description: 'Up to 100 without an event license.', maximum: 100 } } });
     const at = (value: unknown): Values => ({ third_party_settings: { data_surface_examples_compliance: { license: value, stewards: 1 } } });
     expect(holdsIf(rule?.if, at(null))).toBe(true);
     expect(holdsIf(rule?.if, at(''))).toBe(true);
@@ -165,11 +166,11 @@ describe('a rule declared as data', () => {
     expect(holdsIf(rule?.if, {})).toBe(true);
   });
 
-  it('is narrowed here, keyword for keyword as /refine answers, where nothing dynamic depends on it', () => {
+  it('is narrowed here, keyword for keyword as /refine answers, where nothing to refine with values depends on it', () => {
     // The stewards' rule set aside: what is left of a license or room
     // change is the capacity, its room conditionals and its declared rule.
     const mount = full.properties?.third_party_settings as Schema;
-    const stated = { ...full, properties: { ...full.properties, third_party_settings: { ...mount, 'x-surface': { ...mount['x-surface'], dynamic: undefined } } } } as Schema;
+    const stated = { ...full, properties: { ...full.properties, third_party_settings: { ...mount, 'x-surface': { ...mount['x-surface'], refine: undefined } } } } as Schema;
     play(recorded, ['local', 'local', 'local'], stated);
   });
 
@@ -240,7 +241,7 @@ describe('structures mixed in', () => {
   });
 
   it('narrows a member reading a port here, and asks about one a number moves', () => {
-    play(recorded, ['local', 'local', { key: 'changed', marker: 'dynamic' }]);
+    play(recorded, ['local', 'local', { key: 'changed', marker: 'refine' }]);
   });
 
   it('narrows a member inside an attached child by the child\'s own key', () => {
@@ -272,16 +273,16 @@ describe('structures mixed in', () => {
 });
 
 describe('a key whose access only the server decides', () => {
-  // The full schema is the account's: a key a runtime access answer may
-  // lock or leave out is there, marked `x-surface.access: "runtime"`, and
+  // The full schema is the account's: a key a live access answer may
+  // lock or leave out is there, marked `x-surface.access: "live"`, and
   // the schema for these answers settles it. The journal's full schema with
   // its archive and its owner so marked stands for one such account.
   const recorded = journal as unknown as Recorded;
   const declared = inlineSchema(recorded.schema.schema);
-  const runtime = (schema: Schema): Schema => ({ ...schema, 'x-surface': { ...(schema['x-surface'] as Extension), access: 'runtime' } });
+  const live = (schema: Schema): Schema => ({ ...schema, 'x-surface': { ...(schema['x-surface'] as Extension), access: 'live' } });
   const full: Schema = {
     ...declared,
-    properties: { ...declared.properties, archive: runtime(declared.properties?.archive as Schema), owner: runtime(declared.properties?.owner as Schema) },
+    properties: { ...declared.properties, archive: live(declared.properties?.archive as Schema), owner: live(declared.properties?.owner as Schema) },
   };
   const staff = served(recorded.contract);
 
@@ -356,7 +357,7 @@ describe('what is asked rather than narrowed', () => {
 describe('the status line', () => {
   it('names what was narrowed, or the key and marker that asked', () => {
     expect(narrowingStatus({ local: true, keys: ['room', 'capacity'], settled: { schema: {}, values: {}, stale: [] } })).toBe('Narrowed here: room, capacity');
-    expect(narrowingStatus({ local: false, key: 'room', marker: 'runtime' })).toBe('Asked the server: room depends on a runtime rule');
-    expect(narrowingStatus({ local: false, key: 'capacity', marker: 'dynamic' })).toBe('Asked the server: capacity depends on a dynamic rule');
+    expect(narrowingStatus({ local: false, key: 'room', marker: 'live' })).toBe('Asked the server: room depends on a live rule');
+    expect(narrowingStatus({ local: false, key: 'capacity', marker: 'refine' })).toBe('Asked the server: capacity depends on a rule to refine with values');
   });
 });

@@ -1,14 +1,16 @@
 {
-    "surface": "registration.step3.ticket.paid",
+    "resource": "registration.step3.ticket.paid",
     "module": "data_surface_examples",
+    "contract": 2,
     "documents": [
         {
-            "surface": "registration.step3.ticket.paid",
-            "situation": null,
+            "resource": "registration.step3.ticket.paid",
+            "operation": null,
             "label": null,
             "schema": {
                 "$schema": "https://json-schema.org/draft/2020-12/schema",
                 "x-surface": {
+                    "contract": 2,
                     "version": 1
                 },
                 "type": "object",

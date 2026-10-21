@@ -1,14 +1,16 @@
 {
-    "surface": "event.person",
+    "resource": "event.person",
     "module": "data_surface_examples",
+    "contract": 2,
     "documents": [
         {
-            "surface": "event.person",
-            "situation": null,
+            "resource": "event.person",
+            "operation": null,
             "label": null,
             "schema": {
                 "$schema": "https://json-schema.org/draft/2020-12/schema",
                 "x-surface": {
+                    "contract": 2,
                     "version": 1,
                     "ports": {
                         "listed": {
@@ -33,7 +35,7 @@
                             "string",
                             "null"
                         ],
-                        "format": "email",
+                        "format": "idn-email",
                         "x-surface": {
                             "locked": false,
                             "dependsOn": [
@@ -57,7 +59,7 @@
                 ],
                 "$defs": {
                     "event.phone": {
-                        "title": "Phone",
+                        "title": "event.phone",
                         "description": "Digits, with spaces if you like, and a leading + for a country code.",
                         "type": [
                             "string",

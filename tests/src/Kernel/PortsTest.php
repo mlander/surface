@@ -346,7 +346,7 @@ class PortsTest extends DataSurfaceKernelTestBase {
     $this->assertSame(['rows'], $def['required'], 'The aisle may not apply, so the def does not require it.');
     $this->assertSame(['layout'], $def['properties']['aisle']['x-surface']['dependsOn'], 'In the def, a key reading a port names the port.');
     $this->assertArrayNotHasKey('enumerated', $def['properties']['aisle']['x-surface']);
-    $this->assertArrayNotHasKey('dynamic', $def['properties']['aisle']['x-surface']);
+    $this->assertArrayNotHasKey('refine', $def['properties']['aisle']['x-surface']);
 
     $site = $full['properties']['seating'];
     $this->assertSame('#/$defs/resource_test.seating', $site['$ref']);
@@ -357,28 +357,31 @@ class PortsTest extends DataSurfaceKernelTestBase {
     $expected = [
       'no aisle for a standing room, on the venue\'s allOf' => <<<'JSON'
         {"if": {"properties": {"layout": {"const": "standing"}}, "required": ["layout"]},
-         "then": {"properties": {"seating": {"properties": {"aisle": false}}}}}
+         "then": {"properties": {"seating": {"type": "object", "properties": {"aisle": false}}}}}
         JSON,
       'a theatre\'s aisles, the aisle required where it applies' => <<<'JSON'
         {"if": {"properties": {"layout": {"const": "theatre"}}, "required": ["layout"]},
-         "then": {"properties": {"seating": {
+         "then": {"properties": {"seating": {"type": "object",
            "properties": {"aisle": {"oneOf": [{"const": "centre", "title": "Centre"}, {"const": "side", "title": "Side"}]}},
            "required": ["rows", "aisle"]}}}}
         JSON,
       'the rule reading the guests port, stated as written, at the capacity' => <<<'JSON'
         {"if": {"properties": {"capacity": {"type": "number", "maximum": 100}}, "required": ["capacity"]},
-         "then": {"properties": {"seating": {"properties": {
-           "rows": {"description": "Up to 10 rows for up to 100 guests.", "maximum": 10}}}}},
+         "then": {"properties": {"seating": {"type": "object", "properties": {
+           "rows": {"type": "integer", "description": "Up to 10 rows for up to 100 guests.", "maximum": 10}}}}},
          "x-surface": {"declared": true}}
         JSON,
       'the rule requiring the ushers, reading the guests port, at the capacity' => <<<'JSON'
         {"if": {"properties": {"capacity": {"type": "number", "exclusiveMinimum": 200}}, "required": ["capacity"]},
-         "then": {"properties": {"seating": {"properties": {"ushers": {"type": "integer"}}, "required": ["ushers"]}}},
+         "then": {"properties": {"seating": {"type": "object", "properties": {"ushers": {"type": "integer"}}, "required": ["ushers"]}}},
          "x-surface": {"declared": true}}
         JSON,
     ];
+    // A rule's conditional marked where the emitter's pass wrote it; the
+    // wire lists it in the frame's `x-surface.rules`.
+    $conditions = SchemaResolver::restored($full)['allOf'];
     foreach ($expected as $label => $json) {
-      $this->assertContains(json_decode($json, TRUE), $full['allOf'], $label);
+      $this->assertContains(json_decode($json, TRUE), $conditions, $label);
     }
     $this->assertCount(5, $full['allOf']);
 

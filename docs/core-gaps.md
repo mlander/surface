@@ -128,7 +128,8 @@ limit from the refusal.
 **Here today.** The emitter maps `Range`, `Length`, `Count`, `Email`,
 `NotBlank`, `Regex`, `Sequentially` and `AtLeastOneOf` to keywords, a
 `Choice` to its values, and names every other constraint under
-`x-surface.checkedOnServer`, so a client knows a server-side rule exists
+`x-surface.checkedOnServer`, with what it checks, so a client knows a
+server-side rule exists
 (`ContractEmitter::keywords()` in `src/Contract/ContractEmitter.php`). A
 `Regex` is written only when every construct in its pattern is on an
 allowlist of those PHP and JavaScript read alike, and is otherwise left
@@ -586,9 +587,9 @@ documents](served-contract.md#two-documents)):
   written as `if`/`then` on the parent (one per venue). A validator, or
   an agent planning its values, reads this one. Where a rule cannot be
   stated it stays at the declared width and says why: `checkedOnServer`
-  names a constraint with no keyword, `dynamic` a dependency on a value
+  names a constraint with no keyword, `refine` a dependency on a value
   whose cases cannot be listed (free text, or more combinations than a
-  cap), `runtime` a rule that reads site state, such as a lookup.
+  cap), `live` a rule that reads site state, such as a lookup.
 
 One document cannot do both: a list that depends on a sibling is either
 narrowed for one value of it, and wrong for the others, or written for

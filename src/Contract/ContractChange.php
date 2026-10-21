@@ -47,6 +47,17 @@ final class ContractChange {
   public const UNPINNED = 'unpinned';
 
   /**
+   * The baseline was written in another version of the contract's format.
+   *
+   * Not a breaking change of the resource: the wire every document is
+   * written in moved (`x-surface.contract`), so every keyword may be
+   * spelled anew and none is compared. The lint fails until writing the
+   * baselines re-pins them in today's version, which needs no allowance.
+   * Decision: see docs/decisions.md#contract-2.
+   */
+  public const CONTRACT = 'contract';
+
+  /**
    * Constructs a ContractChange.
    *
    * @param string $surface
@@ -65,8 +76,8 @@ final class ContractChange {
    *   One of the ContractDiff effects: what the change does to the
    *   documents the schema accepts.
    * @param string $status
-   *   self::COMPATIBLE, self::VERSIONED, self::ALLOWED, self::BREAKING or
-   *   self::UNPINNED.
+   *   self::COMPATIBLE, self::VERSIONED, self::ALLOWED, self::BREAKING,
+   *   self::UNPINNED or self::CONTRACT.
    */
   public function __construct(
     public readonly string $surface,
@@ -84,7 +95,7 @@ final class ContractChange {
    *   TRUE for a breaking change, versioned, allowed or not.
    */
   public function isBreaking(): bool {
-    return !in_array($this->status, [self::COMPATIBLE, self::UNPINNED], TRUE);
+    return !in_array($this->status, [self::COMPATIBLE, self::UNPINNED, self::CONTRACT], TRUE);
   }
 
   /**
@@ -92,10 +103,11 @@ final class ContractChange {
    *
    * @return bool
    *   TRUE for a breaking change no version and no allowance answers for,
-   *   and for a declaration with no baseline.
+   *   for a declaration with no baseline, and for a baseline written in
+   *   another version of the contract.
    */
   public function fails(): bool {
-    return in_array($this->status, [self::BREAKING, self::UNPINNED], TRUE);
+    return in_array($this->status, [self::BREAKING, self::UNPINNED, self::CONTRACT], TRUE);
   }
 
   /**
@@ -103,7 +115,8 @@ final class ContractChange {
    *
    * @return bool
    *   TRUE for a breaking change no version and no allowance answers for;
-   *   a declaration with no baseline is pinned by writing it.
+   *   a declaration with no baseline, and a baseline of another contract
+   *   version, are pinned by writing them.
    */
   public function needsAllowance(): bool {
     return $this->status === self::BREAKING;

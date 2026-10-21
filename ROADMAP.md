@@ -1121,6 +1121,45 @@ renames sit in A because they are cheapest before new code exists.
       tool; neither document carries it, as neither carries a key's own
       bound message (`docs/decisions.md#a-rule-declared-as-data`).
 
+    Group E, the contract's wire (synthesis section 1 B21 to B24, 2a's
+    wire rows, 3.7), one contract version
+    (`docs/decisions.md#contract-2`):
+    - **E1 (B21, B22), plain JSON Schema below an applicator.** DONE
+      2026-10-20: no `x-surface` below `allOf`, `anyOf`, `oneOf`, `if`,
+      `then`, `else` or `not`; the owning object says it, `rules` for a
+      declared rule's conditional and `within` by JSON pointer for a
+      narrowing; the declared type beside a keyword one type reads; every
+      live document and baseline compiles under ajv's strict mode.
+    - **E2, `$id` and a title per def.** DONE 2026-10-20: a document a
+      route serves says its URL; every def's `title` is its id.
+    - **E3, the union of a key's variants.** DONE 2026-10-20: `anyOf` of
+      each variant's def, and null where it may be cleared, so a type
+      generator writes `Free | Paid | null`.
+    - **E4 and E5, `refine` and `live`.** DONE 2026-10-20: for `dynamic`
+      and `runtime`, and `access: "live"` for `access: "runtime"`.
+    - **E6, `checkedOnServer` says what it checks.** DONE 2026-10-20:
+      each entry `{constraint, message}`.
+    - **E7, no `operation.readOnly`.** DONE 2026-10-20: `kind: "read"`
+      says it; the lint compares `kind`.
+    - **E8 (B23), `idn-email`.** DONE 2026-10-20: Drupal admits a
+      non-ASCII local part, and `email` did not.
+    - **E9, the old words off the wire.** DONE 2026-10-20: `resource`
+      and `operation` for `surface` and `situation`, in every document,
+      `created`, the React page's settings and a baseline; the widget
+      hint `variants` for `slot`.
+    - **E10, the contract's own version.** DONE 2026-10-20:
+      `x-surface.contract` and the `Contract-Version` header; the React
+      app refuses another; the lint reports a baseline of another version
+      as one `contract` change that `--write` re-pins with no reason;
+      baselines record it (`docs/evolution.md#the-contracts-own-version`).
+    - **B24, the markers table on `runtime`.** DONE 2026-10-20: closed by
+      the served contract page's rewrite; `live` is in the full schema,
+      on the key.
+
+    Open: `locked: false` and `dependsOn: []` are still on every
+    property; no `x-surface` metaschema is published; one `narrowing`
+    keyword and a root `exact: false` are left for later.
+
 ## Rejected, on the record
 
 So they are not re-proposed: imperative input-mutation hooks before

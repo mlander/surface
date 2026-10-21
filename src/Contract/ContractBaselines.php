@@ -20,7 +20,9 @@ use Drupal\data_surface\ResourceBuild\ResourcesInterface;
  * read it. ContractDiff judges today's emission against it. Each records
  * the module that declares it, so one directory may hold several modules'
  * baselines and a run naming some of them compares and writes only
- * theirs.
+ * theirs, and the version of the contract's wire format it was written
+ * in (`contract`), so a baseline from before the wire moved is re-pinned,
+ * not compared keyword by keyword.
  *
  * Decision: see docs/decisions.md#a-resource-evolves-in-the-open.
  */
@@ -69,9 +71,9 @@ final class ContractBaselines {
    * @param string[] $modules
    *   The modules.
    *
-   * @return array<string, array{surface: string, module: string, documents: list<array>}>
-   *   Each baseline, by id: the module declaring it and its documents as
-   *   emitted.
+   * @return array<string, array{resource: string, module: string, contract: int, documents: list<array>}>
+   *   Each baseline, by id: the module declaring it, the contract version
+   *   its documents are written in and its documents as emitted.
    */
   public function emit(array $modules): array {
     $baselines = [];
@@ -94,8 +96,9 @@ final class ContractBaselines {
       }
       if ($documents !== []) {
         $baselines[$definition->id] = [
-          'surface' => $definition->id,
+          'resource' => $definition->id,
           'module' => $definition->module,
+          'contract' => ContractEmitter::CONTRACT,
           'documents' => $documents,
         ];
       }
@@ -200,8 +203,8 @@ final class ContractBaselines {
    * @param string $directory
    *   The directory.
    * @param array $baseline
-   *   The baseline: `surface`, `module`, `documents` and, when any,
-   *   `allowed`.
+   *   The baseline: `resource`, `module`, `contract`, `documents` and,
+   *   when any, `allowed`.
    */
   public function write(string $directory, array $baseline): void {
     if (!is_dir($directory) && !mkdir($directory, 0775, TRUE) && !is_dir($directory)) {
@@ -210,7 +213,7 @@ final class ContractBaselines {
     if (($baseline['allowed'] ?? []) === []) {
       unset($baseline['allowed']);
     }
-    file_put_contents($directory . '/' . $baseline['surface'] . '.json', json_encode($baseline, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR) . "\n");
+    file_put_contents($directory . '/' . ($baseline['resource'] ?? $baseline['surface']) . '.json', json_encode($baseline, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR) . "\n");
   }
 
   /**
@@ -224,16 +227,25 @@ final class ContractBaselines {
    * @return \Drupal\data_surface\Contract\ContractChange[]
    *   Every difference, judged, in id order. A declaration or a document
    *   no longer emitted breaks; one with no baseline yet fails, unpinned,
-   *   until writing the baselines pins it.
+   *   until writing the baselines pins it. Baselines written in another
+   *   version of the contract are not compared: one change says so, once
+   *   for each version they move from, its document and owner `*` (every
+   *   such baseline), and fails until writing the baselines re-pins them.
    */
   public function compare(array $baselines, array $current): array {
     $diff = new ContractDiff();
     $current = self::decoded($current);
     $changes = [];
+    $moved = [];
     $ids = array_unique([...array_keys($baselines), ...array_keys($current)]);
     sort($ids);
     foreach ($ids as $id) {
       $id = (string) $id;
+      if (isset($baselines[$id], $current[$id]) && self::contractOf($baselines[$id]) !== self::contractOf($current[$id])) {
+        // Decision: see docs/decisions.md#contract-2.
+        $moved[self::contractOf($baselines[$id])][] = $id;
+        continue;
+      }
       $allowed = array_column($baselines[$id]['allowed'] ?? [], 'reason', 'path');
       if (!isset($current[$id])) {
         $changes[] = new ContractChange($id, $id, '#', 'no longer declared', ContractDiff::BREAKS, isset($allowed['#']) ? ContractChange::ALLOWED : ContractChange::BREAKING);
@@ -243,21 +255,43 @@ final class ContractBaselines {
         $changes[] = new ContractChange($id, $id, '#', 'no baseline yet', ContractDiff::NOTE, ContractChange::UNPINNED);
         continue;
       }
-      $before = self::bySituation($baselines[$id]['documents'] ?? []);
-      $after = self::bySituation($current[$id]['documents']);
-      foreach ($before + $after as $situation => $ignored) {
-        if (!isset($after[$situation])) {
-          $changes[] = new ContractChange($id, $id, $situation . '#', 'operation no longer described', ContractDiff::BREAKS, isset($allowed[$situation . '#']) ? ContractChange::ALLOWED : ContractChange::BREAKING);
+      $before = self::byOperation($baselines[$id]['documents'] ?? []);
+      $after = self::byOperation($current[$id]['documents']);
+      foreach ($before + $after as $operation => $ignored) {
+        if (!isset($after[$operation])) {
+          $changes[] = new ContractChange($id, $id, $operation . '#', 'operation no longer described', ContractDiff::BREAKS, isset($allowed[$operation . '#']) ? ContractChange::ALLOWED : ContractChange::BREAKING);
         }
-        elseif (!isset($before[$situation])) {
-          $changes[] = new ContractChange($id, $id, $situation . '#', 'operation added', ContractDiff::NOTE, ContractChange::COMPATIBLE);
+        elseif (!isset($before[$operation])) {
+          $changes[] = new ContractChange($id, $id, $operation . '#', 'operation added', ContractDiff::NOTE, ContractChange::COMPATIBLE);
         }
         else {
-          array_push($changes, ...$diff->compare($before[$situation], $after[$situation], $allowed));
+          array_push($changes, ...$diff->compare($before[$operation], $after[$operation], $allowed));
         }
       }
     }
+    ksort($moved);
+    foreach ($moved as $from => $ignored) {
+      $changes[] = new ContractChange('*', '*', '#', sprintf('contract version %d to %d', $from, ContractEmitter::CONTRACT), ContractDiff::CONTRACT, ContractChange::CONTRACT);
+    }
     return $changes;
+  }
+
+  /**
+   * Reads which version of the contract a baseline was written in.
+   *
+   * @param array $baseline
+   *   The baseline.
+   *
+   * @return int
+   *   Its `contract`, else its first document's, else 1: a baseline
+   *   written before the contract had a version.
+   */
+  protected static function contractOf(array $baseline): int {
+    if (is_int($baseline['contract'] ?? NULL)) {
+      return $baseline['contract'];
+    }
+    $first = $baseline['documents'][0] ?? NULL;
+    return is_array($first) ? ContractDiff::contractOf($first) : 1;
   }
 
   /**
@@ -267,12 +301,12 @@ final class ContractBaselines {
    *   The documents.
    *
    * @return array<string, array>
-   *   Each document, by its `situation`, the empty string for none.
+   *   Each document, by its operation, the empty string for none.
    */
-  protected static function bySituation(array $documents): array {
+  protected static function byOperation(array $documents): array {
     $keyed = [];
     foreach ($documents as $document) {
-      $keyed[(string) ($document['situation'] ?? '')] = $document;
+      $keyed[(string) ContractDiff::operationOf($document)] = $document;
     }
     return $keyed;
   }

@@ -1,23 +1,24 @@
 {
-    "surface": "first.newsletter",
+    "resource": "first.newsletter",
     "module": "data_surface_first",
+    "contract": 2,
     "documents": [
         {
-            "surface": "first.newsletter",
-            "situation": "configure",
+            "resource": "first.newsletter",
+            "operation": "configure",
             "label": "Configure the newsletter",
             "schema": {
                 "$schema": "https://json-schema.org/draft/2020-12/schema",
                 "title": "Configure the newsletter",
                 "description": "Sets who the newsletter is sent from, how often it goes out and how many recipients one send reaches.",
                 "x-surface": {
+                    "contract": 2,
                     "operation": {
                         "id": "configure",
                         "label": "Configure the newsletter",
                         "description": "Sets who the newsletter is sent from, how often it goes out and how many recipients one send reaches.",
                         "kind": "update",
                         "creates": false,
-                        "readOnly": false,
                         "destructive": false,
                         "idempotent": true
                     },
@@ -37,7 +38,7 @@
                     "sender_email": {
                         "title": "Sender email",
                         "type": "string",
-                        "format": "email",
+                        "format": "idn-email",
                         "x-surface": {
                             "locked": false,
                             "dependsOn": []

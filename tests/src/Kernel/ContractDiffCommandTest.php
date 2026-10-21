@@ -116,7 +116,7 @@ class ContractDiffCommandTest extends DataSurfaceKernelTestBase {
     $this->copyCommitted();
     [$status, $display] = $this->diff(['--module' => self::PINNED, '--dir' => $this->directory]);
     $this->assertSame(0, $status, $display);
-    $this->assertStringContainsString('19 resources and structures, emitted for user 1', $display);
+    $this->assertStringContainsString('19 resources and structures in contract 2, emitted for user 1', $display);
     $this->assertStringContainsString('0 failing', $display);
   }
 
@@ -147,9 +147,42 @@ class ContractDiffCommandTest extends DataSurfaceKernelTestBase {
     [$status] = $this->diff(['--module' => 'data_surface_first', '--dir' => $this->directory, '--write' => TRUE]);
     $this->assertSame(0, $status, 'Pinning a declaration asks no reason.');
     $written = json_decode((string) file_get_contents($this->directory . '/first.store.json'), TRUE);
-    $this->assertSame(['surface', 'module', 'documents'], array_keys($written));
+    $this->assertSame(['resource', 'module', 'contract', 'documents'], array_keys($written));
     $this->assertSame('data_surface_first', $written['module']);
     [$status] = $this->diff(['--module' => 'data_surface_first', '--dir' => $this->directory]);
+    $this->assertSame(0, $status);
+  }
+
+  /**
+   * Tests baselines of contract 1 fail once, and --write re-pins them.
+   *
+   * The wire moved, so nothing is compared keyword by keyword: the run
+   * says "contract version 1 to 2" once and fails, and writing needs no
+   * reason, since no resource broke its promise.
+   */
+  public function testAnotherContractVersionFailsOnceUntilWritten(): void {
+    $this->copyCommitted();
+    foreach (glob($this->directory . '/*.json') ?: [] as $file) {
+      $baseline = json_decode((string) file_get_contents($file), TRUE);
+      $documents = [];
+      foreach ($baseline['documents'] as $document) {
+        unset($document['schema']['x-surface']['contract']);
+        $keys = ['surface' => $document['resource'], 'situation' => $document['operation']];
+        $documents[] = $keys + array_diff_key($document, ['resource' => TRUE, 'operation' => TRUE]);
+      }
+      $old = ['surface' => $baseline['resource'], 'module' => $baseline['module'], 'documents' => $documents];
+      file_put_contents($file, json_encode($old));
+    }
+    [$status, $display] = $this->diff(['--module' => self::PINNED, '--dir' => $this->directory, '--format' => 'json']);
+    $this->assertSame(1, $status);
+    $report = json_decode($display, TRUE, 512, JSON_THROW_ON_ERROR);
+    $this->assertSame(2, $report['contract']);
+    $this->assertSame(['*: contract version 1 to 2 (contract)'], array_map(static fn (array $change): string => sprintf('%s: %s (%s)', $change['resource'], $change['change'], $change['status']), $report['changes']));
+
+    [$status, $display] = $this->diff(['--module' => self::PINNED, '--dir' => $this->directory, '--write' => TRUE]);
+    $this->assertSame(0, $status, 'Re-pinning asks no reason: ' . $display);
+    $this->assertSame(2, json_decode((string) file_get_contents($this->directory . '/registration.step3.json'), TRUE)['contract']);
+    [$status] = $this->diff(['--module' => self::PINNED, '--dir' => $this->directory]);
     $this->assertSame(0, $status);
   }
 
@@ -177,7 +210,7 @@ class ContractDiffCommandTest extends DataSurfaceKernelTestBase {
     ]);
     $this->assertSame(1, $status);
     $report = json_decode($display, TRUE, 512, JSON_THROW_ON_ERROR);
-    $said = array_map(static fn (array $change): string => $change['surface'] . ': ' . $change['change'], $report['changes']);
+    $said = array_map(static fn (array $change): string => $change['resource'] . ': ' . $change['change'], $report['changes']);
     $this->assertSame(['first.gone: no longer declared'], $said);
 
     [$status, $display] = $this->diff([
@@ -214,7 +247,7 @@ class ContractDiffCommandTest extends DataSurfaceKernelTestBase {
     $report = json_decode($display, TRUE, 512, JSON_THROW_ON_ERROR);
     $this->assertSame((int) $account->id(), $report['uid']);
     $this->assertSame(1, $status);
-    $this->assertContains('event.program configure#/properties/fees: key removed', array_map(static fn (array $change): string => sprintf('%s %s: %s', $change['surface'], $change['path'], $change['change']), $report['changes']));
+    $this->assertContains('event.program configure#/properties/fees: key removed', array_map(static fn (array $change): string => sprintf('%s %s: %s', $change['resource'], $change['path'], $change['change']), $report['changes']));
 
     [$status, $display] = $this->diff(['--module' => self::PINNED, '--dir' => $this->directory, '--uid' => '999']);
     $this->assertSame(1, $status);

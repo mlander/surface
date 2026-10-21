@@ -27,6 +27,12 @@ namespace Drupal\data_surface\Contract;
  *   a write supplies it where nothing is stored and the pipeline refuses
  *   one that does not by name.
  *
+ * Two documents written in different versions of the contract's own wire
+ * format (`x-surface.contract`, absent reading as 1) are not compared
+ * keyword by keyword: every keyword may be spelled anew, and the
+ * difference is one change of its own class, CONTRACT, which re-pinning
+ * the baseline answers.
+ *
  * For the inputs, what a client sends, NARROWS and BREAKS are breaking;
  * for the outputs, what a client reads, WIDENS and BREAKS are. A
  * breaking change passes when the version of the id that owns it (the
@@ -68,6 +74,11 @@ final class ContractDiff {
   public const NOTE = 'note';
 
   /**
+   * The two documents are written in different versions of the contract.
+   */
+  public const CONTRACT = 'contract';
+
+  /**
    * Keywords that annotate and never refuse.
    *
    * `format` is an annotation by decision
@@ -81,6 +92,7 @@ final class ContractDiff {
     'default',
     'examples',
     '$comment',
+    '$id',
     'deprecated',
     'format',
     'writeOnly',
@@ -115,14 +127,15 @@ final class ContractDiff {
   /**
    * How an operation behaves, which a client acts on.
    */
-  protected const FACTS = ['id', 'creates', 'readOnly', 'destructive', 'idempotent'];
+  protected const FACTS = ['id', 'kind', 'creates', 'destructive', 'idempotent'];
 
   /**
    * Compares one document with its baseline.
    *
    * @param array $baseline
-   *   The baseline document, as decoded from JSON: `surface`, `situation`,
-   *   `schema` and, when declared, `outputs`.
+   *   The baseline document, as decoded from JSON: `resource`,
+   *   `operation`, `schema` and, when declared, `outputs` (a document of
+   *   contract 1 says `surface` and `situation`).
    * @param array $current
    *   Today's document, the same way.
    * @param array<string, string> $allowed
@@ -132,8 +145,14 @@ final class ContractDiff {
    *   Every difference, judged.
    */
   public function compare(array $baseline, array $current, array $allowed = []): array {
-    $surface = (string) ($current['surface'] ?? $baseline['surface'] ?? '');
-    $prefix = ($current['situation'] ?? $baseline['situation'] ?? '') . '#';
+    $surface = self::idOf($current) ?? self::idOf($baseline) ?? '';
+    $prefix = (self::operationOf($current) ?? self::operationOf($baseline) ?? '') . '#';
+    $was = self::contractOf($baseline);
+    $is = self::contractOf($current);
+    if ($was !== $is) {
+      // Every keyword may be spelled anew: one change, not one per keyword.
+      return [new ContractChange($surface, $surface, $prefix, sprintf('contract version %d to %d', $was, $is), self::CONTRACT, ContractChange::CONTRACT)];
+    }
     $found = $this->node($baseline['schema'] ?? TRUE, $current['schema'] ?? TRUE, $prefix, $surface, FALSE);
     if (isset($baseline['outputs']) && !isset($current['outputs'])) {
       $found[] = [$surface, $prefix . 'outputs', 'outputs no longer declared', self::BREAKS, TRUE];
@@ -186,13 +205,57 @@ final class ContractDiff {
    */
   public function versions(array $document): array {
     $schema = is_array($document['schema'] ?? NULL) ? $document['schema'] : [];
-    $versions = [(string) ($document['surface'] ?? '') => (int) ($schema['x-surface']['version'] ?? 1)];
+    $versions = [(string) self::idOf($document) => (int) ($schema['x-surface']['version'] ?? 1)];
     foreach ($schema['$defs'] ?? [] as $key => $def) {
       if ($this->isFrame($def)) {
         $versions[$this->owner((string) $key)] = (int) ($def['x-surface']['version'] ?? 1);
       }
     }
     return $versions;
+  }
+
+  /**
+   * Reads which version of the contract's wire format a document is in.
+   *
+   * @param array $document
+   *   The document.
+   *
+   * @return int
+   *   Its `x-surface.contract`; 1 for one that states none, as every
+   *   document did before the contract had a version.
+   */
+  public static function contractOf(array $document): int {
+    $schema = is_array($document['schema'] ?? NULL) ? $document['schema'] : [];
+    return (int) ($schema['x-surface']['contract'] ?? 1);
+  }
+
+  /**
+   * Reads the id of the resource or structure a document describes.
+   *
+   * @param array $document
+   *   The document, of any contract version.
+   *
+   * @return string|null
+   *   Its `resource`, or a contract 1 document's `surface`.
+   */
+  public static function idOf(array $document): ?string {
+    $id = $document['resource'] ?? $document['surface'] ?? NULL;
+    return is_string($id) ? $id : NULL;
+  }
+
+  /**
+   * Reads the id of the operation a document describes.
+   *
+   * @param array $document
+   *   The document, of any contract version.
+   *
+   * @return string|null
+   *   Its `operation`, or a contract 1 document's `situation`; NULL for
+   *   none.
+   */
+  public static function operationOf(array $document): ?string {
+    $id = array_key_exists('resource', $document) ? ($document['operation'] ?? NULL) : ($document['situation'] ?? NULL);
+    return is_string($id) ? $id : NULL;
   }
 
   /**
@@ -289,6 +352,11 @@ final class ContractDiff {
     if (in_array($keyword, self::RULES, TRUE) || $keyword === 'const') {
       return $by_presence($keyword);
     }
+    if ($keyword === 'anyOf' && (isset($old['x-surface']['variants']) || isset($new['x-surface']['variants']))) {
+      // A key's union of its variants, beside the conditionals that state
+      // each one exactly and are judged themselves: it narrows nothing.
+      return $one('the union of the variants changed', self::NOTE);
+    }
 
     return match ($keyword) {
       '$defs' => $this->defs((array) $a, (array) $b, $path, $owner, $reading),
@@ -301,7 +369,7 @@ final class ContractDiff {
       'required' => $this->required((array) $a, (array) $b, (array) ($old['properties'] ?? []), (array) ($new['properties'] ?? []), $path, $owner, $reading),
       'additionalProperties', 'unevaluatedProperties' => $this->node($in_old ? $a : TRUE, $in_new ? $b : TRUE, $path, $owner, $reading),
       'items', 'then', 'else' => $this->node($in_old ? $a : TRUE, $in_new ? $b : TRUE, $path, $owner, $reading),
-      'allOf' => $this->allOf((array) $a, (array) $b, $old, $path, $owner, $reading),
+      'allOf' => $this->allOf((array) $a, (array) $b, $old, $new, $path, $owner, $reading),
       '$ref' => $one(sprintf('refers to %s where it referred to %s', $b ?? 'nothing', $a ?? 'nothing'), self::BREAKS),
       default => $one($keyword . ' changed, which the lint does not read', self::BREAKS),
     };
@@ -383,11 +451,16 @@ final class ContractDiff {
         continue;
       }
       if ($name === 'checkedOnServer') {
-        foreach (array_diff((array) $b, (array) $a) as $constraint) {
+        $before = self::constraints((array) $a);
+        $after = self::constraints((array) $b);
+        foreach (array_diff($after, $before) as $constraint) {
           $add($at, sprintf('checked on the server now: %s', $constraint), self::NARROWS);
         }
-        foreach (array_diff((array) $a, (array) $b) as $constraint) {
+        foreach (array_diff($before, $after) as $constraint) {
           $add($at, sprintf('no longer checked on the server: %s', $constraint), self::WIDENS);
+        }
+        if ($before === $after) {
+          $add($at, 'what a constraint checked on the server says changed', self::NOTE);
         }
       }
       elseif ($name === 'ports') {
@@ -423,6 +496,19 @@ final class ContractDiff {
       }
     }
     return $found;
+  }
+
+  /**
+   * Names the constraints a `checkedOnServer` lists.
+   *
+   * @param array $entries
+   *   Its entries, each `{constraint, message}`.
+   *
+   * @return string[]
+   *   The constraints' ids.
+   */
+  protected static function constraints(array $entries): array {
+    return array_map(static fn (mixed $entry): string => (string) (is_array($entry) ? ($entry['constraint'] ?? '') : $entry), $entries);
   }
 
   /**
@@ -635,9 +721,10 @@ final class ContractDiff {
    * Compares the conjuncts of two objects: conditionals and compositions.
    *
    * Each entry is matched by what it is: a conditional by its `if` (and
-   * whether it is a declared rule), a composition by its reference, the
-   * rest by its whole text. A conjunct dropped only widens. One added
-   * narrows, unless it is a conditional no document the baseline
+   * whether its object's `x-surface.rules` lists it as a declared rule), a
+   * composition by its reference, the rest by its whole text. A conjunct
+   * dropped only widens. One added narrows, unless it is a conditional no
+   * document the baseline
    * accepted can meet, because it asks a key for a value the baseline
    * did not allow there (a new variant's), or a reference whose members
    * the properties report.
@@ -648,6 +735,8 @@ final class ContractDiff {
    *   Today's.
    * @param array $frame
    *   The baseline's object the `allOf` is on.
+   * @param array $now
+   *   Today's.
    * @param string $path
    *   The path of `allOf`.
    * @param string $owner
@@ -658,9 +747,9 @@ final class ContractDiff {
    * @return list<array{0: string, 1: string, 2: string, 3: string, 4: bool}>
    *   Each difference.
    */
-  protected function allOf(array $old, array $new, array $frame, string $path, string $owner, bool $reading): array {
-    $old = $this->conjuncts($old);
-    $new = $this->conjuncts($new);
+  protected function allOf(array $old, array $new, array $frame, array $now, string $path, string $owner, bool $reading): array {
+    $old = $this->conjuncts($old, (array) ($frame['x-surface']['rules'] ?? []));
+    $new = $this->conjuncts($new, (array) ($now['x-surface']['rules'] ?? []));
     $found = [];
     foreach ($old as $key => [$i, $entry]) {
       if (!isset($new[$key])) {
@@ -692,15 +781,17 @@ final class ContractDiff {
    *
    * @param array $entries
    *   The entries.
+   * @param int[] $rules
+   *   The indexes of the declared rules' conditionals among them.
    *
    * @return array<string, array{0: int, 1: mixed}>
    *   Each entry with its position, by its key.
    */
-  protected function conjuncts(array $entries): array {
+  protected function conjuncts(array $entries, array $rules = []): array {
     $keyed = [];
     foreach (array_values($entries) as $i => $entry) {
       $key = match (TRUE) {
-        is_array($entry) && array_key_exists('if', $entry) => 'if:' . json_encode($entry['if']) . (isset($entry['x-surface']['declared']) ? ':declared' : ''),
+        is_array($entry) && array_key_exists('if', $entry) => 'if:' . json_encode($entry['if']) . (in_array($i, $rules, TRUE) ? ':declared' : ''),
         is_array($entry) && isset($entry['$ref']) && count($entry) === 1 => 'ref:' . $entry['$ref'],
         default => 'is:' . json_encode($entry),
       };

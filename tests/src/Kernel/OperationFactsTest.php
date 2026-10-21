@@ -310,7 +310,11 @@ class OperationFactsTest extends DataSurfaceKernelTestBase {
       ];
       foreach ($documents as $which => $schema) {
         $this->assertSame(['$schema', 'title', 'description', 'x-surface'], array_slice(array_keys($schema), 0, 4), $which);
-        $this->assertSame($facts, $schema['x-surface']['operation'], $which);
+        // `kind: read` says what `readOnly` said: the documents leave it to
+        // the tool. Decision: see docs/decisions.md#contract-2.
+        $stated = $facts;
+        unset($stated['readOnly']);
+        $this->assertSame($stated, $schema['x-surface']['operation'], $which);
         $this->assertSame($facts['description'], $schema['description'], $which . ': the operation\'s description is the document\'s.');
       }
     }
@@ -333,8 +337,8 @@ class OperationFactsTest extends DataSurfaceKernelTestBase {
     $this->assertArrayNotHasKey('description', $emitter->emitFull($built, 'tool_test.vault', 'configure', $vault->label, operation: $vault->facts())->document['schema']);
 
     $built = $resources->buildOperation(RegistrationStep3Resource::class, 'configure', []);
-    $this->assertSame(['version' => 1], $emitter->emit($built, [], 'registration.step3')->document['schema']['x-surface'], 'No operation: only the version.');
-    $this->assertSame(['version' => 1], $emitter->emitFull($built, 'registration.step3')->document['schema']['x-surface'], 'No operation: only the version.');
+    $this->assertSame(['contract' => 2, 'version' => 1], $emitter->emit($built, [], 'registration.step3')->document['schema']['x-surface'], 'No operation: only the contract and the version.');
+    $this->assertSame(['contract' => 2, 'version' => 1], $emitter->emitFull($built, 'registration.step3')->document['schema']['x-surface'], 'No operation: only the contract and the version.');
   }
 
 }

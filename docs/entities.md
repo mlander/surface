@@ -279,7 +279,7 @@ done about it.
     past that the key is free and the validator asks the handler.
 11. **Which text formats an account may use** is a fact about the
     account, so it is a runtime refiner, never run ahead of time; the
-    full schema lists the field's formats and marks the key `runtime`.
+    full schema lists the field's formats and marks the key `live`.
     Core's text widget also preselects the account's first format; the
     structure leaves the format unanswered, and a body saved without one
     renders through the fallback format.

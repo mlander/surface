@@ -48,15 +48,15 @@ function allows(schema: Schema): Phrase[] {
   if (schema.maxLength !== undefined) {
     phrases.push(`at most ${schema.maxLength} characters`);
   }
-  if (schema.format === 'email') {
+  if (schema.format === 'email' || schema.format === 'idn-email') {
     phrases.push('an email address');
   }
   if (schema.pattern !== undefined) {
     const message = schema['x-surface']?.patternMessage;
     phrases.push(message ?? { words: 'matches a required format: ', code: schema.pattern });
   }
-  for (const name of schema['x-surface']?.checkedOnServer ?? []) {
-    phrases.push(`${name}, checked on the server`);
+  for (const checked of schema['x-surface']?.checkedOnServer ?? []) {
+    phrases.push(`checked on the server: ${checked.message}`);
   }
   return phrases.length === 0 ? ['anything of its type'] : phrases;
 }
@@ -90,21 +90,21 @@ function rows(schema: Schema, values: Values, prefix = ''): Row[] {
     const widget = extension?.widget;
     found.push({
       path,
-      type: widget === 'slot' ? 'variants' : widget === 'fieldset' ? 'part' : extension?.list ? 'collection' : (jsonType(property) ?? 'any'),
+      type: widget === 'variants' ? 'variants' : widget === 'fieldset' ? 'part' : extension?.list ? 'collection' : (jsonType(property) ?? 'any'),
       label: property.title ?? name,
       required: (schema.required ?? []).includes(name),
-      allows: widget === 'slot'
-        ? [`a part chosen by ${extension?.by}: ${(extension?.variants ?? []).join(', ')}`]
+      allows: widget === 'variants'
+        ? [`a part chosen by ${extension?.by}: ${Object.keys(extension?.variants ?? {}).join(', ')}`]
         : widget === 'fieldset' ? ['its own keys'] : allows(property),
       dependsOn: extension?.dependsOn ?? [],
       now: extension?.locked
         ? 'locked'
         : extension?.stale
           ? 'stale: shown empty, the stored value kept'
-          : widget === 'slot'
+          : widget === 'variants'
             ? (extension?.chosen ? `the ${extension.chosen} variant` : 'not chosen yet')
-            : extension?.runtime
-              ? (extension.refined ? 'narrowed, and checked at runtime' : 'as declared, checked at runtime')
+            : extension?.live
+              ? (extension.refined ? 'narrowed, and checked by a live rule' : 'as declared, checked by a live rule')
               : extension?.refined ? 'narrowed' : 'as declared',
     });
     if (extension?.list && property.items !== undefined) {
@@ -112,7 +112,7 @@ function rows(schema: Schema, values: Values, prefix = ''): Row[] {
       found.push(...rows(property.items, {}, `${path}.*.`));
       continue;
     }
-    const inner = widget === 'slot' ? resolveVariants(schema, name, values) : widget === 'fieldset' ? property : null;
+    const inner = widget === 'variants' ? resolveVariants(schema, name, values) : widget === 'fieldset' ? property : null;
     if (inner !== null) {
       found.push(...rows(inner, nested, `${path}.`));
     }

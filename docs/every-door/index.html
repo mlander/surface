@@ -385,9 +385,10 @@ final class RegistrationComplianceAlter implements AltersInputsInterface {
     }
   },
   "allOf": [{
-    "if":   { "properties": { "pricing": { "const": "paid" } } },
-    "then": { "properties": { "ticket": {
-      "required": ["price", "currency"] } } }
+    "if":   { "properties": { "pricing": { "const": "paid" } },
+              "required": ["pricing"] },
+    "then": { "properties": { "ticket": { "title": "Ticket",
+      "$ref": "#/$defs/registration.step3.ticket.paid" } } }
   }]
 }`
   };

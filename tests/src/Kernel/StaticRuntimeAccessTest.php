@@ -301,16 +301,16 @@ class StaticRuntimeAccessTest extends DataSurfaceKernelTestBase {
     // the loan, the parent's static answer, and marked, its own.
     $insurance = $full['properties']['loan']['properties']['insurance'];
     $this->assertTrue($insurance['readOnly']);
-    $this->assertSame('runtime', $insurance['x-surface']['access']);
+    $this->assertSame('live', $insurance['x-surface']['access']);
 
     $this->actAs('keeper');
     $full = $this->full();
     foreach (['loan', 'source', 'acquired'] as $key) {
       $this->assertArrayNotHasKey('readOnly', $full['properties'][$key], $key);
-      $this->assertSame('runtime', $full['properties'][$key]['x-surface']['access'], $key);
+      $this->assertSame('live', $full['properties'][$key]['x-surface']['access'], $key);
     }
     $this->assertArrayNotHasKey('access', $full['properties']['title']['x-surface']);
-    $this->assertSame('runtime', $full['properties']['loan']['properties']['insurance']['x-surface']['access']);
+    $this->assertSame('live', $full['properties']['loan']['properties']['insurance']['x-surface']['access']);
 
     $this->actAs('archivist');
     $full = $this->full();
@@ -390,7 +390,7 @@ class StaticRuntimeAccessTest extends DataSurfaceKernelTestBase {
   public function testNarrowingByAccountIsRuntimeRefinement(): void {
     $this->actAs('keeper');
     $full = $this->full();
-    $this->assertTrue($full['properties']['room']['x-surface']['runtime']);
+    $this->assertTrue($full['properties']['room']['x-surface']['live']);
     $this->assertSame(['east', 'west', 'vault'], static::rooms($full), 'The full schema keeps every room: the refiner is never run ahead.');
     $these = $this->these();
     $this->assertSame(['east', 'west'], static::rooms($these));

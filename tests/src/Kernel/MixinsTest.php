@@ -392,7 +392,10 @@ class MixinsTest extends DataSurfaceKernelTestBase {
     $full = $this->schema(JournalResource::class);
     $keys = ['$schema', 'x-surface', 'type', 'properties', 'unevaluatedProperties', 'required', 'allOf', '$defs'];
     $this->assertSame($keys, array_keys($full));
-    $this->assertSame(['version' => 1], $full['x-surface'], 'Asked for in no operation: the version alone.');
+    $this->assertSame(['contract' => 2, 'version' => 1, 'rules' => [2, 4, 5]], $full['x-surface'], 'Asked for in no operation: the contract and the version, and which conditionals are rules.');
+    // Each marker where the emitter's pass wrote it, as the rest reads it.
+    // Decision: see docs/decisions.md#contract-2.
+    $full = SchemaResolver::restored($full);
     $this->assertSame(['resource_test.timestamps', 'resource_test.ownership', 'resource_test.archive'], array_keys($full['$defs']), 'The archive\'s stamps first, then what it mixes in.');
     $this->assertSame(self::KEYS, array_keys($full['properties']), 'Every member keeps its place among the owner\'s keys.');
     $this->assertTrue($full['properties']['changed'], 'The def says all there is.');
@@ -412,7 +415,7 @@ class MixinsTest extends DataSurfaceKernelTestBase {
     $this->assertSame(['$ref' => '#/$defs/resource_test.ownership'], $archive['allOf'][0]);
 
     // Nested by the ledger: one def, closed, the keys under its key.
-    $ledger = $this->schema(LedgerResource::class);
+    $ledger = SchemaResolver::restored($this->schema(LedgerResource::class));
     $def = $ledger['$defs']['resource_test.timestamps'];
     $this->assertFalse($def['additionalProperties']);
     unset($def['additionalProperties']);
@@ -421,12 +424,13 @@ class MixinsTest extends DataSurfaceKernelTestBase {
     $expected = json_decode(<<<'JSON'
       {
         "resource_test.timestamps": {
+          "title": "resource_test.timestamps",
           "type": "object",
           "properties": {
             "created": {"title": "Created", "description": "Seconds since the epoch.", "type": ["integer", "null"], "minimum": 0,
                         "x-surface": {"locked": false, "dependsOn": []}},
             "changed": {"title": "Changed", "type": ["integer", "null"], "minimum": 0,
-                        "x-surface": {"locked": false, "dependsOn": ["created"], "dynamic": true, "declared": true}}
+                        "x-surface": {"locked": false, "dependsOn": ["created"], "refine": true, "declared": true}}
           },
           "allOf": [
             {"if": {"properties": {"created": {"not": {"type": "null"}}}, "required": ["created"]},
@@ -435,6 +439,7 @@ class MixinsTest extends DataSurfaceKernelTestBase {
           ]
         },
         "resource_test.ownership": {
+          "title": "resource_test.ownership",
           "type": "object",
           "properties": {
             "owner": {"title": "Owner", "type": "string", "x-surface": {"locked": false, "dependsOn": ["audience"]}},
@@ -451,11 +456,13 @@ class MixinsTest extends DataSurfaceKernelTestBase {
     // What reads the port is stated on the owner, at its key.
     $this->assertSame(['x-surface' => ['locked' => FALSE, 'dependsOn' => ['visibility'], 'declared' => TRUE]], $full['properties']['owner']);
     $this->assertSame(['x-surface' => ['locked' => FALSE, 'dependsOn' => ['visibility'], 'enumerated' => TRUE]], $full['properties']['shared']);
-    $stated = array_slice($full['allOf'], 2);
-    $this->assertContains(json_decode('{"if": {"properties": {"visibility": {"const": "public"}}, "required": ["visibility"]}, "then": {"properties": {"shared": false}}}', TRUE), $stated);
-    $this->assertContains(json_decode('{"if": {"properties": {"visibility": {"const": "staff"}}, "required": ["visibility"]}, "then": {"properties": {"owner": {"description": "Up to 32 characters for a staff audience.", "maxLength": 32}}}, "x-surface": {"declared": true}}', TRUE), $stated);
-    $this->assertContains(json_decode('{"if": {"properties": {"created": {"type": "null"}}}, "then": {"properties": {"revision": {"description": "A journal never created is on its first revision.", "maximum": 1}}}, "x-surface": {"declared": true}}', TRUE), $stated);
-    $this->assertContains(json_decode('{"if": {"properties": {"published": {"const": true}}, "required": ["published"]}, "then": {"properties": {"created": {"description": "A published journal says when it was created.", "type": "integer"}}, "required": ["created"]}, "x-surface": {"declared": true}}', TRUE), $stated);
+    // Less the declared type each narrowing states beside a keyword one
+    // type reads, which narrows nothing.
+    $stated = array_map(self::untyped(...), array_slice($full['allOf'], 2));
+    $this->assertContains(self::untyped(json_decode('{"if": {"properties": {"visibility": {"const": "public"}}, "required": ["visibility"]}, "then": {"properties": {"shared": false}}}', TRUE)), $stated);
+    $this->assertContains(self::untyped(json_decode('{"if": {"properties": {"visibility": {"const": "staff"}}, "required": ["visibility"]}, "then": {"properties": {"owner": {"type": "string", "description": "Up to 32 characters for a staff audience.", "maxLength": 32}}}, "x-surface": {"declared": true}}', TRUE)), $stated);
+    $this->assertContains(self::untyped(json_decode('{"if": {"properties": {"created": {"type": "null"}}}, "then": {"properties": {"revision": {"type": "integer", "description": "A journal never created is on its first revision.", "maximum": 1}}}, "x-surface": {"declared": true}}', TRUE)), $stated);
+    $this->assertContains(self::untyped(json_decode('{"if": {"properties": {"published": {"const": true}}, "required": ["published"]}, "then": {"properties": {"created": {"description": "A published journal says when it was created.", "type": "integer"}}, "required": ["created"]}, "x-surface": {"declared": true}}', TRUE)), $stated);
     $this->assertCount(6, $full['allOf'], 'Two references and four conditionals: the owner\'s two rules, and what reads the port.');
 
     // A standard validator holds the composed document as the pipeline.
@@ -564,6 +571,25 @@ class MixinsTest extends DataSurfaceKernelTestBase {
     $this->expectException(\LogicException::class);
     $this->expectExceptionMessage('calls mixIn(). A shape is one value');
     (new ShapeBlueprint('resource_test.sku', 'Drupal\some_module\Alter\SkuAlter'))->with(EntryStructure::class);
+  }
+
+  /**
+   * Leaves out every `type` a schema states, at any depth.
+   *
+   * @param array $schema
+   *   The schema.
+   *
+   * @return array
+   *   The same, with no `type`.
+   */
+  protected static function untyped(array $schema): array {
+    unset($schema['type']);
+    foreach ($schema as $keyword => $value) {
+      if (is_array($value)) {
+        $schema[$keyword] = self::untyped($value);
+      }
+    }
+    return $schema;
   }
 
 }

@@ -435,7 +435,7 @@ normalizes an instance's inputs see the caller's own listing:
   and writable, and its description ends with "Whether this may be
   changed is decided once the thing it belongs to is known: a call may
   find it locked or left out." The served contract says the same with
-  `x-surface.access: "runtime"`; the Tool API's normalizer writes its
+  `x-surface.access: "live"`; the Tool API's normalizer writes its
   schema from typed definitions, which carry a description and no
   extension keyword, so the listing says it in words.
 

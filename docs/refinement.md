@@ -191,9 +191,9 @@ things set it apart:
   `defineInputs()`: [recipe](recipes.md#an-unconditional-rule-is-a-constraint)),
   and a rule requiring a key a refiner may rule out.
 
-The full schema states each rule as written, one conditional marked
-`x-surface.declared`, without running anything, and the key carries
-`x-surface.declared: true`
+The full schema states each rule as written, one conditional whose
+index the parent's `x-surface.rules` lists, without running anything,
+and the key carries `x-surface.declared: true`
 ([served contract](served-contract.md#x-surface)). The schema for one
 set of values evaluates it, as the pipeline does. The decision, with
 what was weighed: [A rule declared as data](decisions.md#a-rule-declared-as-data).
@@ -266,14 +266,14 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
   the served contract runs a static refiner ahead of time, for every
   value its watched siblings could take, and writes each answer down as
   a JSON Schema conditional (`enumerated`), or, where the values cannot
-  be listed, says the key is `dynamic` and can be asked about with
-  values. Which rooms a venue has is static.
+  be listed, says the key is `refine`: it can be asked about with
+  values, at `/refine`. Which rooms a venue has is static.
 - **Runtime, `runtime: TRUE`.** A rule whose answer depends on something
   no schema can state: a lookup in the database or a remote service,
   uniqueness (a machine name nobody has taken), the current account,
   the time, any service. It promises the schema nothing. The served
   contract never runs it ahead of time, in either document, and marks
-  the key `runtime`; only the pipeline, a form and the schema for one
+  the key `live`; only the pipeline, a form and the schema for one
   set of values run it, against those values. Which rooms are closed
   today is runtime: example 4 reads it from State.
 
@@ -296,8 +296,8 @@ narrowing check. Two differences follow from the kind:
 
 On one key, a class's static methods run before its runtime ones; the
 owner's run before an alter's, as before. A key with both kinds is
-`enumerated` or `dynamic` for its static refiners, over the siblings
-those watch, and `runtime` besides.
+`enumerated` or `refine` for its static refiners, over the siblings
+those watch, and `live` besides.
 
 #### Enforcing the kind
 

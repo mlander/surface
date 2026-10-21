@@ -1,14 +1,16 @@
 {
-    "surface": "registration.contact",
+    "resource": "registration.contact",
     "module": "data_surface_examples",
+    "contract": 2,
     "documents": [
         {
-            "surface": "registration.contact",
-            "situation": null,
+            "resource": "registration.contact",
+            "operation": null,
             "label": null,
             "schema": {
                 "$schema": "https://json-schema.org/draft/2020-12/schema",
                 "x-surface": {
+                    "contract": 2,
                     "version": 1
                 },
                 "type": "object",
@@ -16,7 +18,7 @@
                     "email": {
                         "title": "Email",
                         "type": "string",
-                        "format": "email",
+                        "format": "idn-email",
                         "x-surface": {
                             "locked": false,
                             "dependsOn": []

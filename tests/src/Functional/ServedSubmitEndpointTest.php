@@ -170,7 +170,7 @@ class ServedSubmitEndpointTest extends BrowserTestBase {
     $this->assertSame('harbour_deck', $stored['room']);
     $this->assertSame(90, $stored['capacity']);
     $contract = $answer['contract'];
-    $this->assertSame('registration.step2', $contract['surface']);
+    $this->assertSame('registration.step2', $contract['resource']);
     $this->assertEquals(self::VALID, array_intersect_key($contract['values'], self::VALID));
     $this->assertSame('harbour_deck', $contract['values']['room']);
     $this->assertContains('harbour_deck', array_column($contract['schema']['properties']['room']['oneOf'], 'const'));
@@ -257,8 +257,8 @@ class ServedSubmitEndpointTest extends BrowserTestBase {
     ]));
     $this->assertTrue($answer['committed'], (string) json_encode($answer['violations']));
     $this->assertSame([
-      'surface' => 'node.type',
-      'situation' => 'edit',
+      'resource' => 'node.type',
+      'operation' => 'edit',
       'parameters' => ['type' => 'recipe'],
     ], $answer['created']);
 

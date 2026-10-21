@@ -97,7 +97,7 @@ class ShapesTest extends DataSurfaceKernelTestBase {
    * The stock code's def, as both documents write it.
    */
   protected const DEF = [
-    'title' => 'Stock code',
+    'title' => 'resource_test.sku',
     'description' => 'Two capitals and digits, as printed on the shelf.',
     'type' => ['string', 'null'],
     'pattern' => '^[A-Z]{2}\d+$',

@@ -651,7 +651,7 @@ runtime one (the subject or site state does) alike, and a locked key
 keeps what is stored however it was posted. The kind decides only what
 is said ahead of time: the full schema and the tool listing state a
 static answer for the account that asks and mark a runtime one, its key
-there and writable with `x-surface.access: "runtime"`, so a document
+there and writable with `x-surface.access: "live"`, so a document
 valid against the full schema may still post a key the runtime answer
 then locks (kept) or omits (refused as an unknown key)
 ([Static and runtime access](resources.md#static-and-runtime-access)).

@@ -455,7 +455,7 @@ What each kind does, by door:
 | --- | --- | --- |
 | The build (`build()`), the form, the pipeline, the schema for these answers | applied | applied |
 | The build for the account alone (`buildStatic()`) | applied | asked, set aside: the key kept as the static answers leave it, and marked |
-| The full schema | locked: `readOnly`, `x-surface.locked`; omitted: not there | there and writable, `x-surface.access: "runtime"` |
+| The full schema | locked: `readOnly`, `x-surface.locked`; omitted: not there | there and writable, `x-surface.access: "live"` |
 | The tool listing | locked: a locked property; omitted: not there | there, its description saying a call may find it locked or left out |
 
 So the full schema and the tool listing, which clients cache, are the
@@ -490,7 +490,7 @@ account; a state-based one is settled at call time
 **Narrowing by account is not access.** "An editor sees fewer venues"
 narrows the values a key allows, which is a refiner's: it reads the
 current user, so it is a runtime refiner, and the full schema keeps the
-key wide and marked `runtime`. Access only says whether the keys may be
+key wide and marked `live`. Access only says whether the keys may be
 changed, seen, or neither.
 
 ```php

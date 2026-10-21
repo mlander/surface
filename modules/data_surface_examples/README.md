@@ -125,7 +125,7 @@ which only a stored value resolves, and this reads none.
   `title, type` beside `title, type, oneOf (3)`, the room `title, type`
   beside `title, type, oneOf (6), if/then on venue (3 cases)`, the
   ticket `title, $comment` beside
-  `title, type, if/then on pricing (2 variants: free has note, $ref (registration.step3.ticket.free); paid has price, currency, $ref (registration.step3.ticket.paid))`,
+  `title, anyOf, if/then on pricing (2 variants: free has note, $ref (registration.step3.ticket.free); paid has price, currency, $ref (registration.step3.ticket.paid))`,
   the contact `title, type, properties, additionalProperties, required`
   beside
   `title, type, properties, additionalProperties, required, $ref (registration.contact)`,
@@ -522,7 +522,7 @@ only kind an instance method may be:
   data_surface_examples_compliance.closed_rooms '["riverside_east"]'
   --input-format=json`); then the room leaves the East room out and says
   "The East room is closed.", the submit refuses it, and the full schema
-  still lists it under Riverside Hall, marked `runtime`. Reset to
+  still lists it under Riverside Hall, marked `live`. Reset to
   defaults opens every room again.
 
 No form alter, no hook.
@@ -937,9 +937,10 @@ final class BulletinResource implements ResourceInterface {
 ```
 
 Nothing is run to learn either rule. The full schema states each as
-written, an `if`/`then` marked `x-surface.declared`, and the send day as
-`false` under the monthly conditional and `required` under the other:
-the panel shows the rules beside those three conditionals. Choose
+written, an `if`/`then` the frame lists in `x-surface.rules`, and the
+send day as `false` under the monthly conditional and `required` under
+the other: the panel shows the rules beside those three conditionals.
+Choose
 Monthly and the send day is gone from the form, over AJAX; the stored
 Friday is kept for the day the bulletin goes weekly again: the third
 call's values leave it out, as every answer leaves out a key that does
@@ -1276,7 +1277,7 @@ never declared
 - **Runtime**, for any other account: once the program is published the
   fees are fixed, which only what is stored says, read under the
   program's config tag. The full schema marks the fees `access:
-  "runtime"`, and the schema for these answers, the form and the
+  "live"`, and the schema for these answers, the form and the
   pipeline settle it. Save the program published and reload: the fees
   are drawn disabled.
 
@@ -1426,7 +1427,7 @@ answer's kind is read from its cacheability, as any answer's is:
   that changes it, its headline and its fees with every other key, and
   the fees are fixed wherever else they appear. Only what is stored
   says so, so the full schema marks every key of the program `access:
-  "runtime"`, and a call is refused by name.
+  "live"`, and a call is refused by name.
 
 <!-- code: ../data_surface_examples_workflow/src/Alter/FeesWorkflowAlter.php -->
 

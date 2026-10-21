@@ -109,7 +109,7 @@ class StaticRuntimeAccessFormTest extends BrowserTestBase {
     $this->drupalLogin($this->drupalCreateUser(['keep an exhibit']));
     $full = $this->fullSchema();
     $this->assertArrayNotHasKey('readOnly', $full['properties']['loan']);
-    $this->assertSame('runtime', $full['properties']['loan']['x-surface']['access']);
+    $this->assertSame('live', $full['properties']['loan']['x-surface']['access']);
     $this->drupalGet('surface-test/exhibit');
     foreach (self::ANSWERED as $name) {
       $assert->fieldEnabled($name);
@@ -125,7 +125,7 @@ class StaticRuntimeAccessFormTest extends BrowserTestBase {
     foreach (self::ANSWERED as $name) {
       $assert->fieldDisabled($name);
     }
-    $this->assertSame('runtime', $this->fullSchema()['properties']['loan']['x-surface']['access'], 'The full schema is the same whatever is stored.');
+    $this->assertSame('live', $this->fullSchema()['properties']['loan']['x-surface']['access'], 'The full schema is the same whatever is stored.');
     $this->drupalGet('surface-api/resource_test.exhibit/configure');
     $contract = json_decode($this->getSession()->getPage()->getContent(), TRUE);
     $this->assertTrue($contract['schema']['properties']['loan']['readOnly'], 'The schema for these answers settles it.');

@@ -139,7 +139,8 @@ class RuleMessageTest extends DataSurfaceKernelTestBase {
     $emitter = $this->container->get('data_surface.contract_emitter');
     $full = json_decode((string) json_encode($emitter->emitFull($kiosk, 'resource_test.kiosk')->document['schema']), TRUE);
     $thens = array_column($full['allOf'], 'then');
-    $this->assertContains(['properties' => ['capacity' => ['maximum' => 100]]], $thens);
+    $capacity = ['type' => $full['properties']['capacity']['type'], 'maximum' => 100];
+    $this->assertContains(['properties' => ['capacity' => $capacity]], $thens, 'The bound, the declared type beside it.');
     $this->assertStringNotContainsString('without a license', (string) json_encode($full));
     $served = json_decode((string) json_encode($emitter->emit($kiosk, ['licensed' => FALSE], 'resource_test.kiosk')->document), TRUE);
     $this->assertSame(100, $served['schema']['properties']['capacity']['maximum']);

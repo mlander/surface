@@ -156,7 +156,7 @@ class ExamplesTodayPanelTest extends DataSurfaceKernelTestBase {
       'pricing' => ['title, type', 'title, type, oneOf (2), default'],
       'ticket' => [
         'title, $comment',
-        'title, type, if/then on pricing (2 variants: free has note, $ref (registration.step3.ticket.free); paid has price, currency, $ref (registration.step3.ticket.paid))',
+        'title, anyOf, if/then on pricing (2 variants: free has note, $ref (registration.step3.ticket.free); paid has price, currency, $ref (registration.step3.ticket.paid))',
       ],
       'contact' => [
         'title, type, properties, additionalProperties, required',
@@ -220,7 +220,7 @@ class ExamplesTodayPanelTest extends DataSurfaceKernelTestBase {
     $after = $container[DataSurfaceOperationForm::PANEL_KEY][ExamplePanels::TODAY];
     $this->assertSame([
       'title, $comment',
-      'title, type, if/then on pricing (2 variants: free has note, $ref (registration.step3.ticket.free); paid has price, currency, $ref (registration.step3.ticket.paid))',
+      'title, anyOf, if/then on pricing (2 variants: free has note, $ref (registration.step3.ticket.free); paid has price, currency, $ref (registration.step3.ticket.paid))',
     ], $this->comparison($after)['ticket']);
     $this->assertSame($this->comparison($before), $this->comparison($after));
     $this->assertSame($before['core']['json']['#value'], $after['core']['json']['#value']);
@@ -229,7 +229,7 @@ class ExamplesTodayPanelTest extends DataSurfaceKernelTestBase {
     $markup = $this->ajaxMarkup($response, $panels);
     $this->assertStringContainsString('Behind the scenes: the contract, as it stands', $markup);
     $this->assertStringContainsString('Without a resource: what config schema can say', $markup);
-    $this->assertMatchesRegularExpression('#<tr data-today-key="ticket">(?:(?!</tr>).)*<td>title, \$comment</td>\s*<td>title, type, if/then on pricing \(2 variants: free has note, \$ref \(registration\.step3\.ticket\.free\); paid has price, currency, \$ref \(registration\.step3\.ticket\.paid\)\)</td>#s', $markup);
+    $this->assertMatchesRegularExpression('#<tr data-today-key="ticket">(?:(?!</tr>).)*<td>title, \$comment</td>\s*<td>title, anyOf, if/then on pricing \(2 variants: free has note, \$ref \(registration\.step3\.ticket\.free\); paid has price, currency, \$ref \(registration\.step3\.ticket\.paid\)\)</td>#s', $markup);
     $this->assertStringContainsString('No schema is defined for property of type', $markup);
 
     $state = $this->postStep(3, ['venue' => 'harbour'] + self::SHIPPED, ['_triggering_element_name' => 'surface[venue]']);

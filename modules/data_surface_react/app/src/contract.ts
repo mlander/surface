@@ -4,6 +4,38 @@
 // The app reads it through inlineSchema(), once per contract, so nothing
 // else here follows a reference.
 
+/**
+ * The contract version this app reads.
+ *
+ * Both documents state theirs in `x-surface.contract` at the top of
+ * `schema`, and every answer of the five endpoints in its
+ * `Contract-Version` header. A document of any other version is refused,
+ * never read as if it were this one.
+ */
+export const CONTRACT = 2;
+
+/** A document or an answer of a contract version this app does not read. */
+export class ContractRefused extends Error {
+  constructor(readonly sent: string) {
+    super(`This page reads contract ${CONTRACT}; the server sent contract ${sent}.`);
+    this.name = 'ContractRefused';
+  }
+}
+
+/**
+ * Refuses a document of a contract this app does not read.
+ *
+ * A document that states no `x-surface.contract` is of contract 1, which
+ * said nothing of its version.
+ */
+export function assertContract<T extends { schema?: Schema | null }>(document: T): T {
+  const stated = document?.schema?.['x-surface']?.contract;
+  if (stated !== CONTRACT) {
+    throw new ContractRefused(stated === undefined || stated === null ? '1' : String(stated));
+  }
+  return document;
+}
+
 export type Widget =
   | 'select'
   | 'radios'
@@ -15,7 +47,7 @@ export type Widget =
   | 'textarea'
   | 'email'
   | 'fieldset'
-  | 'slot'
+  | 'variants'
   | 'list';
 
 export interface EmptyOption {
@@ -32,10 +64,12 @@ export interface Extension {
   emptyOption?: EmptyOption;
   multiple?: boolean;
   by?: string;
-  variants?: string[];
+  /** On a key with variants: the def each value of the deciding key chooses, by that value. */
+  variants?: Record<string, string>;
+  /** On a key with variants: the variant the deciding key chose, or null. */
   chosen?: string | null;
-  variant?: string;
-  checkedOnServer?: string[];
+  /** Each constraint only the server checks, and what it checks, as plain text. */
+  checkedOnServer?: { constraint: string; message: string }[];
   /** A Regex's own message: how a person is told what `pattern` allows. */
   patternMessage?: string;
   /** On an object that only groups each module's fieldset: draw nothing around them. */
@@ -52,13 +86,13 @@ export interface Extension {
    * Static, but not stated: a watched key cannot be listed, or the
    * combinations exceed the cap. Narrowed for values by /refine.
    */
-  dynamic?: boolean;
+  refine?: boolean;
   /**
-   * A runtime refiner narrows the key too: a rule only the server applies,
+   * A live refiner narrows the key too: a rule only the server applies,
    * when asked, which no schema states ahead of time. The full schema
    * keeps the key wider; this document is refined by it for its values.
    */
-  runtime?: boolean;
+  live?: boolean;
   /**
    * In the full schema: an access answer only the thing itself decides
    * was set aside for this account, so the key is as its static access
@@ -66,14 +100,29 @@ export interface Extension {
    * schema for these answers settles it, and the page keeps what that
    * says rather than narrowing the key from the full schema.
    */
-  access?: 'runtime';
+  access?: 'live';
   /**
    * In the full schema: the key is narrowed by rules declared as data,
-   * each a conditional on the frame marked `x-surface.declared`, stated as
-   * written. The page evaluates each `if` and tightens the key by its
+   * each a conditional on the frame its `x-surface.rules` lists, stated
+   * as written. The page evaluates each `if` and tightens the key by its
    * `then`; the schema for some values was evaluated already.
    */
   declared?: boolean;
+  /** At the top of a document: the contract version it is written in. */
+  contract?: number;
+  /**
+   * On the wire only, on an object that holds an `allOf`: the indexes of
+   * its declared rules' conditionals. restored() marks each one
+   * `x-surface.declared` and drops the list.
+   */
+  rules?: number[];
+  /**
+   * On the wire only, on an object not itself below an applicator: what
+   * the schemas below its applicators say, by JSON pointer from it.
+   * restored() sets each as the `x-surface` of the schema it points at
+   * and drops the map.
+   */
+  within?: Record<string, Extension>;
   /**
    * On a collection: a list whose every item is a child, `items`
    * referring to the child's def. Each item is drawn as the child's
@@ -105,12 +154,14 @@ export interface Conditional {
    * does not apply, and `required` where it is required only here.
    */
   then: { properties?: Record<string, Schema | false>; required?: string[] };
-  /** On a declared rule's conditional: it is stated as written. */
+  /** On a declared rule's conditional, once restored(): it is stated as written. */
   'x-surface'?: { declared?: boolean };
 }
 
 export interface Schema {
   $schema?: string;
+  /** On a served document: the absolute URL it is served at. */
+  $id?: string;
   /** A reference to a def, `#/$defs/<id>`; resolved by inlineSchema(). */
   $ref?: string;
   /** The root's subschemas, one per child and one per shape, by id. */
@@ -125,6 +176,12 @@ export interface Schema {
   /** On a frame that mixes structures in, before inlineSchema() flattens it. */
   unevaluatedProperties?: boolean;
   allOf?: Conditional[];
+  /**
+   * On a key with variants, as served: a reference to each variant's def,
+   * and null where the key may be cleared. inlineSchema() drops it: the
+   * conditionals state each variant exactly.
+   */
+  anyOf?: Schema[];
   items?: Schema;
   oneOf?: Choice[];
   minimum?: number;
@@ -145,8 +202,8 @@ export interface Schema {
 export type Values = Record<string, unknown>;
 
 export interface Contract {
-  surface: string;
-  situation: string | null;
+  resource: string;
+  operation: string | null;
   label: string | null;
   schema: Schema;
   values: Values;
@@ -193,8 +250,8 @@ export interface Validation {
 
 /** Where a created thing now lives: an operation and its parameters. */
 export interface Created {
-  surface: string;
-  situation: string;
+  resource: string;
+  operation: string;
   parameters: Record<string, string | number>;
 }
 
@@ -299,6 +356,113 @@ function merge(base: Json, over: Json): Json {
   return merged;
 }
 
+/** A def as laid over a site: its own `title` is its id, not a label, so it is left out. */
+function untitled(def: Json): Json {
+  if (!('title' in def)) {
+    return def;
+  }
+  const { title: _title, ...rest } = def;
+  return rest;
+}
+
+/** The keywords whose subschemas restored() walks: a map of them, a list, or one. */
+const NAMED = ['properties', '$defs', 'patternProperties'];
+const LISTED = ['allOf', 'anyOf', 'oneOf'];
+const SINGLE = ['if', 'then', 'else', 'not', 'items', 'additionalProperties', 'unevaluatedProperties', 'contains', 'propertyNames'];
+
+/**
+ * Puts each marker back where the emitter's pass wrote it.
+ *
+ * The wire keeps `x-surface` off every schema below an applicator: the
+ * object that owns an `allOf` lists its declared rules' conditionals by
+ * index in `x-surface.rules`, and says what is said below it in
+ * `x-surface.within`, by JSON pointer from itself. This reads both back
+ * into place, `x-surface.declared` on each rule's conditional and each
+ * entry of `within` as the `x-surface` of the schema it points at (a
+ * narrowing that said nothing else is an empty object there), and drops
+ * the two lists, so the rest of the app reads the markers where they
+ * stand. Applied twice, it changes nothing more. It works on a copy: what
+ * was served is left as it was. PHP's twin is
+ * `SchemaResolver::restored()`.
+ */
+export function restored(schema: Schema): Schema {
+  return restoreInPlace(JSON.parse(JSON.stringify(schema)) as Json) as Schema;
+}
+
+function restoreInPlace(schema: Json): Json {
+  for (const [keyword, value] of Object.entries(schema)) {
+    if (NAMED.includes(keyword) && isObject(value)) {
+      for (const [name, child] of Object.entries(value)) {
+        if (isObject(child)) {
+          value[name] = restoreInPlace(child);
+        }
+      }
+    }
+    else if (LISTED.includes(keyword) && Array.isArray(value)) {
+      value.forEach((member, i) => {
+        if (isObject(member)) {
+          value[i] = restoreInPlace(member);
+        }
+      });
+    }
+    else if (SINGLE.includes(keyword) && isObject(value)) {
+      schema[keyword] = restoreInPlace(value);
+    }
+  }
+  const extension = schema['x-surface'];
+  if (!isObject(extension) || (!('rules' in extension) && !('within' in extension))) {
+    return schema;
+  }
+  const conditions = schema.allOf;
+  for (const i of Array.isArray(extension.rules) ? extension.rules : []) {
+    const condition = Number.isInteger(i) && Array.isArray(conditions) ? conditions[i as number] : undefined;
+    if (isObject(condition)) {
+      condition['x-surface'] = { ...(isObject(condition['x-surface']) ? condition['x-surface'] : {}), declared: true };
+    }
+  }
+  for (const [pointer, said] of Object.entries(isObject(extension.within) ? extension.within : {})) {
+    if (!pointer.startsWith('/')) {
+      continue;
+    }
+    placed(schema, pointer.slice(1).split('/').map((segment) => segment.replace(/~1/g, '/').replace(/~0/g, '~')), said);
+  }
+  delete extension.rules;
+  delete extension.within;
+  if (Object.keys(extension).length === 0) {
+    delete schema['x-surface'];
+  }
+  return schema;
+}
+
+/**
+ * Sets the `x-surface` of the schema a path from an owning schema leads to.
+ *
+ * A schema that said nothing but its `x-surface` was left `true` where it
+ * stood, or, as a property, left out (its `properties` too, when nothing
+ * else was in them): each is made an object again on the way. An empty
+ * list is read as the empty object PHP may encode one as. PHP's twin is
+ * `SchemaResolver::placed()`.
+ */
+function placed(owner: Json, path: string[], said: unknown): void {
+  let node: Json | unknown[] = owner;
+  path.forEach((segment, i) => {
+    const last = i === path.length - 1;
+    const index = Array.isArray(node) && /^\d+$/.test(segment) ? Number(segment) : null;
+    const container = node as Record<string | number, unknown>;
+    const key = index ?? segment;
+    let inner = container[key];
+    const nextIsIndex = !last && /^\d+$/.test(path[i + 1]) && Array.isArray(inner) && inner.length > 0;
+    if (!isObject(inner) && !nextIsIndex) {
+      inner = {};
+      container[key] = inner;
+    }
+    if (last) {
+      (inner as Json)['x-surface'] = said;
+    }
+    node = inner as Json | unknown[];
+  });
+}
+
 /**
  * Resolves one schema's references, and says which defs it followed.
  *
@@ -325,7 +489,7 @@ function resolveAt(schema: Json, root: Json, ancestors: string[]): [Json, string
       return;
     }
     followed.push(name);
-    resolved = merge(resolved, resolveAt(def, root, [...ancestors, name])[0]);
+    resolved = merge(resolved, resolveAt(untitled(def), root, [...ancestors, name])[0]);
   };
   for (const [keyword, value] of Object.entries(schema)) {
     const name = keyword === '$ref' && typeof value === 'string' ? defName(value) : null;
@@ -336,6 +500,10 @@ function resolveAt(schema: Json, root: Json, ancestors: string[]): [Json, string
     if (keyword === 'allOf' && Array.isArray(value) && value.some((entry) => isObject(entry) && '$ref' in entry)) {
       const conditions: unknown[] = [];
       for (const entry of value) {
+        if (entry === true) {
+          // A narrowing that says nothing: what it said was `x-surface`, put back by restored().
+          continue;
+        }
         if (!isObject(entry) || 'if' in entry) {
           conditions.push(entry);
           continue;
@@ -346,7 +514,7 @@ function resolveAt(schema: Json, root: Json, ancestors: string[]): [Json, string
           // not inside the def, so the def is no ancestor of it.
           const def = isObject(root.$defs) ? root.$defs[referred] : undefined;
           if (isObject(def) && !ancestors.includes(referred)) {
-            mixed.push(resolveAt(def, root, [...ancestors, referred])[0]);
+            mixed.push(resolveAt(untitled(def), root, [...ancestors, referred])[0]);
           }
           continue;
         }
@@ -429,7 +597,7 @@ function mixIn(frame: Json, def: Json): Json {
  * left as written; inlineSchema() resolves those too.
  */
 export function resolveSchema(schema: Schema, root: Schema): Schema {
-  return resolveAt(schema as Json, root as Json, [])[0] as Schema;
+  return resolveAt(restored(schema) as Json, restored(root) as Json, [])[0] as Schema;
 }
 
 /**
@@ -450,13 +618,21 @@ export function isPart(schema: Schema): boolean {
  *
  * What the app draws from: run once per contract, on load and on each
  * refine, so a property, a variant's conditional and a fieldset's keys are
- * each read inline. At the root, `$defs` is dropped. PHP's twin is
+ * each read inline. Its markers are first put back in place (restored()),
+ * once, at the root. At the root, `$defs` is dropped; a key with variants
+ * loses the `anyOf` that unites them, which the conditionals state one
+ * by one. PHP's twin is
  * `Drupal\data_surface\Contract\SchemaResolver::inline()`.
  */
 export function inlineSchema(schema: Schema, root?: Schema, ancestors: string[] = []): Schema {
-  const base = (root ?? schema) as Json;
-  const [resolved, followed] = resolveAt(schema as Json, base, ancestors);
-  if (root === undefined) {
+  const own = restored(schema) as Json;
+  return inlined(own, root === undefined ? own : (restored(root) as Json), ancestors, root === undefined);
+}
+
+/** inlineSchema(), its markers already in place. */
+function inlined(schema: Json, base: Json, ancestors: string[], atRoot: boolean): Schema {
+  const [resolved, followed] = resolveAt(schema, base, ancestors);
+  if (atRoot) {
     delete resolved.$defs;
   }
   if (followed.length > ancestors.length && isObject(resolved.properties)) {
@@ -464,9 +640,16 @@ export function inlineSchema(schema: Schema, root?: Schema, ancestors: string[] 
     // item. A key that refers to a shape's def is a value, never a frame.
     parts.add(resolved);
   }
-  const inline = (inner: unknown): unknown => (isObject(inner) ? inlineSchema(inner as Schema, base as Schema, followed) : inner);
+  const inline = (inner: unknown): unknown => (isObject(inner) ? inlined(inner, base, followed, false) : inner);
   if (isObject(resolved.properties)) {
-    resolved.properties = Object.fromEntries(Object.entries(resolved.properties).map(([name, property]) => [name, inline(property)]));
+    resolved.properties = Object.fromEntries(Object.entries(resolved.properties).map(([name, property]) => {
+      if (isObject(property) && isObject(property['x-surface']) && property['x-surface'].variants !== undefined && 'anyOf' in property) {
+        // The union of its variants: the conditionals state each one.
+        const { anyOf: _union, ...rest } = property;
+        return [name, inline(rest)];
+      }
+      return [name, inline(property)];
+    }));
   }
   if (isObject(resolved.items)) {
     resolved.items = inline(resolved.items);
@@ -709,7 +892,7 @@ function tighten(base: Schema, over: Schema): Schema {
  * ends it, one that requires it requires it, and one that narrows it
  * tightens what the key allows so far, and says why only where it did.
  */
-function applyRules(rules: Conditional[], name: string, schema: Schema, values: Values): { schema: Schema; ruled: boolean; required: boolean } {
+function applyRules(rules: Conditional[], name: string, schema: Schema, values: Values, declared: Schema): { schema: Schema; ruled: boolean; required: boolean } {
   let effective = schema;
   let required = false;
   for (const rule of rules) {
@@ -724,13 +907,27 @@ function applyRules(rules: Conditional[], name: string, schema: Schema, values: 
     if (then !== null) {
       // The rule's sentence only where the rest of it did something, or
       // where it is all the rule says (Rule::apply()).
-      const { description, ...rest } = then;
+      const { description, ...rest } = overDeclared(then, declared);
       const next = tighten(effective, rest);
       const did = Object.keys(rest).length === 0 || !sameJson(next, effective);
       effective = did && description !== undefined ? { ...next, description } : next;
     }
   }
   return { schema: effective, ruled: false, required };
+}
+
+/**
+ * A `then`'s narrowing of a key as laid over it: the `type` it states
+ * beside a keyword only one type reads is the key's declared type, which
+ * never narrows, so it is left out, and never widens what another
+ * conditional narrowed already.
+ */
+function overDeclared(then: Schema, declared: Schema): Schema {
+  if (then.type === undefined || !sameJson(then.type, declared.type)) {
+    return then;
+  }
+  const { type: _type, ...rest } = then;
+  return rest;
 }
 
 /** What a conditional narrows one key to: its schema, or null where it only rules it out or requires it. */
@@ -774,7 +971,7 @@ export function watchedPaths(schema: Schema, values: Values, prefix = ''): Set<s
     }
     const nestedValues = isObject(nested) ? nested : {};
     const widget = property['x-surface']?.widget;
-    const inner = widget === 'slot' ? resolveVariants(schema, name, values) : widget === 'fieldset' ? property : null;
+    const inner = widget === 'variants' ? resolveVariants(schema, name, values) : widget === 'fieldset' ? property : null;
     if (inner !== null) {
       watchedPaths(inner, nestedValues, `${prefix}${name}.`).forEach((path) => watched.add(path));
     }
@@ -816,17 +1013,17 @@ export function fieldId(path: string): string {
 // Narrowing here.
 //
 // The full schema states every dependency that can be listed as a
-// conditional on the frame it sits in, and marks the rest: `dynamic` (a
-// static rule it could not list) and `runtime` (a rule only the server
-// can apply). So a change whose dependents are all stated can be narrowed
+// conditional on the frame it sits in, and marks the rest: `refine` (a
+// static rule it could not list, which /refine runs for values) and
+// `live` (a rule only the server can apply). So a change whose dependents are all stated can be narrowed
 // in the page, from the full schema, by the module's own rules; a change
-// with a dynamic or runtime dependent is asked of /refine. The page's
+// with a `refine` or `live` dependent is asked of /refine. The page's
 // answer must be the server's: the same discard and orphan rule
 // (DataSurfaceFormBuilder::settle()), the same reading of a select
 // (ContractEmitter::property()), keyword for keyword.
 
 /** Why a change was asked of the server rather than narrowed here. */
-export type Marker = 'runtime' | 'dynamic' | 'access' | 'stored' | 'unsettled' | 'pending';
+export type Marker = 'live' | 'refine' | 'access' | 'stored' | 'unsettled' | 'pending';
 
 /** A change the page cannot narrow by itself, and the key that says why. */
 export class Unsettled extends Error {
@@ -873,8 +1070,8 @@ export function narrowingStatus(narrowed: Narrowed): string {
     return `Narrowed here: ${narrowed.keys.join(', ')}`;
   }
   const why: Record<Marker, string> = {
-    runtime: 'depends on a runtime rule',
-    dynamic: 'depends on a dynamic rule',
+    live: 'depends on a live rule',
+    refine: 'depends on a rule to refine with values',
     access: 'has access only the server decides',
     stored: 'stands for a stored value only the server holds',
     unsettled: 'could not be narrowed here',
@@ -887,7 +1084,7 @@ export function narrowingStatus(narrowed: Narrowed): string {
  * Narrows a change from the full schema, or says why the server must.
  *
  * Every key that depends on the changed one, transitively, is found
- * through `dependsOn`; one marked `dynamic` or `runtime`, one inside a
+ * through `dependsOn`; one marked `refine` or `live`, one inside a
  * part that is, or one standing for a stored value the page never saw,
  * sends the change to /refine. Otherwise the change is settled here, the
  * way /refine settles it: an answer the new choices orphan is dropped and
@@ -963,7 +1160,7 @@ export function dependents(full: Schema, values: Values, path: string): { frame:
     if (property === undefined || i === segments.length - 1) {
       break;
     }
-    if (property['x-surface']?.widget === 'slot') {
+    if (property['x-surface']?.widget === 'variants') {
       frame = resolveVariants(frame, name, held);
       held = asValues(held[name]);
       prefix += `${name}.`;
@@ -1011,7 +1208,7 @@ function closure(frame: Schema, key: string): string[] {
 /** The first dependent the server must narrow, by its marker: on the key, or anywhere inside it. */
 function markedIn(frame: Schema, names: string[], prefix: string): { key: string; marker: Marker } | null {
   const marker = (schema: Schema): Marker | null =>
-    schema['x-surface']?.runtime ? 'runtime' : schema['x-surface']?.dynamic ? 'dynamic' : null;
+    schema['x-surface']?.live ? 'live' : schema['x-surface']?.refine ? 'refine' : null;
   const inside = (schema: Schema, at: string): { key: string; marker: Marker } | null => {
     for (const [name, property] of Object.entries(schema.properties ?? {})) {
       const own = marker(property);
@@ -1098,7 +1295,7 @@ function conditionalKey(condition: Conditional): string | undefined {
 }
 
 function isVariants(schema: Schema): boolean {
-  return schema['x-surface']?.widget === 'slot';
+  return schema['x-surface']?.widget === 'variants';
 }
 
 function isCollection(schema: Schema): boolean {
@@ -1231,7 +1428,7 @@ interface Context {
  * is dropped and falls back to what is stored; a key falling back to a
  * stored value its moved dependency no longer offers is held unanswered
  * and stands for it. Repeated to the fixed point. A list read for values
- * the page cannot narrow for (a dynamic or runtime key whose dependencies
+ * the page cannot narrow for (a `refine` or `live` key whose dependencies
  * moved) is assumed to keep the input, and the frame is refused unless
  * that key was dropped anyway.
  */
@@ -1266,8 +1463,8 @@ function settle(full: Schema, previous: Schema | null, input: Values, stored: Va
     if (was !== undefined && before !== null && deps.every((dep) => sameJson(norm(getAt(values, dep)), norm(getAt(before, dep))))) {
       return offered(was);
     }
-    if (extension?.runtime || extension?.dynamic) {
-      uncertain.set(name, extension.runtime ? 'runtime' : 'dynamic');
+    if (extension?.live || extension?.refine) {
+      uncertain.set(name, extension.live ? 'live' : 'refine');
       return UNKNOWN;
     }
     const rules = extension?.declared ? rulesOf(full.allOf ?? [], name) : [];
@@ -1282,7 +1479,7 @@ function settle(full: Schema, previous: Schema | null, input: Values, stored: Va
         }
         schema = narrowed.reduce<Schema>((reached, condition) => {
           const branch = narrowingOf(condition, name);
-          return branch === null ? reached : merge(reached as Json, branch as Json) as Schema;
+          return branch === null ? reached : merge(reached as Json, overDeclared(branch, declared) as Json) as Schema;
         }, declared);
       }
       else if (held.some(Boolean) || rules.length > 0) {
@@ -1292,7 +1489,7 @@ function settle(full: Schema, previous: Schema | null, input: Values, stored: Va
     }
     if (rules.length > 0) {
       // Each declared rule that holds, after what the coded ones answer.
-      const applied = applyRules(rules, name, schema, values);
+      const applied = applyRules(rules, name, schema, values, declared);
       if (applied.ruled) {
         return null;
       }
@@ -1349,7 +1546,7 @@ function settle(full: Schema, previous: Schema | null, input: Values, stored: Va
       if (!discarded.includes(name) && !stillStands(name, values)) {
         const declared = properties[name];
         if (declared.properties !== undefined && !isPart(declared) && !isVariants(declared)) {
-          throw new Unsettled(path + name, declared['x-surface']?.dynamic ? 'dynamic' : 'unsettled');
+          throw new Unsettled(path + name, declared['x-surface']?.refine ? 'refine' : 'unsettled');
         }
         discarded.push(name);
         again = true;
@@ -1425,7 +1622,7 @@ function settle(full: Schema, previous: Schema | null, input: Values, stored: Va
  * schema: as declared, with the `then` of each conditional its values
  * meet laid over it once every key it watches holds a value, and with
  * its conditionals, held to what its dependencies still offer, while one
- * holds nothing (`enumerated`). A dynamic or runtime key is never read
+ * holds nothing (`enumerated`). A `refine` or `live` key is never read
  * here.
  */
 function core(full: Schema, previous: Schema | null, values: Values, before: Values | null, path: string, context: Context): Schema {
@@ -1446,7 +1643,7 @@ function core(full: Schema, previous: Schema | null, values: Values, before: Val
     const deps = extension?.dependsOn ?? [];
     const was = previous?.properties?.[name];
     const held = values[name];
-    if (extension?.access === 'runtime') {
+    if (extension?.access === 'live') {
       // Its access is the server's to settle, which the schema for these
       // answers did: left out there, it stays out; locked there, it stays
       // as it was; with nothing settled for this frame, the server is asked.
@@ -1492,11 +1689,11 @@ function core(full: Schema, previous: Schema | null, values: Values, before: Val
       }
       continue;
     }
-    if (extension?.runtime) {
-      throw new Unsettled(at, 'runtime');
+    if (extension?.live) {
+      throw new Unsettled(at, 'live');
     }
-    if (extension?.dynamic) {
-      throw new Unsettled(at, 'dynamic');
+    if (extension?.refine) {
+      throw new Unsettled(at, 'refine');
     }
     // A key's declared rules, and the keys its coded refiners watch.
     // Decision: see docs/decisions.md#a-rule-declared-as-data.
@@ -1526,7 +1723,7 @@ function core(full: Schema, previous: Schema | null, values: Values, before: Val
     }
     if (rules.length > 0) {
       // Whether a rule rules it out, or requires it, for these values.
-      const applied = applyRules(rules, name, declared, values);
+      const applied = applyRules(rules, name, declared, values, declared);
       if (applied.ruled) {
         ruled[name] = deps;
         continue;
@@ -1569,7 +1766,7 @@ function core(full: Schema, previous: Schema | null, values: Values, before: Val
               // Requiredness narrowed, and the frame's `required` not said.
               throw new Unsettled(at, 'unsettled');
             }
-            effective = merge(effective as Json, then as Json) as Schema;
+            effective = merge(effective as Json, overDeclared(then, declared) as Json) as Schema;
           }
         }
         enumerated = false;
@@ -1592,7 +1789,7 @@ function core(full: Schema, previous: Schema | null, values: Values, before: Val
     }
     if (rules.length > 0) {
       // Each rule that holds, tightened over what the coded ones answer.
-      effective = applyRules(rules, name, effective, values).schema;
+      effective = applyRules(rules, name, effective, values, declared).schema;
     }
     if (isCollection(declared)) {
       // The items are the child's def, described from nothing: no value
@@ -1668,26 +1865,20 @@ function present(schema: Schema, full: Schema, values: Values, path: string, map
       const by = extension.by ?? '';
       const branches = variantsIn(schema.allOf ?? [], name);
       const chosen = branches.find((condition) => sameValue(condition.if.properties[by]?.const, values[by])) ?? null;
-      const id = chosen === null ? null : narrowingOf(chosen, name)?.['x-surface']?.variant ?? null;
+      const id = chosen === null ? null : variantId(extension, chosen.if.properties[by]?.const);
       properties[name] = { ...property, 'x-surface': { ...extension, chosen: id, refined: id !== null, stale: false } };
       shown[name] = held;
       for (const branch of branches) {
         const variant = narrowingOf(branch, name) as Schema;
-        const variantId = variant['x-surface']?.variant;
-        const fullBranch = variantsIn(full.allOf ?? [], name).find((condition) => narrowingOf(condition, name)?.['x-surface']?.variant === variantId);
+        const deciding = branch.if.properties[by]?.const;
+        const fullBranch = variantsIn(full.allOf ?? [], name).find((condition) => sameValue(condition.if.properties[by]?.const, deciding));
         const fullVariant = (fullBranch === undefined ? null : narrowingOf(fullBranch, name)) ?? variant;
         const isChosen = branch === chosen;
         const own = { ...frameDefaults(fullVariant), ...(isChosen && fits(fullVariant, held) ? asValues(held) : {}) };
         const answered = present(variant, fullVariant, own, `${at}.`, false, isChosen ? context : { ...context, standing: new Map() }, isChosen ? stale : []);
-        replaced.set(branch, {
-          ...branch,
-          then: {
-            ...branch.then,
-            properties: {
-              [name]: { ...answered.schema, 'x-surface': { ...(variant['x-surface'] as Extension), refined: isChosen && anyRefined(answered.schema), stale: false } },
-            },
-          },
-        });
+        // A variant's own frame carries no `x-surface` of a key: what is
+        // said of the key is said on the key with variants.
+        replaced.set(branch, { ...branch, then: { ...branch.then, properties: { [name]: answered.schema } } });
         if (isChosen) {
           shown[name] = answered.shown;
         }
@@ -1779,6 +1970,17 @@ function present(schema: Schema, full: Schema, values: Values, path: string, map
   return { schema: answered, shown };
 }
 
+/**
+ * The variant a deciding value chooses: the key of the key's `variants`
+ * map that names it, each a value of the deciding key.
+ */
+export function variantId(extension: Extension | undefined, deciding: unknown): string | null {
+  if (deciding === null || deciding === undefined) {
+    return null;
+  }
+  return Object.keys(extension?.variants ?? {}).find((id) => sameValue(id, deciding)) ?? String(deciding);
+}
+
 /** ContractEmitter::anyRefined(): a property of the frame says it is narrowed now. */
 function anyRefined(schema: Schema): boolean {
   return Object.values(schema.properties ?? {}).some((property) => Boolean(property['x-surface']?.refined));
@@ -1842,5 +2044,11 @@ function resolveLocally(request: Narrowing, unknown: Set<string>): Settled {
   }
   const stale: string[] = [];
   const answered = present(narrowed, request.full, values, '', false, context, stale);
-  return { schema: answered.schema, values: answered.shown, stale };
+  // Where the schema for these answers is served, not the full schema's.
+  const schema: Schema = { ...answered.schema };
+  delete schema.$id;
+  if (request.previous.schema.$id !== undefined) {
+    schema.$id = request.previous.schema.$id;
+  }
+  return { schema, values: answered.shown, stale };
 }

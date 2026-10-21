@@ -22,7 +22,7 @@ final class ServedContract implements CacheableDependencyInterface {
    * Constructs a ServedContract.
    *
    * @param array $document
-   *   The contract: `surface`, `situation`, `label`, `schema`, `values`,
+   *   The contract: `resource`, `operation`, `label`, `schema`, `values`,
    *   `stale`, and `outputs` when the data surface declares any.
    * @param \Drupal\Core\Cache\CacheableMetadata $cacheability
    *   What the refined data surface and the option lists it offers

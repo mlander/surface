@@ -1,27 +1,31 @@
 {
-    "surface": "registration.step3",
+    "resource": "registration.step3",
     "module": "data_surface_examples",
+    "contract": 2,
     "documents": [
         {
-            "surface": "registration.step3",
-            "situation": "configure",
+            "resource": "registration.step3",
+            "operation": "configure",
             "label": "Configure registration (step 3)",
             "schema": {
                 "$schema": "https://json-schema.org/draft/2020-12/schema",
                 "title": "Configure registration (step 3)",
                 "description": "Sets the event registration: its title, whether it is open, the venue and room, the capacity, the pricing with its ticket, and the contact.",
                 "x-surface": {
+                    "contract": 2,
                     "operation": {
                         "id": "configure",
                         "label": "Configure registration (step 3)",
                         "description": "Sets the event registration: its title, whether it is open, the venue and room, the capacity, the pricing with its ticket, and the contact.",
                         "kind": "update",
                         "creates": false,
-                        "readOnly": false,
                         "destructive": false,
                         "idempotent": true
                     },
-                    "version": 1
+                    "version": 1,
+                    "rules": [
+                        9
+                    ]
                 },
                 "type": "object",
                 "properties": {
@@ -102,7 +106,7 @@
                                 "venue"
                             ],
                             "enumerated": true,
-                            "runtime": true
+                            "live": true
                         }
                     },
                     "capacity": {
@@ -144,9 +148,16 @@
                     },
                     "ticket": {
                         "title": "Ticket",
-                        "type": [
-                            "object",
-                            "null"
+                        "anyOf": [
+                            {
+                                "$ref": "#/$defs/registration.step3.ticket.free"
+                            },
+                            {
+                                "$ref": "#/$defs/registration.step3.ticket.paid"
+                            },
+                            {
+                                "type": "null"
+                            }
                         ],
                         "x-surface": {
                             "locked": false,
@@ -154,10 +165,10 @@
                                 "pricing"
                             ],
                             "by": "pricing",
-                            "variants": [
-                                "free",
-                                "paid"
-                            ]
+                            "variants": {
+                                "free": "#/$defs/registration.step3.ticket.free",
+                                "paid": "#/$defs/registration.step3.ticket.paid"
+                            }
                         }
                     },
                     "contact": {
@@ -194,7 +205,7 @@
                                 "capacity"
                             ],
                             "group": true,
-                            "dynamic": true
+                            "refine": true
                         }
                     }
                 },
@@ -304,6 +315,10 @@
                         "then": {
                             "properties": {
                                 "capacity": {
+                                    "type": [
+                                        "integer",
+                                        "null"
+                                    ],
                                     "description": "Up to 400 for the Main hall.",
                                     "maximum": 400
                                 }
@@ -324,6 +339,10 @@
                         "then": {
                             "properties": {
                                 "capacity": {
+                                    "type": [
+                                        "integer",
+                                        "null"
+                                    ],
                                     "description": "Up to 120 for the East room.",
                                     "maximum": 120
                                 }
@@ -344,6 +363,10 @@
                         "then": {
                             "properties": {
                                 "capacity": {
+                                    "type": [
+                                        "integer",
+                                        "null"
+                                    ],
                                     "description": "Up to 60 for the Reading room.",
                                     "maximum": 60
                                 }
@@ -364,6 +387,10 @@
                         "then": {
                             "properties": {
                                 "capacity": {
+                                    "type": [
+                                        "integer",
+                                        "null"
+                                    ],
                                     "description": "Up to 30 for the Garden room.",
                                     "maximum": 30
                                 }
@@ -384,6 +411,10 @@
                         "then": {
                             "properties": {
                                 "capacity": {
+                                    "type": [
+                                        "integer",
+                                        "null"
+                                    ],
                                     "description": "Up to 800 for the Auditorium.",
                                     "maximum": 800
                                 }
@@ -404,6 +435,10 @@
                         "then": {
                             "properties": {
                                 "capacity": {
+                                    "type": [
+                                        "integer",
+                                        "null"
+                                    ],
                                     "description": "Up to 150 for the Upper deck.",
                                     "maximum": 150
                                 }
@@ -414,8 +449,13 @@
                         "if": {
                             "properties": {
                                 "third_party_settings": {
+                                    "type": [
+                                        "object",
+                                        "null"
+                                    ],
                                     "properties": {
                                         "data_surface_examples_compliance": {
+                                            "type": "object",
                                             "properties": {
                                                 "license": {
                                                     "type": "null"
@@ -429,13 +469,14 @@
                         "then": {
                             "properties": {
                                 "capacity": {
+                                    "type": [
+                                        "integer",
+                                        "null"
+                                    ],
                                     "description": "Up to 100 without an event license.",
                                     "maximum": 100
                                 }
                             }
-                        },
-                        "x-surface": {
-                            "declared": true
                         }
                     },
                     {
@@ -453,12 +494,7 @@
                             "properties": {
                                 "ticket": {
                                     "title": "Ticket",
-                                    "$ref": "#/$defs/registration.step3.ticket.free",
-                                    "x-surface": {
-                                        "locked": false,
-                                        "dependsOn": [],
-                                        "variant": "free"
-                                    }
+                                    "$ref": "#/$defs/registration.step3.ticket.free"
                                 }
                             }
                         }
@@ -478,12 +514,7 @@
                             "properties": {
                                 "ticket": {
                                     "title": "Ticket",
-                                    "$ref": "#/$defs/registration.step3.ticket.paid",
-                                    "x-surface": {
-                                        "locked": false,
-                                        "dependsOn": [],
-                                        "variant": "paid"
-                                    }
+                                    "$ref": "#/$defs/registration.step3.ticket.paid"
                                 }
                             }
                         }
@@ -491,6 +522,7 @@
                 ],
                 "$defs": {
                     "registration.step3.ticket.free": {
+                        "title": "registration.step3.ticket.free",
                         "type": "object",
                         "properties": {
                             "note": {
@@ -509,6 +541,7 @@
                         "additionalProperties": false
                     },
                     "registration.step3.ticket.paid": {
+                        "title": "registration.step3.ticket.paid",
                         "type": "object",
                         "properties": {
                             "price": {
@@ -551,12 +584,13 @@
                         ]
                     },
                     "registration.contact": {
+                        "title": "registration.contact",
                         "type": "object",
                         "properties": {
                             "email": {
                                 "title": "Email",
                                 "type": "string",
-                                "format": "email",
+                                "format": "idn-email",
                                 "x-surface": {
                                     "locked": false,
                                     "dependsOn": []
@@ -580,6 +614,7 @@
                         ]
                     },
                     "registration.compliance": {
+                        "title": "registration.compliance",
                         "type": "object",
                         "properties": {
                             "license": {
@@ -617,7 +652,7 @@
                         }
                     },
                     "event.license": {
-                        "title": "Event license",
+                        "title": "event.license",
                         "description": "The four digits after EV- on the license, such as 2048. Required to host more than 100 people.",
                         "type": [
                             "string",

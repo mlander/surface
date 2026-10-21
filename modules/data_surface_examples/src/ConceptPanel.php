@@ -191,10 +191,10 @@ final class ConceptPanel {
    */
   public function paragraph(string $id): \Stringable {
     return match ($id) {
-      'event.bulletin' => $this->t('A rule between keys whose condition and effect a schema can state is declared as data, <code>narrow()->when()</code>, beside the keys it is about. Two rules read the frequency here: a weekly issue holds at most five items, and a monthly bulletin has no send day. The send day is required wherever it applies; where it does not, the form draws no element for it, a value sent for it is refused, and what is stored is kept for the day it applies again. Nothing is run to learn either rule: the full schema states both as written, each an <code>if</code>/<code>then</code> marked <code>declared</code>.'),
+      'event.bulletin' => $this->t('A rule between keys whose condition and effect a schema can state is declared as data, <code>narrow()->when()</code>, beside the keys it is about. Two rules read the frequency here: a weekly issue holds at most five items, and a monthly bulletin has no send day. The send day is required wherever it applies; where it does not, the form draws no element for it, a value sent for it is refused, and what is stored is kept for the day it applies again. Nothing is run to learn either rule: the full schema states both as written, each an <code>if</code>/<code>then</code> its frame lists under <code>x-surface.rules</code>.'),
       'event.press', 'event.desk' => $this->t('A person to contact is one structure, declared once and attached by two resources: the press page at /surface-examples/8, and the information desk at /surface-examples/8/desk. The person asks for an email while it is listed publicly, which only its container knows, so it reads a port, <code>listed</code>, and each container wires it to a key of its own: <code>public</code> on the press page, <code>in_program</code> at the desk. The desk also holds a collection of up to four volunteers, each the same structure, whose port nothing wires. The phone is a named shape, asked for by the person and by the desk itself, and the two keys of the review are mixed into the press page, so they are its own. Both documents write each part once, under <code>$defs</code>, and refer to it where it is used.'),
       'event.sales' => $this->t("The ticket types are the site's, not the code's: one checkbox and one set of limits per type, listed by a provider that reads the site's configuration and says so in its cacheability. Add a type and reload: the form, both documents and the tool have its keys at the next request, with no cache rebuild. The speaker type is locked there, so it is drawn fixed, <code>readOnly</code> in both documents, and a value a tool sends for it is not taken, which the answer says."),
-      'event.program' => $this->t('Access says whether keys may be changed, seen, or neither, and its kind is read from its cacheability, never declared. The access class of the fees locks them for an account without "set event fees", which the account alone decides, so the full schema states the lock for that account. For any other account the program decides: once it is published, the fees are fixed, which only what is stored can say, so the full schema marks the fees <code>access: runtime</code> and the schema for these answers settles it. Each operation also states how a call behaves: configuring changes what exists and may be repeated, and checking, at /surface-examples/10/check, changes nothing, so its tool is a read and has no read tool beside it.'),
+      'event.program' => $this->t('Access says whether keys may be changed, seen, or neither, and its kind is read from its cacheability, never declared. The access class of the fees locks them for an account without "set event fees", which the account alone decides, so the full schema states the lock for that account. For any other account the program decides: once it is published, the fees are fixed, which only what is stored can say, so the full schema marks the fees <code>access: live</code> and the schema for these answers settles it. Each operation also states how a call behaves: configuring changes what exists and may be repeated, and checking, at /surface-examples/10/check, changes nothing, so its tool is a read and has no read tool beside it.'),
       'event.doors' => $this->t('Every stock widget, each chosen by what its key declares: a time input for a string that asks for one, checkboxes for a short list of choices, radios for one choice that asks for them, a text area for a multiline string, and rows with "Add another" for a list of free values. The config schema is fully validatable, so the storage knows which keys may hold nothing. A key a call leaves out keeps what is stored, null clears it, and a value replaces it; the badges, which the storage always holds, refuse null and name their default. The four dry runs below show each.'),
       default => $this->t('Not an example of this series.'),
     };
@@ -211,10 +211,12 @@ final class ConceptPanel {
    */
   protected function rulesAsData(OperationRoute $served): array {
     $full = $this->full($served);
-    $declared = array_values(array_filter($full['allOf'] ?? [], static fn (array $branch): bool => !empty($branch[ContractEmitter::EXTENSION]['declared'])));
+    // The frame lists its declared rules' conditionals by index.
+    // Decision: see docs/decisions.md#contract-2.
+    $declared = array_values(array_intersect_key($full['allOf'] ?? [], array_flip($full[ContractEmitter::EXTENSION]['rules'] ?? [])));
     return [
       'rules' => $this->details($this->t('The rules, as declared'), $this->t('From <code>defineInputs()</code>, word for word.'), $this->pre(implode("\n", self::statements(self::file(BulletinResource::class), '$inputs->narrow(')))),
-      'conditionals' => $this->details($this->t('The rules, as the full schema states them'), $this->t('Each rule, and the send day required where it applies, as one conditional marked <code>declared</code>: what a client reads before it sends anything.'), $this->json($declared)),
+      'conditionals' => $this->details($this->t('The rules, as the full schema states them'), $this->t('Each rule, and the send day required where it applies, as one conditional the frame lists under <code>x-surface.rules</code>: what a client reads before it sends anything.'), $this->json($declared)),
     ];
   }
 
@@ -354,7 +356,6 @@ final class ConceptPanel {
       $rows[] = [
         $operation->id,
         $facts['kind'],
-        self::yesNo($facts['readOnly']),
         self::yesNo($facts['destructive']),
         self::yesNo($facts['idempotent']),
         $tool_id,
@@ -367,22 +368,21 @@ final class ConceptPanel {
     // Decision: see
     // docs/decisions.md#an-alter-may-answer-access-and-the-stricter-stands.
     $workflow = $this->moduleHandler->moduleExists(self::WORKFLOW)
-      ? $this->t('Another module, @module, answers as well, with two alters and no change to the program, each asked after the program\'s own answers, the stricter standing. An account without "see event fees" does not see the fees at all, which the account alone decides, so the full schema above leaves them out for it, where before they were locked. Once the module\'s workflow state is published the program is locked whole, its headline and its fees with everything else, which only what is stored decides: the full schema marks every key of the program <code>access: runtime</code>, and the last call below, made in that state, is refused by name.', ['@module' => self::WORKFLOW])
+      ? $this->t('Another module, @module, answers as well, with two alters and no change to the program, each asked after the program\'s own answers, the stricter standing. An account without "see event fees" does not see the fees at all, which the account alone decides, so the full schema above leaves them out for it, where before they were locked. Once the module\'s workflow state is published the program is locked whole, its headline and its fees with everything else, which only what is stored decides: the full schema marks every key of the program <code>access: live</code>, and the last call below, made in that state, is refused by name.', ['@module' => self::WORKFLOW])
       : $this->t('Enable @module and reload: another module then answers for the program and its fees as well, with no change to the program.', ['@module' => self::WORKFLOW]);
     return [
       'accounts' => $this->details(
         $this->t('The fees in the full schema, for two accounts'),
-        $this->t('For you, and for an account without "@permission". Static answers are stated for the account that asks: locked, <code>readOnly</code>. A runtime answer is marked <code>access: runtime</code>, and the schema for these answers says whether it holds now.', ['@permission' => FeesAccess::PERMISSION]),
+        $this->t('For you, and for an account without "@permission". Static answers are stated for the account that asks: locked, <code>readOnly</code>. A runtime answer is marked <code>access: live</code>, and the schema for these answers says whether it holds now.', ['@permission' => FeesAccess::PERMISSION]),
         $this->json(['you' => $yours, 'without the permission' => $theirs]),
       ),
       'workflow' => ['#markup' => '<p>' . $workflow . '</p>'],
       'facts' => [
         '#type' => 'table',
-        '#caption' => $this->t('How each operation behaves: what both documents state under <code>x-surface.operation</code>, its kind first (a create, an update or a read, derived from whether it is read only and whether it creates), the Tool API kind its tool is given, and the hints an MCP client reads from that kind. The Tool API has idempotence on the kind, not the tool, and no kind that writes is idempotent, so configuring, idempotent in both documents, reaches an MCP client as not.'),
+        '#caption' => $this->t('How each operation behaves: what both documents state under <code>x-surface.operation</code>, its kind first (a create, an update or a read, derived from whether it is read only and whether it creates, so a read is how a document says read only), the Tool API kind its tool is given, and the hints an MCP client reads from that kind. The Tool API has idempotence on the kind, not the tool, and no kind that writes is idempotent, so configuring, idempotent in both documents, reaches an MCP client as not.'),
         '#header' => [
           $this->t('Operation'),
           'kind',
-          'readOnly',
           'destructive',
           'idempotent',
           $this->t('Tool'),

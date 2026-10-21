@@ -1,11 +1,26 @@
 {
     "schema": {
-        "surface": "resource_test.bulletin",
-        "situation": "configure",
+        "resource": "resource_test.bulletin",
+        "operation": "configure",
         "label": "Configure the bulletin",
         "schema": {
             "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "$id": "http://localhost/surface-api/resource_test.bulletin/configure/schema",
             "title": "Configure the bulletin",
+            "description": "Configures the bulletin, whose settings always exist.",
+            "x-surface": {
+                "contract": 2,
+                "operation": {
+                    "id": "configure",
+                    "label": "Configure the bulletin",
+                    "description": "Configures the bulletin, whose settings always exist.",
+                    "kind": "update",
+                    "creates": false,
+                    "destructive": false,
+                    "idempotent": true
+                },
+                "version": 1
+            },
             "type": "object",
             "properties": {
                 "frequency": {
@@ -99,12 +114,27 @@
         }
     },
     "contract": {
-        "surface": "resource_test.bulletin",
-        "situation": "configure",
+        "resource": "resource_test.bulletin",
+        "operation": "configure",
         "label": "Configure the bulletin",
         "schema": {
             "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "$id": "http://localhost/surface-api/resource_test.bulletin/configure",
             "title": "Configure the bulletin",
+            "description": "Configures the bulletin, whose settings always exist.",
+            "x-surface": {
+                "contract": 2,
+                "operation": {
+                    "id": "configure",
+                    "label": "Configure the bulletin",
+                    "description": "Configures the bulletin, whose settings always exist.",
+                    "kind": "update",
+                    "creates": false,
+                    "destructive": false,
+                    "idempotent": true
+                },
+                "version": 1
+            },
             "type": "object",
             "properties": {
                 "frequency": {
@@ -194,12 +224,32 @@
                 "stale": []
             },
             "answer": {
-                "surface": "resource_test.bulletin",
-                "situation": "configure",
+                "resource": "resource_test.bulletin",
+                "operation": "configure",
                 "label": "Configure the bulletin",
                 "schema": {
                     "$schema": "https://json-schema.org/draft/2020-12/schema",
+                    "$id": "http://localhost/surface-api/resource_test.bulletin/configure",
                     "title": "Configure the bulletin",
+                    "description": "Configures the bulletin, whose settings always exist.",
+                    "x-surface": {
+                        "contract": 2,
+                        "operation": {
+                            "id": "configure",
+                            "label": "Configure the bulletin",
+                            "description": "Configures the bulletin, whose settings always exist.",
+                            "kind": "update",
+                            "creates": false,
+                            "destructive": false,
+                            "idempotent": true
+                        },
+                        "version": 1,
+                        "doesNotApply": {
+                            "send_day": [
+                                "frequency"
+                            ]
+                        }
+                    },
                     "type": "object",
                     "properties": {
                         "frequency": {
@@ -232,14 +282,7 @@
                     "additionalProperties": false,
                     "required": [
                         "frequency"
-                    ],
-                    "x-surface": {
-                        "doesNotApply": {
-                            "send_day": [
-                                "frequency"
-                            ]
-                        }
-                    }
+                    ]
                 },
                 "values": {
                     "frequency": "monthly"
@@ -262,12 +305,27 @@
                 "stale": []
             },
             "answer": {
-                "surface": "resource_test.bulletin",
-                "situation": "configure",
+                "resource": "resource_test.bulletin",
+                "operation": "configure",
                 "label": "Configure the bulletin",
                 "schema": {
                     "$schema": "https://json-schema.org/draft/2020-12/schema",
+                    "$id": "http://localhost/surface-api/resource_test.bulletin/configure",
                     "title": "Configure the bulletin",
+                    "description": "Configures the bulletin, whose settings always exist.",
+                    "x-surface": {
+                        "contract": 2,
+                        "operation": {
+                            "id": "configure",
+                            "label": "Configure the bulletin",
+                            "description": "Configures the bulletin, whose settings always exist.",
+                            "kind": "update",
+                            "creates": false,
+                            "destructive": false,
+                            "idempotent": true
+                        },
+                        "version": 1
+                    },
                     "type": "object",
                     "properties": {
                         "frequency": {
@@ -362,12 +420,32 @@
                 "stale": []
             },
             "answer": {
-                "surface": "resource_test.bulletin",
-                "situation": "configure",
+                "resource": "resource_test.bulletin",
+                "operation": "configure",
                 "label": "Configure the bulletin",
                 "schema": {
                     "$schema": "https://json-schema.org/draft/2020-12/schema",
+                    "$id": "http://localhost/surface-api/resource_test.bulletin/configure",
                     "title": "Configure the bulletin",
+                    "description": "Configures the bulletin, whose settings always exist.",
+                    "x-surface": {
+                        "contract": 2,
+                        "operation": {
+                            "id": "configure",
+                            "label": "Configure the bulletin",
+                            "description": "Configures the bulletin, whose settings always exist.",
+                            "kind": "update",
+                            "creates": false,
+                            "destructive": false,
+                            "idempotent": true
+                        },
+                        "version": 1,
+                        "doesNotApply": {
+                            "send_day": [
+                                "frequency"
+                            ]
+                        }
+                    },
                     "type": "object",
                     "properties": {
                         "frequency": {
@@ -400,14 +478,7 @@
                     "additionalProperties": false,
                     "required": [
                         "frequency"
-                    ],
-                    "x-surface": {
-                        "doesNotApply": {
-                            "send_day": [
-                                "frequency"
-                            ]
-                        }
-                    }
+                    ]
                 },
                 "values": {
                     "frequency": "monthly"
@@ -430,12 +501,27 @@
                 "stale": []
             },
             "answer": {
-                "surface": "resource_test.bulletin",
-                "situation": "configure",
+                "resource": "resource_test.bulletin",
+                "operation": "configure",
                 "label": "Configure the bulletin",
                 "schema": {
                     "$schema": "https://json-schema.org/draft/2020-12/schema",
+                    "$id": "http://localhost/surface-api/resource_test.bulletin/configure",
                     "title": "Configure the bulletin",
+                    "description": "Configures the bulletin, whose settings always exist.",
+                    "x-surface": {
+                        "contract": 2,
+                        "operation": {
+                            "id": "configure",
+                            "label": "Configure the bulletin",
+                            "description": "Configures the bulletin, whose settings always exist.",
+                            "kind": "update",
+                            "creates": false,
+                            "destructive": false,
+                            "idempotent": true
+                        },
+                        "version": 1
+                    },
                     "type": "object",
                     "properties": {
                         "frequency": {

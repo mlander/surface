@@ -30,6 +30,10 @@ From the first tagged release on:
 - `x-surface.version` means what this page says: it counts the breaking
   changes made to a resource's or structure's stored values, and a
   compatible change never moves it.
+- `x-surface.contract` and the `Contract-Version` header mean what
+  [the contract's own version](#the-contracts-own-version) says: a
+  document of one contract version is spelled as that version says, and
+  a change to the spelling raises it.
 - Once stored-value migrations are built, values stored by any tagged
   release are converted forward when they are read.
 - The result shape every door answers a run in, and each violation's
@@ -59,7 +63,8 @@ edit, and its default again for a stored value that predates the key),
 client reads a document by the schema served with it: the documents are
 closed (`additionalProperties: false`), so a full schema cached before a
 key was added refuses a document that carries it, and a client fetches
-the full schema again when the version it holds is not the one served.
+the full schema again when the version it holds, or the contract
+version it is written in, is not the one served.
 
 | Change | Verdict | What stored values need | What a client needs | How it is detected |
 | --- | --- | --- | --- | --- |
@@ -84,7 +89,7 @@ the full schema again when the version it holds is not the one served.
 | A variant removed | breaking | The deciding key's stored value is stale and the variant's keys are unread: a migration moves them to a variant still offered. | Choosing it is refused. | `choice removed`, `rule removed` |
 | A required port added to a structure others attach | breaking for every container | Nothing. | Every container must wire it: the build refuses an unwired required port, at each site. | `required port added` on the def |
 | A shape tightened by an alter, on a site that stores values outside it | breaking, on that site | As for a constraint tightened; the alter's module ships the post-update that converts or reports them. | As for a constraint tightened. | The site's own contract diff over its own baselines; the shape's module cannot see it. |
-| An operation removed, or how it behaves changed (`readOnly`, `destructive`, `creates`, `idempotent`) | breaking | Nothing. | A client acts on those facts. | `operation no longer described`, `the operation's destructive changed` |
+| An operation removed, or how it behaves changed (`kind`, `destructive`, `creates`, `idempotent`) | breaking | Nothing. | A client acts on those facts. | `operation no longer described`, `the operation's destructive changed` |
 
 ## The version
 
@@ -101,9 +106,9 @@ compatible change never moves it, and it is 1 until the first breaking
 change after values were first stored. Three readers use it:
 
 - **Clients.** Both documents stamp it, `x-surface.version`, at the top
-  always (after `operation`, first when there is none) and on a def
-  only above 1, since a def at 1 has said nothing yet. A client compares
-  it before it trusts a cached document.
+  always (after `operation`, or after `contract` when there is none)
+  and on a def only above 1, since a def at 1 has said nothing yet. A
+  client compares it before it trusts a cached document.
 - **The contract diff**, which lets a breaking change through when the
   version of the id that owns it was raised.
 - **Stored-value migrations**, keyed by it.
@@ -118,11 +123,59 @@ to each resource and structure that uses it, and the contract diff
 attributes it to the document it finds it in. A derived resource is at
 1: its keys are the site's, not the code's.
 
+A resource's version is not [the contract's](#the-contracts-own-version):
+the one counts the breaking changes to what a resource stores, the
+other the changes to how every document is spelled.
+
 **Today a version above 1 is refused at discovery.** It promises that
 values stored at an older version are converted before anything reads
 them, and the migrations that keep that promise are designed below and
 not built (ROADMAP.md, Phase D item 13). Until they are, a breaking
 change is accepted by an allowance in its baseline, with its reason.
+
+## The contract's own version
+
+Both documents are written in a version of the wire format, the
+contract's own, distinct from a resource's version: the resource's
+counts the breaking changes made to its stored values, the contract's
+the changes made to how every document is spelled and laid out, whatever
+it describes ([decision](decisions.md#contract-2)). Contract 1 is what
+the module served until 2026-10-20, and what every document was before
+it had a number; today's is 2 (`ContractEmitter::CONTRACT`).
+
+**What raises it.** A change to how documents are spelled or laid out
+that a client reading the old spelling would misread: a key or a marker
+renamed, moved or reshaped (`surface` becoming `resource`, `dynamic`
+becoming `refine`, `variants` a map where it was a list, a marker moved
+off a conditional onto the object that owns it). Not a resource's own
+change, which its version answers, and not an addition a client may
+ignore, such as a new marker under `x-surface` that narrows nothing.
+Every wire change waiting for a version moves together, once, so a
+client moves once.
+
+**How a server states it.** Both documents carry it first under the top
+`x-surface`, `"contract": 2`, and every answer of the five
+`/surface-api` endpoints that is not an error carries the response header
+`Contract-Version: 2`, so a client can tell before it reads a body. A
+document that states none is of contract 1.
+
+**What a client does.** It reads the header, or the document's
+`x-surface.contract`, first, and refuses a version it does not know
+rather than guess at it: a key read by its old name finds nothing, and
+a marker read where it no longer sits says nothing, so a guess fails
+quietly. The React app reads contract 2 only, and refuses another by
+the header or by the document. A full schema cached in another contract
+version is fetched again, as one of another resource version is.
+
+**What the lint does.** The contract diff compares only documents of one
+contract version. A baseline written in another is not compared keyword
+by keyword, since every keyword may be spelled anew: the run reports it
+once, as one change, "contract version 1 to 2", its document and owner
+`*`, of its own class, `contract`. It fails, as an unpinned declaration
+does, and it is no breaking change, since no resource broke its promise:
+`--write` re-pins every such baseline in today's version with no
+`--allow` asked. Each baseline records the version it was written in,
+`contract`.
 
 ## Stored-value migrations, as they will be
 
@@ -212,9 +265,13 @@ the full schema of each operation that needs no subject, and for a
 structure with no operation of its own, the one it is described in
 alone. They are emitted for one fixed account, the site's first unless
 the command's `--uid` names another, so the documents do not depend on
-who runs the lint. Each records the module that declares it
-(`"module"`), so one directory may hold several modules' baselines and
-a run naming some of them compares, writes and removes only theirs.
+who runs the lint. Each records the id it pins (`"resource"`), the
+module that declares it (`"module"`), so one directory may hold several
+modules' baselines and a run naming some of them compares, writes and
+removes only theirs, and the version of the contract its documents are
+written in (`"contract"`), so a baseline from before the wire moved is
+re-pinned rather than compared ([the contract's own
+version](#the-contracts-own-version)).
 This module pins the examples and `data_surface_first` in its own
 `tests/fixtures/contracts/`: nineteen files, the resources and the
 structures they hold. An adopter commits its own, in its own module.
@@ -226,7 +283,12 @@ adds a key that may be left out, replaces, or only notes. For the
 inputs, what a client sends, narrowing and replacing are breaking; for
 the outputs, what a client reads, widening and replacing are. A
 difference in a keyword the lint does not read is breaking: it is
-never more lenient than it can show. Each breaking change is then:
+never more lenient than it can show. A change to a key's union of its
+variants is a note, since the conditionals that state each variant are
+judged themselves, and so is one to `$id`, `rules` or `within`, which
+say where a thing is, not what is accepted. `checkedOnServer` is
+compared by constraint, and a change to what one says it checks is a
+note. Each breaking change is then:
 
 - **versioned**, when the version of the id that owns it was raised
   (the document's resource or structure, or the structure whose def the
@@ -238,7 +300,10 @@ never more lenient than it can show. Each breaking change is then:
 A declaration with no baseline is **unpinned**, and fails too: it is no
 breaking change, so writing the baselines pins it with no reason asked,
 but a lint that passed it could not tell a declaration nobody pinned,
-or a directory mistyped, from one that kept its promise.
+or a directory mistyped, from one that kept its promise. A baseline
+written in another contract version fails the same way, once for the
+run, as the one change "contract version 1 to 2", and `--write` re-pins
+it with no reason asked.
 
 **The test.** `ContractBaselineTest` emits every pinned declaration and
 fails on a breaking change that is neither versioned nor allowed, and
@@ -254,8 +319,10 @@ ddev drush data_surface:contract-diff \
   --dir=modules/custom/data_surface/tests/fixtures/contracts
 ```
 
-prints every difference with its verdict and the account the documents
-were emitted for, and exits non-zero on a failing one. It fails closed:
+prints every difference with its verdict, and a summary naming the
+contract version and the account the documents were emitted for ("19
+resources and structures in contract 2, emitted for user 1 (admin):
+..."), and exits non-zero on a failing one. It fails closed:
 
 - **`--dir`** is the directory the baselines are kept in, read from the
   Drupal root, by default the first module's `tests/fixtures/contracts`,
@@ -271,16 +338,17 @@ were emitted for, and exits non-zero on a failing one. It fails closed:
   baselines, removes a baseline of theirs no longer declared, and
   refuses to write while a breaking change is neither versioned nor
   allowed, unless `--allow="<reason>"` says why, which is recorded in
-  that baseline beside each change it accepted. An unpinned declaration
-  needs no reason.
+  that baseline beside each change it accepted. An unpinned declaration,
+  and a baseline written in another contract version, need no reason.
 - **`--uid`** is the account the documents are emitted for, `1` by
   default and printed with the verdicts: another account's static
   access answers give other documents (example 10's fees are left out
   for an account that may not see them), and a site that turns the
   super user policy off may want a role's account instead.
 - **`--format=json`** prints the same for a program: `modules`,
-  `directory`, `uid`, `declarations`, `changes` (each `surface`,
-  `owner`, `path`, `change`, `effect`, `status`, `fails`), `failing`,
+  `directory`, `uid`, `contract`, `declarations`, `changes` (each
+  `resource`, `owner`, `path`, `change`, `effect`, `status`, `fails`;
+  `surface` before contract 2), `failing`,
   `passed`, and with `--write`, `written` and `removed`; a refusal
   before comparing answers `error` beside them. The exit code is the
   verdict either way.

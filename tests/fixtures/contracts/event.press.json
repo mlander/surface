@@ -1,27 +1,31 @@
 {
-    "surface": "event.press",
+    "resource": "event.press",
     "module": "data_surface_examples",
+    "contract": 2,
     "documents": [
         {
-            "surface": "event.press",
-            "situation": "configure",
+            "resource": "event.press",
+            "operation": "configure",
             "label": "Configure the press page",
             "schema": {
                 "$schema": "https://json-schema.org/draft/2020-12/schema",
                 "title": "Configure the press page",
                 "description": "Sets the press page: whether it is shown, the press contact, and who last reviewed it and when.",
                 "x-surface": {
+                    "contract": 2,
                     "operation": {
                         "id": "configure",
                         "label": "Configure the press page",
                         "description": "Sets the press page: whether it is shown, the press contact, and who last reviewed it and when.",
                         "kind": "update",
                         "creates": false,
-                        "readOnly": false,
                         "destructive": false,
                         "idempotent": true
                     },
-                    "version": 1
+                    "version": 1,
+                    "rules": [
+                        1
+                    ]
                 },
                 "type": "object",
                 "properties": {
@@ -73,6 +77,7 @@
                         "then": {
                             "properties": {
                                 "contact": {
+                                    "type": "object",
                                     "properties": {
                                         "email": {
                                             "description": "Required while this person is listed publicly.",
@@ -84,14 +89,12 @@
                                     ]
                                 }
                             }
-                        },
-                        "x-surface": {
-                            "declared": true
                         }
                     }
                 ],
                 "$defs": {
                     "event.person": {
+                        "title": "event.person",
                         "type": "object",
                         "properties": {
                             "name": {
@@ -108,7 +111,7 @@
                                     "string",
                                     "null"
                                 ],
-                                "format": "email",
+                                "format": "idn-email",
                                 "x-surface": {
                                     "locked": false,
                                     "dependsOn": [
@@ -140,6 +143,7 @@
                         }
                     },
                     "event.review": {
+                        "title": "event.review",
                         "type": "object",
                         "properties": {
                             "reviewed_on": {
@@ -195,15 +199,17 @@
                                     "required": [
                                         "reviewed_by"
                                     ]
-                                },
-                                "x-surface": {
-                                    "declared": true
                                 }
                             }
-                        ]
+                        ],
+                        "x-surface": {
+                            "rules": [
+                                0
+                            ]
+                        }
                     },
                     "event.phone": {
-                        "title": "Phone",
+                        "title": "event.phone",
                         "description": "Digits, with spaces if you like, and a leading + for a country code.",
                         "type": [
                             "string",

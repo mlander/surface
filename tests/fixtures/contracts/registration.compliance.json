@@ -1,14 +1,16 @@
 {
-    "surface": "registration.compliance",
+    "resource": "registration.compliance",
     "module": "data_surface_examples_compliance",
+    "contract": 2,
     "documents": [
         {
-            "surface": "registration.compliance",
-            "situation": null,
+            "resource": "registration.compliance",
+            "operation": null,
             "label": null,
             "schema": {
                 "$schema": "https://json-schema.org/draft/2020-12/schema",
                 "x-surface": {
+                    "contract": 2,
                     "version": 1,
                     "ports": {
                         "capacity": {
@@ -46,7 +48,7 @@
                 ],
                 "$defs": {
                     "event.license": {
-                        "title": "Event license",
+                        "title": "event.license",
                         "description": "The four digits after EV- on the license, such as 2048. Required to host more than 100 people.",
                         "type": [
                             "string",

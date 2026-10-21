@@ -99,7 +99,7 @@ class ContractBaselineTest extends DataSurfaceKernelTestBase {
       'registration.step3.ticket.paid',
     ], array_keys($current));
 
-    $this->assertSame(array_column($current, 'module', 'surface'), array_column($committed, 'module', 'surface'), 'Each baseline records the module declaring it.');
+    $this->assertSame(array_column($current, 'module', 'resource'), array_column($committed, 'module', 'resource'), 'Each baseline records the module declaring it.');
 
     $failing = array_filter($baselines->compare($committed, $current), static fn (ContractChange $change): bool => $change->fails());
     $this->assertSame([], array_map(static fn (ContractChange $change): string => sprintf('%s %s: %s', $change->surface, $change->path, $change->change), array_values($failing)), 'A breaking change raises its owner\'s version, or its baseline allows it.');
@@ -185,8 +185,8 @@ class ContractBaselineTest extends DataSurfaceKernelTestBase {
   /**
    * Tests both documents stamp the version.
    *
-   * At the top always, first under `x-surface` after how the operation
-   * behaves; on a def only above 1.
+   * At the top always, under `x-surface` after the contract's own version
+   * and how the operation behaves; on a def only above 1.
    */
   public function testTheVersionIsStamped(): void {
     $emitter = $this->container->get('data_surface.contract_emitter');
@@ -194,8 +194,8 @@ class ContractBaselineTest extends DataSurfaceKernelTestBase {
     $built = $resources->buildOperation(RegistrationStep1Resource::class, 'configure');
     $this->assertSame(1, $built->version());
     $full = $emitter->emitFull($built, 'registration.step1', 'configure', 'Configure', operation: ['id' => 'configure'])->document['schema'];
-    $this->assertSame(['operation', 'version'], array_keys($full['x-surface']));
-    $this->assertSame(['version' => 1], $emitter->emit($built, [], 'registration.step1')->document['schema']['x-surface']);
+    $this->assertSame(['contract', 'operation', 'version'], array_keys($full['x-surface']));
+    $this->assertSame(['contract' => 2, 'version' => 1], $emitter->emit($built, [], 'registration.step1')->document['schema']['x-surface']);
 
     $later = new DataSurfaceBuilder();
     $later->setDefinition('depth', DataDefinition::create('integer'));
@@ -211,10 +211,42 @@ class ContractBaselineTest extends DataSurfaceKernelTestBase {
       $emitter->emitFull($surface, 'versioned')->document['schema'],
       $emitter->emit($surface, $surface->getDefaultValues(), 'versioned')->document['schema'],
     ] as $schema) {
-      $this->assertSame(['version' => 3], $schema['x-surface']);
+      $this->assertSame(['contract' => 2, 'version' => 3], $schema['x-surface']);
       $this->assertSame(['version' => 2], $schema['$defs']['versioned.later']['x-surface']);
       $this->assertArrayNotHasKey('x-surface', $schema['$defs']['versioned.first'], 'A def at 1 says nothing.');
     }
+  }
+
+  /**
+   * Tests baselines of another contract version are re-pinned, not compared.
+   *
+   * Every keyword of a contract 1 baseline may be spelled anew in contract
+   * 2, so the lint says so once, for every such baseline, and fails until
+   * the baselines are written again; it never reports a breaking change
+   * per keyword, and writing needs no reason.
+   */
+  public function testAnotherContractVersionIsSaidOnce(): void {
+    $baselines = $this->container->get('data_surface.contract_baselines');
+    $current = $baselines->emit(self::PINNED);
+    $old = [];
+    foreach ($baselines->read($baselines->directory('data_surface')) as $id => $baseline) {
+      $this->assertSame(2, $baseline['contract'], $id . ' is pinned in contract 2.');
+      // As contract 1 spelled it.
+      $documents = [];
+      foreach ($baseline['documents'] as $document) {
+        unset($document['schema']['x-surface']['contract']);
+        $keys = ['surface' => $document['resource'], 'situation' => $document['operation']];
+        $documents[] = $keys + array_diff_key($document, ['resource' => TRUE, 'operation' => TRUE]);
+      }
+      $old[$id] = ['surface' => $id, 'module' => $baseline['module'], 'documents' => $documents];
+    }
+    $changes = $baselines->compare($old, $current);
+    $this->assertCount(1, $changes);
+    [$change] = $changes;
+    $said = [$change->surface, $change->path, $change->change, $change->status];
+    $this->assertSame(['*', '#', 'contract version 1 to 2', ContractChange::CONTRACT], $said);
+    $this->assertTrue($change->fails());
+    $this->assertFalse($change->needsAllowance());
   }
 
   /**

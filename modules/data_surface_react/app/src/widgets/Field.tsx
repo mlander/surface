@@ -19,7 +19,7 @@ import { Description, Errors, isLocked, RequiredMarker, type FieldProps } from '
  * them to checkboxes or a multiple select, a map to a fieldset, a string
  * to a text input, a time input or a textarea, a number to a number
  * input, a boolean to a checkbox, a list of free values to rows; and the
- * one the Form API has no element for, variants (the widget hint `slot`).
+ * one the Form API has no element for, variants (the widget hint `variants`).
  */
 export function Field(props: FieldProps): JSX.Element | null {
   const extension = props.schema['x-surface'];
@@ -42,7 +42,7 @@ export function Field(props: FieldProps): JSX.Element | null {
       return <TextareaField {...props} />;
     case 'fieldset':
       return <FieldsetField {...props} />;
-    case 'slot':
+    case 'variants':
       return <VariantsField {...props} />;
     case 'list':
       return <ListField {...props} />;
@@ -202,19 +202,21 @@ export function FieldsetField(props: FieldProps): JSX.Element {
 }
 
 /**
- * Variants (the widget hint `slot`): the fieldset of the variant their
+ * Variants (the widget hint `variants`): the fieldset of the variant their
  * deciding key chose, read from the parent's conditionals, and nothing
  * at all while nothing is chosen, as the form builder renders no element
  * for variants nothing has chosen yet. A variant that declares no keys
  * (a choice with nothing more to say) is drawn as nothing too, as the
- * form builder draws it.
+ * form builder draws it. The variant says nothing of the key it fills:
+ * the key with variants says whether it is locked, and the variant's
+ * fieldset is locked with it.
  */
 export function VariantsField(props: FieldProps): JSX.Element | null {
   const variant = props.parent === undefined ? null : resolveVariants(props.parent, props.name, props.parentValues ?? {});
   if (variant === null || Object.keys(variant.properties ?? {}).length === 0) {
     return null;
   }
-  return <FieldsetField {...props} schema={variant} />;
+  return <FieldsetField {...props} schema={variant} disabled={isLocked(props)} />;
 }
 
 /** What a new row of a list starts as. */

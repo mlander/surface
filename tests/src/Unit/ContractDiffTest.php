@@ -26,15 +26,16 @@ class ContractDiffTest extends UnitTestCase {
    * The baseline: a resource, one of its keys a structure's def.
    */
   protected const BASELINE = [
-    'surface' => 'event',
-    'situation' => 'configure',
+    'resource' => 'event',
+    'operation' => 'configure',
     'schema' => [
       'x-surface' => [
+        'contract' => 2,
         'operation' => [
           'id' => 'configure',
           'label' => 'Configure',
+          'kind' => 'update',
           'creates' => FALSE,
-          'readOnly' => FALSE,
           'destructive' => FALSE,
           'idempotent' => TRUE,
         ],
@@ -195,7 +196,13 @@ class ContractDiffTest extends UnitTestCase {
       ],
       'a rule tightened' => [['allOf/0/then/properties/capacity/maximum' => 60], ContractDiff::NARROWS, $breaking],
       'a constraint only the server checks added' => [
-        ['properties/code/x-surface' => ['checkedOnServer' => ['UniqueCode']]],
+        [
+          'properties/code/x-surface' => [
+            'checkedOnServer' => [
+              ['constraint' => 'UniqueCode', 'message' => 'A code no other event has'],
+            ],
+          ],
+        ],
         ContractDiff::NARROWS,
         $breaking,
       ],
@@ -247,15 +254,107 @@ class ContractDiffTest extends UnitTestCase {
   }
 
   /**
-   * Tests the operation's kind is not compared on its own.
+   * Tests the operation's kind is compared, since contract 2.
    *
-   * It is derived from `readOnly` and `creates`, which are; a baseline
-   * written before it was stated reads the same.
+   * The documents no longer say `readOnly` under `x-surface.operation`:
+   * `kind: read` says it, so an update made a read, or a read made an
+   * update, is a change a client acts on.
    */
-  public function testTheKindIsNotComparedOnItsOwn(): void {
+  public function testTheKindIsCompared(): void {
     $current = self::BASELINE;
-    $current['schema']['x-surface']['operation']['kind'] = 'update';
-    $this->assertSame([], (new ContractDiff())->compare(self::BASELINE, $current));
+    $current['schema']['x-surface']['operation']['kind'] = 'read';
+    [$change] = (new ContractDiff())->compare(self::BASELINE, $current);
+    $this->assertSame('configure#/x-surface/operation/kind', $change->path);
+    $this->assertSame([ContractDiff::BREAKS, ContractChange::BREAKING], [$change->effect, $change->status]);
+  }
+
+  /**
+   * Tests a document of another contract version is one change, not many.
+   *
+   * Contract 1 spelled the document's keys `surface` and `situation` and
+   * stated no `x-surface.contract`; every keyword may be spelled anew in
+   * contract 2, so nothing is compared keyword by keyword. The one change
+   * fails until the baseline is written again, which needs no reason.
+   */
+  public function testAnotherContractVersionIsOneChange(): void {
+    $before = [
+      'surface' => 'event',
+      'situation' => 'configure',
+      'schema' => [
+        'x-surface' => ['operation' => ['id' => 'configure', 'readOnly' => FALSE], 'version' => 1],
+        'type' => 'object',
+        'properties' => ['old' => ['type' => 'string']],
+      ],
+    ];
+    $changes = (new ContractDiff())->compare($before, self::BASELINE);
+    $this->assertCount(1, $changes);
+    [$change] = $changes;
+    $said = [$change->surface, $change->path, $change->change];
+    $this->assertSame(['event', 'configure#', 'contract version 1 to 2'], $said);
+    $this->assertSame([ContractDiff::CONTRACT, ContractChange::CONTRACT], [$change->effect, $change->status]);
+    $this->assertTrue($change->fails());
+    $this->assertFalse($change->isBreaking());
+    $this->assertFalse($change->needsAllowance());
+    $this->assertSame(1, ContractDiff::contractOf($before));
+    $this->assertSame(2, ContractDiff::contractOf(self::BASELINE));
+  }
+
+  /**
+   * Tests a declared rule is told apart by its frame's list, not a marker.
+   *
+   * In contract 2 no `x-surface` sits on a conditional: the frame lists
+   * its rules' indexes in `x-surface.rules`. A rule that moves to another
+   * index is the same rule, and a coded refiner's conditional with the
+   * same `if` is not it.
+   */
+  public function testRulesAreToldApartByTheFramesList(): void {
+    $rule = [
+      'if' => ['properties' => ['code' => ['type' => 'null']]],
+      'then' => ['properties' => ['capacity' => ['type' => ['integer', 'null'], 'maximum' => 100]]],
+    ];
+    $baseline = self::BASELINE;
+    $baseline['schema']['allOf'][] = $rule;
+    $baseline['schema']['x-surface']['rules'] = [1];
+    $moved = $baseline;
+    $moved['schema']['allOf'] = [$rule, ...self::BASELINE['schema']['allOf']];
+    $moved['schema']['x-surface']['rules'] = [0];
+    $narrowing = array_filter((new ContractDiff())->compare($baseline, $moved), static fn (ContractChange $change): bool => $change->effect !== ContractDiff::NOTE);
+    $this->assertSame([], $narrowing, 'The rule moved: nothing added, nothing dropped.');
+
+    $coded = $moved;
+    $coded['schema']['x-surface']['rules'] = [];
+    $said = array_map(static fn (ContractChange $change): string => $change->change, (new ContractDiff())->compare($baseline, $coded));
+    $this->assertContains('rule removed', $said);
+    $this->assertContains('rule added', $said);
+  }
+
+  /**
+   * Tests a key's union of its variants only notes.
+   *
+   * The conditionals state each variant exactly and are judged
+   * themselves; the `anyOf` beside them, for type generators, is never
+   * narrower than the one that applies.
+   */
+  public function testTheUnionOfVariantsOnlyNotes(): void {
+    $baseline = self::BASELINE;
+    $baseline['schema']['properties']['ticket'] = [
+      'title' => 'Ticket',
+      'type' => ['object', 'null'],
+      'anyOf' => [['$ref' => '#/$defs/event.ticket.free'], ['type' => 'null']],
+      'x-surface' => ['by' => 'venue', 'variants' => ['hall' => '#/$defs/event.ticket.free']],
+    ];
+    $current = $baseline;
+    $current['schema']['properties']['ticket']['anyOf'] = [
+      ['$ref' => '#/$defs/event.ticket.free'],
+      ['$ref' => '#/$defs/event.ticket.paid'],
+      ['type' => 'null'],
+    ];
+    $current['schema']['properties']['ticket']['x-surface']['variants']['barn'] = '#/$defs/event.ticket.paid';
+    $changes = (new ContractDiff())->compare($baseline, $current);
+    $this->assertNotEmpty($changes);
+    foreach ($changes as $change) {
+      $this->assertSame([ContractDiff::NOTE, ContractChange::COMPATIBLE], [$change->effect, $change->status], $change->change);
+    }
   }
 
   /**

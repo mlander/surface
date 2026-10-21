@@ -31,12 +31,41 @@ namespace Drupal\data_surface\Contract;
  *   `unevaluatedProperties`.
  *
  * A reference that leads back into a def being read is left as it is, so
- * a recursive schema ends. This is data_surface_react's `resolveSchema()`
- * and `inlineSchema()`, in PHP.
+ * a recursive schema ends. A def's own `title` is its id, not a label, so
+ * it is not laid over a site. This is data_surface_react's
+ * `resolveSchema()` and `inlineSchema()`, in PHP.
+ *
+ * The inline reading is the emitter's own, before the placement rules of
+ * the contract's version moved its markers (ContractEmitter::settled()):
+ * restored() puts each `x-surface.within` entry back where it stands and
+ * marks each conditional `x-surface.rules` lists `x-surface.declared`,
+ * since composition moves conditionals and their indexes with them, and
+ * a key's union of its variants is left to the conditionals, which state
+ * each one exactly.
  *
  * @see \Drupal\data_surface\Contract\ContractEmitter::reference()
  */
 final class SchemaResolver {
+
+  /**
+   * Stands where a def's title stood, until a site's own replaces it.
+   */
+  protected const DEF_TITLE = "\0def-title";
+
+  /**
+   * The keywords that hold one subschema, not a list or a map of them.
+   */
+  protected const SINGLE = [
+    'if',
+    'then',
+    'else',
+    'not',
+    'items',
+    'additionalProperties',
+    'unevaluatedProperties',
+    'contains',
+    'propertyNames',
+  ];
 
   /**
    * Resolves one schema's references, not those of the schemas inside it.
@@ -53,6 +82,40 @@ final class SchemaResolver {
    *   The effective schema.
    */
   public static function resolve(array $schema, array $root, array &$followed = []): array {
+    return self::untitled(self::resolveAt(self::restored($schema), self::restored($root), $followed));
+  }
+
+  /**
+   * Drops a def's title no site's title replaced.
+   *
+   * @param array $resolved
+   *   A schema, resolved.
+   *
+   * @return array
+   *   The same, with no def's title left.
+   */
+  protected static function untitled(array $resolved): array {
+    if (($resolved['title'] ?? NULL) === self::DEF_TITLE) {
+      unset($resolved['title']);
+    }
+    return $resolved;
+  }
+
+  /**
+   * Resolves one schema's references, its markers in place.
+   *
+   * @param array $schema
+   *   A schema in the document, restored().
+   * @param array $root
+   *   The document's root, restored().
+   * @param string[] $followed
+   *   The defs already followed on the way here; the ones followed now
+   *   are added.
+   *
+   * @return array
+   *   The effective schema.
+   */
+  protected static function resolveAt(array $schema, array $root, array &$followed = []): array {
     $ancestors = $followed;
     $resolved = [];
     // A frame that mixes structures in holds its own properties beside a
@@ -87,7 +150,7 @@ final class SchemaResolver {
             continue;
           }
           $inner = $ancestors;
-          $resolved = self::merge($resolved, self::resolve($entry, $root, $inner));
+          $resolved = self::merge($resolved, self::resolveAt($entry, $root, $inner));
         }
         if ($conditions !== []) {
           $resolved = self::merge($resolved, ['allOf' => $conditions]);
@@ -193,12 +256,23 @@ final class SchemaResolver {
     if (in_array($name, $ancestors, TRUE) || !is_array($def)) {
       return self::merge($resolved, ['$ref' => $reference]);
     }
+    // Its id, which names the def, not the key the site labels: held in
+    // its place for the site's own title, and dropped when the site has
+    // none (untitled()).
+    if (array_key_exists('title', $def)) {
+      if (array_key_exists('title', $resolved)) {
+        unset($def['title']);
+      }
+      else {
+        $def['title'] = self::DEF_TITLE;
+      }
+    }
     if (in_array($name, $followed, TRUE)) {
       return $resolved;
     }
     $followed[] = $name;
     $inner = [...$ancestors, $name];
-    return self::merge($resolved, self::resolve($def, $root, $inner));
+    return self::merge($resolved, self::resolveAt($def, $root, $inner));
   }
 
   /**
@@ -216,32 +290,144 @@ final class SchemaResolver {
    *   at the root, no `$defs`.
    */
   public static function inline(array $schema, ?array $root = NULL, array $followed = []): array {
-    $at_root = $root === NULL;
-    $root ??= $schema;
-    $resolved = self::resolve($schema, $root, $followed);
+    $schema = self::restored($schema);
+    return self::inlined($schema, $root === NULL ? $schema : self::restored($root), $followed, $root === NULL);
+  }
+
+  /**
+   * Resolves a schema and every schema inside it, its markers in place.
+   *
+   * @param array $schema
+   *   The schema, restored().
+   * @param array $root
+   *   The document's root, restored().
+   * @param string[] $followed
+   *   The defs already followed on the way here.
+   * @param bool $at_root
+   *   Whether $schema is the root.
+   *
+   * @return array
+   *   The schema, inline.
+   */
+  protected static function inlined(array $schema, array $root, array $followed, bool $at_root): array {
+    $resolved = self::untitled(self::resolveAt($schema, $root, $followed));
     if ($at_root) {
       unset($resolved['$defs']);
     }
     if (is_array($resolved['properties'] ?? NULL)) {
       foreach ($resolved['properties'] as $name => $property) {
         if (is_array($property)) {
-          $resolved['properties'][$name] = self::inline($property, $root, $followed);
+          if (isset($property[ContractEmitter::EXTENSION]['variants'], $property['anyOf'])) {
+            // The union of its variants: the conditionals state each one.
+            unset($property['anyOf']);
+          }
+          $resolved['properties'][$name] = self::inlined($property, $root, $followed, FALSE);
         }
       }
     }
     if (is_array($resolved['items'] ?? NULL)) {
-      $resolved['items'] = self::inline($resolved['items'], $root, $followed);
+      $resolved['items'] = self::inlined($resolved['items'], $root, $followed, FALSE);
     }
     if (is_array($resolved['allOf'] ?? NULL)) {
       foreach ($resolved['allOf'] as $i => $condition) {
         foreach (['then', 'else'] as $branch) {
           if (is_array($condition[$branch] ?? NULL)) {
-            $resolved['allOf'][$i][$branch] = self::inline($condition[$branch], $root, $followed);
+            $resolved['allOf'][$i][$branch] = self::inlined($condition[$branch], $root, $followed, FALSE);
           }
         }
       }
     }
     return $resolved;
+  }
+
+  /**
+   * Puts each marker back where the emitter's pass wrote it.
+   *
+   * The wire keeps `x-surface` off every schema below an applicator: the
+   * owning object lists its declared rules' conditionals by index in
+   * `x-surface.rules`, and says what is said below it in
+   * `x-surface.within`, by JSON pointer from itself. This reads both back
+   * into place, `x-surface.declared` on each rule's conditional and each
+   * entry of `within` as the `x-surface` of the schema it points at, and
+   * drops the two lists. Applied twice, it changes nothing more.
+   *
+   * Decision: see docs/decisions.md#contract-2.
+   *
+   * @param array $schema
+   *   A schema the emitter wrote, or any schema inside one.
+   *
+   * @return array
+   *   The same, each marker in place.
+   */
+  public static function restored(array $schema): array {
+    foreach ($schema as $keyword => $value) {
+      if (!is_array($value)) {
+        continue;
+      }
+      if (in_array($keyword, ['properties', '$defs', 'patternProperties'], TRUE)) {
+        foreach ($value as $name => $child) {
+          if (is_array($child)) {
+            $schema[$keyword][$name] = self::restored($child);
+          }
+        }
+      }
+      elseif (in_array($keyword, ['allOf', 'anyOf', 'oneOf'], TRUE) && array_is_list($value)) {
+        foreach ($value as $i => $member) {
+          if (is_array($member)) {
+            $schema[$keyword][$i] = self::restored($member);
+          }
+        }
+      }
+      elseif (in_array($keyword, self::SINGLE, TRUE)) {
+        $schema[$keyword] = self::restored($value);
+      }
+    }
+    $extension = $schema[ContractEmitter::EXTENSION] ?? NULL;
+    if (!is_array($extension) || (!isset($extension['rules']) && !isset($extension['within']))) {
+      return $schema;
+    }
+    foreach (is_array($extension['rules'] ?? NULL) ? $extension['rules'] : [] as $i) {
+      if (is_int($i) && is_array($schema['allOf'][$i] ?? NULL)) {
+        $schema['allOf'][$i][ContractEmitter::EXTENSION]['declared'] = TRUE;
+      }
+    }
+    foreach (is_array($extension['within'] ?? NULL) ? $extension['within'] : [] as $pointer => $said) {
+      $path = array_map(static fn (string $segment): string => str_replace(['~1', '~0'], ['/', '~'], $segment), explode('/', substr((string) $pointer, 1)));
+      $schema = self::placed($schema, $path, $said);
+    }
+    unset($schema[ContractEmitter::EXTENSION]['rules'], $schema[ContractEmitter::EXTENSION]['within']);
+    if ($schema[ContractEmitter::EXTENSION] === []) {
+      unset($schema[ContractEmitter::EXTENSION]);
+    }
+    return $schema;
+  }
+
+  /**
+   * Sets the `x-surface` of the schema a path leads to.
+   *
+   * A schema that said nothing but its `x-surface` was left `true` where
+   * it stood, or, as a property, left out: either is made an object again.
+   *
+   * @param array $schema
+   *   The owning schema.
+   * @param string[] $path
+   *   The path from it, segment by segment.
+   * @param mixed $said
+   *   The `x-surface`.
+   *
+   * @return array
+   *   The owning schema, the `x-surface` in place.
+   */
+  protected static function placed(array $schema, array $path, mixed $said): array {
+    if ($path === []) {
+      $schema[ContractEmitter::EXTENSION] = $said;
+      return $schema;
+    }
+    $segment = array_shift($path);
+    $key = ctype_digit($segment) && array_is_list($schema) ? (int) $segment : $segment;
+    $inner = $schema[$key] ?? [];
+    $schema[$key] = self::placed(is_array($inner) ? $inner : [], $path, $said);
+    return $schema;
   }
 
   /**

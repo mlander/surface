@@ -122,7 +122,7 @@ the record of the rework that brought the module to the pattern.
   `user.roles`, `user.roles:<role>`, no tag, permanent max-age) and is stated in the
   full schema and the tool listing for the account that asks; runtime
   (a tag, the `user` context, max-age 0, or no cacheability at all) is
-  marked there, `x-surface.access: "runtime"`, and settled by the schema
+  marked there, `x-surface.access: "live"`, and settled by the schema
   for these answers. `ResourcesInterface::buildStatic()` builds for the
   account alone; the operation's permission is the first static answer
   (`OperationDefinition::staticPermission()`); narrowing a key's values
@@ -136,9 +136,9 @@ the three kinds; in code `#[Shape]` names the third, and the word never
 names the blueprint or the layout. A value that arrives of the wrong
 type is a `TypeMismatchException`. Product names
 and on-the-wire identifiers keep the word surface (module, namespaces,
-services, routes and paths, `x-surface`, the contract's `surface` and
-`situation` keys, the `surface[...]` form key, React, the `DataSurface*`
-engine, tool ids); every concept name uses the new word
+services, routes and paths, `x-surface`, the `surface[...]` form key,
+React, the `DataSurface*` engine, tool ids; the contract's `surface` and
+`situation` keys became `resource` and `operation` with contract 2); every concept name uses the new word
 (`docs/decisions.md#the-product-keeps-its-name`).
 
 ## One spelling
@@ -336,7 +336,7 @@ sealed data surface and its values into JSON Schema 2020-12 with an
 on their deciding sibling. That is the schema as it stands, for one set
 of values; `emitFull()` is the second document, the full schema, which
 reads no value: every key as declared, every listable dependency as
-conditionals, the rest `dynamic`, and never stricter than the pipeline
+conditionals, the rest `refine` or `live`, and never stricter than the pipeline
 (`docs/decisions.md#two-documents-never-stricter-than-the-runtime`).
 It names no widget unless asked
 (`emit(..., widgets: TRUE)`); `data_surface_tool`'s contract panel shows

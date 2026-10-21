@@ -256,7 +256,7 @@ final class ServedOperations {
    * @param array $outputs
    *   The outputs the storage read back.
    *
-   * @return array{surface: string, situation: string, parameters: array<string, string|int>}|null
+   * @return array{resource: string, operation: string, parameters: array<string, string|int>}|null
    *   The resource id, the operation id and its parameters as raw values,
    *   or NULL when the operation does not create or nothing answers.
    */
@@ -305,8 +305,8 @@ final class ServedOperations {
         }
       }
       return [
-        'surface' => $served->definition->id,
-        'situation' => (string) $id,
+        'resource' => $served->definition->id,
+        'operation' => (string) $id,
         'parameters' => $parameters,
       ];
     }

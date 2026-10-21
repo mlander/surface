@@ -116,8 +116,14 @@ class ServedContractEndpointsTest extends BrowserTestBase {
     $full = json_decode($first, TRUE);
     // The document and nothing that is one moment's: no values, no stale
     // paths, no fingerprint.
-    $this->assertSame(['surface', 'situation', 'label', 'schema'], array_keys($full));
-    $this->assertSame('registration.step2', $full['surface']);
+    $this->assertSame(['resource', 'operation', 'label', 'schema'], array_keys($full));
+    $this->assertSame('registration.step2', $full['resource']);
+    // In contract 2, said in the header and the document, which says where
+    // it is served. Decision: see docs/decisions.md#contract-2.
+    $this->assertSame('2', $this->getSession()->getResponseHeader('Contract-Version'));
+    $this->assertSame(2, $full['schema']['x-surface']['contract']);
+    $this->assertStringEndsWith('/surface-api/registration.step2/configure/schema', $full['schema']['$id']);
+    $this->assertSame(['$schema', '$id', 'title'], array_slice(array_keys($full['schema']), 0, 3));
     $room = $full['schema']['properties']['room'];
     $this->assertCount(6, $this->offered($room));
     $this->assertSame(['widget' => 'select', 'locked' => FALSE, 'dependsOn' => ['venue'], 'enumerated' => TRUE], $room['x-surface']);
@@ -169,18 +175,21 @@ class ServedContractEndpointsTest extends BrowserTestBase {
     $this->assertSession()->titleEquals('React: Configure registration (step 2) | Drupal');
     $this->assertSession()->elementExists('css', '#data-surface-react');
     $settings = $this->getDrupalSettings()['dataSurfaceReact'];
-    $this->assertSame('registration.step2', $settings['surface']);
-    $this->assertSame('configure', $settings['situation']);
+    $this->assertSame('registration.step2', $settings['resource']);
+    $this->assertSame('configure', $settings['operation']);
     $this->assertStringEndsWith('/surface-api', $settings['apiBase']);
     $this->assertStringEndsWith('/session/token', $settings['tokenUrl']);
 
     $this->drupalGet('surface-api/registration.step2/configure');
     $this->assertSession()->statusCodeEquals(200);
     $contract = json_decode($this->getSession()->getPage()->getContent(), TRUE);
-    $this->assertSame(['surface', 'situation', 'label', 'schema', 'values', 'stale', 'fingerprint'], array_keys($contract));
+    $this->assertSame(['resource', 'operation', 'label', 'schema', 'values', 'stale', 'fingerprint'], array_keys($contract));
     $this->assertIsString($contract['fingerprint']);
-    $this->assertSame('registration.step2', $contract['surface']);
+    $this->assertSame('registration.step2', $contract['resource']);
     $this->assertSame('https://json-schema.org/draft/2020-12/schema', $contract['schema']['$schema']);
+    $this->assertSame('2', $this->getSession()->getResponseHeader('Contract-Version'));
+    $this->assertSame(2, $contract['schema']['x-surface']['contract']);
+    $this->assertStringEndsWith('/surface-api/registration.step2/configure', $contract['schema']['$id']);
     $this->assertSame(['venue'], $contract['schema']['properties']['room']['x-surface']['dependsOn']);
     $this->assertSame('riverside', $contract['values']['venue']);
 

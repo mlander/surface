@@ -1,11 +1,31 @@
 {
     "schema": {
-        "surface": "resource_test.journal",
-        "situation": "configure",
+        "resource": "resource_test.journal",
+        "operation": "configure",
         "label": "Configure the journal",
         "schema": {
             "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "$id": "http://localhost/surface-api/resource_test.journal/configure/schema",
             "title": "Configure the journal",
+            "description": "Configures the journal, whose settings always exist.",
+            "x-surface": {
+                "contract": 2,
+                "operation": {
+                    "id": "configure",
+                    "label": "Configure the journal",
+                    "description": "Configures the journal, whose settings always exist.",
+                    "kind": "update",
+                    "creates": false,
+                    "destructive": false,
+                    "idempotent": true
+                },
+                "version": 1,
+                "rules": [
+                    2,
+                    4,
+                    5
+                ]
+            },
             "type": "object",
             "properties": {
                 "title": {
@@ -134,13 +154,11 @@
                     "then": {
                         "properties": {
                             "owner": {
+                                "type": "string",
                                 "description": "Up to 32 characters for a staff audience.",
                                 "maxLength": 32
                             }
                         }
-                    },
-                    "x-surface": {
-                        "declared": true
                     }
                 },
                 {
@@ -181,9 +199,6 @@
                         "required": [
                             "created"
                         ]
-                    },
-                    "x-surface": {
-                        "declared": true
                     }
                 },
                 {
@@ -197,18 +212,20 @@
                     "then": {
                         "properties": {
                             "revision": {
+                                "type": [
+                                    "integer",
+                                    "null"
+                                ],
                                 "description": "A journal never created is on its first revision.",
                                 "maximum": 1
                             }
                         }
-                    },
-                    "x-surface": {
-                        "declared": true
                     }
                 }
             ],
             "$defs": {
                 "resource_test.timestamps": {
+                    "title": "resource_test.timestamps",
                     "type": "object",
                     "properties": {
                         "created": {
@@ -238,7 +255,7 @@
                                 "dependsOn": [
                                     "created"
                                 ],
-                                "dynamic": true,
+                                "refine": true,
                                 "declared": true
                             }
                         }
@@ -267,14 +284,17 @@
                                 "required": [
                                     "changed"
                                 ]
-                            },
-                            "x-surface": {
-                                "declared": true
                             }
                         }
-                    ]
+                    ],
+                    "x-surface": {
+                        "rules": [
+                            0
+                        ]
+                    }
                 },
                 "resource_test.ownership": {
+                    "title": "resource_test.ownership",
                     "type": "object",
                     "properties": {
                         "owner": {
@@ -317,6 +337,7 @@
                     }
                 },
                 "resource_test.archive": {
+                    "title": "resource_test.archive",
                     "type": "object",
                     "properties": {
                         "shelf": {
@@ -402,13 +423,11 @@
                             "then": {
                                 "properties": {
                                     "owner": {
+                                        "type": "string",
                                         "description": "Up to 32 characters for a staff audience.",
                                         "maxLength": 32
                                     }
                                 }
-                            },
-                            "x-surface": {
-                                "declared": true
                             }
                         },
                         {
@@ -428,18 +447,38 @@
                                 }
                             }
                         }
-                    ]
+                    ],
+                    "x-surface": {
+                        "rules": [
+                            1
+                        ]
+                    }
                 }
             }
         }
     },
     "contract": {
-        "surface": "resource_test.journal",
-        "situation": "configure",
+        "resource": "resource_test.journal",
+        "operation": "configure",
         "label": "Configure the journal",
         "schema": {
             "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "$id": "http://localhost/surface-api/resource_test.journal/configure",
             "title": "Configure the journal",
+            "description": "Configures the journal, whose settings always exist.",
+            "x-surface": {
+                "contract": 2,
+                "operation": {
+                    "id": "configure",
+                    "label": "Configure the journal",
+                    "description": "Configures the journal, whose settings always exist.",
+                    "kind": "update",
+                    "creates": false,
+                    "destructive": false,
+                    "idempotent": true
+                },
+                "version": 1
+            },
             "type": "object",
             "properties": {
                 "title": {
@@ -570,30 +609,12 @@
                             "$ref": "#/$defs/resource_test.archive"
                         },
                         {
+                            "type": "object",
                             "properties": {
                                 "owner": {
+                                    "type": "string",
                                     "description": "Up to 32 characters for a staff audience.",
-                                    "maxLength": 32,
-                                    "x-surface": {
-                                        "widget": "text",
-                                        "locked": false,
-                                        "dependsOn": [
-                                            "circle"
-                                        ],
-                                        "refined": true,
-                                        "stale": false
-                                    }
-                                },
-                                "shared": {
-                                    "x-surface": {
-                                        "widget": "checkbox",
-                                        "locked": false,
-                                        "dependsOn": [
-                                            "circle"
-                                        ],
-                                        "refined": false,
-                                        "stale": false
-                                    }
+                                    "maxLength": 32
                                 },
                                 "stamps": {
                                     "allOf": [
@@ -601,34 +622,19 @@
                                             "$ref": "#/$defs/resource_test.timestamps"
                                         },
                                         {
+                                            "type": "object",
                                             "properties": {
                                                 "changed": {
                                                     "description": "Required once the created time is set.",
                                                     "type": "integer",
-                                                    "minimum": 1690000000,
-                                                    "x-surface": {
-                                                        "widget": "number",
-                                                        "locked": false,
-                                                        "dependsOn": [
-                                                            "created"
-                                                        ],
-                                                        "refined": true,
-                                                        "stale": false
-                                                    }
+                                                    "minimum": 1690000000
                                                 }
                                             },
                                             "required": [
                                                 "changed"
                                             ]
                                         }
-                                    ],
-                                    "x-surface": {
-                                        "widget": "fieldset",
-                                        "locked": false,
-                                        "dependsOn": [],
-                                        "refined": true,
-                                        "stale": false
-                                    }
+                                    ]
                                 }
                             }
                         }
@@ -638,7 +644,43 @@
                         "locked": false,
                         "dependsOn": [],
                         "refined": true,
-                        "stale": false
+                        "stale": false,
+                        "within": {
+                            "/allOf/1/properties/owner": {
+                                "widget": "text",
+                                "locked": false,
+                                "dependsOn": [
+                                    "circle"
+                                ],
+                                "refined": true,
+                                "stale": false
+                            },
+                            "/allOf/1/properties/shared": {
+                                "widget": "checkbox",
+                                "locked": false,
+                                "dependsOn": [
+                                    "circle"
+                                ],
+                                "refined": false,
+                                "stale": false
+                            },
+                            "/allOf/1/properties/stamps": {
+                                "widget": "fieldset",
+                                "locked": false,
+                                "dependsOn": [],
+                                "refined": true,
+                                "stale": false
+                            },
+                            "/allOf/1/properties/stamps/allOf/1/properties/changed": {
+                                "widget": "number",
+                                "locked": false,
+                                "dependsOn": [
+                                    "created"
+                                ],
+                                "refined": true,
+                                "stale": false
+                            }
+                        }
                     }
                 }
             },
@@ -659,6 +701,7 @@
             ],
             "$defs": {
                 "resource_test.timestamps": {
+                    "title": "resource_test.timestamps",
                     "type": "object",
                     "properties": {
                         "created": {
@@ -692,7 +735,7 @@
                                 ],
                                 "refined": false,
                                 "stale": false,
-                                "dynamic": true,
+                                "refine": true,
                                 "declared": true
                             }
                         }
@@ -721,14 +764,17 @@
                                 "required": [
                                     "changed"
                                 ]
-                            },
-                            "x-surface": {
-                                "declared": true
                             }
                         }
-                    ]
+                    ],
+                    "x-surface": {
+                        "rules": [
+                            0
+                        ]
+                    }
                 },
                 "resource_test.ownership": {
+                    "title": "resource_test.ownership",
                     "type": "object",
                     "properties": {
                         "owner": {
@@ -775,6 +821,7 @@
                     }
                 },
                 "resource_test.archive": {
+                    "title": "resource_test.archive",
                     "type": "object",
                     "properties": {
                         "shelf": {
@@ -874,13 +921,11 @@
                             "then": {
                                 "properties": {
                                     "owner": {
+                                        "type": "string",
                                         "description": "Up to 32 characters for a staff audience.",
                                         "maxLength": 32
                                     }
                                 }
-                            },
-                            "x-surface": {
-                                "declared": true
                             }
                         },
                         {
@@ -900,7 +945,12 @@
                                 }
                             }
                         }
-                    ]
+                    ],
+                    "x-surface": {
+                        "rules": [
+                            1
+                        ]
+                    }
                 }
             }
         },
@@ -958,12 +1008,32 @@
                 "stale": []
             },
             "answer": {
-                "surface": "resource_test.journal",
-                "situation": "configure",
+                "resource": "resource_test.journal",
+                "operation": "configure",
                 "label": "Configure the journal",
                 "schema": {
                     "$schema": "https://json-schema.org/draft/2020-12/schema",
+                    "$id": "http://localhost/surface-api/resource_test.journal/configure",
                     "title": "Configure the journal",
+                    "description": "Configures the journal, whose settings always exist.",
+                    "x-surface": {
+                        "contract": 2,
+                        "operation": {
+                            "id": "configure",
+                            "label": "Configure the journal",
+                            "description": "Configures the journal, whose settings always exist.",
+                            "kind": "update",
+                            "creates": false,
+                            "destructive": false,
+                            "idempotent": true
+                        },
+                        "version": 1,
+                        "doesNotApply": {
+                            "shared": [
+                                "visibility"
+                            ]
+                        }
+                    },
                     "type": "object",
                     "properties": {
                         "title": {
@@ -1082,30 +1152,12 @@
                                     "$ref": "#/$defs/resource_test.archive"
                                 },
                                 {
+                                    "type": "object",
                                     "properties": {
                                         "owner": {
+                                            "type": "string",
                                             "description": "Up to 32 characters for a staff audience.",
-                                            "maxLength": 32,
-                                            "x-surface": {
-                                                "widget": "text",
-                                                "locked": false,
-                                                "dependsOn": [
-                                                    "circle"
-                                                ],
-                                                "refined": true,
-                                                "stale": false
-                                            }
-                                        },
-                                        "shared": {
-                                            "x-surface": {
-                                                "widget": "checkbox",
-                                                "locked": false,
-                                                "dependsOn": [
-                                                    "circle"
-                                                ],
-                                                "refined": false,
-                                                "stale": false
-                                            }
+                                            "maxLength": 32
                                         },
                                         "stamps": {
                                             "allOf": [
@@ -1113,34 +1165,19 @@
                                                     "$ref": "#/$defs/resource_test.timestamps"
                                                 },
                                                 {
+                                                    "type": "object",
                                                     "properties": {
                                                         "changed": {
                                                             "description": "Required once the created time is set.",
                                                             "type": "integer",
-                                                            "minimum": 1690000000,
-                                                            "x-surface": {
-                                                                "widget": "number",
-                                                                "locked": false,
-                                                                "dependsOn": [
-                                                                    "created"
-                                                                ],
-                                                                "refined": true,
-                                                                "stale": false
-                                                            }
+                                                            "minimum": 1690000000
                                                         }
                                                     },
                                                     "required": [
                                                         "changed"
                                                     ]
                                                 }
-                                            ],
-                                            "x-surface": {
-                                                "widget": "fieldset",
-                                                "locked": false,
-                                                "dependsOn": [],
-                                                "refined": true,
-                                                "stale": false
-                                            }
+                                            ]
                                         }
                                     }
                                 }
@@ -1150,7 +1187,43 @@
                                 "locked": false,
                                 "dependsOn": [],
                                 "refined": true,
-                                "stale": false
+                                "stale": false,
+                                "within": {
+                                    "/allOf/1/properties/owner": {
+                                        "widget": "text",
+                                        "locked": false,
+                                        "dependsOn": [
+                                            "circle"
+                                        ],
+                                        "refined": true,
+                                        "stale": false
+                                    },
+                                    "/allOf/1/properties/shared": {
+                                        "widget": "checkbox",
+                                        "locked": false,
+                                        "dependsOn": [
+                                            "circle"
+                                        ],
+                                        "refined": false,
+                                        "stale": false
+                                    },
+                                    "/allOf/1/properties/stamps": {
+                                        "widget": "fieldset",
+                                        "locked": false,
+                                        "dependsOn": [],
+                                        "refined": true,
+                                        "stale": false
+                                    },
+                                    "/allOf/1/properties/stamps/allOf/1/properties/changed": {
+                                        "widget": "number",
+                                        "locked": false,
+                                        "dependsOn": [
+                                            "created"
+                                        ],
+                                        "refined": true,
+                                        "stale": false
+                                    }
+                                }
                             }
                         }
                     },
@@ -1169,15 +1242,9 @@
                             "$ref": "#/$defs/resource_test.timestamps"
                         }
                     ],
-                    "x-surface": {
-                        "doesNotApply": {
-                            "shared": [
-                                "visibility"
-                            ]
-                        }
-                    },
                     "$defs": {
                         "resource_test.timestamps": {
+                            "title": "resource_test.timestamps",
                             "type": "object",
                             "properties": {
                                 "created": {
@@ -1211,7 +1278,7 @@
                                         ],
                                         "refined": false,
                                         "stale": false,
-                                        "dynamic": true,
+                                        "refine": true,
                                         "declared": true
                                     }
                                 }
@@ -1240,14 +1307,17 @@
                                         "required": [
                                             "changed"
                                         ]
-                                    },
-                                    "x-surface": {
-                                        "declared": true
                                     }
                                 }
-                            ]
+                            ],
+                            "x-surface": {
+                                "rules": [
+                                    0
+                                ]
+                            }
                         },
                         "resource_test.ownership": {
+                            "title": "resource_test.ownership",
                             "type": "object",
                             "properties": {
                                 "owner": {
@@ -1294,6 +1364,7 @@
                             }
                         },
                         "resource_test.archive": {
+                            "title": "resource_test.archive",
                             "type": "object",
                             "properties": {
                                 "shelf": {
@@ -1393,13 +1464,11 @@
                                     "then": {
                                         "properties": {
                                             "owner": {
+                                                "type": "string",
                                                 "description": "Up to 32 characters for a staff audience.",
                                                 "maxLength": 32
                                             }
                                         }
-                                    },
-                                    "x-surface": {
-                                        "declared": true
                                     }
                                 },
                                 {
@@ -1419,7 +1488,12 @@
                                         }
                                     }
                                 }
-                            ]
+                            ],
+                            "x-surface": {
+                                "rules": [
+                                    1
+                                ]
+                            }
                         }
                     }
                 },
@@ -1476,12 +1550,27 @@
                 "stale": []
             },
             "answer": {
-                "surface": "resource_test.journal",
-                "situation": "configure",
+                "resource": "resource_test.journal",
+                "operation": "configure",
                 "label": "Configure the journal",
                 "schema": {
                     "$schema": "https://json-schema.org/draft/2020-12/schema",
+                    "$id": "http://localhost/surface-api/resource_test.journal/configure",
                     "title": "Configure the journal",
+                    "description": "Configures the journal, whose settings always exist.",
+                    "x-surface": {
+                        "contract": 2,
+                        "operation": {
+                            "id": "configure",
+                            "label": "Configure the journal",
+                            "description": "Configures the journal, whose settings always exist.",
+                            "kind": "update",
+                            "creates": false,
+                            "destructive": false,
+                            "idempotent": true
+                        },
+                        "version": 1
+                    },
                     "type": "object",
                     "properties": {
                         "title": {
@@ -1612,30 +1701,12 @@
                                     "$ref": "#/$defs/resource_test.archive"
                                 },
                                 {
+                                    "type": "object",
                                     "properties": {
                                         "owner": {
+                                            "type": "string",
                                             "description": "Up to 32 characters for a staff audience.",
-                                            "maxLength": 32,
-                                            "x-surface": {
-                                                "widget": "text",
-                                                "locked": false,
-                                                "dependsOn": [
-                                                    "circle"
-                                                ],
-                                                "refined": true,
-                                                "stale": false
-                                            }
-                                        },
-                                        "shared": {
-                                            "x-surface": {
-                                                "widget": "checkbox",
-                                                "locked": false,
-                                                "dependsOn": [
-                                                    "circle"
-                                                ],
-                                                "refined": false,
-                                                "stale": false
-                                            }
+                                            "maxLength": 32
                                         },
                                         "stamps": {
                                             "allOf": [
@@ -1643,34 +1714,19 @@
                                                     "$ref": "#/$defs/resource_test.timestamps"
                                                 },
                                                 {
+                                                    "type": "object",
                                                     "properties": {
                                                         "changed": {
                                                             "description": "Required once the created time is set.",
                                                             "type": "integer",
-                                                            "minimum": 1690000000,
-                                                            "x-surface": {
-                                                                "widget": "number",
-                                                                "locked": false,
-                                                                "dependsOn": [
-                                                                    "created"
-                                                                ],
-                                                                "refined": true,
-                                                                "stale": false
-                                                            }
+                                                            "minimum": 1690000000
                                                         }
                                                     },
                                                     "required": [
                                                         "changed"
                                                     ]
                                                 }
-                                            ],
-                                            "x-surface": {
-                                                "widget": "fieldset",
-                                                "locked": false,
-                                                "dependsOn": [],
-                                                "refined": true,
-                                                "stale": false
-                                            }
+                                            ]
                                         }
                                     }
                                 }
@@ -1680,7 +1736,43 @@
                                 "locked": false,
                                 "dependsOn": [],
                                 "refined": true,
-                                "stale": false
+                                "stale": false,
+                                "within": {
+                                    "/allOf/1/properties/owner": {
+                                        "widget": "text",
+                                        "locked": false,
+                                        "dependsOn": [
+                                            "circle"
+                                        ],
+                                        "refined": true,
+                                        "stale": false
+                                    },
+                                    "/allOf/1/properties/shared": {
+                                        "widget": "checkbox",
+                                        "locked": false,
+                                        "dependsOn": [
+                                            "circle"
+                                        ],
+                                        "refined": false,
+                                        "stale": false
+                                    },
+                                    "/allOf/1/properties/stamps": {
+                                        "widget": "fieldset",
+                                        "locked": false,
+                                        "dependsOn": [],
+                                        "refined": true,
+                                        "stale": false
+                                    },
+                                    "/allOf/1/properties/stamps/allOf/1/properties/changed": {
+                                        "widget": "number",
+                                        "locked": false,
+                                        "dependsOn": [
+                                            "created"
+                                        ],
+                                        "refined": true,
+                                        "stale": false
+                                    }
+                                }
                             }
                         }
                     },
@@ -1701,6 +1793,7 @@
                     ],
                     "$defs": {
                         "resource_test.timestamps": {
+                            "title": "resource_test.timestamps",
                             "type": "object",
                             "properties": {
                                 "created": {
@@ -1734,7 +1827,7 @@
                                         ],
                                         "refined": false,
                                         "stale": false,
-                                        "dynamic": true,
+                                        "refine": true,
                                         "declared": true
                                     }
                                 }
@@ -1763,14 +1856,17 @@
                                         "required": [
                                             "changed"
                                         ]
-                                    },
-                                    "x-surface": {
-                                        "declared": true
                                     }
                                 }
-                            ]
+                            ],
+                            "x-surface": {
+                                "rules": [
+                                    0
+                                ]
+                            }
                         },
                         "resource_test.ownership": {
+                            "title": "resource_test.ownership",
                             "type": "object",
                             "properties": {
                                 "owner": {
@@ -1817,6 +1913,7 @@
                             }
                         },
                         "resource_test.archive": {
+                            "title": "resource_test.archive",
                             "type": "object",
                             "properties": {
                                 "shelf": {
@@ -1916,13 +2013,11 @@
                                     "then": {
                                         "properties": {
                                             "owner": {
+                                                "type": "string",
                                                 "description": "Up to 32 characters for a staff audience.",
                                                 "maxLength": 32
                                             }
                                         }
-                                    },
-                                    "x-surface": {
-                                        "declared": true
                                     }
                                 },
                                 {
@@ -1942,7 +2037,12 @@
                                         }
                                     }
                                 }
-                            ]
+                            ],
+                            "x-surface": {
+                                "rules": [
+                                    1
+                                ]
+                            }
                         }
                     }
                 },
@@ -2001,12 +2101,27 @@
                 "stale": []
             },
             "answer": {
-                "surface": "resource_test.journal",
-                "situation": "configure",
+                "resource": "resource_test.journal",
+                "operation": "configure",
                 "label": "Configure the journal",
                 "schema": {
                     "$schema": "https://json-schema.org/draft/2020-12/schema",
+                    "$id": "http://localhost/surface-api/resource_test.journal/configure",
                     "title": "Configure the journal",
+                    "description": "Configures the journal, whose settings always exist.",
+                    "x-surface": {
+                        "contract": 2,
+                        "operation": {
+                            "id": "configure",
+                            "label": "Configure the journal",
+                            "description": "Configures the journal, whose settings always exist.",
+                            "kind": "update",
+                            "creates": false,
+                            "destructive": false,
+                            "idempotent": true
+                        },
+                        "version": 1
+                    },
                     "type": "object",
                     "properties": {
                         "title": {
@@ -2137,30 +2252,12 @@
                                     "$ref": "#/$defs/resource_test.archive"
                                 },
                                 {
+                                    "type": "object",
                                     "properties": {
                                         "owner": {
+                                            "type": "string",
                                             "description": "Up to 32 characters for a staff audience.",
-                                            "maxLength": 32,
-                                            "x-surface": {
-                                                "widget": "text",
-                                                "locked": false,
-                                                "dependsOn": [
-                                                    "circle"
-                                                ],
-                                                "refined": true,
-                                                "stale": false
-                                            }
-                                        },
-                                        "shared": {
-                                            "x-surface": {
-                                                "widget": "checkbox",
-                                                "locked": false,
-                                                "dependsOn": [
-                                                    "circle"
-                                                ],
-                                                "refined": false,
-                                                "stale": false
-                                            }
+                                            "maxLength": 32
                                         },
                                         "stamps": {
                                             "allOf": [
@@ -2168,34 +2265,19 @@
                                                     "$ref": "#/$defs/resource_test.timestamps"
                                                 },
                                                 {
+                                                    "type": "object",
                                                     "properties": {
                                                         "changed": {
                                                             "description": "Required once the created time is set.",
                                                             "type": "integer",
-                                                            "minimum": 1690000000,
-                                                            "x-surface": {
-                                                                "widget": "number",
-                                                                "locked": false,
-                                                                "dependsOn": [
-                                                                    "created"
-                                                                ],
-                                                                "refined": true,
-                                                                "stale": false
-                                                            }
+                                                            "minimum": 1690000000
                                                         }
                                                     },
                                                     "required": [
                                                         "changed"
                                                     ]
                                                 }
-                                            ],
-                                            "x-surface": {
-                                                "widget": "fieldset",
-                                                "locked": false,
-                                                "dependsOn": [],
-                                                "refined": true,
-                                                "stale": false
-                                            }
+                                            ]
                                         }
                                     }
                                 }
@@ -2205,7 +2287,43 @@
                                 "locked": false,
                                 "dependsOn": [],
                                 "refined": true,
-                                "stale": false
+                                "stale": false,
+                                "within": {
+                                    "/allOf/1/properties/owner": {
+                                        "widget": "text",
+                                        "locked": false,
+                                        "dependsOn": [
+                                            "circle"
+                                        ],
+                                        "refined": true,
+                                        "stale": false
+                                    },
+                                    "/allOf/1/properties/shared": {
+                                        "widget": "checkbox",
+                                        "locked": false,
+                                        "dependsOn": [
+                                            "circle"
+                                        ],
+                                        "refined": false,
+                                        "stale": false
+                                    },
+                                    "/allOf/1/properties/stamps": {
+                                        "widget": "fieldset",
+                                        "locked": false,
+                                        "dependsOn": [],
+                                        "refined": true,
+                                        "stale": false
+                                    },
+                                    "/allOf/1/properties/stamps/allOf/1/properties/changed": {
+                                        "widget": "number",
+                                        "locked": false,
+                                        "dependsOn": [
+                                            "created"
+                                        ],
+                                        "refined": true,
+                                        "stale": false
+                                    }
+                                }
                             }
                         }
                     },
@@ -2226,6 +2344,7 @@
                     ],
                     "$defs": {
                         "resource_test.timestamps": {
+                            "title": "resource_test.timestamps",
                             "type": "object",
                             "properties": {
                                 "created": {
@@ -2259,7 +2378,7 @@
                                         ],
                                         "refined": false,
                                         "stale": false,
-                                        "dynamic": true,
+                                        "refine": true,
                                         "declared": true
                                     }
                                 }
@@ -2288,14 +2407,17 @@
                                         "required": [
                                             "changed"
                                         ]
-                                    },
-                                    "x-surface": {
-                                        "declared": true
                                     }
                                 }
-                            ]
+                            ],
+                            "x-surface": {
+                                "rules": [
+                                    0
+                                ]
+                            }
                         },
                         "resource_test.ownership": {
+                            "title": "resource_test.ownership",
                             "type": "object",
                             "properties": {
                                 "owner": {
@@ -2342,6 +2464,7 @@
                             }
                         },
                         "resource_test.archive": {
+                            "title": "resource_test.archive",
                             "type": "object",
                             "properties": {
                                 "shelf": {
@@ -2441,13 +2564,11 @@
                                     "then": {
                                         "properties": {
                                             "owner": {
+                                                "type": "string",
                                                 "description": "Up to 32 characters for a staff audience.",
                                                 "maxLength": 32
                                             }
                                         }
-                                    },
-                                    "x-surface": {
-                                        "declared": true
                                     }
                                 },
                                 {
@@ -2467,7 +2588,12 @@
                                         }
                                     }
                                 }
-                            ]
+                            ],
+                            "x-surface": {
+                                "rules": [
+                                    1
+                                ]
+                            }
                         }
                     }
                 },

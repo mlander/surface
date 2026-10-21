@@ -173,12 +173,13 @@ class ExamplesConceptsTest extends DataSurfaceKernelTestBase {
    */
   public function testSevenStatesItsRulesAsWritten(): void {
     $full = $this->full(BulletinResource::class);
-    $declared = array_values(array_filter($full['allOf'], static fn (array $branch): bool => !empty($branch[ContractEmitter::EXTENSION]['declared'])));
+    // Listed by the frame by index: no x-surface below an applicator.
+    $declared = array_values(array_intersect_key($full['allOf'], array_flip($full[ContractEmitter::EXTENSION]['rules'])));
     $this->assertCount(3, $declared);
     $this->assertSame(['frequency' => ['const' => 'monthly']], $declared[0]['if']['properties']);
     $this->assertFalse($declared[0]['then']['properties']['send_day']);
     $this->assertSame(['send_day'], $declared[1]['then']['required']);
-    $this->assertSame(['description' => 'Up to 5 in a weekly issue.', 'maximum' => 5], $declared[2]['then']['properties']['items']);
+    $this->assertSame(['type' => ['integer', 'null'], 'description' => 'Up to 5 in a weekly issue.', 'maximum' => 5], $declared[2]['then']['properties']['items'], 'The declared type beside the bound.');
     $this->assertTrue($full['properties']['send_day'][ContractEmitter::EXTENSION]['declared']);
     $this->assertSame(['frequency'], $full['required']);
 
@@ -314,7 +315,7 @@ class ExamplesConceptsTest extends DataSurfaceKernelTestBase {
   public function testTenLocksTheFeesStaticallyAndAtRuntime(): void {
     // An account that may set event fees: the program decides, marked.
     $fees = $this->full(ProgramResource::class)['properties']['fees'];
-    $this->assertSame('runtime', $fees[ContractEmitter::EXTENSION]['access']);
+    $this->assertSame('live', $fees[ContractEmitter::EXTENSION]['access']);
     $this->assertArrayNotHasKey('readOnly', $fees);
     $this->assertArrayNotHasKey('#disabled', $this->formAt('data_surface_examples.step10')['fees']);
 
@@ -333,7 +334,7 @@ class ExamplesConceptsTest extends DataSurfaceKernelTestBase {
     $stored = $this->stored('data_surface_examples.program');
     $this->assertSame(9, $stored['sessions']);
     $this->assertEquals(['standard' => 20.0, 'concession' => 10.0], $stored['fees']);
-    $this->assertSame('runtime', $this->full(ProgramResource::class)['properties']['fees'][ContractEmitter::EXTENSION]['access'], 'The full schema reads no stored value.');
+    $this->assertSame('live', $this->full(ProgramResource::class)['properties']['fees'][ContractEmitter::EXTENSION]['access'], 'The full schema reads no stored value.');
 
     // An account without the permission: locked, stated ahead of time.
     $this->setUpCurrentUser(permissions: ['administer site configuration']);
@@ -349,19 +350,20 @@ class ExamplesConceptsTest extends DataSurfaceKernelTestBase {
   public function testTenStatesHowEachOperationBehaves(): void {
     $configure = $this->full(ProgramResource::class)[ContractEmitter::EXTENSION]['operation'];
     $check = $this->full(ProgramResource::class, 'check')[ContractEmitter::EXTENSION]['operation'];
-    $facts = ['creates' => FALSE, 'readOnly' => FALSE, 'destructive' => FALSE, 'idempotent' => TRUE];
+    // No `readOnly` in the documents: `kind: read` says it.
+    $facts = ['creates' => FALSE, 'destructive' => FALSE, 'idempotent' => TRUE];
     $this->assertSame([
       'id' => 'configure',
       'label' => 'Configure the program',
       'description' => 'Sets the program: its headline, how many sessions it has, whether it is published, and its fees.',
       'kind' => 'update',
     ] + $facts, $configure);
-    $this->assertSame(array_replace([
+    $this->assertSame([
       'id' => 'check',
       'label' => 'Check a program',
       'description' => 'Checks a program against every rule the program configuration applies, and saves nothing.',
       'kind' => 'read',
-    ] + $facts, ['readOnly' => TRUE]), $check);
+    ] + $facts, $check);
     $tools = $this->container->get('plugin.manager.tool');
     $this->assertSame(ToolOperation::Write, $tools->getDefinition('data_surface:event.program:configure')->getOperation());
     $this->assertSame(ToolOperation::Read, $tools->getDefinition('data_surface:event.program:check')->getOperation());
@@ -470,7 +472,7 @@ class ExamplesConceptsTest extends DataSurfaceKernelTestBase {
     // Example 10's two accounts and its facts.
     $panel = $this->formAt('data_surface_examples.step10')[DataSurfaceOperationForm::PANEL_KEY][ExamplePanels::CONCEPT];
     $accounts = json_decode(htmlspecialchars_decode((string) $panel['accounts']['content']['#value']), TRUE);
-    $this->assertSame('runtime', $accounts['you']['property'][ContractEmitter::EXTENSION]['access']);
+    $this->assertSame('live', $accounts['you']['property'][ContractEmitter::EXTENSION]['access']);
     $this->assertTrue($accounts['without the permission']['property']['readOnly']);
     $this->assertStringContainsString('Enable data_surface_examples_workflow and reload', (string) $panel['workflow']['#markup'], 'Without the workflow module, the panel says how to see its answers.');
     $this->assertArrayNotHasKey('event.program:published_in_workflow', $panel['calls'], 'A call another module\'s part needs is made only where it is on.');
@@ -478,7 +480,6 @@ class ExamplesConceptsTest extends DataSurfaceKernelTestBase {
     $this->assertSame([
       'check',
       'read',
-      'true',
       'false',
       'true',
       'data_surface:event.program:check',

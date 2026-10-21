@@ -87,13 +87,15 @@ These keep the word, as product names or on-the-wire identifiers:
   `_data_surface_react_access`) and URL paths (`/surface-api/...`,
   `/surface-react/...`, `/surface-examples/...`);
 - config names and State keys;
-- the served contract's `x-surface` keyword, its `surface` and
-  `situation` keys (the resource's id and the operation's id, in the
-  document and in `created`), and the React page's `drupalSettings`
-  keys, because clients already read them;
+- the served contract's `x-surface` keyword, because clients already
+  read it; the document's own keys for the resource's id and the
+  operation's id, in the document, in `created` and in the React page's
+  `drupalSettings`, are `resource` and `operation` since
+  [contract 2](#contract-2), which moved them with the other wire
+  changes, once (they were `surface` and `situation`);
 - the `surface[...]` form key;
-- the React app's identifiers (`SurfaceForm`, `surface` in its
-  settings);
+- the React app's identifiers (`SurfaceForm`, the `dataSurfaceReact`
+  settings namespace);
 - the engine: what the build step seals is a *data surface*
   (`DataSurfaceInterface`), and the classes around it keep the name
   (`DataSurfaceBuilder`, `DataSurfacePipeline`, `DataSurfaceFormBuilder`,
@@ -191,8 +193,11 @@ grep:
 
 Deferred:
 
-- The contract's `surface` and `situation` keys: renaming them is a
-  wire change, so it waits for a version of the contract.
+- The contract's `surface` and `situation` keys: a wire change, so it
+  waited for a version of the contract. They moved with
+  [contract 2](#contract-2) on 2026-10-20, to `resource` and
+  `operation`, as did the `x-surface.widget: "slot"` hint, now
+  `variants`.
 - The resource test module's `/surface-test/...` paths and the entity
   test module's "bypass surface entity test field access" permission:
   only tests read them, and URL paths and permission names follow the
@@ -339,9 +344,10 @@ whose tag is a sibling key.
   effect: a slot there is markup a theme fills, and a Drupal reader
   met the word with that meaning first.
 
-The wire keeps the old word: the widget hint `x-surface.widget: "slot"`
-(and any other `slot` a client reads) stays until the contract's
-version, as its `surface` and `situation` keys do
+The wire kept the old word until the contract's version moved: the
+widget hint was `x-surface.widget: "slot"` until
+[contract 2](#contract-2), and is `variants`, moved with the
+`surface` and `situation` keys
 ([The product keeps its name](#the-product-keeps-its-name)). In code,
 the engine's `Slot` is `Variants`, `ContractEmitter::slot()` is
 `variants()` and `DerivedVariantsInterface::slot()` is `variantsAt()`;
@@ -686,9 +692,11 @@ A `#[RefinesInput]` method is static unless its attribute says
 `runtime: TRUE`. A static refiner promises to be a pure function of the
 siblings it watches, so the served contract runs it ahead of time and
 states its answers as conditionals (`enumerated`), or says they cannot
-be listed (`dynamic`). A runtime refiner promises the schema nothing: the
-emitter never runs it, in either document; the key keeps the width its
-static refiners give it in the full schema and carries `runtime: true`;
+be listed (`refine`: ask `/refine` with values). A runtime refiner
+promises the schema nothing: the emitter never runs it, in either
+document; the key keeps the width its static refiners give it in the
+full schema and carries `live: true` (the markers were `dynamic` and
+`runtime` until [contract 2](#contract-2));
 the schema for one set of values, which describes that moment, is
 refined by it like any other; the pipeline runs it on every validate and
 submit and has the last word, as it always had. One that watches nothing
@@ -815,7 +823,7 @@ Three spellings were weighed. A marker set on the definition the refiner
 returns is what the engine does inside, but as the author's spelling it
 is invisible until the refiner runs, and the full schema and the tool's
 listing must know before anything runs which keys may not apply, or a
-`dynamic` or `runtime` key required in them would be stricter than the
+`refine` or `live` key required in them would be stricter than the
 pipeline. A blueprint declaration, `add(..., appliesWhen:)`, is
 declarative narrowing ([ROADMAP](../ROADMAP.md) item 3), which cannot
 state a runtime rule; it has since landed as a refiner too, whose
@@ -868,7 +876,7 @@ it as it states any static answer. Each door:
   under `additionalProperties: false`, which refuses it present, and
   `false` says the same, so the two documents say one thing; `type:
   null` would admit a `null` the accepted document never holds, and read
-  as a key whose value is `null`, which clears. A `dynamic` or `runtime`
+  as a key whose value is `null`, which clears. A `refine` or `live`
   key whose refiner may rule it out is in no `required`, since nothing
   says where it applies. The tool's listing makes it optional for the
   same reason, and the pipeline asks for it where it applies.
@@ -1015,9 +1023,11 @@ condition is runtime. Each choice, and why:
 - **Stated as written.** The full schema and every def state each rule
   as one conditional, its `then` read the way an enumerated one is (only
   what changed, `false` where it does not apply, `required` where only
-  there), marked `x-surface.declared` beside its `if`, after the key's
-  enumerated conditionals; the key says `x-surface.declared: true` and is
-  no longer `dynamic` for a rule. Only the coded refiners are enumerated
+  there), after the key's enumerated conditionals, its index listed in
+  the owning object's `x-surface.rules` (since [contract 2](#contract-2);
+  before, `x-surface.declared` sat beside its `if`); the key says
+  `x-surface.declared: true` and is no longer `refine` for a rule.
+  Only the coded refiners are enumerated
   there. The schema for these answers evaluates the rules for its values,
   as a coded refiner whose gate is open is applied, and writes none.
   A key a rule may rule out is in no `required`, and a conditional
@@ -1076,7 +1086,7 @@ one, up to @max" read the room's ceiling off another refiner's answer,
 which is an effect computed, so it stayed with the code it left. In a
 room seating fewer than a hundred the room's ceiling is the lower one,
 and its own sentence stands: the rule tightened nothing. Its stewards stay
-coded and `dynamic` (they watch a number), so the React page still asks
+coded and `refine` (they watch a number), so the React page still asks
 on a license change: the stewards depend on the capacity. Phase C item 9
 of the roadmap (dependent effects as data) is this, but `locked`.
 (`Refinement\Condition`, `Refinement\Rule`, `Refinement\DeclaredRefiner`,
@@ -1278,10 +1288,10 @@ first case. Each choice, and why:
   stricter than the pipeline, and a def that knew the wired key would
   be one container's. So the def lists its ports (`x-surface.ports`), a
   key reading a port names it in its `dependsOn` and carries neither
-  `enumerated` nor `dynamic`, and it is in no `required` where it may be
+  `enumerated` nor `refine`, and it is in no `required` where it may be
   ruled out. The container states the rest on its own `allOf`, an `if`
   on its key and a `then` reaching into the child at the site: coded
-  refiners enumerated over the wired keys' lists (`dynamic` when they
+  refiners enumerated over the wired keys' lists (`refine` when they
   read a key of the child's too, whose value the container does not
   state), declared rules as written, the port read at the wired key.
   The site says which key each port reads (`x-surface.reads`), and its
@@ -1768,7 +1778,8 @@ is known. Decided 2026-10-18, point by point.
   `x-surface.locked`, one it left out is not there, as the schema for
   these answers always had them; a key a runtime answer may lock or
   leave out is there, as the static answers leave it, marked
-  `x-surface.access: "runtime"`, and the schema for these answers, from
+  `x-surface.access: "live"` (`"runtime"` until
+  [contract 2](#contract-2)), and the schema for these answers, from
   `build()`, settles it and marks nothing. So the full schema is
   account-dependent only through static answers: its cacheability
   carries what they read and the cache contexts of the answers set
@@ -1797,7 +1808,7 @@ is known. Decided 2026-10-18, point by point.
   TRUE` (`ExhibitResource::roomsForAccount()`: only an account that may
   use the vault is offered it). Access has three answers by design and
   cannot say "fewer values"; a refiner can, and the full schema already
-  keeps such a key wide and marked `runtime`.
+  keeps such a key wide and marked `live`.
 - **The operation's permission is the first static answer.** One
   permission as written depends on the account alone, so it is static
   (`OperationDefinition::staticPermission()`); one with a `%key`
@@ -1927,7 +1938,7 @@ closing that gap (found 2026-10-19), point by point.
   build with alters answering, as it does without.
 - **At the top, set aside marks every key.** A runtime answer set aside
   at the top, an access class's or an alter's, now marks every key of
-  the resource (`x-surface.access: "runtime"` in the full schema, the
+  the resource (`x-surface.access: "live"` in the full schema, the
   words in the tool listing), since the whole of it may be found locked
   once the subject is known. *Changed with this decision: until then
   nothing was marked, and the full schema stated open keys the build
@@ -2584,9 +2595,13 @@ that destroys, or that is not idempotent, is refused at discovery.
   state the facts at the top, first under the top's `x-surface`, beside
   the title that is the operation's label:
   `x-surface.operation: {id, label, description, kind, creates,
-  readOnly, destructive, idempotent}`, `description` only when the
+  destructive, idempotent}`, `description` only when the
   operation says one, so a client reading the contract directly has the
-  operation's own answer, idempotence included. As the label is the
+  operation's own answer, idempotence included. No `readOnly` among
+  them since [contract 2](#contract-2): `kind: "read"` says it, and
+  JSON Schema's `readOnly` at the same top means the resource is
+  [locked whole](#locked-at-the-top). The attribute keeps `readOnly`,
+  and the tool reads it. As the label is the
   document's `title`, the description is its top `description`
   (decided 2026-10-20), and a change to either is a note to the
   contract diff. A document
@@ -2596,9 +2611,10 @@ that destroys, or that is not idempotent, is refused at discovery.
   read, one that creates is a create, and every other an update
   (`OperationDefinition::kind()`), read off the attribute, so known
   before anything is built. It is never declared, so it
-  cannot disagree with `readOnly` and `creates`, and the contract diff
-  does not compare it on its own: a change to it is a change to one of
-  those two, which it does compare. It is the fact a client needs first,
+  cannot disagree with `readOnly` and `creates`. The contract diff
+  compares it beside `creates` (until [contract 2](#contract-2) it
+  compared `readOnly`, which the documents no longer state). It is the
+  fact a client needs first,
   and it says what a generated tool asks for at its door: a create
   requires the keys the resource requires, an update none ([Required is
   the resource's, and an update tool requires nothing at its
@@ -3482,8 +3498,8 @@ contract, so `x-surface.widget`, the Form API mapping said for a
 renderer, and `multiple`, its qualifier, are written only when a caller
 passes `widgets: TRUE`; `data_surface_react` does, for its app. The rest
 of `x-surface` (locked, dependsOn, refined, stale, emptyOption, by,
-variants and chosen, a variant's id, checkedOnServer, enumerated,
-dynamic, runtime) is the
+variants and chosen, rules, within, checkedOnServer, enumerated,
+refine, live) is the
 data surface's own reading of a key, not a widget, and is always written.
 The hints are stripped after the schema is built rather than threaded
 through it, so the widget a key gets is still read in the same pass as
@@ -3541,9 +3557,9 @@ in that document as a value (it clears the key,
 with no keyword, named in `checkedOnServer`) or a dependency cannot be
 listed or would be too large (free text, a number, a key an alter
 mounted, more than the cap), the schema stays at the declared width and
-marks the key `dynamic`, never an approximation that is narrower; where
+marks the key `refine`, never an approximation that is narrower; where
 a refiner is declared runtime, the full schema never runs it and marks
-the key `runtime` ([Static by default, runtime by
+the key `live` ([Static by default, runtime by
 declaration](#static-by-default-runtime-by-declaration)).
 Exactness is pursued wherever it is possible, which is what enumeration
 is for, and is the goal there, not the guarantee. For the schema as it
@@ -3553,8 +3569,8 @@ case became), and held by `AdvertisedSchemaAcceptanceTest`: for each
 example and fixture, a table of accepted and refused documents, each
 asserted against the pipeline and both documents with a standard
 validator, `format` not asserted and `default` not filled. Where the
-schema is exact the two agree both ways; where it is `dynamic` or
-`runtime` it may only be wider. One exception stands: a stale value is
+schema is exact the two agree both ways; where it is `refine` or
+`live` it may only be wider. One exception stands: a stale value is
 storage's, not an answer, and the full schema states the list as it is,
 so a stored value a static list no longer offers is kept by the
 pipeline and refused by the full schema, which reads no storage.
@@ -3614,8 +3630,8 @@ structures have
 (the largest is the demo block's field, entity types times bundles) with
 room for a real site's bundles, and is small enough that a
 country-sized list (some 250) is refused outright rather than written.
-Above it the key is `dynamic`. A key watching free text, a number, a
-boolean or a key an alter mounted stays `dynamic` whatever the count:
+Above it the key is `refine`. A key watching free text, a number, a
+boolean or a key an alter mounted stays `refine` whatever the count:
 its domain is not a list, so there is nothing to enumerate, and
 inventing one (sampling numbers, guessing at a license) would state a
 rule the refiners never made. Such a key keeps `dependsOn`, and a client
@@ -3897,12 +3913,14 @@ every value PHP accepts.
 
 ### `format` is an annotation
 
-The emitter writes `format` (`email`, `uri`, `date-time`) as JSON Schema
-2020-12 defines it by default: an annotation, which a client may opt
-into asserting. Drupal's checks are not the formats' (an
-internationalized address, a URI with a space, a date with no time), so
-a client that asserts formats may refuse what the pipeline accepts; the
-suite's validator does not assert them, as a standard one does not.
+The emitter writes `format` (`idn-email`, `uri`, `date-time`) as JSON
+Schema 2020-12 defines it by default: an annotation, which a client may
+opt into asserting. Drupal's checks are not the formats' (a URI with a
+space, a date with no time), so a client that asserts formats may
+refuse what the pipeline accepts; the suite's validator does not assert
+them, as a standard one does not. An address is `idn-email` (RFC 6531)
+since [contract 2](#contract-2), which admits a non-ASCII local part
+as Drupal's validator does; it was `email`, which refused one.
 (`ContractEmitter::type()`)
 
 ### A composite is its parts
@@ -4000,7 +4018,7 @@ window to the moment between the comparison and the commit.
 The React page narrows a change itself when the full schema states the
 answer, and asks `/refine` for the rest. On a change it collects every
 key that depends on the changed one, transitively, through `dependsOn`;
-when none is marked `dynamic` or `runtime`, nor holds one inside it, it
+when none is marked `refine` or `live`, nor holds one inside it, it
 reads each from the full schema's conditionals for the new values and
 sends nothing. When one is, or the resolver meets anything it cannot
 read (a stale value it was handed as `null`, a reference left
@@ -4017,7 +4035,9 @@ what is stored, which the full schema never read, and no answer carries
 a signal that the schema itself moved, so there is nothing to refetch
 on. A site that changes an option list during a session (a bundle
 added) is answered by the server where it matters, on validate and
-submit.
+submit. The page reads one contract version: a document or an answer of
+another, by its `Contract-Version` header or its `x-surface.contract`,
+is refused, not read ([Contract 2](#contract-2)).
 
 The page's settling mirrors the server's exactly, orphans included,
 because a local answer is a stand-in for `/refine`'s and must be the
@@ -4033,6 +4053,116 @@ orphaned room falls back to what is stored when the pricing changes),
 and a Vitest test holds it to recorded `/refine` answers for examples 2
 and 3, keyword for keyword. (`narrow()` in `app/src/contract.ts`,
 `ResourceApiController::schema()`)
+
+### Contract 2
+
+Decided 2026-10-20, from the DX reviews (group E of
+`docs/reviews-2026-10-20/synthesis.md`: section 1, B21 to B24; section
+2a, the wire rows; section 3.7). Both documents are written in a version
+of the wire format, the contract's own, distinct from a resource's
+version: `x-surface.contract`, at the top of both, first under
+`x-surface`, and the `Contract-Version` header every route of
+`data_surface_react` answers with, but for an error. Contract 1 is what `main` serves and
+what every document said before it had a number; `next` serves 2. Every
+wire change the reviews asked for moved together, once, so a client
+moves once. The changes, each with why ([the table](served-contract.md#contract-2)):
+
+- **A version of the contract itself.** A resource's version counts the
+  breaking changes to its stored values; nothing counted the changes to
+  how every document is spelled, so a client could not tell a document
+  it does not know from one it does. The React app reads contract 2
+  only and refuses another, by the header or by the document. The
+  contract diff compares only documents of one contract version: a
+  baseline of another is not read keyword by keyword (every keyword may
+  be spelled anew) but reported once, "contract version 1 to 2", as a
+  change class of its own that fails until `--write` re-pins it, with no
+  reason asked, since no resource broke its promise. Each baseline
+  records the version it was written in, `contract`.
+  ([Evolving a resource](evolution.md#the-contracts-own-version))
+- **`resource` and `operation`, not `surface` and `situation`.** The
+  document's two keys said the retired words, deferred by
+  [the product keeps its name](#the-product-keeps-its-name) to this
+  version (ai-agents, smithy, naming, json-schema-tooling). So do
+  `created`, the React page's settings and a baseline's own key. The
+  `x-surface` keyword, the `surface[...]` form key and the URL paths
+  keep the product's word.
+- **`$id` on both documents.** Every reference is local, so a tool that
+  embeds a document (an OpenAPI bundler) resolved them against the wrong
+  root, and two documents could not share one validator
+  (json-schema-tooling 2.2). A document served at a route says that
+  route's URL, with the operation's parameters; one no route serves (the
+  contract panel, a baseline) has none. The top `description`, the
+  operation's, is unchanged.
+- **No `x-surface` below an applicator** (B21, json-schema-tooling 2.1).
+  RJSF merges `allOf` with json-schema-merge-allof, which has no resolver
+  for two differing `x-surface` objects, so it fell back to the unmerged
+  schema: every room offered, the paid ticket empty. Each marker moved
+  to the object owning the applicator: a declared rule's conditional is
+  listed by its index in the frame's `x-surface.rules` (the app evaluates
+  a rule whatever its keys hold, so it must still tell one apart); what
+  a site's narrowing says of a key inside its child is said on the site,
+  in `x-surface.within`, by JSON pointer; and a variant's conditional
+  says nothing beside its reference, since the key's own
+  `x-surface.variants` now maps each value to its def.
+  `SchemaResolver::inline()` and the app's `inlineSchema()` read each
+  marker back into place before they compose.
+- **The declared type beside a keyword one type reads** (B22). A
+  narrowing, a `then` or an `if` that states `maximum`, `properties`,
+  `required` or a pattern without `type` was refused by ajv's
+  `strictTypes` (six of twelve live full schemas) and read by type
+  generators as an object. Each now states the declared type, which
+  cannot narrow; a narrowing's `required` lists only what it adds to its
+  def's, which `strictRequired` also asked. Every live document and every
+  baseline compiles under ajv's strict mode.
+- **`title` on every def, its id**, so generated type names are stable
+  and language-free (json-schema-tooling 2.5). A shape's def titled
+  itself by the shape's label before; the label is each key's, beside
+  the reference. An inline reading lays no def's title over a site.
+- **The union of a key's variants** (json-schema-tooling 2.4). The key's
+  property is `anyOf` of a reference to each variant's def, and null
+  where it may be cleared, with no `type` beside it (the union says it,
+  and a generator would only intersect the two), so a type generator
+  writes `Free | Paid | null` where it wrote `{} | null`. It is never
+  narrower than the conditional that applies, which still states each
+  variant exactly; the lint reads a change to it as a note. The widget
+  hint for such a key is `variants`, not `slot`
+  ([Variants, not slots](#variants-not-slots)).
+- **`refine` and `live`, not `dynamic` and `runtime`** (section 3.7,
+  ai-agents change 5). `dynamic` read as "computed"; what it means is
+  "ask `/refine` with values". `runtime` sat beside `access: "runtime"`,
+  a different fact. A key a runtime refiner narrows is `live`, and an
+  access answer only the subject settles is `access: "live"`.
+  `enumerated` and `declared` stay: the app evaluates them differently,
+  an enumerated conditional only once every key it watches holds a
+  value, a rule whatever they hold. One `narrowing` list (ai-agents) and
+  a root `exact: false` (json-schema-tooling) were weighed and left for
+  later.
+- **`checkedOnServer` says what each constraint checks** (ai-agents
+  change 5). A plugin id tells a model nothing; each entry is
+  `{constraint, message}`, the constraint's own message where it was
+  given one, else its plugin's label.
+- **No `x-surface.operation.readOnly`** (naming, json-schema-tooling).
+  `kind: "read"` says it, and JSON Schema's `readOnly` at the same top
+  means locked whole. The attribute keeps it, and the tool reads it; the
+  lint now compares `kind`.
+- **`idn-email`, not `email`** (B23). Drupal's validator admits a
+  non-ASCII local part, which RFC 6531 does and `email` does not, so a
+  client asserting `format` refused `jörg@example.com`, which the
+  pipeline accepts. `format` stays an annotation
+  ([`format` is an annotation](#format-is-an-annotation)).
+- **A bound is a number.** Core's timestamp field holds its Range as
+  strings, which were emitted as strings and made twenty-eight live documents
+  invalid against the 2020-12 metaschema; they are numbers now.
+
+B24, the served contract page saying `runtime` was never in the full
+schema, is closed by the page's rewrite. Not changed: `locked: false`
+and `dependsOn: []` are still written on every property (a cut
+json-schema-tooling proposed), and no `x-surface` metaschema is
+published yet. (`ContractEmitter::CONTRACT`, `ContractEmitter::settled()`,
+`SchemaResolver::restored()`, `ContractDiff::CONTRACT`,
+`ContractChange::CONTRACT`, `ContractBaselines::compare()`,
+`ResourceApiController::VERSION_HEADER`, `CONTRACT` and
+`assertContract()` in `app/src/contract.ts`)
 
 ## Evolution
 
@@ -4139,7 +4269,15 @@ resource](evolution.md#compatible-and-breaking). Each choice, and why:
   baseline records its module, and a run compares, writes and removes
   only the named modules', so modules may share a directory; the account
   the documents are emitted for is named (`--uid`) and printed; and the
-  verdicts print as JSON for a program (`--format=json`).
+  verdicts print as JSON for a program (`--format=json`). It compares
+  only documents of one contract version (decided 2026-10-20,
+  [Contract 2](#contract-2)): each baseline records the version it was
+  written in, `contract`, and one written in another is not read
+  keyword by keyword but reported once, "contract version 1 to 2", a
+  change of its own class (`contract`) that fails until `--write`
+  re-pins it, with no reason asked, since no resource broke its
+  promise. A change to a key's union of its variants, to `$id`, `rules`
+  or `within` is a note; `checkedOnServer` is compared by constraint.
 - **What is promised.** `main` promises nothing today. From the first
   tagged release, every resource and structure of the examples and
   `data_surface_first` keeps a baseline (as will any the main module

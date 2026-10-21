@@ -67,7 +67,7 @@ services:
   # widget hints only when a renderer asks for them.
   data_surface.contract_emitter:
     class: Drupal\data_surface\Contract\ContractEmitter
-    arguments: ['@data_surface.options', '@string_translation']
+    arguments: ['@data_surface.options', '@string_translation', '@validation.constraint']
   # The additive-diff lint: each module's committed contract baselines,
   # and today's full schemas judged against them.
   data_surface.contract_baselines:
