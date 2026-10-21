@@ -95,7 +95,8 @@ class ReactNarrowingTest extends ExamplesWebDriverTestBase {
     // On the empty option, standing for the stored main hall.
     $this->assertSame('', $page->findField('room')->getValue());
 
-    $page->selectFieldOption('pricing', 'paid');
+    // The option's text is the paid ticket's label.
+    $page->selectFieldOption('pricing', 'Paid');
     $this->assertNotNull($assert->waitForElement('css', '#dsr-ticket-price'));
     $this->assertSame('Narrowed here: ticket.', $this->narrowing());
     $this->assertSame(1, $this->fetched('/refine'));

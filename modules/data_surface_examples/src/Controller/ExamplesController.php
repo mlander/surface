@@ -144,7 +144,7 @@ final class ExamplesController extends ControllerBase {
       'form' => $this->formBuilder()->getForm(RegistrationStep1ClassicForm::class),
       'today' => $this->configSchemaPanel->build(
         RegistrationStep1Storage::CONFIG,
-        note: $this->t('This form requires the event title and holds the capacity between 1 and 1000. Neither rule is in the config schema, so neither is in either document below: only the form knows them.'),
+        note: $this->t('This form requires the event title and holds the capacity between 1 and 1000, in its own code. The config schema below states the bounds only because it is written from the resource of example 1; written for this form alone, it would state neither rule.'),
       ),
     ];
   }

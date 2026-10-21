@@ -348,6 +348,39 @@ the engine's `Slot` is `Variants`, `ContractEmitter::slot()` is
 `DerivedVariants` already fit. (`BlueprintInterface::attachVariants()`,
 `Resource\Attribute\Variant`, `Variants`, `DerivedVariantsInterface`)
 
+**The tags live on the variants** (decided 2026-10-20, from the DX
+reviews). `#[Variant(..., label:)]` says what a person is offered the
+value as, and a deciding key that declares no list of its own gains a
+`LabeledChoice` of the variants' values and labels (a plain `Choice`
+when none gives a label; a variant with none is offered as its value).
+The shipped deciding keys drop the lists that restated their variants'
+values, and example 3's pricing is offered as Free and Paid, not `free`
+and `paid`, in the form and both documents.
+
+- **One place for a tag.** A tag was written on the deciding key's list
+  and again on each variant, and its label in neither; now it is
+  written once, where zod and Swift write a union's cases.
+- **Always open, as the glossary says.** With no list on the deciding
+  key, a variant another module adds is offered with no change to the
+  parent. A declared list closed the union before: it refused at build
+  any variant whose value it did not name.
+- **A declared list narrows and never widens.** A list the deciding key
+  does declare is a narrowing of the variants' values: a variant whose
+  value it leaves out is not offered, and a value it names that no
+  variant is for (declared or derived, offered or withheld from the
+  account) is refused at build, naming the key and the value, because
+  it would choose nothing. Before, such a value was dropped silently and
+  a variant the list left out was refused; the second is the narrowing
+  every other list allows, the first the widening none does. A key that
+  declares its list keeps its own words: the variants' labels are not
+  merged into it.
+- **The order is discovery's.** A derived list offers the variants in
+  the order discovery found them, as `Variants` always held them; an
+  owner wanting another order declares the list.
+
+(`Resource\Attribute\Variant::$label`, `DataSurfaceBuilder::attachVariants()`,
+`Resources::assertListNarrowsVariants()`)
+
 ## Authoring
 
 ### A resource or structure is static
@@ -999,6 +1032,34 @@ condition is runtime. Each choice, and why:
   itself, a child, a collection or another module's mounted key; an
   alter's rule on a key it offered more values on, whose rules would run
   on its slice of the list alone (not built; its refiner says it).
+- **`unless()`, and no double negation in the schema** (2026-10-20,
+  from the DX reviews). `->unless($c)` is `->when(Condition::not($c))`,
+  under the same one-condition check: the recipe every toggle copies
+  ("the door code does not apply unless after-hours access is on") read
+  as two negations. `unless` is a word of the rule, not of the closed
+  condition vocabulary, and states the same `if`. Where the conditional
+  requiring a key wherever no rule rules it out would wrap a negated
+  condition in `not`, the emitter writes the condition itself: the
+  documents mean what they meant, and read as the rule does.
+- **A bound's rule takes a message** (2026-10-20, from the DX reviews).
+  `constrain('Range' | 'Length' | 'Count', [..., 'message' => t(...)])`,
+  one option as `Regex` takes it, written under Symfony's own option for
+  each bound the rule sets (`minMessage`, `maxMessage`), or the one a
+  range holding both bounds reports in (`notInRangeMessage`, beside
+  which Symfony refuses the other two), and a length's or count's
+  `exactMessage` for both bounds at one value; and
+  only where the rule's bound stands: a bound the key already held at or
+  inside the rule's keeps the key's message, as it keeps the key's
+  description. One spelling rather than Symfony's three, because an
+  author writes one sentence for one condition; the cost is Symfony's
+  own, that a range holding both bounds says one message for either
+  side, so a rule's message on a range is worded for the range, its
+  numbers written in. The message is handed to the validator as its
+  source string, as a declared constraint's is. It reaches the form and
+  the tool as the refusal, the condition after it; neither
+  document carries it, as neither carries a key's own bound message:
+  `maximum` says itself, where a pattern needs `patternMessage` to be
+  read by a person. A message with no bound is refused.
 - **Held to the pipeline.** `StaticRefinerAgreementTrait` samples the
   values each `if` names, either side of each bound, nothing, and a value
   the key would hold, and for every document the pipeline could accept
@@ -1501,6 +1562,87 @@ class, so it cannot be handed a name per resource; an argument on
 `#[Resource]` would put a storage detail on the resource, which the
 pattern keeps out of it. The subclass is three lines, and it is where a
 settings resource's storage grows if it needs to. (`ConfigObjectStorage`)
+
+### A config object is described by its resource
+
+The resource definition is the single description of a config object,
+and its config schema is derived from it, as a stepping stone until core
+can read a data definition as the schema. Decided by the owner on
+2026-10-20, from the first change three reviews proposed (laravel,
+creative-generalist, drupal-architecture; [synthesis
+3.1](reviews-2026-10-20/synthesis.md)): the first settings page declared
+each key twice and two defaults three times. Seeding the class from the
+schema, the architecture review's direction, was rejected: it would
+entrench what the module means to retire, a second declaration in the
+format core is asked to replace with data definitions
+([core gaps, step 2](core-gaps.md#step-2-operations-and-access-for-simple-config)).
+
+- **Written, committed, checked.** `drush data_surface:config-schema`
+  writes, for every resource a `ConfigObjectStorage` stores, the
+  object's entry in `config/schema/<module>.schema.yml` and its
+  `config/install` file; without `--write` it prints the difference and
+  fails when there is one. `ConfigSchemaDriftTest` holds the shipped
+  ones to it. The schema stays a committed file and the storage's truth
+  ([The whole object is checked](#the-whole-object-is-checked) stands),
+  read by core with nothing of this module running: generation removes
+  the keeping in step by hand, not the schema.
+- **What it says.** Fully validatable at the root; a type per key from
+  its definition (a multi-line string a `string`: a resource says
+  nothing of translation, so nothing generated is translatable);
+  `nullable: true` where the three-way rule lets null clear (an optional
+  key that is no secret and that its storage does not always hold), and
+  on a required key installed holding nothing; `requiredKey:
+  false` where a key may be absent, a module's mounted keys (stored once
+  sent) and the keys of an entry from the site; the bounds and patterns a
+  schema can carry, from the definition's own (`Length`, `Range`,
+  `Regex`, `Count`, `NotBlank`), and none on a key a rule may rule out,
+  which the rule holds only where it applies; no list of values, since a
+  stored value a list no longer offers is kept as stale, and a `Choice`
+  in the schema would refuse every later write to the object over it;
+  the owner's labels, not an alter's rewording.
+- **Which keys are always held is the storage's to say.** Whether a key
+  may hold nothing is a fact of where it is stored ([A key its storage
+  always holds](#a-key-its-storage-always-holds)), so the storage
+  subclass that names the object names them too, `ALWAYS_HELD`, by
+  dotted path; the schema leaves `nullable: true` off them, and
+  `mayClear()` reads it back. So the generated schemas keep every key's
+  nullability as it was: example 11's badges and greeters and the
+  recipes' after-hours flag, keywords and holidays always held, every
+  other optional key cleared by null. Deriving it from a declared
+  default was tried and turned down: it made every optional key with a
+  default refuse null on objects that were not fully validatable, a
+  breaking change in twenty-three properties of the examples' contracts,
+  which is a decision of its own.
+- **The install file** keeps the value it gives a key (what a site
+  starts from may differ from the default, as example 7's send day and
+  example 11's greeters do), takes the declared default for a key it
+  does not give, and drops a key the resource does not declare. What a
+  resource cannot say is kept from the file too: the object's label, a
+  variant's when it declares none, the comments, and every entry no
+  resource writes. Each entry written says so on the line above it.
+- **Mounted keys** follow the existing convention: the owner's
+  `third_party_settings` is written when a module mounting there is on
+  as it is generated, and each mounting module's entry
+  `<config>.third_party.<module>` in its own file. Open: whether every
+  generated object should declare `third_party_settings` whatever is on,
+  as core does for config entities, so an alter from a module the owner
+  never generated with is not refused under that key.
+- **A schema the module did not generate is held to.** Core's
+  `node.type.*` or an adopter's written by hand: a storage implementing
+  `HeldToConfigSchemaInterface` says where the resource advertises more
+  (type, nullability, `Regex`, `Length`, `Range`, `Choice`, `Count`,
+  `NotBlank`, `Email`), and the build refuses it, naming each key, so
+  the contract never advertises what storage will refuse. A generated
+  schema is never narrower; one written before the resource changed is
+  refused until it is written again, and the generator builds without
+  the check (`Resources::declaration()`). The node type resource, which
+  the architecture review found restating core's schema less strictly,
+  states core's control-character patterns now, and `NodeTypeStorage`
+  says from the schema that its two booleans always hold a value.
+
+(`Storage\ConfigSchemaGenerator`, `Drush\Commands\ConfigSchemaCommand`,
+`Storage\HeldToConfigSchemaTrait`, `Resources::assertHeldToSchema()`,
+`ConfigSchemaDriftTest`, `ConfigSchemaCheckTest`)
 
 ### The whole object is checked
 
@@ -3642,7 +3784,10 @@ any key hold NULL, so its keys may be cleared, as before; a storage that
 does not say, or a key no schema describes, may be cleared too. Opting a
 config object into this is its schema's `FullyValidatable`, which also
 makes its keys required keys, with `nullable: true` on each that may
-hold nothing.
+hold nothing. A schema written from the resource is fully validatable,
+and holds every single value that declares a default
+([A config object is described by its
+resource](#a-config-object-is-described-by-its-resource)).
 
 On a key so marked:
 

@@ -14,7 +14,7 @@ use Drupal\data_surface_resource_test\Resource\Digest\DigestResource;
  * A monthly digest's schedule: nothing to choose.
  */
 #[Structure('resource_test.digest.monthly')]
-#[Variant(of: DigestResource::class, at: 'schedule', for: 'monthly')]
+#[Variant(of: DigestResource::class, at: 'schedule', for: 'monthly', label: 'Monthly')]
 final class MonthlyScheduleStructure implements StructureInterface {
 
   /**

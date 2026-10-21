@@ -21,13 +21,16 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
    *
    * The parent never names the children. Every structure carrying
    * #[Variant] for this class and key is one of the variants, one per
-   * value of $by, and $by's allowed values become exactly those: a Choice
-   * over the variants' values, narrower than any list it already
-   * declares, which must allow every one of them. Until $by holds a value
-   * the key is an `any` stub that lists every variant; once it does, the
-   * stub narrows to exactly that variant's map, which is an ordinary
-   * refinement under the rule that `any` may become anything narrower. A
-   * sibling the context locks chooses the variant from the start.
+   * value of $by, and $by's allowed values become exactly those: when $by
+   * declares no list, a LabeledChoice of the variants' values and labels
+   * (a Choice when none gives a label); a list $by declares narrows them,
+   * a variant whose value it leaves out is not offered, and a value it
+   * names that no variant is for is refused at build. Until $by holds a
+   * value the key is an `any` stub that lists every variant; once it
+   * does, the stub narrows to exactly that variant's map, which is an
+   * ordinary refinement under the rule that `any` may become anything
+   * narrower. A sibling the context locks chooses the variant from the
+   * start.
    *
    * A child that cannot be enumerated statically is the one case for a
    * #[RefinesInput] method on an `any` key returning the narrower

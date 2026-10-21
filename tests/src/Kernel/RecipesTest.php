@@ -139,9 +139,9 @@ class RecipesTest extends DataSurfaceKernelTestBase {
   public function testTheSchemaIsFullyValidatable(): void {
     $typed = $this->container->get('config.typed');
     $name = 'data_surface_resource_test.opening_hours';
-    // The language code its translatable notes ask for, which the
-    // storage writes beside the values.
-    $stored = ['langcode' => 'en'] + $this->config($name)->getRawData();
+    // Written from the resource, it holds nothing translatable, so no
+    // language code either.
+    $stored = $this->config($name)->getRawData();
     $violations = static function (array $data) use ($typed, $name): array {
       $messages = [];
       foreach ($typed->createFromNameAndData($name, $data)->validate() as $violation) {

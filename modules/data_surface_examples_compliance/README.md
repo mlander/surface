@@ -30,8 +30,10 @@ $inputs->attach('third_party_settings.data_surface_examples_compliance', Complia
 
 so the license and the stewards are stored under this module's name at
 `third_party_settings.data_surface_examples_compliance` and described by
-this module's own config schema, exactly where the alter's own keys were
-before the structure existed. The rest is glue for this one owner. It
+this module's own config schema (written from the resource by `drush
+data_surface:config-schema --module=data_surface_examples_compliance
+--write`), exactly where the alter's own keys were before the structure
+existed. The rest is glue for this one owner. It
 rewords example 3's title label with `describe()`, titles the fieldset
 and places it right after the capacity the license lifts:
 

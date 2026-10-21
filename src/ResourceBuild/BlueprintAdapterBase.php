@@ -141,12 +141,41 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
   }
 
   /**
+   * {@inheritdoc}
+   *
+   * The list is built here, so an author never reaches for core's
+   * constructor, whose create() asks the typed data manager for the item.
+   */
+  public function addList(string $key, string|DataDefinitionInterface $item, string|\Stringable $label, mixed $default = NULL): ListDataDefinition {
+    $shaped = NULL;
+    if (is_string($item) && str_contains($item, '\\')) {
+      if (is_subclass_of($item, DefinesInputsInterface::class)) {
+        throw new \LogicException(sprintf('addList("%s") was handed %s, a resource or structure, as its item: a list of groups of keys is a collection, attachList(\'%s\', ...).', $key, $item, $key));
+      }
+      $item = $shaped = $this->fromShape($key, $item, 'addList');
+    }
+    elseif (is_string($item)) {
+      $item = $this->typedDataManager->createDataDefinition($item);
+    }
+    $list = (new ListDataDefinition(['type' => 'list'], $item))->setLabel($label);
+    $this->addDefinition($key, $list, $default);
+    if ($shaped !== NULL) {
+      // Each item starts from the shape, held to it as a key declared with
+      // it is: by the name of the key's items.
+      $this->shaped[$key . '.*'] = $shaped;
+    }
+    return $list;
+  }
+
+  /**
    * Starts a key from the shape a class names.
    *
    * @param string $key
    *   The key, for the messages.
    * @param string $type
-   *   The class handed to add().
+   *   The class handed to add() or addList().
+   * @param string $verb
+   *   The method it was handed to, for the message.
    *
    * @return \Drupal\Core\TypedData\DataDefinition
    *   The key's definition, marked with the shape.
@@ -154,11 +183,11 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
    * @throws \LogicException
    *   When the class is no shape.
    */
-  protected function fromShape(string $key, string $type): DataDefinition {
+  protected function fromShape(string $key, string $type, string $verb = 'add'): DataDefinition {
     if (!Shapes::isShape($type)) {
       throw new \LogicException(is_subclass_of($type, DefinesInputsInterface::class)
-        ? sprintf('add("%s") was handed %s, a resource or structure, as a type: a group of keys is attached at the key, attach(\'%s\', ...), or mixed in, mixIn().', $key, $type, $key)
-        : sprintf('add("%s") was handed %s, which is no typed data type and no shape: a shape implements %s and carries #[Shape].', $key, $type, 'Drupal\data_surface\Resource\ShapeInterface'));
+        ? sprintf('%s("%s") was handed %s, a resource or structure, as a type: a group of keys is attached at the key, attach(\'%s\', ...), or mixed in, mixIn().', $verb, $key, $type, $key)
+        : sprintf('%s("%s") was handed %s, which is no typed data type and no shape: a shape implements %s and carries #[Shape].', $verb, $key, $type, 'Drupal\data_surface\Resource\ShapeInterface'));
     }
     return $this->shapes?->forKey($type) ?? Shapes::unaltered($type);
   }

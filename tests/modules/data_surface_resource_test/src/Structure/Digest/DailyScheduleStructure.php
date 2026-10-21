@@ -14,7 +14,7 @@ use Drupal\data_surface_resource_test\Resource\Digest\DigestResource;
  * A daily digest's schedule: nothing to choose.
  */
 #[Structure('resource_test.digest.daily')]
-#[Variant(of: DigestResource::class, at: 'schedule', for: 'daily')]
+#[Variant(of: DigestResource::class, at: 'schedule', for: 'daily', label: 'Daily')]
 final class DailyScheduleStructure implements StructureInterface {
 
   /**

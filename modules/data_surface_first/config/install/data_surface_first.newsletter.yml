@@ -1,4 +1,4 @@
 sender_name: 'The newsletter'
-sender_email: 'newsletter@example.com'
+sender_email: newsletter@example.com
 frequency: weekly
 max_recipients: 500

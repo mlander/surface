@@ -1,38 +1,53 @@
 # The digest fixture: a schedule whose shape is the chosen frequency's,
 # two of them empty.
+# Generated from the resource_test.digest resource by drush data_surface:config-schema.
 data_surface_resource_test.digest:
   type: config_object
   label: 'Digest'
+  constraints:
+    FullyValidatable: ~
   mapping:
     frequency:
       type: string
       label: 'Frequency'
     schedule:
-      type: data_surface_resource_test.digest.schedule.[%parent.frequency]
+      type: 'data_surface_resource_test.digest.schedule.[%parent.frequency]'
       label: 'Schedule'
 
+# Generated from the resource_test.digest resource by drush data_surface:config-schema.
 data_surface_resource_test.digest.schedule.daily:
   type: mapping
-  label: 'Daily schedule'
+  label: 'Daily'
+  constraints:
+    FullyValidatable: ~
   mapping: {  }
 
+# Generated from the resource_test.digest resource by drush data_surface:config-schema.
 data_surface_resource_test.digest.schedule.monthly:
   type: mapping
-  label: 'Monthly schedule'
+  label: 'Monthly'
+  constraints:
+    FullyValidatable: ~
   mapping: {  }
 
+# Generated from the resource_test.digest resource by drush data_surface:config-schema.
 data_surface_resource_test.digest.schedule.weekly:
   type: mapping
-  label: 'Weekly schedule'
+  label: 'Weekly'
+  constraints:
+    FullyValidatable: ~
   mapping:
     send_day:
       type: string
       label: 'Send day'
 
 # The bulletin fixture: a send day that applies only to a weekly bulletin.
+# Generated from the resource_test.bulletin resource by drush data_surface:config-schema.
 data_surface_resource_test.bulletin:
   type: config_object
   label: 'Bulletin'
+  constraints:
+    FullyValidatable: ~
   mapping:
     frequency:
       type: string
@@ -42,9 +57,12 @@ data_surface_resource_test.bulletin:
       label: 'Send day'
 
 # The parcel fixture: every rule between its keys declared as data.
+# Generated from the resource_test.parcel resource by drush data_surface:config-schema.
 data_surface_resource_test.parcel:
   type: config_object
   label: 'Parcel'
+  constraints:
+    FullyValidatable: ~
   mapping:
     service:
       type: string
@@ -52,21 +70,36 @@ data_surface_resource_test.parcel:
     weight:
       type: integer
       label: 'Weight in kilograms'
+      constraints:
+        Range:
+          min: 1
+          max: 1000
     insured:
       type: boolean
       label: 'Insured'
+      nullable: true
     declared_value:
       type: integer
       label: 'Declared value'
       nullable: true
+      constraints:
+        Range:
+          min: 0
+          max: 100000
     reference:
       type: string
       label: 'Reference'
       nullable: true
+      constraints:
+        Length:
+          max: 32
     signature:
       type: string
       label: 'Signed for by'
       nullable: true
+      constraints:
+        Length:
+          max: 64
     tracking:
       type: string
       label: 'Tracking code'
@@ -78,9 +111,13 @@ data_surface_resource_test.parcel:
     labels:
       type: sequence
       label: 'Labels'
+      nullable: true
+      constraints:
+        Count:
+          max: 3
       sequence:
         type: string
-        label: 'Label'
+        label: 'Labels'
     note:
       type: string
       label: 'Note for the driver'
@@ -90,41 +127,29 @@ data_surface_resource_test.parcel:
       label: 'Third party settings'
       requiredKey: false
       sequence:
-        type: data_surface_resource_test.parcel.third_party.[%key]
+        type: 'data_surface_resource_test.parcel.third_party.[%key]'
 
 # What ParcelAlter mounts on the parcel, under the module's name.
+# Generated from the resource_test.parcel resource by drush data_surface:config-schema.
 data_surface_resource_test.parcel.third_party.data_surface_resource_test:
   type: mapping
-  label: 'Customs'
+  label: 'Data Surface Resource Test'
+  constraints:
+    FullyValidatable: ~
   mapping:
     customs:
       type: string
       label: 'Customs code'
       nullable: true
-
-# The seating structure's keys, wherever it is attached: the venue's
-# seating, the hall's chairs, and the hall's mount for HallSeatingAlter.
-# The structure stores nothing itself; each container describes it here.
-data_surface_resource_test.seating:
-  type: mapping
-  label: 'Seating'
-  mapping:
-    rows:
-      type: integer
-      label: 'Rows'
-    aisle:
-      type: string
-      label: 'Aisle'
-      nullable: true
-    ushers:
-      type: integer
-      label: 'Ushers'
-      nullable: true
+      requiredKey: false
 
 # The venue fixture: the seating structure, its ports wired to the venue.
+# Generated from the resource_test.venue resource by drush data_surface:config-schema.
 data_surface_resource_test.venue:
   type: config_object
   label: 'Venue'
+  constraints:
+    FullyValidatable: ~
   mapping:
     layout:
       type: string
@@ -132,15 +157,41 @@ data_surface_resource_test.venue:
     capacity:
       type: integer
       label: 'Capacity'
+      constraints:
+        Range:
+          min: 1
+          max: 1000
     seating:
-      type: data_surface_resource_test.seating
+      type: mapping
       label: 'Seating'
+      mapping:
+        rows:
+          type: integer
+          label: 'Rows'
+          constraints:
+            Range:
+              min: 1
+              max: 40
+        aisle:
+          type: string
+          label: 'Aisle'
+        ushers:
+          type: integer
+          label: 'Ushers'
+          nullable: true
+          constraints:
+            Range:
+              min: 0
+              max: 20
 
 # The hall fixture: the seating structure reused as its chairs, and again
 # at HallSeatingAlter's mount.
+# Generated from the resource_test.hall resource by drush data_surface:config-schema.
 data_surface_resource_test.hall:
   type: config_object
   label: 'Hall'
+  constraints:
+    FullyValidatable: ~
   mapping:
     arrangement:
       type: string
@@ -151,43 +202,77 @@ data_surface_resource_test.hall:
     guests:
       type: integer
       label: 'Guests'
+      constraints:
+        Range:
+          min: 1
+          max: 2000
     chairs:
-      type: data_surface_resource_test.seating
+      type: mapping
       label: 'Chairs'
+      mapping:
+        rows:
+          type: integer
+          label: 'Rows'
+          constraints:
+            Range:
+              min: 1
+              max: 40
+        aisle:
+          type: string
+          label: 'Aisle'
+        ushers:
+          type: integer
+          label: 'Ushers'
+          nullable: true
+          constraints:
+            Range:
+              min: 0
+              max: 20
     third_party_settings:
       type: sequence
       label: 'Third party settings'
       requiredKey: false
       sequence:
-        type: data_surface_resource_test.hall.third_party.[%key]
+        type: 'data_surface_resource_test.hall.third_party.[%key]'
 
 # What HallSeatingAlter mounts on the hall: the seating structure.
+# Generated from the resource_test.hall resource by drush data_surface:config-schema.
 data_surface_resource_test.hall.third_party.data_surface_resource_test:
-  type: data_surface_resource_test.seating
-  label: 'Overflow seating'
-
-# The timestamps structure's keys, for whatever attaches it: the ledger's
-# stamps and the archive's. Where a structure is mixed in instead, its
-# owner lists the same keys among its own, flat, since a config object's
-# mapping already extends config_object and takes no second parent.
-data_surface_resource_test.timestamps:
   type: mapping
-  label: 'Timestamps'
+  label: 'Overflow seating'
+  constraints:
+    FullyValidatable: ~
   mapping:
-    created:
+    rows:
       type: integer
-      label: 'Created'
-      nullable: true
-    changed:
+      label: 'Rows'
+      requiredKey: false
+      constraints:
+        Range:
+          min: 1
+          max: 40
+    aisle:
+      type: string
+      label: 'Aisle'
+      requiredKey: false
+    ushers:
       type: integer
-      label: 'Changed'
+      label: 'Ushers'
       nullable: true
+      requiredKey: false
+      constraints:
+        Range:
+          min: 0
+          max: 20
 
 # The journal fixture: the ownership and the timestamps mixed in, their
 # members the journal's own keys, listed flat beside its title.
+# Generated from the resource_test.journal resource by drush data_surface:config-schema.
 data_surface_resource_test.journal:
   type: config_object
   label: 'Journal'
+  constraints:
+    FullyValidatable: ~
   mapping:
     title:
       type: string
@@ -195,7 +280,6 @@ data_surface_resource_test.journal:
     visibility:
       type: string
       label: 'Visibility'
-    # Mixed in from resource_test.ownership.
     owner:
       type: string
       label: 'Owner'
@@ -203,19 +287,27 @@ data_surface_resource_test.journal:
       type: boolean
       label: 'Shared with editors'
       nullable: true
-    # Mixed in from resource_test.timestamps.
     created:
       type: integer
       label: 'Created'
       nullable: true
+      constraints:
+        Range:
+          min: 0
     changed:
       type: integer
       label: 'Changed'
       nullable: true
+      constraints:
+        Range:
+          min: 0
     revision:
       type: integer
       label: 'Revision'
       nullable: true
+      constraints:
+        Range:
+          min: 1
     published:
       type: boolean
       label: 'Published'
@@ -230,7 +322,6 @@ data_surface_resource_test.journal:
         circle:
           type: string
           label: 'Circle'
-        # Mixed in from resource_test.ownership.
         owner:
           type: string
           label: 'Owner'
@@ -239,34 +330,81 @@ data_surface_resource_test.journal:
           label: 'Shared with editors'
           nullable: true
         stamps:
-          type: data_surface_resource_test.timestamps
+          type: mapping
           label: 'Archive stamps'
+          mapping:
+            created:
+              type: integer
+              label: 'Created'
+              nullable: true
+              constraints:
+                Range:
+                  min: 0
+            changed:
+              type: integer
+              label: 'Changed'
+              nullable: true
+              constraints:
+                Range:
+                  min: 0
 
 # The ledger fixture: the timestamps structure attached under a key.
+# Generated from the resource_test.ledger resource by drush data_surface:config-schema.
 data_surface_resource_test.ledger:
   type: config_object
   label: 'Ledger'
+  constraints:
+    FullyValidatable: ~
   mapping:
     name:
       type: string
       label: 'Name'
     stamps:
-      type: data_surface_resource_test.timestamps
+      type: mapping
       label: 'Stamps'
+      mapping:
+        created:
+          type: integer
+          label: 'Created'
+          nullable: true
+          constraints:
+            Range:
+              min: 0
+        changed:
+          type: integer
+          label: 'Changed'
+          nullable: true
+          constraints:
+            Range:
+              min: 0
 
 # The depot fixture: the stock code shape at two keys, and a shelf tag
 # reading it through a port.
+# Generated from the resource_test.depot resource by drush data_surface:config-schema.
 data_surface_resource_test.depot:
   type: config_object
   label: 'Depot'
+  constraints:
+    FullyValidatable: ~
   mapping:
     sku:
       type: string
       label: 'Stock code'
+      constraints:
+        Regex:
+          pattern: '/^[A-Z]{2}\d+$/D'
+        Length:
+          min: 4
+          max: 12
     spare:
       type: string
       label: 'Spare code'
       nullable: true
+      constraints:
+        Regex:
+          pattern: '/^[A-Z]{2}\d+$/D'
+        Length:
+          max: 6
     tag:
       type: mapping
       label: 'Shelf tag'
@@ -275,12 +413,18 @@ data_surface_resource_test.depot:
           type: string
           label: 'Label'
           nullable: true
+          constraints:
+            Length:
+              max: 20
 
 # The exhibit fixture: the provenance mixed in, its members listed flat
 # beside the title; the loan attached, with its insurance inside it.
+# Generated from the resource_test.exhibit resource by drush data_surface:config-schema.
 data_surface_resource_test.exhibit:
   type: config_object
   label: 'Exhibit'
+  constraints:
+    FullyValidatable: ~
   mapping:
     title:
       type: string
@@ -292,7 +436,6 @@ data_surface_resource_test.exhibit:
       type: string
       label: 'Room'
       nullable: true
-    # Mixed in from resource_test.provenance.
     source:
       type: string
       label: 'Source'
@@ -301,6 +444,9 @@ data_surface_resource_test.exhibit:
       type: integer
       label: 'Acquired'
       nullable: true
+      constraints:
+        Range:
+          min: 1800
     loan:
       type: mapping
       label: 'Loan'
@@ -324,6 +470,7 @@ data_surface_resource_test.exhibit:
 
 # The opening hours fixture: the common settings recipes (docs/recipes.md).
 # Fully validatable, so a key not marked nullable always holds a value.
+# Generated from the resource_test.opening_hours resource by drush data_surface:config-schema.
 data_surface_resource_test.opening_hours:
   type: config_object
   label: 'Opening hours'
@@ -333,17 +480,24 @@ data_surface_resource_test.opening_hours:
     opens:
       type: string
       label: 'Opens at'
+      constraints:
+        Regex:
+          pattern: '/^([01]\d|2[0-3]):[0-5]\d$/D'
     closes:
       type: integer
       label: 'Closes at, in minutes after midnight'
+      constraints:
+        Range:
+          min: 721
+          max: 1439
     days:
       type: sequence
       label: 'Days open'
       sequence:
         type: string
-        label: 'Day'
+        label: 'Days open'
     notes:
-      type: text
+      type: string
       label: 'Notes'
       nullable: true
     after_hours:
@@ -358,13 +512,13 @@ data_surface_resource_test.opening_hours:
       label: 'After-hours days'
       sequence:
         type: string
-        label: 'Day'
+        label: 'After-hours days'
     keywords:
       type: sequence
       label: 'Keywords'
       sequence:
         type: string
-        label: 'Keyword'
+        label: 'Keywords'
     holidays:
       type: string
       label: 'On public holidays'
@@ -390,52 +544,67 @@ data_surface_resource_test.benches:
 
 # The workshop fixture: one bench, one light and one stock code per bench
 # the site lists.
+# Generated from the resource_test.workshop resource by drush data_surface:config-schema.
 data_surface_resource_test.workshop:
   type: config_object
   label: 'Workshop'
+  constraints:
+    FullyValidatable: ~
   mapping:
     closed:
       type: boolean
       label: 'Closed'
+      nullable: true
     benches:
       type: sequence
       label: 'Benches'
       sequence:
         type: mapping
-        label: 'Bench'
+        label: 'Benches'
         mapping:
           enabled:
             type: boolean
             label: 'In use'
+            nullable: true
+            requiredKey: false
           hours:
             type: integer
             label: 'Hours a day'
             nullable: true
+            requiredKey: false
     lights:
       type: sequence
       label: 'Lights'
       sequence:
         type: boolean
-        label: 'Light'
+        label: 'Lights'
+        nullable: true
     codes:
       type: sequence
       label: 'Bench codes'
       sequence:
         type: string
-        label: 'Stock code'
+        label: 'Bench codes'
         nullable: true
+        constraints:
+          Regex:
+            pattern: '/^[A-Z]{2}\d+$/D'
+          Length:
+            max: 12
 
 # The gallery fixture: access answered by alters. The plaque is mixed in,
 # its members flat beside the name; a wall attached twice; a finish typed
 # by the medium; a room per entry the site lists.
+# Generated from the resource_test.gallery resource by drush data_surface:config-schema.
 data_surface_resource_test.gallery:
   type: config_object
   label: 'Gallery'
+  constraints:
+    FullyValidatable: ~
   mapping:
     name:
       type: string
       label: 'Name'
-    # Mixed in from resource_test.plaque.
     caption:
       type: string
       label: 'Caption'
@@ -445,53 +614,66 @@ data_surface_resource_test.gallery:
       label: 'Credit'
       nullable: true
     north:
-      type: data_surface_resource_test.gallery.wall
+      type: mapping
       label: 'North wall'
+      mapping:
+        artwork:
+          type: string
+          label: 'Artwork'
+          nullable: true
+        height:
+          type: integer
+          label: 'Height'
+          nullable: true
     south:
-      type: data_surface_resource_test.gallery.wall
+      type: mapping
       label: 'South wall'
+      mapping:
+        artwork:
+          type: string
+          label: 'Artwork'
+          nullable: true
+        height:
+          type: integer
+          label: 'Height'
+          nullable: true
     medium:
       type: string
       label: 'Medium'
     finish:
-      type: data_surface_resource_test.gallery.finish.[%parent.medium]
+      type: 'data_surface_resource_test.gallery.finish.[%parent.medium]'
       label: 'Finish'
     rooms:
       type: sequence
       label: 'Rooms'
       sequence:
         type: mapping
-        label: 'Room'
+        label: 'Rooms'
         mapping:
           lights:
             type: boolean
             label: 'Lights'
+            nullable: true
+            requiredKey: false
 
-data_surface_resource_test.gallery.wall:
-  type: mapping
-  label: 'Wall'
-  mapping:
-    artwork:
-      type: string
-      label: 'Artwork'
-      nullable: true
-    height:
-      type: integer
-      label: 'Height'
-      nullable: true
-
+# Generated from the resource_test.gallery resource by drush data_surface:config-schema.
 data_surface_resource_test.gallery.finish.oil:
   type: mapping
-  label: 'Oil finish'
+  label: 'Oil'
+  constraints:
+    FullyValidatable: ~
   mapping:
     varnish:
       type: string
       label: 'Varnish'
       nullable: true
 
+# Generated from the resource_test.gallery resource by drush data_surface:config-schema.
 data_surface_resource_test.gallery.finish.print:
   type: mapping
-  label: 'Print finish'
+  label: 'Print'
+  constraints:
+    FullyValidatable: ~
   mapping:
     edition:
       type: integer

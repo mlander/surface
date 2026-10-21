@@ -11,8 +11,11 @@ use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface\Pipeline\StorageViolationsException;
 use Drupal\data_surface\Pipeline\ViolationSet;
+use Drupal\data_surface\Resource\HeldToConfigSchemaInterface;
+use Drupal\data_surface\Resource\KnowsClearableKeysInterface;
 use Drupal\data_surface\Resource\ResourceStorageInterface;
 use Drupal\data_surface\Pipeline\Storage\BaseFieldOverrideStorage;
+use Drupal\data_surface\Storage\HeldToConfigSchemaTrait;
 use Drupal\data_surface\Storage\SchemaViolations;
 use Drupal\node\Entity\NodeType;
 use Drupal\node\NodePreviewMode;
@@ -40,8 +43,28 @@ use Drupal\node\NodeTypeInterface;
  *   Read, planned and written by the engine's BaseFieldOverrideStorage,
  *   which compares before writing, as core's form does, so a value that
  *   did not move writes no override.
+ *
+ * The node type's keys are held to core's config schema, node.type.*,
+ * which is fully validatable: it says which of them always hold a value
+ * (mayClear()), and the build refuses the resource where it advertises
+ * more than that schema (widerThanSchema()).
  */
-final class NodeTypeStorage implements ResourceStorageInterface {
+final class NodeTypeStorage implements ResourceStorageInterface, KnowsClearableKeysInterface, HeldToConfigSchemaInterface {
+
+  use HeldToConfigSchemaTrait;
+
+  /**
+   * The resource's keys the node type entity stores, and core's schema says.
+   */
+  protected const ENTITY_KEYS = [
+    'name',
+    'type',
+    'description',
+    'help',
+    'new_revision',
+    'preview_mode',
+    'display_submitted',
+  ];
 
   /**
    * The entity type whose bundles this storage writes.
@@ -93,6 +116,35 @@ final class NodeTypeStorage implements ResourceStorageInterface {
     protected readonly EntityFieldManagerInterface $entityFieldManager,
     protected readonly TypedConfigManagerInterface $typedConfig,
   ) {}
+
+  /**
+   * {@inheritdoc}
+   */
+  public function configSchemaType(): string {
+    return 'node.type.*';
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  protected function configSchemaPaths(): array {
+    return array_combine(self::ENTITY_KEYS, self::ENTITY_KEYS);
+  }
+
+  /**
+   * {@inheritdoc}
+   *
+   * By core's rule, read from node.type.*: fully validatable, so a key it
+   * does not call nullable always holds a value. A key stored as a base
+   * field override is not known here.
+   */
+  public function mayClear(OperationContext $context, string $path): ?bool {
+    if (!in_array($path, self::ENTITY_KEYS, TRUE)) {
+      return NULL;
+    }
+    $schema = $this->typedConfig->getDefinition($this->configSchemaType());
+    return !empty($schema['mapping'][$path]['nullable']);
+  }
 
   /**
    * {@inheritdoc}

@@ -502,7 +502,15 @@ with cacheability that says what it read; a write through an operation
 validates against the config schema before it saves. Where they are
 named is open; one spelling is an `operations:` key on the object's
 `config_object` root in its config schema, beside the constraints
-already allowed there. Core's cache rules already make the static and
+already allowed there. A config object described by a data definition
+needs no schema of its own: typed config validation would read the
+types, constraints and nullability from the definition rather than from
+a mapping (`TypedConfigManager::buildDataDefinition()` builds the same
+definition from YAML today), config translation the translatable keys,
+and `FullyValidatable` which keys are always held, so the schema this
+module writes from a resource (`drush data_surface:config-schema`,
+[Storage](storage.md#a-schema-generated-from-the-resource)) would go.
+Core's cache rules already make the static and
 runtime split readable: an answer whose only cache contexts are
 `user.permissions` or `user.roles`, with no tag and a permanent max-age,
 can be stated for an account ahead of time.

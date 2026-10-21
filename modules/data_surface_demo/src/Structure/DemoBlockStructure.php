@@ -75,8 +75,7 @@ final class DemoBlockStructure implements StructureInterface {
     // presentation chooses between, one per #[Variant] declared for it.
     $inputs->add('presentation', 'string', t('Presentation'), default: 'list')
       ->setDescription(t('How the items are laid out.'))
-      ->setRequired(TRUE)
-      ->addConstraint('Choice', ['choices' => ['list', 'grid']]);
+      ->setRequired(TRUE);
     $inputs->attachVariants('presentation_settings', by: 'presentation')
       ->setLabel(t('Presentation settings'))
       ->setDescription(t('What the chosen presentation needs.'));

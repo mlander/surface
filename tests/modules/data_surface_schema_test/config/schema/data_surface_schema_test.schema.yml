@@ -1,0 +1,31 @@
+# Written by hand, as an adopter's or core's schema is, and narrower than
+# the resource that stores in it: the build refuses that resource, naming
+# each key the schema says less for.
+data_surface_schema_test.narrowed:
+  type: config_object
+  label: 'Narrowed settings'
+  constraints:
+    FullyValidatable: ~
+  mapping:
+    code:
+      type: machine_name
+      label: 'Code'
+    limit:
+      type: integer
+      label: 'Limit'
+      constraints:
+        Range:
+          max: 10
+    mode:
+      type: string
+      label: 'Mode'
+      constraints:
+        Choice:
+          choices: [quiet, loud]
+    size:
+      type: string
+      label: 'Size'
+    note:
+      type: string
+      label: 'Note'
+      nullable: true

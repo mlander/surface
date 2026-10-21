@@ -88,7 +88,8 @@ declares; the test module's `TestBlockStructure`, a structure, uses two.
   the one every door shows: the form element's title, the tool's
   property label, the schema's `title`; the description is the text
   under the element and the property's description.
-  `addDefinition()` is the long form, for a map or a list. The label is
+  `addList()` is the same for a list of values, and `addDefinition()`
+  the long form, for a map ([Maps and lists](#maps-and-lists)). The label is
   `t('...')` with a literal string; see [Translatable
   strings](#translatable-strings). The type may be a shape's class, a
   value declared once for every key that asks for it ([Named
@@ -422,11 +423,22 @@ $inputs->addDefinition('field_overrides', $overrides, default: []);
 properties are another class's keys is a child instead: `attach()` or
 `attachVariants()`.
 
-A list is constructed around its item definition rather than described
-into one, so write `new ListDataDefinition(['type' => 'list'], $item)`
-and describe the list fluently afterwards. Core's
-`ListDataDefinition::create()` asks the typed data manager for the item,
-and a resource or structure class reaches for no service.
+A list of values is `addList()`, as a single value is `add()`: a key,
+an item, a label and a default, the item a type name, a shape's class or
+a definition of its own. It returns the list, described fluently
+afterwards with the core setters:
+
+```php
+$inputs->addList('keywords', 'string', t('Keywords'), default: []);
+$inputs->addList('days', $day, t('Days open'))
+  ->setRequired(TRUE);
+```
+
+The blueprint builds the list, so a resource or structure class never
+writes core's constructor, and never calls `ListDataDefinition::create()`,
+which asks the typed data manager for the item. A list of structures is
+a collection, `attachList()`
+([Collections](resources.md#collections)).
 
 ## Defaults and examples
 
@@ -436,7 +448,7 @@ keys the core draft proposes, through `DefinitionMetadata`:
 
 | What | Definition array key | Written with |
 | --- | --- | --- |
-| Default value | `default_value` | the `default:` argument of `add()` and `addDefinition()`, or `DefinitionMetadata::setDefaultValue()` |
+| Default value | `default_value` | the `default:` argument of `add()`, `addList()` and `addDefinition()`, or `DefinitionMetadata::setDefaultValue()` |
 | Examples | `examples` | `DefinitionMetadata::setExamples()` |
 
 Each accessor delegates to the definition's own core method when one
@@ -445,7 +457,7 @@ version. Read them back with `hasDefaultValue()`, `getDefaultValue()`,
 `defaultOf()` (which assembles a complex definition's default from its
 property definitions) and `getExamples()`.
 
-Passed to `add()` or `addDefinition()`, `NULL` declares no default,
+Passed to `add()`, `addList()` or `addDefinition()`, `NULL` declares no default,
 which is what core definitions already say. Written with
 `DefinitionMetadata::setDefaultValue()`, `NULL` is a declared default
 and is distinct from declaring none. What consumers do with a declared

@@ -95,6 +95,12 @@ final class ResourceBlueprintAdditions extends BlueprintAdapterBase {
    */
   public function describe(string $key, string|\Stringable|null $label = NULL, string|\Stringable|null $description = NULL, ?string $after = NULL): static {
     $this->assertWithinMixin('rewords', $key);
+    // The owner's own words are kept, for what describes the owner's
+    // storage whichever modules are on (its config schema).
+    $owned = $label === NULL || str_starts_with($key, 'third_party_settings.') ? NULL : $this->find($key);
+    if ($owned !== NULL) {
+      DefinitionMetadata::keepOwnLabel($owned);
+    }
     return parent::describe($key, $label, $description, $after);
   }
 

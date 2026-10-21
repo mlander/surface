@@ -330,13 +330,14 @@ class OperationToolsTest extends DataSurfaceKernelTestBase {
     $this->assertSame('Rehearsal', $result->getContextValues()[OperationInputs::VALUES]['name']);
     $this->assertArrayNotHasKey('prepared', $result->getContextValues());
 
-    // A dry run is refused for what storage would refuse.
+    // A dry run is refused for what storage would refuse, which the
+    // resource states as core's schema does.
     $tool = $this->tool('data_surface:node.type:add');
     $tool->setInputValue(OperationInputs::VALUES, ['name' => "Two\nlines", 'type' => 'two_lines'] + self::NODE_TYPE_REQUIRED);
     $tool->setInputValue(OperationInputs::DRY_RUN, TRUE);
     $tool->execute();
     $this->assertFalse($tool->getResult()->isSuccess());
-    $this->assertStringContainsString('name: Labels are not allowed to span multiple lines', (string) $tool->getResult()->getMessage());
+    $this->assertStringContainsString('name: The name may not span lines or hold control characters.', (string) $tool->getResult()->getMessage());
   }
 
   /**

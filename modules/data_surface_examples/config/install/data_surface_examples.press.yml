@@ -1,7 +1,7 @@
 public: true
 contact:
   name: 'Robin Lee'
-  email: 'press@example.com'
+  email: press@example.com
   phone: '+1 555 0100'
 reviewed_on: '2026-10-01'
 reviewed_by: 'Sam Ortiz'

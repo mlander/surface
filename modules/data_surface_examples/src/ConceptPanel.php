@@ -82,7 +82,7 @@ final class ConceptPanel {
     'event.doors' => [
       'docs/recipes.md',
       'docs/semantics.md#absent-null-or-a-value',
-      'docs/storage.md#a-fully-validatable-schema',
+      'docs/storage.md#a-schema-generated-from-the-resource',
     ],
   ];
 

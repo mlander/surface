@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Drupal\data_surface_resource_test\Resource\Library;
 
 use Drupal\Core\TypedData\DataDefinition;
-use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\data_surface\Refinement\Condition;
 use Drupal\data_surface\Resource\Attribute\Operation;
 use Drupal\data_surface\Resource\Attribute\Resource;
@@ -67,10 +66,8 @@ final class OpeningHoursResource implements ResourceInterface {
           'sun' => t('Sunday'),
         ],
       ]);
-    $days = (new ListDataDefinition(['type' => 'list'], $day))
-      ->setLabel(t('Days open'))
+    $inputs->addList('days', $day, t('Days open'), default: ['mon', 'tue', 'wed', 'thu', 'fri'])
       ->setRequired(TRUE);
-    $inputs->addDefinition('days', $days, default: ['mon', 'tue', 'wed', 'thu', 'fri']);
 
     $inputs->add('notes', 'string', t('Notes'))
       ->setSetting('multiline', TRUE);
@@ -80,24 +77,20 @@ final class OpeningHoursResource implements ResourceInterface {
       ->setRequired(TRUE)
       ->addConstraint('Length', ['min' => 4, 'max' => 12]);
     $inputs->narrow('door_code')
-      ->when(Condition::not(Condition::equals('after_hours', TRUE)))
+      ->unless(Condition::equals('after_hours', TRUE))
       ->doesNotApply();
 
-    $late = (new ListDataDefinition(['type' => 'list'], $day))
-      ->setLabel(t('After-hours days'))
+    $inputs->addList('late_days', $day, t('After-hours days'), default: [])
       ->setRequired(TRUE)
       ->addConstraint('Count', [
         'min' => 1,
         'minMessage' => t('Choose at least one day for after-hours access.'),
       ]);
-    $inputs->addDefinition('late_days', $late, default: []);
     $inputs->narrow('late_days')
-      ->when(Condition::not(Condition::equals('after_hours', TRUE)))
+      ->unless(Condition::equals('after_hours', TRUE))
       ->doesNotApply();
 
-    $keywords = (new ListDataDefinition(['type' => 'list'], DataDefinition::create('string')))
-      ->setLabel(t('Keywords'));
-    $inputs->addDefinition('keywords', $keywords, default: []);
+    $inputs->addList('keywords', 'string', t('Keywords'), default: []);
 
     $inputs->add('holidays', 'string', t('On public holidays'), default: 'closed')
       ->addConstraint('LabeledChoice', [

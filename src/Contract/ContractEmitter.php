@@ -1362,7 +1362,7 @@ final class ContractEmitter {
     }
 
     // Required only where no rule rules it out.
-    $unless = array_map(static fn (array $ifs): array => ['not' => count($ifs) === 1 ? $ifs[0] : ['anyOf' => $ifs]], $ruling);
+    $unless = array_map(static fn (array $ifs): array => static::negated(count($ifs) === 1 ? $ifs[0] : ['anyOf' => $ifs]), $ruling);
     $guard = static function (array $branch, string $below) use ($unless): array {
       if (isset($unless[$below])) {
         $branch['if'] = ['allOf' => [$branch['if'], $unless[$below]]];
@@ -1407,6 +1407,24 @@ final class ContractEmitter {
       }
     }
     return [$property, $branches, $requires, $stated];
+  }
+
+  /**
+   * Negates an `if`, writing `c` where it would write `not(not(c))`.
+   *
+   * A rule declared with unless(), or with when(Condition::not(...)),
+   * rules a key out where its condition does not hold; the conditional
+   * requiring the key wherever no rule rules it out then states the
+   * condition itself rather than its double negation.
+   *
+   * @param array $if
+   *   The `if`.
+   *
+   * @return array
+   *   Its negation.
+   */
+  protected static function negated(array $if): array {
+    return array_keys($if) === ['not'] && is_array($if['not']) ? $if['not'] : ['not' => $if];
   }
 
   /**

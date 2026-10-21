@@ -357,20 +357,20 @@ class NodeTypeResourceTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests the config schema refusing, at prepare, what the resource let in.
+   * Tests a name core's schema refuses is refused by the resource first.
    *
-   * The resource only limits the name's length; the node type's schema is
-   * fully validatable, and a required label may not hold a line break.
-   * Prepare holds the rehearsed entity to that schema, so the refusal is
-   * the schema's own message, filed under the resource's key, and it arrives
-   * for a dry run as it does for a real submit, before anything is
-   * written.
+   * The node type's schema is fully validatable, and a required label may
+   * not hold a line break. The resource states the same pattern, since the
+   * build refuses a resource wider than the schema its storage writes, so
+   * the refusal is the resource's, in its own words, at every door, for a
+   * dry run as for a real submit, before anything is written. Prepare still
+   * holds the rehearsed entity to the schema, which says the same in core's
+   * words to a caller that reaches the storage alone.
    */
   public function testSchemaRefusesAnInvalidNodeTypeAtPrepare(): void {
     [$surface, $storage] = $this->served($this->resources()->operation(NodeTypeResource::class, 'add'));
     $values = ['name' => "Two\nlines", 'type' => 'two_lines'];
-    // The built resource itself has nothing against it.
-    $this->assertTrue($this->pipeline()->validate($surface, $this->pipeline()->accept($surface, $values, []))->isEmpty());
+    $this->assertSame(['name'], $this->pipeline()->validate($surface, $this->pipeline()->accept($surface, $values, []))->keys());
 
     foreach ([TRUE, FALSE] as $dry_run) {
       $result = $this->submit($surface, $storage, $values, $dry_run);
@@ -378,7 +378,7 @@ class NodeTypeResourceTest extends DataSurfaceKernelTestBase {
       $this->assertFalse($result->committed);
       $this->assertNull($result->prepared);
       $this->assertSame(['name'], $result->violations->keys());
-      $this->assertSame('Labels are not allowed to span multiple lines or contain control characters.', (string) $result->violations->byKey('name')[0]->message);
+      $this->assertSame('The name may not span lines or hold control characters.', (string) $result->violations->byKey('name')[0]->message);
     }
     $this->assertNull(NodeType::load('two_lines'));
 

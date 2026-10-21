@@ -7,7 +7,6 @@ namespace Drupal\data_surface_demo_extras\Alter;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslationInterface;
 use Drupal\Core\TypedData\DataDefinition;
-use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Resource\Attribute\Alters;
@@ -107,11 +106,10 @@ final class NodeTypeAlter implements AltersInputsInterface, AltersStorageLayoutI
         'pattern' => NodeTypeReviewSettings::TAG_PATTERN,
         'message' => $this->t('An audience tag is lower case letters and digits, words joined by one space or one hyphen, with nothing around it.'),
       ]);
-    $inputs->addDefinition(NodeTypeReviewSettings::TAGS, (new ListDataDefinition([], $tag))
-      ->setLabel($this->t('Audience tags'))
+    $inputs->addList(NodeTypeReviewSettings::TAGS, $tag, $this->t('Audience tags'), default: [])
       ->setDescription($this->t('Who content of this type is written for, each tag listed once and in lower case, for example "local news" or "sports".'))
       ->setSetting(CommaSeparatedListWidget::SETTING, TRUE)
-      ->addConstraint('DataSurfaceDemoExtrasUniqueItems', []), []);
+      ->addConstraint('DataSurfaceDemoExtrasUniqueItems', []);
     $inputs->describe('third_party_settings.data_surface_demo_extras', label: $this->t('Editorial review'));
   }
 

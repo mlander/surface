@@ -38,11 +38,13 @@ use Drupal\data_surface\Resource\KeyedList;
 use Drupal\data_surface\Resource\KeysFromSiteInterface;
 use Drupal\data_surface\Resource\KnowsClearableKeysInterface;
 use Drupal\data_surface\Resource\AccessAnswer;
+use Drupal\data_surface\Resource\Attribute\Variant;
 use Drupal\data_surface\Resource\OperationAccessInterface;
 use Drupal\data_surface\Resource\AltersAccessInterface;
 use Drupal\data_surface\Resource\AltersInputsInterface;
 use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface\Resource\DefinesInputsInterface;
+use Drupal\data_surface\Resource\HeldToConfigSchemaInterface;
 use Drupal\data_surface\Resource\ResourceStorageInterface;
 use Drupal\data_surface\Attachment;
 use Drupal\data_surface\Entry;
@@ -164,6 +166,22 @@ final class Resources implements ResourcesInterface {
   protected bool $declaring = FALSE;
 
   /**
+   * Whether a resource is held to the config schema its storage writes.
+   *
+   * FALSE only while a schema is being generated from it (declaration()).
+   */
+  protected bool $holdsToSchema = TRUE;
+
+  /**
+   * The resources found no wider than their storage's schema.
+   *
+   * Keyed by the resource's name and the context's id.
+   *
+   * @var array<string, true>
+   */
+  protected array $heldToSchema = [];
+
+  /**
    * How many static access answers are kept, the least recently asked let go.
    */
   protected const STATIC_ANSWERS_KEPT = 256;
@@ -217,6 +235,37 @@ final class Resources implements ResourcesInterface {
   }
 
   /**
+   * Builds what a resource declares, for its config schema to be written from.
+   *
+   * What buildDeclared() builds, without holding the resource to the
+   * config schema its storage writes: that schema is what is being
+   * generated, and the one on disk may not describe the resource yet.
+   * For the config schema generator alone.
+   *
+   * @param string $resource
+   *   The class, or its #[Resource] id.
+   * @param \Drupal\data_surface\Resource\OperationContext $context
+   *   Where it is being asked for.
+   *
+   * @return \Drupal\data_surface\DataSurfaceInterface
+   *   The sealed data surface.
+   *
+   * @internal
+   *
+   * @see \Drupal\data_surface\Storage\ConfigSchemaGenerator
+   */
+  public function declaration(string $resource, OperationContext $context): DataSurfaceInterface {
+    $was = $this->holdsToSchema;
+    $this->holdsToSchema = FALSE;
+    try {
+      return $this->buildDeclared($resource, $context);
+    }
+    finally {
+      $this->holdsToSchema = $was;
+    }
+  }
+
+  /**
    * Builds at the top, with the access answers applied as asked.
    *
    * @param string $resource
@@ -241,11 +290,64 @@ final class Resources implements ResourcesInterface {
     [$was_alone, $was_declaring] = [$this->accountAlone, $this->declaring];
     [$this->accountAlone, $this->declaring] = [$alone, $declaring];
     try {
-      return $this->buildResource($resource, $context, [], top: TRUE);
+      $built = $this->buildResource($resource, $context, [], top: TRUE);
+      $this->assertHeldToSchema($resource, $context, $built);
+      return $built;
     }
     finally {
       [$this->accountAlone, $this->declaring] = [$was_alone, $was_declaring];
     }
+  }
+
+  /**
+   * Refuses a resource wider than the config schema its storage writes.
+   *
+   * Asked of a storage that holds what it writes to a config schema
+   * (HeldToConfigSchemaInterface), once per resource and context: a key
+   * the schema types otherwise, says may not be null where the resource
+   * lets it be cleared, or constrains further than the resource, would be
+   * advertised by every door and then refused by storage.
+   *
+   * Decision: see
+   * docs/decisions.md#a-config-object-is-described-by-its-resource.
+   *
+   * @param string $resource
+   *   The class, or its id.
+   * @param \Drupal\data_surface\Resource\OperationContext $context
+   *   Where it was asked for.
+   * @param \Drupal\data_surface\DataSurfaceInterface $built
+   *   What was built.
+   *
+   * @throws \LogicException
+   *   Naming each key the schema says less for.
+   */
+  protected function assertHeldToSchema(string $resource, OperationContext $context, DataSurfaceInterface $built): void {
+    if (!$this->holdsToSchema) {
+      return;
+    }
+    $definition = $this->registry->getDefinition($resource);
+    $memo = $definition->name() . ' ' . $context->id;
+    if ($definition->storage === NULL || isset($this->heldToSchema[$memo])) {
+      return;
+    }
+    $storage = $this->instance($definition->storage, ResourceStorageInterface::class);
+    if ($storage instanceof HeldToConfigSchemaInterface) {
+      $wider = $storage->widerThanSchema($built);
+      if ($wider !== []) {
+        $keys = [];
+        foreach ($wider as $path => $why) {
+          $keys[] = sprintf('"%s": %s', $path, $why);
+        }
+        throw new \LogicException(sprintf(
+          'The %s resource advertises more than %s, the config schema %s holds what it stores to, so storage would refuse what every door offers. Where: %s. Narrow the resource to what the schema states; a schema generated from the resource is written again with drush data_surface:config-schema --write.',
+          $definition->id,
+          $storage->configSchemaType(),
+          $definition->storage,
+          implode('; ', $keys),
+        ));
+      }
+    }
+    $this->heldToSchema[$memo] = TRUE;
   }
 
   /**
@@ -497,7 +599,9 @@ final class Resources implements ResourcesInterface {
           $variants[(string) $value] ??= new Attachment((new DataSurfaceBuilder($definitions))->setWatchedValueCheck($this->watchedValueCheck)->seal());
         }
       }
-      $builder->attachVariants($key, $by, $variants);
+      $declared = [...array_map('strval', array_keys($variants)), ...$withheld];
+      static::assertListNarrowsVariants($builder, $definition, $key, $by, $declared);
+      $builder->attachVariants($key, $by, $variants, static::variantLabels($children));
       if ($runtime_variant) {
         $builder->markRuntimeAccess($key);
       }
@@ -770,6 +874,12 @@ final class Resources implements ResourcesInterface {
   protected function buildEach(DataSurfaceBuilderInterface $builder, ResourceDefinition $definition, string $key, array $each, OperationContext $context, array $frame, array $ancestry, array $input_keys, array $attached, array $lists): void {
     $keys = $this->keysFrom($definition, $key, $each['from']);
     $builder->addCacheableDependency($keys);
+    // What every entry is, whatever the site lists: what the map's config
+    // schema is written from.
+    $shell = $builder->getDefinition($key);
+    if ($shell !== NULL) {
+      DefinitionMetadata::setEach($shell, $each['child'] ? $each['each'] : (new ResourceBlueprint(new DataSurfaceBuilder(), $this->typedDataManager))->useShapes($this->shapes())->add($key, $each['each'], $shell->getLabel() ?? $key, $each['default']));
+    }
     $entries = $keys->entries();
     $map = (new DataSurfaceBuilder())->setWatchedValueCheck($this->watchedValueCheck);
     $access = NULL;
@@ -2003,6 +2113,75 @@ final class Resources implements ResourcesInterface {
       ];
     }
     return $variantKeys;
+  }
+
+  /**
+   * Refuses a deciding key's list naming a value no variant is for.
+   *
+   * The variants say the values a deciding key may hold; a list the key
+   * declares itself narrows them, keeping fewer, and never names one more:
+   * a value with no variant would choose nothing.
+   *
+   * Decision: see docs/decisions.md#variants-not-slots.
+   *
+   * @param \Drupal\data_surface\DataSurfaceBuilderInterface $builder
+   *   The builder, holding the deciding key as declared and extended.
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   *   The resource or structure being built.
+   * @param string $key
+   *   The key the variants sit at.
+   * @param string $by
+   *   The deciding key.
+   * @param string[] $values
+   *   The values a variant is declared or derived for, offered or
+   *   withheld from this account.
+   *
+   * @throws \LogicException
+   *   Naming the key and each value no variant is for.
+   */
+  protected static function assertListNarrowsVariants(DataSurfaceBuilderInterface $builder, ResourceDefinition $definition, string $key, string $by, array $values): void {
+    $deciding = $builder->getDefinition($by);
+    $set = $deciding === NULL ? NULL : ChoiceSet::of($deciding);
+    if ($set === NULL) {
+      return;
+    }
+    $unfilled = array_values(array_diff(array_map('strval', $set->values), $values));
+    if ($unfilled !== []) {
+      throw new \LogicException(sprintf(
+        '%s lists %s for "%s", and no variant at "%s" is for %s. A deciding key\'s list narrows the values its variants are for and names no other: declare a #[Variant] for %s, or leave the list out and let the variants say the values.',
+        $definition->id,
+        '"' . implode('", "', $unfilled) . '"',
+        $by,
+        $key,
+        count($unfilled) === 1 ? 'it' : 'them',
+        count($unfilled) === 1 ? 'it' : 'each',
+      ));
+    }
+  }
+
+  /**
+   * Gets what each variant calls its value, from its #[Variant].
+   *
+   * @param array<string, string> $children
+   *   The variant classes, by the value each is for.
+   *
+   * @return array<string, string|\Stringable>
+   *   The labels the variants give, by value; a variant giving none is
+   *   left out.
+   */
+  protected static function variantLabels(array $children): array {
+    $labels = [];
+    foreach ($children as $value => $child) {
+      if (!class_exists($child)) {
+        continue;
+      }
+      $attribute = (new \ReflectionClass($child))->getAttributes(Variant::class)[0] ?? NULL;
+      $label = $attribute?->newInstance()->label;
+      if ($label !== NULL) {
+        $labels[(string) $value] = $label;
+      }
+    }
+    return $labels;
   }
 
   /**

@@ -678,9 +678,11 @@ interface DataSurfaceBuilderInterface {
    *
    * Advertised as an `any` placeholder marked as variants until the
    * deciding key holds a value, and as exactly the chosen variant's map once it
-   * does, or from the start, when the deciding key is locked. The
-   * deciding key gains a Choice over the variant ids, checked narrower
-   * against any list of values it already declares, and becomes a
+   * does, or from the start, when the deciding key is locked. A deciding
+   * key that declares no list of values gains one over the variant ids,
+   * a LabeledChoice when labels are given and a Choice otherwise; one
+   * that declares a list keeps it, narrowed to the variants offered, and
+   * a variant whose value it leaves out is not offered. It becomes a
    * refinement dependency of the key, so a form rebuilds on it and the
    * discard cascade resets a variant it orphaned.
    *
@@ -691,6 +693,9 @@ interface DataSurfaceBuilderInterface {
    * @param array<string, \Drupal\data_surface\Attachment> $variants
    *   One sealed child per value of the deciding key. May be empty:
    *   variants nothing declares offer nothing to choose.
+   * @param array<string, string|\Stringable> $labels
+   *   What each value is called, by value, for a deciding key that
+   *   declares no list; a value with none is called by itself.
    *
    * @return $this
    *
@@ -698,10 +703,9 @@ interface DataSurfaceBuilderInterface {
    *   When the deciding key is the key itself, is not declared, holds a
    *   list or a map, or the key already holds anything but an empty map.
    * @throws \LogicException
-   *   When the key already holds an attached child, or a variant names a
-   *   value the deciding key does not allow.
+   *   When the key already holds an attached child.
    */
-  public function attachVariants(string $key, string $by, array $variants): static;
+  public function attachVariants(string $key, string $by, array $variants, array $labels = []): static;
 
   /**
    * Declares a collection: a key whose value is a list of child instances.

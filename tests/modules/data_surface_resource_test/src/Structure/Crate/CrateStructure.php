@@ -22,8 +22,7 @@ final class CrateStructure implements StructureInterface {
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('contents', 'string', 'Contents', default: 'fruit')
-      ->setRequired(TRUE)
-      ->addConstraint('Choice', ['choices' => ['fruit']]);
+      ->setRequired(TRUE);
     $inputs->attachVariants('contents_settings', by: 'contents')
       ->setLabel('Contents settings');
   }

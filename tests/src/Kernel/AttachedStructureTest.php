@@ -158,8 +158,8 @@ class AttachedStructureTest extends DataSurfaceKernelTestBase {
     $this->assertSame('any', $placeholder->getDataType());
     $this->assertSame('kind', DefinitionMetadata::variantsBy($placeholder));
     $this->assertSame('Kind settings', (string) $placeholder->getLabel());
-    // The deciding key gained the variants as its choices, narrower than
-    // what it declared: a sack has no settings, so it is not offered.
+    // The deciding key keeps the list it declared, which names only values
+    // a variant is for.
     $this->assertEqualsCanonicalizing(['jar', 'tin'], $surface->getDefinition('kind')->getConstraints()['Choice']['choices']);
     $this->assertSame(['kind_settings' => ['kind']], $surface->getDefinitions()->refinements());
     // It starts as the variant the deciding key starts on.

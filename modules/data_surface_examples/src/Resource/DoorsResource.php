@@ -6,7 +6,6 @@ namespace Drupal\data_surface_examples\Resource;
 
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\TypedData\DataDefinition;
-use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\data_surface\Resource\Attribute\Operation;
 use Drupal\data_surface\Resource\Attribute\Resource;
 use Drupal\data_surface\Resource\BlueprintInterface;
@@ -46,10 +45,8 @@ final class DoorsResource implements ResourceInterface {
       ->addConstraint('LabeledChoice', [
         'choices' => ['fri' => t('Friday'), 'sat' => t('Saturday'), 'sun' => t('Sunday')],
       ]);
-    $days = (new ListDataDefinition(['type' => 'list'], $day))
-      ->setLabel(t('Days'))
+    $inputs->addList('days', $day, t('Days'), default: ['fri', 'sat'])
       ->setRequired(TRUE);
-    $inputs->addDefinition('days', $days, default: ['fri', 'sat']);
 
     $inputs->add('badges', 'string', t('Badges'), default: 'printed')
       ->setSetting('widget', 'radios')
@@ -60,9 +57,7 @@ final class DoorsResource implements ResourceInterface {
     $inputs->add('notes', 'string', t('Notes for the door team'))
       ->setSetting('multiline', TRUE);
 
-    $greeters = (new ListDataDefinition(['type' => 'list'], DataDefinition::create('string')))
-      ->setLabel(t('Greeters'));
-    $inputs->addDefinition('greeters', $greeters, default: []);
+    $inputs->addList('greeters', 'string', t('Greeters'), default: []);
   }
 
 }

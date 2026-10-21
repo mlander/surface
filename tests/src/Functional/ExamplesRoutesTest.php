@@ -92,11 +92,12 @@ class ExamplesRoutesTest extends BrowserTestBase {
     $blocks = $today->findAll('css', 'pre');
     $this->assertCount(2, $blocks);
     $this->assertStringContainsString('No schema is defined for property of type', $blocks[0]->getText());
-    $this->assertStringContainsString('data_surface_examples.ticket.[%parent.pricing], which can only be resolved against a stored value.', $blocks[1]->getText());
+    $this->assertStringContainsString('data_surface_examples.registration_step3.ticket.[%parent.pricing], which can only be resolved against a stored value.', $blocks[1]->getText());
     $this->assertStringNotContainsString('oneOf', $blocks[1]->getText());
     $venue = $today->findAll('css', 'table.data-surface-today-comparison tr[data-today-key="venue"] td');
     $this->assertSame(['venue', 'title, type', 'title, type, oneOf (3)'], array_map(static fn ($cell): string => $cell->getText(), $venue));
-    $assert->elementTextContains('css', 'table.data-surface-today-comparison tr[data-today-keyword="required"]', 'not stated');
+    // Fully validatable, the generated schema asks every key to be stored.
+    $assert->elementTextContains('css', 'table.data-surface-today-comparison tr[data-today-keyword="required"]', 'title, open, venue, room, capacity, pricing, ticket, contact');
     $this->submitForm(['surface[title]' => 'Harvest fair'], 'Save');
     $assert->pageTextContains('The changes have been saved.');
     $this->assertSame('Harvest fair', $this->config('data_surface_examples.registration_step3')->get('title'));
@@ -116,7 +117,7 @@ class ExamplesRoutesTest extends BrowserTestBase {
     $assert->fieldValueEquals('title', 'Spring meetup');
     $assert->elementsCount('css', 'details.data-surface-today-panel pre', 2);
     $assert->elementNotExists('css', 'table.data-surface-today-comparison');
-    $assert->pageTextContains('This form requires the event title and holds the capacity between 1 and 1000. Neither rule is in the config schema, so neither is in either document below: only the form knows them.');
+    $assert->pageTextContains('This form requires the event title and holds the capacity between 1 and 1000, in its own code. The config schema below states the bounds only because it is written from the resource of example 1; written for this form alone, it would state neither rule.');
     $assert->elementTextContains('css', 'details.data-surface-today-panel', 'Registration settings, example 1');
     $this->submitForm(['title' => 'Classic meetup'], 'Save configuration');
     $assert->pageTextContains('The configuration options have been saved.');

@@ -438,7 +438,10 @@ so the rule is this sentence. `npm test` is not part of
   by `scripts/generate-comparison.php`, `docs/catalog.md` by
   `scripts/generate-catalog.php`, and the contract baselines under
   `tests/fixtures/contracts/` by `drush data_surface:contract-diff
-  --write`. Never edit any of them by hand.
+  --write`, and the config schema and install files of every resource
+  stored in a `ConfigObjectStorage` by `drush data_surface:config-schema
+  --write` (the test modules' through `ConfigSchemaDriftTest` with
+  `DATA_SURFACE_CONFIG_SCHEMA_WRITE=1`). Never edit any of them by hand.
 - Commit messages are one line.
 
 ## Naming

@@ -171,7 +171,11 @@ which serves the real contract.
 5. **Generate the config schema from the shape.** The hand-written
    `block.settings.*` and formatter-settings YAML becomes an emitted
    artifact via config schema discovery, deleting the parallel
-   declaration every critique named first among Drupalisms.
+   declaration every critique named first among Drupalisms. CLOSED
+   2026-10-20 for a simple config object: its schema and install file
+   are written from the resource, committed and checked for drift
+   (`drush data_surface:config-schema`, group D of item 14 below); a
+   plugin's settings and discovery-time emission are not built.
    Backbone, added 2026-09-17 after the owner named the gap: **the
    coordinate space is declared, not free.** A provider declares its
    operations, and per operation its subject space as a data
@@ -1087,6 +1091,35 @@ renames sit in A because they are cheapest before new code exists.
       is sent with its label (`ResultCodesTest`, `ToolResultShapeTest`,
       `docs/decisions.md#one-result-at-every-door`,
       `docs/semantics.md#codes`).
+
+    Group D, say each key once (synthesis 2c and 3.1):
+    - **D1, a key declared once, the class the source.** DONE
+      2026-10-20: `drush data_surface:config-schema` writes a simple
+      config object's schema entry and install file from its resource,
+      fully validatable, mounted keys by the existing convention, and
+      prints the difference without `--write`; `ConfigSchemaDriftTest`
+      holds the examples, the first module, the compliance module and the
+      test fixtures to it; a schema the module did not generate is held to
+      at build, the resource refused where it is wider, naming the key
+      (`ConfigSchemaCheckTest`, the node type resource against core's
+      `node.type.*`;
+      `docs/decisions.md#a-config-object-is-described-by-its-resource`).
+      Open: whether every generated object declares
+      `third_party_settings` whatever is on; a translatable key, which a
+      resource cannot say yet; a list of values, left out of the schema
+      while a stale value is kept rather than refused.
+    - **D2, `addList()`.** DONE 2026-10-20: a list of values is one
+      blueprint call, returning the list definition.
+    - **D3, `#[Variant(label:)]`.** DONE 2026-10-20: the deciding key's
+      choices and labels come from its variants unless it declares a
+      list, which may only narrow them
+      (`docs/decisions.md#variants-not-slots`).
+    - **D4, `Rule::unless()`.** DONE 2026-10-20, and the emitter writes
+      `c` where `not(not(c))` would stand.
+    - **D5, `message` on a rule's `Range`, `Length` and `Count`.** DONE
+      2026-10-20, spelled as `Regex`'s is and reaching the form and the
+      tool; neither document carries it, as neither carries a key's own
+      bound message (`docs/decisions.md#a-rule-declared-as-data`).
 
 ## Rejected, on the record
 

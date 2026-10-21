@@ -9,7 +9,6 @@ use Drupal\Core\Field\FieldItemInterface;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
-use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\data_surface\Pipeline\NotEmitted;
 use Drupal\data_surface\Plugin\Field\FieldFormatter\DataSurfaceFormatterBase;
 use Drupal\data_surface\Refinement\ChoiceSet;
@@ -88,12 +87,8 @@ final class DataSurfaceDemoFormatter extends DataSurfaceFormatterBase implements
       ->setDescription(t('The field value, prefixed and cased as the settings ask.'))
       ->setRequired(TRUE);
 
-    // Core takes a list's item definition in the constructor rather than
-    // through a setter, so the list is built around its item.
-    $outputs->addDefinition('classes', (new ListDataDefinition(['type' => 'list'], DataDefinition::create('string')
-      ->setLabel(t('Class'))))
-      ->setLabel(t('Classes'))
-      ->setDescription(t('The classes the chosen variant puts on the wrapper. Absent when no variant is chosen.')));
+    $outputs->addList('classes', DataDefinition::create('string')->setLabel(t('Class')), t('Classes'))
+      ->setDescription(t('The classes the chosen variant puts on the wrapper. Absent when no variant is chosen.'));
   }
 
   /**

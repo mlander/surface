@@ -64,8 +64,11 @@ the resource's contract:
   `ConfigSchemaContract` reads the schema definition and translates it
   one to one: a label is a `title`, a type a `type`, a mapping an
   object, and a constraint the schema declares the keyword JSON Schema
-  has for it. The examples' schema declares types and labels, so types
-  and titles are what come out. Example 1:
+  has for it. The examples' schema is written from their resources
+  (`drush data_surface:config-schema`), fully validatable, so it carries
+  each key's type and label, its bounds, what is always held and what
+  null may clear; a list of values it leaves to the resource, which keeps
+  a value a list no longer offers as stale. Example 1:
 
 <!-- json: data_surface_examples.registration_step1 -->
 
@@ -81,24 +84,39 @@ the resource's contract:
         },
         "capacity": {
             "title": "Capacity",
-            "type": "integer"
+            "type": [
+                "integer",
+                "null"
+            ],
+            "minimum": 1,
+            "maximum": 1000
         },
         "open": {
             "title": "Registration open",
-            "type": "boolean"
+            "type": [
+                "boolean",
+                "null"
+            ]
         }
     },
-    "additionalProperties": false
+    "additionalProperties": false,
+    "required": [
+        "title",
+        "capacity",
+        "open"
+    ]
 }
 ```
 
-No bounds on the capacity, and nothing required. The one rule in it is
-`additionalProperties: false`, because a mapping in config schema
-refuses a key it does not list. In example 3 the
-venue, the room and the pricing are strings with no list of values, and
-the ticket has a title and a `$comment`: its type is
-`data_surface_examples.ticket.[%parent.pricing]`, which only a stored
-value resolves, and this reads none.
+The capacity's bounds are there, every key is required to be stored, and
+null clears the two optional ones; `additionalProperties: false`
+because a mapping in config schema refuses a key it does not list. What
+a schema generated from the resource does not say is the lists of values
+and what depends on what: in example 3 the venue, the room and the
+pricing are strings with no list, and the ticket has
+a title and a `$comment`: its type is
+`data_surface_examples.registration_step3.ticket.[%parent.pricing]`,
+which only a stored value resolves, and this reads none.
 
 - **Key by key.** A table counted from two documents, one row per key
   the resource declares: the JSON Schema keywords the mapping states,
@@ -108,10 +126,12 @@ value resolves, and this reads none.
   beside `title, type, oneOf (6), if/then on venue (3 cases)`, the
   ticket `title, $comment` beside
   `title, type, if/then on pricing (2 variants: free has note, $ref (registration.step3.ticket.free); paid has price, currency, $ref (registration.step3.ticket.paid))`,
-  the contact `title, type, properties, additionalProperties` beside
+  the contact `title, type, properties, additionalProperties, required`
+  beside
   `title, type, properties, additionalProperties, required, $ref (registration.contact)`,
-  and the last row lists what is required: "not stated" beside
-  `title, venue, room, pricing`. The resource writes each part once,
+  and the last row lists what is required: every key, which a fully
+  validatable schema asks to be stored, beside
+  `title, venue, room, pricing`, which a caller must give. The resource writes each part once,
   under `$defs`, and refers to it where it is used; the table counts
   what a reference resolves to and names the reference beside it.
 
@@ -121,8 +141,10 @@ it: its table, and "The schema for these answers".
 
 The classic twin of example 1 carries the same two documents under its
 form, and no table, having no resource to compare with. Its form requires
-the title and holds the capacity between 1 and 1000. Neither rule is in
-the config schema, so neither is in either document.
+the title and holds the capacity between 1 and 1000, in its own code.
+The config schema states the bounds only because it is written from
+example 1's resource; written for the classic form alone, it would state
+neither rule.
 
 ## Example 1: declare what you accept
 
@@ -347,8 +369,7 @@ final class RegistrationStep3Resource implements ResourceInterface {
     $inputs->add('capacity', 'integer', t('Capacity'), default: 50)
       ->addConstraint('Range', ['min' => 1]);
     $inputs->add('pricing', 'string', t('Pricing'), default: 'free')
-      ->setRequired(TRUE)
-      ->addConstraint('Choice', ['choices' => ['free', 'paid']]);
+      ->setRequired(TRUE);
     $inputs->attachVariants('ticket', by: 'pricing')
       ->setLabel(t('Ticket'));
     $inputs->attach('contact', ContactStructure::class)
@@ -385,13 +406,15 @@ final class RegistrationStep3Resource implements ResourceInterface {
 }
 ```
 
-The two tickets:
+The pricing lists no values: its values are the tickets', and its
+labels too, each ticket saying what it is offered as with `label:`. A
+third ticket is offered as soon as its class exists. The two tickets:
 
 <!-- code: src/Structure/FreeTicketStructure.php -->
 
 ```php
 #[Structure('registration.step3.ticket.free')]
-#[Variant(of: RegistrationStep3Resource::class, at: 'ticket', for: 'free')]
+#[Variant(of: RegistrationStep3Resource::class, at: 'ticket', for: 'free', label: new TranslatableMarkup('Free'))]
 final class FreeTicketStructure implements StructureInterface {
 
   /**
@@ -409,7 +432,7 @@ final class FreeTicketStructure implements StructureInterface {
 
 ```php
 #[Structure('registration.step3.ticket.paid')]
-#[Variant(of: RegistrationStep3Resource::class, at: 'ticket', for: 'paid')]
+#[Variant(of: RegistrationStep3Resource::class, at: 'ticket', for: 'paid', label: new TranslatableMarkup('Paid'))]
 final class PaidTicketStructure implements StructureInterface {
 
   /**
@@ -1544,10 +1567,8 @@ final class DoorsResource implements ResourceInterface {
       ->addConstraint('LabeledChoice', [
         'choices' => ['fri' => t('Friday'), 'sat' => t('Saturday'), 'sun' => t('Sunday')],
       ]);
-    $days = (new ListDataDefinition(['type' => 'list'], $day))
-      ->setLabel(t('Days'))
+    $inputs->addList('days', $day, t('Days'), default: ['fri', 'sat'])
       ->setRequired(TRUE);
-    $inputs->addDefinition('days', $days, default: ['fri', 'sat']);
 
     $inputs->add('badges', 'string', t('Badges'), default: 'printed')
       ->setSetting('widget', 'radios')
@@ -1558,19 +1579,18 @@ final class DoorsResource implements ResourceInterface {
     $inputs->add('notes', 'string', t('Notes for the door team'))
       ->setSetting('multiline', TRUE);
 
-    $greeters = (new ListDataDefinition(['type' => 'list'], DataDefinition::create('string')))
-      ->setLabel(t('Greeters'));
-    $inputs->addDefinition('greeters', $greeters, default: []);
+    $inputs->addList('greeters', 'string', t('Greeters'), default: []);
   }
 
 }
 ```
 
-The config schema is fully validatable
-([A fully validatable schema](../../docs/storage.md#a-fully-validatable-schema)):
+The config schema is written from the resource, so it is fully
+validatable ([A schema generated from the
+resource](../../docs/storage.md#a-schema-generated-from-the-resource)):
 `FullyValidatable` at its root, every key stored, and `nullable: true`
-on the notes alone. So the storage knows the notes may hold nothing and
-the badges may not: the badges are always held, their radios offer no
+on the notes alone, the one single value with no default. So the storage
+knows the notes may hold nothing and the badges may not: the badges are always held, their radios offer no
 "- None -", and both schemas leave `null` out of their type.
 
 What a call sends for a key means one of three things

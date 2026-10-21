@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\data_surface\Storage;
 
+use Drupal\Component\Utility\NestedArray;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Config\Schema\ArrayElement;
 use Drupal\Core\Config\Schema\Undefined;
@@ -15,6 +16,7 @@ use Drupal\Core\StringTranslation\TranslationInterface;
 use Drupal\data_surface\Pipeline\StorageViolationsException;
 use Drupal\data_surface\Pipeline\Violation;
 use Drupal\data_surface\Pipeline\ViolationSet;
+use Drupal\data_surface\Resource\HeldToConfigSchemaInterface;
 use Drupal\data_surface\Resource\KnowsClearableKeysInterface;
 use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface\Resource\ResourceStorageInterface;
@@ -48,6 +50,9 @@ use Drupal\data_surface\Resource\ResourceStorageInterface;
  * - mayClear() says which keys the schema lets hold nothing, by core's
  *   own rule: in a fully validatable object, only those it calls
  *   nullable.
+ * - widerThanSchema() says where the resource advertises more than the
+ *   schema allows, which the build refuses: never, for a schema generated
+ *   from the resource (drush data_surface:config-schema).
  *
  * The storage owns `_core`, which the config installer writes, and
  * `langcode`, which core's rule asks for exactly when the schema has a
@@ -60,15 +65,28 @@ use Drupal\data_surface\Resource\ResourceStorageInterface;
  *
  * @see docs/storage.md#a-simple-config-object
  */
-abstract class ConfigObjectStorage implements ResourceStorageInterface, KnowsClearableKeysInterface {
+abstract class ConfigObjectStorage implements ResourceStorageInterface, KnowsClearableKeysInterface, HeldToConfigSchemaInterface {
 
   use DependencySerializationTrait;
+  use HeldToConfigSchemaTrait;
   use StringTranslationTrait;
 
   /**
    * The config object the values live in, named by the subclass.
    */
   public const CONFIG = '';
+
+  /**
+   * The optional keys the object always holds a value for, by dotted path.
+   *
+   * Whether a key may hold nothing is a fact of where it is stored, so the
+   * subclass says it: its generated schema leaves `nullable: true` off
+   * these, and mayClear() then answers that they may not be cleared. Every
+   * other optional key may.
+   *
+   * @see docs/decisions.md#a-key-its-storage-always-holds
+   */
+  public const ALWAYS_HELD = [];
 
   /**
    * The keys the storage owns and a resource never declares.
@@ -191,8 +209,15 @@ abstract class ConfigObjectStorage implements ResourceStorageInterface, KnowsCle
     $hash = hash('xxh64', serialize($stored));
     if (!array_key_exists($path, $this->clearable[$hash] ?? [])) {
       $answer = NULL;
+      // A key nothing is stored for yet is read as holding nothing, so
+      // the schema still answers for it.
+      $data = $stored;
+      $parents = explode('.', $path);
+      if (!NestedArray::keyExists($data, $parents) && $this->mapsAlong($data, $parents)) {
+        NestedArray::setValue($data, $parents, NULL);
+      }
       try {
-        $element = $this->typed($name, $stored)?->get($path);
+        $element = $this->typed($name, $data)?->get($path);
         if ($element !== NULL && !$element instanceof Undefined) {
           $answer = !$element->getDataDefinition()->isRequired();
         }
@@ -203,6 +228,40 @@ abstract class ConfigObjectStorage implements ResourceStorageInterface, KnowsCle
       $this->clearable[$hash][$path] = $answer;
     }
     return $this->clearable[$hash][$path];
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function configSchemaType(): string {
+    return $this->name();
+  }
+
+  /**
+   * Answers whether every part of a path holding something is a map.
+   *
+   * A list's items are not keys, so a path into one (a collection's key,
+   * named without a delta) is never filled in.
+   *
+   * @param array $data
+   *   The data.
+   * @param string[] $parents
+   *   The path, a key per level.
+   *
+   * @return bool
+   *   TRUE when no level along it holds a list.
+   */
+  protected function mapsAlong(array $data, array $parents): bool {
+    foreach (array_slice($parents, 0, -1) as $parent) {
+      if (!array_key_exists($parent, $data)) {
+        return TRUE;
+      }
+      $data = $data[$parent];
+      if (!is_array($data) || array_is_list($data)) {
+        return FALSE;
+      }
+    }
+    return TRUE;
   }
 
   /**

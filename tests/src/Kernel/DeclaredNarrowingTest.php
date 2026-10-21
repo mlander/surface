@@ -398,7 +398,7 @@ class DeclaredNarrowingTest extends DataSurfaceKernelTestBase {
       ],
       'an option outside it' => [
         static fn () => (new Rule('count'))->constrain('Range', ['max' => 5, 'maxMessage' => 'No.']),
-        'takes min and max',
+        'takes min, max and message, and was given max, maxMessage',
       ],
       'a pattern no schema states exactly' => [
         static fn () => (new Rule('code'))->constrain('Regex', ['pattern' => '/^\w+$/i']),
@@ -522,8 +522,11 @@ class DeclaredNarrowingTest extends DataSurfaceKernelTestBase {
         {"if": {"not": {"properties": {"service": {"const": "freight"}}, "required": ["service"]}},
          "then": {"properties": {"note": false}}}
         JSON,
+      // A rule declared with unless() rules the note out where the
+      // service is not freight: required wherever it applies states the
+      // condition itself, not its double negation.
       'required wherever it applies' => <<<'JSON'
-        {"if": {"not": {"not": {"properties": {"service": {"const": "freight"}}, "required": ["service"]}}},
+        {"if": {"properties": {"service": {"const": "freight"}}, "required": ["service"]},
          "then": {"required": ["note"]}}
         JSON,
       'all of, any of, present, a pattern' => <<<'JSON'

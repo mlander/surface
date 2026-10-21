@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Drupal\data_surface_resource_test\Resource\Parcel;
 
 use Drupal\Core\TypedData\DataDefinition;
-use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\data_surface\Refinement\Condition;
 use Drupal\data_surface\Resource\Attribute\Operation;
 use Drupal\data_surface\Resource\Attribute\Resource;
@@ -79,10 +78,8 @@ final class ParcelResource implements ResourceInterface {
           'perishable' => t('Perishable'),
         ],
       ]);
-    $inputs->addDefinition('labels', ListDataDefinition::create('string')
-      ->setItemDefinition($label)
-      ->setLabel(t('Labels'))
-      ->addConstraint('Count', ['max' => 3]));
+    $inputs->addList('labels', $label, t('Labels'))
+      ->addConstraint('Count', ['max' => 3]);
     $inputs->add('note', 'string', t('Note for the driver'))
       ->setRequired(TRUE);
 
@@ -124,7 +121,7 @@ final class ParcelResource implements ResourceInterface {
       ->constrain('Length', ['min' => 2]);
     // A note is for the freight driver alone.
     $inputs->narrow('note')
-      ->when(Condition::not(Condition::equals('service', 'freight')))
+      ->unless(Condition::equals('service', 'freight'))
       ->doesNotApply();
     // A referenced express or insured parcel is tracked by a code.
     $inputs->narrow('tracking')

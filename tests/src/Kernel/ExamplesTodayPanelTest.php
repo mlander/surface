@@ -152,17 +152,18 @@ class ExamplesTodayPanelTest extends DataSurfaceKernelTestBase {
       // The full schema: every room and a case per venue, a lower bound
       // and a case per room, both ticket variants, whatever is stored.
       'room' => ['title, type', 'title, type, oneOf (6), if/then on venue (3 cases)'],
-      'capacity' => ['title, type', 'title, type, minimum, default, if/then on room (6 cases)'],
+      'capacity' => ['title, type, minimum', 'title, type, minimum, default, if/then on room (6 cases)'],
       'pricing' => ['title, type', 'title, type, oneOf (2), default'],
       'ticket' => [
         'title, $comment',
         'title, type, if/then on pricing (2 variants: free has note, $ref (registration.step3.ticket.free); paid has price, currency, $ref (registration.step3.ticket.paid))',
       ],
       'contact' => [
-        'title, type, properties, additionalProperties',
+        'title, type, properties, additionalProperties, required',
         'title, type, properties, additionalProperties, required, $ref (registration.contact)',
       ],
-      'required' => ['not stated', 'title, venue, room, pricing'],
+      // Fully validatable, the config schema requires every key stored.
+      'required' => ['title, open, venue, room, capacity, pricing, ticket, contact', 'title, venue, room, pricing'],
     ], $this->comparison($today));
     // The examples' README quotes the rows, as the table prints them.
     $readme = (string) file_get_contents(dirname(__DIR__, 3) . '/modules/data_surface_examples/README.md');
@@ -172,7 +173,7 @@ class ExamplesTodayPanelTest extends DataSurfaceKernelTestBase {
       }
     }
     // Counted from the two documents: the venue's row is longer on the
-    // resource's side by the list config schema has no way to give.
+    // resource's side by the list a generated schema leaves to it.
     $surface = $this->document($panels[ExamplePanels::CONTRACT]['full'])['properties']['venue'];
     unset($surface['x-surface']);
     $this->assertSame(['title', 'type', 'oneOf'], array_keys($surface));
@@ -187,9 +188,9 @@ class ExamplesTodayPanelTest extends DataSurfaceKernelTestBase {
     $this->assertSame('Registration settings, example 1', $this->document($today['derived'])['title']);
     $this->assertSame([
       'title' => ['title, type', 'title, type'],
-      'capacity' => ['title, type', 'title, type, minimum, maximum, default'],
+      'capacity' => ['title, type, minimum, maximum', 'title, type, minimum, maximum, default'],
       'open' => ['title, type', 'title, type, default'],
-      'required' => ['not stated', 'title'],
+      'required' => ['title, capacity, open', 'title'],
     ], $this->comparison($today));
     $today = $this->panelsOf(2)[ExamplePanels::TODAY];
     $this->assertSame('Registration settings, example 2', $this->document($today['derived'])['title']);
@@ -276,11 +277,11 @@ class ExamplesTodayPanelTest extends DataSurfaceKernelTestBase {
     $this->assertSame('Without a resource: what config schema can say', (string) $today['#title']);
     // No resource on this page, so nothing to compare with.
     $this->assertSame(['intro', 'note', 'core', 'derived'], Element::children($today));
-    $this->assertSame('<p>This form requires the event title and holds the capacity between 1 and 1000. Neither rule is in the config schema, so neither is in either document below: only the form knows them.</p>', (string) $today['note']['#markup']);
+    $this->assertSame('<p>This form requires the event title and holds the capacity between 1 and 1000, in its own code. The config schema below states the bounds only because it is written from the resource of example 1; written for this form alone, it would state neither rule.</p>', (string) $today['note']['#markup']);
     $this->assertSame(['$comment'], array_keys($this->document($today['core'])));
     $derived = $this->document($today['derived']);
-    $this->assertSame(['title' => 'Capacity', 'type' => 'integer'], $derived['properties']['capacity']);
-    $this->assertArrayNotHasKey('required', $derived);
+    $this->assertSame(['title' => 'Capacity', 'type' => ['integer', 'null'], 'minimum' => 1, 'maximum' => 1000], $derived['properties']['capacity']);
+    $this->assertSame(['title', 'capacity', 'open'], $derived['required']);
     // The rules the note names are the form's own.
     $this->assertTrue($page['form']['title']['#required']);
     $this->assertSame([1, 1000], [$page['form']['capacity']['#min'], $page['form']['capacity']['#max']]);

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\data_surface_resource_test\Structure\Gallery;
 
+use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\data_surface\Resource\Attribute\Structure;
 use Drupal\data_surface\Resource\Attribute\Variant;
 use Drupal\data_surface\Resource\BlueprintInterface;
@@ -14,7 +15,7 @@ use Drupal\data_surface_resource_test\Resource\Gallery\GalleryResource;
  * The finish of a print: a variant nothing answers for.
  */
 #[Structure('resource_test.gallery.finish.print')]
-#[Variant(of: GalleryResource::class, at: 'finish', for: 'print')]
+#[Variant(of: GalleryResource::class, at: 'finish', for: 'print', label: new TranslatableMarkup('Print'))]
 final class PrintFinishStructure implements StructureInterface {
 
   /**

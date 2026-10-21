@@ -62,9 +62,49 @@ interface BlueprintAdditionsInterface {
   public function add(string $key, string $type, string|\Stringable $label, mixed $default = NULL): DataDefinition;
 
   /**
+   * Adds a list of values: name, item, label.
+   *
+   * A multi-select, a list of free strings, a list of shapes: a list is
+   * a key, declared as add() declares one, with no core constructor in
+   * the author's way. Returns the list definition, so the rest
+   * (required, a Count, a description, a widget setting) is plain core
+   * API, as for add().
+   *
+   * @code
+   * $inputs->addList('keywords', 'string', t('Keywords'), default: []);
+   * $inputs->addList('days', $day, t('Days open'), default: ['mon'])
+   *   ->setRequired(TRUE);
+   * @endcode
+   *
+   * A list of structures is a collection, attachList(); a map of values
+   * per thing the site has is addEach().
+   *
+   * @param string $key
+   *   The key.
+   * @param string|\Drupal\Core\TypedData\DataDefinitionInterface $item
+   *   What every item is: a typed data type, as core's typed data manager
+   *   names it, the class of a shape (each item then starts from the
+   *   shape as its alters left it), or the item's definition, for an item
+   *   with constraints of its own (a LabeledChoice for a multi-select).
+   * @param string|\Stringable $label
+   *   The list's label.
+   * @param mixed $default
+   *   The default value, a list; NULL declares none.
+   *
+   * @return \Drupal\Core\TypedData\ListDataDefinition
+   *   The list, already part of the blueprint.
+   *
+   * @throws \LogicException
+   *   When the key is already declared; for a class that is no shape (a
+   *   resource or structure is attachList()'s), and, for an alter of a
+   *   shape, always.
+   */
+  public function addList(string $key, string|DataDefinitionInterface $item, string|\Stringable $label, mixed $default = NULL): ListDataDefinition;
+
+  /**
    * Adds a key, the long form.
    *
-   * For a definition that is not one simple type: a list, a map. Like
+   * For a definition add() and addList() do not build: a map, say. Like
    * every declaring verb, it returns what it declared, for the owner to
    * go on labeling with the core setters.
    *

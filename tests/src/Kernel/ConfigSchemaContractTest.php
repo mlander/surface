@@ -14,9 +14,12 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  *
  * The before picture under each example: what core answers when asked
  * for a JSON Schema of the config object, and the plain mapping of its
- * config schema. Both are asserted whole, so a constraint added to the
- * examples' schema, a cleverer mapping, or core starting to answer shows
- * up here first.
+ * config schema. The examples' schema is written from their resources
+ * now (drush data_surface:config-schema), so it carries types, bounds
+ * and what is always held; the lists of values, what depends on what and
+ * the ticket's shape it does not say. Both are asserted
+ * whole, so a schema written otherwise, a cleverer mapping, or core
+ * starting to answer shows up here first.
  */
 #[Group('data_surface')]
 #[RunTestsInSeparateProcesses]
@@ -39,7 +42,7 @@ class ConfigSchemaContractTest extends DataSurfaceKernelTestBase {
   /**
    * The keywords the examples' config schema has nothing to say with.
    */
-  protected const UNSAID = ['required', 'enum', 'oneOf', 'minimum', 'maximum', 'default', 'allOf', 'if'];
+  protected const UNSAID = ['enum', 'oneOf', 'default', 'allOf', 'if'];
 
   /**
    * The comment a type that needs a value is given.
@@ -86,7 +89,10 @@ class ConfigSchemaContractTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests example 1: three types and three titles, and nothing else.
+   * Tests example 1: types, titles, the capacity's bounds and every key held.
+   *
+   * Fully validatable, so every key is in `required`; the capacity and the
+   * open flag are optional in the resource, so null clears them.
    */
   public function testExampleOneIsTypesAndTitles(): void {
     $derived = $this->contract()->derived('data_surface_examples.registration_step1');
@@ -96,10 +102,11 @@ class ConfigSchemaContractTest extends DataSurfaceKernelTestBase {
       'type' => 'object',
       'properties' => [
         'title' => ['title' => 'Event title', 'type' => 'string'],
-        'capacity' => ['title' => 'Capacity', 'type' => 'integer'],
-        'open' => ['title' => 'Registration open', 'type' => 'boolean'],
+        'capacity' => ['title' => 'Capacity', 'type' => ['integer', 'null'], 'minimum' => 1, 'maximum' => 1000],
+        'open' => ['title' => 'Registration open', 'type' => ['boolean', 'null']],
       ],
       'additionalProperties' => FALSE,
+      'required' => ['title', 'capacity', 'open'],
     ], $derived);
     $this->assertSame([], array_values(array_intersect(self::UNSAID, $this->keywordsIn($derived))));
 
@@ -110,13 +117,13 @@ class ConfigSchemaContractTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests example 3: the inherited keys, and no shape for the ticket.
+   * Tests example 3: no lists, and still no shape for the ticket.
    *
-   * The type is example 2's, which is example 1's, so the keys come in
-   * that order. The venue, the room and the pricing are strings with no
-   * list; the capacity an integer with no bounds; the ticket's type
-   * needs the pricing's value, so it is named and not resolved; and
-   * what other modules mount is named the same way, by its `[%key]`.
+   * The keys come in the resource's order. The venue, the room and the
+   * pricing are strings with no list, since a generated schema leaves the
+   * values to the resource; the ticket's type needs the pricing's value, so it
+   * is named and not resolved; and what other modules mount is named the
+   * same way, by its `[%key]`.
    */
   public function testExampleThreeHasNoListsNoBoundsAndNoTicketShape(): void {
     $derived = $this->contract()->derived('data_surface_examples.registration_step3');
@@ -126,33 +133,35 @@ class ConfigSchemaContractTest extends DataSurfaceKernelTestBase {
       'type' => 'object',
       'properties' => [
         'title' => ['title' => 'Event title', 'type' => 'string'],
-        'capacity' => ['title' => 'Capacity', 'type' => 'integer'],
-        'open' => ['title' => 'Registration open', 'type' => 'boolean'],
+        'open' => ['title' => 'Registration open', 'type' => ['boolean', 'null']],
         'venue' => ['title' => 'Venue', 'type' => 'string'],
         'room' => ['title' => 'Room', 'type' => 'string'],
+        'capacity' => ['title' => 'Capacity', 'type' => ['integer', 'null'], 'minimum' => 1],
         'pricing' => ['title' => 'Pricing', 'type' => 'string'],
         'ticket' => [
           'title' => 'Ticket',
-          '$comment' => sprintf(self::NEEDS_A_VALUE, 'data_surface_examples.ticket.[%parent.pricing]'),
+          '$comment' => sprintf(self::NEEDS_A_VALUE, 'data_surface_examples.registration_step3.ticket.[%parent.pricing]'),
         ],
         'contact' => [
           'title' => 'Contact',
           'type' => 'object',
           'properties' => [
             'email' => ['title' => 'Email', 'type' => 'string', 'format' => 'email'],
-            'phone' => ['title' => 'Phone', 'type' => 'string'],
+            'phone' => ['title' => 'Phone', 'type' => ['string', 'null']],
           ],
           'additionalProperties' => FALSE,
+          'required' => ['email', 'phone'],
         ],
         'third_party_settings' => [
           'title' => 'Third party settings',
           'type' => 'object',
           'additionalProperties' => [
-            '$comment' => sprintf(self::NEEDS_A_VALUE, 'data_surface_examples.registration.third_party.[%key]'),
+            '$comment' => sprintf(self::NEEDS_A_VALUE, 'data_surface_examples.registration_step3.third_party.[%key]'),
           ],
         ],
       ],
       'additionalProperties' => FALSE,
+      'required' => ['title', 'open', 'venue', 'room', 'capacity', 'pricing', 'ticket', 'contact'],
     ];
     $this->assertSame($expected, $derived);
     $this->assertSame([], array_values(array_intersect(self::UNSAID, $this->keywordsIn($derived))));
@@ -169,7 +178,7 @@ class ConfigSchemaContractTest extends DataSurfaceKernelTestBase {
     // describes its keys under its own name, which only a stored key
     // would lead to.
     $this->enableModules(['data_surface_examples_compliance']);
-    $this->assertTrue($this->container->get('config.typed')->hasConfigSchema('data_surface_examples.registration.third_party.data_surface_examples_compliance'));
+    $this->assertTrue($this->container->get('config.typed')->hasConfigSchema('data_surface_examples.registration_step3.third_party.data_surface_examples_compliance'));
     $this->assertSame($expected, $this->contract()->derived('data_surface_examples.registration_step3'));
   }
 

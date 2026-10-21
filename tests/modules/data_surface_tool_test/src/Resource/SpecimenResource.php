@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Drupal\data_surface_tool_test\Resource;
 
 use Drupal\Core\TypedData\DataDefinition;
-use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\data_surface\Resource\Attribute\Operation;
 use Drupal\data_surface\Resource\Attribute\Resource;
@@ -44,10 +43,9 @@ final class SpecimenResource implements ResourceInterface {
       ->addConstraint('Choice', ['choices' => ['alpha', 'beta']]);
     $inputs->add('code', 'string', t('Code'))
       ->addConstraint('Regex', ['pattern' => '/^[a-z]{2}\d{2}$/D', 'message' => 'Two letters and two digits.']);
-    $inputs->addDefinition('tags', (new ListDataDefinition([], DataDefinition::create('string')
-      ->addConstraint('Choice', ['choices' => ['a', 'b', 'c', 'd', 'x']])))
-      ->setLabel(t('Tags'))
-      ->addConstraint('Count', ['max' => 3]));
+    $inputs->addList('tags', DataDefinition::create('string')
+      ->addConstraint('Choice', ['choices' => ['a', 'b', 'c', 'd', 'x']]), t('Tags'))
+      ->addConstraint('Count', ['max' => 3]);
     $inputs->addDefinition('size', MapDataDefinition::create()
       ->setLabel(t('Size'))
       ->setPropertyDefinition('width', DataDefinition::create('integer')->setLabel(t('Width')))

@@ -134,8 +134,9 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
   its label and description, which change nothing about what is
   accepted.
 - **`add()` takes name, type and label** and returns the core
-  definition, so the rest is plain core API. `addDefinition()` is the
-  long form, for a map or a list. A label is `t('...')`, with a literal
+  definition, so the rest is plain core API. `addList()` is the same
+  for a list of values, and `addDefinition()` the long form, for a map.
+  A label is `t('...')`, with a literal
   string: a static method has no instance for the translation service
   to be injected into, and `t()` returns the same lazy
   `TranslatableMarkup`.
@@ -848,9 +849,10 @@ Mounted keys need config schema, since the owner's storage holds every
 write to it. On a config entity core describes
 `third_party_settings.<module>` already, and the mounting module declares
 its part as for any third-party setting. On a simple config object the
-owner declares `third_party_settings` as a sequence typed by the module
-key, and the mounting module declares its part; `ConfigObjectStorage`
-refuses a mount no schema describes ([Storage](storage.md#keys-another-module-mounts)).
+owner's schema declares `third_party_settings` as a sequence typed by the
+module key, and the mounting module's declares its part, both written
+from the resources when generated; `ConfigObjectStorage` refuses a mount
+no schema describes ([Storage](storage.md#keys-another-module-mounts)).
 
 `DemoBlockAlter` in the demo extras module does the three things most
 alters do: it adds a badge, rewords the headline's help text with
@@ -1083,48 +1085,55 @@ final class RegistrationComplianceAlter implements AltersInputsInterface {
 ```
 
 Its keys are stored in example 3's config object, under its module's
-name, so two schemas describe them. The owner declared
-`third_party_settings` before any alter existed, as a sequence typed by
-the module key, in `data_surface_examples.registration_step3`:
+name, so two schemas describe them, and both are written from the
+resources by `drush data_surface:config-schema --write`
+([Storage](storage.md#a-schema-generated-from-the-resource)). The owner's
+schema gains `third_party_settings`, a sequence typed by the module key,
+in `data_surface_examples.registration_step3`:
 
 <!-- excerpt: modules/data_surface_examples/config/schema/data_surface_examples.schema.yml -->
 
 ```yaml
-# Where other modules' keys are mounted, each described by the module
-# that mounts it, under its own name.
 third_party_settings:
   type: sequence
   label: 'Third party settings'
   requiredKey: false
   sequence:
-    type: data_surface_examples.registration.third_party.[%key]
+    type: 'data_surface_examples.registration_step3.third_party.[%key]'
 ```
 
-and the mounting module declares its part, the type that key names:
+and the mounting module's schema gains its part, the type that key
+names, each key of it free to be absent, since a mounted key is stored
+only once it is sent:
 
 <!-- code: modules/data_surface_examples_compliance/config/schema/data_surface_examples_compliance.schema.yml -->
 
 ```yaml
-# What this module's alter mounts on example 3's registration settings,
-# described under this module's name, which is where the alter's keys
-# are stored.
-data_surface_examples.registration.third_party.data_surface_examples_compliance:
+# Generated from the registration.step3 resource by drush data_surface:config-schema.
+data_surface_examples.registration_step3.third_party.data_surface_examples_compliance:
   type: mapping
-  label: 'Compliance settings'
+  label: 'Compliance'
+  constraints:
+    FullyValidatable: ~
   mapping:
     license:
       type: string
       label: 'Event license'
       nullable: true
+      requiredKey: false
+      constraints:
+        Regex:
+          pattern: '/^\d{4}$/D'
     stewards:
       type: integer
       label: 'Stewards'
-      nullable: true
+      requiredKey: false
 ```
 
-An owner that leaves `third_party_settings` out of its schema makes every
-later alter on its simple config object refused until the owner's schema
-changes ([Storage](storage.md#keys-another-module-mounts)). An owner
+An owner whose schema has no `third_party_settings` (written by hand
+without it, or generated while no module mounting there was on) makes
+every later alter on its simple config object refused until the owner's
+schema changes ([Storage](storage.md#keys-another-module-mounts)). An owner
 that is a config entity declares nothing, since core describes its
 `third_party_settings`; the mounting module still declares its part.
 
@@ -1246,10 +1255,22 @@ Variants are a tagged union whose tag is a sibling key.
 `attachVariants('key', by: 'sibling')` attaches them at the key, and the
 sibling, the deciding key, chooses one. They are always open. The parent
 never names them: every class marked
-`#[Variant(of: Parent::class, at: 'key', for: '...')]` is the variant
-for that value, and the sibling's allowed values become exactly the
-values the variants are for. A new variant brings itself and the parent
+`#[Variant(of: Parent::class, at: 'key', for: '...', label: ...)]` is the
+variant for that value, and the sibling's allowed values become exactly
+the values the variants are for, each offered by the variant's `label:`
+(a `LabeledChoice`; a variant with no label is offered as its value).
+A new variant brings itself, its value and its label, and the parent
 never changes.
+
+The deciding key declares no list of its own, then: the union's tags
+live on its variants, written once. A list it does declare is a
+narrowing of the variants' values, and keeps its own words: a variant
+whose value it leaves out is not offered, and a value it names that no
+variant is for is refused when the parent is built ("... lists "pot"
+for "kind", and no variant at "settings" is for it."), since it would
+choose nothing. Such a list closes the union to a module that adds a
+variant, unless that module offers the value as well
+(`extendChoices()`); leave it out to keep the union open.
 
 A variant may declare no keys: a choice with nothing more to say (a
 daily digest has no send day, a weekly one does). It renders as
@@ -1259,25 +1280,25 @@ both contracts and the tool state it as an object with no properties.
 per value, since `#[Variant]` names one value.
 
 The demo block's presentation has two variants, its two presentation
-structures; the field instance resource attaches its storage, a
-resource of its own, and its settings are variants each field type's
-module adds, as are the storage's own settings:
+structures, which say the presentation's values and what each is
+called; the field instance resource attaches its storage, a resource of
+its own, and its settings are variants each field type's module adds,
+as are the storage's own settings:
 
 ```php
 // DemoBlockStructure
 $inputs->add('presentation', 'string', t('Presentation'), default: 'list')
-  ->setRequired(TRUE)
-  ->addConstraint('Choice', ['choices' => ['list', 'grid']]);
+  ->setRequired(TRUE);
 $inputs->attachVariants('presentation_settings', by: 'presentation')
   ->setLabel(t('Presentation settings'))
   ->setDescription(t('What the chosen presentation needs.'));
 
 // ListPresentationStructure and GridPresentationStructure, beside it
 #[Structure('block.data_surface_demo.presentation.list')]
-#[Variant(of: DemoBlockStructure::class, at: 'presentation_settings', for: 'list')]
+#[Variant(of: DemoBlockStructure::class, at: 'presentation_settings', for: 'list', label: new TranslatableMarkup('List'))]
 
 #[Structure('block.data_surface_demo.presentation.grid')]
-#[Variant(of: DemoBlockStructure::class, at: 'presentation_settings', for: 'grid')]
+#[Variant(of: DemoBlockStructure::class, at: 'presentation_settings', for: 'grid', label: new TranslatableMarkup('Grid'))]
 
 // FieldInstanceResource, in data_surface_tool
 $inputs->attach('storage', FieldStorageResource::class)
@@ -1301,8 +1322,9 @@ placeholder marked as variants (`DefinitionMetadata::variantsBy()`); once
 it does, or from the start when the context locks the deciding key, it is
 exactly the chosen variant's map. That is an ordinary refinement under
 the rule that `any` may become anything narrower, not a mechanism of its
-own. The deciding key gains a Choice over the variants' values, checked
-narrower than any list it already had, and becomes a refinement
+own. The deciding key gains a list of the variants' values, labeled as
+they say, or keeps its own, narrowed to the variants offered (one an
+access class withholds is not), and becomes a refinement
 dependency of the key the variants sit at, so the form rebuilds on it
 over AJAX and the discard cascade drops input left by another variant. A
 payload carrying another variant's keys is refused by name
@@ -1492,12 +1514,13 @@ its own module attaches it. The recipe:
    when its keys are part of the resource rather than a thing of their
    own ([Mixins](#mixins)).
 3. **Describe its keys in config schema**, since the container's
-   storage holds them: the structure stores nothing itself. Under the
-   key it sits at for a resource's own config schema, and at the mount
-   for an alter, by the convention for keys another module mounts
-   ([Storage](storage.md#keys-another-module-mounts)): the owner's
-   `third_party_settings` a sequence typed by the module key, the
-   mounting module's mapping the structure's keys. A mapping type of the
+   storage holds them: the structure stores nothing itself. A container
+   stored in a simple config object has them written for it, under the
+   key the structure sits at, and at the mount for an alter, by the
+   convention for keys another module mounts
+   ([Storage](storage.md#keys-another-module-mounts)), when its schema is
+   generated (`drush data_surface:config-schema --write`). A schema
+   written by hand describes them the same way; a mapping type of the
    structure's keys, declared once, can serve every site.
 4. **That is all.** The structure brings its refiners, its declared
    rules, its access class and its operations, and keeps its def id in

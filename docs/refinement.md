@@ -115,15 +115,53 @@ when the effect must be computed (the stewards for a capacity,
 | `Condition::not($c)` | `$c` does not hold | `{"not": c}` |
 | `Condition::allOf(...$cs)`, `anyOf()` | every one, at least one, holds | `{"allOf": [...]}`, `{"anyOf": [...]}` |
 
+A rule says its condition with `->when($c)`, or with `->unless($c)` for
+one whose effects hold where `$c` does not: the same rule as
+`->when(Condition::not($c))`, read without the double negative, and one
+condition either way. "The door code does not apply unless after-hours
+access is on":
+
+```php
+$inputs->narrow('door_code')
+  ->unless(Condition::equals('after_hours', TRUE))
+  ->doesNotApply();
+```
+
+The conditional requiring a key wherever no rule rules it out tests
+`after_hours` itself here, not `not(not(...))`. Each class's `use` line:
+[Namespaces](concepts.md#namespaces).
+
 | Effect | Does, while the condition holds | Stated as the `then` |
 | --- | --- | --- |
-| `->constrain('Range', ['min' => a, 'max' => b])` | raises the minimum, lowers the maximum | `minimum`, `maximum` |
+| `->constrain('Range', ['min' => a, 'max' => b, 'message' => ...])` | raises the minimum, lowers the maximum; refuses a value outside the rule's bound with the message, if one is given | `minimum`, `maximum` |
 | `->constrain('Length', [...])`, `('Count', [...])` | the same, for a text's length, a list's items | `minLength`, `maxLength`; `minItems`, `maxItems` |
 | `->constrain('Choice', ['choices' => [...]])` | keeps only these of the key's own values (`LabeledChoice` reads the same) | `oneOf` of what stays |
 | `->constrain('Regex', ['pattern' => ..., 'message' => ...])` | a pattern, where the key has none | `pattern` |
 | `->require()` | the key must hold a value | `required`, and its type without `null` |
 | `->doesNotApply()` | the key [does not apply](#when-a-key-does-not-apply) | the key `false` |
 | `->because($text)` | says why, under the field, where the rule's other effects tightened the key for these values (always for `require()`, or for a description alone) | `description`, kept in the `then` whatever the values |
+
+A bound's `message` is one sentence for the rule, as a `Regex`'s is:
+written under Symfony's own option for each bound the rule sets
+(`minMessage`, `maxMessage`; `notInRangeMessage` for a range holding
+both bounds, and `exactMessage` too for a length or count, for both
+bounds at one value), and only where the rule's bound is the one that
+stands, so a bound the key already held keeps the key's message.
+Symfony reports a range holding both bounds in one message, whichever
+side refuses, so word a rule's message on a range for the range ("From
+1 to 100 without a license."), and write its numbers into the sentence:
+which option reports it decides which placeholders it has. The form and
+the tool refuse with it, the condition after it:
+
+```php
+$inputs->narrow('late_days')
+  ->when(Condition::equals('after_hours', TRUE))
+  ->constrain('Count', ['min' => 1, 'message' => t('Choose at least one day for after-hours access.')]);
+```
+
+"Choose at least one day for after-hours access. This applies when
+After-hours access is on." The documents state the bound, `minItems`,
+as they state a key's own, and carry no bound's message.
 
 A condition names keys of the frame the narrowed key sits in, by their
 names: the owner's keys, and an alter's own mounted keys by the names it

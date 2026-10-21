@@ -198,7 +198,8 @@ below.)
   means a second class, a child, or an operation.
 - **Name, type and label sit on one line.** `add()` takes those three
   and returns the core definition, so the rest is plain core API.
-  `addDefinition()` is the long form, for a list or a map. The label is
+  `addList()` is the same for a list of values, and `addDefinition()`
+  the long form, for a map. The label is
   `t('...')`, a literal string.
 - **It is ordered like the thing it describes.** Identity first, the
   thing's own keys next, its parts last.

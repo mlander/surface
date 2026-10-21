@@ -20,8 +20,8 @@ use Drupal\data_surface_resource_test\Storage\PantryStorage;
  * - label: attached by class, with storage of its own.
  * - kind_settings: variants chosen by kind, declared by JarStructure
  *   (no storage) and TinResource (storage of its own). The kind declares
- *   a sack as well, which no variant is for, so the variants narrow it
- *   away.
+ *   its own list, which may name no value but a variant's, and keeps its
+ *   own words: the variants give no labels here.
  */
 #[Resource('resource_test.pantry', identity: ['pantry'], storage: PantryStorage::class)]
 final class PantryResource implements ResourceInterface {
@@ -48,7 +48,7 @@ final class PantryResource implements ResourceInterface {
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('pantry', 'string', 'Pantry')->setRequired(TRUE);
     $inputs->add('kind', 'string', 'Kind', default: 'jar')
-      ->addConstraint('Choice', ['choices' => ['jar', 'tin', 'sack']]);
+      ->addConstraint('Choice', ['choices' => ['jar', 'tin']]);
     $inputs->attach('shelf', ShelfStructure::class);
     $inputs->attach('label', LabelResource::class);
     $inputs->attachVariants('kind_settings', by: 'kind')

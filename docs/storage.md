@@ -59,7 +59,8 @@ so it is the whole of the storage code. What it does:
   `langcode` or `_core`.
 - **The object must exist**, from the module's `config/install`, and a
   config schema must describe it: a missing schema is a `\LogicException`
-  naming the object, since the storage exists to hold values to it.
+  naming the object, since the storage exists to hold values to it. Both
+  are written from the resource ([below](#a-schema-generated-from-the-resource)).
 - **`mayClear()`** says which keys the object may hold nothing for, by
   core's own rule: any key, unless the schema is fully validatable
   (`constraints: {FullyValidatable: ~}` at its root), where only a key
@@ -67,47 +68,94 @@ so it is the whole of the storage code. What it does:
   tool's null for it is refused naming its default, both schemas leave
   null out of its type, and its select offers no `- None -` once a
   valid choice is selected
-  ([decision](decisions.md#a-key-its-storage-always-holds)). So
-  `nullable: true` matters only in a fully validatable schema, on each
-  optional key that may be emptied; elsewhere it changes nothing. The
-  test module's opening hours (`resource_test.opening_hours`) are such
-  an object ([below](#a-fully-validatable-schema)).
+  ([decision](decisions.md#a-key-its-storage-always-holds)). A generated
+  schema is fully validatable, so `nullable: true` is what decides it.
+- **`widerThanSchema()`** says where the resource advertises more than
+  the schema allows, and the build refuses such a resource
+  ([below](#a-schema-the-module-did-not-generate)); a generated schema is
+  never narrower.
 
-### A fully validatable schema
+### A schema generated from the resource
 
-`FullyValidatable` is core's opt-in to strict config validation, and
-the one place `nullable:` means anything. What it asks of the author of
-the schema:
+The resource is the one description of the config object; its config
+schema and the values it is installed with are written from it, until
+core can read a data definition as the schema
+([decision](decisions.md#a-config-object-is-described-by-its-resource)):
 
-- **The constraint at the root**, `constraints: {FullyValidatable: ~}`
-  on the object's own entry. A part whose type is named by its data,
-  such as `third_party_settings` typed `<owner>.third_party.[%key]`,
-  answers to the type it resolves to: each mounting module's mapping
-  says `FullyValidatable` too, or its keys are held as before.
-- **A type on every key**, as any schema needs: config validation lets
-  data no schema describes through without a word.
-- **Every key stored.** A key the object leaves out is refused ("'notes'
-  is a required key.") unless it says `requiredKey: false`, so the
-  module's `config/install` carries every key, an empty one as `~`,
-  `''` or `[]`.
-- **`nullable: true` on each key that may hold nothing**, and only
-  there: null anywhere else is refused, by core and by the resource,
-  which holds such a key always ([decision](decisions.md#a-key-its-storage-always-holds)).
-  A text that may be left blank is `nullable: true`; a sequence is
-  never null, and stores `[]`.
-- **A constraint on a leaf is optional.** Core's own types carry some
-  (`email`, `label`); the resource's constraints are the rule at every
-  door, and `prepare()` holds the stored object to the schema's as
-  well, so a constraint written in both says the same thing twice and
-  keeps them in step by hand.
+```bash
+drush data_surface:config-schema --module=my_module
+drush data_surface:config-schema --module=my_module --write
+```
 
-To check a stored object, ask core's typed config, with the language
-code a translatable value needs (the storage writes it):
-`\Drupal::service('config.typed')->get('<name>')->validate()` answers no
-violation. The test module's opening hours, whose recipes are
-[Common settings recipes](recipes.md), store a text that may be left
-blank and a door code that may be cleared, and nothing else may hold
-null:
+The first writes nothing: it prints how each file differs from what the
+resources declare, as a unified diff, and fails when one does, so a
+check can run it. The second writes them; commit what it writes. Without
+`--module` it names every module owning a resource stored in a simple
+config object, or writing an entry for one. For each such resource it
+writes:
+
+- **The object's entry** in `config/schema/<module>.schema.yml`, a
+  `config_object` that is fully validatable, its label kept from the
+  entry it replaces (the resource has none), and its mapping in
+  declaration order.
+- **Each key** typed from its definition (`string`, `email`, `integer`,
+  `float`, `boolean`, `uri`, `timestamp`, or the primitive its typed
+  data class holds; a multi-line string is a `string`), labeled with the
+  label its owner gave it, whatever an alter reworded.
+- **`nullable: true`** where null clears, by the three-way rule: on an
+  optional key, a single value or a list, unless it is a secret or the
+  storage always holds it; and on a required single value installed
+  holding nothing. A map holds its keys. The storage subclass names the
+  optional keys it always holds, by dotted path, beside the object:
+
+  ```php
+  final class DoorsStorage extends ConfigObjectStorage {
+
+    public const CONFIG = 'data_surface_examples.doors';
+
+    public const ALWAYS_HELD = ['badges', 'greeters'];
+
+  }
+  ```
+- **The bounds and patterns a schema can carry**: `Length`, `Range`,
+  `Regex`, `Count` and `NotBlank`, their messages left to the resource.
+  A list of values (`Choice`, `LabeledChoice`) is not written: a value a
+  list no longer offers is kept as [stale](semantics.md#stale-values-the-third-state)
+  and must not make the object refuse a write to another key. A key a
+  rule may rule out carries none: the rule holds only where the key
+  applies.
+- **A child** as a `mapping` of its keys, a collection as a `sequence` of
+  them, keys from the site as a `sequence` of what each entry is (each
+  key of an entry free to be absent, since an entry is stored as it was
+  accepted), and variants as a type their deciding key names,
+  `<config>.<key>.[%parent.<deciding key>]`, each variant's mapping
+  written in the schema file of the module that declares it.
+- **The install file**, `config/install/<config>.yml`: every key the
+  object stores, in declaration order, the value the file already gives
+  it (what a site starts from, which may differ from the default), the
+  declared default for a key the file does not give, and nothing (`~`,
+  or `[]` for a list) for one with neither.
+
+The other entries in the file, and the comments above an entry, are
+kept as they are; each entry written says so on the line above it. A
+test holds the shipped ones to it, `ConfigSchemaDriftTest`, which also
+writes the test modules' files (they are never installed on a site) when
+run with `DATA_SURFACE_CONFIG_SCHEMA_WRITE=1`.
+
+What fully validatable asks, which the generated schema does: a type on
+every key, since config validation lets data no schema describes through
+without a word; every key stored ("'notes' is a required key.") unless
+it says `requiredKey: false`, so the install file carries every key;
+`nullable: true` on each key that may hold nothing, and only there; a
+sequence stores `[]`, and `nullable: true` on one only lets a schema
+written for an object that was not fully validatable keep what it said.
+To check a stored object, ask core's typed config:
+`\Drupal::service('config.typed')->get('<name>')->validate()` answers
+no violation. The test module's opening hours, whose recipes are
+[Common settings recipes](recipes.md), always hold the after-hours flag,
+the keywords and the holidays, which `OpeningHoursStorage::ALWAYS_HELD`
+names, and may hold nothing for the notes and for the door code, which
+is installed holding nothing:
 
 <!-- yaml: tests/modules/data_surface_resource_test/config/schema/data_surface_resource_test.schema.yml#data_surface_resource_test.opening_hours -->
 
@@ -121,17 +169,24 @@ data_surface_resource_test.opening_hours:
     opens:
       type: string
       label: 'Opens at'
+      constraints:
+        Regex:
+          pattern: '/^([01]\d|2[0-3]):[0-5]\d$/D'
     closes:
       type: integer
       label: 'Closes at, in minutes after midnight'
+      constraints:
+        Range:
+          min: 721
+          max: 1439
     days:
       type: sequence
       label: 'Days open'
       sequence:
         type: string
-        label: 'Day'
+        label: 'Days open'
     notes:
-      type: text
+      type: string
       label: 'Notes'
       nullable: true
     after_hours:
@@ -146,13 +201,13 @@ data_surface_resource_test.opening_hours:
       label: 'After-hours days'
       sequence:
         type: string
-        label: 'Day'
+        label: 'After-hours days'
     keywords:
       type: sequence
       label: 'Keywords'
       sequence:
         type: string
-        label: 'Keyword'
+        label: 'Keywords'
     holidays:
       type: string
       label: 'On public holidays'
@@ -162,89 +217,120 @@ The values are stored as the resource accepted them, key for key: an
 attached structure is the map at its key, and the variants at a key
 are the map of the variant the deciding key chose.
 
+### A schema the module did not generate
+
+Core's `node.type.*`, or an adopter's schema written by hand, says what
+storage refuses, and a resource stored to it must not advertise more. A
+storage holding what it writes to a config schema implements
+`Resource\HeldToConfigSchemaInterface`, as `ConfigObjectStorage` does
+and as the node type demo's `NodeTypeStorage` does for `node.type.*`,
+most simply with `Storage\HeldToConfigSchemaTrait`, and the build asks it
+once per resource and context. It holds each key to what the schema
+states for it:
+
+- **Type**: the same primitive (an integer where the schema says
+  `float`), a map where it says a mapping, a list where it says a
+  sequence; a key the schema does not describe is refused too.
+- **Nullability**: under a fully validatable root, a key the schema does
+  not call nullable must hold a value, required or always held. A storage
+  that knows which keys those are says so (`KnowsClearableKeysInterface`),
+  as `ConfigObjectStorage` and `NodeTypeStorage` do from the schema.
+- **Constraints**: `Regex` (either way it matches), `Length`, `Range`,
+  `Choice`, `Count`, `NotBlank` and `Email`, each implied by the
+  resource's own constraint of that name, or by a choice list every
+  value of which passes it. `NotBlank` with `allowNull` is implied by
+  the three-way rule itself, since an empty string is nothing, which
+  clears. Any other constraint is not read, a pattern other than the
+  schema's (or the schema's with `D` added) is read as wider, and a type
+  named by its data otherwise than by the deciding key or `[%key]` is
+  not followed.
+
+Where the resource is wider, the build refuses it, naming each key:
+
+```
+The schema_test.narrowed resource advertises more than
+data_surface_schema_test.narrowed, the config schema
+Drupal\data_surface_schema_test\Storage\NarrowedStorage holds what it
+stores to, so storage would refuse what every door offers. Where:
+"code": the schema refuses a value that does not match /^[a-z0-9_]+$/,
+which the resource does not; "limit": it may be more than 10, which the
+schema refuses; ...
+```
+
+Narrow the resource to what the schema states: the node type resource
+states core's patterns for the name (a label refuses control
+characters), the description and the help (text keeps line breaks and
+tabs), and its storage says from the schema that the two booleans always
+hold a value. A generated schema passes by construction; one generated
+before the resource changed is refused until it is written again, and
+the command builds the resource without this check, since the schema on
+disk is what it replaces.
+
 ### Keys another module mounts
 
 An alter's keys are mounted under `third_party_settings.<module>`
 ([Alters](resources.md#alters)), and on a simple config object core
 describes no such key: the owner declares it, and each module that
-mounts there describes its own part. The convention is the one the
-examples use, a sequence whose type is named by the module key:
+mounts there describes its own part. Generated, the owner's schema gains
+`third_party_settings` when a module mounting there is on while it is
+written, a sequence whose type is named by the module key, and the
+mounting module's schema gains its part, written by the same command
+for that module, fully validatable, each key free to be absent, since a
+mounted key is stored only once it is sent. Example 3's, from the
+compliance module:
 
 ```yaml
-# The owner, in its config/schema/<owner>.schema.yml:
-my_module.settings:
-  type: config_object
-  mapping:
-    # ... the resource's own keys ...
-    third_party_settings:
-      type: sequence
-      label: 'Third party settings'
-      requiredKey: false
-      sequence:
-        type: my_module.settings.third_party.[%key]
+# The owner, data_surface_examples.registration_step3:
+third_party_settings:
+  type: sequence
+  label: 'Third party settings'
+  requiredKey: false
+  sequence:
+    type: 'data_surface_examples.registration_step3.third_party.[%key]'
+```
 
-# The module that mounts, in its config/schema/<module>.schema.yml:
-my_module.settings.third_party.other_module:
+<!-- code: modules/data_surface_examples_compliance/config/schema/data_surface_examples_compliance.schema.yml -->
+
+```yaml
+# Generated from the registration.step3 resource by drush data_surface:config-schema.
+data_surface_examples.registration_step3.third_party.data_surface_examples_compliance:
   type: mapping
-  label: 'Other module settings'
+  label: 'Compliance'
+  constraints:
+    FullyValidatable: ~
   mapping:
     license:
       type: string
       label: 'Event license'
+      nullable: true
+      requiredKey: false
+      constraints:
+        Regex:
+          pattern: '/^\d{4}$/D'
+    stewards:
+      type: integer
+      label: 'Stewards'
+      requiredKey: false
 ```
 
-Config validation lets data no schema describes through without a word,
-so `ConfigObjectStorage` checks the mounts itself: a module whose
-settings resolve to no type is refused under `third_party_settings`,
-naming the module; an owner that declares no `third_party_settings` at
-all is refused by the schema under that key. `data_surface_examples`
-declares `data_surface_examples.registration.third_party.[%key]` and
-`data_surface_examples_compliance` its part.
-
-A structure an alter attaches at its mount is described the same way:
-its keys are the mount's, so the mounting module's mapping lists them,
-and a mapping type of the structure's keys declared once serves every
-site that stores it ([Reusing a structure](resources.md#reusing-a-structure-from-another-module)).
-The test module's `data_surface_resource_test.seating` is one, used by
-the venue's `seating`, the hall's `chairs` and the hall's mount.
+A schema written by hand follows the same convention. Config validation
+lets data no schema describes through without a word, so
+`ConfigObjectStorage` checks the mounts itself: a module whose settings
+resolve to no type is refused under `third_party_settings`, naming the
+module; an owner that declares no `third_party_settings` at all is
+refused by the schema under that key. A structure an alter attaches at
+its mount is written the same way, its keys the mount's
+([Reusing a structure](resources.md#reusing-a-structure-from-another-module)).
 
 ### Keys a mixed-in structure brings
 
 A structure [mixed in](resources.md#mixins) stores nothing itself
 either, and its members are the owner's keys, stored flat beside the
-owner's own, so the owner's config schema lists them among its own, as
-any key it declares. A mapping of them cannot be inherited: a simple
-config object's mapping extends `config_object` already, and a mapping
-takes one parent. So the owner repeats the members, and a comment
-naming the structure keeps the two in step; whatever attaches the same
-structure uses one mapping type of its keys, as for any structure
-attached:
-
-```yaml
-# The owner, which mixes the timestamps in:
-data_surface_resource_test.journal:
-  type: config_object
-  mapping:
-    title:
-      type: string
-      label: 'Title'
-    # Mixed in from resource_test.timestamps.
-    created:
-      type: integer
-      label: 'Created'
-      nullable: true
-    changed:
-      type: integer
-      label: 'Changed'
-      nullable: true
-
-# Another, which attaches them under a key:
-data_surface_resource_test.ledger:
-  type: config_object
-  mapping:
-    stamps:
-      type: data_surface_resource_test.timestamps
-```
+owner's own, so the owner's schema lists them among its own, as any key
+it declares, and the generator writes them so. A schema written by hand
+cannot inherit a mapping of them (a simple config object's mapping
+extends `config_object` already, and a mapping takes one parent), so it
+repeats the members.
 
 A member the structure's access omits for the account writing is kept
 as stored, at the owner's level or inside a child the owner stores.

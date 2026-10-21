@@ -94,6 +94,24 @@ final class DefinitionMetadata {
   protected const ALWAYS_HELD_KEY = 'data_surface_always_held';
 
   /**
+   * The definition array key holding what each entry from the site is.
+   *
+   * Written by the build step on the map addEach() or attachEach()
+   * declared: the entries are the site's, so a reader that describes the
+   * map whatever the site lists (its config schema) reads the entry here.
+   */
+  protected const EACH_KEY = 'data_surface_each';
+
+  /**
+   * The definition array key holding the label the owner gave a key.
+   *
+   * Written when an alter rewords a key it does not own, so what
+   * describes the owner's own storage (its config schema) reads the
+   * owner's words, not those of whichever modules were on.
+   */
+  protected const OWN_LABEL_KEY = 'data_surface_own_label';
+
+  /**
    * Declares the value a definition starts from.
    *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
@@ -506,6 +524,73 @@ final class DefinitionMetadata {
     return $definition instanceof \ArrayAccess
       && $definition->offsetExists(static::ALWAYS_HELD_KEY)
       && (bool) $definition->offsetGet(static::ALWAYS_HELD_KEY);
+  }
+
+  /**
+   * Says what each entry of a map of keys from the site is.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The map addEach() or attachEach() declared.
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface|string $each
+   *   The definition every entry has, for addEach(); the structure every
+   *   entry is, by class, for attachEach().
+   *
+   * @see docs/decisions.md#keys-that-come-from-the-site
+   */
+  public static function setEach(DataDefinitionInterface $definition, DataDefinitionInterface|string $each): void {
+    static::arrayAccess($definition)->offsetSet(static::EACH_KEY, $each);
+  }
+
+  /**
+   * Reads what each entry of a map of keys from the site is.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The definition to read.
+   *
+   * @return \Drupal\Core\TypedData\DataDefinitionInterface|string|null
+   *   The definition every entry has, or the structure every entry is,
+   *   by class; NULL for any other key.
+   */
+  public static function eachOf(DataDefinitionInterface $definition): DataDefinitionInterface|string|null {
+    if (!$definition instanceof \ArrayAccess || !$definition->offsetExists(static::EACH_KEY)) {
+      return NULL;
+    }
+    $each = $definition->offsetGet(static::EACH_KEY);
+    return $each instanceof DataDefinitionInterface || is_string($each) ? $each : NULL;
+  }
+
+  /**
+   * Keeps the label a key's owner gave it, before another module rewords it.
+   *
+   * The first call wins: an owner's label is kept once, whichever alter
+   * rewords it after.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The key's definition.
+   */
+  public static function keepOwnLabel(DataDefinitionInterface $definition): void {
+    $access = static::arrayAccess($definition);
+    if (!$access->offsetExists(static::OWN_LABEL_KEY)) {
+      $access->offsetSet(static::OWN_LABEL_KEY, $definition->getLabel());
+    }
+  }
+
+  /**
+   * Reads the label a key's owner gave it.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The definition to read.
+   *
+   * @return string|\Stringable|null
+   *   The owner's label, which another module has since reworded; the
+   *   label it has, when none has.
+   */
+  public static function ownLabel(DataDefinitionInterface $definition): string|\Stringable|null {
+    if ($definition instanceof \ArrayAccess && $definition->offsetExists(static::OWN_LABEL_KEY)) {
+      $label = $definition->offsetGet(static::OWN_LABEL_KEY);
+      return is_string($label) || $label instanceof \Stringable ? $label : NULL;
+    }
+    return $definition->getLabel();
   }
 
   /**

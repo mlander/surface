@@ -58,8 +58,7 @@ final class GalleryResource implements ResourceInterface {
     $inputs->attach('south', WallStructure::class)
       ->setLabel(t('South wall'));
     $inputs->add('medium', 'string', t('Medium'), default: 'oil')
-      ->setRequired(TRUE)
-      ->addConstraint('Choice', ['choices' => ['oil', 'print']]);
+      ->setRequired(TRUE);
     $inputs->attachVariants('finish', by: 'medium')
       ->setLabel(t('Finish'));
     $inputs->attachEach('rooms', RoomStructure::class, from: GalleryRooms::class)

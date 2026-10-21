@@ -281,10 +281,10 @@ class ReadToolTest extends DataSurfaceKernelTestBase {
     $this->assertSame('Configure registration (step 3): the stored values were read, and nothing was written.', $read['message']);
     $this->assertSame([
       'title' => 'Spring meetup',
-      'capacity' => 50,
       'open' => TRUE,
       'venue' => 'riverside',
       'room' => 'riverside_main',
+      'capacity' => 50,
       'pricing' => 'free',
       'ticket' => ['note' => ''],
       'contact' => ['email' => 'events@example.com', 'phone' => ''],

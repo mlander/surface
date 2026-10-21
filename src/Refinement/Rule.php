@@ -6,6 +6,7 @@ namespace Drupal\data_surface\Refinement;
 
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
+use Drupal\data_surface\ConstraintMessages;
 use Drupal\data_surface\Contract\PatternTranslation;
 
 /**
@@ -28,9 +29,11 @@ use Drupal\data_surface\Contract\PatternTranslation;
  * Schema spelling, so the full schema states the rule as a conditional
  * without running it:
  *
- * - constrain('Range', [min, max]): raises the minimum, lowers the
- *   maximum; `minimum`, `maximum`. `Length` and `Count` the same, for a
- *   text's length and a list's items; `minLength`, `maxItems` and so on.
+ * - constrain('Range', [min, max, message]): raises the minimum, lowers
+ *   the maximum; `minimum`, `maximum`. `Length` and `Count` the same,
+ *   for a text's length and a list's items; `minLength`, `maxItems` and
+ *   so on. The message, if any, is what a value outside the rule's
+ *   bound is refused with.
  * - constrain('Choice' or 'LabeledChoice', [choices]): keeps only these
  *   of the key's own values; the `oneOf` of what stays.
  * - constrain('Regex', [pattern, message]): a pattern, where the key has
@@ -59,12 +62,25 @@ final class Rule {
    * The constraints a rule may add or tighten, and the options each takes.
    */
   public const CONSTRAINTS = [
-    'Range' => ['min', 'max'],
-    'Length' => ['min', 'max'],
-    'Count' => ['min', 'max'],
+    'Range' => ['min', 'max', 'message'],
+    'Length' => ['min', 'max', 'message'],
+    'Count' => ['min', 'max', 'message'],
     'Choice' => ['choices'],
     'LabeledChoice' => ['choices'],
     'Regex' => ['pattern', 'message'],
+  ];
+
+  /**
+   * The message options a bound's message is written under, by bound.
+   *
+   * Symfony's: `both` is the one a range holding both bounds reports in,
+   * whichever side refuses (Symfony refuses the other two beside it), and
+   * the one a length or count reports in when both bounds are one value.
+   */
+  protected const BOUND_MESSAGES = [
+    'Range' => ['min' => 'minMessage', 'max' => 'maxMessage', 'both' => 'notInRangeMessage'],
+    'Length' => ['min' => 'minMessage', 'max' => 'maxMessage', 'both' => 'exactMessage'],
+    'Count' => ['min' => 'minMessage', 'max' => 'maxMessage', 'both' => 'exactMessage'],
   ];
 
   /**
@@ -124,10 +140,37 @@ final class Rule {
   }
 
   /**
+   * Says when the effects apply, by when they do not: unless it holds.
+   *
+   * The same rule as when(Condition::not($condition)), read without the
+   * double negative: "the door code does not apply unless after-hours
+   * access is on".
+   *
+   * @code
+   * $inputs->narrow('door_code')
+   *   ->unless(Condition::equals('after_hours', TRUE))
+   *   ->doesNotApply();
+   * @endcode
+   *
+   * @param \Drupal\data_surface\Refinement\Condition $condition
+   *   The condition under which the effects do not apply, on keys of the
+   *   same frame.
+   *
+   * @return $this
+   *
+   * @throws \LogicException
+   *   When the rule has a condition already, as when() does.
+   */
+  public function unless(Condition $condition): static {
+    return $this->when(Condition::not($condition));
+  }
+
+  /**
    * Adds or tightens a constraint while the condition holds.
    *
    * @param string $constraint
-   *   Range, Length or Count (min and max); Choice or LabeledChoice
+   *   Range, Length or Count (min and max, at least one, and a message a
+   *   value outside them is refused with); Choice or LabeledChoice
    *   (choices: the values of the key's own list to keep); Regex (a
    *   pattern, and the message that explains it).
    * @param array $options
@@ -146,7 +189,15 @@ final class Rule {
     }
     $unknown = array_diff(array_keys($options), self::CONSTRAINTS[$constraint]);
     if ($unknown !== [] || $options === []) {
-      throw new \InvalidArgumentException(sprintf('narrow("%s")->constrain(\'%s\') takes %s, and was given %s.', $this->key, $constraint, implode(' and ', self::CONSTRAINTS[$constraint]), $options === [] ? 'nothing' : implode(', ', array_keys($options))));
+      $takes = self::CONSTRAINTS[$constraint];
+      $last = array_pop($takes);
+      throw new \InvalidArgumentException(sprintf('narrow("%s")->constrain(\'%s\') takes %s, and was given %s.', $this->key, $constraint, $takes === [] ? $last : implode(', ', $takes) . ' and ' . $last, $options === [] ? 'nothing' : implode(', ', array_keys($options))));
+    }
+    if (isset(self::BOUND_MESSAGES[$constraint]) && !array_key_exists('min', $options) && !array_key_exists('max', $options)) {
+      throw new \InvalidArgumentException(sprintf('narrow("%s")->constrain(\'%s\') was given a message and no bound: its message is what a value outside the rule\'s min or max is refused with.', $this->key, $constraint));
+    }
+    if (array_key_exists('message', $options) && (!is_string($options['message']) && !$options['message'] instanceof \Stringable || (string) $options['message'] === '')) {
+      throw new \InvalidArgumentException(sprintf('narrow("%s")->constrain(\'%s\') takes a message that says something, written with t().', $this->key, $constraint));
     }
     foreach (['min', 'max'] as $bound) {
       if (array_key_exists($bound, $options) && (!is_int($options[$bound]) && !is_float($options[$bound]))) {
@@ -349,6 +400,7 @@ final class Rule {
       }
       $existing = is_array($constraints[$name] ?? NULL) ? $constraints[$name] : [];
       $bounds = $options;
+      unset($bounds['message']);
       if (!$written) {
         if (isset($options['min'], $existing['min'])) {
           $bounds['min'] = max($existing['min'], $options['min']);
@@ -357,7 +409,11 @@ final class Rule {
           $bounds['max'] = min($existing['max'], $options['max']);
         }
       }
-      $definition->addConstraint($name, array_replace($existing, $bounds));
+      $merged = array_replace($existing, $bounds);
+      if (isset($options['message'])) {
+        $merged = array_replace($merged, $this->boundMessages($name, $options, $existing, $merged, $written));
+      }
+      $definition->addConstraint($name, $merged);
     }
     // The rule says why only where it did something: a bound the key
     // already held at or inside the rule's leaves the key's own words.
@@ -371,6 +427,59 @@ final class Rule {
       }
     }
     return $definition;
+  }
+
+  /**
+   * Writes a bound's message under the options Symfony reads it from.
+   *
+   * One message on the rule, written for each bound the rule's own
+   * stands for (every one as written; tightening, one tighter than the
+   * key's), so a bound the rule left as the key had it keeps the key's
+   * message: Symfony's message for that side, or, for a range holding
+   * both bounds, the one message it reports either side in; and a
+   * length's or count's message for both bounds at one value. Handed to
+   * the validator as its source string, as a declared constraint's
+   * message is, for core's translator to translate.
+   *
+   * Decision: see docs/decisions.md#a-rule-declared-as-data.
+   *
+   * @param string $name
+   *   Range, Length or Count.
+   * @param array $options
+   *   The rule's options, its message among them.
+   * @param array $existing
+   *   The constraint's options on the key before the rule.
+   * @param array $merged
+   *   The constraint's options with the rule's bounds written.
+   * @param bool $written
+   *   Whether the effects are written as they are.
+   *
+   * @return array<string, mixed>
+   *   The message options to write.
+   */
+  protected function boundMessages(string $name, array $options, array $existing, array $merged, bool $written): array {
+    $names = self::BOUND_MESSAGES[$name];
+    $message = ConstraintMessages::source($options['message']);
+    $standing = [];
+    foreach (['min', 'max'] as $bound) {
+      if (isset($options[$bound]) && ($written || !isset($existing[$bound]) || ($bound === 'min' ? $options[$bound] > $existing[$bound] : $options[$bound] < $existing[$bound]))) {
+        $standing[] = $bound;
+      }
+    }
+    if ($standing === []) {
+      return [];
+    }
+    if ($name === 'Range' && isset($merged['min'], $merged['max'])) {
+      return [$names['both'] => $message];
+    }
+    $messages = [];
+    foreach ($standing as $bound) {
+      $messages[$names[$bound]] = $message;
+    }
+    if ($name !== 'Range') {
+      $messages[$names['both']] = $message;
+    }
+    return $messages;
   }
 
   /**

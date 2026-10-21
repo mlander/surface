@@ -76,8 +76,9 @@ it is fixed. Reach for `narrow()` only when another key's value decides.
 ## A multi-select
 
 A list whose item is a choice: the `LabeledChoice` goes on the item, and
-the list is labeled and required as any key is. Up to twelve choices it
-is drawn as checkboxes.
+`addList()` declares the list around it, labeled, defaulted and required
+as `add()` declares any key. Up to twelve choices it is drawn as
+checkboxes.
 
 <!-- excerpt: tests/modules/data_surface_resource_test/src/Resource/Library/OpeningHoursResource.php -->
 
@@ -94,11 +95,13 @@ $day = DataDefinition::create('string')
       'sun' => t('Sunday'),
     ],
   ]);
-$days = (new ListDataDefinition(['type' => 'list'], $day))
-  ->setLabel(t('Days open'))
+$inputs->addList('days', $day, t('Days open'), default: ['mon', 'tue', 'wed', 'thu', 'fri'])
   ->setRequired(TRUE);
-$inputs->addDefinition('days', $days, default: ['mon', 'tue', 'wed', 'thu', 'fri']);
 ```
+
+`addList()` takes the item as a type name (`'string'`), a shape's class,
+or a definition, as here, when the item has constraints of its own, and
+returns the list for the rest of the core setters.
 
 The form draws checkboxes, one per day, the served contract says
 `x-surface.widget: "checkboxes"`, React draws its checkboxes, and the
@@ -137,7 +140,7 @@ placeholder, and the served contract says `x-surface.widget:
 The door code means something only while after-hours access is on, and
 then it must be given. Declare it required in `defineInputs()`, as it is
 wherever it applies, and say where it does not apply with a declared
-rule:
+rule: it does not apply `unless()` after-hours access is on.
 
 <!-- excerpt: tests/modules/data_surface_resource_test/src/Resource/Library/OpeningHoursResource.php -->
 
@@ -147,11 +150,17 @@ $inputs->add('door_code', 'string', t('Door code'))
   ->setRequired(TRUE)
   ->addConstraint('Length', ['min' => 4, 'max' => 12]);
 $inputs->narrow('door_code')
-  ->when(Condition::not(Condition::equals('after_hours', TRUE)))
+  ->unless(Condition::equals('after_hours', TRUE))
   ->doesNotApply();
 ```
 
 Each class's `use` line: [Namespaces](concepts.md#namespaces).
+
+`unless($c)` is `when(Condition::not($c))`, read without the double
+negative: the door code does not apply unless after-hours access is on.
+Both schemas state it as `when()` would, and the conditional requiring the
+code wherever it applies tests `after_hours` itself, with no `not` around
+a `not`.
 
 Not `->require()` in a rule: required where it applies is what
 `defineInputs()` already says, a key that does not apply is never
@@ -177,16 +186,14 @@ not apply is never validated, so the condition stays the rule's alone.
 <!-- excerpt: tests/modules/data_surface_resource_test/src/Resource/Library/OpeningHoursResource.php -->
 
 ```php
-$late = (new ListDataDefinition(['type' => 'list'], $day))
-  ->setLabel(t('After-hours days'))
+$inputs->addList('late_days', $day, t('After-hours days'), default: [])
   ->setRequired(TRUE)
   ->addConstraint('Count', [
     'min' => 1,
     'minMessage' => t('Choose at least one day for after-hours access.'),
   ]);
-$inputs->addDefinition('late_days', $late, default: []);
 $inputs->narrow('late_days')
-  ->when(Condition::not(Condition::equals('after_hours', TRUE)))
+  ->unless(Condition::equals('after_hours', TRUE))
   ->doesNotApply();
 ```
 
@@ -194,10 +201,10 @@ With after-hours access on and no day checked, every door refuses it
 ("Choose at least one day for after-hours access."), and the full
 schema says `minItems: 1`. A list that always applies, and needs an item only
 while another key holds a value, takes the count in the rule instead,
-`->constrain('Count', ['min' => 1])` after its `->when()`
-([Declaring a rule](refinement.md#declaring-a-rule)); its refusal is
-core's sentence with the condition after it, since a rule's `Count`
-carries no message.
+`->constrain('Count', ['min' => 1, 'message' => t('...')])` after its
+`->when()` ([Declaring a rule](refinement.md#declaring-a-rule)); its
+refusal is the rule's message, with the condition after it, or core's
+sentence when the rule gives none.
 
 **A key left out keeps what is stored**
 ([decision](decisions.md#absent-keeps-null-clears)), and that meets
@@ -214,14 +221,12 @@ A list whose item is a plain string, such as keywords, is a list to the
 tool, both schemas and React, and on the form too: the stock list widget
 draws it as rows, one text field per keyword, with "Remove" beside each
 and "Add another" under them, each rebuilding the list over AJAX. Nothing
-to declare but the list:
+to declare but the list, its item a type name:
 
 <!-- excerpt: tests/modules/data_surface_resource_test/src/Resource/Library/OpeningHoursResource.php -->
 
 ```php
-$keywords = (new ListDataDefinition(['type' => 'list'], DataDefinition::create('string')))
-  ->setLabel(t('Keywords'));
-$inputs->addDefinition('keywords', $keywords, default: []);
+$inputs->addList('keywords', 'string', t('Keywords'), default: []);
 ```
 
 A row left empty is dropped, as the pipeline drops an empty item; what a

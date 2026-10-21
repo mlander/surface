@@ -106,7 +106,7 @@ $inputs->add('handling', 'string', t('Handling'))
   ->setSetting('widget', 'radios')
   ->addConstraint('LabeledChoice', ['choices' => [...]]);
 
-$days = (new ListDataDefinition(['type' => 'list'], $day))
+$inputs->addList('days', $day, t('Days'))
   ->setSetting('widget', 'select');   // a multiple select, at any length
 
 $inputs->add('opens', 'string', t('Opens at'))

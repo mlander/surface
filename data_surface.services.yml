@@ -73,6 +73,11 @@ services:
   data_surface.contract_baselines:
     class: Drupal\data_surface\Contract\ContractBaselines
     arguments: ['@data_surface.resource_registry', '@data_surface.resources', '@data_surface.contract_emitter', '@extension.list.module']
+  # The config schema and install file of every resource stored in a simple
+  # config object, written from the resource (drush data_surface:config-schema).
+  data_surface.config_schema:
+    class: Drupal\data_surface\Storage\ConfigSchemaGenerator
+    arguments: ['@data_surface.resource_registry', '@data_surface.resources', '@extension.list.module', '%app.root%']
   # Every discovered resource and structure, its operations, alters and
   # variants, as one array: what docs/catalog.md is generated from.
   data_surface.resource_catalog:

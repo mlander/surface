@@ -7,7 +7,6 @@ namespace Drupal\data_surface_address\Resource;
 use CommerceGuys\Addressing\AddressFormat\AddressField;
 use CommerceGuys\Addressing\AddressFormat\FieldOverride;
 use Drupal\Core\TypedData\DataDefinition;
-use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\data_surface\Resource\Attribute\Resource;
 use Drupal\data_surface\Resource\Attribute\Variant;
@@ -52,14 +51,12 @@ final class AddressFieldSettingsResource implements ResourceInterface {
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
     // The item says what one country code is, and the Country constraint
-    // is the whole of that. Core takes a list's item definition in the
-    // constructor rather than through a setter, so the list is built
-    // around its item and described fluently after.
-    $inputs->addDefinition('available_countries', (new ListDataDefinition(['type' => 'list'], DataDefinition::create('string')
+    // is the whole of that.
+    $country = DataDefinition::create('string')
       ->setLabel(t('Country'))
-      ->addConstraint('Country', [])))
-      ->setLabel(t('Available countries'))
-      ->setDescription(t('Leave empty for all countries.')), default: []);
+      ->addConstraint('Country', []);
+    $inputs->addList('available_countries', $country, t('Available countries'), default: [])
+      ->setDescription(t('Leave empty for all countries.'));
 
     // Locked languages are excluded by default, which is what the address
     // module's own settings form does by hand: "not specified" and "not

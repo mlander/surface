@@ -129,11 +129,11 @@
                         "oneOf": [
                             {
                                 "const": "free",
-                                "title": "free"
+                                "title": "Free"
                             },
                             {
                                 "const": "paid",
-                                "title": "paid"
+                                "title": "Paid"
                             }
                         ],
                         "default": "free",

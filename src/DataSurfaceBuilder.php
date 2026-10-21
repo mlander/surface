@@ -464,7 +464,7 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
   /**
    * {@inheritdoc}
    */
-  public function attachVariants(string $key, string $by, array $variants): static {
+  public function attachVariants(string $key, string $by, array $variants, array $labels = []): static {
     $this->assertMutable();
     $this->assertNotNested($key);
     if ($by === $key) {
@@ -477,25 +477,29 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
     $ids = array_map('strval', array_keys($variants));
     $before = DataSurface::deepClone($deciding);
     $set = ChoiceSet::of($deciding);
+    // Decision: see docs/decisions.md#variants-not-slots.
     if ($set === NULL) {
       // The complete set of values the variants can be chosen by is part
       // of what the key advertises, so the deciding key says it in its own
-      // vocabulary.
-      $deciding->addConstraint('Choice', ['choices' => $ids]);
+      // vocabulary, in the variants' words when they give any.
+      if ($labels === []) {
+        $deciding->addConstraint('Choice', ['choices' => $ids]);
+      }
+      else {
+        $named = [];
+        foreach ($ids as $id) {
+          $named[$id] = $labels[$id] ?? $id;
+        }
+        (new ChoiceSet('LabeledChoice', $ids, $named))->applyTo($deciding);
+      }
     }
     else {
-      // A variant its deciding key never allowed would be a shape nobody
-      // can reach, and declaring one is a mistake worth hearing now.
-      $unoffered = array_diff($ids, array_map('strval', $set->values));
-      if ($unoffered !== []) {
-        throw new \LogicException(sprintf(
-          'The variants at "%s" include the %s %s, which "%s" does not allow: a variant its deciding key cannot choose would never be reached.',
-          $key,
-          implode(', ', $unoffered),
-          count($unoffered) === 1 ? 'variant' : 'variants',
-          $by,
-        ));
-      }
+      // A list the key declares narrows the variants: one whose value it
+      // leaves out is not offered, and a value no variant is offered for
+      // here (one withheld from this account) leaves the list.
+      $allowed = array_map('strval', $set->values);
+      $variants = array_intersect_key($variants, array_flip($allowed));
+      $ids = array_map('strval', array_keys($variants));
       $set->withValues(array_values(array_filter(
         $set->values,
         static fn (mixed $value): bool => in_array((string) $value, $ids, TRUE),

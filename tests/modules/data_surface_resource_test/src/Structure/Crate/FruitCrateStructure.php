@@ -18,7 +18,7 @@ use Drupal\data_surface\Resource\StructureInterface;
  * chosen.
  */
 #[Structure('resource_test.crate.fruit')]
-#[Variant(of: CrateStructure::class, at: 'contents_settings', for: 'fruit')]
+#[Variant(of: CrateStructure::class, at: 'contents_settings', for: 'fruit', label: 'Fruit')]
 final class FruitCrateStructure implements StructureInterface {
 
   /**

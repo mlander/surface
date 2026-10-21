@@ -18,7 +18,7 @@ React by `data_surface_react`) or the first resource's
 | --- | --- | --- | --- |
 | **1** Resource, `#[Resource]` | What thing do I want a form, a tool and a schema for? | Never: everything starts here. | `/admin/config/services/surface-newsletter`, `/surface-examples/1` |
 | **1** Operation, `#[Operation]` | How is it asked for, what does a call do (`description`), which permission gates it, and does a call create (`creates`), change nothing (`readOnly`) or destroy what is there (`destructive`)? ([Resources](resources.md#operations-add-edit-and-the-rest)) | Never: a route and a tool are made from one. On the class it needs no method; leave `creates`, `readOnly` and `destructive` out when a call does none of them; whether it is safe to repeat is derived. | `/admin/config/services/surface-newsletter`; read only, `/surface-examples/10/check` |
-| **1** Storage, `ConfigObjectStorage` | Where do its values live? | A settings page: subclass `ConfigObjectStorage`, name the config object, done. | `/admin/config/services/surface-newsletter` |
+| **1** Storage, `ConfigObjectStorage` | Where do its values live? | A settings page: subclass `ConfigObjectStorage`, name the config object, and write its config schema and install file from the resource with `drush data_surface:config-schema --write` ([Storage](storage.md#a-schema-generated-from-the-resource)), done. | `/admin/config/services/surface-newsletter` |
 | **1** `defineInputs()` and `add()` | What keys does it take, of what type, allowing what (a constraint), defaulting to what? | Never. | `/admin/config/services/surface-newsletter` |
 | Shape, `#[Shape]` | Is one value, such as an event license, asked for at several keys with the same type, pattern and words? ([Declaring a resource](declaring-a-resource.md#named-shapes)) | The value is asked for at one key: write its constraints there. | `/surface-examples/8/desk` |
 | Declared rule, `narrow()->when(Condition::...)` | Does one key narrow when another holds a value, by a condition a schema can state, such as no license, no more than a hundred? ([Refinement](refinement.md#declaring-a-rule)) | Declare the rule when its condition and effect fit the vocabulary; write a refiner when the effect must be computed (the stewards for a capacity, `ceil(capacity / 50)`) or the condition is runtime. | `/surface-examples/7` |
@@ -35,7 +35,7 @@ React by `data_surface_react`) or the first resource's
 | Variants, `attachVariants()`, `#[Variant]` | Does one key's value choose which further keys apply? | No answer changes which keys there are. | `/surface-examples/3` |
 | Collection, `attachList()` | Does it hold a list of repeated groups of keys? | Nothing repeats. | `/surface-examples/8/desk` |
 | Alter, `#[Alters]` | Am I adding keys or rules to a resource another module owns, attaching a structure of mine to it, or answering who may change or see it (`AltersAccessInterface`, asked after the owner's answer, the stricter standing)? ([Resources](resources.md#an-alters-answer)) | You own it: change the class. | `/surface-examples/4`; an access answer, `/surface-examples/10` with `data_surface_examples_workflow` |
-| Mounted keys and their config schema | Does my alter's module store keys on someone else's config object, or may another module's alter store keys on mine? Both sides declare config schema: the owner of a simple config object declares `third_party_settings` up front, a sequence typed by the module key, before any alter exists, and the mounting module declares its part ([Storage](storage.md#keys-another-module-mounts), [a whole alter](resources.md#a-whole-alter)). | You write no alter, and no other module will mount keys on your config object. An owner that skips it leaves every later alter needing an edit of the owner's schema; an owner that is a config entity declares nothing, since core describes its `third_party_settings`. | `/surface-examples/4` |
+| Mounted keys and their config schema | Does my alter's module store keys on someone else's config object, or may another module's alter store keys on mine? Both sides' config schema says so: the owner of a simple config object has `third_party_settings`, a sequence typed by the module key, and the mounting module its part; generated, each is written by `drush data_surface:config-schema --write` with the mounting module on ([Storage](storage.md#keys-another-module-mounts), [a whole alter](resources.md#a-whole-alter)). | You write no alter, and no other module will mount keys on your config object. An owner whose schema lacks it leaves every later alter refused until the owner's schema is written again; an owner that is a config entity declares nothing, since core describes its `third_party_settings`. | `/surface-examples/4` |
 | `describe()` and `extendChoices()` | Must my alter reword or place an owner's key, or offer one more value on its list? | Your alter only adds keys of its own. | `describe()`, `/surface-examples/4` |
 | Secret, `DefinitionMetadata::setSecret()` | Is a value write-only, such as an API key? | Every value may be read back. | - |
 | Examples, `DefinitionMetadata::setExamples()` | Should the form show what a valid value looks like? | The label says enough. | `/surface-examples/8/desk` |
@@ -91,6 +91,7 @@ refused.
 | `Condition` | `use Drupal\data_surface\Refinement\Condition;` |
 | `ConfigEntityStorage` | `use Drupal\data_surface\Pipeline\Storage\ConfigEntityStorage;` |
 | `ConfigObjectStorage` | `use Drupal\data_surface\Storage\ConfigObjectStorage;` |
+| `ConfigSchemaGenerator` | `use Drupal\data_surface\Storage\ConfigSchemaGenerator;` |
 | `DataSurfaceAccess` | `use Drupal\data_surface\DataSurfaceAccess;` |
 | `DataSurfaceBlockBase` | `use Drupal\data_surface\Plugin\Block\DataSurfaceBlockBase;` |
 | `DataSurfaceConditionBase` | `use Drupal\data_surface\Plugin\Condition\DataSurfaceConditionBase;` |
@@ -111,8 +112,11 @@ refused.
 | `DoesNotApply` | `use Drupal\data_surface\Refinement\DoesNotApply;` |
 | `FieldSettingsStorage` | `use Drupal\data_surface\Pipeline\Storage\FieldSettingsStorage;` |
 | `FieldSurfaceProviderInterface` | `use Drupal\data_surface\Form\FieldSurfaceProviderInterface;` |
+| `HeldToConfigSchemaInterface` | `use Drupal\data_surface\Resource\HeldToConfigSchemaInterface;` |
+| `HeldToConfigSchemaTrait` | `use Drupal\data_surface\Storage\HeldToConfigSchemaTrait;` |
 | `KeyedList` | `use Drupal\data_surface\Resource\KeyedList;` |
 | `KeysFromSiteInterface` | `use Drupal\data_surface\Resource\KeysFromSiteInterface;` |
+| `KnowsClearableKeysInterface` | `use Drupal\data_surface\Resource\KnowsClearableKeysInterface;` |
 | `NotEmitted` | `use Drupal\data_surface\Pipeline\NotEmitted;` |
 | `Operation` | `use Drupal\data_surface\Resource\Attribute\Operation;` |
 | `OperationAccessInterface` | `use Drupal\data_surface\Resource\OperationAccessInterface;` |

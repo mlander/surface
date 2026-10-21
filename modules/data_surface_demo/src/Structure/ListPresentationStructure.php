@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\data_surface_demo\Structure;
 
+use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\data_surface\Resource\Attribute\Structure;
 use Drupal\data_surface\Resource\Attribute\Variant;
 use Drupal\data_surface\Resource\BlueprintInterface;
@@ -19,7 +20,7 @@ use Drupal\data_surface\Resource\StructureInterface;
  * @see \Drupal\data_surface_demo\Structure\DemoBlockStructure
  */
 #[Structure('block.data_surface_demo.presentation.list')]
-#[Variant(of: DemoBlockStructure::class, at: 'presentation_settings', for: 'list')]
+#[Variant(of: DemoBlockStructure::class, at: 'presentation_settings', for: 'list', label: new TranslatableMarkup('List'))]
 final class ListPresentationStructure implements StructureInterface {
 
   /**

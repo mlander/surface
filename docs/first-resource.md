@@ -49,7 +49,9 @@ dependencies:
 
 The settings are a simple config object, so they are described the way
 any Drupal config is: a config schema, and the values the module ships
-with.
+with. You write neither by hand: once the resource in step 4 exists,
+`drush data_surface:config-schema --module=data_surface_first --write`
+writes both from it.
 
 <!-- yaml: modules/data_surface_first/config/schema/data_surface_first.schema.yml#data_surface_first.newsletter -->
 
@@ -57,10 +59,15 @@ with.
 data_surface_first.newsletter:
   type: config_object
   label: 'Newsletter settings'
+  constraints:
+    FullyValidatable: ~
   mapping:
     sender_name:
       type: string
       label: 'Sender name'
+      constraints:
+        Length:
+          max: 64
     sender_email:
       type: email
       label: 'Sender email'
@@ -70,13 +77,18 @@ data_surface_first.newsletter:
     max_recipients:
       type: integer
       label: 'Maximum recipients per send'
+      nullable: true
+      constraints:
+        Range:
+          min: 1
+          max: 10000
 ```
 
 <!-- code: modules/data_surface_first/config/install/data_surface_first.newsletter.yml -->
 
 ```yaml
 sender_name: 'The newsletter'
-sender_email: 'newsletter@example.com'
+sender_email: newsletter@example.com
 frequency: weekly
 max_recipients: 500
 ```

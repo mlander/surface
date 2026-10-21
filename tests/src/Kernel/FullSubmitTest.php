@@ -61,10 +61,10 @@ class FullSubmitTest extends DataSurfaceKernelTestBase {
    */
   protected const STORED = [
     'title' => 'Spring meetup',
-    'capacity' => 50,
     'open' => TRUE,
     'venue' => 'harbour',
     'room' => 'harbour_deck',
+    'capacity' => 50,
   ];
 
   /**

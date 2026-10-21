@@ -30,8 +30,7 @@ final class NoticeStructure implements StructureInterface {
       ->setRequired(TRUE)
       ->addConstraint('Choice', ['choices' => ['post', 'email']]);
     $inputs->add('cadence', 'string', 'Cadence', default: 'daily')
-      ->setRequired(TRUE)
-      ->addConstraint('Choice', ['choices' => ['daily', 'weekly']]);
+      ->setRequired(TRUE);
     $inputs->attach('address', NoticeAddressStructure::class)
       ->setLabel('Address');
     $inputs->attachVariants('schedule', by: 'cadence')

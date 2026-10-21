@@ -80,6 +80,13 @@ final class ShapeBlueprint implements BlueprintAdditionsInterface {
   /**
    * {@inheritdoc}
    */
+  public function addList(string $key, string|DataDefinitionInterface $item, string|\Stringable $label, mixed $default = NULL): ListDataDefinition {
+    throw $this->refused(sprintf('addList("%s")', $key));
+  }
+
+  /**
+   * {@inheritdoc}
+   */
   public function attach(string $key, string $child, array $reads = []): MapDataDefinition {
     throw $this->refused(sprintf('attach("%s")', $key));
   }

@@ -94,10 +94,20 @@ final class NodeTypeResource implements ResourceInterface {
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
     // Which content type this is.
+    // Core's schema stores the name as a label, which may not span lines
+    // or hold a control character, and the description and the help as
+    // text, which may hold line breaks and tabs and no other control
+    // character: said here too, so no door offers what the node type's
+    // schema refuses.
     $inputs->add('name', 'string', t('Name'))
       ->setDescription(t('The human readable name for this content type.'))
       ->setRequired(TRUE)
-      ->addConstraint('Length', ['max' => 255]);
+      ->addConstraint('Length', ['max' => 255])
+      ->addConstraint('Regex', [
+        'pattern' => '/([^\PC])/u',
+        'match' => FALSE,
+        'message' => t('The name may not span lines or hold control characters.'),
+      ]);
     $inputs->add('type', 'string', t('Machine name'))
       ->setDescription(t('Unique machine readable name: lowercase letters, numbers, and underscores only.'))
       ->setRequired(TRUE)
@@ -112,7 +122,12 @@ final class NodeTypeResource implements ResourceInterface {
     // textarea.
     $inputs->add('description', 'string', t('Description'))
       ->setDescription(t('Displays on the Content types page.'))
-      ->setSetting('multiline', TRUE);
+      ->setSetting('multiline', TRUE)
+      ->addConstraint('Regex', [
+        'pattern' => '/([^\PC\x09\x0a\x0d])/u',
+        'match' => FALSE,
+        'message' => t('The description may not hold control characters other than line breaks and tabs.'),
+      ]);
     // Not stored on the node type: the title base field's per bundle
     // label.
     $inputs->add('title_label', 'string', t('Title field label'), default: 'Title')
@@ -130,7 +145,12 @@ final class NodeTypeResource implements ResourceInterface {
       ]);
     $inputs->add('help', 'string', t('Explanation or submission guidelines'))
       ->setDescription(t('Displayed at the top of the page when creating or editing content of this type.'))
-      ->setSetting('multiline', TRUE);
+      ->setSetting('multiline', TRUE)
+      ->addConstraint('Regex', [
+        'pattern' => '/([^\PC\x09\x0a\x0d])/u',
+        'match' => FALSE,
+        'message' => t('The help may not hold control characters other than line breaks and tabs.'),
+      ]);
 
     // The defaults of new content, kept on the node base fields.
     $inputs->add('status', 'boolean', t('Published'), default: TRUE)

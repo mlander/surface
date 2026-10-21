@@ -49,8 +49,7 @@ final class RegistrationStep3Resource implements ResourceInterface {
     $inputs->add('capacity', 'integer', t('Capacity'), default: 50)
       ->addConstraint('Range', ['min' => 1]);
     $inputs->add('pricing', 'string', t('Pricing'), default: 'free')
-      ->setRequired(TRUE)
-      ->addConstraint('Choice', ['choices' => ['free', 'paid']]);
+      ->setRequired(TRUE);
     $inputs->attachVariants('ticket', by: 'pricing')
       ->setLabel(t('Ticket'));
     $inputs->attach('contact', ContactStructure::class)

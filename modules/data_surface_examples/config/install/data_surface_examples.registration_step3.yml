@@ -1,11 +1,11 @@
 title: 'Spring meetup'
-capacity: 50
 open: true
 venue: riverside
 room: riverside_main
+capacity: 50
 pricing: free
 ticket:
   note: ''
 contact:
-  email: 'events@example.com'
+  email: events@example.com
   phone: ''

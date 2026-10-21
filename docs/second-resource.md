@@ -8,7 +8,8 @@ and stops there.
 
 It is the store location in the same module, `data_surface_first`. The
 storage, the permission and the route are the first page's, with new
-names; only the refiner is new.
+names, and the schema and install file are written from the resource
+by the same command; only the refiner is new.
 
 ## The settings
 
@@ -18,6 +19,8 @@ names; only the refiner is new.
 data_surface_first.store:
   type: config_object
   label: 'Store location'
+  constraints:
+    FullyValidatable: ~
   mapping:
     country:
       type: string

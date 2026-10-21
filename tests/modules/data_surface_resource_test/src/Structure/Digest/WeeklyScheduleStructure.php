@@ -14,7 +14,7 @@ use Drupal\data_surface_resource_test\Resource\Digest\DigestResource;
  * A weekly digest's schedule: the day it is sent.
  */
 #[Structure('resource_test.digest.weekly')]
-#[Variant(of: DigestResource::class, at: 'schedule', for: 'weekly')]
+#[Variant(of: DigestResource::class, at: 'schedule', for: 'weekly', label: 'Weekly')]
 final class WeeklyScheduleStructure implements StructureInterface {
 
   /**

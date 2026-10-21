@@ -319,9 +319,9 @@ class ResourceBuildTest extends DataSurfaceKernelTestBase {
         NosyParentStructure::class,
         NosyChildStructure::class . '::heightInPantry() watches "pantry", which is a key of resource_test.broken.nosy_parent, the parent this one is attached inside at "nosy".',
       ],
-      'a variant its deciding key cannot choose' => [
+      'a deciding value no variant is for' => [
         UnofferedVariantStructure::class,
-        'The variants at "settings" include the tin variant, which "kind" does not allow',
+        'resource_test.broken.unoffered_variant lists "pot" for "kind", and no variant at "settings" is for it.',
       ],
       'an owner refiner that is an instance method' => [
         InstanceRefinerStructure::class,
