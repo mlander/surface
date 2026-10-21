@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="description" content="An interactive 3D model of a resource, its structures and alters, and how one contract feeds Form API, a headless client, Tool API, MCP, agents, ECA and FlowDrop.">
+<meta name="description" content="An interactive 3D model of a resource, its structures and alters, its declared rules, reuse, keys from the site, access and operation facts, and how one contract feeds Form API, a headless client, OpenAPI, Tool API, MCP, agents, ECA and FlowDrop.">
 <style>
 /* What a host page would otherwise supply. [hidden] has to win over the layout rules below. */
 :root { color-scheme: light; }
@@ -122,7 +122,7 @@ pre.code .t-n { color: var(--refine); font-weight: 500; }
 .lb-major { font: 600 12px/1 var(--f-body); color: var(--ink); background: var(--panel); border: 1px solid var(--line);
   padding: 5px 8px 5px 7px; border-left: 3px solid var(--c, var(--ink-2)); }
 .lb-mid, .lb-note { font: 500 11px/1 var(--f-mono); color: var(--ink); background: var(--panel); border: 1px solid var(--line); padding: 4px 6px; }
-.lb-minor { font: 500 10.5px/1 var(--f-mono); color: var(--ink);
+.lb-minor, .lb-key { font: 500 10.5px/1 var(--f-mono); color: var(--ink);
   text-shadow: 0 0 3px var(--bg), 0 0 3px var(--bg), 0 0 6px var(--bg), 0 0 6px var(--bg); }
 .lb-door { font: 600 12px/1 var(--f-body); color: var(--ink); background: var(--panel);
   border: 1px solid var(--line); padding: 5px 8px; border-radius: 0; }
@@ -152,7 +152,9 @@ table.cmp td:last-child { color: var(--owner); font-weight: 600; }
   .lb-major, .lb-door { font-size: 10.5px; padding: 4px 6px; }
   .lb-door.t2 { font-size: 10px; }
   .lb-title { font-size: 12px; }
-  .lb-minor { font-size: 9.5px; }
+  .lb-minor, .lb-key { font-size: 9.5px; }
+  .lb-area.lb-note, .lb-area.lb-key { font-size: 8.5px; }
+  .lb-area.lb-note { padding: 2px 4px; }
   .hint { font-size: 10.5px; right: 10px; bottom: 8px; }
 }
 @media (prefers-reduced-motion: reduce) { .lb, .hint { transition: none; } }
@@ -164,7 +166,7 @@ table.cmp td:last-child { color: var(--owner); font-weight: 600; }
     <header>
       <p class="eyebrow">Data Surface</p>
       <h1>One resource, every door</h1>
-      <p class="about">This models the event registration example that ships in the <a href="https://github.com/mlander/data_surface/tree/main/modules/data_surface_examples" target="_blank" rel="noopener"><code>data_surface_examples</code></a> module: the settings for one event, with a venue, a room, a capacity, a ticket and a contact. Compliance is a second example module that adds a license and stewards. It is a drawing of that example, not a live copy of it.</p>
+      <p class="about">This is a drawing of the examples that ship in the <a href="https://github.com/mlander/data_surface/tree/main/modules/data_surface_examples" target="_blank" rel="noopener"><code>data_surface_examples</code></a> module, not a live copy of them. Most views, the contract and the doors draw example 3, the settings for one event registration (a venue, a room, a capacity, a ticket and a contact), and example 4, Compliance, a second module that adds a license and stewards. Rules as data draws examples 4 and 7, Reuse examples 4 and 8, Site keys example 9, and Access and Operations example 10.</p>
     </header>
 
     <nav class="tabs" aria-label="Layers of the model" id="tabs">
@@ -175,6 +177,11 @@ table.cmp td:last-child { color: var(--owner); font-weight: 600; }
       <button class="tab" data-ch="parts" aria-pressed="false">Structures</button>
       <button class="tab" data-ch="refine" aria-pressed="false">Refinement</button>
       <button class="tab" data-ch="alter" aria-pressed="false">Alters</button>
+      <button class="tab" data-ch="rules" aria-pressed="false">Rules as data</button>
+      <button class="tab" data-ch="reuse" aria-pressed="false">Reuse</button>
+      <button class="tab" data-ch="siteKeys" aria-pressed="false">Site keys</button>
+      <button class="tab" data-ch="access" aria-pressed="false">Access</button>
+      <button class="tab" data-ch="ops" aria-pressed="false">Operations</button>
       <button class="tab" data-ch="contract" aria-pressed="false">Contract</button>
       <button class="tab" data-ch="doors" aria-pressed="false">Doors</button>
     </nav>
@@ -215,7 +222,7 @@ table.cmp td:last-child { color: var(--owner); font-weight: 600; }
 
     <section class="chapter" id="ch-surface" hidden>
       <h2>The resource</h2>
-      <p>One class declares the inputs. Each key is an ordinary typed data definition with ordinary constraints.</p>
+      <p>One class declares the inputs and the operations that read and write them. Each key is an ordinary typed data definition with ordinary constraints.</p>
       <p>Its storage, underneath, loads the current values and commits the new ones, so the resource never knows where they are kept.</p>
       <pre class="code" data-code="surface"></pre>
     </section>
@@ -237,14 +244,54 @@ table.cmp td:last-child { color: var(--owner); font-weight: 600; }
     <section class="chapter" id="ch-alter" hidden>
       <h2>Others get a say</h2>
       <p>Another module can add keys to a resource it does not own, stored under its own name. It can tighten the owner's keys and say where its fieldset is drawn.</p>
-      <p>Here Compliance adds a license and stewards. Without a license it holds capacity at 100. The owner's class is not touched.</p>
+      <p>Here Compliance attaches its own structure, a license and stewards, and wires the structure's capacity to the owner's. Without a license it holds capacity at 100. The owner's class is not touched.</p>
       <pre class="code" data-code="alter"></pre>
+    </section>
+
+    <section class="chapter" id="ch-rules" hidden>
+      <h2>Declare the rule</h2>
+      <p>A rule whose condition and effect a schema can state is declared as data beside the keys. Compliance holds the capacity at 100 with <code>narrow('capacity')-&gt;when(Condition::absent('license'))-&gt;constrain('Range', ['max' =&gt; 100])</code>. The room's ceiling stays a coded refiner, <code>capacityOfRoom()</code>, which the emitter runs once per room to list its answers.</p>
+      <p>A rule is not run: the full schema writes it as an <code>if</code> / <code>then</code> and lists it under <code>x-surface.rules</code>, so the capacity is stated exactly. The stewards watch the capacity, a number no list covers, so they stay <code>refine</code>: a client asks again with its values.</p>
+      <p>A key can also not apply. While the bulletin goes out monthly, its send day is not on the form or in the documents, and storage keeps the stored day.</p>
+      <pre class="code" data-code="rules"></pre>
+    </section>
+
+    <section class="chapter" id="ch-reuse" hidden>
+      <h2>Reuse: one definition, two sites</h2>
+      <p>A structure names no key of the resource that holds it. What it needs from there it reads through a port, and each container wires the port to a key of its own. Example 8's person reads <code>listed</code>: the press page wires it to <code>public</code>, the information desk to <code>in_program</code>. Compliance reads <code>capacity</code> the same way.</p>
+      <p>Each document writes the person once, as <code>event.person</code> under <code>$defs</code>, with its port. Each site says which key the port reads, <code>x-surface.reads</code>, and states the email rule on its own <code>allOf</code>.</p>
+      <p>A mixin is merged flat: the review's two keys are the press page's own, stored beside <code>public</code> and refused as <code>reviewed_by</code>. A shape is one named value: the phone is <code>event.phone</code>, used by the person and by the desk, and the license is <code>event.license</code>.</p>
+      <pre class="code" data-code="reuse"></pre>
+    </section>
+
+    <section class="chapter" id="ch-siteKeys" hidden>
+      <h2>Keys from the site</h2>
+      <p>Example 9 has one checkbox and one set of limits per ticket type the site sells. The class cannot list the types. The site's configuration does, and a provider, <code>TicketTypes</code>, reads it at every build.</p>
+      <p>The provider declares what it read, the configuration's cache tag, so the form, both documents and the tool listing are cached by that tag. Add a VIP type to the configuration and reload: its checkbox, its limits and its row in the tool listing appear, with no cache rebuild.</p>
+      <p>The speaker type is locked in the configuration. It is drawn fixed and is <code>readOnly</code> in both documents. A value a tool sends for it is not taken, and the answer says so in a note.</p>
+      <pre class="code" data-code="siteKeys"></pre>
+    </section>
+
+    <section class="chapter" id="ch-access" hidden>
+      <h2>Who may change what</h2>
+      <p>The fees of example 10 name an access class. The kind of its answer is read from the answer's cacheability, never declared: an answer that varies by <code>user.permissions</code> alone is static, and one that reads a stored value is runtime.</p>
+      <p>A static answer is stated ahead, for the account that asks. Without "set event fees", the fees are locked: <code>readOnly</code> in the full schema and in the tool listing. With the workflow module on, an account without "see event fees" gets no fees at all.</p>
+      <p>For any other account the stored program decides: once it is published, the fees are fixed. The full schema marks them <code>access: "live"</code>, and the schema for these answers, the form and the pipeline settle it per request.</p>
+      <pre class="code" data-code="access"></pre>
+    </section>
+
+    <section class="chapter" id="ch-ops" hidden>
+      <h2>What an operation says about itself</h2>
+      <p><code>#[Operation]</code> says whether a call creates, changes nothing or may destroy, and whether repeating it changes anything more. Both documents state these facts at the top, under <code>x-surface.operation</code>. Example 10's check declares <code>readOnly: TRUE</code>, which the documents state as <code>kind: "read"</code>.</p>
+      <p>The Tool API gives a read only operation the Read kind and every other operation the Write kind. An MCP client reads its hints from that kind and from the destructive flag. Checking changes nothing, so it has no read tool beside it.</p>
+      <p>The Tool API keeps idempotence on the kind, and no kind that writes is idempotent. Configuring is idempotent in both documents and reaches an MCP client as not idempotent.</p>
+      <pre class="code" data-code="ops"></pre>
     </section>
 
     <section class="chapter" id="ch-contract" hidden>
       <h2>The contract</h2>
-      <p>Ask the resource with the values so far and it answers with its schema as it stands: JSON Schema, with labeled choices as <code>oneOf</code> and variants as <code>if</code> / <code>then</code>.</p>
-      <p>Nothing in it depends on who is asking.</p>
+      <p>Ask the resource and it answers in JSON Schema, contract 2, as two documents. The schema as it stands is built for the values so far. The full schema reads no value, so it is the same whatever is stored or typed; access in it is the asking account's.</p>
+      <p>Labeled choices are <code>oneOf</code>. A key's variants are an <code>anyOf</code> of their defs, each chosen by a conditional. A declared rule is an <code>if</code> / <code>then</code> listed under <code>x-surface.rules</code>. Where a rule cannot be stated, the key says <code>refine</code> (ask again with values) or <code>live</code> (settled at runtime).</p>
       <pre class="code" data-code="contract"></pre>
     </section>
 
@@ -325,16 +372,21 @@ function compliance_form_alter(&$form, $form_state, $form_id) {
   constraints: ['Range' => ['min' => 1, 'max' => 1000]],
 ),`,
     surface: `#[Resource('registration.step3', storage: RegistrationStep3Storage::class)]
+#[Operation('configure',
+  label: new TranslatableMarkup('Configure registration (step 3)'),
+  permission: 'administer site configuration',
+)]
 final class RegistrationStep3Resource implements ResourceInterface {
 
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('title', 'string', t('Event title'))
       ->setRequired(TRUE);
     $inputs->add('venue', 'string', t('Venue'))
+      ->setRequired(TRUE)
       ->addConstraint('LabeledChoice', ['choices' => Venues::VENUES]);
     $inputs->add('capacity', 'integer', t('Capacity'), default: 50)
       ->addConstraint('Range', ['min' => 1]);
-    // open, room, pricing
+    // open, room, pricing, ticket, contact
   }
 
 }`,
@@ -345,7 +397,7 @@ $inputs->attachVariants('ticket', by: 'pricing')
   ->setLabel(t('Ticket'));
 
 #[Structure('registration.step3.ticket.paid')]
-#[Variant(of: RegistrationStep3Resource::class, at: 'ticket', for: 'paid')]
+#[Variant(of: RegistrationStep3Resource::class, at: 'ticket', for: 'paid', label: new TranslatableMarkup('Paid'))]
 final class PaidTicketStructure implements StructureInterface {
   // price, currency
 }`,
@@ -362,34 +414,118 @@ public static function roomInVenue(
 final class RegistrationComplianceAlter implements AltersInputsInterface {
 
   public function alterInputs(BlueprintAdditionsInterface $inputs): void {
-    $inputs->add('license', 'string', $this->t('Event license'));
-    $inputs->add('stewards', 'integer', $this->t('Stewards'), default: 1);
-    $inputs->describe(
-      'third_party_settings.data_surface_examples_compliance',
-      label: $this->t('Compliance'),
-      after: 'capacity',
-    );
+    // The structure's capacity is example 3's.
+    $inputs->attach('third_party_settings.data_surface_examples_compliance', ComplianceStructure::class, reads: ['capacity' => 'capacity']);
+    $inputs->describe('title', label: $this->t('Public event title'));
+    $inputs->describe('third_party_settings.data_surface_examples_compliance', label: $this->t('Compliance'), after: 'capacity');
     $inputs->narrow('capacity')
       ->when(Condition::absent('license'))
-      ->constrain('Range', ['max' => 100]);
+      ->constrain('Range', ['max' => 100])
+      ->because($this->t('Up to 100 without an event license.'));
   }
 
 }`,
     contract: `{
+  "x-surface": { "contract": 2,
+    "operation": { "id": "configure", "kind": "update", ... },
+    "version": 1, "rules": [9] },
   "properties": {
-    "capacity": {
-      "type": ["integer", "null"],
-      "minimum": 1, "maximum": 100,
-      "x-surface": { "refined": true,
-        "dependsOn": ["room", "third_party_settings...license"] }
-    }
+    "capacity": { "title": "Capacity", "type": ["integer", "null"],
+      "minimum": 1, "default": 50,
+      "x-surface": { "dependsOn": ["room",
+        "third_party_settings.data_surface_examples_compliance.license"],
+        "enumerated": true, "declared": true } },
+    "ticket": { "title": "Ticket", "anyOf": [
+      { "$ref": "#/$defs/registration.step3.ticket.free" },
+      { "$ref": "#/$defs/registration.step3.ticket.paid" },
+      { "type": "null" } ] }
   },
-  "allOf": [{
-    "if":   { "properties": { "pricing": { "const": "paid" } },
-              "required": ["pricing"] },
-    "then": { "properties": { "ticket": { "title": "Ticket",
-      "$ref": "#/$defs/registration.step3.ticket.paid" } } }
-  }]
+  "allOf": [ ...,
+    { "if":   { "properties": { "pricing": { "const": "paid" } },
+                "required": ["pricing"] },
+      "then": { "properties": { "ticket": { "title": "Ticket",
+        "$ref": "#/$defs/registration.step3.ticket.paid" } } } } ]
+}`,
+    rules: `// registration.step3, the full schema
+"x-surface": { "contract": 2, ..., "rules": [9] },
+"allOf": [ ...,
+  { "if": { "properties": { "third_party_settings": {
+      "type": ["object", "null"],
+      "properties": { "data_surface_examples_compliance": {
+        "type": "object",
+        "properties": { "license": { "type": "null" } } } } } } },
+    "then": { "properties": { "capacity": {
+      "type": ["integer", "null"],
+      "description": "Up to 100 without an event license.",
+      "maximum": 100 } } } } ]
+
+// event.bulletin: the send day does not apply when monthly
+{ "if": { "properties": { "frequency": { "const": "monthly" } },
+          "required": ["frequency"] },
+  "then": { "properties": { "send_day": false } } }`,
+    reuse: `// event.press
+"contact": { "title": "Press contact", "$ref": "#/$defs/event.person",
+  "x-surface": { "dependsOn": ["public"],
+    "reads": { "listed": "public" }, "declared": true } },
+"allOf": [ { "$ref": "#/$defs/event.review" },
+  { "if": { "properties": { "public": { "const": true } },
+            "required": ["public"] },
+    "then": { "properties": { "contact": { "type": "object",
+      "properties": { "email": { ... } }, "required": ["email"] } } } } ]
+
+// event.desk
+"lead": { "title": "Desk lead", "$ref": "#/$defs/event.person",
+  "x-surface": { "dependsOn": ["in_program"],
+    "reads": { "listed": "in_program" }, "declared": true } },
+"allOf": [
+  { "if": { "properties": { "in_program": { "const": true } },
+            "required": ["in_program"] },
+    "then": { "properties": { "lead": { "type": "object",
+      "properties": { "email": { ... } }, "required": ["email"] } } } } ]`,
+    siteKeys: `// TicketSalesResource::defineInputs()
+$inputs->addEach('on_sale', 'boolean', from: TicketTypes::class, default: FALSE)
+  ->setLabel(t('On sale'))
+  ->setDescription(t('Which ticket types can be bought.'));
+
+// TicketTypes, the provider
+public function keys(): KeyedList {
+  $config = $this->configFactory->get(self::CONFIG);
+  $keys = (new KeyedList())->addCacheableDependency($config);
+  foreach ($config->get('types') ?? [] as $id => $type) {
+    $keys->add((string) $id, (string) $type['label'], locked: (bool) ($type['locked'] ?? FALSE));
+  }
+  return $keys;
+}`,
+    access: `#[Structure('event.fees', access: FeesAccess::class)]
+
+// FeesAccess
+public function access(OperationContext $context, AccountInterface $account): AccessAnswer {
+  $read = (new CacheableMetadata())->addCacheContexts(['user.permissions']);
+  if (!$account->hasPermission(self::PERMISSION)) {
+    // Static: the account alone.
+    return AccessAnswer::locked('Only an account that may set event fees changes them.')->addCacheableDependency($read);
+  }
+  $program = $this->configFactory->get(ProgramStorage::CONFIG);
+  $read->addCacheableDependency($program);
+  if ($program->get('published') === TRUE) {
+    // Runtime: a stored value, under its config tag.
+    return AccessAnswer::locked('The fees are fixed once the program is published.')->addCacheableDependency($read);
+  }
+  return AccessAnswer::open()->addCacheableDependency($read);
+}`,
+    ops: `// event.program, the check operation, both documents
+"x-surface": {
+  "contract": 2,
+  "operation": {
+    "id": "check",
+    "label": "Check a program",
+    "description": "Checks a program against every rule the program configuration applies, and saves nothing.",
+    "kind": "read",
+    "creates": false,
+    "destructive": false,
+    "idempotent": true
+  },
+  "version": 1
 }`
   };
 
@@ -399,7 +535,7 @@ final class RegistrationComplianceAlter implements AltersInputsInterface {
       sample: "$form['surface'] = $builder->buildSurfaceForm(\n  $surface, $values, $form_state);" },
     { id: 'schema', name: 'JSON Schema', tier: 1, ang: 103, shipped: true,
       body: 'The contract is served as JSON Schema 2020-12. Post the values so far to refine and it comes back narrowed. Validate and submit refuse exactly what the form refuses.',
-      sample: "GET  /surface-api/registration.step3/configure\nPOST /surface-api/registration.step3/configure/refine\nPOST /surface-api/registration.step3/configure/validate\nPOST /surface-api/registration.step3/configure/submit" },
+      sample: "GET  /surface-api/registration.step3/configure\nGET  /surface-api/registration.step3/configure/schema\nPOST /surface-api/registration.step3/configure/refine\nPOST /surface-api/registration.step3/configure/validate\nPOST /surface-api/registration.step3/configure/submit" },
     { id: 'tool', name: 'Tool API', tier: 1, ang: 45, shipped: true,
       body: 'Every operation of a resource is derived as a tool. Its inputs, required flags and constraints are the contract\'s, so nothing is declared twice.',
       sample: "data_surface:registration.step3:configure" },
@@ -412,15 +548,18 @@ final class RegistrationComplianceAlter implements AltersInputsInterface {
     { id: 'headless', name: 'Headless', tier: 2, ang: 119, via: 'schema', shipped: true,
       body: 'A React app that knows nothing about this resource draws it from the schema: selects from oneOf, variants from if / then, order and grouping from the x-surface hints.',
       sample: "/surface-react/registration.step3/configure" },
+    { id: 'openapi', name: 'OpenAPI', tier: 2, ang: 104, via: 'schema', shipped: true,
+      body: 'An OpenAPI 3.1 document describes every resource operation served over HTTP, with each operation\'s full schema among its components.',
+      sample: "GET /surface-api/openapi.json" },
     { id: 'drush', name: 'Drush', tier: 2, ang: 90, via: 'tool', shipped: true,
-      body: 'The command line describes the tool and calls it. A refused value comes back with the message a person would see on the form.',
-      sample: "drush tool:info data_surface:registration.step3:configure\ndrush tool:run data_surface:registration.step3:configure --uid=1 \\\n  --input='{\"values\": {\"title\": \"Garden party\",\n    \"venue\": \"riverside\", \"room\": \"riverside_main\",\n    \"capacity\": 150, \"pricing\": \"free\"}}'\n\n// Failed: The values were refused:\n// capacity: This value should be between 1 and 100." },
+      body: 'The command line describes the tool and calls it. A refused value comes back with the message a person would see on the form, and a value sent for a locked key comes back as a note.',
+      sample: "drush tool:run data_surface:registration.step3:configure --uid=1 \\\n  --input='{\"values\": {\"title\": \"Harbour talk\", \"venue\": \"riverside\",\n    \"room\": \"library_reading\", \"capacity\": 50, \"pricing\": \"free\"}}'\n\n// Failed: The values were refused:\n// room: The value you selected is not a valid choice. This applies when venue is riverside (Riverside Hall). Choose riverside_main (Main hall) or riverside_east (East room).\n\ndrush tool:run data_surface:event.sales:configure --uid=1 \\\n  --input='{\"values\":{\"on_sale\":{\"standard\":true,\"speaker\":true}}}' --input=dry_run=true\n\n// Success: Dry run of Configure ticket sales: the values were accepted and prepared, and nothing was written.\n// on_sale.speaker: Speaker is locked and kept as stored; the value sent was not taken." },
     { id: 'mcp', name: 'MCP', tier: 2, ang: 77, via: 'tool', shipped: false,
       body: 'An MCP server that lists Tool API tools lists this one, input schema included. The client sees the same required keys and the same ceilings.',
       sample: "tools/list  ->  data_surface:registration.step3:configure\n                inputSchema: the contract" },
     { id: 'agents', name: 'AI agents', tier: 2, ang: 50, via: 'tool', shipped: false,
       body: 'An agent given the tool reads what it takes before calling it. When a value is refused, the reason comes back in words, so the agent can correct itself.',
-      sample: "// agent sends capacity 150, no license\n// The values were refused:\n// capacity: This value should be between 1 and 100." },
+      sample: "// the agent moves the event to a room of another venue\n// The values were refused:\n// room: The value you selected is not a valid choice. This applies when venue is riverside (Riverside Hall). Choose riverside_main (Main hall) or riverside_east (East room).\n// it reads the fix from the refusal, and the next call is accepted" },
     { id: 'eca', name: 'ECA', tier: 2, ang: 37, via: 'tool', shipped: false,
       body: 'An action that runs the tool is configured from the same definitions. A model cannot save what the form would refuse.',
       sample: "event  ->  condition  ->  run tool\n                          data_surface:registration.step3:configure" },
@@ -434,20 +573,28 @@ final class RegistrationComplianceAlter implements AltersInputsInterface {
   var CHAPTERS = {
     today:    { focus: ['today'], solo: true, cam: { tx: -27.2, ty: 1.4, tz: 0.2, th: 0.08, ph: 0.95, r: 36 } },
     compare:  { focus: null, cam: { tx: -12.5, ty: 0.6, tz: 1.2, th: 0.0, ph: 0.9, r: 62 } },
-    all:      { focus: ['surface', 'target', 'parts', 'refine', 'alter', 'contract', 'doors'], cam: { tx: 0, ty: 1.8, tz: -1.5, th: 0.18, ph: 0.97, r: 30 } },
-    surface:  { focus: ['surface', 'target'], cam: { tx: -0.6, ty: 1.0, tz: 1.6, th: 0.22, ph: 0.92, r: 16 } },
+    all:      { focus: ['surface', 'storage', 'parts', 'refine', 'alter', 'contract', 'doors'], cam: { tx: 0, ty: 1.8, tz: -1.5, th: 0.18, ph: 0.97, r: 30 } },
+    surface:  { focus: ['surface', 'storage'], cam: { tx: -0.6, ty: 1.0, tz: 1.6, th: 0.22, ph: 0.92, r: 16 } },
     parts:    { focus: ['surface', 'parts'], cam: { tx: 0.6, ty: 1.9, tz: 1.6, th: 0.34, ph: 0.98, r: 11.5 } },
     refine:   { focus: ['surface', 'parts', 'refine'], cam: { tx: -1.6, ty: 1.9, tz: 0.2, th: -0.22, ph: 0.9, r: 11 } },
     alter:    { focus: ['surface', 'alter'], cam: { tx: 1.5, ty: 2.3, tz: -0.7, th: 0.62, ph: 0.98, r: 11 } },
+    rules:    { focus: ['rule'], solo: true, sun: 36, cam: { tx: 36.4, ty: 2.6, tz: -0.2, th: 0.1, ph: 0.8, r: 21.5 } },
+    reuse:    { focus: ['reuse'], solo: true, sun: 60, cam: { tx: 61.2, ty: 2.3, tz: 0.4, th: 0.04, ph: 0.85, r: 24.5 } },
+    siteKeys: { focus: ['keys'], solo: true, sun: 84, cam: { tx: 83.8, ty: 2.2, tz: 0.4, th: 0.04, ph: 0.82, r: 22 } },
+    access:   { focus: ['access'], solo: true, sun: 106, cam: { tx: 103.4, ty: 1.2, tz: 1.2, th: 0.0, ph: 0.55, r: 27.5 } },
+    ops:      { focus: ['op'], solo: true, sun: 132, cam: { tx: 132, ty: 2.4, tz: -4.2, th: 0.0, ph: 0.95, r: 25 } },
     contract: { focus: ['surface', 'parts', 'alter', 'refine', 'contract'], cam: { tx: 0, ty: 2.9, tz: 0, th: 0.3, ph: 1.16, r: 15.5 } },
     doors:    { focus: ['contract', 'doors', 'surface'], cam: { tx: 0, ty: 1.4, tz: -4.6, th: 0.2, ph: 0.74, r: 31 } }
   };
 
-  /* What a link carries: #today, #side-by-side, #doors.mcp. A bare token, so it survives any host. */
-  var SLUG = { all: '', today: 'today', compare: 'side-by-side', surface: 'surface', parts: 'subsurfaces',
-    refine: 'refinement', alter: 'alters', contract: 'contract', doors: 'doors' };
-  var FROM_SLUG = {};
+  /* What a link carries: #today, #side-by-side, #doors.mcp, or ?view=reuse. A bare token, so it survives any host. */
+  var SLUG = { all: '', today: 'today', compare: 'side-by-side', surface: 'surface', parts: 'structures',
+    refine: 'refinement', alter: 'alters', rules: 'rules', reuse: 'reuse', siteKeys: 'site-keys', access: 'access',
+    ops: 'operations', contract: 'contract', doors: 'doors' };
+  var FROM_SLUG = { subsurfaces: 'parts' }; // links made before the rename
   Object.keys(SLUG).forEach(function (k) { FROM_SLUG[SLUG[k] || 'whole-picture'] = k; FROM_SLUG[k] = k; });
+  /* The scenes that stand on their own ground, away from the main model: shown only in their own view. */
+  var AREA = { today: true, rule: true, reuse: true, keys: true, access: true, op: true };
 
   var state = { pricing: 'free', license: '' };
   var chapter = 'all';
@@ -473,6 +620,9 @@ final class RegistrationComplianceAlter implements AltersInputsInterface {
   }
   function readHash() {
     var raw = (location.hash || '').replace(/^#/, '');
+    if (!raw) {
+      try { raw = new URLSearchParams(location.search).get('view') || ''; } catch (e) { raw = ''; }
+    }
     try { raw = decodeURIComponent(raw); } catch (e) { /* use it as it came */ }
     var bits = raw.toLowerCase().split('.'), ch = FROM_SLUG[bits[0]];
     if (!bits[0] || !ch) { return null; }
@@ -494,7 +644,7 @@ final class RegistrationComplianceAlter implements AltersInputsInterface {
       b.setAttribute('aria-pressed', String(b.getAttribute('data-ch') === id));
     });
     Object.keys(CHAPTERS).forEach(function (k) { document.getElementById('ch-' + k).hidden = k !== id; });
-    if (gl) { gl.focus(CHAPTERS[id].focus, CHAPTERS[id].solo); gl.fly(CHAPTERS[id].cam); }
+    if (gl) { gl.focus(CHAPTERS[id].focus, CHAPTERS[id].solo); gl.fly(CHAPTERS[id].cam); gl.sun(CHAPTERS[id].sun); }
     if (!quiet) { writeHash(); }
   }
   document.getElementById('tabs').addEventListener('click', function (e) {
@@ -635,7 +785,7 @@ final class RegistrationComplianceAlter implements AltersInputsInterface {
   function label(text, parent, x, y, z, tags, level, opts) {
     opts = opts || {};
     var el = document.createElement(opts.door ? 'button' : 'div');
-    el.className = 'lb lb-' + level + (opts.cls ? ' ' + opts.cls : '');
+    el.className = 'lb lb-' + level + (opts.cls ? ' ' + opts.cls : '') + (AREA[tags[0]] && tags[0] !== 'today' ? ' lb-area' : '');
     el.textContent = text;
     if (opts.c) { el.style.setProperty('--c', 'var(--' + opts.c + ')'); }
     labelsEl.appendChild(el);
@@ -652,7 +802,7 @@ final class RegistrationComplianceAlter implements AltersInputsInterface {
   }
 
   /* ground and the two arcs the doors stand on */
-  var ground = new T.Mesh(new T.CircleGeometry(90, 64), new T.ShadowMaterial({ opacity: 0.16 }));
+  var ground = new T.Mesh(new T.CircleGeometry(175, 96), new T.ShadowMaterial({ opacity: 0.16 }));
   ground.rotation.x = -Math.PI / 2; ground.position.x = -14; ground.receiveShadow = true; scene.add(ground);
   [8.5, 14].forEach(function (r) {
     var pts = [];
@@ -661,8 +811,8 @@ final class RegistrationComplianceAlter implements AltersInputsInterface {
   });
 
   /* storage */
-  var slab = box(9.6, 0.3, 5.8, 'slab', ['target']); slab.position.set(0, 0.15, 0); scene.add(slab); edges(slab, ['target']);
-  label('Storage: load, prepare, commit', scene, 3.4, 0.2, 3.25, ['target'], 'major', { c: 'ink-2' });
+  var slab = box(9.6, 0.3, 5.8, 'slab', ['storage']); slab.position.set(0, 0.15, 0); scene.add(slab); edges(slab, ['storage']);
+  label('Storage: load, prepare, commit', scene, 3.4, 0.2, 3.25, ['storage'], 'major', { c: 'ink-2' });
   function drum(x, z, tags) {
     for (var i = 0; i < 3; i++) {
       var c = solid(new T.CylinderGeometry(0.95, 0.95, 0.34, 40), 'store', tags); c.position.set(x, 0.17 + i * 0.4, z); scene.add(c);
@@ -675,7 +825,7 @@ final class RegistrationComplianceAlter implements AltersInputsInterface {
   label('Registration resource', scene, -4.2, 1.75, 2.5, ['surface'], 'major', { c: 'owner' });
   var pins = [];
   [[-4.0, -2.3], [4.0, -2.3], [-4.0, 2.3], [4.0, 2.3]].forEach(function (p) { pins.push(v(p[0], 0.3, p[1]), v(p[0], 1.275, p[1])); });
-  scene.add(lines(pins, 'line', ['surface', 'target'], 0.9, null, true));
+  scene.add(lines(pins, 'line', ['surface', 'storage'], 0.9, null, true));
 
   function tile(parent, name, x, z, top, role, tags, w, grp) {
     var m = box(w || 1.35, 0.16, 0.8, role, tags, 1, grp);
@@ -769,9 +919,9 @@ final class RegistrationComplianceAlter implements AltersInputsInterface {
   var gCap = gauge(0, -0.4, ['refine', 'alter', 'surface'], 0.45, 'alter', 'max 100');
 
   /* where values live: only the storage class knows */
-  drum(0, 5.9, ['target']);
-  arrow(v(0, 0.32, 2.9), v(0, 1.24, 5.25), 0.9, ['target'], 'values');
-  label('Kept in config and content', scene, 0, 0.1, 7.5, ['target'], 'major', { c: 'ink-2' });
+  drum(0, 5.9, ['storage']);
+  arrow(v(0, 0.32, 2.9), v(0, 1.24, 5.25), 0.9, ['storage'], 'values');
+  label('Kept in config and content', scene, 0, 0.1, 7.5, ['storage'], 'major', { c: 'ink-2' });
 
   /* the contract */
   var RING = 4.6;
@@ -791,8 +941,8 @@ final class RegistrationComplianceAlter implements AltersInputsInterface {
 
   /* commit: validated values go down to storage */
   var commit = new T.LineCurve3(v(-4.55, 1.3, 0.6), v(-4.55, 0.32, 0.6));
-  scene.add(lines([commit.v1, commit.v2], 'line', ['target', 'surface'], 1));
-  var commitBead = flat(new T.SphereGeometry(0.085, 10, 8), 'values', ['target', 'surface']); scene.add(commitBead);
+  scene.add(lines([commit.v1, commit.v2], 'line', ['storage', 'surface'], 1));
+  var commitBead = flat(new T.SphereGeometry(0.085, 10, 8), 'values', ['storage', 'surface']); scene.add(commitBead);
 
   /* doors */
   var doorObj = {}, hits = [], flows = [];
@@ -945,6 +1095,287 @@ final class RegistrationComplianceAlter implements AltersInputsInterface {
   label('Storage: the same config and content', scene, X0, 0.1, GZ + 2.5, TD, 'major', { c: 'ink-2' });
   label('Today: written twice, altered once', scene, X0, 0.1, GZ + 4.1, TD, 'title');
 
+  /* ---------- since the demo: one scene per concept, each on its own ground ---------- */
+  var motions = [], fades = [];
+  function stack(x, z, w, d, role, tags, title, o) {
+    o = o || {};
+    var sl = box(w + 0.6, 0.3, d + 0.6, 'slab', tags); sl.position.set(x, 0.15, z); scene.add(sl); edges(sl, tags);
+    var pl = box(w, 0.25, d, role, tags); pl.position.set(x, 1.4, z); scene.add(pl); edges(pl, tags);
+    var pp = [], px = w / 2 - 0.3, pz = d / 2 - 0.3;
+    [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(function (c) {
+      pp.push(v(x + c[0] * px, 0.3, z + c[1] * pz), v(x + c[0] * px, 1.275, z + c[1] * pz));
+    });
+    scene.add(lines(pp, 'line', tags, 0.9, null, true));
+    if (title) {
+      label(title, scene, x + (o.tx === undefined ? -w / 2 + 0.4 : o.tx), 1.75, z + d / 2, tags, 'major', { c: o.c || 'owner' });
+    }
+  }
+  function keyTile(parent, name, x, z, top, role, tags, w, grp) {
+    var m = box(w || 1.35, 0.16, 0.8, role, tags, 1, grp);
+    m.position.set(x, top + 0.08, z); parent.add(m);
+    var L = name ? label(name, parent, x, top + 0.42, z, tags, 'key', { grp: grp }) : null;
+    return L;
+  }
+  /* a group whose parts fade together; its labels go with it */
+  function fadeGroup() {
+    var g = new T.Group(); g.userData.fade = 1; g.userData.fadeGoal = 1; g.userData.hideLabels = true;
+    scene.add(g); fades.push(g);
+    return g;
+  }
+  /* a structure hovering over its dock, its keys in a row */
+  function floater(x, y, z, w, d, role, tileRole, tags, keys, kw, grp) {
+    var parent = grp || scene;
+    var p = box(w, 0.2, d, role, tags, 1, grp); p.position.set(x, y, z); parent.add(p); edges(p, tags, grp);
+    var step = w / Math.max(1, keys.length);
+    keys.forEach(function (k, i) { keyTile(parent, k, x - w / 2 + step * (i + 0.5), z, y + 0.1, tileRole, tags, kw, grp); });
+  }
+  function dock(x, z, w, d, tags, grp) {
+    var s = box(w, 0.03, d, 'slot', tags, 1, grp); s.position.set(x, TOP + 0.015, z); s.castShadow = false; (grp || scene).add(s);
+  }
+  function outline(x, y, z, w, h, d, role, tags, base, grp) {
+    var gh = new T.LineSegments(new T.EdgesGeometry(new T.BoxGeometry(w, h, d)), new T.LineBasicMaterial());
+    gh.userData.it = track(gh, role, tags, base || 0.85, grp); gh.position.set(x, y, z); (grp || scene).add(gh);
+  }
+  function padlock(x, y, z, tags, grp) {
+    var b = solid(new T.BoxGeometry(0.4, 0.3, 0.16), 'blockBar', tags, 1, grp); b.position.set(x, y, z); (grp || scene).add(b);
+    var s = solid(new T.TorusGeometry(0.13, 0.04, 6, 18, Math.PI), 'blockBar', tags, 1, grp); s.position.set(x, y + 0.15, z); (grp || scene).add(s);
+  }
+  /* a port: a socket on the structure, which the container wires to a key of its own */
+  function socket(x, y, z, tags, name) {
+    var r = flat(new T.TorusGeometry(0.26, 0.07, 8, 28), 'refine', tags); r.rotation.x = Math.PI / 2; r.position.set(x, y, z); scene.add(r);
+    label(name, scene, x - 1.1, y + 0.1, z, tags, 'note');
+    return v(x, y + 0.05, z);
+  }
+  /* a named shape: one def, a hexagonal token, with a thread to each key that uses it */
+  function shapeDef(x, y, z, tags, name, to) {
+    var h = solid(new T.CylinderGeometry(0.5, 0.5, 0.34, 6), 'contract', tags); h.position.set(x, y, z); scene.add(h); edges(h, tags);
+    label(name, scene, x, y + 0.62, z, tags, 'note');
+    var pts = [];
+    to.forEach(function (p) { pts.push(v(x, y - 0.17, z), p); });
+    scene.add(lines(pts, 'contractLine', tags, 0.9, null, true));
+  }
+  /* a rule as data: a see-through card, its lines readable from outside */
+  function card(x, y, z, w, h, tags) {
+    var p = flat(new T.PlaneGeometry(w, h), 'contract', tags, 0.2, null, { side: T.DoubleSide, transparent: true, depthWrite: false });
+    p.position.set(x, y, z); scene.add(p);
+    outline(x, y, z, w, h, 0.02, 'contract', tags, 0.9);
+    for (var i = 0; i < 3; i++) {
+      var bw = w * (i === 2 ? 0.42 : 0.74);
+      var bar = flat(new T.BoxGeometry(bw, 0.07, 0.02), 'contract', tags, 0.85);
+      bar.position.set(x - (w * 0.74 - bw) / 2, y + h * 0.24 - i * h * 0.24, z + 0.02); scene.add(bar);
+    }
+  }
+  /* a listing, as a tool describes its inputs: one row per key */
+  function listing(x, z, w, h, tags, title) {
+    var b = box(w, h, 0.14, 'slab', tags); b.position.set(x, 0.2 + h / 2, z); scene.add(b); edges(b, tags);
+    label(title, scene, x, h + 0.75, z, tags, 'major', { c: 'contract' });
+    return function (name, i, grp, locked) {
+      var y = 0.2 + h - 0.4 - i * 0.55;
+      var r = flat(new T.BoxGeometry(w - 0.4, 0.34, 0.03), 'contractLine', tags, 0.55, grp); r.position.set(x, y, z + 0.09); (grp || scene).add(r);
+      label(name, scene, x - (locked ? 0.25 : 0), y, z + 0.14, tags, 'key', { grp: grp });
+      if (locked) { padlock(x + w / 2 - 0.42, y - 0.08, z + 0.22, tags, grp); }
+    };
+  }
+  function account(x, z, tags) {
+    var b = solid(new T.CylinderGeometry(0.2, 0.3, 0.75, 18), 'values', tags); b.position.set(x, 0.375, z); scene.add(b);
+    var hd = solid(new T.SphereGeometry(0.21, 16, 12), 'values', tags); hd.position.set(x, 0.98, z); scene.add(hd);
+  }
+  function dashedRing(x, y, z, rx, rz, tags) {
+    var pts = [];
+    for (var i = 0; i < 40; i += 2) {
+      var a0 = i * Math.PI / 20, a1 = (i + 1) * Math.PI / 20;
+      pts.push(v(x + rx * Math.cos(a0), y, z + rz * Math.sin(a0)), v(x + rx * Math.cos(a1), y, z + rz * Math.sin(a1)));
+    }
+    scene.add(lines(pts, 'refine', tags, 1, null, true));
+  }
+
+  /* 1. Declare the rule: examples 4 and 7. A rule as data beside a coded refiner, and a key that does not apply. */
+  var RX = 36, RU = ['rule'];
+  stack(RX - 4.4, 0, 7.0, 4.4, 'owner', RU, 'Registration: examples 3 and 4');
+  keyTile(scene, 'room', RX - 6.6, -1.1, TOP, 'ownerTile', RU);
+  keyTile(scene, 'capacity', RX - 2.6, -1.1, TOP, 'ownerTile', RU);
+  /* the coded refiner: a closed box, run once per room to list what it answers */
+  var coded = box(1.1, 0.6, 0.6, 'refine', RU); coded.position.set(RX - 4.6, TOP + 1.3, -1.1); scene.add(coded); edges(coded, RU);
+  refine(v(RX - 6.6, KT, -1.1), v(RX - 5.2, TOP + 1.1, -1.1), 0.45, RU);
+  refine(v(RX - 4.0, TOP + 1.1, -1.1), v(RX - 2.85, KT, -1.1), 0.45, RU);
+  label('capacityOfRoom(): code, run per room', scene, RX - 5.6, TOP + 2.05, -1.1, RU, 'note');
+  /* the compliance mount, and its rule on the owner's capacity: data, stated as written */
+  var RM = v(RX - 4.6, ALT, 1.15);
+  floater(RM.x, RM.y, RM.z, 3.2, 1.6, 'alter', 'alterTile', RU, ['license', 'stewards'], 1.25);
+  label('Compliance', scene, RM.x - 2.25, RM.y + 0.1, RM.z + 0.75, RU, 'major', { c: 'alter' });
+  var rmPins = [];
+  [[-1.5, -0.7], [1.5, -0.7], [-1.5, 0.7], [1.5, 0.7]].forEach(function (c) {
+    rmPins.push(v(RM.x + c[0], TOP, RM.z + c[1]), v(RM.x + c[0], RM.y - 0.1, RM.z + c[1]));
+  });
+  scene.add(lines(rmPins, 'line', RU, 0.9, null, true));
+  refine(v(RM.x - 0.8, RM.y + 0.27, RM.z), v(RX - 2.4, KT, -0.8), 1.0, RU);
+  card(RX - 1.6, 4.6, 0.2, 2.1, 1.2, RU);
+  label('narrow(\'capacity\'): a rule as data', scene, RX - 1.6, 5.5, 0.2, RU, 'note');
+  label('capacity: enumerated and declared, stated exactly', scene, RX - 0.6, TOP + 0.5, -2.5, RU, 'note');
+  dashedRing(RM.x + 0.8, RM.y + 0.2, RM.z, 0.85, 0.62, RU);
+  label('stewards: refine, ask again', scene, RM.x + 1.2, RM.y - 0.3, RM.z + 1.3, RU, 'note');
+  /* the full schema writes each rule down */
+  var gRuleRing = new T.Group(); gRuleRing.position.set(RX + 1.2, 6.4, -1.0); scene.add(gRuleRing);
+  var rr = flat(new T.TorusGeometry(1.4, 0.05, 10, 80), 'contract', RU); rr.rotation.x = Math.PI / 2; gRuleRing.add(rr);
+  label('Full schema: each rule an if / then', scene, RX + 1.2, 7.15, -1.0, RU, 'major', { c: 'contract' });
+  arrow(v(RX - 1.6, 5.2, 0.2), v(RX + 0.1, 6.35, -0.6), 0.3, RU, 'contract');
+  /* the bulletin: the send day does not apply when it goes out monthly */
+  stack(RX + 5.3, 0, 6.4, 3.4, 'owner', RU, 'Bulletin: example 7');
+  var freqL = keyTile(scene, 'frequency: weekly', RX + 3.1, 0, TOP, 'ownerTile', RU, 1.5);
+  outline(RX + 5.3, TOP + 0.08, 0, 1.5, 0.2, 0.95, 'refine', RU, 0.8);
+  var gSend = fadeGroup();
+  keyTile(gSend, 'send_day', RX + 5.3, 0, TOP, 'ownerTile', RU, 1.35, gSend);
+  keyTile(scene, 'items', RX + 7.5, 0, TOP, 'ownerTile', RU);
+  refine(v(RX + 3.1, KT, 0), v(RX + 5.1, KT, 0), 0.7, RU);
+  card(RX + 4.2, 3.35, 0, 1.6, 0.95, RU);
+  arrow(v(RX + 4.2, 3.85, 0), v(RX + 2.45, 6.35, -0.7), 0.3, RU, 'contract');
+  var sendL = label('weekly: send_day required', scene, RX + 6.0, TOP + 1.0, 0.3, RU, 'note');
+  label('Rules declared as data', scene, RX, 0.1, 3.9, RU, 'title');
+  motions.push(function () {
+    var monthly = reduce || Math.floor(clock / 3.5) % 2 === 1;
+    if (monthly === gSend.userData.monthly) { return; }
+    gSend.userData.monthly = monthly; gSend.userData.fadeGoal = monthly ? 0 : 1;
+    if (reduce) { gSend.userData.fade = gSend.userData.fadeGoal; }
+    freqL.el.textContent = 'frequency: ' + (monthly ? 'monthly' : 'weekly');
+    sendL.el.textContent = monthly ? 'monthly: send_day does not apply, storage keeps it' : 'weekly: send_day required';
+  });
+
+  /* 2. Reuse: examples 8 and 4. One def at two sites through a port, a mixin merged flat, and shapes. */
+  var PX = 60, PU = ['reuse'], PY = 3.7, PZ = -1.8;
+  stack(PX - 6.4, 0.8, 6.0, 3.6, 'owner', PU, 'Press page: example 8');
+  keyTile(scene, 'public', PX - 8.3, 0, TOP, 'ownerTile', PU, 1.3);
+  dock(PX - 5.6, 0, 2.8, 1.0, PU);
+  label('contact', scene, PX - 5.6, TOP + 0.3, 0.75, PU, 'key');
+  keyTile(scene, 'reviewed_on', PX - 7.85, 1.75, TOP, 'partTile', PU, 1.65);
+  keyTile(scene, 'reviewed_by', PX - 5.95, 1.75, TOP, 'partTile', PU, 1.65);
+  stack(PX + 1.0, 0.8, 6.0, 3.6, 'owner', PU, 'Information desk: example 8');
+  keyTile(scene, 'in_program', PX - 0.9, 0, TOP, 'ownerTile', PU, 1.6);
+  dock(PX + 2.0, 0, 2.8, 1.0, PU);
+  label('lead', scene, PX + 2.0, TOP + 0.3, 0.75, PU, 'key');
+  keyTile(scene, 'phone', PX - 0.9, 1.75, TOP, 'ownerTile', PU, 1.6);
+  keyTile(scene, 'volunteers: up to 4', PX + 2.0, 1.75, TOP, 'partTile', PU, 2.8);
+  /* the person: one def, hovering between the two sites that attach it */
+  floater(PX - 2.2, PY, PZ, 4.0, 1.4, 'part', 'partTile', PU, ['name', 'email', 'phone'], 1.15);
+  label('PersonStructure: one def, event.person', scene, PX - 2.2, PY + 1.05, PZ, PU, 'major', { c: 'part' });
+  arrow(v(PX - 3.6, PY - 0.12, PZ + 0.55), v(PX - 5.6, TOP + 0.1, -0.15), 0.45, PU, 'part');
+  arrow(v(PX - 0.8, PY - 0.12, PZ + 0.55), v(PX + 2.0, TOP + 0.1, -0.15), 0.45, PU, 'part');
+  var sockP = socket(PX - 4.65, PY, PZ, PU, 'port: listed');
+  refine(v(PX - 8.3, KT, 0), sockP, 1.1, PU);
+  refine(v(PX - 0.9, KT, 0), sockP, 1.1, PU);
+  label('reads: listed => public', scene, PX - 8.6, TOP + 0.9, -1.5, PU, 'note');
+  label('reads: listed => in_program', scene, PX - 0.6, TOP + 0.35, -1.05, PU, 'note');
+  /* the review, mixed in: its keys are the press page's own */
+  outline(PX - 6.9, 3.0, 1.75, 3.9, 0.2, 1.0, 'part', PU, 0.9);
+  scene.add(lines([v(PX - 8.7, 2.9, 1.75), v(PX - 8.7, TOP + 0.16, 1.75), v(PX - 5.1, 2.9, 1.75), v(PX - 5.1, TOP + 0.16, 1.75)], 'line', PU, 0.9, null, true));
+  label('mixIn(ReviewStructure): merged flat', scene, PX - 6.9, 3.4, 2.6, PU, 'note');
+  /* the phone: one shape, asked for by the person and by the desk */
+  shapeDef(PX + 4.8, 3.3, 0.2, PU, 'event.phone: one shape, two keys', [v(PX - 0.87, PY + 0.26, PZ), v(PX - 0.9, KT, 1.75)]);
+  /* compliance: its capacity port, wired by the alter to the owner's capacity */
+  stack(PX + 8.8, 0.8, 4.4, 3.6, 'owner', PU, 'Registration: example 4');
+  keyTile(scene, 'capacity', PX + 7.8, 1.75, TOP, 'ownerTile', PU);
+  dock(PX + 8.8, 0, 3.4, 1.0, PU);
+  floater(PX + 8.8, PY, PZ, 3.4, 1.4, 'part', 'partTile', PU, ['license', 'stewards'], 1.3);
+  label('ComplianceStructure', scene, PX + 8.8, PY + 1.05, PZ, PU, 'major', { c: 'part' });
+  arrow(v(PX + 8.8, PY - 0.12, PZ + 0.55), v(PX + 8.8, TOP + 0.1, -0.15), 0.4, PU, 'part');
+  var sockC = socket(PX + 6.75, PY, PZ, PU, 'port: capacity');
+  refine(v(PX + 7.8, KT, 1.75), sockC, 1.1, PU);
+  shapeDef(PX + 11.6, 3.0, -0.4, PU, 'event.license', [v(PX + 7.95, PY + 0.26, PZ)]);
+  label('One definition, many sites', scene, PX + 0.5, 0.1, 4.0, PU, 'title');
+
+  /* 3. Keys from the site: example 9. One checkbox and one set of limits per ticket type in the configuration. */
+  var KX = 84, KU = ['keys'];
+  drum(KX - 7.0, 2.2, KU);
+  label('Config: ticket_types', scene, KX - 7.0, 0.1, 3.8, KU, 'major', { c: 'ink-2' });
+  var prov = box(1.7, 0.8, 0.9, 'store', KU); prov.position.set(KX - 7.0, 2.9, -1.4); scene.add(prov); edges(prov, KU);
+  label('TicketTypes::keys()', scene, KX - 7.0, 3.65, -1.4, KU, 'note');
+  label('cache tag: config:data_surface_examples.ticket_types', scene, KX - 5.6, 4.15, -1.4, KU, 'note');
+  arrow(v(KX - 7.0, 1.25, 2.2), v(KX - 7.0, 2.45, -0.95), 0.6, KU, 'values');
+  stack(KX, 0, 8.4, 4.4, 'owner', KU, 'Ticket sales: example 9');
+  label('on_sale: one checkbox per type', scene, KX - 2.6, TOP - 0.2, 3.3, KU, 'note');
+  label('limits: one set per type', scene, KX - 5.0, DOCK + 0.9, -1.0, KU, 'note');
+  var fan = [], from = v(KX - 6.15, 2.9, -1.4);
+  [['standard', -3.0], ['student', -1.0], ['speaker', 1.0]].forEach(function (t) {
+    var locked = t[0] === 'speaker';
+    keyTile(scene, t[0], KX + t[1], 1.2, TOP, locked ? 'block' : 'ownerTile', KU, 1.6);
+    fan.push(from, v(KX + t[1], KT, 1.2));
+    if (locked) {
+      outline(KX + t[1], DOCK, -1.0, 1.7, 0.2, 1.1, 'line', KU, 0.8);
+      label('do not apply', scene, KX + t[1], DOCK + 0.1, -1.0, KU, 'key');
+    } else {
+      dock(KX + t[1], -1.0, 1.7, 1.1, KU);
+      floater(KX + t[1], DOCK, -1.0, 1.7, 1.1, 'part', 'partTile', KU, []);
+    }
+  });
+  scene.add(lines(fan, 'line', KU, 0.9, null, true));
+  padlock(KX + 1.0, TOP + 0.62, 1.2, KU);
+  label('speaker: locked in config, readOnly', scene, KX + 0.6, TOP - 0.2, 2.75, KU, 'note');
+  var gVip = fadeGroup();
+  keyTile(gVip, 'vip', KX + 3.0, 1.2, TOP, 'ownerTile', KU, 1.6, gVip);
+  dock(KX + 3.0, -1.0, 1.7, 1.1, KU, gVip);
+  floater(KX + 3.0, DOCK, -1.0, 1.7, 1.1, 'part', 'partTile', KU, [], 0, gVip);
+  gVip.add(lines([from, v(KX + 3.0, KT, 1.2)], 'line', KU, 0.9, gVip, true));
+  label('vip: added in config, no cache rebuild', scene, KX + 3.8, TOP - 0.2, 3.4, KU, 'note', { grp: gVip });
+  var row = listing(KX + 6.6, -0.2, 2.8, 2.7, KU, 'Tool listing');
+  row('standard', 0); row('student', 1); row('speaker: readOnly', 2, null, true); row('vip', 3, gVip);
+  label('Keys from the site', scene, KX, 0.1, 4.0, KU, 'title');
+  motions.push(function () { gVip.userData.fadeGoal = reduce || clock % 8 < 4.5 ? 1 : 0; if (reduce) { gVip.userData.fade = 1; } });
+
+  /* 4. Who may change what: example 10. Static answers stated for the account, a runtime one settled per request. */
+  var AX = 106, AU = ['access'];
+  function program(x, title) {
+    stack(x, 0, 5.8, 3.8, 'owner', AU, title);
+    keyTile(scene, 'headline', x - 1.9, -1.0, TOP, 'ownerTile', AU, 1.65);
+    keyTile(scene, 'sessions', x, -1.0, TOP, 'ownerTile', AU, 1.65);
+    keyTile(scene, 'published', x + 1.9, -1.0, TOP, 'ownerTile', AU, 1.65);
+    dock(x, 0.85, 3.4, 1.4, AU);
+    account(x + 2.6, 3.1, AU);
+  }
+  program(AX - 7.0, 'Without "set event fees"');
+  floater(AX - 7.0, DOCK, 0.85, 3.4, 1.4, 'block', 'block', AU, ['standard', 'concession'], 1.45);
+  padlock(AX - 7.0, DOCK + 0.72, 0.85, AU);
+  label('static: locked for this account', scene, AX - 7.0, DOCK + 1.4, 0.85, AU, 'note');
+  program(AX, 'Without "see event fees"');
+  outline(AX, DOCK, 0.85, 3.4, 0.2, 1.4, 'line', AU, 0.9);
+  label('static: left out (workflow module)', scene, AX, DOCK + 1.4, 0.85, AU, 'note');
+  program(AX + 7.0, 'May set the fees');
+  floater(AX + 7.0, DOCK, 0.85, 3.4, 1.4, 'part', 'partTile', AU, ['standard', 'concession'], 1.45);
+  var pulse = flat(new T.TorusGeometry(2.2, 0.05, 8, 72), 'refine', AU); pulse.rotation.x = Math.PI / 2; pulse.position.set(AX + 7.0, DOCK + 0.1, 0.85); scene.add(pulse);
+  refine(v(AX + 8.9, KT, -1.0), v(AX + 8.4, DOCK + 0.25, 0.5), 0.8, AU);
+  label('runtime: live, settled per request', scene, AX + 7.0, DOCK + 1.4, 0.85, AU, 'note');
+  var rowA = listing(AX - 12.2, -0.4, 2.9, 2.7, AU, 'Tool listing, this account');
+  rowA('headline', 0); rowA('sessions', 1); rowA('published', 2); rowA('fees: readOnly', 3, null, true);
+  label('Who may change what', scene, AX - 2.5, 0.1, 4.3, AU, 'title');
+  motions.push(function () { var s = 1 + 0.06 * Math.sin(clock * 2.6); pulse.scale.set(s, s * 0.55, 1); });
+
+  /* 5. What an operation says about itself: example 10. The facts, and the doors that read them. */
+  var OX = 132, OU = ['op'];
+  stack(OX, 1.0, 6.4, 3.6, 'owner', OU, 'Program: example 10');
+  keyTile(scene, 'headline', OX - 2.1, 1.0, TOP, 'ownerTile', OU, 1.7);
+  keyTile(scene, 'sessions', OX, 1.0, TOP, 'ownerTile', OU, 1.7);
+  keyTile(scene, 'published', OX + 2.1, 1.0, TOP, 'ownerTile', OU, 1.7);
+  card(OX - 1.75, 3.9, 0.4, 3.1, 1.6, OU);
+  card(OX + 1.75, 3.9, 0.4, 3.1, 1.6, OU);
+  label('configure: kind update', scene, OX - 1.75, 3.9, 0.6, OU, 'note');
+  label('check: kind read', scene, OX + 1.75, 3.9, 0.6, OU, 'note');
+  label('x-surface.operation', scene, OX, 5.2, 0.4, OU, 'major', { c: 'contract' });
+  scene.add(lines([v(OX - 1.75, TOP, 0.4), v(OX - 1.75, 3.1, 0.4), v(OX + 1.75, TOP, 0.4), v(OX + 1.75, 3.1, 0.4)], 'contractLine', OU, 0.8, null, true));
+  buildDoor('op-w', 'configure: Write', v(OX - 6.3, 0, -5.6), v(OX, 0, 1), 1, OU, { fixed: true });
+  buildDoor('op-r', 'configure:read: Read', v(OX - 2.1, 0, -6.0), v(OX, 0, 1), 1, OU, { fixed: true });
+  buildDoor('op-c', 'check: Read', v(OX + 2.1, 0, -6.0), v(OX, 0, 1), 1, OU, { fixed: true });
+  buildDoor('op-x', 'check: no read tool', v(OX + 6.3, 0, -5.6), v(OX, 0, 1), 1, OU, { fixed: true, shut: true });
+  buildDoor('op-mw', 'MCP: configure', v(OX - 6.3, 0, -11.2), v(OX - 6.3, 0, 0), 2, OU, { fixed: true });
+  buildDoor('op-mc', 'MCP: check', v(OX + 2.1, 0, -11.2), v(OX + 2.1, 0, 0), 2, OU, { fixed: true });
+  var cfg = v(OX - 1.75, 3.1, 0.4), chk = v(OX + 1.75, 3.1, 0.4);
+  flow(cfg, doorObj['op-w'].mid, 1.2, 1, 'op-w', OU, { quiet: true });
+  flow(cfg, doorObj['op-r'].mid, 1.2, 1, 'op-r', OU, { quiet: true });
+  flow(chk, doorObj['op-c'].mid, 1.2, 1, 'op-c', OU, { quiet: true });
+  flow(chk, doorObj['op-x'].mid, 1.2, 1, 'op-x', OU, { quiet: true, cut: 0.5 });
+  flow(doorObj['op-w'].mid, doorObj['op-mw'].mid, 1.4, 2, 'op-mw', OU, { quiet: true });
+  flow(doorObj['op-c'].mid, doorObj['op-mc'].mid, 1.4, 2, 'op-mc', OU, { quiet: true });
+  label('readOnlyHint no, idempotentHint no', scene, OX - 6.3, 3.15, -11.2, OU, 'note');
+  label('readOnlyHint yes, idempotentHint yes', scene, OX + 2.1, 3.15, -11.2, OU, 'note');
+  label('An operation states how it behaves', scene, OX, 0.1, 4.1, OU, 'title');
+
   /* ---------- theme ---------- */
   var palette = {};
   function paint() {
@@ -987,7 +1418,7 @@ final class RegistrationComplianceAlter implements AltersInputsInterface {
   function clampGoal() {
     goal.ph = Math.max(0.22, Math.min(1.46, goal.ph));
     goal.r = Math.max(7, Math.min(110, goal.r));
-    goal.tx = Math.max(-52, Math.min(26, goal.tx));
+    goal.tx = Math.max(-52, Math.min(150, goal.tx));
     goal.ty = Math.max(-3, Math.min(14, goal.ty));
     goal.tz = Math.max(-26, Math.min(22, goal.tz));
   }
@@ -1113,6 +1544,10 @@ final class RegistrationComplianceAlter implements AltersInputsInterface {
     focus: function (f, alone) { focusSet = f; solo = !!alone; },
     fly: function (c) { Object.assign(goal, c); if (reduce) { Object.assign(cam, c); } },
     state: applyState,
+    sun: function (x) {
+      var sx = x === undefined ? -14 : x;
+      sun.target.position.set(sx, 0, -2); sun.position.set(sx + 9, 24, 13);
+    },
     select: function (id) {
       Object.keys(doorObj).forEach(function (k) {
         var on = k === id, o = doorObj[k];
@@ -1123,8 +1558,9 @@ final class RegistrationComplianceAlter implements AltersInputsInterface {
   };
 
   focusSet = CHAPTERS[chapter].focus; solo = !!CHAPTERS[chapter].solo;
-  items.forEach(function (it) { if (!inFocus(it.tags)) { it.cur = solo || it.tags[0] === 'today' ? 0 : 0.09; } });
+  items.forEach(function (it) { if (!inFocus(it.tags)) { it.cur = solo || AREA[it.tags[0]] ? 0 : 0.09; } });
   if (selected) { gl.select(selected); }
+  gl.sun(CHAPTERS[chapter].sun);
 
   /* ---------- frame ---------- */
   var tmp = new T.Vector3(), last = 0, raf = 0;
@@ -1141,6 +1577,8 @@ final class RegistrationComplianceAlter implements AltersInputsInterface {
       g.position.lerp(g.userData.goal, k);
       g.userData.fade += (g.userData.fadeGoal - g.userData.fade) * k;
     });
+    fades.forEach(function (g) { g.userData.fade += (g.userData.fadeGoal - g.userData.fade) * k; });
+    motions.forEach(function (f) { f(); });
     gauges.forEach(function (g) {
       g.h += (g.goal - g.h) * k;
       g.pillar.scale.y = g.h; g.cap.position.set(g.x, KT + g.h, g.z);
@@ -1180,7 +1618,7 @@ final class RegistrationComplianceAlter implements AltersInputsInterface {
     });
 
     items.forEach(function (it) {
-      var want = inFocus(it.tags) ? 1 : (solo || it.tags[0] === 'today' ? 0 : 0.09);
+      var want = inFocus(it.tags) ? 1 : (solo || AREA[it.tags[0]] ? 0 : 0.09);
       it.cur += (want - it.cur) * k;
       var op = Math.min(1, it.base * it.cur * (it.grp ? it.grp.userData.fade : 1) + it.boost * it.cur);
       var m = it.obj.material;
@@ -1199,11 +1637,12 @@ final class RegistrationComplianceAlter implements AltersInputsInterface {
       tmp.copy(L.pos); L.parent.updateWorldMatrix(true, false); tmp.applyMatrix4(L.parent.matrixWorld);
       var dist = tmp.distanceTo(camera.position);
       tmp.project(camera);
-      var op = inFocus(L.tags) ? 1 : (L.level === 'minor' || L.level === 'mid' || L.level === 'note' || L.level === 'title' || L.tags[0] === 'today' || solo ? 0 : 0.2);
+      var op = inFocus(L.tags) ? 1 : (L.level === 'minor' || L.level === 'key' || L.level === 'mid' || L.level === 'note' || L.level === 'title' || AREA[L.tags[0]] || solo ? 0 : 0.2);
       if (L.level === 'minor') { op *= Math.max(0, Math.min(1, (21 - dist) / 4)); }
+      if (L.level === 'key') { op *= Math.max(0, Math.min(1, (46 - dist) / 6)); }
       if (L.level === 'mid') { op *= Math.max(0, Math.min(1, (23 - dist) / 4)); }
       if (L.level === 'note') { op *= Math.max(0, Math.min(1, (48 - dist) / 6)); }
-      if (L.grp) { op *= L.grp.userData.fade < 0.7 ? 0.55 : 1; }
+      if (L.grp) { op *= L.grp.userData.fade < 0.7 ? (L.grp.userData.hideLabels ? 0 : 0.55) : 1; }
       if (tmp.z > 1 || tmp.z < -1) { op = 0; }
       if (op < 0.02) {
         if (L.shown !== 0) { L.el.style.visibility = 'hidden'; L.shown = 0; }
