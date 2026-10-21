@@ -197,32 +197,56 @@ function standsForStored(props: FieldProps): boolean {
   return Boolean(props.schema['x-surface']?.stale);
 }
 
+/**
+ * The placeholder an input shows while empty: only the one its
+ * arrangement declares, never an example, which would read as filled.
+ */
+function placeholderOf(props: FieldProps): string | undefined {
+  return props.schema['x-surface']?.arrangement?.placeholder;
+}
+
+/** An input between the prefix and the suffix its arrangement gives. */
+function Affixed({ props, children }: { props: FieldProps; children: JSX.Element }): JSX.Element {
+  const arrangement = props.schema['x-surface']?.arrangement;
+  if (arrangement?.prefix === undefined && arrangement?.suffix === undefined) {
+    return children;
+  }
+  return (
+    <span className="dsr-affixed">
+      {arrangement.prefix !== undefined ? <span className="dsr-prefix">{arrangement.prefix}</span> : null}
+      {children}
+      {arrangement.suffix !== undefined ? <span className="dsr-suffix">{arrangement.suffix}</span> : null}
+    </span>
+  );
+}
+
 /** A number input: Range's bounds as min and max, a step by type. */
 export function NumberField(props: FieldProps): JSX.Element {
   const id = fieldId(props.path);
-  const example = props.schema.examples?.[0];
   return (
     <Item props={props} marker={props.required}>
-      <input
-        type="number"
-        id={id}
-        name={props.path}
-        value={isEmpty(props.value) ? '' : String(props.value)}
-        min={props.schema.minimum}
-        max={props.schema.maximum}
-        step={jsonType(props.schema) === 'integer' ? 1 : 'any'}
-        placeholder={example === undefined ? undefined : String(example)}
-        required={props.required && !standsForStored(props)}
-        disabled={isLocked(props)}
-        aria-describedby={describedBy(props, id)}
-        aria-invalid={(props.errors[props.path] ?? []).length > 0 || undefined}
-        onChange={(event) => {
-          const raw = event.target.value;
-          // Sent as typed when it is not a number: the pipeline casts
-          // what means the same and refuses the rest, with its message.
-          props.onChange(props.path, raw === '' ? null : Number.isNaN(Number(raw)) ? raw : Number(raw));
-        }}
-      />
+      <Affixed props={props}>
+        <input
+          type="number"
+          id={id}
+          name={props.path}
+          value={isEmpty(props.value) ? '' : String(props.value)}
+          min={props.schema.minimum}
+          max={props.schema.maximum}
+          step={jsonType(props.schema) === 'integer' ? 1 : 'any'}
+          placeholder={placeholderOf(props)}
+          required={props.required && !standsForStored(props)}
+          disabled={isLocked(props)}
+          aria-describedby={describedBy(props, id)}
+          aria-invalid={(props.errors[props.path] ?? []).length > 0 || undefined}
+          onChange={(event) => {
+            const raw = event.target.value;
+            // Sent as typed when it is not a number: the pipeline casts
+            // what means the same and refuses the rest, with its message.
+            props.onChange(props.path, raw === '' ? null : Number.isNaN(Number(raw)) ? raw : Number(raw));
+          }}
+        />
+      </Affixed>
     </Item>
   );
 }
@@ -230,36 +254,38 @@ export function NumberField(props: FieldProps): JSX.Element {
 /**
  * A text input: email, time or url by type, a password for a secret.
  *
- * Length's max is the maxlength and the first example the placeholder;
- * a secret is never shown a value and gets no placeholder.
+ * Length's max is the maxlength, and the placeholder the one its
+ * arrangement declares; a secret is never shown a value and gets no
+ * placeholder.
  */
 export function TextField(props: FieldProps): JSX.Element {
   const id = fieldId(props.path);
   const secret = Boolean(props.schema.writeOnly);
   const widget = props.schema['x-surface']?.widget;
   const type = secret ? 'password' : widget === 'email' ? 'email' : widget === 'time' ? 'time' : props.schema.format === 'uri' ? 'url' : 'text';
-  const example = props.schema.examples?.[0];
   return (
     <Item props={props} marker={props.required}>
-      <input
-        type={type}
-        id={id}
-        name={props.path}
-        value={isEmpty(props.value) ? '' : String(props.value)}
-        maxLength={props.schema.maxLength}
-        placeholder={secret || example === undefined ? undefined : String(example)}
-        required={props.required && !secret && !standsForStored(props)}
-        disabled={isLocked(props)}
-        autoComplete={secret ? 'new-password' : undefined}
-        aria-describedby={describedBy(props, id)}
-        aria-invalid={(props.errors[props.path] ?? []).length > 0 || undefined}
-        onChange={(event) => props.onChange(props.path, event.target.value)}
-      />
+      <Affixed props={props}>
+        <input
+          type={type}
+          id={id}
+          name={props.path}
+          value={isEmpty(props.value) ? '' : String(props.value)}
+          maxLength={props.schema.maxLength}
+          placeholder={secret ? undefined : placeholderOf(props)}
+          required={props.required && !secret && !standsForStored(props)}
+          disabled={isLocked(props)}
+          autoComplete={secret ? 'new-password' : undefined}
+          aria-describedby={describedBy(props, id)}
+          aria-invalid={(props.errors[props.path] ?? []).length > 0 || undefined}
+          onChange={(event) => props.onChange(props.path, event.target.value)}
+        />
+      </Affixed>
     </Item>
   );
 }
 
-/** A textarea: no maxlength and no placeholder, as the string widget. */
+/** A textarea: no maxlength, and only a declared placeholder, as the string widget. */
 export function TextareaField(props: FieldProps): JSX.Element {
   const id = fieldId(props.path);
   return (
@@ -268,6 +294,7 @@ export function TextareaField(props: FieldProps): JSX.Element {
         id={id}
         name={props.path}
         rows={5}
+        placeholder={placeholderOf(props)}
         value={isEmpty(props.value) ? '' : String(props.value)}
         required={props.required && !standsForStored(props)}
         disabled={isLocked(props)}

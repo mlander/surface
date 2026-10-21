@@ -228,8 +228,9 @@ class ContractDiffTest extends UnitTestCase {
   /**
    * Tests a required key added says what a write must now supply.
    *
-   * To the inputs a note; to the outputs, what a client reads, a key
-   * always there narrows what it may meet, which is compatible.
+   * To the inputs of an update a note; to the outputs, what a client
+   * reads, a key always there narrows what it may meet, which is
+   * compatible.
    */
   public function testRequiredKeyAddedSaysWhatWritesSupply(): void {
     $current = self::BASELINE;
@@ -251,6 +252,65 @@ class ContractDiffTest extends UnitTestCase {
     [$change] = (new ContractDiff())->compare($baseline, $current);
     $this->assertSame('required key added', $change->change);
     $this->assertSame([ContractDiff::NARROWS, ContractChange::COMPATIBLE], [$change->effect, $change->status]);
+  }
+
+  /**
+   * Tests a required key added is judged by the operation's kind.
+   *
+   * With no default: a note on an update and on a read, which act on what
+   * is stored, so a key left out keeps what is there; breaking on a
+   * create, whose every old call leaves it out and is refused; and
+   * breaking where no kind is stated, a structure described alone, whose
+   * containers may create it. With a default, a note for every kind. One
+   * declaration is judged per document, so the same key can be a note on
+   * `configure` and breaking on `add`.
+   */
+  public function testRequiredKeyAddedIsJudgedByTheKind(): void {
+    $judged = static function (?string $kind, bool $default = FALSE): ContractChange {
+      $baseline = self::BASELINE;
+      if ($kind === NULL) {
+        unset($baseline['schema']['x-surface']['operation']);
+      }
+      else {
+        $baseline['schema']['x-surface']['operation']['kind'] = $kind;
+      }
+      $current = $baseline;
+      $current['schema']['properties']['notes'] = ['title' => 'Notes', 'type' => 'string'] + ($default ? ['default' => 'None'] : []);
+      $current['schema']['required'][] = 'notes';
+      $changes = (new ContractDiff())->compare($baseline, $current);
+      self::assertCount(1, $changes);
+      return $changes[0];
+    };
+
+    foreach (['update', 'read'] as $kind) {
+      $change = $judged($kind);
+      $this->assertSame('required key added: a write must now supply notes where nothing is stored', $change->change, $kind);
+      $this->assertSame([ContractDiff::NOTE, ContractChange::COMPATIBLE], [$change->effect, $change->status], $kind);
+    }
+    $change = $judged('create');
+    $this->assertSame('configure#/properties/notes', $change->path);
+    $this->assertSame('required key added with no default: a create that leaves notes out is refused', $change->change);
+    $this->assertSame([ContractDiff::NARROWS, ContractChange::BREAKING], [$change->effect, $change->status]);
+    $this->assertTrue($change->fails());
+    $change = $judged(NULL);
+    $this->assertSame('required key added with no default: a container that creates this structure and leaves notes out is refused', $change->change);
+    $this->assertSame([ContractDiff::NARROWS, ContractChange::BREAKING], [$change->effect, $change->status]);
+
+    foreach (['update', 'read', 'create', NULL] as $kind) {
+      $change = $judged($kind, TRUE);
+      $this->assertSame('required key added, with a default', $change->change, (string) $kind);
+      $this->assertSame([ContractDiff::NOTE, ContractChange::COMPATIBLE], [$change->effect, $change->status], (string) $kind);
+    }
+
+    // An allowance with a reason is the escape on a create, as for any
+    // breaking change.
+    $baseline = self::BASELINE;
+    $baseline['schema']['x-surface']['operation']['kind'] = 'create';
+    $current = $baseline;
+    $current['schema']['properties']['notes'] = ['title' => 'Notes', 'type' => 'string'];
+    $current['schema']['required'][] = 'notes';
+    [$change] = (new ContractDiff())->compare($baseline, $current, ['configure#/properties/notes' => 'Every caller sends notes already.']);
+    $this->assertSame(ContractChange::ALLOWED, $change->status);
   }
 
   /**

@@ -150,34 +150,74 @@ class ContractBaselineTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests a required key added is compatible, with a note.
+   * Tests a required key added is judged per operation, by its kind.
    *
-   * Nothing stored or sent before held it, so the lint passes it and says
-   * what it asks of a write; a default answers for it. An optional key
-   * made required stays breaking.
+   * Nothing stored or sent before held it. On `configure`, an update, the
+   * lint passes it and says what it asks of a write, since a key left out
+   * keeps what is stored; on a create of the same declaration (an `add`
+   * document beside it, as `node.type` has) every old create leaves it
+   * out and is refused, so it is breaking there, and an allowance with a
+   * reason answers it. A default answers for both. An optional key made
+   * required stays breaking.
    */
-  public function testRequiredKeyAddedOnlyNotes(): void {
+  public function testRequiredKeyAddedIsJudgedPerOperation(): void {
     $baselines = $this->container->get('data_surface.contract_baselines');
     $committed = $baselines->read($baselines->directory('data_surface'));
     $current = $baselines->emit(self::PINNED);
 
+    // The same declaration in a create beside its update.
+    $create = static function (array $document): array {
+      $document['operation'] = 'add';
+      $document['schema']['x-surface']['operation'] = ['id' => 'add', 'kind' => 'create', 'creates' => TRUE] + $document['schema']['x-surface']['operation'];
+      return $document;
+    };
+    $committed['registration.step2']['documents'][] = $create($committed['registration.step2']['documents'][0]);
+    $current['registration.step2']['documents'][] = $create($current['registration.step2']['documents'][0]);
+    $this->assertSame([], array_values(array_filter($baselines->compare($committed, $current), static fn (ContractChange $change): bool => $change->effect !== 'note')), 'Nothing differs before the key is added.');
+
     $added = $current;
-    $schema = &$added['registration.step2']['documents'][0]['schema'];
-    $schema['properties']['organizer'] = ['title' => 'Organizer', 'type' => 'string'];
-    $schema['required'][] = 'organizer';
-    [$change] = array_values(array_filter($baselines->compare($committed, $added), static fn (ContractChange $change): bool => str_ends_with($change->path, '/organizer')));
-    $this->assertSame('configure#/properties/organizer', $change->path);
-    $this->assertSame('required key added: a write must now supply organizer where nothing is stored', $change->change);
-    $this->assertSame(['note', ContractChange::COMPATIBLE], [$change->effect, $change->status]);
+    foreach ($added['registration.step2']['documents'] as &$document) {
+      $document['schema']['properties']['organizer'] = ['title' => 'Organizer', 'type' => 'string'];
+      $document['schema']['required'][] = 'organizer';
+    }
+    unset($document);
+    $organizer = static fn (array $changes): array => array_map(
+      static fn (ContractChange $change): array => [$change->path, $change->change, $change->effect, $change->status],
+      array_values(array_filter($changes, static fn (ContractChange $change): bool => str_ends_with($change->path, '/organizer'))),
+    );
+    $this->assertSame([
+      [
+        'configure#/properties/organizer',
+        'required key added: a write must now supply organizer where nothing is stored',
+        'note',
+        ContractChange::COMPATIBLE,
+      ],
+      [
+        'add#/properties/organizer',
+        'required key added with no default: a create that leaves organizer out is refused',
+        'narrows',
+        ContractChange::BREAKING,
+      ],
+    ], $organizer($baselines->compare($committed, $added)));
 
-    $schema['properties']['organizer']['default'] = 'The events team';
-    [$change] = array_values(array_filter($baselines->compare($committed, $added), static fn (ContractChange $change): bool => str_ends_with($change->path, '/organizer')));
-    $this->assertSame('required key added, with a default', $change->change);
-    $this->assertSame(ContractChange::COMPATIBLE, $change->status);
-    unset($schema);
+    $allowing = $committed;
+    $allowing['registration.step2']['allowed'] = [
+      ['path' => 'add#/properties/organizer', 'reason' => 'Every caller that creates one names its organizer already.'],
+    ];
+    $this->assertSame(ContractChange::ALLOWED, $organizer($baselines->compare($allowing, $added))[1][3]);
 
-    $made = $current;
+    foreach ($added['registration.step2']['documents'] as &$document) {
+      $document['schema']['properties']['organizer']['default'] = 'The events team';
+    }
+    unset($document);
+    $this->assertSame([
+      ['configure#/properties/organizer', 'required key added, with a default', 'note', ContractChange::COMPATIBLE],
+      ['add#/properties/organizer', 'required key added, with a default', 'note', ContractChange::COMPATIBLE],
+    ], $organizer($baselines->compare($committed, $added)));
+
+    $made = $baselines->emit(self::PINNED);
     $made['registration.step2']['documents'][0]['schema']['required'][] = 'capacity';
+    $committed = $baselines->read($baselines->directory('data_surface'));
     [$change] = $this->changes($baselines->compare($committed, $made));
     $this->assertSame(['capacity made required', ContractChange::BREAKING], [$change->change, $change->status]);
   }

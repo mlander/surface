@@ -8,6 +8,8 @@ use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Form\SubformStateInterface;
 use Drupal\Core\Plugin\PluginBase;
 use Drupal\Core\TypedData\DataDefinitionInterface;
+use Drupal\data_surface\DefinitionMetadata;
+use Drupal\data_surface\Form\DataSurfaceFormBuilderInterface;
 use Drupal\data_surface\Pipeline\ValueState;
 
 /**
@@ -45,6 +47,20 @@ abstract class DataSurfaceWidgetBase extends PluginBase implements DataSurfaceWi
   public const STALE_KEY = '#data_surface_stale';
 
   /**
+   * The element types a value is typed into, which take a placeholder.
+   */
+  protected const PLACEHOLDER_TYPES = [
+    'textfield',
+    'textarea',
+    'email',
+    'url',
+    'tel',
+    'search',
+    'number',
+    'machine_name',
+  ];
+
+  /**
    * Builds the properties every element derives from its definition.
    *
    * @return array
@@ -57,6 +73,68 @@ abstract class DataSurfaceWidgetBase extends PluginBase implements DataSurfaceWi
     ];
     if ($definition->getDescription() !== NULL) {
       $element['#description'] = $definition->getDescription();
+    }
+    return $element;
+  }
+
+  /**
+   * Draws a key's arrangement on the element a widget built for it.
+   *
+   * Every element, whichever widget built it: its weight among its
+   * frame's keys, a prefix and a suffix beside the input, the help after
+   * its description, a placeholder on an input a value is typed into
+   * (never on a password), and the group it is drawn in, as a marker the
+   * form builder reads (DataSurfaceFormBuilderInterface::GROUP_KEY).
+   * Nothing here changes what the element posts or what is accepted.
+   *
+   * Decision: see docs/decisions.md#arrangement-is-declared-once.
+   *
+   * @param array $element
+   *   The element the widget built.
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The key's definition.
+   *
+   * @return array
+   *   The element, arranged.
+   */
+  public static function arranged(array $element, DataDefinitionInterface $definition): array {
+    $arrangement = DefinitionMetadata::arrangementOf($definition);
+    if ($arrangement === NULL) {
+      return $element;
+    }
+    if ($arrangement->weight !== NULL) {
+      $element['#weight'] = $arrangement->weight;
+    }
+    if ($arrangement->group !== NULL) {
+      $element[DataSurfaceFormBuilderInterface::GROUP_KEY] = [
+        'id' => $arrangement->group->id,
+        'label' => $arrangement->group->label,
+        'as' => $arrangement->group->as,
+        'collapsed' => $arrangement->group->collapsed,
+        'weight' => $arrangement->group->weight,
+      ];
+    }
+    if (!empty($element[DataSurfaceFormBuilderInterface::PLACEHOLDER_KEY])) {
+      // A key that does not apply has no element, only its place.
+      return $element;
+    }
+    $type = $element['#type'] ?? NULL;
+    if ($arrangement->placeholder !== NULL && (string) $arrangement->placeholder !== '' && in_array($type, self::PLACEHOLDER_TYPES, TRUE)) {
+      $element['#placeholder'] = $arrangement->placeholder;
+    }
+    if ($arrangement->prefix !== NULL && (string) $arrangement->prefix !== '') {
+      $element['#field_prefix'] = $arrangement->prefix;
+    }
+    if ($arrangement->suffix !== NULL && (string) $arrangement->suffix !== '') {
+      $element['#field_suffix'] = $arrangement->suffix;
+    }
+    if ($arrangement->help !== NULL && (string) $arrangement->help !== '') {
+      $element['#description'] = isset($element['#description'])
+        ? t('@description @help', [
+          '@description' => $element['#description'],
+          '@help' => $arrangement->help,
+        ])
+        : $arrangement->help;
     }
     return $element;
   }

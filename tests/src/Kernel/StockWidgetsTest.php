@@ -282,7 +282,7 @@ class StockWidgetsTest extends DataSurfaceKernelTestBase {
     $this->assertArrayNotHasKey('#empty_option', $holidays, 'A valid choice of a key that cannot be cleared: no empty option.');
     $this->assertSame('closed', $holidays['#default_value']);
     $stale = $this->form($hours, ['holidays' => 'weekly'])['holidays'];
-    $this->assertSame('- Select -', (string) $stale['#empty_option'], 'No valid choice: the empty option stands for it, as a required select\'s does.');
+    $this->assertSame('- Keep weekly (no longer offered) -', (string) $stale['#empty_option'], 'No valid choice: the empty option stands for the stored value and says so, as a required select\'s does.');
 
     $optional = DataDefinition::create('string')->addConstraint('Choice', ['choices' => ['a', 'b']]);
     $this->assertSame('- None -', (string) $this->form($this->one($optional), ['key' => 'a'])['key']['#empty_option'], 'Optional and clearable: "- None -" always.');

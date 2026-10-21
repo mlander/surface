@@ -16,6 +16,7 @@ use Drupal\data_surface\DefinitionMap;
 use Drupal\data_surface\DataSurfaceBuilder;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\DefinitionMetadata;
+use Drupal\data_surface\Resource\Arrangement;
 use Drupal\data_surface\Form\DataSurfaceFormBuilder;
 use Drupal\data_surface\Pipeline\Sentences;
 use Drupal\data_surface_test\CacheableCasingRefiner;
@@ -31,7 +32,7 @@ use PHPUnit\Framework\Attributes\Group;
  * The behaviors the adapter era masked are native here: defaults at
  * every depth, constraint-to-element mapping, empty options on optional
  * selects, options derived from the constraints that declare them,
- * examples as placeholder text, locked rendering, and extraction that
+ * only a declared placeholder, locked rendering, and extraction that
  * casts through the definition.
  */
 #[Group('data_surface')]
@@ -45,8 +46,13 @@ class SurfaceFormTest extends DataSurfaceKernelTestBase {
 
   /**
    * Builds a data surface exercising every stock widget.
+   *
+   * @param string[] $locked
+   *   The keys to lock.
+   * @param bool $arranged
+   *   Whether its keys declare a placeholder each.
    */
-  protected function surface(array $locked = []): DataSurfaceInterface {
+  protected function surface(array $locked = [], bool $arranged = FALSE): DataSurfaceInterface {
     $badge = DataDefinition::create('string')
       ->setLabel('Badge')
       ->addConstraint('Choice', ['choices' => ['star', 'flame']]);
@@ -84,6 +90,17 @@ class SurfaceFormTest extends DataSurfaceKernelTestBase {
     DefinitionMetadata::setExamples($definitions['notes'], ['One line per change']);
     DefinitionMetadata::setExamples($definitions['mode'], [2]);
     DefinitionMetadata::setExamples($definitions['limit'], [10, 25]);
+    if ($arranged) {
+      $placeholders = [
+        'title' => 'A short title',
+        'notes' => 'One line per change',
+        'mode' => 'Pick one',
+        'active' => 'Tick it',
+      ];
+      foreach ($placeholders as $key => $placeholder) {
+        DefinitionMetadata::setArrangement($definitions[$key], new Arrangement(placeholder: $placeholder));
+      }
+    }
 
     return new DataSurface(
       DefinitionMap::fromArrays(
@@ -174,18 +191,27 @@ class SurfaceFormTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests that the first declared example becomes placeholder text.
+   * Tests a placeholder is only ever declared, never an example.
+   *
+   * An empty field showing an example reads as filled, so a declared
+   * example stays an example (the documents say it) and the placeholder
+   * is the one the key's arrangement gives, on an input a value is typed
+   * into, a textarea among them.
+   *
+   * @see docs/decisions.md#arrangement-is-declared-once
    */
-  public function testExamplesAsPlaceholder(): void {
+  public function testOnlyDeclaredPlaceholdersAreDrawn(): void {
     $surface = $this->surface();
     $form = $this->formBuilder()->buildSurfaceForm($surface, $surface->getDefaultValues(), new FormState());
+    foreach (['title', 'limit', 'notes', 'mode', 'active'] as $key) {
+      $this->assertArrayNotHasKey('#placeholder', $form[$key], $key . ' declares examples and no placeholder.');
+    }
 
-    // String and number inputs show the first example, cast to string.
-    $this->assertSame('Quarterly report', $form['title']['#placeholder']);
-    $this->assertSame('10', $form['limit']['#placeholder']);
-    // A textarea, a select and a checkbox get none, even where the
-    // definition declares examples.
-    $this->assertArrayNotHasKey('#placeholder', $form['notes']);
+    $arranged = $this->surface(arranged: TRUE);
+    $form = $this->formBuilder()->buildSurfaceForm($arranged, $arranged->getDefaultValues(), new FormState());
+    $this->assertSame('A short title', (string) $form['title']['#placeholder']);
+    $this->assertSame('One line per change', (string) $form['notes']['#placeholder']);
+    // A select and a checkbox type nothing, so they take none.
     $this->assertArrayNotHasKey('#placeholder', $form['mode']);
     $this->assertArrayNotHasKey('#placeholder', $form['active']);
   }

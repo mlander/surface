@@ -1,4 +1,4 @@
-import type { Schema, Values } from '../contract';
+import type { Arrangement, ArrangementGroup, Schema, Values } from '../contract';
 import { fieldId, isObject, jsonType, resolveVariants } from '../contract';
 import {
   CheckboxesField,
@@ -134,28 +134,91 @@ export function Properties({
       disabled={locked}
     />
   );
+  const drawnAll = Object.entries(schema.properties ?? {}).map(([name, property]): Arranged => {
+    const drawn = property['x-surface']?.group ? withoutPlaced(property, name, placed) : property;
+    const empty = drawn !== property && Object.keys(drawn.properties ?? {}).length === 0;
+    return {
+      arrangement: property['x-surface']?.arrangement,
+      elements: [
+        empty ? null : field(name, drawn, schema, values, prefix + name, disabled),
+        ...(placed[name] ?? []).map((entry) => {
+          const group = schema.properties?.[entry.group] ?? {};
+          const held = values[entry.group];
+          return field(
+            entry.name,
+            entry.schema,
+            group,
+            isObject(held) ? held : {},
+            `${prefix}${entry.group}.${entry.name}`,
+            disabled || Boolean(group['x-surface']?.locked || group.readOnly),
+          );
+        }),
+      ],
+    };
+  });
+  return <>{arranged(drawnAll, prefix)}</>;
+}
+
+/** One property's elements, and how its arrangement says to draw them. */
+interface Arranged {
+  arrangement?: Arrangement;
+  elements: (JSX.Element | null)[];
+}
+
+/** Sorts by weight, lighter first, keeping declaration order between equals. */
+function byWeight<T>(entries: T[], weight: (entry: T) => number): T[] {
+  return entries.map((entry, position) => ({ entry, position })).sort((a, b) => weight(a.entry) - weight(b.entry) || a.position - b.position).map(({ entry }) => entry);
+}
+
+/**
+ * Draws a frame's properties as their arrangements say, as the form
+ * builder does: each group where its first key is declared, a fieldset or
+ * a details holding its keys, ordered among the frame's keys by its own
+ * weight; each key by its weight within its group, or within the frame.
+ * Only drawing: every key keeps its path.
+ */
+function arranged(entries: Arranged[], prefix: string): (JSX.Element | null)[] {
+  type Top = { weight: number; group: ArrangementGroup; members: Arranged[] } | { weight: number; group: null; entry: Arranged };
+  const top: Top[] = [];
+  const groups = new Map<string, Top & { group: ArrangementGroup }>();
+  for (const entry of entries) {
+    const group = entry.arrangement?.group;
+    if (group === undefined) {
+      top.push({ weight: entry.arrangement?.weight ?? 0, group: null, entry });
+      continue;
+    }
+    let drawn = groups.get(group.id);
+    if (drawn === undefined) {
+      drawn = { weight: group.weight ?? 0, group, members: [] };
+      groups.set(group.id, drawn);
+      top.push(drawn);
+    }
+    drawn.members.push(entry);
+  }
+  return byWeight(top, (entry) => entry.weight).flatMap((entry) => {
+    if (entry.group === null) {
+      return entry.entry.elements;
+    }
+    const members = byWeight(entry.members, (member) => member.arrangement?.weight ?? 0).flatMap((member) => member.elements);
+    return [<ArrangedGroup key={`${prefix}@group.${entry.group.id}`} group={entry.group} id={fieldId(`${prefix}@group.${entry.group.id}`)}>{members}</ArrangedGroup>];
+  });
+}
+
+/** A group a frame's arrangement names: a fieldset, or a details a person may close. */
+function ArrangedGroup({ group, id, children }: { group: ArrangementGroup; id: string; children: (JSX.Element | null)[] }): JSX.Element {
+  if (group.as === 'details') {
+    return (
+      <details className="dsr-details" id={id} open={!group.collapsed}>
+        <summary className="dsr-summary">{group.label}</summary>
+        {children}
+      </details>
+    );
+  }
   return (
-    <>
-      {Object.entries(schema.properties ?? {}).flatMap(([name, property]) => {
-        const drawn = property['x-surface']?.group ? withoutPlaced(property, name, placed) : property;
-        const empty = drawn !== property && Object.keys(drawn.properties ?? {}).length === 0;
-        return [
-          empty ? null : field(name, drawn, schema, values, prefix + name, disabled),
-          ...(placed[name] ?? []).map((entry) => {
-            const group = schema.properties?.[entry.group] ?? {};
-            const held = values[entry.group];
-            return field(
-              entry.name,
-              entry.schema,
-              group,
-              isObject(held) ? held : {},
-              `${prefix}${entry.group}.${entry.name}`,
-              disabled || Boolean(group['x-surface']?.locked || group.readOnly),
-            );
-          }),
-        ];
-      })}
-    </>
+    <fieldset className="dsr-fieldset dsr-arranged" id={id}>
+      <legend className="dsr-legend">{group.label}</legend>
+      {children}
+    </fieldset>
   );
 }
 

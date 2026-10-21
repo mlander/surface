@@ -128,6 +128,75 @@ Taking those render keys over is how a fieldset became a container and a
 host's own wrapper id disappeared, which is the bug the rule exists to
 prevent.
 
+## Arranging the keys
+
+How a form is laid out is declared once, on the keys, and every door
+that draws them reads it: the operation form, each plugin host (a
+block, a condition, a formatter, a field type), the demo's standalone
+form, and the React app through the served contract
+([decision](decisions.md#arrangement-is-declared-once)). A key's
+`Resource\Arrangement` says the group it is drawn in, its weight, a
+placeholder, a prefix and a suffix beside its input, and a help text:
+
+```php
+public static function defineInputs(BlueprintInterface $inputs): void {
+  $workflow = ArrangementGroup::details('workflow', t('Publishing options'), collapsed: TRUE);
+  $status = $inputs->add('status', 'boolean', t('Published'), default: TRUE);
+  DefinitionMetadata::setArrangement($status, new Arrangement(group: $workflow));
+
+  $rate = $inputs->add('rate', 'integer', t('Hourly rate'));
+  DefinitionMetadata::setArrangement($rate, new Arrangement(
+    placeholder: t('For example, 40'),
+    prefix: '$',
+    suffix: t('per hour'),
+    help: t('Whole dollars.'),
+    weight: -5,
+  ));
+}
+```
+
+Each class's `use` line: [Namespaces](concepts.md#namespaces).
+
+- **A group** is `ArrangementGroup::fieldset($id, $label)` or
+  `ArrangementGroup::details($id, $label, collapsed:)`, with an optional
+  `weight:`. The keys of one frame (the top, an attached part, a
+  module's mount) that name one id are drawn in one group, so they say
+  it alike; the build refuses two that differ. It is drawn where its
+  first key is declared: the form builder puts its element in the frame
+  directly before that key, under `@group.<id>`
+  (`DataSurfaceFormBuilderInterface::GROUP_PREFIX`), and the container's
+  pre-render moves each key into it when the form is drawn, as a placed
+  fieldset is moved ([below](#a-placed-fieldset)). Until then every key
+  stays where its value is posted: its `#parents`, its `#name`, its
+  refresh wrapper and everything that walks the container by path are
+  as they were, and the AJAX callback replaces a key inside a group by
+  the same id.
+- **A weight** orders a key among its frame's keys, or, inside a group,
+  among the group's; keys of equal weight keep declaration order.
+- **A placeholder** is drawn on an input a value is typed into (a text
+  field, a text area, a number, an email or a URL input), never on a
+  password. It is the only placeholder there is: a declared example is
+  stated by both documents, and no longer drawn as one, since an empty
+  field showing a value reads as filled.
+- **A prefix and a suffix** are drawn beside the input (`#field_prefix`,
+  `#field_suffix`); **the help** after the key's description, on the
+  form only: the description is what the key means, which the tool
+  listing says, and the help is for a person filling the form in.
+
+An alter arranges an owner's key with `describe($key, arrangement:)`,
+laid over what the owner said: it may place the key (a group, a weight)
+and reword its texts, and it may not take any of them away, so an empty
+text where the owner gave one is refused. Nothing in an arrangement is a
+rule: no default, no requiredness and no path moves, and both schemas
+are unchanged by it, less the hint below. The served contract states it
+as `x-surface.arrangement` only when a renderer asks for the widget
+hints ([The served contract](served-contract.md#x-surface)).
+
+What stays for a [cosmetic layer](#the-cosmetic-seam) is what is truly
+one form's: a borrowed element (the content type demo puts the three
+groups its resource declares into core's vertical tabs, reaching each by
+`@group.<id>`), markup, the message and the redirect.
+
 ## Other modules' keys
 
 The keys alters add are mounted under `third_party_settings`, one map
@@ -243,9 +312,7 @@ The callback answers with an `AjaxResponse`:
 | `RemoveCommand`, then `PrependCommand` | Whatever else the request put in the messenger, a stale value kept, printed inside the container where the render-array path printed it, after the previous request's are taken away. An error on the trigger is never among them: it is printed under the trigger. |
 | `AnnounceCommand` | At most one, polite: what the rebuild changed, in whole sentences, for whoever cannot see it. The trigger's refusal comes first, named for its field, then each dependent the change moved, compared with what the page showed: "Send day no longer applies." or "Send day now applies.", "Items per issue now allows 1 to 20.", "<Label> is now required.", "The choices for Room have changed.", and, for a group whose fields changed (a variant), "Ticket was updated." Nothing is announced when nothing moved. |
 
-**Coming from `#states`.** A dependent moves on a round trip to the
-server, a text trigger's on blur, and one taken out and brought back is
-drawn afresh from what is stored, not from what was typed in it before.
+**Coming from `#states`**: [below](#coming-from-states), idiom by idiom.
 
 Each refinement target, each trigger, each key with variants and each
 placed element gets a wrapper of its own, a `div` in its `#prefix` and
@@ -314,6 +381,32 @@ with) to the rebuilt ones, and replaces a trigger whose options moved:
 the select is redrawn without `- Select -` the moment something is
 chosen, and the page and the form agree again. It is redrawn only
 then; a trigger whose options did not move is never touched.
+
+### Coming from `#states`
+
+A Form API form says how one element follows another with `#states`,
+which the browser applies and the server never sees. Here the rule is
+the resource's, said once and checked by the pipeline at every door, and
+the form follows it by a round trip to the server: a select or a
+checkbox triggers it when it changes, a text or a number input when it
+loses focus. Each idiom, and what differs:
+
+| `#states` | Here | What behaves differently |
+| --- | --- | --- |
+| `visible` | The key applies: a refiner, or a declared rule, answers it does not apply otherwise (`DoesNotApply::here()`, or `doesNotApply()` on a declared rule), and no element is drawn until it does ([Refinement](refinement.md#when-a-key-does-not-apply)). | Without JavaScript, a key that does not apply has no element, so a post leaves it out and it keeps what it holds, where a hidden `#states` element would post its value. With JavaScript, a rebuild draws it afresh from what is stored, so what was typed in it before it went away is gone. |
+| `invisible` | The same rule, the other way round. | The same. |
+| `required` | A declared rule, `$inputs->narrow($key)->when(...)->require()`, or a refiner that requires. | The pipeline checks it on every save, in the rule's own words, with or without JavaScript and at the tool and the React page alike; `#states` only drew the marker, and the browser checked nothing a person could not switch off. The marker follows on the rebuild. |
+| `disabled` | Locked: the operation knows the value (an identity key), or an access answer locks the key or its child. | A locked key posts nothing that counts: extraction keeps what is stored, whatever arrives, where `#states` disabled only the browser's element. It depends on what is stored or who asks, never on another element's live value. |
+| `enabled` | Not locked. | As for `disabled`. |
+| `checked`, `unchecked` | A refiner or a rule that narrows the key to one value, or the stored value, drawn as it is. | Nothing is ticked for the person: a value is what is stored or sent, and the pipeline refuses one the rule does not allow, rather than the browser ticking a box nobody touched. |
+| `access` (by `#access`) | Access: an access answer omits the key (or locks it), asked of the account and, at runtime, of the thing ([Access](resources.md#access)). | Decided on the server for the account, before anything is drawn; the full schema says which answers wait for the thing, `x-surface.access: "live"`. |
+
+Two habits do not carry over. A rule is not a matter of drawing, so a
+rule `#states` would only have shown is checked here: a value a hidden
+element still held is not saved behind a person's back. And nothing
+happens between round trips: a text trigger's dependents move when it
+loses focus, and the rebuild announces what changed for whoever cannot
+see it ([What a change replaces](#what-a-change-replaces)).
 
 ### A collection on a form
 
@@ -624,11 +717,18 @@ an option:
 
 ```html
 <select name="settings[bundle]">
-  <option value="" selected>- None -</option>
+  <option value="" selected>- Keep article (no longer offered) -</option>
   <option value="page">Page</option>
 </select>
 <input type="hidden" name="settings[@stale]" value="bundle">
 ```
+
+The empty option says what it stands for, "- Keep @value (no longer
+offered) -", and still posts the empty string, never a value the key
+does not take ([decision](decisions.md#the-empty-option-rule)). An
+orphan of an edit, which a save refuses rather than keeps, says "- Select
+-" or "- None -" as before, and so does a select on a declared default
+the list does not offer, since nothing is stored to keep.
 
 The whole of the rule for when a single select shows its empty option
 is [a decision](decisions.md#the-empty-option-rule): whenever no valid
@@ -676,8 +776,13 @@ of losing the value:
   name a value that is already stored.
 
 A required stale select is not `#required` to core, because empty there
-means keep and core's check would refuse it before the data surface is asked;
-its label keeps the required marker.
+means keep and core's check would refuse it before the data surface is
+asked, and it has no `required` attribute, which would have the browser
+refuse the option that keeps the value. The rest of the required hint is
+drawn as on every required element: the label keeps the marker, and the
+select says `aria-required="true"`, so a screen reader and the eye agree
+([An element hints and the rule
+speaks](decisions.md#an-element-hints-and-the-rule-speaks)).
 
 Only an explicit new choice replaces the value. Choosing the empty
 option of an optional select clears the key when the select could show
@@ -790,7 +895,7 @@ The defaults:
 | --- | --- |
 | `_data_surface_resource` | The resource class, or its `#[Resource]` id. |
 | `_data_surface_operation` | One of its operation ids. |
-| `_data_surface_cosmetics` | Optional. A service id or class implementing `Form\DataSurfaceFormCosmeticsInterface`. |
+| `_data_surface_cosmetics` | Optional. A service id or class implementing `Form\DataSurfaceFormCosmeticsInterface`: a borrowed element, markup, the message and the redirect. Grouping and order are the keys' [arrangement](#arranging-the-keys). |
 | `_data_surface_panel` | Optional. A service id or class implementing `Form\DataSurfaceFormPanelInterface`: something shown inside the data surface's container, rebuilt with it. |
 
 The route's parameters are the operation method's, by name: an upcast
@@ -875,7 +980,7 @@ the whole of what a form class is still for:
 
 | Method | Decides |
 | --- | --- |
-| `alterSurfaceForm()` | How the built elements are arranged. Runs after every element exists, including the actions. |
+| `alterSurfaceForm()` | What this one form borrows or adds around the built elements: an element of core's (vertical tabs, a machine name), markup. Runs after every element exists, including the actions and the groups the keys' arrangement declares. |
 | `surfaceFormMessage()` | What the person is told. NULL for the generic sentence. |
 | `surfaceFormRedirect()` | Where they are sent. NULL to stay on the form. |
 
@@ -883,6 +988,11 @@ A route names one, in `_data_surface_cosmetics`. Each method is told the
 operation id, as `$operation`, and, as `$subject`, the raw value of the
 operation's first route parameter (the string in the path, before
 upcasting), or `NULL` when the operation takes none.
+
+Grouping, order, placeholders and help are not a cosmetic layer's: they
+are declared on the keys ([Arranging the keys](#arranging-the-keys)),
+where every door reads them, and a layer is read by one form alone. What
+a layer keeps is what is truly one form's.
 
 Nothing in a cosmetic layer can change what a value means. Every element
 keeps its name and its `#parents`; `#group` only relocates an element at
@@ -915,10 +1025,12 @@ contract says `radios` or `checkboxes`, and the React app draws them,
 where a swap changes the form alone. A swap that changes what is posted
 is a widget of its own ([Writing a widget](widgets.md#writing-a-widget)).
 
-`data_surface_demo_node_type` is the worked example: two routes and a
-cosmetics service holding core's vertical tabs, the machine name's
-mirror-while-typing, the message and the redirect. There is no form
-class in the module at all.
+`data_surface_demo_node_type` is the worked example: two routes, a
+resource that declares its three groups, and a cosmetics service that
+puts those groups into core's vertical tabs (placed before the first
+group, so the tabs render before the groups they gather), the machine
+name's mirror-while-typing, the message and the redirect. There is no
+form class in the module at all.
 
 ### When a hand-written form is still right
 

@@ -187,8 +187,9 @@ has nothing to put in `#placeholder`.
 keys the drafts propose, `default_value` and `examples`, written and read
 through one class that delegates to core's own method once one exists
 (`src/DefinitionMetadata.php`). The emitter writes `default` and
-`examples` from them, and the string widget uses the first example as
-its placeholder (`StringWidget`).
+`examples` from them. A form draws no example as a placeholder: an
+empty field showing a value reads as filled, so a placeholder is the
+key's declared arrangement (`DefinitionMetadata::setArrangement()`).
 
 **The core change.** `setExamples()` and `getExamples()` on
 `DataDefinition`, and a default value as plain metadata: nothing

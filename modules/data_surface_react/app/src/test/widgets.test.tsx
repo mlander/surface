@@ -46,7 +46,16 @@ describe('text, textarea and email', () => {
     render(
       <Form
         schema={object(
-          { headline: { title: 'Headline', description: 'Shown above.', type: 'string', maxLength: 50, examples: ['Quarterly report'], 'x-surface': x('text') } },
+          {
+            headline: {
+              title: 'Headline',
+              description: 'Shown above.',
+              type: 'string',
+              maxLength: 50,
+              examples: ['Quarterly report'],
+              'x-surface': x('text', { arrangement: { placeholder: 'A short headline' } }),
+            },
+          },
           ['headline'],
         )}
         initial={{ headline: 'Featured' }}
@@ -55,7 +64,8 @@ describe('text, textarea and email', () => {
     const input = screen.getByLabelText(/Headline/);
     expect(input).toHaveAttribute('type', 'text');
     expect(input).toHaveAttribute('maxlength', '50');
-    expect(input).toHaveAttribute('placeholder', 'Quarterly report');
+    // The declared placeholder, never the example.
+    expect(input).toHaveAttribute('placeholder', 'A short headline');
     expect(input).toBeRequired();
     expect(input).toHaveValue('Featured');
     expect(input).toHaveAccessibleDescription('Shown above.');
@@ -82,10 +92,12 @@ describe('text, textarea and email', () => {
     // A bare pattern makes the browser ask for "the requested format",
     // which is vaguer than the message the server answers with.
     expect(input).not.toHaveAttribute('pattern');
-    expect(input).toHaveAttribute('placeholder', '2048');
+    // An example is no placeholder: an empty field showing a value reads
+    // as filled.
+    expect(input).not.toHaveAttribute('placeholder');
   });
 
-  it('renders a textarea with neither maxlength nor placeholder', () => {
+  it('renders a textarea with no maxlength, and only a declared placeholder', () => {
     render(
       <Form
         schema={object({ help: { title: 'Help', type: ['string', 'null'], maxLength: 10, examples: ['x'], 'x-surface': x('textarea') } })}
@@ -699,5 +711,87 @@ describe('the contract panel', () => {
     const code = document.querySelector('tr[data-surface-key="code"]') as HTMLElement;
     expect(code.textContent).toContain('matches a required format: ^[a-z]+$');
     expect(within(code).getByText('^[a-z]+$').tagName).toBe('CODE');
+  });
+});
+
+describe('the arrangement a key declares (x-surface.arrangement)', () => {
+  const hours = { id: 'hours', label: 'Opening hours', as: 'fieldset' as const };
+  const pricing = { id: 'pricing', label: 'Pricing', as: 'details' as const, collapsed: true };
+  const studio = object({
+    name: { title: 'Studio name', type: 'string', 'x-surface': x('text', { arrangement: { placeholder: 'Riverside studio', help: 'Shown on the door.' } }) },
+    opens: { title: 'Opens at', type: 'string', 'x-surface': x('text', { arrangement: { group: hours, weight: 2 } }) },
+    closes: { title: 'Closes at', type: 'string', 'x-surface': x('text', { arrangement: { group: hours, weight: 1 } }) },
+    rate: {
+      title: 'Hourly rate',
+      description: 'What an hour costs.',
+      type: ['integer', 'null'],
+      examples: [40],
+      'x-surface': x('number', { arrangement: { group: pricing, placeholder: 'For example, 40', prefix: '$', suffix: 'per hour', help: 'Whole dollars.' } }),
+    },
+    deposit: { title: 'Deposit asked', type: 'boolean', 'x-surface': x('checkbox', { arrangement: { group: pricing, weight: -1 } }) },
+    notes: { title: 'Notes', type: ['string', 'null'], 'x-surface': x('textarea', { arrangement: { weight: -10 } }) },
+  });
+
+  it('draws each group where its first key is declared, its keys inside it, each by its weight', () => {
+    const { container } = render(<Form schema={studio} initial={{ name: '', opens: '09:00', closes: '17:00', rate: null, deposit: false, notes: null }} />);
+    // The frame: the notes weighed first, then the name, then each group
+    // where its first key is declared.
+    const drawn = Array.from(container.querySelectorAll('form > *')).map((element) => element.querySelector(':scope > legend, :scope > summary, :scope > label')?.textContent ?? element.tagName);
+    expect(drawn).toEqual(['Notes', 'Studio name', 'Opening hours', 'Pricing']);
+
+    const fieldset = screen.getByRole('group', { name: 'Opening hours' });
+    expect(fieldset.tagName).toBe('FIELDSET');
+    // Inside its group, the closing time is weighed before the opening time.
+    expect(within(fieldset).getAllByRole('textbox').map((input) => input.getAttribute('name'))).toEqual(['closes', 'opens']);
+
+    const details = container.querySelector('details') as HTMLDetailsElement;
+    expect(details.querySelector('summary')).toHaveTextContent('Pricing');
+    // It starts closed, as declared, and holds its keys, the deposit
+    // weighed first.
+    expect(details.open).toBe(false);
+    expect(Array.from(details.querySelectorAll('input')).map((input) => input.getAttribute('name'))).toEqual(['deposit', 'rate']);
+  });
+
+  it('draws the placeholder, the prefix, the suffix and the help it declares', () => {
+    render(<Form schema={studio} initial={{ name: '', opens: '09:00', closes: '17:00', rate: null, deposit: false, notes: null }} />);
+    const rate = screen.getByLabelText('Hourly rate');
+    expect(rate).toHaveAttribute('placeholder', 'For example, 40');
+    expect(rate.previousElementSibling).toHaveTextContent('$');
+    expect(rate.nextElementSibling).toHaveTextContent('per hour');
+    // The help after the description, read with the field.
+    expect(rate).toHaveAccessibleDescription('What an hour costs. Whole dollars.');
+    const name = screen.getByLabelText('Studio name');
+    expect(name).toHaveAttribute('placeholder', 'Riverside studio');
+    expect(name).toHaveAccessibleDescription('Shown on the door.');
+    // Only drawing: every key keeps its own path.
+    expect(screen.getByLabelText('Deposit asked')).toHaveAttribute('name', 'deposit');
+  });
+});
+
+describe('a select standing for a stale value', () => {
+  it('says on its empty option that it keeps the value, and keeps the marker without asking the browser', () => {
+    render(
+      <Form
+        schema={object(
+          {
+            room: {
+              title: 'Room',
+              type: 'string',
+              oneOf: [{ const: 'main', title: 'Main hall' }],
+              'x-surface': x('select', { stale: true, emptyOption: { show: true, label: '- Keep annex (no longer offered) -' } }),
+            },
+          },
+          ['room'],
+        )}
+        initial={{ room: null }}
+      />,
+    );
+    const select = screen.getByLabelText(/Room/);
+    expect(select).toHaveValue('');
+    expect(within(select).getAllByRole('option')[0]).toHaveTextContent('- Keep annex (no longer offered) -');
+    // Empty there means keep, so the browser is not asked to refuse it,
+    // and the label still says the key is required.
+    expect(select).not.toBeRequired();
+    expect(screen.getByText('*')).toBeInTheDocument();
   });
 });

@@ -679,3 +679,41 @@ data_surface_resource_test.gallery.finish.print:
       type: integer
       label: 'Edition'
       nullable: true
+
+# Generated from the resource_test.studio resource by drush data_surface:config-schema.
+data_surface_resource_test.studio:
+  type: config_object
+  label: 'resource_test.studio'
+  constraints:
+    FullyValidatable: ~
+  mapping:
+    name:
+      type: string
+      label: 'Studio name'
+      nullable: true
+      constraints:
+        Length:
+          max: 60
+    opens:
+      type: string
+      label: 'Opens at'
+      nullable: true
+    closes:
+      type: string
+      label: 'Closes at'
+      nullable: true
+    rate:
+      type: integer
+      label: 'Hourly rate'
+      nullable: true
+      constraints:
+        Range:
+          min: 0
+    deposit:
+      type: boolean
+      label: 'Deposit asked'
+      nullable: true
+    notes:
+      type: string
+      label: 'Notes'
+      nullable: true

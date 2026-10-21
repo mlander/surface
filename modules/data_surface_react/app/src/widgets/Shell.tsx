@@ -41,10 +41,19 @@ export function RequiredMarker(): JSX.Element {
   );
 }
 
-/** The description, with the locked or secret note appended. */
-export function Description({ props, id }: { props: FieldProps; id: string }): JSX.Element | null {
-  const notes = [props.schema.description, isLocked(props) ? LOCKED_NOTE : undefined, props.schema.writeOnly ? SECRET_NOTE : undefined]
+/**
+ * What is said under an element: its description, the help its
+ * arrangement gives, and the locked or secret note, as the form builder
+ * appends them.
+ */
+function notesOf(props: FieldProps): string[] {
+  return [props.schema.description, props.schema['x-surface']?.arrangement?.help, isLocked(props) ? LOCKED_NOTE : undefined, props.schema.writeOnly ? SECRET_NOTE : undefined]
     .filter((note): note is string => typeof note === 'string' && note !== '');
+}
+
+/** The description, with the help and the locked or secret note appended. */
+export function Description({ props, id }: { props: FieldProps; id: string }): JSX.Element | null {
+  const notes = notesOf(props);
   if (notes.length === 0) {
     return null;
   }
@@ -73,7 +82,7 @@ export function Errors({ props, id }: { props: FieldProps; id: string }): JSX.El
 /** The ids an input is described by. */
 export function describedBy(props: FieldProps, id: string): string | undefined {
   const ids = [];
-  if (props.schema.description || isLocked(props) || props.schema.writeOnly) {
+  if (notesOf(props).length > 0) {
     ids.push(`${id}--description`);
   }
   if ((props.errors[props.path] ?? []).length > 0) {

@@ -13,10 +13,13 @@ use Drupal\data_surface\Pipeline\DataSurfaceResult;
  * The bespoke part of a generated operation form.
  *
  * DataSurfaceOperationForm builds every element from the data surface,
- * which leaves exactly three things a form still has an opinion about
- * and a data surface never will: how the elements are arranged on the
- * page, what a person is told when the write succeeds, and where they
- * are sent afterwards. This interface is those three, and nothing else:
+ * and draws them as their keys' arrangements say (groups, weights,
+ * placeholders, help), which every door reads. That leaves exactly three
+ * things one form still has an opinion about and a data surface never
+ * will: what it borrows or adds around the elements (an element of
+ * core's, such as vertical tabs around the declared groups, or markup),
+ * what a person is told when the write succeeds, and where they are sent
+ * afterwards. This interface is those three, and nothing else:
  * a cosmetic layer that cannot change what a value means, because it runs
  * after the container is built and its return is rendered, not read.
  *
@@ -34,13 +37,17 @@ use Drupal\data_surface\Pipeline\DataSurfaceResult;
 interface DataSurfaceFormCosmeticsInterface {
 
   /**
-   * Arranges the built form, after every element exists.
+   * Borrows or adds what this one form draws, after every element exists.
    *
-   * Presentation only. Every element keeps its name and its #parents, so
-   * grouping, weights, #states, a machine name mirror, an extra
-   * description or a different widget type change nothing about
-   * extraction, validation, or the machine-visible data surface: deleting
-   * this method's whole body yields the same flat working form.
+   * Presentation only, and only what is this form's alone: grouping,
+   * weights, placeholders and help are the keys' arrangement
+   * (docs/decisions.md#arrangement-is-declared-once), already drawn, each
+   * group under DataSurfaceFormBuilderInterface::GROUP_PREFIX and its id.
+   * Every element keeps its name and its #parents, so a borrowed element
+   * (vertical tabs gathering the groups, a machine name mirror), markup
+   * or a different widget type change nothing about extraction,
+   * validation, or the machine-visible data surface: deleting this
+   * method's whole body yields the same working form.
    *
    * An implementation that needs to change what a value MEANS (its
    * allowed values, its default, whether it is required) is in the wrong

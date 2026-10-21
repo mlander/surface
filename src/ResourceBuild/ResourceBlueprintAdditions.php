@@ -10,6 +10,7 @@ use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
 use Drupal\data_surface\DataSurfaceBuilderInterface;
 use Drupal\data_surface\DefinitionMetadata;
+use Drupal\data_surface\Resource\Arrangement;
 
 /**
  * An alter's blueprint: keys are mounted under the alter's module.
@@ -93,7 +94,7 @@ final class ResourceBlueprintAdditions extends BlueprintAdapterBase {
   /**
    * {@inheritdoc}
    */
-  public function describe(string $key, string|\Stringable|null $label = NULL, string|\Stringable|null $description = NULL, ?string $after = NULL): static {
+  public function describe(string $key, string|\Stringable|null $label = NULL, string|\Stringable|null $description = NULL, ?string $after = NULL, ?Arrangement $arrangement = NULL): static {
     $this->assertWithinMixin('rewords', $key);
     // The owner's own words are kept, for what describes the owner's
     // storage whichever modules are on (its config schema).
@@ -101,7 +102,21 @@ final class ResourceBlueprintAdditions extends BlueprintAdapterBase {
     if ($owned !== NULL) {
       DefinitionMetadata::keepOwnLabel($owned);
     }
-    return parent::describe($key, $label, $description, $after);
+    $mine = in_array($key, $this->keys, TRUE) || $key === 'third_party_settings.' . $this->provider || str_starts_with($key, 'third_party_settings.' . $this->provider . '.');
+    $arranged = $arrangement === NULL || $mine ? NULL : $this->find($key);
+    $removed = $arranged === NULL ? [] : $arrangement->removes(DefinitionMetadata::arrangementOf($arranged));
+    if ($removed !== []) {
+      // Narrowing only, as for the rest of what an alter says of a key it
+      // does not own: it places and rewords, never takes away.
+      // Decision: see docs/decisions.md#arrangement-is-declared-once.
+      throw new \LogicException(sprintf(
+        'The %s alter arranges "%s" with an empty %s, which would take away what its owner arranged. An alter places a key it does not own and rewords what was said of it, never removes it; leave it NULL to keep it.',
+        $this->provider,
+        $key,
+        implode(' and ', $removed),
+      ));
+    }
+    return parent::describe($key, $label, $description, $after, $arrangement);
   }
 
   /**

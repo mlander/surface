@@ -55,8 +55,33 @@ export interface EmptyOption {
   label: string;
 }
 
+/** A named group a key is drawn in: a fieldset, or a details a person may close. */
+export interface ArrangementGroup {
+  id: string;
+  label: string;
+  as: 'fieldset' | 'details';
+  collapsed?: boolean;
+  weight?: number;
+}
+
+/**
+ * How a key is arranged where it is drawn (`x-surface.arrangement`, with
+ * the widget hints): its group, its weight among its frame's keys (or its
+ * group's), and the texts beside its input. Never what it accepts.
+ */
+export interface Arrangement {
+  group?: ArrangementGroup;
+  weight?: number;
+  placeholder?: string;
+  prefix?: string;
+  suffix?: string;
+  help?: string;
+}
+
 export interface Extension {
   widget: Widget | null;
+  /** With the widget hints: how the key is arranged where it is drawn. */
+  arrangement?: Arrangement;
   locked: boolean;
   dependsOn: string[];
   refined: boolean;
@@ -1379,6 +1404,34 @@ const UNKNOWN = Symbol('unknown');
 interface Labels {
   required: string;
   optional: string;
+  /** The server's words for each select it served standing for a stale value, by path. */
+  kept: Map<string, string>;
+}
+
+/**
+ * The empty option of a select standing for a stale value, as
+ * OptionsWidget::keepLabel() words it: what the server served for that
+ * path when it served one, else the same words in English.
+ */
+function keepLabel(labels: Labels, path: string, value: unknown): string {
+  return labels.kept.get(path) ?? `- Keep ${typeof value === 'string' ? value : JSON.stringify(value)} (no longer offered) -`;
+}
+
+/** Reads the server's "keep" wording of each stale select it served, by path. */
+function keptLabels(node: Schema, prefix: string, kept: Map<string, string>): Map<string, string> {
+  for (const [name, property] of Object.entries(node.properties ?? {})) {
+    if (!isObject(property)) {
+      continue;
+    }
+    const extension = property['x-surface'] as Extension | undefined;
+    if (extension?.stale && extension.emptyOption !== undefined && extension.widget === 'select') {
+      kept.set(prefix + name, extension.emptyOption.label);
+    }
+    if (isObject(property.properties)) {
+      keptLabels(property, `${prefix}${name}.`, kept);
+    }
+  }
+  return kept;
 }
 
 /** The empty option's labels, as the server translated them: read from what it served. */
@@ -1400,7 +1453,8 @@ function labels(schema: Schema): Labels {
       for (const [name, property] of Object.entries(node.properties)) {
         const extension = isObject(property) ? (property['x-surface'] as Extension | undefined) : undefined;
         const option = extension?.emptyOption;
-        if (option !== undefined && isObject(property) && property.oneOf !== undefined && extension?.widget === 'select') {
+        // A stale select says it keeps its value, in words of its own.
+        if (option !== undefined && !extension?.stale && isObject(property) && property.oneOf !== undefined && extension?.widget === 'select') {
           found[holdsValue(property as Schema, required.includes(name)) ? 'required' : 'optional'] ??= option.label;
         }
       }
@@ -1408,7 +1462,7 @@ function labels(schema: Schema): Labels {
     Object.values(node).forEach(walk);
   };
   walk(schema);
-  return { required: found.required ?? '- Select -', optional: found.optional ?? '- None -' };
+  return { required: found.required ?? '- Select -', optional: found.optional ?? '- None -', kept: keptLabels(schema, '', new Map()) };
 }
 
 interface Context {
@@ -1942,13 +1996,17 @@ function present(schema: Schema, full: Schema, values: Values, path: string, map
         own.stale = true;
         stale.push(at);
         out = null;
+        if (extension.widget === 'select') {
+          // A save that leaves it keeps the stored value, and it says so.
+          own.emptyOption = { ...own.emptyOption, label: keepLabel(context.labels, at, value) };
+        }
       }
     }
     if (context.unknown.has(at) && isEmpty(held) && !own.stale) {
       // Stale when the page was handed it: the server holds what it stands for.
       own.stale = true;
       if (own.emptyOption !== undefined) {
-        own.emptyOption = { ...own.emptyOption, show: true };
+        own.emptyOption = { ...own.emptyOption, show: true, label: extension.widget === 'select' ? context.labels.kept.get(at) ?? own.emptyOption.label : own.emptyOption.label };
       }
       stale.push(at);
       out = null;
@@ -1957,6 +2015,11 @@ function present(schema: Schema, full: Schema, values: Values, path: string, map
       if (!own.stale) {
         own.stale = true;
         stale.push(at);
+      }
+      if (own.emptyOption !== undefined && extension.widget === 'select') {
+        // Refused by the save that moved what it refines against, not
+        // kept: frame()'s orphan, worded as before.
+        own.emptyOption = { ...own.emptyOption, label: holdsValue(property, (schema.required ?? []).includes(name)) ? context.labels.required : context.labels.optional };
       }
       out = null;
     }

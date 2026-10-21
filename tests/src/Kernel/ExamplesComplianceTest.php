@@ -523,7 +523,9 @@ class ExamplesComplianceTest extends DataSurfaceKernelTestBase {
     $this->assertSame('The four digits after EV- on the license, such as 2048. Required to host more than 100 people.', (string) $license->getDescription());
     $this->assertSame(['2048'], DefinitionMetadata::getExamples($license));
     $element = $this->container->get('plugin.manager.data_surface_widget')->getWidgetFor($license)->buildElement($license, NULL);
-    $this->assertSame('2048', $element['#placeholder']);
+    // The example says it in the documents, not as a placeholder: an
+    // empty field showing a value reads as filled.
+    $this->assertArrayNotHasKey('#placeholder', $element);
     // The message carries the explanation; the input carries no pattern
     // for Form API or a browser to answer in vaguer words.
     $this->assertArrayNotHasKey('#pattern', $element);

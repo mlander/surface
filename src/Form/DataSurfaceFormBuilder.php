@@ -28,8 +28,10 @@ use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Refinement\DoesNotApply;
+use Drupal\data_surface\Resource\ArrangementGroup;
 use Drupal\data_surface\Options\DataSurfaceOptions;
 use Drupal\data_surface\Pipeline\DataSurfacePipelineInterface;
+use Drupal\data_surface\Plugin\DataSurfaceWidget\OptionsWidget;
 use Drupal\data_surface\Pipeline\ValueState;
 use Drupal\data_surface\Pipeline\ViolationSet;
 use Drupal\data_surface\Entry;
@@ -191,8 +193,10 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
     // with what it holds, an orphan standing for its stored value, so its
     // select comes up on the empty option with that value behind it.
     $shown = $values;
+    $orphans = [];
     foreach ($values[self::STANDING_KEY] ?? [] as $dotted => $standing) {
       NestedArray::setValue($shown, explode('.', (string) $dotted), $standing, TRUE);
+      $orphans[] = explode('.', (string) $dotted);
     }
     unset($values[self::STANDING_KEY], $shown[self::STANDING_KEY]);
     $surface = $surface->refine($values);
@@ -219,18 +223,23 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
     // Decision: see docs/decisions.md#locked-at-the-top.
     $whole = $surface->lockedWhole() !== NULL;
     foreach ($definitions as $name => $definition) {
+      // Each key is drawn as its arrangement says, whichever widget draws
+      // it: read off the key as declared, which a variant's definition
+      // below stands in for.
+      // Decision: see docs/decisions.md#arrangement-is-declared-once.
+      $declared = $definition;
       if (DoesNotApply::marks($definition)) {
         // Not rendered at all, not disabled and not hidden: the key does
         // not apply to these values, so there is nothing to answer. Its
         // wrapper alone is drawn, for the rebuild that makes it apply.
         // Decision: see docs/decisions.md#a-key-that-does-not-apply.
-        $container[$name] = ['#markup' => '', self::PLACEHOLDER_KEY => TRUE];
+        $container[$name] = DataSurfaceWidgetBase::arranged(['#markup' => '', self::PLACEHOLDER_KEY => TRUE], $declared);
         continue;
       }
       $list = $definitions->entry($name)?->list;
       if ($list !== NULL && $definition instanceof ListDataDefinitionInterface) {
         // Decision: see docs/decisions.md#a-list-of-child-invocations.
-        $container[$name] = $this->buildCollection(
+        $container[$name] = DataSurfaceWidgetBase::arranged($this->buildCollection(
           $list,
           $definition,
           $values[$name] ?? $surface->getDefault($name),
@@ -240,7 +249,7 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
           $wrapper_id,
           $definitions->entry($name)->lockedBecause,
           $whole,
-        );
+        ), $declared);
         continue;
       }
       $variants = $definitions->entry($name)?->variants;
@@ -258,7 +267,7 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
           // appears the moment its deciding key is answered, through the
           // rebuild the deciding key is wired to. Nothing but its
           // wrapper is rendered, so that rebuild has a place to put it.
-          $container[$name] = ['#markup' => '', self::PLACEHOLDER_KEY => TRUE];
+          $container[$name] = DataSurfaceWidgetBase::arranged(['#markup' => '', self::PLACEHOLDER_KEY => TRUE], $declared);
           continue;
         }
         $child = $variants->variant($chosen)->child;
@@ -296,7 +305,12 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
         $locked = $locked || $variant !== NULL;
         $reason ??= $variant;
       }
-      $element = $this->widgetManager->getWidgetFor($definition)->buildElement($definition, $value);
+      $element = DataSurfaceWidgetBase::arranged($this->widgetManager->getWidgetFor($definition)->buildElement($definition, $value), $declared);
+      if (isset($element[OptionsWidget::UNKEPT_LABEL_KEY]) && !array_key_exists($name, $shown)) {
+        // Nothing stored: a declared default the list does not offer is
+        // no value to keep, so the empty option does not say "keep".
+        $element['#empty_option'] = $element[OptionsWidget::UNKEPT_LABEL_KEY];
+      }
       $inside = $variants === NULL ? $definitions->entry($name)?->attachment?->child : NULL;
       if ($inside !== NULL && !$locked) {
         $element = static::lockedInside($element, $inside);
@@ -311,7 +325,21 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
       }
       $container[$name] = $element;
     }
+    foreach ($orphans as $parents) {
+      // An orphan of the edit stands for the stored value as a stale
+      // select does, but the save that moves what it refines against
+      // refuses it rather than keeping it: its empty option does not
+      // say "keep".
+      // Decision: see docs/decisions.md#the-empty-option-rule.
+      $exists = FALSE;
+      $orphan = NestedArray::getValue($container, $parents, $exists);
+      if ($exists && is_array($orphan) && isset($orphan[OptionsWidget::UNKEPT_LABEL_KEY])) {
+        $orphan['#empty_option'] = $orphan[OptionsWidget::UNKEPT_LABEL_KEY];
+        NestedArray::setValue($container, $parents, $orphan);
+      }
+    }
     $container = $this->wireRefinement($container, $surface, $values, [], $wrapper_id);
+    $container = static::withGroups($container);
     $stale = static::stalePaths($container);
     if ($stale !== []) {
       // Fixed to this build: what the person is looking at now, not what
@@ -1085,9 +1113,9 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
         // What the change moved; a panel every rebuild redraws is not.
         $drawn[(string) $dotted] = $element;
       }
-      // Rendered without the container, so a fieldset placed inside it
-      // is placed here, as the container's pre-render would have.
-      $elements[$element[self::REFRESH_ID_KEY]] = static::placeMounts($element);
+      // Rendered without the container, so a group or a fieldset placed
+      // inside it is drawn here, as the container's pre-render would have.
+      $elements[$element[self::REFRESH_ID_KEY]] = static::placeMounts(static::gatherGroups($element));
     }
     $response = new AjaxResponse();
     foreach ($elements as $id => $element) {
@@ -1418,7 +1446,91 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
    * {@inheritdoc}
    */
   public static function preRenderSurfaceContainer(array $element): array {
-    return static::placeMounts($element);
+    return static::placeMounts(static::gatherGroups($element));
+  }
+
+  /**
+   * Adds one element per group its keys' arrangements name, at any depth.
+   *
+   * A group is drawn where its first key is declared: its element, a
+   * fieldset or a details, goes into the frame directly before that key,
+   * under GROUP_PREFIX and its id, with the group's own weight when it
+   * declares one (a key's weight orders it inside its group). It holds
+   * nothing yet: the keys stay where their values are posted until the
+   * container is drawn (gatherGroups()). A cosmetic layer reaches it by
+   * its key, to put it in vertical tabs, say. First in render order of
+   * its members, so a group a borrowed element gathers by Form API's own
+   * `#group` is drawn before what it holds.
+   *
+   * Decision: see docs/decisions.md#arrangement-is-declared-once.
+   *
+   * @param array $element
+   *   The frame: the container, or any element below it.
+   *
+   * @return array
+   *   The frame, with an empty element per group, at any depth.
+   */
+  protected static function withGroups(array $element): array {
+    $groups = [];
+    foreach (static::elementChildren($element) as $key) {
+      $element[$key] = static::withGroups($element[$key]);
+      $group = $element[$key][self::GROUP_KEY] ?? NULL;
+      if (!is_array($group) || !is_string($group['id'] ?? NULL)) {
+        continue;
+      }
+      $groups[$group['id']] ??= ['first' => (string) $key, 'group' => $group];
+    }
+    if ($groups === []) {
+      return $element;
+    }
+    $before = array_column($groups, NULL, 'first');
+    $framed = [];
+    foreach ($element as $key => $value) {
+      if (isset($before[(string) $key])) {
+        $group = $before[(string) $key]['group'];
+        $drawn = $group['as'] === ArrangementGroup::DETAILS
+          ? ['#type' => 'details', '#title' => $group['label'], '#open' => empty($group['collapsed'])]
+          : ['#type' => 'fieldset', '#title' => $group['label']];
+        if (isset($group['weight'])) {
+          $drawn['#weight'] = $group['weight'];
+        }
+        $framed[self::GROUP_PREFIX . $group['id']] = $drawn;
+      }
+      $framed[$key] = $value;
+    }
+    return $framed;
+  }
+
+  /**
+   * Draws each grouped element inside its group's element, at any depth.
+   *
+   * Written into the group's element in place, so a borrowed element that
+   * gathers groups by Form API's own `#group` (vertical tabs) draws the
+   * group with what it holds. Every moved element keeps its #parents,
+   * #name and refresh wrapper, so it posts where it always did and the
+   * AJAX callback replaces it by the same id; within the group, Form API
+   * sorts the members by weight.
+   *
+   * @param array $element
+   *   The frame.
+   *
+   * @return array
+   *   The frame, its grouped elements inside their groups.
+   */
+  protected static function gatherGroups(array $element): array {
+    foreach (static::elementChildren($element) as $key) {
+      $group = $element[$key][self::GROUP_KEY] ?? NULL;
+      $into = is_array($group) && is_string($group['id'] ?? NULL) ? self::GROUP_PREFIX . $group['id'] : NULL;
+      if ($into !== NULL && $into !== (string) $key && isset($element[$into]) && is_array($element[$into])) {
+        $element[$into][$key] = $element[$key];
+        $element[$into]['#sorted'] = FALSE;
+        unset($element[$key]);
+      }
+    }
+    foreach (static::elementChildren($element) as $key) {
+      $element[$key] = static::gatherGroups($element[$key]);
+    }
+    return $element;
   }
 
   /**

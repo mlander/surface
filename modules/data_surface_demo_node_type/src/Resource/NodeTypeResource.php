@@ -6,6 +6,9 @@ namespace Drupal\data_surface_demo_node_type\Resource;
 
 use Drupal\Core\Entity\EntityTypeInterface;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
+use Drupal\data_surface\DefinitionMetadata;
+use Drupal\data_surface\Resource\Arrangement;
+use Drupal\data_surface\Resource\ArrangementGroup;
 use Drupal\data_surface\Resource\Attribute\Operation;
 use Drupal\data_surface\Resource\Attribute\Resource;
 use Drupal\data_surface\Resource\BlueprintInterface;
@@ -128,22 +131,32 @@ final class NodeTypeResource implements ResourceInterface {
         'match' => FALSE,
         'message' => t('The description may not hold control characters other than line breaks and tabs.'),
       ]);
+    // How the content form is filled in, drawn as core's content type form
+    // draws it: three groups after the name, the first open. Declared on
+    // the keys, so every door that draws them reads it; the cosmetic
+    // layer only borrows core's vertical tabs to hold the groups.
+    $submission = new Arrangement(group: ArrangementGroup::details('submission', t('Submission form settings')));
+    $workflow = new Arrangement(group: ArrangementGroup::details('workflow', t('Publishing options'), collapsed: TRUE));
+    $display = new Arrangement(group: ArrangementGroup::details('display', t('Display settings'), collapsed: TRUE));
+
     // Not stored on the node type: the title base field's per bundle
     // label.
-    $inputs->add('title_label', 'string', t('Title field label'), default: 'Title')
+    $title_label = $inputs->add('title_label', 'string', t('Title field label'), default: 'Title')
       ->setDescription(t('The label shown for the title field on the content form.'))
       ->setRequired(TRUE)
       ->addConstraint('Length', ['max' => 255]);
+    DefinitionMetadata::setArrangement($title_label, $submission);
     // Spelled canonically — values as a list, labels beside them —
     // because the values are integers, and an integer-keyed map of labels
     // cannot be told from a list of values.
-    $inputs->add('preview_mode', 'integer', t('Preview before submitting'), default: NodePreviewMode::Optional->value)
+    $preview_mode = $inputs->add('preview_mode', 'integer', t('Preview before submitting'), default: NodePreviewMode::Optional->value)
       ->setRequired(TRUE)
       ->addConstraint('LabeledChoice', [
         'choices' => array_column(NodePreviewMode::cases(), 'value'),
         'labels' => NodePreviewMode::asOptions(),
       ]);
-    $inputs->add('help', 'string', t('Explanation or submission guidelines'))
+    DefinitionMetadata::setArrangement($preview_mode, $submission);
+    $help = $inputs->add('help', 'string', t('Explanation or submission guidelines'))
       ->setDescription(t('Displayed at the top of the page when creating or editing content of this type.'))
       ->setSetting('multiline', TRUE)
       ->addConstraint('Regex', [
@@ -151,18 +164,23 @@ final class NodeTypeResource implements ResourceInterface {
         'match' => FALSE,
         'message' => t('The help may not hold control characters other than line breaks and tabs.'),
       ]);
+    DefinitionMetadata::setArrangement($help, $submission);
 
     // The defaults of new content, kept on the node base fields.
-    $inputs->add('status', 'boolean', t('Published'), default: TRUE)
+    $status = $inputs->add('status', 'boolean', t('Published'), default: TRUE)
       ->setDescription(t('Whether new content of this type is published by default.'));
-    $inputs->add('promote', 'boolean', t('Promoted to front page'), default: FALSE)
+    $promote = $inputs->add('promote', 'boolean', t('Promoted to front page'), default: FALSE)
       ->setDescription(t('Whether new content of this type is promoted by default.'));
-    $inputs->add('sticky', 'boolean', t('Sticky at top of lists'), default: FALSE)
+    $sticky = $inputs->add('sticky', 'boolean', t('Sticky at top of lists'), default: FALSE)
       ->setDescription(t('Whether new content of this type is sticky by default.'));
-    $inputs->add('new_revision', 'boolean', t('Create new revision'), default: TRUE)
+    $new_revision = $inputs->add('new_revision', 'boolean', t('Create new revision'), default: TRUE)
       ->setDescription(t('Whether edits create a new revision by default.'));
-    $inputs->add('display_submitted', 'boolean', t('Display author and date information'), default: TRUE)
+    foreach ([$status, $promote, $sticky, $new_revision] as $published) {
+      DefinitionMetadata::setArrangement($published, $workflow);
+    }
+    $display_submitted = $inputs->add('display_submitted', 'boolean', t('Display author and date information'), default: TRUE)
       ->setDescription(t('Author username and publish date will be displayed.'));
+    DefinitionMetadata::setArrangement($display_submitted, $display);
   }
 
 }

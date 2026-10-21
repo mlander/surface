@@ -23,8 +23,10 @@ operation's permission cannot say: the node type entity's own answer.
 There is no form class in this module, and no tool. Both routes name
 `Drupal\data_surface\Form\DataSurfaceOperationForm` with the resource
 class and an operation; the edit route's `{type}` is the edit
-operation's `$type`. What is left of a form here is
-`NodeTypeResourceFormCosmetics`: core's vertical tabs, the machine name's
+operation's `$type`. The resource declares which keys sit in which of
+its three groups (`Arrangement`), so every door draws them alike. What
+is left of a form here is `NodeTypeResourceFormCosmetics`: core's
+vertical tabs borrowed to hold those groups, the machine name's
 mirror-while-typing, the message and the redirect, which is the part
 that should stay bespoke. With `data_surface_tool` enabled, both
 operations are tools, `data_surface:node.type:add` and

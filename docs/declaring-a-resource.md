@@ -462,9 +462,10 @@ which is what core definitions already say. Written with
 `DefinitionMetadata::setDefaultValue()`, `NULL` is a declared default
 and is distinct from declaring none. What consumers do with a declared
 one: the data surface's `getDefault()` and
-`getDefaultValues()` read it, `accept()` merges it under the stored
-values, and the string and number widgets render the first example as
-`#placeholder`. An operation that creates may give starting values with
+`getDefaultValues()` read it, and `accept()` merges it under the stored
+values; an example is stated by both documents and drawn as no
+placeholder, which is the key's declared
+[arrangement](forms.md#arranging-the-keys). An operation that creates may give starting values with
 `withDefaults()`, which become the key's defaults in that context.
 
 Two consequences worth knowing before you declare one. A map's declared

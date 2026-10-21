@@ -96,6 +96,29 @@
   padding: 0 0.25rem;
 }
 
+.dsr-details {
+  min-width: 0;
+  margin: 0 0 1rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid currentColor;
+  border-radius: 0.25rem;
+}
+
+.dsr-summary {
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.dsr-details[open] > .dsr-summary {
+  margin-bottom: 0.75rem;
+}
+
+.dsr-affixed {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
 .dsr-list__rows {
   margin: 0 0 0.5rem;
   padding-inline-start: 1.25rem;

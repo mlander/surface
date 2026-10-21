@@ -78,7 +78,9 @@ version it is written in, is not the one served.
 | A label, a description, a default or an example changed | compatible | Nothing. | Nothing; a default changed changes what a create gives a key left out, which the note says. | a note |
 | A required key made optional | compatible | Nothing. | A reader of `values` may meet `null` there. | `made optional` |
 | A required key added, with a default | compatible | Nothing: a value stored before reads the default until it is written. | Nothing: a create gives it the default, and an edit keeps what it holds. | `required key added, with a default` (a note) |
-| A required key added, with no default | compatible, with a note | Nothing loads differently: a thing stored before holds nothing there, so its next write must supply the key, and the pipeline refuses one that does not in the key's own words. Where the value can be derived from what is stored, raise the version and migrate it in instead, so no write is asked for it. | A create sends it; an edit of a thing stored before it sends it once, and an edit of one that holds it may leave it out (an update tool requires nothing at its door, [decision](decisions.md#required-is-the-resources-and-an-update-tool-requires-nothing-at-its-door)). | `required key added: a write must now supply <key> where nothing is stored` (a note) |
+| A required key added, with no default, to an operation that acts on what is stored (an update, a read) | compatible, with a note | Nothing loads differently: a thing stored before holds nothing there, so its next write must supply the key, and the pipeline refuses one that does not in the key's own words. Where the value can be derived from what is stored, raise the version and migrate it in instead, so no write is asked for it. | An edit of a thing stored before it sends it once, and an edit of one that holds it may leave it out, since a key left out keeps what is stored (an update tool requires nothing at its door, [decision](decisions.md#required-is-the-resources-and-an-update-tool-requires-nothing-at-its-door)). | `required key added: a write must now supply <key> where nothing is stored` (a note) |
+| A required key added, with no default, to a create | breaking | Nothing. | Every create an old client sends leaves it out, and nothing is stored for it to keep, so every one is refused. Give the key a default, or allow it with a reason. | `required key added with no default: a create that leaves <key> out is refused` |
+| A required key added, with no default, to a structure described alone | breaking | As for its containers. | It states no operation, so the lint cannot tell whether a container creates it, and judges it as a create; each container's own document judges the same key in that container's kind. | `required key added with no default: a container that creates this structure and leaves <key> out is refused` |
 | A key removed | breaking | A migration drops it; `ConfigObjectStorage` otherwise keeps it stored, unread, since it lays values over what is stored. | Sending it is refused as an unknown key. | `key removed` |
 | A key renamed | breaking | A migration moves the value. | The old name is refused as unknown; the new one is asked for. | `key removed` beside `optional key added` |
 | A constraint tightened | breaking | A value stored outside it is refused at the next write, naming the key, since the pipeline validates what it keeps as well as what is sent: a migration brings it inside, or the author shows none is stored. | A value it sent before is refused. | `maximum lowered`, `pattern added`, `checked on the server now` |
@@ -283,7 +285,12 @@ adds a key that may be left out, replaces, or only notes. For the
 inputs, what a client sends, narrowing and replacing are breaking; for
 the outputs, what a client reads, widening and replacing are. A
 difference in a keyword the lint does not read is breaking: it is
-never more lenient than it can show. A change to a key's union of its
+never more lenient than it can show. A required key added with no
+default is judged by the kind of operation the document describes
+(`x-surface.operation.kind`): a note in an update or a read, breaking in
+a create and in a structure described alone, so one declaration can be a
+note on its `configure` and breaking on its `add`, each reported on its
+own document. A change to a key's union of its
 variants is a note, since the conditionals that state each variant are
 judged themselves, and so is one to `$id`, `rules` or `within`, which
 say where a thing is, not what is accepted. `checkedOnServer` is

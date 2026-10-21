@@ -7,6 +7,7 @@ namespace Drupal\data_surface;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
+use Drupal\data_surface\Resource\Arrangement;
 
 /**
  * Reads and writes definition metadata core cannot express yet.
@@ -110,6 +111,15 @@ final class DefinitionMetadata {
    * owner's words, not those of whichever modules were on.
    */
   protected const OWN_LABEL_KEY = 'data_surface_own_label';
+
+  /**
+   * The definition array key holding how a key is arranged where drawn.
+   *
+   * Holds an Arrangement: its group, weight, placeholder, prefix, suffix
+   * and help. The module's own, like 'secret': core's form display says
+   * the same for fields, and has nowhere on a data definition to say it.
+   */
+  protected const ARRANGEMENT_KEY = 'data_surface_arrangement';
 
   /**
    * Declares the value a definition starts from.
@@ -591,6 +601,43 @@ final class DefinitionMetadata {
       return is_string($label) || $label instanceof \Stringable ? $label : NULL;
     }
     return $definition->getLabel();
+  }
+
+  /**
+   * Declares how a key is arranged where it is drawn.
+   *
+   * Replaces whatever arrangement the key had; an alter lays its own over
+   * the owner's with describe(..., arrangement:) instead. Read by the
+   * generated form for every host, and stated by the served contract as
+   * `x-surface.arrangement` when a renderer asks for widget hints. Nothing
+   * in it changes what is accepted.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The key's definition.
+   * @param \Drupal\data_surface\Resource\Arrangement $arrangement
+   *   Its arrangement.
+   *
+   * @see docs/decisions.md#arrangement-is-declared-once
+   */
+  public static function setArrangement(DataDefinitionInterface $definition, Arrangement $arrangement): void {
+    static::arrayAccess($definition)->offsetSet(static::ARRANGEMENT_KEY, $arrangement);
+  }
+
+  /**
+   * Reads how a key is arranged where it is drawn.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The definition to read.
+   *
+   * @return \Drupal\data_surface\Resource\Arrangement|null
+   *   Its arrangement, or NULL when it declares none.
+   */
+  public static function arrangementOf(DataDefinitionInterface $definition): ?Arrangement {
+    if (!$definition instanceof \ArrayAccess || !$definition->offsetExists(static::ARRANGEMENT_KEY)) {
+      return NULL;
+    }
+    $arrangement = $definition->offsetGet(static::ARRANGEMENT_KEY);
+    return $arrangement instanceof Arrangement ? $arrangement : NULL;
   }
 
   /**

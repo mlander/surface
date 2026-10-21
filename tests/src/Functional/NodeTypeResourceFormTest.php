@@ -91,6 +91,26 @@ class NodeTypeResourceFormTest extends BrowserTestBase {
     $assert_session->checkboxChecked('surface[status]');
     $assert_session->checkboxNotChecked('surface[promote]');
 
+    // The groups the resource declares are drawn as details, each with
+    // its keys inside, and the cosmetic layer's vertical tabs hold them:
+    // the layer borrows the element, the resource says what goes where.
+    $tabs = $assert_session->elementExists('css', '[data-vertical-tabs-panes]');
+    foreach ([
+      'Submission form settings' => ['title_label', 'preview_mode', 'help'],
+      'Publishing options' => ['status', 'promote', 'sticky', 'new_revision'],
+      'Display settings' => ['display_submitted'],
+    ] as $title => $keys) {
+      $group = $tabs->find('xpath', sprintf('//details[summary[normalize-space()="%s"]]', $title));
+      $this->assertNotNull($group, $title . ' is a details inside the vertical tabs.');
+      foreach ($keys as $key) {
+        $this->assertNotNull($group->find('css', sprintf('[name="surface[%s]"]', $key)), sprintf('%s is drawn inside %s.', $key, $title));
+      }
+    }
+    // The name, the machine name and the description stay above them.
+    $this->assertNull($tabs->find('css', '[name="surface[name]"]'));
+    $this->assertNull($tabs->find('css', '[name="surface[description]"]'));
+    $assert_session->elementsCount('css', '[name="surface[status]"]', 1);
+
     $this->submitForm([
       'surface[name]' => 'Recipe',
       'surface[type]' => 'recipe',

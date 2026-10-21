@@ -23,9 +23,12 @@ namespace Drupal\data_surface\Contract;
  *   reference to another def, a required port);
  * - NOTE: nothing a validator reads (a label, a description, a default,
  *   a marker under `x-surface`), and one thing it does: a required key
- *   added to the inputs, which no document stored or sent before held, so
- *   a write supplies it where nothing is stored and the pipeline refuses
- *   one that does not by name.
+ *   added to the inputs of an operation that acts on what is stored (an
+ *   update or a read), which no document stored or sent before held, so
+ *   a write supplies it where nothing is stored, a key left out keeps
+ *   what is there, and the pipeline refuses one that does not by name.
+ *   Added with no default to a create's inputs it NARROWS: every create
+ *   an old client sends leaves it out and is refused.
  *
  * Two documents written in different versions of the contract's own wire
  * format (`x-surface.contract`, absent reading as 1) are not compared
@@ -130,6 +133,16 @@ final class ContractDiff {
   protected const FACTS = ['id', 'kind', 'creates', 'destructive', 'idempotent'];
 
   /**
+   * The kind of the operation the documents being compared describe.
+   *
+   * Read from today's document, or the baseline's, when compare() starts:
+   * whether a required key added asks something of every old call
+   * depends on it. NULL for a structure described alone, which states
+   * none.
+   */
+  private ?string $kind = NULL;
+
+  /**
    * Compares one document with its baseline.
    *
    * @param array $baseline
@@ -153,6 +166,7 @@ final class ContractDiff {
       // Every keyword may be spelled anew: one change, not one per keyword.
       return [new ContractChange($surface, $surface, $prefix, sprintf('contract version %d to %d', $was, $is), self::CONTRACT, ContractChange::CONTRACT)];
     }
+    $this->kind = self::kindOf($current) ?? self::kindOf($baseline);
     $found = $this->node($baseline['schema'] ?? TRUE, $current['schema'] ?? TRUE, $prefix, $surface, FALSE);
     if (isset($baseline['outputs']) && !isset($current['outputs'])) {
       $found[] = [$surface, $prefix . 'outputs', 'outputs no longer declared', self::BREAKS, TRUE];
@@ -256,6 +270,21 @@ final class ContractDiff {
   public static function operationOf(array $document): ?string {
     $id = array_key_exists('resource', $document) ? ($document['operation'] ?? NULL) : ($document['situation'] ?? NULL);
     return is_string($id) ? $id : NULL;
+  }
+
+  /**
+   * Reads the kind of the operation a document describes.
+   *
+   * @param array $document
+   *   The document.
+   *
+   * @return string|null
+   *   Its `x-surface.operation.kind`, `create`, `update` or `read`; NULL
+   *   for one that states none, a structure described alone.
+   */
+  public static function kindOf(array $document): ?string {
+    $kind = is_array($document['schema'] ?? NULL) ? ($document['schema']['x-surface']['operation']['kind'] ?? NULL) : NULL;
+    return is_string($kind) ? $kind : NULL;
   }
 
   /**
@@ -654,20 +683,35 @@ final class ContractDiff {
         $found[] = [$owner, $at, 'key removed', self::BREAKS, $reading];
       }
       elseif (!array_key_exists($key, $old)) {
+        // Judged by the operation's kind. Nothing stored or sent before
+        // held it, so an operation acting on what is stored changes no
+        // document's meaning: a key left out keeps what is there, a write
+        // supplies it where nothing is, and the pipeline refuses one that
+        // does not in the key's own words. A create has nothing stored to
+        // keep, so every create an old client sends is refused; and a
+        // structure described alone states no kind, so the lint cannot
+        // tell which its containers call it in, and is never more lenient
+        // than it can show (each container's own document judges it in
+        // that container's kind).
+        // Decision: see docs/decisions.md#a-resource-evolves-in-the-open.
         [$change, $effect] = match (TRUE) {
           !in_array($key, $required, TRUE) => ['optional key added', self::ADDS],
           $reading => ['required key added', self::NARROWS],
-          // Nothing stored or sent before held it, so no document changes
-          // meaning: a write supplies it where nothing is stored, and the
-          // pipeline refuses one that does not in the key's own words.
-          // Decision: see docs/decisions.md#a-resource-evolves-in-the-open.
           is_array($new[$key]) && array_key_exists('default', $new[$key]) => [
             'required key added, with a default',
             self::NOTE,
           ],
-          default => [
+          $this->kind === 'update' || $this->kind === 'read' => [
             sprintf('required key added: a write must now supply %s where nothing is stored', $key),
             self::NOTE,
+          ],
+          $this->kind === 'create' => [
+            sprintf('required key added with no default: a create that leaves %s out is refused', $key),
+            self::NARROWS,
+          ],
+          default => [
+            sprintf('required key added with no default: a container that creates this structure and leaves %s out is refused', $key),
+            self::NARROWS,
           ],
         };
         $found[] = [$owner, $at, $change, $effect, $reading];

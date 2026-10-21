@@ -285,7 +285,16 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
       'library_garden' => 'Garden room',
     ], $this->titles($room));
     $this->assertTrue($room['x-surface']['stale']);
-    $this->assertSame(['show' => TRUE, 'label' => '- Select -'], $room['x-surface']['emptyOption']);
+    // Emitted for these values directly, the stored room is stale and its
+    // empty option says it keeps it; /refine holds it as an orphan of the
+    // edit instead, which a save refuses, and words it "- Select -".
+    $this->assertSame(['show' => TRUE, 'label' => '- Keep riverside_main (no longer offered) -'], $room['x-surface']['emptyOption']);
+    $orphaned = $this->contract('registration.step2', 'configure', [], [
+      'venue' => 'library',
+      DataSurfaceFormBuilderInterface::STANDING_KEY => ['room' => 'riverside_main'],
+      'room' => NULL,
+    ]);
+    $this->assertSame(['show' => TRUE, 'label' => '- Select -'], $orphaned['schema']['properties']['room']['x-surface']['emptyOption']);
     $this->assertNull($moved['values']['room']);
     $this->assertSame(['room'], $moved['stale']);
 

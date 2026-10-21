@@ -102,12 +102,15 @@ final class MapWidget extends DataSurfaceWidgetBase implements ContainerFactoryP
       if (DoesNotApply::marks($property_definition)) {
         // A key an alter mounted that does not apply: its wrapper alone.
         // Decision: see docs/decisions.md#a-key-that-does-not-apply.
-        $element[$property_name] = ['#markup' => '', DataSurfaceFormBuilderInterface::PLACEHOLDER_KEY => TRUE];
+        $ruled_out = ['#markup' => '', DataSurfaceFormBuilderInterface::PLACEHOLDER_KEY => TRUE];
+        $element[$property_name] = static::arranged($ruled_out, $property_definition);
         continue;
       }
-      $element[$property_name] = $this->widgetManager
+      // Each key drawn as its arrangement says, whichever widget drew it.
+      // Decision: see docs/decisions.md#arrangement-is-declared-once.
+      $element[$property_name] = static::arranged($this->widgetManager
         ->getWidgetFor($property_definition)
-        ->buildElement($property_definition, is_array($value) ? ($value[$property_name] ?? NULL) : NULL);
+        ->buildElement($property_definition, is_array($value) ? ($value[$property_name] ?? NULL) : NULL), $property_definition);
     }
     return $element;
   }

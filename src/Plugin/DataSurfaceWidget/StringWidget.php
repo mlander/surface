@@ -54,12 +54,10 @@ final class StringWidget extends DataSurfaceWidgetBase {
     if ($element['#type'] !== 'textarea') {
       $element = $this->lengthHint($element, $definition);
     }
-    // The first declared example shows what a valid value looks like
-    // before the value is typed, rather than after validation fails.
-    $examples = DefinitionMetadata::getExamples($definition);
-    if ($examples !== [] && $element['#type'] !== 'textarea') {
-      $element['#placeholder'] = (string) reset($examples);
-    }
+    // No placeholder from the examples: an empty field showing a value
+    // reads as filled. A placeholder is declared, in the key's
+    // arrangement, and the form builder draws it.
+    // Decision: see docs/decisions.md#arrangement-is-declared-once.
     return $element;
   }
 
@@ -74,9 +72,9 @@ final class StringWidget extends DataSurfaceWidgetBase {
    *   form. The form builder does not hand a secret's value to a widget
    *   either; both halves are deliberate, because one of them alone is a
    *   line somebody deletes as redundant.
-   * - **No `#placeholder`.** The string widget shows a definition's
-   *   first example to say what a valid value looks like, and an example
-   *   of an API token is either useless or a leak.
+   * - **No `#placeholder`.** Not even one the key's arrangement
+   *   declares: a placeholder of an API token is either useless or a
+   *   leak, and the form builder draws none on a password.
    * - **No `#required`.** Leaving the box empty is how a person says
    *   "the stored secret is unchanged", which is a legal submission and
    *   the usual one; a browser-enforced required attribute would make

@@ -9,6 +9,7 @@ use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslationInterface;
 use Drupal\Core\Url;
 use Drupal\data_surface\DataSurfaceInterface;
+use Drupal\data_surface\Form\DataSurfaceFormBuilderInterface;
 use Drupal\data_surface\Form\DataSurfaceFormCosmeticsInterface;
 use Drupal\data_surface\Form\DataSurfaceOperationForm;
 use Drupal\data_surface\Pipeline\DataSurfaceResult;
@@ -16,17 +17,25 @@ use Drupal\data_surface\Pipeline\DataSurfaceResult;
 /**
  * Everything the content type form still has an opinion about.
  *
- * All that is left of a form class once the values are declared on a
- * resource: visual grouping, the machine name's mirror-while-typing, the
- * sentence a person reads afterwards and the page they land on. No
- * build, no validate, no submit.
+ * All that is left of a form class once the values and their arrangement
+ * are declared on a resource: core's vertical tabs borrowed to hold the
+ * groups the resource declares, the machine name's mirror-while-typing,
+ * the sentence a person reads afterwards and the page they land on. No
+ * build, no validate, no submit, and no grouping or weight: which key
+ * sits in which group is the resource's, read by every door.
  *
- * Deleting this class yields the same flat working form, which is the
- * test of whether a cosmetic layer is really cosmetic.
+ * Deleting this class yields the same working form, its groups drawn as
+ * details one under another, which is the test of whether a cosmetic
+ * layer is really cosmetic.
  */
 final class NodeTypeResourceFormCosmetics implements DataSurfaceFormCosmeticsInterface {
 
   use StringTranslationTrait;
+
+  /**
+   * The groups the resource declares, which the vertical tabs hold.
+   */
+  protected const TABS = ['submission', 'workflow', 'display'];
 
   /**
    * Constructs a NodeTypeResourceFormCosmetics object.
@@ -41,53 +50,31 @@ final class NodeTypeResourceFormCosmetics implements DataSurfaceFormCosmeticsInt
   /**
    * {@inheritdoc}
    *
-   * Render-order landmine, kept from the form class this replaces: the
-   * groups registry holds live references, so a member that renders
-   * before its group self-suppresses through the shared reference and
-   * the group later injects an already printed copy, giving an empty
-   * details element. The group elements must render BEFORE their
-   * members, hence the tabs sit inside the 'surface' container after the
-   * fields that stay flat, at weight 10, with every grouped member
-   * pushed after them at weight 20.
+   * The vertical tabs go directly before the first group, so they render
+   * before the groups they gather by `#group`: a group drawn before its
+   * holder would print itself in place and leave the tab empty.
    */
   public function alterSurfaceForm(array $form, DataSurfaceInterface $surface, FormStateInterface $form_state, string $operation, ?string $subject): array {
     $key = DataSurfaceOperationForm::SURFACE_KEY;
-    $form[$key]['additional_settings'] = [
-      '#type' => 'vertical_tabs',
-      '#weight' => 10,
-    ];
-    $form[$key]['submission'] = [
-      '#type' => 'details',
-      '#title' => $this->t('Submission form settings'),
-      '#group' => $key . '][additional_settings',
-      '#open' => TRUE,
-      '#weight' => 11,
-    ];
-    $form[$key]['workflow'] = [
-      '#type' => 'details',
-      '#title' => $this->t('Publishing options'),
-      '#group' => $key . '][additional_settings',
-      '#weight' => 12,
-    ];
-    $form[$key]['display'] = [
-      '#type' => 'details',
-      '#title' => $this->t('Display settings'),
-      '#group' => $key . '][additional_settings',
-      '#weight' => 13,
-    ];
-    $groups = [
-      'title_label' => 'submission',
-      'preview_mode' => 'submission',
-      'help' => 'submission',
-      'status' => 'workflow',
-      'promote' => 'workflow',
-      'sticky' => 'workflow',
-      'new_revision' => 'workflow',
-      'display_submitted' => 'display',
-    ];
-    foreach ($groups as $name => $group) {
-      $form[$key][$name]['#group'] = $key . '][' . $group;
-      $form[$key][$name]['#weight'] = 20;
+    $groups = array_values(array_filter(
+      array_map(static fn (string $group): string => DataSurfaceFormBuilderInterface::GROUP_PREFIX . $group, self::TABS),
+      static fn (string $group): bool => isset($form[$key][$group]),
+    ));
+    if ($groups !== []) {
+      $surface_form = [];
+      foreach ($form[$key] as $name => $element) {
+        if ($name === $groups[0]) {
+          $surface_form['additional_settings'] = ['#type' => 'vertical_tabs'];
+          if (isset($element['#weight'])) {
+            $surface_form['additional_settings']['#weight'] = $element['#weight'];
+          }
+        }
+        $surface_form[$name] = $element;
+      }
+      foreach ($groups as $group) {
+        $surface_form[$group]['#group'] = $key . '][additional_settings';
+      }
+      $form[$key] = $surface_form;
     }
 
     // The element type is borrowed for what it draws, not for what it

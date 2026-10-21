@@ -131,7 +131,8 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
   alter gets `BlueprintAdditionsInterface`, which can add but not change or
   remove what the owner declared. Adding a key twice is refused. The
   one change anyone may make to a key already declared is `describe()`:
-  its label and description, which change nothing about what is
+  its label, its description and its arrangement (where it is drawn,
+  and its placeholder and help), which change nothing about what is
   accepted.
 - **`add()` takes name, type and label** and returns the core
   definition, so the rest is plain core API. `addList()` is the same
@@ -885,6 +886,12 @@ titled with the module's name until its alter names it, once it has
 added a key. The `third_party_settings` map around the modules' mounts
 only groups them, so a form and the served contract draw nothing for it
 ([Generated forms](forms.md#other-modules-keys)).
+
+An alter may arrange a key it does not own, `describe('capacity',
+arrangement: new Arrangement(group: ..., help: ...))`: put it in a
+group, weigh it, give or reword its placeholder, prefix, suffix and
+help, over what the owner arranged, never emptying any of them
+([Arranging the keys](forms.md#arranging-the-keys)).
 
 On its own mount, and only there, an alter may also say where that
 fieldset is drawn, with `after:`, naming a top-level key of the owner's

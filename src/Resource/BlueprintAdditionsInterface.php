@@ -130,9 +130,9 @@ interface BlueprintAdditionsInterface {
    * For an alter rewording a key it does not own. An owner words its own
    * keys with the core setters on what add() and attach() return.
    *
-   * Label, description and, for a mount, placement: the one change to
-   * an existing key an alter may make, because it changes nothing about
-   * what is accepted. Type, presence and width stay the owner's;
+   * Label, description, arrangement and, for a mount, placement: the one
+   * change to an existing key an alter may make, because it changes
+   * nothing about what is accepted. Type, presence and width stay the owner's;
    * tightening is a #[RefinesInput] method. Not a narrowing, so not
    * checked as one.
    *
@@ -160,15 +160,26 @@ interface BlueprintAdditionsInterface {
    *   For the calling alter's own input mount only: a top-level key of
    *   the owner's blueprint, a plain key or an attached part, to draw the
    *   mount's fieldset directly after. NULL leaves it where it is.
+   * @param \Drupal\data_surface\Resource\Arrangement|null $arrangement
+   *   How the key is drawn (its group, weight, placeholder, prefix,
+   *   suffix and help), laid over what the key's owner arranged: what it
+   *   says replaces, what it leaves NULL stays. An alter may place an
+   *   owner's key and reword what the owner said, never take it away: a
+   *   text emptied where the owner gave one is refused. NULL leaves the
+   *   arrangement as it is.
    *
    * @return $this
    *
    * @throws \LogicException
-   *   When no declared key answers to that name; and, with $after, when
-   *   the key is not the calling alter's own input mount, or $after names
-   *   no top-level key of the owner's blueprint.
+   *   When no declared key answers to that name; with $after, when the key
+   *   is not the calling alter's own input mount, or $after names no
+   *   top-level key of the owner's blueprint; and with $arrangement, when
+   *   it would empty a text another contributor arranged, or the key is an
+   *   output, which is never drawn.
+   *
+   * @see docs/decisions.md#arrangement-is-declared-once
    */
-  public function describe(string $key, string|\Stringable|null $label = NULL, string|\Stringable|null $description = NULL, ?string $after = NULL): static;
+  public function describe(string $key, string|\Stringable|null $label = NULL, string|\Stringable|null $description = NULL, ?string $after = NULL, ?Arrangement $arrangement = NULL): static;
 
   /**
    * A child at a key, by class: a structure, or a resource it holds.

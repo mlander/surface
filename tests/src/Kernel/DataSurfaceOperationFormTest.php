@@ -8,6 +8,7 @@ use Drupal\Core\Field\Entity\BaseFieldOverride;
 use Drupal\Core\Form\FormState;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Routing\RouteObjectInterface;
+use Drupal\data_surface\Form\DataSurfaceFormBuilderInterface;
 use Drupal\data_surface\Form\DataSurfaceOperationForm;
 use Drupal\node\Entity\NodeType;
 use Drupal\Tests\user\Traits\UserCreationTrait;
@@ -157,11 +158,18 @@ class DataSurfaceOperationFormTest extends DataSurfaceKernelTestBase {
     // means the values a new content type starts from.
     $this->assertSame('Title', $form[DataSurfaceOperationForm::SURFACE_KEY]['title_label']['#default_value']);
     $this->assertTrue($form[DataSurfaceOperationForm::SURFACE_KEY]['status']['#default_value']);
-    // The cosmetic layer ran: the tabs exist and the machine name got
-    // its mirror, neither of which the generic form knows about.
-    $this->assertSame('vertical_tabs', $form[DataSurfaceOperationForm::SURFACE_KEY]['additional_settings']['#type']);
-    $this->assertSame('machine_name', $form[DataSurfaceOperationForm::SURFACE_KEY]['type']['#type']);
-    $this->assertSame('surface][workflow', $form[DataSurfaceOperationForm::SURFACE_KEY]['promote']['#group']);
+    // The resource's arrangement drew its groups, and the key stays where
+    // its value is posted; the cosmetic layer ran: the tabs exist and hold
+    // the groups, and the machine name got its mirror, neither of which
+    // the generic form knows about.
+    $surface = $form[DataSurfaceOperationForm::SURFACE_KEY];
+    $this->assertSame('details', $surface['@group.workflow']['#type']);
+    $this->assertSame('Publishing options', (string) $surface['@group.workflow']['#title']);
+    $this->assertSame('workflow', $surface['promote'][DataSurfaceFormBuilderInterface::GROUP_KEY]['id']);
+    $this->assertArrayNotHasKey('#group', $surface['promote']);
+    $this->assertSame('vertical_tabs', $surface['additional_settings']['#type']);
+    $this->assertSame('surface][additional_settings', $surface['@group.workflow']['#group']);
+    $this->assertSame('machine_name', $surface['type']['#type']);
 
     $form_state = $this->submitTheForm([
       'name' => 'Recipe',

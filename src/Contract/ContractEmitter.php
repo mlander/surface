@@ -20,12 +20,14 @@ use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\DefinitionMap;
 use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Plugin\DataSurfaceWidget\CheckboxesWidget;
+use Drupal\data_surface\Plugin\DataSurfaceWidget\OptionsWidget;
 use Drupal\data_surface\Plugin\DataSurfaceWidget\RadiosWidget;
 use Drupal\data_surface\Plugin\DataSurfaceWidget\TimeWidget;
 use Drupal\data_surface\Form\DataSurfaceFormBuilderInterface;
 use Drupal\data_surface\Options\DataSurfaceOptions;
 use Drupal\data_surface\Options\OptionSet;
 use Drupal\data_surface\Pipeline\ValueState;
+use Drupal\data_surface\Resource\Arrangement;
 use Drupal\data_surface\Refinement\DeclaredRefiner;
 use Drupal\data_surface\Refinement\DoesNotApply;
 use Drupal\data_surface\Refinement\Rule;
@@ -215,7 +217,7 @@ final class ContractEmitter {
   /**
    * The `x-surface` keywords that are widget hints, written when asked for.
    */
-  protected const WIDGET_HINTS = ['widget', 'multiple'];
+  protected const WIDGET_HINTS = ['widget', 'multiple', 'arrangement'];
 
   /**
    * Where every subschema a document defines is, as a JSON pointer.
@@ -1145,6 +1147,12 @@ final class ContractEmitter {
           if (!$properties[$name][self::EXTENSION]['stale']) {
             $properties[$name][self::EXTENSION]['stale'] = TRUE;
             $stale[] = $prefix . $name;
+          }
+          if (isset($properties[$name][self::EXTENSION]['emptyOption']) && ($properties[$name][self::EXTENSION]['widget'] ?? NULL) !== 'radios') {
+            // Refused by the save that moved what it refines against, not
+            // kept: its empty option does not say "keep".
+            // Decision: see docs/decisions.md#the-empty-option-rule.
+            $properties[$name][self::EXTENSION]['emptyOption']['label'] = (string) (DefinitionMetadata::holdsValue($current->definition) ? $this->t('- Select -') : $this->t('- None -'));
           }
           $shown[$name] = NULL;
         }
@@ -2957,9 +2965,15 @@ final class ContractEmitter {
         // Radios show nothing checked where a select shows its empty
         // option, so their "- None -" is there only where choosing
         // nothing is an answer.
+        // A select standing for a stale value says it keeps it, as the
+        // form's does; frame() words an orphan's as it was.
         $extension['emptyOption'] = [
           'show' => $radios ? !$holds : !($chosen && $holds),
-          'label' => (string) ($holds && !$radios ? $this->t('- Select -') : $this->t('- None -')),
+          'label' => (string) match (TRUE) {
+            !$radios && $configured && !$chosen => OptionsWidget::keepLabel($value),
+            $holds && !$radios => $this->t('- Select -'),
+            default => $this->t('- None -'),
+          },
         ];
         if ($configured && !$chosen) {
           // Shown on the empty option, standing for the stored value,
@@ -2998,6 +3012,12 @@ final class ContractEmitter {
     if (isset($schema[self::EXTENSION . '-pattern-message'])) {
       $extension['patternMessage'] = $schema[self::EXTENSION . '-pattern-message'];
       unset($schema[self::EXTENSION . '-pattern-message']);
+    }
+    $arranged = $this->arrangement($definition);
+    if ($arranged !== []) {
+      // A widget hint: how the key is drawn, never what it accepts.
+      // Decision: see docs/decisions.md#arrangement-is-declared-once.
+      $extension['arrangement'] = $arranged;
     }
     $schema[self::EXTENSION] = $extension;
     $shape = DefinitionMetadata::shapeDefinition($definition);
@@ -3673,6 +3693,33 @@ final class ContractEmitter {
   }
 
   /**
+   * States how a key is arranged where it is drawn, as plain text.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The key's definition.
+   *
+   * @return array
+   *   Its arrangement as Arrangement::toArray() states it, the group's
+   *   label and every text read as plain text; empty for none.
+   */
+  protected function arrangement(DataDefinitionInterface $definition): array {
+    $arrangement = DefinitionMetadata::arrangementOf($definition);
+    if ($arrangement === NULL) {
+      return [];
+    }
+    $arranged = $arrangement->toArray();
+    if ($arrangement->group !== NULL) {
+      $arranged['group']['label'] = PlainText::of($arrangement->group->label);
+    }
+    foreach (Arrangement::TEXTS as $text) {
+      if (isset($arranged[$text])) {
+        $arranged[$text] = PlainText::of((string) $arrangement->{$text});
+      }
+    }
+    return $arranged;
+  }
+
+  /**
    * Strips the widget hints from a schema, at every depth.
    *
    * The hints are written while the schema is built, because the widget
@@ -3683,8 +3730,8 @@ final class ContractEmitter {
    *   A schema this emitter wrote.
    *
    * @return array
-   *   The schema, its `x-surface` keywords without `widget` and
-   *   `multiple`.
+   *   The schema, its `x-surface` keywords without `widget`, `multiple`
+   *   and `arrangement`.
    */
   protected function withoutWidgets(array $schema): array {
     foreach ($schema as $key => $value) {
@@ -3692,7 +3739,7 @@ final class ContractEmitter {
         continue;
       }
       if ($key === self::EXTENSION) {
-        unset($value['widget'], $value['multiple']);
+        unset($value['widget'], $value['multiple'], $value['arrangement']);
         $schema[$key] = $value;
       }
       else {

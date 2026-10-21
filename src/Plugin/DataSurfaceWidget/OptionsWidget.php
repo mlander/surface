@@ -41,6 +41,18 @@ final class OptionsWidget extends ChoiceWidgetBase {
   protected const MAXIMUM_SIZE = 8;
 
   /**
+   * Render key on a stale select: the empty option it has when not stale.
+   *
+   * A select stands for a stored value on its empty option in two cases.
+   * Stale, the value is kept by a save that leaves it, and the option
+   * says so ("- Keep @value (no longer offered) -"). An orphan of an edit
+   * (what it refines against moved in the same edit) is refused by that
+   * save instead, so the form builder puts this label back on it: the
+   * widget reads the definition alone and cannot tell the two apart.
+   */
+  public const UNKEPT_LABEL_KEY = '#data_surface_unkept_label';
+
+  /**
    * {@inheritdoc}
    *
    * An empty set is a list too: a refiner that narrowed it to nothing, or
@@ -141,14 +153,22 @@ final class OptionsWidget extends ChoiceWidgetBase {
     $element['#empty_option'] = $holds ? $this->t('- Select -') : $this->t('- None -');
     if ($configured && !$chosen) {
       // Stale: the value travels on the element, so extraction can read
-      // an untouched select as the stored value it could not show.
+      // an untouched select as the stored value it could not show, and
+      // the empty option says that is what it stands for. It still
+      // posts the empty string, never a value the key does not take.
       $element[self::STALE_KEY] = $value;
+      $element[self::UNKEPT_LABEL_KEY] = $element['#empty_option'];
+      $element['#empty_option'] = static::keepLabel($value);
       if ($required) {
-        // Empty is not a refusal here, it is "keep": so not core's
-        // required check, which would refuse it before the data surface is
-        // asked. The marker stays on the label, where it is drawn.
+        // Empty is not a refusal here, it is "keep": so no `required`
+        // attribute, which would have the browser refuse the option that
+        // keeps it. The rest of the required hint is drawn as on every
+        // required element: the marker on the label, and aria-required,
+        // so what a screen reader says agrees with what the eye sees.
+        // Decision: see docs/decisions.md#an-element-hints-and-the-rule-speaks.
         $element['#required'] = FALSE;
         $element['#label_attributes']['class'] = ['js-form-required', 'form-required'];
+        $element['#attributes']['aria-required'] = 'true';
       }
     }
     // Otherwise, a required select with nothing chosen is refused in the
@@ -156,6 +176,21 @@ final class OptionsWidget extends ChoiceWidgetBase {
     // required check off every element it draws.
     // Decision: see docs/decisions.md#an-element-hints-and-the-rule-speaks.
     return $element;
+  }
+
+  /**
+   * Words the empty option of a select standing for a stale value.
+   *
+   * @param mixed $value
+   *   The stored value no longer offered.
+   *
+   * @return \Drupal\Core\StringTranslation\TranslatableMarkup
+   *   "- Keep @value (no longer offered) -".
+   *
+   * @see docs/decisions.md#the-empty-option-rule
+   */
+  public static function keepLabel(mixed $value): TranslatableMarkup {
+    return t('- Keep @value (no longer offered) -', ['@value' => is_scalar($value) ? (string) $value : (string) json_encode($value)]);
   }
 
   /**

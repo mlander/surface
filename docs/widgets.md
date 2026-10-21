@@ -145,20 +145,25 @@ says ([decision](decisions.md#an-element-hints-and-the-rule-speaks)). A select o
 option rule](decisions.md#the-empty-option-rule): always when the key
 may be cleared, and when it holds a value (required, or [always held by
 its storage](decisions.md#a-key-its-storage-always-holds)) only while no
-valid choice is selected. Radios show nothing checked where a select
+valid choice is selected; standing for a stored value no longer offered,
+it reads "- Keep @value (no longer offered) -". Radios show nothing checked where a select
 shows that empty option, and a `- None -` radio only where the key may
 be cleared. The string
 widget picks its element type from the definition (`textarea` when the
 definition carries the `multiline` type setting, otherwise `email`,
-`url` or `textfield` from the data type), and both the string and number
-widgets render a definition's first declared example as `#placeholder`,
-which is how a valid value is shown before it is typed rather than after
-validation fails. A textarea gets neither a `maxlength` nor a
-`#placeholder`.
+`url` or `textfield` from the data type). A textarea gets no
+`maxlength`. No widget draws a declared example as a placeholder: an
+empty field showing a value reads as filled. A placeholder, a prefix, a
+suffix, a help text, a weight and a group are the key's
+[arrangement](forms.md#arranging-the-keys), which the form builder draws
+on whatever element the widget built
+(`DataSurfaceWidgetBase::arranged()`), a module's own widget's
+included.
 
 A definition marked secret is the one case where the string widget
 renders something a data type would not predict: a `password` element
-with no `#default_value`, no `#placeholder` and no `#required`, plus the
+with no `#default_value`, no `#placeholder` (not even a declared one)
+and no `#required`, plus the
 note "Leave blank to keep the current value." The form builder does not
 hand a secret's value to the widget in the first place, so nothing about
 a stored secret reaches the render array from either side. Why each of

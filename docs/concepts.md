@@ -38,11 +38,12 @@ React by `data_surface_react`) or the first resource's
 | Mounted keys and their config schema | Does my alter's module store keys on someone else's config object, or may another module's alter store keys on mine? Both sides' config schema says so: the owner of a simple config object has `third_party_settings`, a sequence typed by the module key, and the mounting module its part; generated, each is written by `drush data_surface:config-schema --write` with the mounting module on ([Storage](storage.md#keys-another-module-mounts), [a whole alter](resources.md#a-whole-alter)). | You write no alter, and no other module will mount keys on your config object. An owner whose schema lacks it leaves every later alter refused until the owner's schema is written again; an owner that is a config entity declares nothing, since core describes its `third_party_settings`. | `/surface-examples/4` |
 | `describe()` and `extendChoices()` | Must my alter reword or place an owner's key, or offer one more value on its list? | Your alter only adds keys of its own. | `describe()`, `/surface-examples/4` |
 | Secret, `DefinitionMetadata::setSecret()` | Is a value write-only, such as an API key? | Every value may be read back. | - |
-| Examples, `DefinitionMetadata::setExamples()` | Should the form show what a valid value looks like? | The label says enough. | `/surface-examples/8/desk` |
+| Examples, `DefinitionMetadata::setExamples()` | Should a caller see what a valid value looks like? Both documents state it; a form shows it only as a placeholder the key's arrangement declares. | The label says enough. | `/surface-examples/8/desk` |
+| Arrangement, `DefinitionMetadata::setArrangement()` | Should keys sit in a group (a fieldset or a details), in another order, or show a placeholder, a prefix, a suffix or a help text, on every form that draws them and in React? ([Generated forms](forms.md#arranging-the-keys)) | Declaration order and the labels are the form you want. | `/admin/structure/types/surface-add` (with `data_surface_demo_node_type`) |
 | Settings layout, `StorageLayoutInterface` | Is a value stored differently from how a person is asked for it? | It is stored as asked. | - |
 | Outputs, `defineOutputs()` | Does running the host emit values a caller relies on? | Nothing is emitted: settings pages emit nothing. | - |
 | Plugin host, `#[UsesStructure]` | Is it a block's, formatter's, condition's, action's or field type's settings? | No plugin holds it. | - |
-| Cosmetic layer, `_data_surface_cosmetics` | Does the form need grouping, weights or a borrowed element, with nothing meaning something else? | The generated form is the form you want. | - |
+| Cosmetic layer, `_data_surface_cosmetics` | Does one operation form need a borrowed element (vertical tabs, a machine name), markup, a message or a redirect, with nothing meaning something else? Grouping and order are the arrangement's. | The generated form, arranged, is the form you want. | - |
 | Panel, `_data_surface_panel` | Should the contract be shown beside the form? | Nobody needs to see it there. | `/surface-examples/1` |
 | Options resolver | Is the list of allowed values the site's (entity types, bundles), not a literal? | It is a literal list: `LabeledChoice`. | - |
 | Widget plugin | Does a key need an element no stock widget draws? Checkboxes, radios, rows for a list of free values and a time input are stock, asked for with `setSetting('widget', ...)` where the rule does not pick them ([Widgets](widgets.md#which-element-a-list-of-choices-is)). | The stock widgets draw it. | The stock widgets, `/surface-examples/11` |
@@ -84,6 +85,8 @@ refused.
 | `AltersAccessInterface` | `use Drupal\data_surface\Resource\AltersAccessInterface;` |
 | `AltersInputsInterface` | `use Drupal\data_surface\Resource\AltersInputsInterface;` |
 | `AltersStorageLayoutInterface` | `use Drupal\data_surface\Resource\AltersStorageLayoutInterface;` |
+| `Arrangement` | `use Drupal\data_surface\Resource\Arrangement;` |
+| `ArrangementGroup` | `use Drupal\data_surface\Resource\ArrangementGroup;` |
 | `BaseFieldOverrideStorage` | `use Drupal\data_surface\Pipeline\Storage\BaseFieldOverrideStorage;` |
 | `BlueprintAdditionsInterface` | `use Drupal\data_surface\Resource\BlueprintAdditionsInterface;` |
 | `BlueprintInterface` | `use Drupal\data_surface\Resource\BlueprintInterface;` |

@@ -758,6 +758,7 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
     foreach ($definitions as $definition) {
       ConstraintMessages::sources($definition);
     }
+    static::assertGroupsAgree($definitions);
     // Locked whole: every key not fixed already holds what is stored. After
     // the variants, so a variant is chosen by what its deciding key holds,
     // not preselected by its default.
@@ -1075,6 +1076,54 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
   protected function assertMutable(): void {
     if ($this->sealed !== NULL) {
       throw new \LogicException('The data surface has been sealed and can no longer be changed: widening is a build-time act, and the build is over.');
+    }
+  }
+
+  /**
+   * Refuses two keys of one frame naming one group and drawing it apart.
+   *
+   * Keys that name the same group id are drawn in one group, so they
+   * agree on its label, its kind, whether it starts collapsed and its
+   * weight. A frame is this data surface's own keys, and each module's
+   * mount, whose keys are drawn in that module's fieldset; an attached
+   * child is a frame of its own, checked where it is sealed.
+   *
+   * Decision: see docs/decisions.md#arrangement-is-declared-once.
+   *
+   * @param array<string, \Drupal\Core\TypedData\DataDefinitionInterface> $definitions
+   *   The frame's keys.
+   * @param string $frame
+   *   Where the frame is, for the message: empty for the top.
+   *
+   * @throws \LogicException
+   *   When two keys name one group differently.
+   */
+  protected static function assertGroupsAgree(array $definitions, string $frame = ''): void {
+    $groups = [];
+    foreach ($definitions as $name => $definition) {
+      $name = (string) $name;
+      $group = DefinitionMetadata::arrangementOf($definition)?->group;
+      if ($group !== NULL) {
+        if (isset($groups[$group->id]) && !$groups[$group->id][1]->sameAs($group)) {
+          throw new \LogicException(sprintf(
+            'The keys %s and %s%s name the group "%s" and draw it differently (%s against %s). Keys of one frame that name a group are drawn in one group: give each the same group, its label, kind, collapsed and weight alike.',
+            $groups[$group->id][0],
+            $name,
+            $frame === '' ? '' : ' in ' . $frame,
+            $group->id,
+            json_encode($groups[$group->id][1]->toArray()),
+            json_encode($group->toArray()),
+          ));
+        }
+        $groups[$group->id] ??= [$name, $group];
+      }
+      if ($name === 'third_party_settings' && $definition instanceof ComplexDataDefinitionInterface) {
+        foreach ($definition->getPropertyDefinitions() as $module => $mount) {
+          if ($mount instanceof ComplexDataDefinitionInterface) {
+            static::assertGroupsAgree($mount->getPropertyDefinitions(), 'third_party_settings.' . $module);
+          }
+        }
+      }
     }
   }
 

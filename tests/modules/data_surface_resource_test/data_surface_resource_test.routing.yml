@@ -165,3 +165,16 @@ data_surface_resource_test.workshop:
     _data_surface_operation: 'configure'
   requirements:
     _data_surface_operation_access: 'TRUE'
+
+# The studio's one operation, served by the generic form: its keys
+# arranged in two groups, with weights, a placeholder, a prefix, a suffix
+# and a help text, one of them reworded by an alter.
+data_surface_resource_test.studio:
+  path: '/surface-test/studio'
+  defaults:
+    _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
+    _title: 'Configure the studio'
+    _data_surface_resource: 'Drupal\data_surface_resource_test\Resource\Studio\StudioResource'
+    _data_surface_operation: 'configure'
+  requirements:
+    _data_surface_operation_access: 'TRUE'

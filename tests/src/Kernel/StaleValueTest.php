@@ -206,10 +206,13 @@ class StaleValueTest extends DataSurfaceKernelTestBase {
     // The empty option, selected: nothing real is chosen and nothing was
     // guessed at.
     $this->assertSame('', $element['#default_value']);
+    // The empty option says what it stands for, and still posts the
+    // empty string, never a value the key does not take.
     $this->assertSame(
-      ['' => $required ? '- Select -' : '- None -', 'keep' => 'Keep', 'other' => 'Other'],
+      ['' => '- Keep ' . self::GONE . ' (no longer offered) -', 'keep' => 'Keep', 'other' => 'Other'],
       $this->shown($element),
     );
+    $this->assertSame('', $element['#empty_value']);
     // The stale value is never offered as a choice, nor named by an
     // option of its own: putting it back would let somebody re-save a
     // reference to something gone, and would make the list that is
@@ -218,10 +221,10 @@ class StaleValueTest extends DataSurfaceKernelTestBase {
     // It travels on the element instead, which is how an untouched
     // select keeps it.
     $this->assertSame(self::GONE, $element[DataSurfaceWidgetBase::STALE_KEY]);
-    // No note and no class: the stored value no longer being an option
-    // is the whole of the presentational change.
+    // No note and no class: the stored value no longer being an option,
+    // said on the empty option, is the whole of the presentational change.
     $this->assertSame('What to feature.', (string) $element['#description']);
-    $this->assertArrayNotHasKey('#attributes', $element);
+    $this->assertSame($required ? ['aria-required' => 'true'] : [], $element['#attributes'] ?? []);
   }
 
   /**
@@ -237,6 +240,11 @@ class StaleValueTest extends DataSurfaceKernelTestBase {
     $this->assertFalse($element['#required']);
     $this->assertContains('form-required', $element['#label_attributes']['class']);
     $this->assertArrayNotHasKey('#required_error', $element);
+    // The hint the required-as-hint rule draws on every required element,
+    // less the browser's `required` attribute, which would refuse the
+    // option that keeps the value: the marker for the eye, aria-required
+    // for a screen reader, so the two agree.
+    $this->assertSame('true', $element['#attributes']['aria-required']);
   }
 
   /**

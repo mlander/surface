@@ -12,6 +12,7 @@ use Drupal\data_surface\DataSurfaceBuilderInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Refinement\Rule;
+use Drupal\data_surface\Resource\Arrangement;
 use Drupal\data_surface\Resource\BlueprintAdditionsInterface;
 use Drupal\data_surface\Resource\DefinesInputsInterface;
 
@@ -366,7 +367,7 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
   /**
    * {@inheritdoc}
    */
-  public function describe(string $key, string|\Stringable|null $label = NULL, string|\Stringable|null $description = NULL, ?string $after = NULL): static {
+  public function describe(string $key, string|\Stringable|null $label = NULL, string|\Stringable|null $description = NULL, ?string $after = NULL, ?Arrangement $arrangement = NULL): static {
     $definition = $this->find($key);
     if ($definition === NULL) {
       throw new \LogicException(sprintf(
@@ -390,6 +391,13 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
     }
     if ($after !== NULL) {
       DefinitionMetadata::setPlacedAfter($definition, $after);
+    }
+    if ($arrangement !== NULL) {
+      if ($this->outputs) {
+        throw new \LogicException(sprintf('describe() was asked to arrange the output "%s": outputs are never drawn, so they have nothing to arrange.', $key));
+      }
+      // Decision: see docs/decisions.md#arrangement-is-declared-once.
+      DefinitionMetadata::setArrangement($definition, $arrangement->over(DefinitionMetadata::arrangementOf($definition)));
     }
     return $this;
   }

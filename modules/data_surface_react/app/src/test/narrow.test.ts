@@ -140,6 +140,20 @@ describe('the empty option rule, narrowed here', () => {
     expect(asRadios.settled.schema.properties?.room['x-surface']?.emptyOption).toEqual({ show: false, label: '- None -' });
   });
 
+  it('says a select keeps a stored value no longer offered under a key nobody moved (an orphan, above, says - Select -)', () => {
+    const contract = served(recorded.contract);
+    // Stored, under a venue nobody moved, and no longer offered: kept by a
+    // save that leaves it, and the empty option says so.
+    const stored = { ...contract.values, room: 'library_garden' };
+    const kept = narrow({ full: inlineSchema(recorded.schema.schema), previous: { ...contract, values: stored }, stored, values: stored, stale: [], changed: 'venue' });
+    expect(kept.local, narrowingStatus(kept)).toBe(true);
+    if (!kept.local) {
+      return;
+    }
+    expect(kept.settled.stale).toContain('room');
+    expect(kept.settled.schema.properties?.room['x-surface']?.emptyOption).toEqual({ show: true, label: '- Keep library_garden (no longer offered) -' });
+  });
+
   it('reads a key that holds a value off its required list or its type', () => {
     const choice: Schema = { type: 'string', oneOf: [{ const: 'a', title: 'A' }] };
     expect(holdsValue(choice, true)).toBe(true);

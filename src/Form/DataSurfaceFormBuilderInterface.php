@@ -167,6 +167,31 @@ interface DataSurfaceFormBuilderInterface {
   public const PLACEHOLDER_KEY = '#data_surface_placeholder';
 
   /**
+   * Render key on an element its key's arrangement draws in a group.
+   *
+   * Holds the group's id, label, kind (`as`), whether it starts
+   * collapsed and its weight, values and a label only. Set when the
+   * element is built; buildSurfaceForm() adds one element per group to
+   * the frame, under GROUP_PREFIX and the group's id, before the group's
+   * first member, and
+   * preRenderSurfaceContainer() draws each member inside it. The member
+   * stays where its values are posted for everything Form API and this
+   * builder do with it.
+   *
+   * Decision: see docs/decisions.md#arrangement-is-declared-once.
+   */
+  public const GROUP_KEY = '#data_surface_group';
+
+  /**
+   * The key a group's element takes in its frame, before the group's id.
+   *
+   * No declared key can take it, since a key holds no dot or at sign. A
+   * cosmetic layer that borrows an element for groups (vertical tabs)
+   * reaches a group by it: `@group.workflow`.
+   */
+  public const GROUP_PREFIX = '@group.';
+
+  /**
    * Render key on a value element drawn required that Form API does not check.
    *
    * Set when the container is processed on each element whose #required
@@ -487,10 +512,13 @@ interface DataSurfaceFormBuilderInterface {
   public static function processSurfaceContainer(array &$element, FormStateInterface $form_state, array &$complete_form): array;
 
   /**
-   * Element #pre_render callback: draws placed fieldsets where they go.
+   * Element #pre_render callback: draws groups and placed fieldsets.
    *
    * Attached to the container by buildSurfaceForm(), beside its type's
-   * own. A module's fieldset its alter placed (PLACED_AFTER_KEY) is moved
+   * own. Each element its arrangement draws in a group (GROUP_KEY) is
+   * moved into that group's element of the same frame, at any depth, its
+   * order and weight kept. A module's fieldset its alter placed
+   * (PLACED_AFTER_KEY) is moved
    * out of the grouping container it sits in to directly after the named
    * key of the same frame, at any depth; a grouping container left with
    * nothing to draw is drawn as nothing.
@@ -506,7 +534,7 @@ interface DataSurfaceFormBuilderInterface {
    *   The container element.
    *
    * @return array
-   *   The container, its placed fieldsets moved.
+   *   The container, its grouped elements and placed fieldsets moved.
    */
   public static function preRenderSurfaceContainer(array $element): array;
 

@@ -3012,8 +3012,11 @@ holds](#a-key-its-storage-always-holds), which is no less unable to be
 cleared:
 
 1. A stored value no longer among the options is shown as the empty
-   option, selected. It is not put back into the list and no option
-   names it; the stored value travels on the element
+   option, selected, which says so: "- Keep @value (no longer offered)
+   -" (decided 2026-10-20, from the Form API review and section 3.5 of
+   the reviews' synthesis), posting the empty string as before. It is
+   not put back into the list as a choice; the stored value travels on
+   the element
    (`#data_surface_stale`), and the container posts the paths of such
    selects in a hidden input (`DataSurfaceFormBuilderInterface::STALE_MARKER_KEY`).
    A save that leaves the select empty keeps the stored value, and its
@@ -3031,9 +3034,11 @@ cleared:
    message ("@label is required."), the pipeline's: core's check is off
    on every element the form builder draws
    ([An element hints and the rule speaks](#an-element-hints-and-the-rule-speaks)).
-   A required select standing for a stale value is not required at all,
-   since empty there means keep: no `required` attribute, and its label
-   keeps the marker.
+   A required select standing for a stale value is not required to the
+   browser, since empty there means keep: no `required` attribute, which
+   would refuse the option that keeps it. The rest of the hint is drawn
+   as on every required element, so the eye and a screen reader agree:
+   its label keeps the marker, and the select says `aria-required`.
 4. A select that may be cleared (an optional key its storage does not
    always hold) keeps its empty option, `- None -`, always. Choosing it
    on a select with nothing stale behind it clears the key; on a stale
@@ -3053,7 +3058,13 @@ radios as for a select, and the React app follows it.
 The placeholder option this replaced ("Previous value X is no longer
 available", posting a sentinel from the select) told the person what
 was missing, but put an option in the list that was no value of the
-key. Pipeline callers are unaffected: a payload that leaves a key out
+key; that is why it was rejected, and the sentinel stays rejected. The
+words came back on the empty option, which posts the empty string, so
+the reason does not apply to them. They are said only where a save
+keeps the value: an orphan of the edit, which that save refuses, and a
+declared default the list does not offer, with nothing stored behind
+it, say "- Select -" or "- None -" as before. The served contract's
+`emptyOption` carries the same words, and the React app says them. Pipeline callers are unaffected: a payload that leaves a key out
 keeps it, one that sends the stored stale value back keeps it with a
 stale entry, as before. (`OptionsWidget::singleSelect()`,
 `RadiosWidget::buildElement()`, `DataSurfaceWidgetBase::unstash()`,
@@ -3116,6 +3127,68 @@ the same rule (`CheckboxesWidget::drawsList()`,
 only when asked for. (`DataSurfaceWidgetManager::asked()`,
 `DataSurfaceWidgetBase::answersTo()`, `DataSurfaceWidgetBase::checked()`,
 `ListWidget`, `StockWidgetsTest`)
+
+### Arrangement is declared once
+
+How a key is laid out where it is drawn is declared on its definition,
+once, and read by every door (decided 2026-10-20, from the Form API
+review's second change and section 3.4 of the reviews' synthesis): a
+group (a fieldset or a details, with its label and whether it starts
+collapsed), a weight, a placeholder, a prefix, a suffix and a help text,
+in a `Resource\Arrangement` that an owner sets in `defineInputs()` with
+`DefinitionMetadata::setArrangement()`. Why: one place to describe a
+form, read by the operation form, every plugin host (a block, a
+formatter, a condition, a field type, which had no seam short of
+`hook_form_alter()`), the demo's standalone form and the React app. The
+cosmetic layer was a second place, and only one door read it: the React
+page never saw the content type's groups, and a block had none to give.
+
+- **What it may say is presentation only.** No rule, no default, no
+  requiredness, and no path moves: a key in a group is posted, stored and
+  sent at its own path. The form builder draws each group where its
+  first key is declared, an empty element under `@group.<id>` that the
+  container's pre-render fills at render time, as a placed fieldset is
+  moved, so extraction, errors and the AJAX callback find every key
+  where its value lives. Keys of one frame naming one group must draw it
+  alike; the build refuses two that differ. A weight orders a key in its
+  frame, or in its group.
+- **An alter places and rewords, never removes.** `describe($key,
+  arrangement:)` lays an alter's arrangement over the owner's, under the
+  rule for everything an alter says of a key it does not own: it may put
+  the key in a group, weigh it and reword its texts, and a text it would
+  empty where the owner gave one is refused. A shape is a value and
+  takes none; an output is never drawn and takes none.
+- **Stated as a widget hint.** The served contract writes it under
+  `x-surface.arrangement` only when a renderer asks for the widget hints,
+  as `x-surface.widget` is written: additive in contract 2, no version
+  raised, and the baselines, emitted without the hints, do not move.
+- **The placeholder is only ever declared.** The string and number
+  widgets drew a key's first example as its placeholder, so an author
+  could not give the contract an example without giving the form a
+  placeholder, and an empty field showing "+1 555 0100" read as filled.
+  An example is now the documents' alone.
+- **The cosmetic layer keeps what is truly one form's**: a borrowed
+  element (the content type demo's vertical tabs, which gather the
+  groups its resource declares, by their `@group.<id>` keys), markup,
+  the message and the redirect. `NodeTypeResourceFormCosmetics` lost
+  its groups and its hand-tuned weights.
+
+(`Resource\Arrangement`, `Resource\ArrangementGroup`,
+`DefinitionMetadata::setArrangement()`, `DataSurfaceWidgetBase::arranged()`,
+`DataSurfaceFormBuilder::withGroups()`, `DataSurfaceFormBuilder::gatherGroups()`,
+`DataSurfaceBuilder::assertGroupsAgree()`, `ContractEmitter::arrangement()`,
+`ArrangementTest`, `ArrangementFormTest`)
+
+Declined, each in a line:
+
+- **Cutting the cosmetic layer into `hook_form_FORM_ID_alter()`**
+  (drupal-architecture): a borrowed element, the message and the
+  redirect are still one route's, and a route key is where that route
+  says so; a form alter hook would be a second spelling of the same seam.
+- **Renaming it the form display, `_data_surface_display`** (form-api):
+  `_data_surface_cosmetics` is a route key, which [the product keeps its
+  name](#the-product-keeps-its-name) holds to, and with the arrangement
+  gone from it, what is left is cosmetic.
 
 ## Discovery
 
@@ -4192,23 +4265,43 @@ resource](evolution.md#compatible-and-breaking). Each choice, and why:
   document by the schema served with it: the documents are closed, so a
   full schema cached before a key was added refuses a newer document,
   and a client fetches it again when the version moves.
-- **A required key added is compatible, with a note** (decided
-  2026-10-19, replacing "breaking, as for an optional key made
-  required"). No value stored and no document sent before held the key,
-  so nothing said before changes meaning: a thing stored before it has
-  nothing there, and its next write must supply the key, which the
-  pipeline asks for in the key's own words when it is missing, and an
-  update tool lets through to the pipeline, since it requires nothing at
-  its door ([Required is the resource's, and an update tool requires
-  nothing at its door](#required-is-the-resources-and-an-update-tool-requires-nothing-at-its-door)).
-  The lint reports it as a note, "a write must now supply <key> where
-  nothing is stored"; with a default, which a value stored before reads,
-  it asks nothing. An optional key made required stays breaking: there
-  the nothing a stored value holds may be a `null` a client sent on
-  purpose, which cleared it, and the `null` that cleared it is refused
-  from then on, so what was said before changes meaning. Where the new
-  key's value can be derived from what is stored, the version is raised
-  and a migration writes it, so no write is asked for it.
+- **A required key added with no default is judged by the operation's
+  kind** (decided 2026-10-20, from the Smithy review and section 3.2 of
+  the reviews' synthesis, amending "compatible, with a note", decided
+  2026-10-19). The two sides each had a reason. The owner's, from the
+  entity case: no value stored and no document sent before held the
+  key, so nothing said before changes meaning; a thing stored before has
+  nothing there, its next write must supply the key, the pipeline asks
+  for it in the key's own words, and an update tool lets the call
+  through to the pipeline, since it requires nothing at its door
+  ([Required is the resource's, and an update tool requires nothing at
+  its door](#required-is-the-resources-and-an-update-tool-requires-nothing-at-its-door)).
+  Smithy's (`AddedRequiredMember`, an error without `@default`):
+  compatibility is defined by requests, every client that read the old
+  contract still gets what it asked for, and an old client never sends
+  the key, so its call is refused, the same reason an optional key made
+  required is breaking. Both hold, each for one kind of call, and the
+  kind settles it. On an update or a read, which act on what is stored,
+  a key left out keeps what is there: a client that edits a thing
+  holding the key is not refused, and one stored before is asked once,
+  so the lint notes it, "a write must now supply <key> where nothing is
+  stored". On a create nothing is stored to keep, so every old create
+  is refused: breaking, "a create that leaves <key> out is refused",
+  answered by a default or an allowance with its reason, since the
+  version path is closed until migrations exist. A structure described
+  alone states no kind, so the lint cannot tell whether a container
+  creates it and judges it as a create; each container's document
+  judges the same key in its own kind. The lint reports per document,
+  so one declaration can be a note on `configure` and breaking on
+  `add`. With a default, which a create gives and a value stored before
+  reads, it asks nothing of any kind and stays a note. An optional key
+  made required stays breaking for every kind: the nothing a stored
+  value holds may be a `null` a client sent on purpose, which cleared
+  it, and that `null` is refused from then on. Where the new key's value
+  can be derived from what is stored, the version is raised and a
+  migration writes it, so no write is asked for it.
+  (`ContractDiff::properties()`, `ContractDiffTest::testRequiredKeyAddedIsJudgedByTheKind()`,
+  `ContractBaselineTest::testRequiredKeyAddedIsJudgedPerOperation()`)
 - **A version on the declaration, from 1.** `#[Resource(version:)]` and
   `#[Structure(version:)]` count the breaking changes made to stored
   values; a compatible change never moves the number. Both documents
@@ -4297,6 +4390,19 @@ suppression with a reason, as the allowance does. Core records its
 updates in the site's database, which no export carries, hence a ledger
 in the stored value. A closed schema gains a key backward compatibly,
 never forward, hence a document read by its own version's schema.
+
+Declined from the 2026-10-20 reviews, each in a line:
+
+- **Post-update hooks as the migration path** (drupal-architecture):
+  a post-update runs once per site and is recorded in that site's
+  database, which no export carries, so an older export imported after
+  it is never converted again; the steps stay on the declaration with
+  the ledger in the stored value, and a post-update is only one way to
+  call the eager pass.
+- **`kind: put` for a create whose caller names the thing** (Smithy):
+  `#[Operation(idempotent:)]` already says the one fact `put` would add,
+  and a fourth kind would hand every client that reads `kind` a value
+  it does not know, a wire change for one flag.
 
 Open: a version for an alter's mount, keyed under its module in the
 ledger, since an alter's keys are its module's to migrate; migrating a
