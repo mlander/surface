@@ -138,11 +138,20 @@ final class InputDefinitions {
    *   overwrite every stored value. The data surface's defaults live on the
    *   converted properties, which is where they describe rather than
    *   act.
+   * @param bool $runtimeAccessSaidOnce
+   *   TRUE when the tool's description says that every key may be found
+   *   locked or left out, so a key whose only mark is the one at the top
+   *   does not say it again.
    *
    * @return \Drupal\tool\TypedData\MapInputDefinition
    *   The map input definition.
    */
-  public function fromSurface(DataSurfaceInterface $surface, TranslatableMarkup|string $label, TranslatableMarkup|string $description, bool $required = FALSE, mixed $default_value = NULL): MapInputDefinition {
+  public function fromSurface(DataSurfaceInterface $surface, TranslatableMarkup|string $label, TranslatableMarkup|string $description, bool $required = FALSE, mixed $default_value = NULL, bool $runtimeAccessSaidOnce = FALSE): MapInputDefinition {
+    // Said once by the tool's description, a mark every key carries from
+    // the top is not said on each key again; a key's own mark still is.
+    // Decision: see
+    // docs/decisions.md#access-is-static-or-runtime-read-from-its-cacheability.
+    $once = $runtimeAccessSaidOnce && $surface->isRuntimeAccessWhole();
     $properties = [];
     $definitions = $surface->getDefinitions();
     foreach ($definitions->entries() as $name => $entry) {
@@ -162,7 +171,7 @@ final class InputDefinitions {
         // locked with it.
         static::lock($property);
       }
-      if ($entry->runtimeAccess) {
+      if ($entry->runtimeAccess && !($once && !$surface->isRuntimeAccessOwn((string) $name))) {
         $this->runtimeAccessNote($property);
       }
       $properties[$name] = $property;
@@ -922,7 +931,11 @@ final class InputDefinitions {
    * built for the account alone keeps open. The Tool API's normalizer
    * writes JSON Schema from these typed definitions and carries a
    * description, and no extension keyword, so the description says it:
-   * the served contract's `x-surface.access: "live"`, in words.
+   * the served contract's `x-surface.access: "live"`, in words. Not said
+   * on a key whose only mark is a runtime answer at the top that the
+   * tool's description already says once for every key
+   * (OperationInputs::description()): a note on each key would bury what
+   * each says of itself.
    *
    * Decision: see
    * docs/decisions.md#access-is-static-or-runtime-read-from-its-cacheability.

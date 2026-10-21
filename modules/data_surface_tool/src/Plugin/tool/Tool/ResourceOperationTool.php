@@ -294,7 +294,7 @@ final class ResourceOperationTool extends ResourceOperationToolBase implements I
     // stale reference with its path and its code.
     // Decision: see docs/decisions.md#one-result-at-every-door, and
     // docs/decisions.md#every-door-projects-what-the-read-tool-projects.
-    $answer = $result->document($this->pipeline->outbound($built, $result->values));
+    $answer = $result->document($this->pipeline->outbound($built, $result->held()));
     if (!$result->isValid()) {
       // Refused by access, or by a resource locked whole, which no other
       // values would change: no retry with corrected input can help.

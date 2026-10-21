@@ -90,6 +90,9 @@ final class DataSurface implements DataSurfaceInterface {
    * @param array<string, mixed> $withheld
    *   The watched values its refiners were handed as nothing because
    *   their own keys refused them, by dotted path, each as it was given.
+   * @param string[]|null $runtimeAccessOwn
+   *   When a runtime answer at the top marked every key, the keys also
+   *   marked by an answer of their own; NULL when none at the top did.
    *
    * @internal
    *   A data surface is built by the build step, which seals a
@@ -110,7 +113,22 @@ final class DataSurface implements DataSurfaceInterface {
     protected readonly bool $changesNothing = FALSE,
     protected readonly int $version = 1,
     protected readonly array $withheld = [],
+    protected readonly ?array $runtimeAccessOwn = NULL,
   ) {
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function isRuntimeAccessWhole(): bool {
+    return $this->runtimeAccessOwn !== NULL;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function isRuntimeAccessOwn(string $key): bool {
+    return $this->runtimeAccessOwn === NULL ? $this->definitions->isRuntimeAccess($key) : in_array($key, $this->runtimeAccessOwn, TRUE);
   }
 
   /**
@@ -151,7 +169,7 @@ final class DataSurface implements DataSurfaceInterface {
     if ($values === $this->ports && $definitions === $this->portDefinitions) {
       return $this;
     }
-    return new self($this->definitions, $this->cacheability, $this->outputs, $this->thirdPartyLayouts, $this->watchedValueCheck, $values, $definitions, $this->lockedWhole, $this->changesNothing, $this->version);
+    return new self($this->definitions, $this->cacheability, $this->outputs, $this->thirdPartyLayouts, $this->watchedValueCheck, $values, $definitions, $this->lockedWhole, $this->changesNothing, $this->version, runtimeAccessOwn: $this->runtimeAccessOwn);
   }
 
   /**
@@ -334,7 +352,7 @@ final class DataSurface implements DataSurfaceInterface {
    *   A copy that answers withheldValues() with them.
    */
   protected function withWithheld(array $withheld): static {
-    return new self($this->definitions, $this->cacheability, $this->outputs, $this->thirdPartyLayouts, $this->watchedValueCheck, $this->ports, $this->portDefinitions, $this->lockedWhole, $this->changesNothing, $this->version, $withheld);
+    return new self($this->definitions, $this->cacheability, $this->outputs, $this->thirdPartyLayouts, $this->watchedValueCheck, $this->ports, $this->portDefinitions, $this->lockedWhole, $this->changesNothing, $this->version, $withheld, $this->runtimeAccessOwn);
   }
 
   /**
@@ -442,7 +460,7 @@ final class DataSurface implements DataSurfaceInterface {
       $changed = TRUE;
     }
     return $changed
-      ? new self($definitions, $cacheability, $this->outputs, $this->thirdPartyLayouts, $this->watchedValueCheck, $this->ports, $this->portDefinitions, $this->lockedWhole, $this->changesNothing, $this->version)
+      ? new self($definitions, $cacheability, $this->outputs, $this->thirdPartyLayouts, $this->watchedValueCheck, $this->ports, $this->portDefinitions, $this->lockedWhole, $this->changesNothing, $this->version, runtimeAccessOwn: $this->runtimeAccessOwn)
       : $this;
   }
 

@@ -77,7 +77,7 @@ services:
   # config object, written from the resource (drush data_surface:config-schema).
   data_surface.config_schema:
     class: Drupal\data_surface\Storage\ConfigSchemaGenerator
-    arguments: ['@data_surface.resource_registry', '@data_surface.resources', '@extension.list.module', '%app.root%']
+    arguments: ['@data_surface.resource_registry', '@data_surface.resources', '@extension.list.module', '%app.root%', '%container.modules%', '@service_container', '@class_resolver', '@data_surface.resource_plugins']
   # Every discovered resource and structure, its operations, alters and
   # variants, as one array: what docs/catalog.md is generated from.
   data_surface.resource_catalog:

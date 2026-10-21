@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Drupal\data_surface_tool;
 
 use Drupal\Core\Cache\Cache;
+use Drupal\Core\Session\AnonymousUserSession;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\StringTranslation\TranslationInterface;
@@ -163,6 +164,13 @@ final class OperationInputs {
    * @var array<string, \Drupal\data_surface\DataSurfaceInterface>|null
    */
   protected ?array $built = NULL;
+
+  /**
+   * Whether every key's mark is said once, by resource and operation.
+   *
+   * @var array<string, bool>
+   */
+  protected array $saidOnce = [];
 
   /**
    * Constructs an OperationInputs.
@@ -326,7 +334,11 @@ final class OperationInputs {
    *   knows, each required as the resource says on a create.
    */
   public function values(ResourceDefinition $resource, DataSurfaceInterface $built, OperationContext $context): MapInputDefinition {
-    $map = $this->inputDefinitions->withDependencies($this->map($resource, $built, $this->knownIdentity($resource, $context)), $built);
+    $operation = NULL;
+    foreach ($resource->operations as $declared) {
+      $operation = $declared->id === $context->id ? $declared : $operation;
+    }
+    $map = $this->inputDefinitions->withDependencies($this->map($resource, $built, $this->knownIdentity($resource, $context), $operation), $built);
     if (!$context->creates) {
       // Decision: see
       // docs/decisions.md#required-is-the-resources-and-an-update-tool-requires-nothing-at-its-door.
@@ -394,12 +406,12 @@ final class OperationInputs {
     if ($operation->needsNothing()) {
       $context = $this->resources->operation($resource->name(), $operation->id);
       $built = $this->listed($resource, $context, $declared);
-      $map = $this->map($resource, $built, $this->knownIdentity($resource, $context));
+      $map = $this->map($resource, $built, $this->knownIdentity($resource, $context), $operation);
     }
     else {
       // Decision: see docs/decisions.md#identity-before-the-parameters.
       $built = $neutral ?? $this->listed($resource, new OperationContext($operation->id), $declared);
-      $map = $this->map($resource, $built, $this->suppliedIdentity($resource, $operation));
+      $map = $this->map($resource, $built, $this->suppliedIdentity($resource, $operation), $operation);
     }
     if ($input) {
       // Decision: see docs/decisions.md#a-refusal-names-what-it-depends-on.
@@ -637,16 +649,20 @@ final class OperationInputs {
    *   The built resource.
    * @param string[] $known
    *   The identity keys the operation knows, which are no properties.
+   * @param \Drupal\data_surface\ResourceBuild\OperationDefinition|null $operation
+   *   The operation, whose tool's description may say once what every
+   *   key would; NULL when it is not known.
    *
    * @return \Drupal\tool\TypedData\MapInputDefinition
    *   The map, required when any of its properties is.
    */
-  protected function map(ResourceDefinition $resource, DataSurfaceInterface $built, array $known): MapInputDefinition {
+  protected function map(ResourceDefinition $resource, DataSurfaceInterface $built, array $known, ?OperationDefinition $operation = NULL): MapInputDefinition {
     $this->listedTags = Cache::mergeTags($this->listedTags, $built->getCacheTags());
     $map = $this->inputDefinitions->fromSurface(
       $built,
       $this->t('@resource values', ['@resource' => $resource->id]),
       $this->t('The values, as the @resource resource describes them: every key it takes that the operation does not already know, including those other modules add, with its label, its meaning and the values it allows.', ['@resource' => $resource->id]),
+      runtimeAccessSaidOnce: $operation !== NULL && $this->runtimeAccessWhole($resource, $operation),
     );
     $properties = array_diff_key($map->getPropertyDefinitions(), array_flip($known));
     $map->setPropertyDefinitions($properties);
@@ -761,9 +777,14 @@ final class OperationInputs {
    * its label where it says none; then one line of call rules for its
    * kind: what a key left out does, and for an update that the read tool
    * returns what is there. No literal quotes, which a bridge that escapes
-   * the text would turn into entities.
+   * the text would turn into entities. When an access answer at the top
+   * is decided once the subject is known, so that every key is marked, a
+   * last sentence says so once, and no key says it again
+   * (InputDefinitions::runtimeAccessNote()).
    *
-   * Decision: see docs/decisions.md#an-operation-states-how-it-behaves.
+   * Decision: see docs/decisions.md#an-operation-states-how-it-behaves,
+   * and
+   * docs/decisions.md#access-is-static-or-runtime-read-from-its-cacheability.
    *
    * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $resource
    *   The resource.
@@ -775,11 +796,53 @@ final class OperationInputs {
    */
   public function description(ResourceDefinition $resource, OperationDefinition $operation): TranslatableMarkup {
     $arguments = ['@description' => $this->operationDescription($operation)];
-    return match ($operation->kind()) {
+    $description = match ($operation->kind()) {
       OperationDefinition::READ => $this->t('@description Read only: nothing is written; a key left out is checked at its current value.', $arguments),
       OperationDefinition::CREATE => $this->t('@description Create: a key left out takes its default, and every key marked required must be sent.', $arguments),
       default => $this->t('@description Update: send only the keys to change; a key left out keeps its value, null clears it, and values {} changes nothing. The read tool returns the current values.', $arguments),
     };
+    return $this->runtimeAccessWhole($resource, $operation) ? $this->withRuntimeAccessWhole($description) : $description;
+  }
+
+  /**
+   * Answers whether an access answer at the top marks every key of a tool.
+   *
+   * Asked of the access at the top for the anonymous account alone, as
+   * the tool is derived, whoever asks, without a build
+   * (ResourcesInterface::isRuntimeAtTheTop()): the description is cached
+   * for every account,
+   * and the listing an account asks for leaves a key's note out only
+   * where the description says it. A runtime answer marks every key; a
+   * static one, which the account alone decides, marks none.
+   *
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $resource
+   *   The resource.
+   * @param \Drupal\data_surface\ResourceBuild\OperationDefinition $operation
+   *   The operation.
+   *
+   * @return bool
+   *   TRUE when every key is marked as decided once the subject is known.
+   */
+  protected function runtimeAccessWhole(ResourceDefinition $resource, OperationDefinition $operation): bool {
+    $key = $resource->name() . ':' . $operation->id;
+    if (isset($this->saidOnce[$key])) {
+      return $this->saidOnce[$key];
+    }
+    $context = $operation->parameters === [] ? $this->resources->operation($resource->name(), $operation->id) : new OperationContext($operation->id);
+    return $this->saidOnce[$key] = $this->resources->isRuntimeAtTheTop($resource->name(), $context, new AnonymousUserSession());
+  }
+
+  /**
+   * Says once, after a tool's description, that every key is decided late.
+   *
+   * @param \Drupal\Core\StringTranslation\TranslatableMarkup $description
+   *   The description.
+   *
+   * @return \Drupal\Core\StringTranslation\TranslatableMarkup
+   *   The description, the sentence after it.
+   */
+  protected function withRuntimeAccessWhole(TranslatableMarkup $description): TranslatableMarkup {
+    return $this->t('@description Every key may be found locked or left out once the thing is known.', ['@description' => $description]);
   }
 
   /**
@@ -816,10 +879,11 @@ final class OperationInputs {
    *   The description.
    */
   public function readDescription(ResourceDefinition $resource, OperationDefinition $operation): TranslatableMarkup {
-    return $this->t('Reads what is stored for @label, and writes nothing. @needs The values output is the resource itself, less what the operation already knows, in the shape the write tool takes, so a caller can read what is there before changing it. A secret is never returned.', [
+    $description = $this->t('Reads what is stored for @label, and writes nothing. @needs The values output is the resource itself, less what the operation already knows, in the shape the write tool takes, so a caller can read what is there before changing it. A secret is never returned.', [
       '@label' => self::operationLabel($operation),
       '@needs' => $this->needs($operation),
     ]);
+    return $this->runtimeAccessWhole($resource, $operation) ? $this->withRuntimeAccessWhole($description) : $description;
   }
 
   /**

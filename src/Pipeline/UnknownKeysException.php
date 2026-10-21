@@ -28,10 +28,13 @@ final class UnknownKeysException extends \InvalidArgumentException {
    * @param string $path
    *   The dotted path of the level the keys were found in; the empty
    *   string for the data surface's own top level.
+   * @param string[] $declared
+   *   The keys declared at that level, for the nearest to be suggested.
    */
   public function __construct(
     protected readonly array $keys,
     protected readonly string $path = '',
+    protected readonly array $declared = [],
   ) {
     parent::__construct(sprintf(
       'Unknown key(s) %s%s.',
@@ -58,6 +61,16 @@ final class UnknownKeysException extends \InvalidArgumentException {
    */
   public function getPath(): string {
     return $this->path;
+  }
+
+  /**
+   * Gets the keys declared at the level the keys were found in.
+   *
+   * @return string[]
+   *   The declared keys, in declaration order.
+   */
+  public function getDeclared(): array {
+    return $this->declared;
   }
 
 }

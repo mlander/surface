@@ -1547,7 +1547,8 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
    *
    * It moves under a key no data surface key can take, so it collides with
    * nothing; with a #weight, when the key it follows has one, so a
-   * frame Form API sorts keeps it there.
+   * frame Form API sorts keeps it there. A key an arrangement group holds
+   * is followed inside that group, which the React app draws alike.
    *
    * @param array $element
    *   The frame.
@@ -1559,22 +1560,29 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
     foreach (static::elementChildren($element) as $group) {
       foreach (static::elementChildren($element[$group]) as $mount) {
         $after = $element[$group][$mount][self::PLACED_AFTER_KEY] ?? NULL;
-        if (!is_string($after) || $after === (string) $group || !isset($element[$after]) || !is_array($element[$after])) {
+        $holder = is_string($after) && $after !== (string) $group ? static::holding($element, $after) : NULL;
+        if ($holder === NULL) {
           continue;
         }
         $placed = $element[$group][$mount];
         unset($element[$group][$mount]);
-        if (isset($element[$after]['#weight'])) {
-          $placed['#weight'] = $element[$after]['#weight'];
+        $frame = $holder === '' ? $element : $element[$holder];
+        if (isset($frame[$after]['#weight'])) {
+          $placed['#weight'] = $frame[$after]['#weight'];
         }
         $reordered = [];
-        foreach ($element as $key => $value) {
+        foreach ($frame as $key => $value) {
           $reordered[$key] = $value;
           if ((string) $key === $after) {
             $reordered['@placed.' . $group . '.' . $mount] = $placed;
           }
         }
-        $element = $reordered;
+        if ($holder === '') {
+          $element = $reordered;
+        }
+        else {
+          $element[$holder] = $reordered;
+        }
         if (static::elementChildren($element[$group]) === [] && !isset($element[$group][self::REFRESH_ID_KEY])) {
           // Every fieldset it grouped is drawn elsewhere: a container
           // with nothing in it is drawn as nothing.
@@ -1586,6 +1594,31 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
       $element[$key] = static::placeMounts($element[$key]);
     }
     return $element;
+  }
+
+  /**
+   * Finds which element of a frame holds a key, once groups are gathered.
+   *
+   * @param array $element
+   *   The frame.
+   * @param string $key
+   *   The key a fieldset is placed after.
+   *
+   * @return string|null
+   *   An empty string when the frame holds it itself, the group's element
+   *   when an arrangement group drawn there holds it, or NULL when neither
+   *   does.
+   */
+  protected static function holding(array $element, string $key): ?string {
+    if (isset($element[$key]) && is_array($element[$key])) {
+      return '';
+    }
+    foreach (static::elementChildren($element) as $child) {
+      if (str_starts_with((string) $child, self::GROUP_PREFIX) && isset($element[$child][$key]) && is_array($element[$child][$key])) {
+        return (string) $child;
+      }
+    }
+    return NULL;
   }
 
   /**

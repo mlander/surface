@@ -1,5 +1,7 @@
 # Decisions
 
+<!-- cspell:ignore nmae -->
+
 [The pattern](pattern.md) says what a resource, a structure, an alter,
 an operation, storage and an access class are. Building it meant
 deciding points the pattern did not cover. Each is here, once, grouped
@@ -1248,8 +1250,18 @@ The form moves the details at render time (`#pre_render`), after Form
 API is done with the array, so no walk by path changes. Only the
 calling alter's own input mount may be placed; an output mount is never
 drawn, and `after:` on it is refused rather than ignored, so a mistake
-shows. (`BlueprintAdapterBase::assertPlaceable()`,
-`DataSurfaceFormBuilder::placeMounts()`)
+shows. A key the owner put in an [arrangement
+group](#arrangement-is-declared-once) is followed into it: the details
+are drawn in the group, right after the key. Decided 2026-10-21, from
+the fourth fresh-eyes log (entry 28): the form looked for the key in
+the frame, where a gathered group no longer held it, and drew the
+details last, while the React app, which draws a placed fieldset as
+part of the key it follows, drew them in the group. Honoring the
+placement was chosen over refusing it at build: the owner groups and
+the alter places, neither knowing the other, so a refusal would make an
+owner's arrangement break another module's alter.
+(`BlueprintAdapterBase::assertPlaceable()`,
+`DataSurfaceFormBuilder::placeMounts()`, `DataSurfaceFormBuilder::holding()`)
 
 ### Adding a key twice
 
@@ -1669,9 +1681,26 @@ format core is asked to replace with data definitions
   resource cannot say is kept from the file too: the object's label, a
   variant's when it declares none, the comments, and every entry no
   resource writes. Each entry written says so on the line above it.
+- **Before the install, in one run.** A module named that is not
+  installed is read from its code: its classes are scanned from its
+  `src/` as discovery scans an installed module's
+  (`ResourceCollectorPass::discover()`), autoloaded from there, and its
+  alters, storage and access classes built as the container would build
+  them (`AutowiringClassResolver`), with nothing installed or cached.
+  So a new module is written, then its files, then installed once.
+  Decided 2026-10-21, from the fourth fresh-eyes log (entries 13 and
+  14): the command read only installed modules, so a module was
+  installed without its config object and installed again after the
+  files were written, and an owner and the module mounting keys on it
+  were written in two runs, the tool deriver warning in between that
+  the owner advertised a mount no schema described. Requiring the
+  module installed and creating its object from the file just written
+  was weighed and turned down: it keeps the install that reads no
+  install file, and an install file is read once, at install.
 - **Mounted keys** follow the existing convention: the owner's
-  `third_party_settings` is written when a module mounting there is on
-  as it is generated, and each mounting module's entry
+  `third_party_settings` is written when a module mounting there is
+  installed, or named in the same run, as it is generated, and each
+  mounting module's entry
   `<config>.third_party.<module>` in its own file. Open: whether every
   generated object should declare `third_party_settings` whatever is on,
   as core does for config entities, so an alter from a module the owner
@@ -1690,8 +1719,9 @@ format core is asked to replace with data definitions
   says from the schema that its two booleans always hold a value.
 
 (`Storage\ConfigSchemaGenerator`, `Drush\Commands\ConfigSchemaCommand`,
+`ResourceBuild\AutowiringClassResolver`,
 `Storage\HeldToConfigSchemaTrait`, `Resources::assertHeldToSchema()`,
-`ConfigSchemaDriftTest`, `ConfigSchemaCheckTest`)
+`ConfigSchemaDriftTest`, `ConfigSchemaCheckTest`, `ConfigSchemaCommandTest`)
 
 ### The whole object is checked
 
@@ -1830,7 +1860,25 @@ is known. Decided 2026-10-18, point by point.
   account that asks (`ResourceOperationTool::create()`,
   `OperationInputs::listedValues()`), a static lock as a locked
   property, a static omission left out, and a runtime key's description
-  saying that a call may find it locked or left out. The description,
+  saying that a call may find it locked or left out. When the runtime
+  answer is the resource's own, at the top, every key carries the mark,
+  and the tool's description says it once instead, "Every key may be
+  found locked or left out once the thing is known.", and no key repeats
+  it; a key whose mark is its own (a child's access, a mixin's) keeps
+  its note (decided 2026-10-21, from the fourth fresh-eyes log, entry 18,
+  where the same sentence on fourteen keys buried what each key said of
+  itself; `DataSurfaceInterface::isRuntimeAccessWhole()`,
+  `isRuntimeAccessOwn()`). The tool's description is cached for every
+  account, so whether to say it is asked of the answers at the top for
+  the anonymous account alone, without a build
+  (`ResourcesInterface::isRuntimeAtTheTop()`): an answer at the top that is
+  static for it (the tool test module's cabinet) says nothing, and a key
+  in the listing an account asks for drops its note only where the
+  description says it, so no account loses the statement. *Open:* an
+  answer that is static for the anonymous account and runtime for
+  another (the exhibit's) keeps its notes on each key for that account,
+  and one runtime for the anonymous account and static for another says
+  in the description what that account's listing does not mark. The description,
   not a keyword: the Tool API's normalizer writes JSON Schema from typed
   definitions, which carry a description and no extension keyword. Why:
   a full schema and a listing are what clients cache, so they can only
@@ -2072,6 +2120,16 @@ key through the read could read it through a dry run (the fees example
 came back from every write; "omitted is omitted both ways" and "a read
 leaves a secret out" are promises about every door, or about none.
 
+- **What is written, as a read after it loads it.** The write tool's
+  `values`, on a write and a dry run, and React `/validate`'s and
+  `/submit`'s, are projected from what the run writes, not from every
+  key accepted: a key storage never held that the run leaves at its
+  default is not written (absent keeps), so it is not answered either
+  (`DataSurfaceResult::held()`). Decided 2026-10-21, from the fourth
+  fresh-eyes log (entry 20): a write of one key answered a mounted key
+  never sent, at its declared default, which the read tool right after
+  did not. A refusal still answers the values as accepted, since nothing
+  is written and the caller corrects what it sent.
 - **`prepared` is not served.** What prepare rehearsed is storage's own
   shape, and the one answer no access rule read: storage puts back what
   the caller could not see so the write does not drop it, and a layout
@@ -2450,9 +2508,20 @@ value not on its list unexplained.
   This applies when Venue is Riverside Hall. Choose Main hall or East
   room." At most ten (`DataSurfacePipeline::CHOICES_SHOWN`),
   then "or one of 2 more"; an empty list says "Nothing may be chosen."
-  A key that does not apply keeps its sentence, "Send day does not apply
-  when Frequency is Monthly." A bound and a pattern say themselves,
-  through the constraint's message.
+  An item of a list refused by its list of values says its item's
+  choices the same way, at its delta: "days.1: The value you selected
+  is not a valid choice. Choose Friday, Saturday or Sunday." (decided
+  2026-10-21, from the fourth fresh-eyes log, entry 19, where a
+  multi-select's item listed none). A key that does not apply keeps its
+  sentence, "Send day does not apply when Frequency is Monthly." A bound
+  and a pattern say themselves, through the constraint's message.
+- **A misspelled key is named.** A key no definition declares is refused
+  by its path, `unknown_key`; when a key declared beside it is at most
+  two edits away, and the edits are fewer than half its length, a
+  sentence of its own names the nearest: "Unknown key venue_nmae. Did
+  you mean venue_name?", inside a map by its dotted path. A short key,
+  or one near nothing, gets no guess. Decided 2026-10-21, from the
+  fourth fresh-eyes log (entry 19).
 - **The machine's rendering: keys by path, values as sent** (decided
   2026-10-20, from the AI agents review, group C of the reviews'
   synthesis, approved by the owner, amending the form's bullet above,

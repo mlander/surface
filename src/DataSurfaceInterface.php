@@ -193,6 +193,41 @@ interface DataSurfaceInterface extends CacheableDependencyInterface {
   public function lockedWhole(): string|\Stringable|null;
 
   /**
+   * Answers whether a runtime answer at the top marked every key.
+   *
+   * Set when the access asked for the resource as a whole was set aside,
+   * built for the account alone or for no account: once the subject is
+   * known, any key may be found locked or left out, so every key is
+   * marked (DefinitionMap::isRuntimeAccess()), and a listing says so once
+   * rather than on each key.
+   *
+   * Decision: see
+   * docs/decisions.md#access-is-static-or-runtime-read-from-its-cacheability.
+   *
+   * @return bool
+   *   TRUE when every key is marked by an answer at the top.
+   */
+  public function isRuntimeAccessWhole(): bool;
+
+  /**
+   * Answers whether a key is marked by an access answer of its own.
+   *
+   * A key a child's access, a mixin's or a variant's marks as decided
+   * once the subject is known: its mark is its own, whether or not an
+   * answer at the top marked every key as well.
+   *
+   * Decision: see
+   * docs/decisions.md#access-is-static-or-runtime-read-from-its-cacheability.
+   *
+   * @param string $key
+   *   The key.
+   *
+   * @return bool
+   *   TRUE when the key's own answer marked it.
+   */
+  public function isRuntimeAccessOwn(string $key): bool;
+
+  /**
    * Answers whether it was built for an operation that changes nothing.
    *
    * Decision: see docs/decisions.md#an-operation-states-how-it-behaves.

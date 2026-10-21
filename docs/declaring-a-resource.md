@@ -138,6 +138,17 @@ should find it beside every label: a message option may be written with
 which core's validator translates when it refuses a value ([Violation
 messages are objects](semantics.md#violation-messages-are-objects)).
 
+A `Regex` reaches both JSON Schema documents as `pattern` only when it
+stays inside the subset PHP and a JavaScript engine read alike: no
+negated class, `\d` `\w` `\s` `\b` only without the `u` modifier, and
+`$` only with the `D` modifier, which the license's pattern carries
+([The served contract](served-contract.md#never-stricter-than-the-runtime)).
+Any other pattern is checked on the server only and named under
+`x-surface.checkedOnServer`: an email shape written
+`/^[^@\s]+@example\.org$/D` is, for its negated class, while
+`/^[a-z0-9._-]+@example\.org$/D` reaches both documents, and so does
+`/^\d{4}$/D`, where `/^\d{4}$/uD` does not.
+
 A key uses it in the type position of `add()`, with a label of its own:
 
 ```php

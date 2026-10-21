@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace Drupal\data_surface\Storage;
 
 use Drupal\Component\Serialization\Yaml as DrupalYaml;
+use Composer\Autoload\ClassLoader;
+use Drupal\Core\Cache\NullBackend;
+use Drupal\Core\DependencyInjection\ClassResolverInterface;
 use Drupal\Core\Extension\ModuleExtensionList;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
@@ -22,9 +25,13 @@ use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Entry;
 use Drupal\data_surface\Refinement\ChoiceSet;
 use Drupal\data_surface\Resource\OperationContext;
+use Drupal\data_surface\ResourceBuild\AutowiringClassResolver;
+use Drupal\data_surface\ResourceBuild\ResourceCollectorPass;
 use Drupal\data_surface\ResourceBuild\ResourceDefinition;
+use Drupal\data_surface\ResourceBuild\ResourcePlugins;
 use Drupal\data_surface\ResourceBuild\ResourceRegistry;
 use Drupal\data_surface\ResourceBuild\Resources;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\Yaml\Yaml;
 
 /**
@@ -109,13 +116,81 @@ final class ConfigSchemaGenerator {
    *   The module list, for where each module's files are.
    * @param string $root
    *   The Drupal root.
+   * @param array<string, array{pathname: string}> $installed
+   *   The installed modules, as the container was built for them, each
+   *   with the path of its info file from the root.
+   * @param \Symfony\Component\DependencyInjection\ContainerInterface|null $container
+   *   The container, which a module not installed takes its classes'
+   *   arguments from; NULL reads installed modules alone.
+   * @param \Drupal\Core\DependencyInjection\ClassResolverInterface|null $classResolver
+   *   The class resolver.
+   * @param \Drupal\data_surface\ResourceBuild\ResourcePlugins|null $plugins
+   *   The plugins that are their own structure.
    */
   public function __construct(
     protected readonly ResourceRegistry $registry,
     protected readonly Resources $resources,
     protected readonly ModuleExtensionList $moduleList,
     protected readonly string $root,
+    protected readonly array $installed = [],
+    protected readonly ?ContainerInterface $container = NULL,
+    protected readonly ?ClassResolverInterface $classResolver = NULL,
+    protected readonly ?ResourcePlugins $plugins = NULL,
   ) {}
+
+  /**
+   * Gives a generator that also reads modules that are not installed.
+   *
+   * A module's schema and install file are read when it is installed, so
+   * they are written before: each named module that is not installed has
+   * its classes scanned from its src/ as discovery scans an installed
+   * module's (ResourceCollectorPass::discover()), autoloaded from there,
+   * and its alters, storage and access classes built as the container
+   * would build them (AutowiringClassResolver). Nothing is installed and
+   * no cache is written. An owner and a module mounting keys on it are
+   * named together, so one run writes both, each seeing the other.
+   *
+   * Decision: see
+   * docs/decisions.md#a-config-object-is-described-by-its-resource.
+   *
+   * @param string[] $modules
+   *   The modules, installed or not.
+   *
+   * @return static
+   *   This generator when every one is installed; otherwise one reading
+   *   them beside the installed modules.
+   *
+   * @throws \InvalidArgumentException
+   *   When no module of a name is there to read.
+   */
+  public function including(array $modules): static {
+    $missing = array_values(array_diff($modules, array_keys($this->installed)));
+    if ($missing === [] || $this->container === NULL || $this->classResolver === NULL) {
+      return $this;
+    }
+    $absent = array_filter($missing, fn (string $module): bool => !$this->moduleList->exists($module));
+    if ($absent !== []) {
+      // A module written since the list was cached is not in it yet.
+      $this->moduleList->reset();
+      $absent = array_filter($absent, fn (string $module): bool => !$this->moduleList->exists($module));
+    }
+    if ($absent !== []) {
+      throw new \InvalidArgumentException(sprintf('No module named %s is in the code base.', implode(', ', $absent)));
+    }
+    $scanned = $this->installed;
+    $loader = new ClassLoader();
+    foreach ($missing as $module) {
+      $pathname = $this->moduleList->getPathname($module);
+      $loader->addPsr4('Drupal\\' . $module . '\\', $this->root . '/' . dirname($pathname) . '/src');
+      $scanned[$module] = ['pathname' => $pathname];
+    }
+    // As the kernel does for a module installed while it runs: a loader of
+    // their own, since the main one may have cached a miss for a class.
+    $loader->register();
+    $resolver = new AutowiringClassResolver($this->classResolver, $this->container);
+    $registry = new ResourceRegistry(ResourceCollectorPass::discover($scanned, $this->root . '/'), new NullBackend('data_surface_config_schema'), $this->plugins, $resolver);
+    return new static($registry, $this->resources->withRegistry($registry, $resolver), $this->moduleList, $this->root, $scanned);
+  }
 
   /**
    * Lists the resources whose config schema this writes.

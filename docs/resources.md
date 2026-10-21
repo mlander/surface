@@ -457,7 +457,7 @@ What each kind does, by door:
 | The build (`build()`), the form, the pipeline, the schema for these answers | applied | applied |
 | The build for the account alone (`buildStatic()`) | applied | asked, set aside: the key kept as the static answers leave it, and marked |
 | The full schema | locked: `readOnly`, `x-surface.locked`; omitted: not there | there and writable, `x-surface.access: "live"` |
-| The tool listing | locked: a locked property; omitted: not there | there, its description saying a call may find it locked or left out |
+| The tool listing | locked: a locked property; omitted: not there | there, its description saying a call may find it locked or left out; when the answer is the resource's own, at the top, the tool's description says it once for every key instead |
 
 So the full schema and the tool listing, which clients cache, are the
 account's: a static lock or omission is stated for the account that
@@ -896,7 +896,9 @@ help, over what the owner arranged, never emptying any of them
 On its own mount, and only there, an alter may also say where that
 fieldset is drawn, with `after:`, naming a top-level key of the owner's
 blueprint, a plain key or an attached part. The fieldset is then drawn
-directly after that key instead of last, among the other modules'. The
+directly after that key instead of last, among the other modules'; when
+the owner put that key in an arrangement group, inside the group, right
+after the key ([A placed fieldset](forms.md#a-placed-fieldset)). The
 examples' compliance alter ends with
 
 ```php

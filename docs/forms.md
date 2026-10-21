@@ -227,8 +227,11 @@ follows (`PLACED_AFTER_KEY`). The container's `#pre_render`
 container is rendered: out of the grouping container, to directly after
 the named element of the same frame, at any depth, under a key no
 declared key can take, and with that element's `#weight` when it has
-one, so a frame Form API sorts keeps it there. A grouping container left
-with nothing in it is not drawn.
+one, so a frame Form API sorts keeps it there. When the named key sits
+in an [arrangement group](#arranging-the-keys), the fieldset is drawn in
+that group, right after the key, as the React app draws it
+(`ArrangementFormTest` and the app's `widgets.test.tsx` hold both doors
+to it). A grouping container left with nothing in it is not drawn.
 
 The move happens at render time and only then, because it is a matter
 of drawing. By then Form API has processed, validated and submitted the

@@ -83,9 +83,34 @@ final class ResourceCollectorPass implements CompilerPassInterface {
    */
   public function process(ContainerBuilder $container): void {
     $root = $container->hasParameter('app.root') ? $container->getParameter('app.root') . '/' : '';
+    $container->setParameter(self::PARAMETER, self::discover($container->getParameter('container.modules'), $root, $container));
+  }
+
+  /**
+   * Scans modules for the classes discovery keeps, as the container is built.
+   *
+   * Also asked, with no container, for modules that are not installed:
+   * the config schema generator reads a module's resources before the
+   * module is installed (ConfigSchemaGenerator::including()), so its
+   * schema and install file are there when it is.
+   *
+   * @param array<string, array{pathname: string}> $modules
+   *   The modules, in the order they are scanned, each with the path of
+   *   its info file from the root.
+   * @param string $root
+   *   The root the paths are relative to, with a trailing slash; empty
+   *   for paths that are already whole.
+   * @param \Symfony\Component\DependencyInjection\ContainerBuilder|null $container
+   *   The container being built, which the autowired services are
+   *   registered in; NULL to register none.
+   *
+   * @return array<string, array<class-string, mixed>>
+   *   The class lists, by kind, then class name, valued with the module.
+   */
+  public static function discover(array $modules, string $root, ?ContainerBuilder $container = NULL): array {
     $found = array_fill_keys(['resources', 'shapes', 'alters', 'operations', 'derivers', 'overrides'], []);
     $scanned = [];
-    foreach ($container->getParameter('container.modules') as $module => $info) {
+    foreach ($modules as $module => $info) {
       $module_dir = $root . dirname($info['pathname']);
       $lists = [];
       foreach (self::DIRECTORIES as $directory) {
@@ -103,7 +128,7 @@ final class ResourceCollectorPass implements CompilerPassInterface {
       foreach ($lists as $list) {
         foreach ($list as $class => $declares) {
           $reflection = new \ReflectionClass($class);
-          $this->collect($container, $reflection, (string) $module, $found);
+          self::collect($container, $reflection, (string) $module, $found);
           if ($declares) {
             $scanned[$class] = [(string) $module, $reflection];
           }
@@ -119,14 +144,14 @@ final class ResourceCollectorPass implements CompilerPassInterface {
         }
       }
     }
-    $container->setParameter(self::PARAMETER, $found);
+    return $found;
   }
 
   /**
    * Records one class, and registers the services it brings.
    *
-   * @param \Symfony\Component\DependencyInjection\ContainerBuilder $container
-   *   The container being built.
+   * @param \Symfony\Component\DependencyInjection\ContainerBuilder|null $container
+   *   The container being built; NULL to register nothing.
    * @param \ReflectionClass $class
    *   The class.
    * @param string $module
@@ -134,7 +159,7 @@ final class ResourceCollectorPass implements CompilerPassInterface {
    * @param array<string, array<class-string, string>> $found
    *   The class lists, by kind, then class name, valued with the module.
    */
-  protected function collect(ContainerBuilder $container, \ReflectionClass $class, string $module, array &$found): void {
+  protected static function collect(?ContainerBuilder $container, \ReflectionClass $class, string $module, array &$found): void {
     if (!$class->isInstantiable()) {
       return;
     }
@@ -173,13 +198,13 @@ final class ResourceCollectorPass implements CompilerPassInterface {
   /**
    * Registers a class as an autowired service under its own name.
    *
-   * @param \Symfony\Component\DependencyInjection\ContainerBuilder $container
-   *   The container being built.
+   * @param \Symfony\Component\DependencyInjection\ContainerBuilder|null $container
+   *   The container being built; NULL to register nothing.
    * @param string $class
    *   The class.
    */
-  protected static function registerAutowired(ContainerBuilder $container, string $class): void {
-    if (class_exists($class) && !$container->hasDefinition($class)) {
+  protected static function registerAutowired(?ContainerBuilder $container, string $class): void {
+    if ($container !== NULL && class_exists($class) && !$container->hasDefinition($class)) {
       $container->register($class, $class)->setAutowired(TRUE);
     }
   }

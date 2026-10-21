@@ -54,6 +54,12 @@ final class DataSurfaceResult {
    *   against what storage held, a list whole; empty when it changes
    *   nothing, so a committed run with none wrote nothing; NULL when the
    *   run did not reach prepare.
+   * @param array|null $written
+   *   What storage holds once the run is written, or would hold on a dry
+   *   run, in input layout: the accepted values less a key storage never
+   *   held that was left at its default, which is not written
+   *   (DataSurfacePipeline::kept()); NULL when the run did not reach
+   *   prepare.
    */
   public function __construct(
     public readonly array $values,
@@ -63,7 +69,26 @@ final class DataSurfaceResult {
     public readonly ?AccessResultInterface $access = NULL,
     public readonly array $notes = [],
     public readonly ?array $changes = NULL,
+    public readonly ?array $written = NULL,
   ) {
+  }
+
+  /**
+   * Gives the values as a read after this run would load them.
+   *
+   * What every door answers as `values`, once projected: what is written
+   * on a write and a dry run, so a key never sent and never stored (a
+   * mounted key at its default) is no more in the answer than in the
+   * read tool's; the accepted values when the run stopped before prepare.
+   *
+   * Decision: see
+   * docs/decisions.md#every-door-projects-what-the-read-tool-projects.
+   *
+   * @return array
+   *   The values, in input layout.
+   */
+  public function held(): array {
+    return $this->written ?? $this->values;
   }
 
   /**
@@ -84,7 +109,7 @@ final class DataSurfaceResult {
    *
    * @param array|\stdClass $values
    *   The values as the door may return them: what the pipeline's
-   *   outbound() projected of $this->values, written as a document by a
+   *   outbound() projected of held(), written as a document by a
    *   door that serves JSON.
    * @param bool $machine
    *   TRUE for a door a program reads (the tool), whose messages name a

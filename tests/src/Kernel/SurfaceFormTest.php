@@ -409,7 +409,7 @@ class SurfaceFormTest extends DataSurfaceKernelTestBase {
     $this->assertSame(['tags'], $violations->keys());
     $this->assertSame('1', $violations->byKey('tags')[0]->path);
     $this->assertSame(
-      'The value you selected is not a valid choice.',
+      'The value you selected is not a valid choice. Choose News, Tips or Events.',
       (string) $violations->byKey('tags')[0]->message,
     );
   }

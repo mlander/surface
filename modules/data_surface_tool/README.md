@@ -156,7 +156,7 @@ description, and always present:
 | `committed` | Whether the values were written; false for a dry run, a refusal and a read only operation. |
 | `changed` | Whether the write moved a stored value; false when the values were what is stored, and then nothing was saved. |
 | `changes` | The dotted path of each stored value the write changed, or a dry run would, so writing back what the read tool returned changes nothing ([decision](../../docs/decisions.md#absent-keeps-null-clears)). |
-| `values` | The accepted values, as the read tool would answer them: no secret, no key this account may not see. |
+| `values` | The accepted values, as the read tool would answer them after the write: no secret, no key this account may not see, and no key never stored that the write left at its default (a mounted key not sent). |
 | `violations` | Each refusal, `{path, code, message}`; a refusal of the whole call has an empty path. |
 | `notes` | Each value sent for a locked key and not taken, `{path, code, message}`, code `locked`. |
 | `stale` | Each stored value kept that may no longer be chosen, `{path, code, message, stored}`, code `stale`. |
@@ -437,7 +437,15 @@ normalizes an instance's inputs see the caller's own listing:
   find it locked or left out." The served contract says the same with
   `x-surface.access: "live"`; the Tool API's normalizer writes its
   schema from typed definitions, which carry a description and no
-  extension keyword, so the listing says it in words.
+  extension keyword, so the listing says it in words;
+- when that answer is the resource's own, at the top, it marks every
+  key, and the tool's description ends with "Every key may be found
+  locked or left out once the thing is known." instead, with no key
+  repeating it (example 10's `configure` and its read tool, under the
+  workflow module). A key whose mark is its own, as example 10's fees
+  are, keeps its note. Whether to say it is asked as the anonymous
+  account, as the tool is derived, so an answer at the top that is
+  static for it says nothing.
 
 Once the parameters arrive, `values` is refined from the resource built
 with every answer applied, which is what the pipeline holds a call to.
@@ -532,6 +540,19 @@ changing the Tool API.
   tools declare none, and `tool:info` prints "Permission: None" for a
   tool its own `checkAccess()` gates. A permission callback, or
   placeholders filled from named inputs, would let them say it.
+- **A value of the wrong type is refused before the tool runs, with no
+  code and no type named.** The shape check above is the Tool API's, and
+  a runner answers its refusal itself, outside the tool's result shape:
+  a deposit of `12.5` for an integer, or `"lots"` for a number, comes
+  back as "Invalid input: values: (property deposit) This value should
+  be of the correct primitive type.", with no `code`, no `path` and no
+  word of the type wanted. A caller cannot tell it from any other input
+  refusal without parsing the sentence. Called through `execute()`, the
+  tool answers it in its own shape, `code` and `path` included; a runner
+  never gives it the chance. A type mismatch that named the type wanted
+  (core's `PrimitiveType` constraint has its type to hand), or a way for
+  a runner to hand the refusal to the tool to answer, would close it.
+  Found by the fourth fresh-eyes run (entry 19).
 
 ## Note for core
 

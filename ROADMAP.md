@@ -887,8 +887,11 @@ renames sit in A because they are cheapest before new code exists.
       half today, every door agreeing on every rule, and yes for an admin
       settings page, correct before it is pleasant. Third run 2026-10-19
       (`docs/fresh-eyes-2026-10-19b.md`): yes for the contract half and
-      mostly yes for the form half, its gaps folded in. The person half
-      is still to run.
+      mostly yes for the form half, its gaps folded in. Fourth run
+      2026-10-21 (`docs/fresh-eyes-2026-10-21.md`): yes for the contract
+      half and mostly yes for the form half, the install order, `after:`
+      in a group and four tool answers folded in. The person half is
+      still to run.
     - **Two real adopters.** Port two existing contrib settings forms
       that we did not write (candidates: pathauto's settings, metatag's
       defaults, or another module's `ConfigFormBase` with options and a

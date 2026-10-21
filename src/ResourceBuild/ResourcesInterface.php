@@ -81,6 +81,30 @@ interface ResourcesInterface {
   public function buildStatic(string $resource, OperationContext $context): DataSurfaceInterface;
 
   /**
+   * Answers whether the access asked of the whole is runtime for an account.
+   *
+   * The access class and each alter answering access for the resource as
+   * a whole, asked for the account alone as buildStatic() asks them,
+   * without building it: TRUE when an answer is set aside, so that a build
+   * for that account marks every key
+   * (DataSurfaceInterface::isRuntimeAccessWhole()).
+   *
+   * Decision: see
+   * docs/decisions.md#access-is-static-or-runtime-read-from-its-cacheability.
+   *
+   * @param string $resource
+   *   The class, or its id.
+   * @param \Drupal\data_surface\Resource\OperationContext $context
+   *   Where it is being asked for.
+   * @param \Drupal\Core\Session\AccountInterface $account
+   *   The account.
+   *
+   * @return bool
+   *   TRUE when an answer at the top waits for the subject.
+   */
+  public function isRuntimeAtTheTop(string $resource, OperationContext $context, AccountInterface $account): bool;
+
+  /**
    * Builds a resource or structure for no account: what it declares.
    *
    * The build buildStatic() makes, with every access answer set aside,

@@ -51,7 +51,7 @@ The settings are a simple config object, so they are described the way
 any Drupal config is: a config schema, and the values the module ships
 with. You write neither by hand: once the resource in step 4 exists,
 `drush data_surface:config-schema --module=data_surface_first --write`
-writes both from it.
+writes both from it, before the module is installed (step 7).
 
 <!-- yaml: modules/data_surface_first/config/schema/data_surface_first.schema.yml#data_surface_first.newsletter -->
 
@@ -252,8 +252,14 @@ them the same way; the tool declares it, so `drush tool:info` prints it.
 ## 7. Try it
 
 ```bash
+drush data_surface:config-schema --module=data_surface_first --write
 drush pm:install data_surface_first
 ```
+
+The command reads the module's classes whether it is installed or not,
+so write the files first and install once, and run it again without
+`--write` after any change to the resource: it prints what drifted and
+fails until you write again.
 
 On a site run with DDEV, every `drush` command on this page is
 `ddev drush`, from the project root.

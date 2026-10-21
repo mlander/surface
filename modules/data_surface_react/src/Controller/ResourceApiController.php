@@ -251,7 +251,7 @@ final class ResourceApiController implements ContainerInjectionInterface {
     // A person's door: messages as the form renders them, labels alone;
     // the paths and codes are the tool's.
     // Decision: see docs/decisions.md#one-result-at-every-door.
-    $response = new JsonResponse($result->document($this->values($served, $result->values), machine: FALSE));
+    $response = new JsonResponse($result->document($this->values($served, $result->held()), machine: FALSE));
     $response->setEncodingOptions(JsonResponse::DEFAULT_ENCODING_OPTIONS | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
     $response->headers->set(self::VERSION_HEADER, (string) ContractEmitter::CONTRACT);
     return $response;
@@ -306,7 +306,7 @@ final class ResourceApiController implements ContainerInjectionInterface {
       access: $this->servedOperations->access($served),
     );
     // Decision: see docs/decisions.md#one-result-at-every-door.
-    $answer = $result->document($this->values($served, $result->values), machine: FALSE);
+    $answer = $result->document($this->values($served, $result->held()), machine: FALSE);
     if (!$result->committed) {
       return $this->submitted($answer);
     }
@@ -490,7 +490,8 @@ final class ResourceApiController implements ContainerInjectionInterface {
    * @param \Drupal\data_surface_react\ServedOperation $served
    *   The operation.
    * @param array $values
-   *   The run's accepted values.
+   *   The run's values as a read after it would load them
+   *   (DataSurfaceResult::held()).
    *
    * @return \stdClass
    *   The document.

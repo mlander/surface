@@ -1,5 +1,7 @@
 # Fresh eyes four: venue hire, from the docs alone
 
+<!-- cspell:ignore mlander nmae -->
+
 Started reading at 2026-10-21 (epoch 1792588447). Site: /Users/mlander/www/drupal_8_22.
 
 ## Log

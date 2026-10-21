@@ -70,6 +70,11 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
   public const CHOICES_SHOWN = 10;
 
   /**
+   * The most edits an unknown key may be from the declared key suggested.
+   */
+  protected const NEAREST_EDITS = 2;
+
+  /**
    * The context of a refusal's own sentences, for a translator.
    *
    * Decision: see docs/decisions.md#a-refusal-names-what-it-depends-on.
@@ -188,7 +193,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
     $definitions = $surface->getDefinitions();
     $unknown = array_keys(array_diff_key($input, $definitions->toArray()));
     if ($unknown !== []) {
-      throw new UnknownKeysException(array_map('strval', $unknown), $prefix);
+      throw new UnknownKeysException(array_map('strval', $unknown), $prefix, $definitions->names());
     }
     $values = array_fill_keys($definitions->names(), NULL);
     $deferred = [];
@@ -1523,12 +1528,14 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
   /**
    * Finds the definition at a key, or at a property path inside it.
    *
-   * A port is read as the container's key it is wired to.
+   * A port is read as the container's key it is wired to. A delta below
+   * a list names its item, so a refused item's choices are its item's, as
+   * a scalar's are its own.
    *
    * @param \Drupal\data_surface\DataSurfaceInterface $surface
    *   The data surface.
    * @param string[] $parents
-   *   The key, then the property names below it; or a port.
+   *   The key, then the property names or deltas below it; or a port.
    *
    * @return \Drupal\Core\TypedData\DataDefinitionInterface|null
    *   The definition, or NULL when the path names none.
@@ -1540,7 +1547,11 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
     }
     $definition = $surface->getDefinition((string) array_shift($parents));
     foreach ($parents as $property) {
-      $definition = $definition instanceof ComplexDataDefinitionInterface ? $definition->getPropertyDefinition($property) : NULL;
+      $definition = match (TRUE) {
+        $definition instanceof ListDataDefinitionInterface => ctype_digit((string) $property) ? $definition->getItemDefinition() : NULL,
+        $definition instanceof ComplexDataDefinitionInterface => $definition->getPropertyDefinition($property),
+        default => NULL,
+      };
     }
     return $definition;
   }
@@ -2122,7 +2133,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
     // An operation that changes nothing stops where a dry run does.
     // Decision: see docs/decisions.md#an-operation-states-how-it-behaves.
     if ($dry_run || $surface->changesNothing()) {
-      return new DataSurfaceResult($values, $violations, $prepared, access: $access, notes: $notes, changes: $changes);
+      return new DataSurfaceResult($values, $violations, $prepared, access: $access, notes: $notes, changes: $changes, written: $write);
     }
     // A write that changes nothing on a thing that exists is not made:
     // it is committed, and nothing moved. One being created is written
@@ -2130,7 +2141,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
     if ($changes !== [] || $current === [] || $creates) {
       $this->commit($prepared, $storage);
     }
-    return new DataSurfaceResult($values, $violations, $prepared, TRUE, $access, $notes, $changes);
+    return new DataSurfaceResult($values, $violations, $prepared, TRUE, $access, $notes, $changes, $write);
   }
 
   /**
@@ -2183,7 +2194,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
     }
     $unknown = array_keys(array_diff_key($input, $properties));
     if ($unknown !== []) {
-      throw new UnknownKeysException(array_map('strval', $unknown), $path);
+      throw new UnknownKeysException(array_map('strval', $unknown), $path, array_map('strval', array_keys($properties)));
     }
     // The result holds exactly the declared properties, in declaration
     // order: a key storage carries that no property declares is
@@ -2348,7 +2359,12 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
    *
    * The key a violation is filed under is always a top level key, so a
    * nested unknown key is reported on its top-level key with the rest of
-   * its path, exactly like a constraint violation inside a map.
+   * its path, exactly like a constraint violation inside a map. A key
+   * within a small edit distance of one declared at its level is taken
+   * for a misspelling, and the nearest declared key is suggested in a
+   * sentence of its own after the refusal: "Did you mean venue_name?"
+   *
+   * Decision: see docs/decisions.md#a-refusal-names-what-it-depends-on.
    *
    * @param \Drupal\data_surface\Pipeline\UnknownKeysException $exception
    *   The refusal from accept().
@@ -2362,14 +2378,46 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
       $path = $exception->getPath() === '' ? $key : $exception->getPath() . '.' . $key;
       $segments = explode('.', $path);
       $name = array_shift($segments);
+      $message = $this->t('Unknown key @key.', ['@key' => $path]);
+      $near = static::nearest((string) $key, $exception->getDeclared());
+      if ($near !== NULL) {
+        $message = new Sentences($message, $this->t('Did you mean @key?', [
+          '@key' => $exception->getPath() === '' ? $near : $exception->getPath() . '.' . $near,
+        ], ['context' => self::REFUSAL_CONTEXT]));
+      }
       $violations[] = new Violation(
         (string) $name,
         implode('.', $segments),
-        $this->t('Unknown key @key.', ['@key' => $path]),
+        $message,
         Violation::UNKNOWN_KEY,
       );
     }
     return new ViolationSet($violations);
+  }
+
+  /**
+   * Finds the declared key an unknown one is most likely a misspelling of.
+   *
+   * @param string $key
+   *   The unknown key.
+   * @param string[] $declared
+   *   The keys declared at its level, in declaration order.
+   *
+   * @return string|null
+   *   The declared key nearest by edit distance, the first declared among
+   *   equals, when it is at most NEAREST_EDITS edits away and the edits
+   *   are fewer than half the unknown key's length, so a short key is
+   *   never guessed at; NULL when none is that near.
+   */
+  protected static function nearest(string $key, array $declared): ?string {
+    $nearest = NULL;
+    foreach ($declared as $candidate) {
+      $distance = levenshtein(strtolower($key), strtolower((string) $candidate));
+      if ($distance <= self::NEAREST_EDITS && 2 * $distance < strlen($key) && ($nearest === NULL || $distance < $nearest[1])) {
+        $nearest = [(string) $candidate, $distance];
+      }
+    }
+    return $nearest[0] ?? NULL;
   }
 
   /**

@@ -90,9 +90,28 @@ drush data_surface:config-schema --module=my_module --write
 The first writes nothing: it prints how each file differs from what the
 resources declare, as a unified diff, and fails when one does, so a
 check can run it. The second writes them; commit what it writes. Without
-`--module` it names every module owning a resource stored in a simple
-config object, or writing an entry for one. For each such resource it
-writes:
+`--module` it names every installed module owning a resource stored in
+a simple config object, or writing an entry for one.
+
+A module named need not be installed. Its resources, structures, shapes
+and alters are read from its `src/`, as discovery reads an installed
+module's, and its alters, storage and access classes are built as the
+container would build them; nothing is installed and nothing is cached.
+So the order for a new module is: write the classes, write the files,
+install once, and the install reads the schema and the install file it
+needs. A module that mounts keys on another is named with it, and one
+run writes both modules' files, the owner's schema typing the mount,
+with nothing printed between them:
+
+```bash
+drush data_surface:config-schema --module=my_module,my_module_extras --write
+drush pm:install my_module my_module_extras
+drush data_surface:config-schema --module=my_module,my_module_extras
+```
+
+The last line is the drift check: after a change to a resource or an
+alter, it fails until the files are written again. For each such
+resource the command writes:
 
 - **The object's entry** in `config/schema/<module>.schema.yml`, a
   `config_object` that is fully validatable, its label kept from the
@@ -100,8 +119,10 @@ writes:
   declaration order.
 - **Each key** typed from its definition (`string`, `email`, `integer`,
   `float`, `boolean`, `uri`, `timestamp`, or the primitive its typed
-  data class holds; a multi-line string is a `string`), labeled with the
-  label its owner gave it, whatever an alter reworded.
+  data class holds), labeled with the label its owner gave it, whatever
+  an alter reworded. A multi-line string is a `string` too: config
+  schema's `text` is a string marked translatable, and a resource cannot
+  say yet that a key is translatable, so nothing is written as `text`.
 - **`nullable: true`** where null clears, by the three-way rule: on an
   optional key, a single value or a list, unless it is a secret or the
   storage always holds it; and on a required single value installed
@@ -272,12 +293,17 @@ An alter's keys are mounted under `third_party_settings.<module>`
 ([Alters](resources.md#alters)), and on a simple config object core
 describes no such key: the owner declares it, and each module that
 mounts there describes its own part. Generated, the owner's schema gains
-`third_party_settings` when a module mounting there is on while it is
-written, a sequence whose type is named by the module key, and the
-mounting module's schema gains its part, written by the same command
-for that module, fully validatable, each key free to be absent, since a
-mounted key is stored only once it is sent. Example 3's, from the
-compliance module:
+`third_party_settings` when a module mounting there is installed, or
+named in the same run, while it is written, a sequence whose type is
+named by the module key, and the mounting module's schema gains its
+part, fully validatable, each key free to be absent, since a mounted key
+is stored only once it is sent holding something other than its default
+(a form posts every key it draws, and one left at its default is not
+written). Name both modules in one run
+(`--module=my_module,my_module_extras`): run for the owner alone while
+the mounting module is installed and its part is not written yet, and
+the owner advertises a mount no schema describes until the second run.
+Example 3's, from the compliance module:
 
 ```yaml
 # The owner, data_surface_examples.registration_step3:

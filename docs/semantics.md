@@ -1,5 +1,7 @@
 # Value semantics
 
+<!-- cspell:ignore nmae -->
+
 A resource or structure says what a key may hold. This page says what
 happens to the value on its way in: when a key counts as configured, how
 a raw value becomes the type the definition declared, what "required"
@@ -568,7 +570,7 @@ refusal of the whole call has an empty path.
 | --- | --- | --- |
 | `required` | the key | A key, or a property of a map, that must hold a value holds none; also a required output not emitted. |
 | `does_not_apply` | the key | A value was sent for a key a rule ruled out for the values sent. |
-| `unknown_key` | the key | A key the resource does not declare, at any depth. |
+| `unknown_key` | the key | A key the resource does not declare, at any depth; within two edits of a key declared beside it, and fewer than half its length, the message names that key: "Unknown key venue_nmae. Did you mean venue_name?" |
 | `type_mismatch` | the key | A value in a shape its definition cannot hold. |
 | `wrong_variant` | the key | A key sent for a variant its deciding key did not choose. |
 | `no_variant` | the key | A key with variants holds a value while its deciding key holds none. |

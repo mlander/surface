@@ -807,6 +807,7 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
       lockedWhole: $this->lockedWhole,
       changesNothing: $this->changesNothing,
       version: $this->version,
+      runtimeAccessOwn: $this->runtimeAccessWhole ? array_values(array_intersect($this->runtimeAccess, array_keys($definitions))) : NULL,
     );
   }
 

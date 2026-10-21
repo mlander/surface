@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace Drupal\Tests\data_surface\Kernel;
 
 use Drupal\Core\Form\FormState;
+use Drupal\Core\Render\Element;
 use Drupal\data_surface\DataSurfaceBuilder;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\DefinitionMetadata;
+use Drupal\data_surface\Form\DataSurfaceFormBuilder;
 use Drupal\data_surface\Form\DataSurfaceFormBuilderInterface;
 use Drupal\data_surface\Resource\Arrangement;
 use Drupal\data_surface\Resource\ArrangementGroup;
@@ -146,7 +148,17 @@ class ArrangementTest extends DataSurfaceKernelTestBase {
     $children = array_values(array_filter(array_keys($container), static fn ($key): bool => !str_starts_with((string) $key, '#')));
     // Each group directly before its first key, which stays where its
     // value is posted.
-    $this->assertSame(['name', '@group.hours', 'opens', 'closes', '@group.pricing', 'rate', 'deposit', 'notes'], $children);
+    $this->assertSame([
+      'name',
+      '@group.hours',
+      'opens',
+      'closes',
+      '@group.pricing',
+      'rate',
+      'deposit',
+      'notes',
+      'third_party_settings',
+    ], $children);
     $this->assertSame(['#type' => 'fieldset', '#title' => 'Opening hours'], array_map(static fn ($value) => is_object($value) ? (string) $value : $value, $container['@group.hours']));
     $this->assertSame('details', $container['@group.pricing']['#type']);
     $this->assertFalse($container['@group.pricing']['#open']);
@@ -205,6 +217,35 @@ class ArrangementTest extends DataSurfaceKernelTestBase {
     $this->expectException(\LogicException::class);
     $this->expectExceptionMessage('outputs are never drawn, so they have nothing to arrange');
     $outputs->describe('third_party_outputs.first_module.shown', arrangement: new Arrangement(weight: 1));
+  }
+
+  /**
+   * Tests a fieldset placed after a grouped key is drawn in that group.
+   *
+   * StudioAlter places its booking fieldset after the deposit, which the
+   * pricing group holds. Drawn, the fieldset is inside the pricing group,
+   * right after the deposit and before the rate, as the React app draws
+   * it; the mount's container, left with nothing to draw, is drawn as
+   * nothing. That it still posts under its mount is the form test's.
+   *
+   * @see docs/fresh-eyes-2026-10-21.md
+   */
+  public function testFieldsetPlacedAfterGroupedKeyIsDrawnInItsGroup(): void {
+    $studio = $this->studio();
+    $container = $this->container->get('data_surface.form_builder')->buildSurfaceForm($studio, $studio->getDefaultValues(), new FormState());
+    $mount = $container['third_party_settings']['data_surface_resource_test'];
+    $this->assertSame('deposit', $mount[DataSurfaceFormBuilderInterface::PLACED_AFTER_KEY]);
+    $this->assertSame('Booking', (string) $mount['#title']);
+
+    $drawn = DataSurfaceFormBuilder::preRenderSurfaceContainer($container);
+    $placed = '@placed.third_party_settings.data_surface_resource_test';
+    $this->assertArrayNotHasKey($placed, $drawn, 'Not after the group: inside it.');
+    $this->assertSame(['deposit', $placed, 'rate'], Element::children($drawn['@group.pricing'], TRUE));
+    $this->assertArrayHasKey('booking_fee', $drawn['@group.pricing'][$placed]);
+    $this->assertFalse($drawn['third_party_settings']['#access']);
+
+    // A key no group holds is still followed in the frame.
+    $this->assertSame(['booking_fee' => 0], $studio->getDefaultValues()['third_party_settings']['data_surface_resource_test']);
   }
 
   /**

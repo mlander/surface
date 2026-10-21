@@ -16,7 +16,8 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * host no cosmetic layer reaches. Each draws its groups as fieldsets or
  * details holding their keys, orders keys by weight, and draws the input
  * texts; every key still posts at its own path, so a save stores what it
- * stored before.
+ * stored before. A fieldset an alter places after a key a group holds is
+ * drawn in that group, right after the key, as the React app draws it.
  *
  * @see docs/decisions.md#arrangement-is-declared-once
  */
@@ -38,6 +39,11 @@ class ArrangementFormTest extends BrowserTestBase {
    * {@inheritdoc}
    */
   protected $defaultTheme = 'stark';
+
+  /**
+   * The input of the booking fee StudioAlter mounts on the studio.
+   */
+  protected const BOOKING_FEE = 'surface[third_party_settings][data_surface_resource_test][booking_fee]';
 
   /**
    * {@inheritdoc}
@@ -83,14 +89,17 @@ class ArrangementFormTest extends BrowserTestBase {
       'surface[closes]',
       'surface[opens]',
       'surface[deposit]',
+      self::BOOKING_FEE,
       'surface[rate]',
     ], $this->namesIn('//form'));
     // A fieldset holding the hours, the closing time weighed first.
     $this->assertSame(['surface[closes]', 'surface[opens]'], $this->namesIn('//fieldset[legend[normalize-space()="Opening hours"]]'));
     // A details holding the pricing, closed, the deposit weighed first by
-    // the alter.
+    // the alter, and the alter's booking details placed after the deposit
+    // drawn there, inside the group, as the React app draws it.
     $pricing = '//details[summary[normalize-space()="Pricing"]]';
-    $this->assertSame(['surface[deposit]', 'surface[rate]'], $this->namesIn($pricing));
+    $this->assertSame(['surface[deposit]', self::BOOKING_FEE, 'surface[rate]'], $this->namesIn($pricing));
+    $this->assertSame([self::BOOKING_FEE], $this->namesIn($pricing . '//details[summary[normalize-space()="Booking"]]'));
     $this->assertFalse($assert_session->elementExists('xpath', $pricing)->hasAttribute('open'));
 
     // The input texts: a placeholder only where declared, the prefix and
@@ -109,6 +118,7 @@ class ArrangementFormTest extends BrowserTestBase {
       'surface[opens]' => '08:00',
       'surface[rate]' => '45',
       'surface[deposit]' => TRUE,
+      self::BOOKING_FEE => '15',
     ], 'Save');
     $stored = $this->config('data_surface_resource_test.studio')->getRawData();
     $this->assertSame('North studio', $stored['name']);
@@ -116,6 +126,8 @@ class ArrangementFormTest extends BrowserTestBase {
     $this->assertSame('17:00', $stored['closes']);
     $this->assertSame(45, $stored['rate']);
     $this->assertTrue($stored['deposit']);
+    // Drawn in the group, posted and stored at its mount.
+    $this->assertSame(['data_surface_resource_test' => ['booking_fee' => 15]], $stored['third_party_settings']);
   }
 
   /**

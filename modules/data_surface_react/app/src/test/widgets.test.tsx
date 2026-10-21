@@ -766,6 +766,32 @@ describe('the arrangement a key declares (x-surface.arrangement)', () => {
     // Only drawing: every key keeps its own path.
     expect(screen.getByLabelText('Deposit asked')).toHaveAttribute('name', 'deposit');
   });
+
+  it('draws a fieldset placed after a grouped key inside that group, right after it, as the form does', async () => {
+    const booking: Schema = {
+      title: 'Booking',
+      type: 'object',
+      properties: { booking_fee: { title: 'Booking fee', type: ['integer', 'null'], 'x-surface': x('number') } },
+      'x-surface': x('fieldset', { after: 'deposit' }),
+    };
+    const seen: Values[] = [];
+    const { container } = render(
+      <Form
+        schema={object({ ...studio.properties, third_party_settings: { type: 'object', properties: { data_surface_resource_test: booking }, 'x-surface': x('fieldset', { group: true }) } })}
+        initial={{ name: '', opens: '09:00', closes: '17:00', rate: null, deposit: false, notes: null, third_party_settings: { data_surface_resource_test: { booking_fee: 0 } } }}
+        onValues={(values) => seen.push(values)}
+      />,
+    );
+    const details = container.querySelector('details') as HTMLDetailsElement;
+    // Inside the pricing group, after the deposit and before the rate:
+    // ArrangementFormTest holds the Form API page to the same order.
+    expect(Array.from(details.querySelectorAll('input')).map((input) => input.getAttribute('name'))).toEqual(['deposit', 'third_party_settings.data_surface_resource_test.booking_fee', 'rate']);
+    expect(within(details).getByRole('group', { name: 'Booking' })).toContainElement(screen.getByLabelText('Booking fee'));
+    // Posted under its mount, where it is stored.
+    await userEvent.clear(screen.getByLabelText('Booking fee'));
+    await userEvent.type(screen.getByLabelText('Booking fee'), '15');
+    expect(seen[seen.length - 1].third_party_settings).toEqual({ data_surface_resource_test: { booking_fee: 15 } });
+  });
 });
 
 describe('a select standing for a stale value', () => {

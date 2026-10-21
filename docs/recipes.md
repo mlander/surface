@@ -132,8 +132,11 @@ $inputs->add('notes', 'string', t('Notes'))
 
 The string widget draws a `textarea`, with no `maxlength` and no
 placeholder, and the served contract says `x-surface.widget:
-"textarea"` ([Widgets](widgets.md#the-stock-widgets)). Store it as
-`text` in config schema.
+"textarea"` ([Widgets](widgets.md#the-stock-widgets)). Its config schema
+type is `string`, which the generator writes
+([Storage](storage.md#a-schema-generated-from-the-resource)): config
+schema's `text` is a string marked translatable, and a resource cannot
+say yet that a key is translatable.
 
 ## Applies only when another key holds a value, and is then required
 

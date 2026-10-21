@@ -260,6 +260,29 @@ final class Resources implements ResourcesInterface {
   }
 
   /**
+   * Gives a build step reading another registry, its classes built otherwise.
+   *
+   * For the config schema generator alone, which reads modules that are
+   * not installed: their classes are in a registry of their own, and
+   * their alters, storage and access classes are no services yet.
+   *
+   * @param \Drupal\data_surface\ResourceBuild\ResourceRegistry $registry
+   *   The registry.
+   * @param \Drupal\Core\DependencyInjection\ClassResolverInterface $classResolver
+   *   What builds the classes discovery names.
+   *
+   * @return static
+   *   A build step with nothing built yet.
+   *
+   * @internal
+   *
+   * @see \Drupal\data_surface\Storage\ConfigSchemaGenerator::including()
+   */
+  public function withRegistry(ResourceRegistry $registry, ClassResolverInterface $classResolver): static {
+    return new static($registry, $this->typedDataManager, $classResolver, $this->currentUser, $this->operationArguments, $this->derivedVariants, $this->watchedValueCheck, $this->permissionsHashGenerator);
+  }
+
+  /**
    * {@inheritdoc}
    */
   public function build(string $resource, OperationContext $context): DataSurfaceInterface {
@@ -2426,6 +2449,24 @@ final class Resources implements ResourcesInterface {
       }
     }
     return $answer;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function isRuntimeAtTheTop(string $resource, OperationContext $context, AccountInterface $account): bool {
+    $answering = static::answering($this->registry->getDefinition($resource), $context, TRUE);
+    if ($answering === []) {
+      return FALSE;
+    }
+    [$was_alone, $was_declaring] = [$this->accountAlone, $this->declaring];
+    [$this->accountAlone, $this->declaring] = [TRUE, FALSE];
+    try {
+      return $this->answers($answering, $context, $account)[1];
+    }
+    finally {
+      [$this->accountAlone, $this->declaring] = [$was_alone, $was_declaring];
+    }
   }
 
   /**

@@ -24,7 +24,11 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
  * command writes nothing: it prints how each file of the named modules
  * differs from what it would write, and fails when any does, so a check
  * can run it. `--write` writes them. Without `--module`, every module
- * owning such a resource, or writing an entry for one, is named.
+ * owning such a resource, or writing an entry for one, is named. A named
+ * module need not be installed: its resources are read from its src/
+ * (ConfigSchemaGenerator::including()), so the files are written before
+ * it is installed once, and an owner named with a module mounting keys on
+ * it is written with that module's keys in the same run.
  *
  * Decision: see docs/decisions.md#a-config-object-is-described-by-its-resource.
  */
@@ -62,7 +66,7 @@ final class ConfigSchemaCommand extends Command {
    * {@inheritdoc}
    */
   protected function configure(): void {
-    $this->addOption('module', NULL, InputOption::VALUE_REQUIRED, 'The modules whose files are written, separated by commas; by default every module owning a resource stored in a simple config object, or writing an entry for one.');
+    $this->addOption('module', NULL, InputOption::VALUE_REQUIRED, 'The modules whose files are written, separated by commas, installed or not; by default every installed module owning a resource stored in a simple config object, or writing an entry for one. Name an owner and a module mounting keys on it together.');
     $this->addOption('write', NULL, InputOption::VALUE_NONE, 'Write the files; without it, print how each differs and write nothing.');
   }
 
@@ -72,14 +76,21 @@ final class ConfigSchemaCommand extends Command {
   protected function execute(InputInterface $input, OutputInterface $output): int {
     $io = new DrushStyle($input, $output);
     $named = array_values(array_filter(array_map('trim', explode(',', (string) $input->getOption('module')))));
-    $known = $this->generator->modules();
+    try {
+      $generator = $this->generator->including($named);
+    }
+    catch (\InvalidArgumentException $e) {
+      $io->error($e->getMessage());
+      return self::FAILURE;
+    }
+    $known = $generator->modules();
     $unknown = array_diff($named, $known);
     if ($unknown !== []) {
       $io->error(sprintf('%s owns no resource stored in a simple config object and writes no entry for one. The modules that do: %s.', implode(', ', $unknown), implode(', ', $known)));
       return self::FAILURE;
     }
     $modules = $named === [] ? $known : $named;
-    $files = $this->generator->files($modules);
+    $files = $generator->files($modules);
     $differ = [];
     foreach ($files as $path => $contents) {
       $file = $this->root . '/' . $path;

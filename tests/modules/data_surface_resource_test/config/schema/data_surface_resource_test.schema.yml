@@ -717,3 +717,25 @@ data_surface_resource_test.studio:
       type: string
       label: 'Notes'
       nullable: true
+    third_party_settings:
+      type: sequence
+      label: 'Third party settings'
+      requiredKey: false
+      sequence:
+        type: 'data_surface_resource_test.studio.third_party.[%key]'
+
+# Generated from the resource_test.studio resource by drush data_surface:config-schema.
+data_surface_resource_test.studio.third_party.data_surface_resource_test:
+  type: mapping
+  label: 'Booking'
+  constraints:
+    FullyValidatable: ~
+  mapping:
+    booking_fee:
+      type: integer
+      label: 'Booking fee'
+      nullable: true
+      requiredKey: false
+      constraints:
+        Range:
+          min: 0

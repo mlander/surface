@@ -170,9 +170,18 @@ and the schema need not admit; the document they become, it does.
   has no JSON Schema keyword, a dependency is free text or too large to
   list, or a refiner is declared runtime, the schema stays at the
   declared width and says so (`checkedOnServer`, `refine`, `live`);
-  the pipeline's refinement is the guard with the last word. A Regex
-  whose body uses anything the two engines do not read alike carries no
-  `pattern` at all ([decision](decisions.md#a-pattern-both-engines-read-alike)).
+  the pipeline's refinement is the guard with the last word. A Regex is
+  carried as `pattern` only inside the subset PHP and a JavaScript
+  engine read alike: literals, ranges in a class that is not negated,
+  `\d` `\w` `\s` `\b` only without the `u` modifier, the quantifiers,
+  alternation and groups, `^`, and `$` only with the `D` modifier, which
+  every pattern ending in `$` needs
+  ([decision](decisions.md#a-pattern-both-engines-read-alike)). Anything
+  else carries no `pattern` and is named under `checkedOnServer`: the
+  fourth newcomer's email shape, `/^[^@\s]+@example\.org$/D`, is checked
+  on the server only, for its negated class, where
+  `/^[a-z0-9._-]+@example\.org$/D` is carried, and `/^\d{4}$/uD` is
+  checked on the server only, for `\d` under `u`.
 - **A stale value is storage's.** The full schema reads no storage, so a
   stored value a static list no longer offers, which the pipeline keeps
   stale, is outside it.
@@ -1084,7 +1093,7 @@ garden room:
 | `committed` | Whether the values were written; `false` here, always. |
 | `changed` | Whether the write moved a stored value; `false` unless committed. |
 | `changes` | The dotted path of each stored value the write changes, or on a dry run would change, a map by its own keys, a list whole: a plan, empty when the values are what is stored, and on a refusal ([decision](decisions.md#absent-keeps-null-clears)). |
-| `values` | What `accept()` made of the input, as the read tool would answer it: no key the build left out for this account, no secret, no key that does not apply. |
+| `values` | What `accept()` made of the input, as the read tool would answer it once written: no key the build left out for this account, no secret, no key that does not apply, and no key never stored that the run left at its default. |
 | `violations` | Each refusal, `{path, code, message}`: the full dotted path (`ticket.price`, `contact.email`; empty for a refusal of the whole call), a stable [code](semantics.md#codes), and the message as plain text, rendered for a person as the form renders it, a key it depends on and a value by their labels alone. The tool renders the same refusal for a machine, a key by its path and a value by what is sent with its label beside it; the path and the code are the same at both doors, so a program calling this endpoint branches on them ([decision](decisions.md#one-result-at-every-door)). |
 | `notes` | Each value sent for a locked key that the key did not take, `{path, code, message}`, code `locked`, once per key: "Machine name is locked and kept as stored; the value sent was not taken." The key keeps what it holds and nothing is refused ([decision](decisions.md#locked-at-the-top)); a value sent as it is held says nothing. |
 | `stale` | Each stale reference kept, `{path, code, message, stored}`, code `stale`, with the stored value it keeps: the operation form's warning, said out loud. |

@@ -56,6 +56,13 @@ final class CountingResources implements ResourcesInterface {
   /**
    * {@inheritdoc}
    */
+  public function isRuntimeAtTheTop(string $resource, OperationContext $context, AccountInterface $account): bool {
+    return $this->inner->isRuntimeAtTheTop($resource, $context, $account);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
   public function buildDeclared(string $resource, OperationContext $context): DataSurfaceInterface {
     $this->builds[] = $resource;
     return $this->inner->buildDeclared($resource, $context);

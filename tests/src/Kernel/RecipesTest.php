@@ -113,7 +113,7 @@ class RecipesTest extends DataSurfaceKernelTestBase {
     $closes = $this->refusals(['closes' => 720]);
     $this->assertSame(['closes' => 'This value should be between 721 and 1439.'], $closes, 'Noon is not later than noon.');
     $days = $this->refusals(['days' => ['mon', 'xyz']]);
-    $this->assertSame(['days.1' => 'The value you selected is not a valid choice.'], $days);
+    $this->assertSame(['days.1' => 'The value you selected is not a valid choice. Choose Monday, Tuesday, Wednesday, Thursday, Friday, Saturday or Sunday.'], $days, 'A refused item lists its choices, as a single choice does.');
     $this->assertSame(['door_code' => 'Door code does not apply when After-hours access is off.'], $this->refusals(['door_code' => '7310']));
     $this->assertSame([
       'door_code' => 'Door code is required.',
