@@ -97,7 +97,9 @@ the record of the rework that brought the module to the pattern.
   `KeysFromSiteInterface`, whose `keys()` answers a `KeyedList` (id,
   label, optional start and lock, and the cacheability of what it read),
   asked at every build. Refused uncacheable or varying by the account; a
-  locked entry is held to what is stored
+  locked entry is held to what is stored; `attachEach(..., reads:
+  ['selling' => 'on_sale'])` wires each entry's port to the entry of the
+  same id in a sibling map from the same provider
   (`docs/resources.md#keys-that-come-from-the-site`).
 - **Contract**: the JSON Schema a built resource or structure emits.
 - **Version**: `#[Resource(version:)]` or `#[Structure(version:)]`, from

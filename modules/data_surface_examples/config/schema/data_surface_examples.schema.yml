@@ -279,10 +279,6 @@ data_surface_examples.sales:
             label: 'Per order'
             nullable: true
             requiredKey: false
-            constraints:
-              Range:
-                min: 1
-                max: 10
           waiting_list:
             type: boolean
             label: 'Waiting list when sold out'

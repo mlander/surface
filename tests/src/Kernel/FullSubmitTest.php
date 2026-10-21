@@ -541,7 +541,7 @@ class FullSubmitTest extends DataSurfaceKernelTestBase {
     // it, inside the container.
     $this->assertSame('room', $container[DataSurfaceFormBuilderInterface::STALE_MARKER_KEY]['#value']);
     $wrapper = '#' . $container['#attributes']['id'];
-    $this->assertSame([$wrapper . '__stale', $wrapper . '__messages'], $this->ajaxSelectors($response, 'remove'));
+    $this->assertSame([$wrapper . '__stale', $wrapper . '__absent', $wrapper . '__messages'], $this->ajaxSelectors($response, 'remove'));
     $this->assertSame([$wrapper], $this->ajaxSelectors($response, 'append'));
     $marker = $this->ajaxMarkup($response, $wrapper);
     $this->assertStringContainsString('id="' . substr($wrapper, 1) . '__stale"', $marker);
@@ -576,7 +576,7 @@ class FullSubmitTest extends DataSurfaceKernelTestBase {
     $response = $this->ajaxResponse($state);
     // The same wrappers as the first response named: the ids on the page.
     $this->assertSame($replaced, $this->ajaxSelectors($response, 'replaceWith'));
-    $this->assertSame([$wrapper . '__stale', $wrapper . '__messages'], $this->ajaxSelectors($response, 'remove'));
+    $this->assertSame([$wrapper . '__stale', $wrapper . '__absent', $wrapper . '__messages'], $this->ajaxSelectors($response, 'remove'));
     $this->assertSame([], $this->ajaxSelectors($response, 'append'));
   }
 
@@ -686,7 +686,7 @@ class FullSubmitTest extends DataSurfaceKernelTestBase {
     $container = $state->getCompleteForm()[DataSurfaceOperationForm::SURFACE_KEY];
     $response = $this->ajaxResponse($state);
     $wrapper = '#' . $container['#attributes']['id'];
-    $this->assertSame([$wrapper . '__stale', $wrapper . '__messages'], $this->ajaxSelectors($response, 'remove'));
+    $this->assertSame([$wrapper . '__stale', $wrapper . '__absent', $wrapper . '__messages'], $this->ajaxSelectors($response, 'remove'));
     $this->assertSame([], $this->ajaxSelectors($response, 'prepend'));
     $this->assertContains($this->wrapperSelector($container['room']), $this->ajaxSelectors($response, 'replaceWith'));
     $room = $this->ajaxMarkup($response, $this->wrapperSelector($container['room']));

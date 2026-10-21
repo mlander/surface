@@ -78,6 +78,11 @@ services:
   data_surface.config_schema:
     class: Drupal\data_surface\Storage\ConfigSchemaGenerator
     arguments: ['@data_surface.resource_registry', '@data_surface.resources', '@extension.list.module', '%app.root%', '%container.modules%', '@service_container', '@class_resolver', '@data_surface.resource_plugins']
+  # Creates the config objects a module's config/install ships that the
+  # site does not have, for a post-update hook (data_surface_install_missing_config()).
+  data_surface.missing_config_installer:
+    class: Drupal\data_surface\Storage\MissingConfigInstaller
+    arguments: ['@config.storage', '@config.factory', '@config.typed', '@config.manager', '@config.installer', '@extension.list.module']
   # Every discovered resource and structure, its operations, alters and
   # variants, as one array: what docs/catalog.md is generated from.
   data_surface.resource_catalog:

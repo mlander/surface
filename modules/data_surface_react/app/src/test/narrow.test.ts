@@ -6,6 +6,7 @@ import compliance from './fixtures/refine-example3-compliance.json';
 import license from './fixtures/refine-example3-license.json';
 import bulletin from './fixtures/refine-bulletin.json';
 import journal from './fixtures/refine-journal.json';
+import sales from './fixtures/refine-sales.json';
 
 // The page's narrowing held to the server's. Each fixture is what
 // ResourceApiController answered, as uid 1 after the examples were reset:
@@ -373,5 +374,29 @@ describe('the status line', () => {
     expect(narrowingStatus({ local: true, keys: ['room', 'capacity'], settled: { schema: {}, values: {}, stale: [] } })).toBe('Narrowed here: room, capacity');
     expect(narrowingStatus({ local: false, key: 'room', marker: 'live' })).toBe('Asked the server: room depends on a live rule');
     expect(narrowingStatus({ local: false, key: 'capacity', marker: 'refine' })).toBe('Asked the server: capacity depends on a rule to refine with values');
+  });
+});
+
+describe('a port on an entry of a map of keys from the site', () => {
+  // Example 9: each type's limits read whether the type is on sale. The
+  // full schema states each type's rules on the resource's frame, an `if`
+  // on `on_sale.<type>` and a `then` reaching into `limits.<type>`.
+  const recorded = sales as unknown as Recorded;
+  const full = inlineSchema(recorded.schema.schema);
+
+  it('is stated per type, reaching into the type\'s limits', () => {
+    const student = (full.allOf ?? []).filter((condition) => JSON.stringify(condition.if).includes('"student"'));
+    expect(student.map((condition) => condition.then)).toEqual([
+      { properties: { limits: { type: 'object', properties: { student: { type: 'object', properties: { per_order: false } } } } } },
+      { properties: { limits: { type: 'object', properties: { student: { type: 'object', properties: { waiting_list: false } } } } } },
+    ]);
+    expect(holdsIf(student[0].if, { on_sale: { student: false } })).toBe(true);
+    expect(holdsIf(student[0].if, { on_sale: { student: true } })).toBe(false);
+  });
+
+  it('is narrowed here, keyword for keyword as /refine answers: off sale, on again with the stored limits, and after an edit off and on again', () => {
+    // The edit moves nothing, so there is nothing to narrow; the type
+    // taken off sale and put back holds what is stored, not the edit.
+    play(recorded, ['local', 'local', { key: 'limits.standard.per_order', marker: 'unsettled' }, 'local', 'local']);
   });
 });

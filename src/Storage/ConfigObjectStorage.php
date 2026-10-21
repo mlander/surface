@@ -60,8 +60,11 @@ use Drupal\data_surface\Resource\ResourceStorageInterface;
  * language when none is stored, and removes one the schema does not ask
  * for. A resource never declares either.
  *
- * The object is expected to exist, from the module's config/install, so a
- * context that creates is treated as one that edits.
+ * A context that creates is treated as one that edits. The object ships in
+ * the module's config/install, but a missing one reads as empty: load()
+ * answers nothing, so every key starts from its default, prepare() and
+ * mayClear() read the schema with that, and the first commit() creates
+ * the object.
  *
  * @see docs/storage.md#a-simple-config-object
  */

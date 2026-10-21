@@ -11,7 +11,13 @@
                 "$schema": "https://json-schema.org/draft/2020-12/schema",
                 "x-surface": {
                     "contract": 2,
-                    "version": 1
+                    "version": 1,
+                    "ports": {
+                        "selling": {
+                            "type": "boolean",
+                            "required": false
+                        }
+                    }
                 },
                 "type": "object",
                 "properties": {
@@ -26,7 +32,9 @@
                         "default": 4,
                         "x-surface": {
                             "locked": false,
-                            "dependsOn": []
+                            "dependsOn": [
+                                "selling"
+                            ]
                         }
                     },
                     "waiting_list": {
@@ -38,7 +46,9 @@
                         "default": false,
                         "x-surface": {
                             "locked": false,
-                            "dependsOn": []
+                            "dependsOn": [
+                                "selling"
+                            ]
                         }
                     }
                 },

@@ -19,3 +19,14 @@ function data_surface_examples_post_update_doors_without_langcode(): void {
     $config->clear('langcode')->save(TRUE);
   }
 }
+
+/**
+ * Creates the settings of the examples added since the module was installed.
+ *
+ * A site that installed the module before examples 7 to 11 existed has
+ * none of their config objects. An object the site already has is left as
+ * it is.
+ */
+function data_surface_examples_post_update_install_missing_examples(): void {
+  data_surface_install_missing_config('data_surface_examples');
+}

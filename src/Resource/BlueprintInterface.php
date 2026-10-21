@@ -99,12 +99,16 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
    * As addEach(), with each entry a child: the structure, built once for
    * the map and held at every entry's key, with its own keys, refiners,
    * declared rules, alters and access, as attach() holds one. A locked
-   * entry is that child locked. The structure stores nothing itself and
-   * requires no port, since nothing wires an entry yet.
+   * entry is that child locked. The structure stores nothing itself.
+   *
+   * Its ports are wired per entry: `reads: ['selling' => 'on_sale']` hands
+   * the entry `<id>` what `on_sale.<id>` holds, the matching entry of a
+   * sibling map that addEach() declared from the same provider.
    *
    * @code
    * $inputs->attachEach('rows', RowStructure::class, from: SiteRows::class)
    *   ->setLabel(t('Rows'));
+   * $inputs->attachEach('limits', LimitStructure::class, from: Types::class, reads: ['selling' => 'on_sale']);
    * @endcode
    *
    * @param string $key
@@ -113,6 +117,9 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
    *   The structure each entry is, by class, or a derived one's id.
    * @param string $from
    *   The provider's class, implementing KeysFromSiteInterface.
+   * @param array<string, string> $reads
+   *   Each port of the structure, mapped to a sibling map from the same
+   *   provider, whose entry of the same id it reads.
    *
    * @return \Drupal\Core\TypedData\MapDataDefinition
    *   The map at the key, for the owner to label and describe.
@@ -120,9 +127,9 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
    * @throws \LogicException
    *   As addEach() does, and for a shape.
    *
-   * @see docs/resources.md#keys-that-come-from-the-site
+   * @see docs/resources.md#ports-on-an-entry
    */
-  public function attachEach(string $key, string $structure, string $from): MapDataDefinition;
+  public function attachEach(string $key, string $structure, string $from, array $reads = []): MapDataDefinition;
 
   /**
    * A port: a value this structure reads from its container.

@@ -373,7 +373,7 @@ under `$defs`, and referred to ([reusable subschemas](#reusable-subschemas)).
 | `rules` | On an object owning an `allOf` (the top frame, a def), in [the full schema](#two-documents) and in a def: the indexes in that `allOf` of the conditionals that state a declared rule, `"rules": [9]`. A client evaluates a rule whatever the keys it reads hold, and an enumerated conditional only once every key it watches holds a value, so it tells them apart by this list. Contract 1 wrote `x-surface: {"declared": true}` on the conditional itself. |
 | `within` | On an object owning an applicator (a site, a frame, a def): what a schema below the applicator says under `x-surface`, as a map from its JSON pointer, relative to the object, to that `x-surface`. On the field instance's `storage` site, whose narrowing locks the field type: `{"/allOf/1/properties/field_type": {"locked": true, "dependsOn": []}}`. Nothing below an applicator carries `x-surface` ([Contract 2](#contract-2)); `SchemaResolver::restored()` and the app's `inlineSchema()` put each entry back where it points. |
 | `ports` | On an object, a def's or the top's, when the structure reads ports: each port's typed data `type`, whether it is `required`, and the `shape` it reads, when it reads one. A port is no property: its value is a key of the container, which the site names ([below](#a-port-is-stated-at-its-site)). |
-| `reads` | On a site, the property where a child that reads ports is used: each port, mapped to the key of the parent's frame it reads. |
+| `reads` | On a site, the property where a child that reads ports is used: each port, mapped to the key of the parent's frame it reads. On a map of keys from the site whose entries read ports, each port mapped to the sibling map whose entry of the same id it reads. |
 | `live` | Only when `true` (`runtime` in contract 1): a runtime refiner narrows the key too, by a rule no schema can state ([three markers](#three-markers)). Never in a conditional. In the full schema it is on the key, which keeps the width its static refiners give it; the schema for these answers is refined by it for its values. Written beside `enumerated` or `refine` when the key has static refiners as well. |
 | `operation` | At the top only, after `contract`: how the operation behaves, `{id, label, description?, kind, creates, destructive, idempotent}` ([above](#the-schema)). Contract 1 also carried `readOnly`, which `kind: "read"` says. |
 | `version` | At the top always, after `operation`; on a def only above 1, absent reading as 1: which version of its stored values the resource or structure describes, counting the breaking changes made to them. A compatible change never moves it; a client compares it before trusting a cached document ([Evolving a resource](evolution.md#the-version)). |
@@ -676,6 +676,24 @@ alter's mount, is a site inside `third_party_settings` (`{"title":
 {"reads": {"capacity": "capacity"}, ...}}`); its stewards read a number,
 so nothing about them is stated ahead, and the group stays `refine` on
 the capacity.
+
+A structure at every entry of a map of keys from the site reads its
+ports per entry ([Ports on an entry](resources.md#ports-on-an-entry)),
+so its site is each entry: on the owner's `allOf`, an `if` on the
+sibling map's entry and a `then` reaching into the map at the entry,
+once per entry, a locked one's too. The map's property says `reads` as
+the owner wired it, each port by the sibling map, and its `dependsOn`
+names every sibling entry. The map's own def lists no port. Example 9's
+student tickets, one of the two rules:
+
+```json
+{"if": {"properties": {"on_sale": {"type": "object", "properties": {"student": {"const": false}}, "required": ["student"]}}, "required": ["on_sale"]},
+ "then": {"properties": {"limits": {"type": "object", "properties": {"student": {"type": "object", "properties": {"per_order": false}}}}}}}
+```
+
+The schema for these answers narrows each entry where it sits: a key
+that does not apply is `false` in the entry's narrowing, and the entry's
+`doesNotApply` names the port it depends on.
 
 ### A mixed-in structure is composed
 

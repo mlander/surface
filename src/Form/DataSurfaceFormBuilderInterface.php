@@ -44,6 +44,29 @@ interface DataSurfaceFormBuilderInterface {
   public const STALE_MARKER_KEY = '@stale';
 
   /**
+   * Names the keys that did not apply when the form was drawn.
+   *
+   * A key that does not apply is drawn as its wrapper alone, so the page
+   * sends nothing for it. When a sibling changes in the same post and the
+   * key applies to the submission, the build that post is processed
+   * against draws the key for the first time, and nothing the person
+   * sent is in it. So the container posts the dotted paths of the keys it
+   * drew as nothing, an AJAX rebuild replacing the list, and extraction
+   * reads each as left out, which keeps what is stored: the three-way
+   * rule's absent. A forged path only keeps a stored value.
+   *
+   * In the reserved "@" namespace, which no definition is named in.
+   *
+   * @see docs/decisions.md#a-key-that-does-not-apply
+   */
+  public const ABSENT_MARKER_KEY = '@absent';
+
+  /**
+   * Render key on the wrapper drawn for a key that does not apply.
+   */
+  public const RULED_OUT_KEY = '#data_surface_ruled_out';
+
+  /**
    * Marks the element of a list of free values, drawn as rows.
    *
    * Written by the list widget, which cannot know where in the form its

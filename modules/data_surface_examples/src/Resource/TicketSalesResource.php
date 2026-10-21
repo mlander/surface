@@ -18,7 +18,8 @@ use Drupal\data_surface_examples\Structure\TicketLimitStructure;
  *
  * The class cannot list the ticket types: the site's configuration does,
  * and TicketTypes reads it. This class declares the two maps the types
- * sit in, a checkbox per type and a structure per type.
+ * sit in, a checkbox per type and a structure per type. Each type's
+ * structure reads that type's checkbox through its `selling` port.
  */
 #[Resource('event.sales', storage: TicketSalesStorage::class)]
 #[Operation('configure',
@@ -35,7 +36,7 @@ final class TicketSalesResource implements ResourceInterface {
     $inputs->addEach('on_sale', 'boolean', from: TicketTypes::class, default: FALSE)
       ->setLabel(t('On sale'))
       ->setDescription(t('Which ticket types can be bought.'));
-    $inputs->attachEach('limits', TicketLimitStructure::class, from: TicketTypes::class)
+    $inputs->attachEach('limits', TicketLimitStructure::class, from: TicketTypes::class, reads: ['selling' => 'on_sale'])
       ->setLabel(t('Limits'));
   }
 

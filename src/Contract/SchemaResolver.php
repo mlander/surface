@@ -503,6 +503,12 @@ final class SchemaResolver {
       $before = $base[$keyword] ?? NULL;
       if ($keyword === 'properties' && is_array($before) && is_array($value)) {
         foreach ($value as $name => $property) {
+          if ($property === FALSE && is_array($before[$name] ?? NULL)) {
+            // Not applying at this site: no property, as a flat frame
+            // says it; its frame's `doesNotApply` names it.
+            unset($base[$keyword][$name]);
+            continue;
+          }
           $base[$keyword][$name] = is_array($before[$name] ?? NULL) && is_array($property) ? self::merge($before[$name], $property) : $property;
         }
       }
@@ -518,6 +524,12 @@ final class SchemaResolver {
         // not which keys of the child do not apply here.
         // Decision: see docs/decisions.md#a-key-that-does-not-apply.
         $base[$keyword] = $value + ['doesNotApply' => $before['doesNotApply']];
+      }
+      elseif ($keyword === ContractEmitter::EXTENSION && is_array($before) && is_array($value) && !isset($before['doesNotApply']) && isset($value['doesNotApply'])) {
+        // A child narrowed at a site laid over what the site says about
+        // its key: the site's word stands, with which keys of the child
+        // do not apply here.
+        $base[$keyword] = ['doesNotApply' => $value['doesNotApply']] + $before;
       }
       else {
         $base[$keyword] = $value;

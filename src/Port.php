@@ -33,13 +33,34 @@ final class Port {
    * @param string|null $shape
    *   The id of the shape it reads, which the key it is wired to must be
    *   declared with; NULL for a port that reads a type alone.
+   * @param bool $through
+   *   TRUE for the port a map of keys from the site reads only to hand each
+   *   entry its own ports: the entry `<id>` reads `<port>.<id>`, no key of
+   *   the map reads it, and no document lists it. Its name starts with a
+   *   colon, which no entry's id holds.
    */
   public function __construct(
     public readonly string $name,
     public readonly string $type,
     public readonly bool $required = FALSE,
     public readonly ?string $shape = NULL,
+    public readonly bool $through = FALSE,
   ) {
+  }
+
+  /**
+   * Gets the through port a map of keys from the site reads a sibling map by.
+   *
+   * Decision: see docs/decisions.md#keys-that-come-from-the-site.
+   *
+   * @param string $sibling
+   *   The sibling map's key.
+   *
+   * @return static
+   *   The port, named `:<sibling>`.
+   */
+  public static function through(string $sibling): static {
+    return new static(':' . $sibling, 'map', through: TRUE);
   }
 
 }

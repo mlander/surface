@@ -373,7 +373,10 @@ interface DataSurfaceInterface extends CacheableDependencyInterface {
    * its keys. Its container binds it: refine() then hands each port's
    * value to the refiners and rules that read it, by the port's name, as
    * a sibling's value is handed. Nothing else changes: a port is no key,
-   * holds no value of the data surface's own, and is never stored.
+   * holds no value of the data surface's own, and is never stored. A map
+   * of keys from the site whose entries read a sibling map's entries
+   * reads that map through a port (Port::$through) and binds each entry's
+   * ports here, to the entry of the same id.
    *
    * @param array<string, mixed> $values
    *   What each port holds, by port name; names that are no port are

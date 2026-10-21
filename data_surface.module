@@ -1,0 +1,27 @@
+<?php
+
+/**
+ * @file
+ * Functions for Data Surface.
+ */
+
+declare(strict_types=1);
+
+/**
+ * Creates the config objects a module ships that the site does not have.
+ *
+ * For a post-update hook: a config object added to a module's
+ * config/install after a site installed the module reaches that site
+ * this way. An existing object is left as the site has it.
+ *
+ * @param string $module
+ *   The module's machine name.
+ *
+ * @return string[]
+ *   The names of the config objects created.
+ *
+ * @see \Drupal\data_surface\Storage\MissingConfigInstaller::install()
+ */
+function data_surface_install_missing_config(string $module): array {
+  return \Drupal::service('data_surface.missing_config_installer')->install($module);
+}

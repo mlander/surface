@@ -57,10 +57,16 @@ so it is the whole of the storage code. What it does:
   the stored one, or the site's default language when none is stored,
   and removes one the schema does not ask for. A resource never declares
   `langcode` or `_core`.
-- **The object must exist**, from the module's `config/install`, and a
-  config schema must describe it: a missing schema is a `\LogicException`
-  naming the object, since the storage exists to hold values to it. Both
-  are written from the resource ([below](#a-schema-generated-from-the-resource)).
+- **A missing object reads as empty**: every key starts from its
+  default, and the first write creates the object. The module still
+  ships it in `config/install`; on a site that installed the module
+  before the object shipped, a post-update hook calling
+  `data_surface_install_missing_config('<module>')` creates it from that
+  file and leaves every existing object alone.
+- **A config schema must describe the object**: a missing schema is a
+  `\LogicException` naming the object, since the storage exists to hold
+  values to it. The schema and the install file are written from the
+  resource ([below](#a-schema-generated-from-the-resource)).
 - **`mayClear()`** says which keys the object may hold nothing for, by
   core's own rule: any key, unless the schema is fully validatable
   (`constraints: {FullyValidatable: ~}` at its root), where only a key

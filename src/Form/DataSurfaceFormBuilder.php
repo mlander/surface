@@ -233,7 +233,8 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
         // not apply to these values, so there is nothing to answer. Its
         // wrapper alone is drawn, for the rebuild that makes it apply.
         // Decision: see docs/decisions.md#a-key-that-does-not-apply.
-        $container[$name] = DataSurfaceWidgetBase::arranged(['#markup' => '', self::PLACEHOLDER_KEY => TRUE], $declared);
+        $ruled_out = ['#markup' => '', self::PLACEHOLDER_KEY => TRUE, self::RULED_OUT_KEY => TRUE];
+        $container[$name] = DataSurfaceWidgetBase::arranged($ruled_out, $declared);
         continue;
       }
       $list = $definitions->entry($name)?->list;
@@ -339,6 +340,14 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
       }
     }
     $container = $this->wireRefinement($container, $surface, $values, [], $wrapper_id);
+    $absent = static::ruledOutPaths($container);
+    if ($absent !== []) {
+      // Decision: see docs/decisions.md#a-key-that-does-not-apply.
+      $container[self::ABSENT_MARKER_KEY] = [
+        '#type' => 'hidden',
+        '#value' => implode(' ', $absent),
+      ];
+    }
     $container = static::withGroups($container);
     $stale = static::stalePaths($container);
     if ($stale !== []) {
@@ -615,7 +624,7 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
     foreach ($discarded as $dotted) {
       NestedArray::unsetValue($input, explode('.', $dotted));
     }
-    $values = array_replace($stored, $input);
+    $values = static::overlaid($surface, $stored, $input);
     foreach ($discarded as $dotted) {
       // A mounted key falls back to what is stored, as a whole key does;
       // a child's key, inside its own frame, to the child's defaults.
@@ -624,12 +633,45 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
       if (count($parents) > 1 && $entry !== NULL && !$entry->isNested() && $entry->list === NULL) {
         static::restore($values, $stored, $parents);
       }
+      elseif (count($parents) > 1 && $entry?->attachment !== NULL) {
+        NestedArray::unsetValue($values, $parents);
+      }
     }
     foreach (array_keys($orphaned) as $dotted) {
       NestedArray::setValue($values, explode('.', (string) $dotted), NULL, TRUE);
     }
     if ($orphaned !== []) {
       $values[self::STANDING_KEY] = $orphaned;
+    }
+    return $values;
+  }
+
+  /**
+   * Lays input over what is stored, into each attached child too.
+   *
+   * A key the input leaves out keeps what is stored, inside an attached
+   * child as at the top: a key that did not apply, so the page sent
+   * nothing for it, holds its stored value again once it applies.
+   *
+   * Decision: see docs/decisions.md#a-key-that-does-not-apply.
+   *
+   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   *   The data surface or child, as advertised.
+   * @param array $stored
+   *   What is stored for its keys.
+   * @param array $input
+   *   The input for them.
+   *
+   * @return array
+   *   The input over what is stored.
+   */
+  protected static function overlaid(DataSurfaceInterface $surface, array $stored, array $input): array {
+    $values = array_replace($stored, $input);
+    foreach ($input as $name => $held) {
+      $child = $surface->getDefinitions()->entry((string) $name)?->attachment?->child;
+      if ($child !== NULL && is_array($held) && is_array($stored[$name] ?? NULL)) {
+        $values[$name] = static::overlaid($child, $stored[$name], $held);
+      }
     }
     return $values;
   }
@@ -1140,6 +1182,12 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
     if (isset($container[self::STALE_MARKER_KEY])) {
       $response->addCommand(new AppendCommand('#' . $wrapper_id, $container[self::STALE_MARKER_KEY]));
     }
+    // The keys drawn as nothing, likewise: one the rebuild drew must not
+    // be read as left out by the next submission.
+    $response->addCommand(new RemoveCommand('#' . static::reservedId($wrapper_id, 'absent')));
+    if (isset($container[self::ABSENT_MARKER_KEY])) {
+      $response->addCommand(new AppendCommand('#' . $wrapper_id, $container[self::ABSENT_MARKER_KEY]));
+    }
     // What the render-array path printed into the replaced container,
     // printed in the same place, so nothing the request said is held
     // over to the next page: a stale value kept, say. An error on the
@@ -1374,6 +1422,9 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
       static::wrapRefreshed($element, $wrapper_id);
       if (isset($element[self::STALE_MARKER_KEY]) && !isset($element[self::STALE_MARKER_KEY][self::REFRESH_ID_KEY])) {
         $element[self::STALE_MARKER_KEY] = static::wrapped($element[self::STALE_MARKER_KEY], static::reservedId($wrapper_id, 'stale'));
+      }
+      if (isset($element[self::ABSENT_MARKER_KEY]) && !isset($element[self::ABSENT_MARKER_KEY][self::REFRESH_ID_KEY])) {
+        $element[self::ABSENT_MARKER_KEY] = static::wrapped($element[self::ABSENT_MARKER_KEY], static::reservedId($wrapper_id, 'absent'));
       }
     }
     return $element;
@@ -1834,6 +1885,12 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
           $raw += $this->extractKey((string) $name, $definition, $container, $form_state);
         }
       }
+    }
+    // A key drawn as nothing when the page was drawn sent nothing, even
+    // where this build draws it: left out, it keeps what is stored.
+    // Decision: see docs/decisions.md#a-key-that-does-not-apply.
+    foreach (static::markedAbsent($form_state->getUserInput(), $container['#parents'] ?? []) as $dotted) {
+      NestedArray::unsetValue($raw, explode('.', $dotted));
     }
     // One coercion path for every caller: the form hands its raw tree to
     // the same accept() a payload goes through, which is also where
@@ -2621,6 +2678,50 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
       $element[$key] = static::retargetAjax($element[$key], $wrapper_id);
     }
     return $element;
+  }
+
+  /**
+   * Reads the keys a container posted as drawn as nothing.
+   *
+   * @param array|null $input
+   *   The raw input, or NULL for a form state that holds none, as a
+   *   host's form built in code may.
+   * @param string[] $parents
+   *   The container's input path.
+   *
+   * @return string[]
+   *   Dotted paths, relative to the container.
+   */
+  public static function markedAbsent(?array $input, array $parents): array {
+    $marker = $input === NULL ? NULL : NestedArray::getValue($input, [...$parents, self::ABSENT_MARKER_KEY]);
+    return is_string($marker) && $marker !== '' ? explode(' ', $marker) : [];
+  }
+
+  /**
+   * Lists the dotted paths of the keys drawn as nothing, not applying.
+   *
+   * @param array $element
+   *   The container, or an element inside it.
+   * @param string $prefix
+   *   The path so far.
+   *
+   * @return string[]
+   *   The paths, relative to the container.
+   */
+  protected static function ruledOutPaths(array $element, string $prefix = ''): array {
+    $paths = [];
+    foreach (static::elementChildren($element) as $key) {
+      if (!is_array($element[$key])) {
+        continue;
+      }
+      $path = $prefix . $key;
+      if (!empty($element[$key][self::RULED_OUT_KEY])) {
+        $paths[] = $path;
+        continue;
+      }
+      $paths = array_merge($paths, static::ruledOutPaths($element[$key], $path . '.'));
+    }
+    return $paths;
   }
 
   /**

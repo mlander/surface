@@ -11,6 +11,7 @@ use Drupal\Core\Access\AccessResultInterface;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Form\SubformStateInterface;
 use Drupal\Core\Session\AccountInterface;
+use Drupal\data_surface\Form\DataSurfaceFormBuilder;
 use Drupal\data_surface\Form\DataSurfaceFormBuilderInterface;
 use Drupal\data_surface\Hook\ResourcePluginHooks;
 use Drupal\data_surface\Pipeline\DataSurfacePipelineInterface;
@@ -272,7 +273,49 @@ trait DataSurfaceHostTrait {
     }
     $input = $state->getUserInput();
     $tree = NestedArray::getValue($input, $path);
-    return is_array($tree) ? array_intersect_key($tree, $surface->getDefinitions()->toArray()) : [];
+    if (!is_array($tree)) {
+      return [];
+    }
+    // A browser sends nothing for a checkbox not ticked, which Form API
+    // records as NULL: one the page drew, enabled, holding NULL in the
+    // input, says "off", as its stored value says it. One whose place in
+    // the input is gone, an item removed, is no answer at all.
+    foreach (static::uncheckedBoxes($state->getCompleteForm(), $path, $input) as $parents) {
+      NestedArray::setValue($tree, $parents, 0, TRUE);
+    }
+    return array_intersect_key($tree, $surface->getDefinitions()->toArray());
+  }
+
+  /**
+   * Finds the checkboxes a page drew under the container and not ticked.
+   *
+   * @param array|null $element
+   *   The form as it was drawn, or an element in it; NULL when a form
+   *   state was handed no form, as a host's tests may.
+   * @param string[] $path
+   *   The container's input path.
+   * @param array $input
+   *   The raw input.
+   *
+   * @return array<int, string[]>
+   *   The input path below the container of each.
+   */
+  protected static function uncheckedBoxes(?array $element, array $path, array $input): array {
+    if ($element === NULL) {
+      return [];
+    }
+    $found = [];
+    $parents = $element['#parents'] ?? NULL;
+    if (($element['#type'] ?? NULL) === 'checkbox' && is_array($parents) && array_slice($parents, 0, count($path)) === $path && count($parents) > count($path)
+      && empty($element['#disabled']) && ($element['#access'] ?? TRUE) !== FALSE && NestedArray::keyExists($input, $parents) && NestedArray::getValue($input, $parents) === NULL) {
+      $found[] = array_slice($parents, count($path));
+    }
+    foreach ($element as $key => $child) {
+      if (is_array($child) && !str_starts_with((string) $key, '#')) {
+        array_push($found, ...static::uncheckedBoxes($child, $path, $input));
+      }
+    }
+    return $found;
   }
 
   /**
@@ -327,6 +370,11 @@ trait DataSurfaceHostTrait {
         // stored value is built standing for that value again, so its
         // element carries the stash extraction reads it back through.
         $submitted = static::withStaleKept($submitted, $stored, static::staleKeptPaths($state, $path, $submitted, $stored));
+        // A key drawn as nothing sent nothing: drawn now, it stands for
+        // what is stored, which extraction keeps.
+        // Decision: see docs/decisions.md#a-key-that-does-not-apply.
+        $absent = array_filter(DataSurfaceFormBuilder::markedAbsent($state->getUserInput(), $path), static fn (string $dotted): bool => NestedArray::keyExists($stored, explode('.', $dotted)));
+        $submitted = static::withStaleKept($submitted, $stored, array_values($absent));
       }
       return array_replace($stored, $submitted);
     }

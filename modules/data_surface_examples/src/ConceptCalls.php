@@ -70,6 +70,10 @@ final class ConceptCalls {
         'label' => 'Speaker tickets put on sale',
         'values' => ['on_sale' => ['standard' => TRUE, 'speaker' => TRUE]],
       ],
+      'limit_off_sale' => [
+        'label' => 'Student tickets taken off sale, with a new limit for them',
+        'values' => ['on_sale' => ['student' => FALSE], 'limits' => ['student' => ['per_order' => 2]]],
+      ],
     ],
     'event.program' => [
       'check' => [

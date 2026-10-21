@@ -770,8 +770,16 @@ final class Resources implements ResourcesInterface {
     // Each map of keys from the site, its entries listed by its provider
     // now, as an options resolver lists choices.
     // Decision: see docs/decisions.md#keys-that-come-from-the-site.
-    foreach ($inputs->fromSite() as $key => $each) {
-      $this->buildEach($builder, $definition, (string) $key, $each, $context, $frame, $ancestry, $input_keys, $attached, $lists);
+    // A map whose entries read a sibling map's is built after the maps
+    // that read nothing, so each sibling's entries are listed by then.
+    $maps = $inputs->fromSite();
+    $listed = [];
+    foreach ([FALSE, TRUE] as $reading) {
+      foreach ($maps as $key => $each) {
+        if (($each['reads'] !== []) === $reading) {
+          $listed[(string) $key] = $this->buildEach($builder, $definition, (string) $key, $each, $context, $frame, $ancestry, $input_keys, $attached, $lists, $maps, $listed);
+        }
+      }
     }
     foreach ($variantKeys as $key => ['by' => $by, 'children' => $children]) {
       $variants = [];
@@ -1056,7 +1064,7 @@ final class Resources implements ResourcesInterface {
    *   The owner.
    * @param string $key
    *   The key the map sits at.
-   * @param array{each: string, from: class-string<\Drupal\data_surface\Resource\KeysFromSiteInterface>, default: mixed, child: bool} $each
+   * @param array{each: string, from: class-string<\Drupal\data_surface\Resource\KeysFromSiteInterface>, default: mixed, child: bool, reads: array<string, string>} $each
    *   What the blueprint recorded for it.
    * @param \Drupal\data_surface\Resource\OperationContext $context
    *   The owner's context.
@@ -1070,13 +1078,23 @@ final class Resources implements ResourcesInterface {
    *   The owner's keys holding a child.
    * @param string[] $lists
    *   The owner's collection keys.
+   * @param array<string, array> $maps
+   *   Every map of keys from the site the owner declared, by key, as the
+   *   blueprint recorded them: what a port on an entry may read.
+   * @param array<string, \Drupal\data_surface\DataSurfaceInterface|null> $listed
+   *   The maps built so far, by key: the sealed map, or NULL for one left
+   *   out.
+   *
+   * @return \Drupal\data_surface\DataSurfaceInterface|null
+   *   The sealed map, or NULL when its access left it out.
    *
    * @throws \LogicException
    *   When the provider's list cannot be cached or varies by the account,
    *   or an entry of a structure says what it starts from, or the
-   *   structure stores itself or requires a port.
+   *   structure stores itself, or its ports are wired to what an entry
+   *   cannot read (assertEachWiring()).
    */
-  protected function buildEach(DataSurfaceBuilderInterface $builder, ResourceDefinition $definition, string $key, array $each, OperationContext $context, array $frame, array $ancestry, array $input_keys, array $attached, array $lists): void {
+  protected function buildEach(DataSurfaceBuilderInterface $builder, ResourceDefinition $definition, string $key, array $each, OperationContext $context, array $frame, array $ancestry, array $input_keys, array $attached, array $lists, array $maps = [], array $listed = []): ?DataSurfaceInterface {
     $keys = $this->keysFrom($definition, $key, $each['from']);
     $builder->addCacheableDependency($keys);
     // What every entry is, whatever the site lists: what the map's config
@@ -1094,8 +1112,10 @@ final class Resources implements ResourcesInterface {
       if ($structure->storage !== NULL || $structure->identity !== []) {
         throw new \LogicException(sprintf('%s attaches %s at every entry of "%s", which names %s: an entry is stored by its owner, under the key, so it is a structure.', $definition->id, $structure->id, $key, $structure->storage !== NULL ? 'storage of its own' : 'identity keys'));
       }
-      // Nothing wires an entry's ports yet.
-      $this->assertWiring($builder, $definition, NULL, $key, $each['each'], [], $input_keys, $attached, $lists, 'entry');
+      // Each port is wired per entry, to the entry of the same id of a
+      // sibling map from the same provider.
+      // Decision: see docs/decisions.md#keys-that-come-from-the-site.
+      $wired = $this->assertEachWiring($definition, $key, $each, $entries, $maps, $listed);
       $first = array_key_first($entries);
       [$attachment, $access, , $runtime] = $this->buildChild($each['each'], $context, $key, $frame, $ancestry, storedAt: $first === NULL ? NULL : $key . '.' . $first);
       if ($access !== NULL) {
@@ -1104,16 +1124,34 @@ final class Resources implements ResourcesInterface {
       if ($attachment === NULL) {
         // Decision: see docs/decisions.md#omitted-is-omitted-both-ways.
         $builder->omit($key);
-        return;
+        return NULL;
+      }
+      foreach (array_unique(array_values($each['reads'])) as $sibling) {
+        $map->addPort(Port::through($sibling));
       }
       foreach ($entries as $id => $entry) {
+        $id = (string) $id;
         if ($entry['default'] !== NULL) {
           throw new \LogicException(sprintf('%s says what the "%s" entry of "%s" on %s starts from, and each entry there is %s, which starts from its own defaults.', $each['from'], $id, $key, $definition->id, $structure->id));
         }
-        $map->setDefinition((string) $id, MapDataDefinition::create()->setLabel($entry['label']));
-        $map->attach((string) $id, $attachment);
+        $map->setDefinition($id, MapDataDefinition::create()->setLabel($entry['label']));
+        $at = $attachment;
+        if ($each['reads'] !== []) {
+          // In the map, the entry reads the sibling's entry through the
+          // map's own port; in the owner, the edges run from the sibling's
+          // entry to what the entry's keys read it for.
+          $through = [];
+          $owned = [];
+          foreach ($each['reads'] as $port => $sibling) {
+            $through[$port] = Port::through($sibling)->name . '.' . $id;
+            $owned[$port] = $sibling . '.' . $id;
+          }
+          $at = $attachment->withReads($through, $wired[$id]);
+          $this->wirePorts($builder, $key . '.' . $id . '.', $attachment->withReads($owned), FALSE, $definition->id);
+        }
+        $map->attach($id, $at);
         if ($entry['locked']) {
-          $map->lock((string) $id);
+          $map->lock($id);
         }
       }
     }
@@ -1129,13 +1167,94 @@ final class Resources implements ResourcesInterface {
       $held = $frame['held'] ?? NULL;
       $this->markAlwaysHeld($map, array_map('strval', array_keys($entries)), is_array($held) ? ['prefix' => $held['prefix'] . $key . '.'] + $held : NULL);
     }
-    $builder->attach($key, new Attachment($map->seal()));
+    $sealed = $map->seal();
+    $reads = [];
+    foreach (array_unique(array_values($each['reads'])) as $sibling) {
+      $reads[Port::through($sibling)->name] = $sibling;
+    }
+    $builder->attach($key, (new Attachment($sealed))->withReads($reads, static::wiredKeys($builder, $reads)));
     if ($access !== NULL && $access->isLocked()) {
       $builder->lock($key, $access->getReason());
     }
     if ($runtime) {
       $builder->markRuntimeAccess($key);
     }
+    return $sealed;
+  }
+
+  /**
+   * Refuses a wiring of an entry's ports that a sibling map cannot honor.
+   *
+   * Each port wired is one the structure reads, to a sibling map that
+   * addEach() declared from the same provider, whose entry of the same id
+   * is of the port's type (or declared with its shape); every entry has
+   * its match there; and every port the structure requires is wired.
+   *
+   * Decision: see docs/decisions.md#keys-that-come-from-the-site.
+   *
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   *   The owner.
+   * @param string $key
+   *   The key the map sits at.
+   * @param array $each
+   *   What the blueprint recorded for it.
+   * @param array<string, array> $entries
+   *   What its provider listed, by id.
+   * @param array<string, array> $maps
+   *   Every map of keys from the site the owner declared, by key.
+   * @param array<string, \Drupal\data_surface\DataSurfaceInterface|null> $listed
+   *   The maps built so far, by key.
+   *
+   * @return array<string, array<string, \Drupal\Core\TypedData\DataDefinitionInterface>>
+   *   For each entry, the sibling's entry each port reads, as declared, by
+   *   port: what a refusal in the entry names.
+   *
+   * @throws \LogicException
+   *   Naming the owner, the port and what is wrong with the wiring.
+   */
+  protected function assertEachWiring(ResourceDefinition $definition, string $key, array $each, array $entries, array $maps, array $listed): array {
+    [$ports] = $this->portsOf($each['each']);
+    $id = $this->registry->getDefinition($each['each'])->id;
+    $wired = array_fill_keys(array_map('strval', array_keys($entries)), []);
+    foreach ($each['reads'] as $port => $sibling) {
+      $port = (string) $port;
+      if (!isset($ports[$port])) {
+        throw new \LogicException(sprintf('%s wires the "%s" port of %s at every entry of "%s", which %s does not read; it reads %s.', $definition->id, $port, $id, $key, $id, $ports === [] ? 'no port' : implode(', ', array_keys($ports))));
+      }
+      $other = $maps[$sibling] ?? NULL;
+      $problem = match (TRUE) {
+        $sibling === $key => 'which is the map itself: a port reads a value its container holds beside the entry',
+        $other === NULL => sprintf('which is no map of keys from the site: an entry\'s port reads the entry of the same id in a sibling map, addEach(\'%s\', ..., from: %s::class)', $sibling, $each['from']),
+        $other['child'] => 'which holds a structure at every entry: a port reads one value',
+        $other['from'] !== $each['from'] => sprintf('which lists its keys from %s: an entry\'s port reads the entry of the same id, so both maps list their keys from %s', $other['from'], $each['from']),
+        default => NULL,
+      };
+      if ($problem !== NULL) {
+        throw new \LogicException(sprintf('%s wires the "%s" port of %s at every entry of "%s" to "%s", %s.', $definition->id, $port, $id, $key, $sibling, $problem));
+      }
+      $read = $listed[$sibling] ?? NULL;
+      foreach (array_keys($wired) as $entry) {
+        $match = $read?->getDefinition($entry);
+        if ($match === NULL) {
+          throw new \LogicException(sprintf('%s wires the "%s" port of %s at every entry of "%s" to "%s", which has no "%s" entry: %s listed it for one map and not the other.', $definition->id, $port, $id, $key, $sibling, $entry, $each['from']));
+        }
+        $type = $match->getDataType();
+        if ($ports[$port]->type !== 'any' && $type !== $ports[$port]->type) {
+          throw new \LogicException(sprintf('%s wires the "%s" port of %s at every entry of "%s", which reads %s %s, to "%s", whose "%s" entry holds %s %s.', $definition->id, $port, $id, $key, static::article($ports[$port]->type), $ports[$port]->type, $sibling, $entry, static::article($type), $type));
+        }
+        if (static::unshaped($ports[$port], $match) !== NULL) {
+          $shape = DefinitionMetadata::shapeOf($match);
+          throw new \LogicException(sprintf('%s wires the "%s" port of %s at every entry of "%s" to "%s", whose "%s" entry is declared with %s, and the port reads the shape %s: the sibling map declares its entries with it, addEach(\'%s\', <shape>::class, ...).', $definition->id, $port, $id, $key, $sibling, $entry, $shape === NULL ? 'a type alone' : 'the shape ' . $shape, $ports[$port]->shape, $sibling));
+        }
+        $wired[$entry][$port] = DataSurface::deepClone($match);
+      }
+    }
+    foreach ($ports as $port) {
+      if ($port->required && !isset($each['reads'][$port->name])) {
+        throw new \LogicException(sprintf('%s attaches %s at every entry of "%s" without wiring the "%s" port it requires: attachEach(\'%s\', ..., reads: [\'%s\' => \'<map>\']) names a sibling map from %s whose entry of the same id it reads.', $definition->id, $id, $key, $port->name, $key, $port->name, $each['from']));
+      }
+    }
+    return $wired;
   }
 
   /**
@@ -1639,8 +1758,8 @@ final class Resources implements ResourcesInterface {
    * @param string[] $lists
    *   The owner's collection keys.
    * @param string $as
-   *   How the child is held: attach, variant, collection, or entry (of a
-   *   map of keys from the site).
+   *   How the child is held: attach, variant or collection. An entry of a
+   *   map of keys from the site is wired by assertEachWiring().
    *
    * @throws \LogicException
    *   Naming the container, the port and what is wrong with the wiring.
@@ -1683,11 +1802,9 @@ final class Resources implements ResourcesInterface {
         ? sprintf('%s attaches %s at "%s" without wiring the "%s" port it requires: attach(\'%s\', ..., reads: [\'%s\' => \'<key>\']) names the key of %s it reads.', $who, $id, $key, $port->name, $key, $port->name, $definition->id)
         : sprintf('%s fills the "%s" %s of %s and requires the "%s" port, which nothing wires: a port is wired by attach(), and a %s is wired by nothing yet.', $id, $key, match ($as) {
           'variant' => 'variants',
-          'entry' => 'map of keys from the site',
           default => 'collection',
         }, $who, $port->name, match ($as) {
           'variant' => 'variant',
-          'entry' => 'map\'s entry',
           default => 'collection\'s item',
         }));
     }

@@ -1802,7 +1802,7 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
   no `KeysFromSiteInterface`; a structure handed to `addEach()` or a shape
   to `attachEach()`; a list that cannot be cached or varies by the
   account; at the things, a structure that names storage or identity, or
-  requires a port (nothing wires one yet), and a thing that says what a
+  requires a port its owner leaves unwired, and a thing that says what a
   structure starts from; either verb from an alter or inside a structure
   mixed in.
 
@@ -1810,6 +1810,47 @@ A deriver ([below](#derived-resources)) is for what is a resource or
 structure of its own: operations, storage, identity, or a use at many
 sites. Keys that only one resource asks for, one per thing, are this
 ([decision](decisions.md#keys-that-come-from-the-site)).
+
+### Ports on an entry
+
+A structure at every thing may need a value the owner holds for that
+same thing: a ticket type's limits apply only while that type is on
+sale, which the type's checkbox says. The structure declares a
+[port](#ports) as anywhere, and the owner wires it to a sibling map from
+the same provider; the entry `<id>` reads the sibling's entry `<id>`:
+
+```php
+// TicketSalesResource, example 9
+$inputs->addEach('on_sale', 'boolean', from: TicketTypes::class, default: FALSE);
+$inputs->attachEach('limits', TicketLimitStructure::class, from: TicketTypes::class, reads: ['selling' => 'on_sale']);
+
+// TicketLimitStructure
+$inputs->reads('selling', 'boolean');
+$inputs->narrow('per_order')->when(Condition::equals('selling', FALSE))->doesNotApply();
+```
+
+Each class's `use` line: [Namespaces](concepts.md#namespaces).
+
+- **The port is read as anywhere.** The structure's declared rules and
+  coded refiners read it by its name; it moves as the sibling's entry
+  moves, so the form rebuilds that entry over AJAX when its checkbox
+  changes, and a refusal names the sibling's entry (`Per order does not
+  apply when on_sale.student is off.`).
+- **What depends on it is stated per entry**, on the owner's `allOf`: an
+  `if` on `on_sale.<id>` and a `then` reaching into `limits.<id>`, a
+  locked entry's too ([the served
+  contract](served-contract.md#a-port-is-stated-at-its-site)). The
+  schema for these answers settles each entry, and the React page
+  narrows each one from the full schema with no request.
+- **Refused** when the structure does not read the port; when the
+  sibling is no map of keys from the site, is the map itself, holds a
+  structure at every entry, or lists its keys from another provider;
+  when an entry has no match in the sibling; when the sibling's entry is
+  of another type or shape than the port reads; and when a port the
+  structure requires is left unwired.
+- **Inside**, the map reads the sibling map through a port of its own,
+  named `:<sibling>`, which no entry's id can be; no document lists it
+  (`Port::$through`).
 
 ## Derived resources
 

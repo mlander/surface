@@ -89,6 +89,9 @@ final class ConfigSchemaPanel {
       '#type' => 'details',
       '#open' => TRUE,
       '#title' => $this->t('What core answers when asked for a JSON Schema'),
+      'note' => [
+        '#markup' => '<p>' . $this->t("This is core's whole answer, not an error: core has no JSON Schema for a config mapping, and the page its comment links says how code implements a schema.") . '</p>',
+      ],
       'json' => $this->json($today['core']),
     ];
     $panel['derived'] = [

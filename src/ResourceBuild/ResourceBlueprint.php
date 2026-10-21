@@ -50,7 +50,7 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
   /**
    * The maps of keys from the site declared through this blueprint, by key.
    *
-   * @var array<string, array{each: string, from: class-string<\Drupal\data_surface\Resource\KeysFromSiteInterface>, default: mixed, child: bool}>
+   * @var array<string, array{each: string, from: class-string<\Drupal\data_surface\Resource\KeysFromSiteInterface>, default: mixed, child: bool, reads: array<string, string>}>
    */
   protected array $fromSite = [];
 
@@ -339,10 +339,10 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
    *
    * Decision: see docs/decisions.md#keys-that-come-from-the-site.
    */
-  public function attachEach(string $key, string $structure, string $from): MapDataDefinition {
+  public function attachEach(string $key, string $structure, string $from, array $reads = []): MapDataDefinition {
     $this->assertHoldsNoChild('attaches a child per thing the site has', $key);
     static::assertNoShape('attachEach', $key, $structure);
-    return $this->reserveEach('attachEach', $key, $structure, $from, NULL, TRUE);
+    return $this->reserveEach('attachEach', $key, $structure, $from, NULL, TRUE, $reads);
   }
 
   /**
@@ -360,6 +360,8 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
    *   What every entry starts from.
    * @param bool $child
    *   TRUE when each entry is a child.
+   * @param array<string, string> $reads
+   *   For a child, each port mapped to the sibling map it reads per entry.
    *
    * @return \Drupal\Core\TypedData\MapDataDefinition
    *   The map at the key.
@@ -367,21 +369,28 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
    * @throws \LogicException
    *   When the provider is none.
    */
-  protected function reserveEach(string $verb, string $key, string $each, string $from, mixed $default, bool $child): MapDataDefinition {
+  protected function reserveEach(string $verb, string $key, string $each, string $from, mixed $default, bool $child, array $reads = []): MapDataDefinition {
     if (!is_subclass_of($from, KeysFromSiteInterface::class)) {
       throw new \LogicException(sprintf('%s("%s") names %s as where its keys come from, which does not implement %s: a provider lists the site\'s things with keys().', $verb, $key, $from, KeysFromSiteInterface::class));
     }
     $shell = $this->reserveChild($verb, $key);
-    $this->fromSite[$key] = ['each' => $each, 'from' => $from, 'default' => $default, 'child' => $child];
+    $this->fromSite[$key] = [
+      'each' => $each,
+      'from' => $from,
+      'default' => $default,
+      'child' => $child,
+      'reads' => $reads,
+    ];
     return $shell;
   }
 
   /**
    * Gets the maps of keys from the site declared through this blueprint.
    *
-   * @return array<string, array{each: string, from: class-string<\Drupal\data_surface\Resource\KeysFromSiteInterface>, default: mixed, child: bool}>
-   *   What each entry is, the provider, the default for every entry, and
-   *   whether each entry is a child, by key, in declaration order.
+   * @return array<string, array{each: string, from: class-string<\Drupal\data_surface\Resource\KeysFromSiteInterface>, default: mixed, child: bool, reads: array<string, string>}>
+   *   What each entry is, the provider, the default for every entry,
+   *   whether each entry is a child, and the sibling map each of its ports
+   *   reads per entry, by key, in declaration order.
    */
   public function fromSite(): array {
     return $this->fromSite;

@@ -1133,14 +1133,18 @@ final class ContractEmitter {
           // applies.
           $enumerated = $this->enumerate($declared, $static, $entry, $values, $properties[$name], $prefix . $name, $cacheability, $kinds, TRUE);
         }
-        if (!$declaring && $attachment->reads !== []) {
+        if (!$declaring && $attachment->reads !== [] && !static::readsThrough($attachment, $ports)) {
           // Which of this frame's keys each port reads, and what the child
           // answers for them where they hold nothing yet: said here, at the
           // site, on this frame's allOf, never in the child's def.
           // Decision: see docs/decisions.md#a-port-is-a-live-sibling-value.
-          $properties[$name][self::EXTENSION]['reads'] = $attachment->reads;
+          $bound = $current->attachment ?? $attachment;
+          $each = static::throughPorts($attachment->child) !== [];
+          $properties[$name][self::EXTENSION]['reads'] = $each ? $this->eachReads($attachment) : $attachment->reads;
           if (!$locked) {
-            [$branches, $markers] = $this->site($declared, $static, $entry, $current->attachment ?? $attachment, '', $values, $prefix . $name, $cacheability, $kinds, $runtime);
+            [$branches, $markers] = $each
+              ? $this->entrySites($declared, $static, $entry, $bound, $values, $prefix . $name, $cacheability, $kinds, $runtime)
+              : $this->site($declared, $static, $entry, $bound, '', $values, $prefix . $name, $cacheability, $kinds, $runtime);
             array_push($conditions, ...$branches);
             $properties[$name][self::EXTENSION] += $markers;
           }
@@ -1285,13 +1289,16 @@ final class ContractEmitter {
     if ($ruled !== []) {
       $schema[self::EXTENSION] = ['doesNotApply' => $ruled];
     }
-    if ($ports !== []) {
+    // A map of keys from the site reads a sibling map only to hand its
+    // entries their ports: no key of its own reads it, and it is not listed.
+    $listed = array_filter($ports, static fn (Port $port): bool => !$port->through);
+    if ($listed !== []) {
       // What the frame reads from its container, by the names its keys'
       // `dependsOn` use; the site says which key of the container each is.
       $schema[self::EXTENSION]['ports'] = array_map(static fn (Port $port): array => [
         'type' => $port->type,
         'required' => $port->required,
-      ] + ($port->shape === NULL ? [] : ['shape' => $port->shape]), $ports);
+      ] + ($port->shape === NULL ? [] : ['shape' => $port->shape]), $listed);
     }
     if ($advertised->mixins() !== []) {
       // Decision: see docs/decisions.md#a-mixin-is-merged-flat.
@@ -1555,6 +1562,129 @@ final class ContractEmitter {
       [, $stated] = $this->rules($pseudo, $definition, $base, [], FALSE, $path, $cacheability);
       array_push($branches, ...$stated);
       $markers['declared'] = TRUE;
+    }
+    return [$branches, $markers];
+  }
+
+  /**
+   * Lists the ports of a data surface that a map reads for its entries.
+   *
+   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   *   The data surface.
+   *
+   * @return array<string, \Drupal\data_surface\Port>
+   *   Its through ports, by name.
+   */
+  protected static function throughPorts(DataSurfaceInterface $surface): array {
+    return array_filter($surface->getDefinitions()->ports(), static fn (Port $port): bool => $port->through);
+  }
+
+  /**
+   * Answers whether a child reads its ports through a port of its frame.
+   *
+   * An entry of a map of keys from the site reads a sibling map's entry
+   * through the map's own port: what depends on it is stated where the
+   * map's port is wired, in the owner's frame, never in the map's.
+   *
+   * @param \Drupal\data_surface\Attachment $attachment
+   *   The child, wired.
+   * @param array<string, \Drupal\data_surface\Port> $ports
+   *   The frame's ports.
+   *
+   * @return bool
+   *   TRUE when a port of the child reads through one of the frame's.
+   */
+  protected static function readsThrough(Attachment $attachment, array $ports): bool {
+    foreach ($attachment->reads as $path) {
+      if (($ports[explode('.', $path)[0]] ?? NULL)?->through) {
+        return TRUE;
+      }
+    }
+    return FALSE;
+  }
+
+  /**
+   * Spells how a map of keys from the site wires its entries' ports.
+   *
+   * As attachEach() was told: each port of the structure, by the sibling
+   * map whose entry of the same id it reads.
+   *
+   * @param \Drupal\data_surface\Attachment $attachment
+   *   The map, wired to its siblings.
+   *
+   * @return array<string, string>
+   *   The sibling map, by port.
+   */
+  protected function eachReads(Attachment $attachment): array {
+    $spelled = [];
+    foreach ($attachment->child->getDefinitions()->entries() as $entry) {
+      foreach ($entry->attachment->reads ?? [] as $port => $path) {
+        $spelled[(string) $port] ??= $attachment->reads[explode('.', $path)[0]] ?? $path;
+      }
+    }
+    return $spelled;
+  }
+
+  /**
+   * States, per entry, what a map's entries answer for the ports they read.
+   *
+   * Each entry `<id>` of a map of keys from the site reads the entry of
+   * the same id of a sibling map; what depends on it is stated as a site
+   * at the entry, on this frame's `allOf`: an `if` on the sibling's entry
+   * and a `then` reaching into the map at the entry. A locked entry states
+   * its rules too: what is stored is kept, and what does not apply is no
+   * key of it in either document.
+   *
+   * Decision: see docs/decisions.md#keys-that-come-from-the-site.
+   *
+   * @param \Drupal\data_surface\DataSurfaceInterface $declared
+   *   This frame, as advertised.
+   * @param \Drupal\data_surface\DataSurfaceInterface $static
+   *   The same, refined for its values by its static refiners alone.
+   * @param \Drupal\data_surface\Entry $entry
+   *   The key holding the map.
+   * @param \Drupal\data_surface\Attachment $attachment
+   *   The map, wired to its siblings.
+   * @param array $values
+   *   This frame's values.
+   * @param string $path
+   *   The key's dotted path.
+   * @param \Drupal\Core\Cache\CacheableMetadata $cacheability
+   *   Collects what the description depends on.
+   * @param int $kinds
+   *   The kinds of refiner a combination is answered by.
+   * @param bool $runtime
+   *   Whether the document is for one set of values.
+   *
+   * @return array{0: array, 1: array<string, true>}
+   *   The conditionals, and the markers the key carries.
+   */
+  protected function entrySites(DataSurfaceInterface $declared, DataSurfaceInterface $static, Entry $entry, Attachment $attachment, array $values, string $path, CacheableMetadata $cacheability, int $kinds, bool $runtime): array {
+    $branches = [];
+    $markers = [];
+    foreach ($attachment->child->getDefinitions()->entries() as $id => $inner) {
+      $child = $inner->attachment;
+      if ($child === NULL || $child->reads === []) {
+        continue;
+      }
+      // Each port at the sibling's entry, by its path in this frame.
+      $reads = [];
+      foreach ($child->reads as $port => $through) {
+        [$first, $rest] = array_pad(explode('.', $through, 2), 2, '');
+        $reads[(string) $port] = ($attachment->reads[$first] ?? $first) . '.' . $rest;
+      }
+      $site = new Attachment($child->child, $child->source, $child->id, $reads, $child->wired);
+      [$stated, $marked] = $this->site($declared, $static, $entry, $site, (string) $id, $values, $path, $cacheability, $kinds, $runtime);
+      array_push($branches, ...$stated);
+      $markers += $marked;
+      // A coded refiner reading a port is not enumerated at an entry:
+      // the server answers it.
+      $ports = $child->child->getDefinitions()->ports();
+      foreach ($child->child->getDefinitions()->entries() as $key) {
+        if (array_intersect($key->codedDependencies(), array_keys($ports)) !== [] && $this->readsEmptyPort($key, $ports, $site->readFrom($values)->ports ?? [])) {
+          $markers['refine'] = TRUE;
+        }
+      }
     }
     return [$branches, $markers];
   }
@@ -2252,7 +2382,10 @@ final class ContractEmitter {
         }
         continue;
       }
-      if ($keyword === 'properties' && is_array($value) && is_array($def['properties'] ?? NULL)) {
+      if ($keyword === 'properties' && (is_array($value) || $value instanceof \stdClass) && is_array($def['properties'] ?? NULL)) {
+        // A frame with no key left that applies writes its properties as
+        // an empty object.
+        $value = (array) $value;
         $properties = [];
         foreach ($def['properties'] + $value as $name => $property) {
           if (!array_key_exists($name, $value)) {

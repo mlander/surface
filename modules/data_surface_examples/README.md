@@ -59,7 +59,10 @@ the resource's contract:
 - **What core answers when asked for a JSON Schema.** The example's
   typed config, normalized by core's serializer in the `json_schema`
   format. It is asked each time, not written down. The answer is one
-  `$comment`, saying no schema is defined for a mapping.
+  `$comment`, saying no schema is defined for a mapping. That is core's
+  whole answer, not an error, and the panel says so above it: core has
+  no JSON Schema for a config mapping, and the page the comment links says
+  how code implements a schema.
 - **The most a plain mapping of config schema could say.**
   `ConfigSchemaContract` reads the schema definition and translates it
   one to one: a label is a `title`, a type a `type`, a mapping an
@@ -1185,10 +1188,82 @@ final class TicketSalesResource implements ResourceInterface {
     $inputs->addEach('on_sale', 'boolean', from: TicketTypes::class, default: FALSE)
       ->setLabel(t('On sale'))
       ->setDescription(t('Which ticket types can be bought.'));
-    $inputs->attachEach('limits', TicketLimitStructure::class, from: TicketTypes::class)
+    $inputs->attachEach('limits', TicketLimitStructure::class, from: TicketTypes::class, reads: ['selling' => 'on_sale'])
       ->setLabel(t('Limits'));
   }
 
+}
+```
+
+Each type's limits read whether that type is on sale. The structure
+declares a port, `selling`, and rules its keys out while it is off;
+`reads: ['selling' => 'on_sale']` wires the port of the entry `<type>`
+to `on_sale.<type>`, the entry of the same id in the sibling map
+([Ports on an entry](../../docs/resources.md#ports-on-an-entry)).
+
+<!-- code: src/Structure/TicketLimitStructure.php -->
+
+```php
+#[Structure('event.ticket_limit')]
+final class TicketLimitStructure implements StructureInterface {
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function defineInputs(BlueprintInterface $inputs): void {
+    $inputs->add('per_order', 'integer', t('Per order'), default: 4)
+      ->addConstraint('Range', ['min' => 1, 'max' => 10]);
+    $inputs->add('waiting_list', 'boolean', t('Waiting list when sold out'), default: FALSE);
+    $inputs->reads('selling', 'boolean');
+    $inputs->narrow('per_order')->when(Condition::equals('selling', FALSE))->doesNotApply();
+    $inputs->narrow('waiting_list')->when(Condition::equals('selling', FALSE))->doesNotApply();
+  }
+
+}
+```
+
+Untick a type and its limits go: the form drops their elements over
+AJAX, and the page drops their fields with no request. Tick it again and
+they return as stored, since storage keeps what a key holds while it does
+not apply. The full schema states the rule once per type, on the
+resource's frame, an `if` on the type's checkbox and a `then` reaching
+into its limits:
+
+```json
+{
+    "if": {
+        "properties": {
+            "on_sale": {
+                "type": "object",
+                "properties": {
+                    "student": {
+                        "const": false
+                    }
+                },
+                "required": [
+                    "student"
+                ]
+            }
+        },
+        "required": [
+            "on_sale"
+        ]
+    },
+    "then": {
+        "properties": {
+            "limits": {
+                "type": "object",
+                "properties": {
+                    "student": {
+                        "type": "object",
+                        "properties": {
+                            "per_order": false
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 ```
 
@@ -1245,20 +1320,29 @@ drush config:delete data_surface_examples.ticket_types types.vip
 
 The form has a VIP checkbox and VIP limits at once; the second command
 takes them away again. The speaker type is locked in the configuration:
-its checkbox and its limits are drawn fixed, `readOnly` in both
-documents, and a value a tool sends for it is not taken, which the
-answer says in a note. The panel shows the keys the provider answered,
-its cache tag, and the locked type in both documents.
+its checkbox is drawn fixed, `readOnly` in both documents, and a value a
+tool sends for it is not taken, which the answer says in a note. It is
+not on sale as shipped, so its limits do not apply and are not drawn;
+put on sale, they are drawn fixed too. The panel shows the keys the provider answered, its cache tag,
+one type's rules as the full schema states them, and the locked type in
+both documents. A limit sent for a type off sale is refused, naming the
+checkbox it depends on.
 
 ```bash
 drush tool:run data_surface:event.sales:configure --uid=1 --input='{"values":{"on_sale":{"standard":true,"speaker":true}}}' --input=dry_run=true
+
+drush tool:run data_surface:event.sales:configure --uid=1 --input='{"values":{"on_sale":{"student":false},"limits":{"student":{"per_order":2}}}}' --input=dry_run=true
 ```
 
 ```
 1. Speaker tickets put on sale
 Success: Dry run of Configure ticket sales: the values were accepted and prepared, and nothing was written.
 on_sale.speaker: Speaker is locked and kept as stored; the value sent was not taken.
-  values: {"on_sale":{"standard":true,"student":true,"speaker":false},"limits":{"standard":{"per_order":4,"waiting_list":false},"student":{"per_order":1,"waiting_list":true},"speaker":{"per_order":1,"waiting_list":false}}}
+  values: {"on_sale":{"standard":true,"student":true,"speaker":false},"limits":{"standard":{"per_order":4,"waiting_list":false},"student":{"per_order":1,"waiting_list":true},"speaker":[]}}
+
+2. Student tickets taken off sale, with a new limit for them
+Failed: The values were refused:
+limits.student.per_order: Per order does not apply when on_sale.student is off.
 ```
 
 ## Example 10: who may change what

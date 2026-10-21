@@ -943,7 +943,11 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
     [$prefix, $ports] = $outer;
     $resolved = [];
     foreach ($reads as $port => $path) {
-      $resolved[(string) $port] = $ports[$path] ?? $prefix . $path;
+      // A path through a port of this frame (an entry of a map of keys
+      // from the site, reading a sibling map's entry) continues where that
+      // port reads.
+      [$first, $rest] = array_pad(explode('.', $path, 2), 2, NULL);
+      $resolved[(string) $port] = $ports[$path] ?? (isset($ports[$first]) && $rest !== NULL ? $ports[$first] . '.' . $rest : $prefix . $path);
     }
     $this->frame = [$prefix . $at . '.', $resolved];
     try {

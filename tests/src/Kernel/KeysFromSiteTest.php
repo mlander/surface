@@ -376,11 +376,11 @@ class KeysFromSiteTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests a structure that requires a port is no entry: nothing wires one.
+   * Tests an entry's structure is refused with a required port unwired.
    */
-  public function testEntryRequiresNoPort(): void {
+  public function testEntryRequiresItsPortWired(): void {
     $this->expectException(\LogicException::class);
-    $this->expectExceptionMessage('resource_test.seating fills the "seats" map of keys from the site of resource_test.broken.unwired_entry and requires the "layout" port, which nothing wires: a port is wired by attach(), and a map\'s entry is wired by nothing yet.');
+    $this->expectExceptionMessage('resource_test.broken.unwired_entry attaches resource_test.seating at every entry of "seats" without wiring the "layout" port it requires: attachEach(\'seats\', ..., reads: [\'layout\' => \'<map>\']) names a sibling map from');
     $this->container->get('data_surface.resources')->build(UnwiredEntryStructure::class, new OperationContext('configure'));
   }
 

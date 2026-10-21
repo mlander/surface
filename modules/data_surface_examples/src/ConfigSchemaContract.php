@@ -91,6 +91,10 @@ final class ConfigSchemaContract {
   /**
    * Asks core for the JSON Schema of a config object.
    *
+   * The schema describes the object whether or not it is stored, so it is
+   * read from the schema alone: asked for an object that does not exist,
+   * typed config throws.
+   *
    * @param string $name
    *   The config object's name.
    *
@@ -98,7 +102,7 @@ final class ConfigSchemaContract {
    *   What the serializer answers for its typed config, as it answers it.
    */
   public function core(string $name): array {
-    $answer = $this->serializer->normalize($this->typedConfig->get($name), 'json_schema');
+    $answer = $this->serializer->normalize($this->typedConfig->createFromNameAndData($name, []), 'json_schema');
     return is_array($answer) ? $answer : (array) $answer;
   }
 

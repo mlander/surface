@@ -100,9 +100,14 @@ final class MapWidget extends DataSurfaceWidgetBase implements ContainerFactoryP
     }
     foreach ($definition->getPropertyDefinitions() as $property_name => $property_definition) {
       if (DoesNotApply::marks($property_definition)) {
-        // A key an alter mounted that does not apply: its wrapper alone.
+        // A key an alter mounted, or a child's key, that does not apply:
+        // its wrapper alone.
         // Decision: see docs/decisions.md#a-key-that-does-not-apply.
-        $ruled_out = ['#markup' => '', DataSurfaceFormBuilderInterface::PLACEHOLDER_KEY => TRUE];
+        $ruled_out = [
+          '#markup' => '',
+          DataSurfaceFormBuilderInterface::PLACEHOLDER_KEY => TRUE,
+          DataSurfaceFormBuilderInterface::RULED_OUT_KEY => TRUE,
+        ];
         $element[$property_name] = static::arranged($ruled_out, $property_definition);
         continue;
       }

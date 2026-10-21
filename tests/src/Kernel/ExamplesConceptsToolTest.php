@@ -91,6 +91,7 @@ class ExamplesConceptsToolTest extends DataSurfaceKernelTestBase {
     $this->assertSame("Failed: The values were refused:\n" . 'phone: Write the number in digits, such as +1 555 0100.', $first($answers['event.desk']['phone_with_dashes']));
     $this->assertStringContainsString("nothing was written.\non_sale.speaker: Speaker is locked and kept as stored; the value sent was not taken.\n", $answers['event.sales']['speaker_on_sale'], 'A note on a line of its own, after the message.');
     $this->assertStringContainsString('"speaker":false', $answers['event.sales']['speaker_on_sale']);
+    $this->assertSame("Failed: The values were refused:\n" . 'limits.student.per_order: Per order does not apply when on_sale.student is off.', $first($answers['event.sales']['limit_off_sale']));
     $this->assertSame('Success: Check a program changes nothing: the values were accepted and prepared, and nothing was written.', $first($answers['event.program']['check']));
     $this->assertSame("Failed: The values were refused:\n" . 'sessions: This value should be between 1 and 30.', $first($answers['event.program']['check_too_many']));
     $this->assertSame("Failed: The values were refused:\n" . 'This may be seen and not changed, so nothing was written: The program is published in its workflow, so it is fixed.', $first($answers['event.program']['published_in_workflow']));

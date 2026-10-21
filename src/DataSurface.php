@@ -169,7 +169,40 @@ final class DataSurface implements DataSurfaceInterface {
     if ($values === $this->ports && $definitions === $this->portDefinitions) {
       return $this;
     }
-    return new self($this->definitions, $this->cacheability, $this->outputs, $this->thirdPartyLayouts, $this->watchedValueCheck, $values, $definitions, $this->lockedWhole, $this->changesNothing, $this->version, runtimeAccessOwn: $this->runtimeAccessOwn);
+    return new self($this->throughPorts($declared, $values), $this->cacheability, $this->outputs, $this->thirdPartyLayouts, $this->watchedValueCheck, $values, $definitions, $this->lockedWhole, $this->changesNothing, $this->version, runtimeAccessOwn: $this->runtimeAccessOwn);
+  }
+
+  /**
+   * Binds each entry's ports that read through a port of this map.
+   *
+   * A map of keys from the site whose entries read a sibling map reads
+   * that map through a port of its own, and each entry `<id>` reads
+   * `<port>.<id>`: bound here, so whatever asks an entry for its child
+   * hands it the sibling's entry, as its container admitted it.
+   *
+   * Decision: see docs/decisions.md#keys-that-come-from-the-site.
+   *
+   * @param array<string, \Drupal\data_surface\Port> $declared
+   *   The ports this data surface reads.
+   * @param array<string, mixed> $values
+   *   What each holds.
+   *
+   * @return \Drupal\data_surface\DefinitionMap
+   *   The definitions, each such entry bound.
+   */
+  protected function throughPorts(array $declared, array $values): DefinitionMap {
+    $through = array_keys(array_filter($declared, static fn (Port $port): bool => $port->through));
+    if ($through === []) {
+      return $this->definitions;
+    }
+    $definitions = $this->definitions;
+    foreach ($this->definitions->entries() as $entry) {
+      $reads = $entry->attachment->reads ?? [];
+      if ($reads !== [] && array_diff(array_map(static fn (string $path): string => explode('.', $path)[0], $reads), $through) === []) {
+        $definitions = $definitions->with($entry->readingFrom($values) ?? $entry);
+      }
+    }
+    return $definitions;
   }
 
   /**

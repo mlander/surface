@@ -877,7 +877,11 @@ answers it without declaring it is refused) and the enumeration states
 it as it states any static answer. Each door:
 
 - **Form.** No element at all, not disabled and not hidden; only its
-  wrapper, for the AJAX rebuild that makes it apply.
+  wrapper, for the AJAX rebuild that makes it apply. A key drawn as
+  nothing that a full submission makes apply, a sibling changed in the
+  same post, was never sent, so it is read as left out and keeps what is
+  stored, inside a child as at the top: the container posts the paths it
+  drew as nothing (`@absent`), and each AJAX rebuild replaces that list.
 - **Values.** Read as left out: left out, `null`, the empty string or
   exactly what it holds is accepted, and the accepted document leaves
   the key out; any other value is refused, "Send day does not apply when
@@ -3659,10 +3663,33 @@ why:
   where the provider reads (pathauto's alter hook stays inside its
   provider). The structure at the entries is built once for the map, so
   its access answers once, as a collection's item's does; it may name no
-  storage or identity, its owner storing it, and require no port, since
-  nothing wires an entry yet, as nothing wires a variant or a
-  collection's item. Neither verb is offered to an alter, or inside a
-  structure mixed in, which holds no children.
+  storage or identity, its owner storing it. Neither verb is offered to
+  an alter, or inside a structure mixed in, which holds no children.
+- **Ports on an entry.** Decided by the owner on 2026-10-21:
+  `attachEach($key, Structure::class, from:, reads: ['port' =>
+  'sibling'])` wires the port of the entry `<id>` to `sibling.<id>`, the
+  entry of the same id in a sibling map declared with `addEach()` from
+  the same provider. The structure's rules and refiners read the port as
+  anywhere ([A port is a live sibling value](#a-port-is-a-live-sibling-value)),
+  and a rule on a port may rule the structure's keys out, entry by
+  entry. Example 9 is the case: a ticket type's limits do not apply
+  while the type is off sale. The wiring names a map, not a path into
+  it, because the entries are the provider's: the owner cannot name one
+  entry, and the same provider makes the ids match. The build refuses a
+  sibling that is no map of keys from the site, holds structures, lists
+  its keys from another provider, has no entry for an id, or holds
+  another type, and an unwired required port, as attach() refuses a
+  wiring. What depends on the port is stated per entry on the owner's
+  `allOf`, an `if` on the sibling's entry and a `then` reaching into the
+  map at the entry, since only the owner knows both; a locked entry's
+  rules are stated too, so both documents leave out what does not apply
+  to it. Inside, the map reads the sibling through a port of its own,
+  `:<sibling>` (`Port::$through`), and binds each entry's port when it
+  is bound (`DataSurface::withPorts()`), so every door that asks an
+  entry for its child hands it the sibling's entry; no document lists
+  that port. Rejected: one port per entry on the map, named by the id,
+  which an id could collide with; and a path per entry written by the
+  owner, which names entries the code cannot list.
 - **The cost.** Ported again, pathauto's punctuation is a shape (20 code
   lines, the original's select options) and a `keys()` method on the
   service that lists the characters (9), where the deriver was 44; with
@@ -3673,10 +3700,13 @@ why:
   shape's one def in place of 33 inline lists, and honeypot's documents
   now kept by the cache tags of the forms it lists.
 
-Open: a per-option lock in a plain list of choices; a rule naming one
-entry; ports on an entry. (`KeysFromSiteInterface`, `KeyedList`,
+Open: a per-option lock in a plain list of choices; a rule of the
+owner's naming one entry by its id, which waits for a decision from the
+owner, since the code cannot list the ids. Closed: ports on an entry
+(above). (`KeysFromSiteInterface`, `KeyedList`,
 `BlueprintInterface::addEach()`, `BlueprintInterface::attachEach()`,
 `Resources::buildEach()`, `Resources::keysFrom()`,
+`Resources::assertEachWiring()`, `Port::through()`,
 `DataSurfaceFormBuilder::lockedInside()`, `ToolDefinitionsInvalidator`)
 
 ### Keys an alter adds to a content entity

@@ -359,6 +359,12 @@ function merge(base: Json, over: Json): Json {
       const properties: Json = { ...before };
       for (const [name, property] of Object.entries(value)) {
         const was = properties[name];
+        if (property === false && isObject(was)) {
+          // Not applying at this site: no property, as a flat frame says
+          // it; its frame's `doesNotApply` names it.
+          delete properties[name];
+          continue;
+        }
         properties[name] = isObject(was) && isObject(property) ? merge(was, property) : property;
       }
       merged[keyword] = properties;
@@ -373,6 +379,12 @@ function merge(base: Json, over: Json): Json {
       // What a site says about its key replaces what the def said, but not
       // which keys of the child do not apply here.
       merged[keyword] = { ...value, doesNotApply: before.doesNotApply };
+    }
+    else if (keyword === 'x-surface' && isObject(before) && isObject(value) && before.doesNotApply === undefined && value.doesNotApply !== undefined) {
+      // A child narrowed at a site laid over what the site says about its
+      // key: the site's word stands, with which keys of the child do not
+      // apply here.
+      merged[keyword] = { doesNotApply: value.doesNotApply, ...before };
     }
     else {
       merged[keyword] = value;
@@ -738,9 +750,78 @@ function enumeratedOf(conditions: Conditional[], name: string): Conditional[] {
   return conditions.filter((condition) => !isRule(condition) && conditionalKey(condition) === name);
 }
 
-/** The conditionals of one key that its declared rules wrote. */
+/** The conditionals of one key that its declared rules wrote, less those reaching inside it. */
 function rulesOf(conditions: Conditional[], name: string): Conditional[] {
-  return conditions.filter((condition) => isRule(condition) && conditionalKey(condition) === name);
+  return conditions.filter((condition) => isRule(condition) && conditionalKey(condition) === name && reachOf(condition, name) === null);
+}
+
+/**
+ * Where a declared rule stated at a site rules out a key inside a part:
+ * the path below the part, or null for any other conditional.
+ *
+ * A structure's rule that reads a port is stated on its container's frame,
+ * an `if` on the container's keys and a `then` reaching into the part
+ * where the structure sits: at an entry of a map of keys from the site,
+ * `limits.student.per_order`, under `limits` (ContractEmitter::site()).
+ */
+function reachOf(condition: Conditional, name: string): string[] | null {
+  if (!isRule(condition)) {
+    return null;
+  }
+  let node: unknown = condition.then?.properties?.[name];
+  const path: string[] = [];
+  while (isObject(node)) {
+    const entries = Object.entries(isObject(node.properties) ? node.properties : {});
+    if (entries.length !== 1 || Object.keys(node).some((keyword) => keyword !== 'type' && keyword !== 'properties')) {
+      return null;
+    }
+    path.push(entries[0][0]);
+    node = entries[0][1];
+  }
+  return node === false && path.length > 0 ? path : null;
+}
+
+/** The declared rules stated at a site that reach inside one part. */
+function reachesOf(conditions: Conditional[], name: string): Conditional[] {
+  return conditions.filter((condition) => conditionalKey(condition) === name && reachOf(condition, name) !== null);
+}
+
+/**
+ * A part as the rules that reach into it leave it for a frame's values.
+ *
+ * Each key a met rule rules out stays a property, so its frame keeps its
+ * order, and is listed under its frame's `doesNotApply` by what it
+ * depends on, as the server lists it; core() then leaves it out.
+ */
+function reached(part: Schema, reaches: Conditional[], name: string, values: Values): Schema {
+  let out = part;
+  for (const rule of reaches) {
+    if (holdsIf(rule.if, values)) {
+      out = ruledAt(out, reachOf(rule, name) as string[]);
+    }
+  }
+  return out;
+}
+
+function ruledAt(frame: Schema, path: string[]): Schema {
+  const [key, ...rest] = path;
+  const property = frame.properties?.[key];
+  if (property === undefined) {
+    return frame;
+  }
+  const copy: Schema = { ...frame, properties: { ...frame.properties } };
+  if (rest.length > 0) {
+    (copy.properties as Record<string, Schema>)[key] = ruledAt(property, rest);
+  }
+  else {
+    const own = { ...(frame['x-surface'] ?? {}) } as Extension;
+    own.doesNotApply = { ...(own.doesNotApply ?? {}), [key]: property['x-surface']?.dependsOn ?? [] };
+    copy['x-surface'] = own;
+  }
+  if (isPart(frame)) {
+    parts.add(copy);
+  }
+  return copy;
 }
 
 /** The dotted paths an `if` reads, each once. */
@@ -768,7 +849,7 @@ function readBy(schema: unknown, prefix = ''): string[] {
 function codedDeps(frame: Schema, name: string, deps: string[]): string[] {
   const conditions = frame.allOf ?? [];
   const named = new Set(enumeratedOf(conditions, name).flatMap((condition) => Object.keys(condition.if?.properties ?? {})));
-  const read = new Set(rulesOf(conditions, name).flatMap((condition) => readBy(condition.if)));
+  const read = new Set([...rulesOf(conditions, name), ...reachesOf(conditions, name)].flatMap((condition) => readBy(condition.if)));
   return deps.filter((dep) => named.has(dep) || ![...read].some((path) => path === dep || path.startsWith(`${dep}.`) || dep.startsWith(`${path}.`)));
 }
 
@@ -1290,13 +1371,16 @@ function assertReadable(frame: Schema, path: string): void {
     const narrowed = [...new Set([...Object.keys(condition?.then?.properties ?? {}), ...(condition?.then?.required ?? [])])];
     if (isObject(condition) && isRule(condition)) {
       // A rule's `if` reads keys of this frame; its `then` speaks of one
-      // key as a whole, not of a key inside a map, which is the server's.
+      // key as a whole, or rules out one key inside a part, not of a key
+      // inside a plain map, which is the server's.
       const then = narrowed.length === 1 ? condition.then?.properties?.[narrowed[0]] : undefined;
+      const reach = narrowed.length === 1 ? reachOf(condition, narrowed[0]) : null;
       if (
         narrowed.length !== 1
         || 'else' in condition
         || readBy(condition.if).some((read) => !(read.split('.')[0] in properties))
-        || (isObject(then) && ('properties' in then || 'required' in then))
+        || (reach !== null && !isPart(properties[narrowed[0]]))
+        || (reach === null && isObject(then) && ('properties' in then || 'required' in then))
       ) {
         throw new Unsettled(narrowed.length === 1 ? path + narrowed[0] : '', 'unsettled');
       }
@@ -1636,6 +1720,13 @@ function settle(full: Schema, previous: Schema | null, input: Values, stored: Va
     for (const name of orphaned.keys()) {
       values[name] = null;
     }
+    // A key the page did not send because it did not apply holds what is
+    // stored again once it does.
+    for (const name of Object.keys(properties)) {
+      if (!(name in values) && !discarded.includes(name) && name in stored && !(name in (full['x-surface']?.doesNotApply ?? {}))) {
+        values[name] = stored[name];
+      }
+    }
   }
   for (const [name, declared] of Object.entries(properties)) {
     if (discarded.includes(name)) {
@@ -1652,7 +1743,8 @@ function settle(full: Schema, previous: Schema | null, input: Values, stored: Va
     if (!isObject(held) || (!isPart(declared) && !isVariants(declared))) {
       continue;
     }
-    const child = isVariants(declared) ? resolveVariants(full, name, values) : declared;
+    const reaches = reachesOf(full.allOf ?? [], name);
+    const child = isVariants(declared) ? resolveVariants(full, name, values) : reaches.length > 0 ? reached(declared, reaches, name, values) : declared;
     if (child === null) {
       continue;
     }
@@ -1691,8 +1783,16 @@ function core(full: Schema, previous: Schema | null, values: Values, before: Val
   const fullConditions = full.allOf ?? [];
   const previousConditions = previous?.allOf ?? [];
   const mine = (list: Conditional[], name: string) => list.filter((condition) => conditionalKey(condition) === name);
-  for (const [name, declared] of Object.entries(full.properties ?? {})) {
+  for (const [name, stated] of Object.entries(full.properties ?? {})) {
     const at = path + name;
+    if (name in (full['x-surface']?.doesNotApply ?? {})) {
+      // Ruled out by a rule its container states (reached()).
+      required.delete(name);
+      continue;
+    }
+    // A part, as the rules this frame states inside it leave it.
+    const reaches = reachesOf(fullConditions, name);
+    const declared = reaches.length > 0 ? reached(stated, reaches, name, values) : stated;
     const extension = declared['x-surface'];
     const deps = extension?.dependsOn ?? [];
     const was = previous?.properties?.[name];

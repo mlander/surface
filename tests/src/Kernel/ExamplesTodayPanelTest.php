@@ -139,6 +139,10 @@ class ExamplesTodayPanelTest extends DataSurfaceKernelTestBase {
 
     $contract = $this->container->get('data_surface_examples.config_schema_contract');
     $this->assertSame('What core answers when asked for a JSON Schema', (string) $today['core']['#title']);
+    // Said above the block, so the reader does not take the comment for an
+    // error.
+    $this->assertSame(['note', 'json'], Element::children($today['core']));
+    $this->assertSame('<p>This is core\'s whole answer, not an error: core has no JSON Schema for a config mapping, and the page its comment links says how code implements a schema.</p>', (string) $today['core']['note']['#markup']);
     $this->assertSame($contract->core('data_surface_examples.registration_step3'), $this->document($today['core']));
     $this->assertSame(['$comment'], array_keys($this->document($today['core'])));
     $this->assertSame('The most a plain mapping of config schema could say', (string) $today['derived']['#title']);

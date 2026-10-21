@@ -22,7 +22,15 @@
                         "destructive": false,
                         "idempotent": true
                     },
-                    "version": 1
+                    "version": 1,
+                    "rules": [
+                        0,
+                        1,
+                        2,
+                        3,
+                        4,
+                        5
+                    ]
                 },
                 "type": "object",
                 "properties": {
@@ -87,7 +95,15 @@
                         ],
                         "x-surface": {
                             "locked": false,
-                            "dependsOn": [],
+                            "dependsOn": [
+                                "on_sale.standard",
+                                "on_sale.student",
+                                "on_sale.speaker"
+                            ],
+                            "reads": {
+                                "selling": "on_sale"
+                            },
+                            "declared": true,
                             "within": {
                                 "/allOf/1/properties/speaker": {
                                     "locked": true,
@@ -95,17 +111,233 @@
                                 },
                                 "/allOf/1/properties/speaker/allOf/1/properties/per_order": {
                                     "locked": true,
-                                    "dependsOn": []
+                                    "dependsOn": [
+                                        "selling"
+                                    ]
                                 },
                                 "/allOf/1/properties/speaker/allOf/1/properties/waiting_list": {
                                     "locked": true,
-                                    "dependsOn": []
+                                    "dependsOn": [
+                                        "selling"
+                                    ]
                                 }
                             }
                         }
                     }
                 },
                 "additionalProperties": false,
+                "allOf": [
+                    {
+                        "if": {
+                            "properties": {
+                                "on_sale": {
+                                    "type": "object",
+                                    "properties": {
+                                        "standard": {
+                                            "const": false
+                                        }
+                                    },
+                                    "required": [
+                                        "standard"
+                                    ]
+                                }
+                            },
+                            "required": [
+                                "on_sale"
+                            ]
+                        },
+                        "then": {
+                            "properties": {
+                                "limits": {
+                                    "type": "object",
+                                    "properties": {
+                                        "standard": {
+                                            "type": "object",
+                                            "properties": {
+                                                "per_order": false
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "if": {
+                            "properties": {
+                                "on_sale": {
+                                    "type": "object",
+                                    "properties": {
+                                        "standard": {
+                                            "const": false
+                                        }
+                                    },
+                                    "required": [
+                                        "standard"
+                                    ]
+                                }
+                            },
+                            "required": [
+                                "on_sale"
+                            ]
+                        },
+                        "then": {
+                            "properties": {
+                                "limits": {
+                                    "type": "object",
+                                    "properties": {
+                                        "standard": {
+                                            "type": "object",
+                                            "properties": {
+                                                "waiting_list": false
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "if": {
+                            "properties": {
+                                "on_sale": {
+                                    "type": "object",
+                                    "properties": {
+                                        "student": {
+                                            "const": false
+                                        }
+                                    },
+                                    "required": [
+                                        "student"
+                                    ]
+                                }
+                            },
+                            "required": [
+                                "on_sale"
+                            ]
+                        },
+                        "then": {
+                            "properties": {
+                                "limits": {
+                                    "type": "object",
+                                    "properties": {
+                                        "student": {
+                                            "type": "object",
+                                            "properties": {
+                                                "per_order": false
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "if": {
+                            "properties": {
+                                "on_sale": {
+                                    "type": "object",
+                                    "properties": {
+                                        "student": {
+                                            "const": false
+                                        }
+                                    },
+                                    "required": [
+                                        "student"
+                                    ]
+                                }
+                            },
+                            "required": [
+                                "on_sale"
+                            ]
+                        },
+                        "then": {
+                            "properties": {
+                                "limits": {
+                                    "type": "object",
+                                    "properties": {
+                                        "student": {
+                                            "type": "object",
+                                            "properties": {
+                                                "waiting_list": false
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "if": {
+                            "properties": {
+                                "on_sale": {
+                                    "type": "object",
+                                    "properties": {
+                                        "speaker": {
+                                            "const": false
+                                        }
+                                    },
+                                    "required": [
+                                        "speaker"
+                                    ]
+                                }
+                            },
+                            "required": [
+                                "on_sale"
+                            ]
+                        },
+                        "then": {
+                            "properties": {
+                                "limits": {
+                                    "type": "object",
+                                    "properties": {
+                                        "speaker": {
+                                            "type": "object",
+                                            "properties": {
+                                                "per_order": false
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "if": {
+                            "properties": {
+                                "on_sale": {
+                                    "type": "object",
+                                    "properties": {
+                                        "speaker": {
+                                            "const": false
+                                        }
+                                    },
+                                    "required": [
+                                        "speaker"
+                                    ]
+                                }
+                            },
+                            "required": [
+                                "on_sale"
+                            ]
+                        },
+                        "then": {
+                            "properties": {
+                                "limits": {
+                                    "type": "object",
+                                    "properties": {
+                                        "speaker": {
+                                            "type": "object",
+                                            "properties": {
+                                                "waiting_list": false
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                ],
                 "$defs": {
                     "event.sales.on_sale": {
                         "title": "event.sales.on_sale",
@@ -164,7 +396,9 @@
                                 "default": 4,
                                 "x-surface": {
                                     "locked": false,
-                                    "dependsOn": []
+                                    "dependsOn": [
+                                        "selling"
+                                    ]
                                 }
                             },
                             "waiting_list": {
@@ -176,11 +410,21 @@
                                 "default": false,
                                 "x-surface": {
                                     "locked": false,
-                                    "dependsOn": []
+                                    "dependsOn": [
+                                        "selling"
+                                    ]
                                 }
                             }
                         },
-                        "additionalProperties": false
+                        "additionalProperties": false,
+                        "x-surface": {
+                            "ports": {
+                                "selling": {
+                                    "type": "boolean",
+                                    "required": false
+                                }
+                            }
+                        }
                     },
                     "event.sales.limits": {
                         "title": "event.sales.limits",
@@ -215,6 +459,38 @@
                     }
                 }
             }
+        }
+    ],
+    "allowed": [
+        {
+            "path": "configure#/allOf/0",
+            "change": "rule added",
+            "reason": "Ports on an entry (2026-10-21): each ticket type's limits now read whether the type is on sale, and do not apply while it is off. Approved by the owner; the stored limits are kept, and only the examples read this contract."
+        },
+        {
+            "path": "configure#/allOf/1",
+            "change": "rule added",
+            "reason": "Ports on an entry (2026-10-21): each ticket type's limits now read whether the type is on sale, and do not apply while it is off. Approved by the owner; the stored limits are kept, and only the examples read this contract."
+        },
+        {
+            "path": "configure#/allOf/2",
+            "change": "rule added",
+            "reason": "Ports on an entry (2026-10-21): each ticket type's limits now read whether the type is on sale, and do not apply while it is off. Approved by the owner; the stored limits are kept, and only the examples read this contract."
+        },
+        {
+            "path": "configure#/allOf/3",
+            "change": "rule added",
+            "reason": "Ports on an entry (2026-10-21): each ticket type's limits now read whether the type is on sale, and do not apply while it is off. Approved by the owner; the stored limits are kept, and only the examples read this contract."
+        },
+        {
+            "path": "configure#/allOf/4",
+            "change": "rule added",
+            "reason": "Ports on an entry (2026-10-21): each ticket type's limits now read whether the type is on sale, and do not apply while it is off. Approved by the owner; the stored limits are kept, and only the examples read this contract."
+        },
+        {
+            "path": "configure#/allOf/5",
+            "change": "rule added",
+            "reason": "Ports on an entry (2026-10-21): each ticket type's limits now read whether the type is on sale, and do not apply while it is off. Approved by the owner; the stored limits are kept, and only the examples read this contract."
         }
     ]
 }
