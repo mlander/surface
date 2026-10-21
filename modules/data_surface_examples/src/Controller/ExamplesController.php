@@ -71,6 +71,11 @@ final class ExamplesController extends ControllerBase {
   public const REACT = 'data_surface_react';
 
   /**
+   * The module serving the OpenAPI document of every operation's endpoints.
+   */
+  public const OPENAPI = 'data_surface_openapi';
+
+  /**
    * Constructs the controller.
    *
    * @param \Drupal\Core\Extension\ModuleExtensionList $moduleList
@@ -300,7 +305,7 @@ final class ExamplesController extends ControllerBase {
       6 => [
         'title' => $this->t('every door'),
         'sentence' => $this->t('The same contract through every door. The decoupled page is the "In React" links above: the contract served as JSON and drawn by a React app. ECA and an AI agent, through the tool of example 5, are yours to show on your own site.'),
-        'items' => [],
+        'items' => [$this->openApi()],
       ],
       7 => [
         'title' => $this->t('a rule written as data'),
@@ -389,6 +394,24 @@ final class ExamplesController extends ControllerBase {
     }
     $url = Url::fromRoute('data_surface_react.page', ['resource' => $resource, 'operation' => 'configure']);
     return Link::fromTextAndUrl($this->t('In React: @path', ['@path' => $url->toString()]), $url)->toRenderable();
+  }
+
+  /**
+   * Links the OpenAPI document, or says where it will be.
+   *
+   * Every example's endpoints, described for any OpenAPI client; the
+   * examples do not depend on that module, so while it is off the path is
+   * named rather than linked.
+   *
+   * @return array|\Drupal\Core\StringTranslation\TranslatableMarkup
+   *   A link render array, or the sentence naming the path.
+   */
+  protected function openApi(): array|TranslatableMarkup {
+    if (!$this->moduleHandler()->moduleExists(self::OPENAPI)) {
+      return $this->t('As OpenAPI at /surface-api/openapi.json, once @module is enabled.', ['@module' => self::OPENAPI]);
+    }
+    $url = Url::fromRoute('data_surface_openapi.json');
+    return Link::fromTextAndUrl($this->t('As OpenAPI: @path', ['@path' => $url->toString()]), $url)->toRenderable();
   }
 
   /**

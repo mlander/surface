@@ -4466,6 +4466,100 @@ published yet. (`ContractEmitter::CONTRACT`, `ContractEmitter::settled()`,
 `ResourceApiController::VERSION_HEADER`, `CONTRACT` and
 `assertContract()` in `app/src/contract.ts`)
 
+### An OpenAPI document is one more door
+
+`data_surface_openapi` serves `GET /surface-api/openapi.json` (and
+`.yaml`): an OpenAPI 3.1 document of the five endpoints of
+`data_surface_react` for every operation that can be asked on its own
+and needs no subject, so any OpenAPI client, generator or UI drives a
+resource without reading these pages. Decided 2026-10-21.
+
+- **3.1, because the schemas are JSON Schema 2020-12.** A 3.1 schema
+  object is a 2020-12 schema, so each operation's full schema goes in as
+  emitted, `x-surface` included. 3.0 has no `$defs`, `if`/`then`,
+  `const`, type arrays or `unevaluatedProperties`. A 3.0 export would
+  have to drop or rewrite the conditionals, and the documents are
+  [never stricter than the runtime](#two-documents-never-stricter-than-the-runtime),
+  so it could only widen: every enumerated and declared conditional
+  gone, `const` as a one-value `enum`, a type array as `nullable`. That
+  is a possible later export, judged by the contract diff's
+  compatibility classes (a change that only widens), not this door.
+- **Its own route, not the contributed `openapi` module.** Its stable
+  release (8.x-2.3, for Drupal 10 and 11) writes Swagger 2.0, and its
+  3.0.x branch, which writes `openapi: 3.1.0`, has no release and
+  depends on core patches. A generator plugin for it is open, for when a
+  3.1 release exists; the submodule would declare it optional and keep
+  its own route.
+- **Built for no account**, as the tool definitions are
+  ([A static tool definition is no account's](#a-static-tool-definition-is-no-accounts)):
+  each operation is built with `buildDeclared()` as the anonymous
+  account, every key as declared, each one an access answer could lock
+  or leave out marked `x-surface.access: "live"`. So the document is
+  the same for every account and cached under the tags of what it was
+  read from: discovery's index and entries, every build and option list,
+  the site's name, the modules and the anonymous role. It drops the
+  account's cache contexts, since it read none. `info.description` and
+  the top `x-surface` say that the per-request GET and `/schema` answer
+  for the account that asks; `info.version` is the contract's version.
+  The route is open to every account: what it states is what the code
+  and the site's structure declare, the shape a module's source already
+  says, never a stored value; what an account may do is the per-request
+  documents' to say, and they still refuse an account the operation's
+  permission does not admit.
+- **The full schema as components.** Each operation's full schema, no
+  widget hints and no `$id`, is split: each def a component named by its
+  def id (a character a component name does not allow written `_`), the
+  root the operation's values component, and every def pointer, in a
+  `$ref` or in `x-surface.variants`, pointed at its component. Nothing
+  else in a schema changes. Two operations share a component when they
+  describe the def the same way; one that differs keeps its own, its
+  name suffixed and its `title` still the def id. Put back together,
+  the components are the full schema byte for byte, which a test holds
+  for every operation.
+- **An update takes a patch.** A key an update leaves out keeps what is
+  stored, so its validate and submit bodies take the values component
+  with every `required` dropped where dropping only widens: never inside
+  an `if`, a `not`, a `oneOf` or a `contains`, never inside a list's
+  `items` (an item is sent whole). A create takes the full schema: it
+  requires what the resource requires, as its tool does
+  ([Required is the resource's](#required-is-the-resources-and-an-update-tool-requires-nothing-at-its-door)).
+- **Facts to HTTP.** A read only operation has its two GETs alone. How
+  the operation behaves is stated beside each call as `x-surface-kind`,
+  and on the submit as `x-surface-idempotent`, `x-surface-destructive`
+  and `x-surface-creates` (on a read's GET contract); its label is the
+  summary and its description the description. `creates` does not pick
+  `201`: the submit answers 200 whether it refused, wrote or created,
+  with `created` saying where a created thing lives, and the document
+  says what the endpoint answers. *Open:* a committed create answering
+  `201`, a change to the endpoint and its app.
+- **The envelope and the result as components.** `Contract` (the served
+  document: `resource`, `operation`, `label`, `schema`, `values`,
+  `stale`, `outputs`, `fingerprint`, `discarded`), `FullSchema`,
+  `Result` (the one result, `{path, code, message}` entries in
+  `ResultEntry`, `notes` among them), `SubmitResult` and `Created`
+  are shared. A refusal is a 200 `Result` with `ok: false`; a 403 is
+  Drupal's own error page and has no body schema.
+- **Permission as security.** The session cookie is an `apiKey` scheme,
+  and basic auth an `http` one where `basic_auth` is on. Each operation
+  requires one of them, or none when the anonymous role holds its
+  permission, and names the permission as `x-drupal-permission`. The
+  POSTs take `X-CSRF-Token`, required by core only with a session
+  cookie.
+- **Examples from the declared defaults.** A submit's example is the
+  defaults the operation is built with, the tool listing's source,
+  accepted and validated by the pipeline with nothing stored, with no
+  null, no empty map and no locked key; none when no default is declared
+  or the pipeline refuses them (an update's required key with no default
+  aside, which keeps what is stored).
+- **An operation with a subject is listed, not described.** Its
+  parameters arrive in the query string, but its schema depends on the
+  subject, so the top `x-surface.withASubject` names it with its
+  parameters. *Open:* such an operation as a path, its subject's
+  parameters stated and its schema the neutral build's.
+
+(`OpenApiDocument`, `SchemaComponents`, `OpenApiController`,
+`OpenApiDocumentTest`, `SchemaComponentsTest`, `OpenApiEndpointTest`)
+
 ## Evolution
 
 ### A resource evolves in the open

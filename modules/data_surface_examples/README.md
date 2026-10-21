@@ -1044,7 +1044,9 @@ contract as it stands.
 The same contract through every door. The decoupled page is the one
 above, [In React](#in-react): the contract served as JSON and drawn by a
 React app. ECA and an AI agent, through the tool of example 5, are yours
-to show on your own site.
+to show on your own site. With `data_surface_openapi` enabled, the
+landing page links `/surface-api/openapi.json`, every example's
+endpoints described for any OpenAPI client.
 
 ## One small resource per concept
 

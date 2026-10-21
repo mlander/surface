@@ -344,6 +344,10 @@ their configuration may change without a deprecation path.
   endpoint that rehearses the write, and a React app that renders the
   form from it at `/surface-react/{resource}/{operation}`. Its built app
   is committed, so it needs no Node.
+- **Data Surface - OpenAPI** (`data_surface_openapi`): an OpenAPI 3.1
+  document of every operation's endpoints at `/surface-api/openapi.json`
+  (and `.yaml`), each operation's full schema as components, built for
+  no account so it is the same for everyone. Needs `data_surface_react`.
 
 Each submodule's README says what it shows, how to try it, and what gates
 it.
@@ -388,6 +392,7 @@ nothing on it is needed to build.
 | [Value semantics](docs/semantics.md) | Configured or not, the coercion table (the Tool API's), secrets, stale values, type mismatches, required, locked keys. |
 | [The Tool API bridge](modules/data_surface_tool/README.md) | One tool per operation and a read tool beside it, who may run them, the contract panel, and what MCP and the Tool API are told. |
 | [The React app](modules/data_surface_react/README.md) | The served contract's endpoints and the React form drawn from them. |
+| [The OpenAPI document](modules/data_surface_openapi/README.md) | Every operation's endpoints as OpenAPI 3.1, for any OpenAPI client, generator or UI. |
 | [Installation: Tool](docs/installation.md#tool) | Enabling the tool bridge, through which an agent, MCP and Drush call each operation. |
 | [One resource, every door](docs/every-door/index.html) | An interactive 3D model: a resource, its attached structures and an alter, the doors that read its contract, and the same inputs as they are written today. Open the file in a browser. |
 

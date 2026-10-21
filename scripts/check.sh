@@ -59,8 +59,9 @@ $config['globRoot'] = $module;
 // other readers' words, quoted as they wrote them (tool names, French).
 // The contract baselines are generated from code cspell already reads,
 // and an allowance in one names the path it accepted as it was, in the
-// old spelling when the change was a rename.
-$config['ignorePaths'] = ['.git/**', '**/node_modules/**', '.cspell-project-words.txt', 'modules/data_surface_react/dist/**', '**/package-lock.json', 'docs/reviews-*/**', 'tests/fixtures/contracts/**'];
+// old spelling when the change was a rename. The OpenAPI 3.1 schema is the
+// OpenAPI Initiative's file, copied unchanged.
+$config['ignorePaths'] = ['.git/**', '**/node_modules/**', '.cspell-project-words.txt', 'modules/data_surface_react/dist/**', '**/package-lock.json', 'docs/reviews-*/**', 'tests/fixtures/contracts/**', 'tests/fixtures/openapi/oas-*.json'];
 foreach ($config['dictionaryDefinitions'] as &$dictionary) {
   $dictionary['path'] = $core . '/' . ltrim($dictionary['path'], './');
 }

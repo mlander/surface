@@ -1,0 +1,30 @@
+{
+    "/surface-api/first.newsletter/configure/submit": {
+        "values": {
+            "frequency": "weekly",
+            "max_recipients": 500
+        }
+    },
+    "/surface-api/first.store/configure/submit": {
+        "values": {
+            "country": "CA",
+            "region": "CA-ON"
+        }
+    },
+    "/surface-api/tool_test.cabinet/edit/submit": {
+        "values": {
+            "label": "Cabinet",
+            "drawers": 4,
+            "lock": "key",
+            "lock_settings": {
+                "keys": 2
+            }
+        }
+    },
+    "/surface-api/tool_test.specimen/configure/submit": {
+        "values": {
+            "name": "specimen",
+            "count": 5
+        }
+    }
+}
