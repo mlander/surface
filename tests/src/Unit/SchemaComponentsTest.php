@@ -15,7 +15,8 @@ use PHPUnit\Framework\Attributes\Group;
  * operation's values component, and every def pointer, in a `$ref` or an
  * `x-surface.variants` map, points at its component. Two documents share
  * a def they describe the same way and keep one each where they differ.
- * A patch drops `required` only where dropping it widens.
+ * A patch drops `required` only where dropping it widens, and a def it
+ * reaches has a patch of its own only where that patch differs.
  *
  * @see docs/decisions.md#an-openapi-document-is-one-more-door
  */
@@ -136,6 +137,75 @@ class SchemaComponentsTest extends UnitTestCase {
     $this->assertSame('#/components/schemas/test.contact.patch', $components->get('test.ticket.free.patch')['properties']['holder']['$ref']);
     $this->assertSame(['name'], $components->get('test.contact')['required'], 'The full component keeps its own.');
     $this->assertSame($patch, $components->patch($root), 'Written once.');
+  }
+
+  /**
+   * Tests a def a patch reaches is patched only where its patch differs.
+   *
+   * A def that drops a `required`, or reaches one that does, has a patch;
+   * one that would be the same is pointed at as it is, and has none. A
+   * request body's patch is written even when it is the same schema.
+   */
+  public function testPatchOnlyWhereItDiffers(): void {
+    $schema = [
+      'type' => 'object',
+      'properties' => [
+        'code' => ['$ref' => '#/$defs/test.code'],
+        'wrapper' => ['$ref' => '#/$defs/test.wrapper'],
+        'loop' => ['$ref' => '#/$defs/test.loop'],
+      ],
+      '$defs' => [
+        // A named scalar shape: nothing to drop.
+        'test.code' => ['title' => 'test.code', 'type' => 'string', 'maxLength' => 8],
+        // Requires nothing itself, but reaches a def that does.
+        'test.wrapper' => [
+          'title' => 'test.wrapper',
+          'type' => 'object',
+          'properties' => ['holder' => ['$ref' => '#/$defs/test.contact'], 'code' => ['$ref' => '#/$defs/test.code']],
+        ],
+        'test.contact' => [
+          'title' => 'test.contact',
+          'type' => 'object',
+          'properties' => ['name' => ['type' => 'string']],
+          'required' => ['name'],
+        ],
+        // Reaches itself and requires nothing: the same in a patch.
+        'test.loop' => [
+          'title' => 'test.loop',
+          'type' => 'object',
+          'properties' => ['next' => ['$ref' => '#/$defs/test.loop']],
+        ],
+      ],
+    ];
+    $components = new SchemaComponents();
+    $root = $components->add($schema, 'thing');
+    $patch = $components->patch($root);
+    $names = array_keys($components->all());
+    $expected = [
+      'test.code',
+      'test.contact',
+      'test.contact.patch',
+      'test.loop',
+      'test.wrapper',
+      'test.wrapper.patch',
+      'thing',
+      'thing.patch',
+    ];
+    $this->assertSame($expected, $names, 'No patch of a def that would be the same.');
+    $properties = $components->get($patch)['properties'];
+    $this->assertSame('#/components/schemas/test.code', $properties['code']['$ref'], 'Pointed at as it is.');
+    $this->assertSame('#/components/schemas/test.loop', $properties['loop']['$ref'], 'A def that reaches itself and drops nothing.');
+    $this->assertSame('#/components/schemas/test.wrapper.patch', $properties['wrapper']['$ref'], 'A def reaching one that drops a required.');
+    $wrapper = $components->get('test.wrapper.patch')['properties'];
+    $this->assertSame('#/components/schemas/test.contact.patch', $wrapper['holder']['$ref']);
+    $this->assertSame('#/components/schemas/test.code', $wrapper['code']['$ref']);
+
+    // A request body's own patch is written even when it drops nothing,
+    // and points at itself where its def did.
+    $loop = $components->patch('test.loop');
+    $this->assertSame('test.loop.patch', $loop);
+    $this->assertSame('#/components/schemas/test.loop.patch', $components->get($loop)['properties']['next']['$ref']);
+    $this->assertSame('#/components/schemas/test.loop', $components->get($patch)['properties']['loop']['$ref'], 'A patch written before still points at the def, the same schema.');
   }
 
 }

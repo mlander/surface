@@ -25,11 +25,12 @@ final class OpenApiDescription implements CacheableDependencyInterface {
    * @param \Drupal\Core\Cache\CacheableMetadata $cacheability
    *   What it was read from: discovery, every build and option list, the
    *   site's name and the roles' grants; never an account.
-   * @param array<string, array{resource: string, operation: string, schema: string, request: string|null}> $operations
+   * @param array<string, array{resource: string, operation: string, schema: string, request: string|null, outputs: string|null}> $operations
    *   Each operation described, by `<resource>:<operation>`: its
    *   resource and operation ids, the component its full schema became,
-   *   and the component its request bodies take (the patch, for one that
-   *   changes what exists), NULL for a read.
+   *   the component its request bodies take (the patch, for one that
+   *   changes what exists), NULL for a read, and the component its
+   *   declared outputs became, NULL when it declares none.
    */
   public function __construct(
     public readonly array $document,
