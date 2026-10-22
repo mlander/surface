@@ -33,7 +33,15 @@ operation that needs a subject is listed under the top
   keyword where the emitter wrote it. An update's validate and submit
   bodies take its patch (`first.newsletter.configure.patch`), which
   requires nothing, since a key left out keeps what is stored; a
-  create's take the full schema.
+  create's take the full schema. A def the patch reaches has a patch
+  of its own only where it differs. Declared outputs are a component
+  too (`<values>.outputs`).
+- **The resource in the answers.** Every answer composes its shared
+  envelope with the operation's components: `values` is the values
+  component or any object, and `schema` and `outputs` show the
+  component as their example. The `/schema` answer's example is the
+  full schema built for no account, so Swagger UI and Redoc show the
+  resource's schema under that endpoint.
 - **Facts.** `x-surface-kind` on every call; `x-surface-idempotent`,
   `x-surface-destructive` and `x-surface-creates` on the submit. The
   summary is the operation's label, the description its description.
@@ -64,9 +72,11 @@ module, and what is open.
 
 `OpenApiDocumentTest` (kernel: valid against the official OpenAPI 3.1
 schema in `tests/fixtures/openapi/`, every reference resolves, the
-components are the full schemas byte for byte, the logbook's and the
-newsletter's facts, the security requirement, the cacheability, the
-examples pinned in `tests/fixtures/openapi/examples.json`),
-`SchemaComponentsTest` (unit: components, sharing, patches) and
+components are the full schemas and outputs byte for byte, every
+answer shows the operation's components, a patch only where one is
+needed, the logbook's and the newsletter's facts, the security
+requirement, the cacheability, the examples pinned in
+`tests/fixtures/openapi/examples.json`), `SchemaComponentsTest` (unit:
+components, sharing, patches, a patch only where it differs) and
 `OpenApiEndpointTest` (functional: the same document for an account and
 for anonymous, as JSON and as YAML).

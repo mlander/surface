@@ -29,7 +29,15 @@ use Drupal\data_surface\Contract\SchemaResolver;
  * writes that schema from the full one by dropping every `required` it
  * can drop without making anything stricter: never inside an `if`, a
  * `not`, a `oneOf` or a `contains`, where dropping one would narrow, and
- * never inside a list's `items`, since an item is sent whole.
+ * never inside a list's `items`, since an item is sent whole. A key left
+ * out of an attached child or a chosen variant keeps what is stored too
+ * (the pipeline accepts a child against what it holds), so a def the
+ * patch reaches where it may loosen has a patch of its own, but only
+ * when that patch differs from the def: when the def, or a def it
+ * reaches the same way, drops a `required`. Any other def is pointed at
+ * as it is, so a patch is written only where a request body, or a patch
+ * one reaches, needs it. The request body's own patch is always written,
+ * so an update's body is named `<values>.patch` whatever its content.
  *
  * Decision: see docs/decisions.md#an-openapi-document-is-one-more-door.
  */
@@ -75,11 +83,20 @@ final class SchemaComponents {
   protected array $identities = [];
 
   /**
-   * Each component's patch, once written.
+   * The component a patch points at for each component, once decided.
+   *
+   * Its patch, or itself when its patch would be the same schema.
    *
    * @var array<string, string>
    */
   protected array $patches = [];
+
+  /**
+   * Whether each component's patch differs from it, once decided.
+   *
+   * @var array<string, bool>
+   */
+  protected array $differs = [];
 
   /**
    * Adds one full schema: its defs, then its root.
@@ -122,23 +139,98 @@ final class SchemaComponents {
   }
 
   /**
-   * Writes a component's patch, and the patches it points at.
+   * Writes a request body's patch, and the patches it points at.
    *
    * @param string $name
-   *   The component.
+   *   The component a request body would take whole.
    *
    * @return string
    *   The patch's component name.
    */
   public function patch(string $name): string {
-    if (isset($this->patches[$name])) {
+    if (isset($this->patches[$name]) && $this->patches[$name] !== $name) {
       return $this->patches[$name];
     }
-    $patch = $this->unique($name . self::PATCH);
-    $this->patches[$name] = $patch;
-    $this->schemas[$patch] = [];
-    $this->schemas[$patch] = $this->loosened($this->schemas[$name]);
-    return $patch;
+    $written = $this->decide($name);
+    if ($this->patches[$name] === $name) {
+      // A request body's patch is written even when it is the same schema.
+      $this->patches[$name] = $this->reserved($name . self::PATCH);
+      $written[] = $name;
+    }
+    foreach ($written as $component) {
+      $survey = [];
+      $this->schemas[$this->patches[$component]] = $this->loosened($this->schemas[$component], $survey);
+    }
+    return $this->patches[$name];
+  }
+
+  /**
+   * Decides which components a patch reaches need a patch of their own.
+   *
+   * A component needs one when it drops a `required` where it may loosen,
+   * or reaches, where it may loosen, a component that needs one. Decided
+   * for every component reached at once, so a def that reaches itself is
+   * decided too.
+   *
+   * @param string $name
+   *   The component a patch is written from.
+   *
+   * @return string[]
+   *   The components given a patch's name here, whose patch is still to
+   *   be written.
+   */
+  protected function decide(string $name): array {
+    $reached = [];
+    $pending = [$name];
+    while ($pending !== []) {
+      $component = array_shift($pending);
+      if (isset($reached[$component]) || isset($this->differs[$component])) {
+        continue;
+      }
+      $survey = ['dropped' => FALSE, 'reached' => []];
+      $this->loosened($this->schemas[$component], $survey);
+      $reached[$component] = $survey;
+      array_push($pending, ...$survey['reached']);
+    }
+    $differs = array_map(static fn (array $survey): bool => $survey['dropped'], $reached);
+    do {
+      $changed = FALSE;
+      foreach ($reached as $component => $survey) {
+        if ($differs[$component]) {
+          continue;
+        }
+        foreach ($survey['reached'] as $target) {
+          if ($differs[$target] ?? $this->differs[$target]) {
+            $differs[$component] = $changed = TRUE;
+            break;
+          }
+        }
+      }
+    } while ($changed);
+    $this->differs += $differs;
+    $written = [];
+    foreach ($differs as $component => $differ) {
+      $this->patches[$component] = $differ ? $this->reserved($component . self::PATCH) : $component;
+      if ($differ) {
+        $written[] = $component;
+      }
+    }
+    return $written;
+  }
+
+  /**
+   * Reserves a name no component has yet, to be written later.
+   *
+   * @param string $name
+   *   The name wanted.
+   *
+   * @return string
+   *   The name given.
+   */
+  protected function reserved(string $name): string {
+    $name = $this->unique($name);
+    $this->schemas[$name] = [];
+    return $name;
   }
 
   /**
@@ -339,38 +431,43 @@ final class SchemaComponents {
    *
    * @param array $schema
    *   A schema in a place where dropping `required` only widens.
+   * @param array{dropped?: bool, reached?: string[]} $survey
+   *   What it found, changed in place: whether it dropped a `required`,
+   *   and each component it reached where it may loosen.
    *
    * @return array
    *   The schema, with no `required` there, and every component it points
-   *   at from there pointed at as its patch.
+   *   at from there pointed at as decided (decide()).
    */
-  protected function loosened(array $schema): array {
+  protected function loosened(array $schema, array &$survey): array {
     if (isset($schema['required']) && is_array($schema['required']) && array_is_list($schema['required'])) {
       unset($schema['required']);
+      $survey['dropped'] = TRUE;
     }
     if (isset($schema['$ref']) && is_string($schema['$ref']) && str_starts_with($schema['$ref'], self::POINTER)) {
       $target = substr($schema['$ref'], strlen(self::POINTER));
       if (!str_contains($target, '/') && isset($this->schemas[$target])) {
-        $schema['$ref'] = self::POINTER . $this->patch($target);
+        $survey['reached'][] = $target;
+        $schema['$ref'] = self::POINTER . ($this->patches[$target] ?? $target);
       }
     }
     foreach (self::PATCH_MAPS as $keyword) {
       if (isset($schema[$keyword]) && is_array($schema[$keyword])) {
         foreach ($schema[$keyword] as $key => $sub) {
-          $schema[$keyword][$key] = is_array($sub) ? $this->loosenedPart($sub) : $sub;
+          $schema[$keyword][$key] = is_array($sub) ? $this->loosenedPart($sub, $survey) : $sub;
         }
       }
     }
     foreach (self::PATCH_LISTS as $keyword) {
       if (isset($schema[$keyword]) && is_array($schema[$keyword])) {
         foreach ($schema[$keyword] as $index => $sub) {
-          $schema[$keyword][$index] = is_array($sub) ? $this->loosenedPart($sub) : $sub;
+          $schema[$keyword][$index] = is_array($sub) ? $this->loosenedPart($sub, $survey) : $sub;
         }
       }
     }
     foreach (self::PATCH_ONE as $keyword) {
       if (isset($schema[$keyword]) && is_array($schema[$keyword])) {
-        $schema[$keyword] = $this->loosenedPart($schema[$keyword]);
+        $schema[$keyword] = $this->loosenedPart($schema[$keyword], $survey);
       }
     }
     return $schema;
@@ -381,14 +478,16 @@ final class SchemaComponents {
    *
    * @param array $schema
    *   The schema.
+   * @param array{dropped?: bool, reached?: string[]} $survey
+   *   As loosened() takes it.
    *
    * @return array|\stdClass
    *   As loosened() answers; a schema left with nothing in it (a `then`
    *   that only required) is the empty object, which allows anything, so
    *   it is written `{}` and not `[]`.
    */
-  protected function loosenedPart(array $schema): array|\stdClass {
-    $loosened = $this->loosened($schema);
+  protected function loosenedPart(array $schema, array &$survey): array|\stdClass {
+    $loosened = $this->loosened($schema, $survey);
     return $loosened === [] ? new \stdClass() : $loosened;
   }
 

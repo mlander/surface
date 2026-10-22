@@ -51,6 +51,12 @@ use Symfony\Component\HttpFoundation\Request;
  *   the operation's values component. A create's submit and validate take
  *   it as it is; an update's take its patch, since a key left out keeps
  *   what is stored.
+ * - **The resource in every answer.** Each answer composes its shared
+ *   envelope with the operation's components: `values` is the values
+ *   component or any object (a contract shows a key that holds nothing
+ *   as null), and `schema` and `outputs`, JSON Schema documents, are
+ *   objects whose example is the component. Declared outputs are a
+ *   component of their own.
  * - **Facts to HTTP.** A read only operation has its two GETs alone; how
  *   the operation behaves is stated as `x-surface-kind`,
  *   `x-surface-idempotent`, `x-surface-destructive` and
@@ -281,7 +287,7 @@ final class OpenApiDocument {
    * @param \Drupal\Core\Cache\CacheableMetadata $cacheability
    *   What the document was read from; added to.
    *
-   * @return array{0: array<string, array>, 1: array{resource: string, operation: string, schema: string, request: string|null}}
+   * @return array{0: array<string, array>, 1: array{resource: string, operation: string, schema: string, request: string|null, outputs: string|null}}
    *   The paths, and what the operation became.
    */
   protected function operation(ResourceDefinition $definition, OperationDefinition $operation, SchemaComponents $components, CacheableMetadata $cacheability): array {
@@ -290,6 +296,9 @@ final class OpenApiDocument {
     $full = $this->emitter->emitFull($built, $definition->id, $operation->id, $operation->label, operation: $operation->facts());
     $cacheability->addCacheableDependency($built)->addCacheableDependency($full);
     $schema = $components->add($full->document['schema'], $definition->id . '.' . $operation->id);
+    $outputs = is_array($full->document['outputs'] ?? NULL)
+      ? $components->add($full->document['outputs'], $definition->id . '.' . $operation->id . '.outputs')
+      : NULL;
     $kind = $operation->kind();
     $request = match ($kind) {
       OperationDefinition::READ => NULL,
@@ -319,6 +328,14 @@ final class OpenApiDocument {
     $token = [['$ref' => '#/components/parameters/CsrfToken']];
     $declared = ['$ref' => SchemaComponents::POINTER . $schema];
     $id = $definition->id . ':' . $operation->id;
+    // The resource in the answers: its values, and its schema documents
+    // shown by example.
+    $documents = ['schema' => static::document($components->get($schema), (string) $this->t('JSON Schema 2020-12; its example is the full schema built for no account.'))];
+    if ($outputs !== NULL) {
+      $documents['outputs'] = static::document($components->get($outputs), (string) $this->t('JSON Schema 2020-12; its example is the output schema.'));
+    }
+    $contractValues = $this->shaped($schema, (string) $this->t('Values not valid against it: a key that holds nothing is null.'));
+    $resultValues = $this->shaped($schema, (string) $this->t('Values not valid against it: a refused run answers what it accepted.'));
     $endpoints = [];
     $endpoints['contract'] = $common + [
       'operationId' => $id . ':contract',
@@ -326,7 +343,10 @@ final class OpenApiDocument {
       'description' => $this->joined($description, (string) $this->t('The schema for these answers, narrowed for the account that asks and for the stored values, with the values, the stale paths and the fingerprint a submit may send back. Never cached.')),
     ] + ($kind === OperationDefinition::READ ? $facts : []) + [
       'responses' => [
-        '200' => $this->answer((string) $this->t('The contract.'), static::contract(['values', 'stale', 'fingerprint'])),
+        '200' => $this->answer(
+          (string) $this->t('The contract.'),
+          static::composed('Contract', ['values' => $contractValues] + $documents, ['values', 'stale', 'fingerprint']),
+        ),
       ] + $denied,
       'x-surface-schema' => $declared,
     ];
@@ -335,7 +355,16 @@ final class OpenApiDocument {
       'summary' => (string) $this->t('@label: the full schema', ['@label' => $label]),
       'description' => $this->joined($description, (string) $this->t('The full schema for any values, for the account that asks: its static access applied, a runtime answer marked. Built for no account, it is the component x-surface-schema names. Cacheable.')),
       'responses' => [
-        '200' => $this->answer((string) $this->t('The full schema.'), ['$ref' => SchemaComponents::POINTER . 'FullSchema']),
+        '200' => $this->answer(
+          (string) $this->t('The full schema.'),
+          static::composed('FullSchema', $documents),
+          [
+            'declared' => [
+              'summary' => (string) $this->t('Built for no account'),
+              'value' => static::fullSchema($full->document, $components, $schema, $outputs),
+            ],
+          ],
+        ),
       ] + $denied,
       'x-surface-schema' => $declared,
     ];
@@ -352,7 +381,7 @@ final class OpenApiDocument {
         'responses' => [
           '200' => $this->answer(
             (string) $this->t('The contract, re-narrowed.'),
-            static::contract(['values', 'stale', 'discarded']),
+            static::composed('Contract', ['values' => $contractValues] + $documents, ['values', 'stale', 'discarded']),
           ),
         ] + $malformed + $denied,
       ];
@@ -363,7 +392,7 @@ final class OpenApiDocument {
         'parameters' => $token,
         'requestBody' => $this->body($request, $kind, FALSE, NULL),
         'responses' => [
-          '200' => $this->answer((string) $this->t('The result.'), ['$ref' => SchemaComponents::POINTER . 'Result']),
+          '200' => $this->answer((string) $this->t('The result.'), static::composed('Result', ['values' => $resultValues])),
         ] + $malformed + $denied,
       ];
       $written = $kind === OperationDefinition::CREATE
@@ -377,7 +406,12 @@ final class OpenApiDocument {
         'parameters' => $token,
         'requestBody' => $this->body($request, $kind, TRUE, $this->example($built, $full->document['schema'], $kind)),
         'responses' => [
-          '200' => $this->answer((string) $this->t('The result, then outputs, contract and created.'), ['$ref' => SchemaComponents::POINTER . 'SubmitResult']),
+          '200' => $this->answer(
+            (string) $this->t('The result, then outputs, contract and created.'),
+            static::composed('SubmitResult', ['values' => $resultValues] + ($outputs === NULL ? [] : [
+              'outputs' => $this->shaped($outputs, (string) $this->t('Outputs not valid against it: a refused run answers none.')),
+            ])),
+          ),
         ] + $malformed + $denied,
       ];
     }
@@ -393,26 +427,97 @@ final class OpenApiDocument {
       'operation' => $operation->id,
       'schema' => $schema,
       'request' => $request,
+      'outputs' => $outputs,
     ];
     return [$paths, $entry];
   }
 
   /**
-   * Writes the contract's schema, with the keys an endpoint always answers.
+   * Writes an answer's schema: a shared envelope with the operation in it.
    *
+   * @param string $envelope
+   *   The shared component the answer is.
+   * @param array<string, array> $properties
+   *   The envelope's properties typed for the operation.
    * @param string[] $required
-   *   The keys beside the four every contract carries.
+   *   The keys this endpoint always answers, beside the envelope's own.
    *
    * @return array
    *   The schema.
    */
-  protected static function contract(array $required): array {
+  protected static function composed(string $envelope, array $properties, array $required = []): array {
+    $own = ['type' => 'object', 'properties' => $properties];
+    if ($required !== []) {
+      $own['required'] = $required;
+    }
+    return ['allOf' => [['$ref' => SchemaComponents::POINTER . $envelope], $own]];
+  }
+
+  /**
+   * Writes the schema of values shaped as a component.
+   *
+   * Either the component, or any object: an answer's values need not be
+   * valid against it (a contract shows a key that holds nothing as null,
+   * a refused run answers what it accepted), and an answer's schema is
+   * never stricter than the endpoint.
+   *
+   * @param string $component
+   *   The component.
+   * @param string $otherwise
+   *   What the values are when they are not valid against it.
+   *
+   * @return array
+   *   The schema.
+   */
+  protected function shaped(string $component, string $otherwise): array {
     return [
-      'allOf' => [
-        ['$ref' => SchemaComponents::POINTER . 'Contract'],
-        ['type' => 'object', 'required' => $required],
+      'anyOf' => [
+        ['$ref' => SchemaComponents::POINTER . $component],
+        ['type' => 'object', 'description' => $otherwise],
       ],
     ];
+  }
+
+  /**
+   * Writes the schema of a JSON Schema document an answer carries.
+   *
+   * An object, with the component as its example: a `$ref` to the JSON
+   * Schema meta-schema would be fetched from json-schema.org by a linter
+   * or a UI, and Redocly's reads it as a malformed schema object.
+   *
+   * @param array $component
+   *   The component.
+   * @param string $description
+   *   What the document is.
+   *
+   * @return array
+   *   The schema.
+   */
+  protected static function document(array $component, string $description): array {
+    return ['type' => 'object', 'description' => $description, 'examples' => [$component]];
+  }
+
+  /**
+   * Writes the full schema endpoint's answer, built for no account.
+   *
+   * @param array $document
+   *   The full schema document, as emitted.
+   * @param \Drupal\data_surface_openapi\SchemaComponents $components
+   *   The components.
+   * @param string $schema
+   *   The values component.
+   * @param string|null $outputs
+   *   The outputs component, or NULL when none are declared.
+   *
+   * @return array
+   *   The document, its schema and outputs as their components.
+   */
+  protected static function fullSchema(array $document, SchemaComponents $components, string $schema, ?string $outputs): array {
+    $document['schema'] = $components->get($schema);
+    if ($outputs !== NULL) {
+      $document['outputs'] = $components->get($outputs);
+    }
+    return $document;
   }
 
   /**
@@ -555,15 +660,21 @@ final class OpenApiDocument {
    *   What the answer is.
    * @param array $schema
    *   Its body's schema.
+   * @param array<string, array> $examples
+   *   Its body's examples, by name; none by default.
    *
    * @return array
    *   The response.
    */
-  protected function answer(string $description, array $schema): array {
+  protected function answer(string $description, array $schema, array $examples = []): array {
+    $media = ['schema' => $schema];
+    if ($examples !== []) {
+      $media['examples'] = $examples;
+    }
     return [
       'description' => $description,
       'headers' => [ResourceApiController::VERSION_HEADER => ['$ref' => '#/components/headers/ContractVersion']],
-      'content' => ['application/json' => ['schema' => $schema]],
+      'content' => ['application/json' => $media],
     ];
   }
 

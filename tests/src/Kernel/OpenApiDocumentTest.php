@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Drupal\Tests\data_surface\Kernel;
 
 use Drupal\Core\Cache\Cache;
+use Drupal\Core\Url;
 use Drupal\data_surface\Contract\ContractEmitter;
 use Drupal\data_surface_openapi\OpenApiDescription;
 use Drupal\data_surface_openapi\OpenApiDocument;
@@ -12,6 +13,7 @@ use Drupal\data_surface_openapi\SchemaComponents;
 use Drupal\user\Entity\Role;
 use Opis\JsonSchema\Errors\ErrorFormatter;
 use Opis\JsonSchema\CompliantValidator;
+use PHPUnit\Framework\Assert;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use Symfony\Component\HttpFoundation\Request;
@@ -23,7 +25,12 @@ use Symfony\Component\HttpFoundation\Request;
  * committed under tests/fixtures/openapi/), every reference in it
  * resolves, and each operation's values component and the defs it
  * reaches are, put back together, the full schema the emitter writes for
- * the operation built for no account, byte for byte. The logbook's five
+ * the operation built for no account, byte for byte, declared outputs
+ * included. Every answer shows the operation's components: `values` the
+ * values component, `schema` and `outputs` by example, and the full
+ * schema endpoint's example the document built for no account. A patch
+ * is written only for a request body and the defs it reaches that
+ * differ in one. The logbook's five
  * operations and the first resource's newsletter map their facts as the
  * decision says; the security requirement names the permission; the
  * cacheability carries discovery's tags and no account's context; and
@@ -35,6 +42,8 @@ use Symfony\Component\HttpFoundation\Request;
 #[Group('data_surface')]
 #[RunTestsInSeparateProcesses]
 class OpenApiDocumentTest extends DataSurfaceKernelTestBase {
+
+  use ContentEntityFixtureTrait;
 
   /**
    * {@inheritdoc}
@@ -193,7 +202,12 @@ class OpenApiDocumentTest extends DataSurfaceKernelTestBase {
       $name = $registry->getDefinition($entry['resource'])->name();
       $operation = $registry->getOperation($name, $entry['operation']);
       $built = $resources->buildDeclared($name, $resources->operation($name, $operation->id));
-      $emitted = json_decode((string) json_encode($emitter->emitFull($built, $entry['resource'], $operation->id, $operation->label, operation: $operation->facts())->document['schema'], JSON_THROW_ON_ERROR), TRUE);
+      $full = json_decode((string) json_encode($emitter->emitFull($built, $entry['resource'], $operation->id, $operation->label, operation: $operation->facts())->document, JSON_THROW_ON_ERROR), TRUE);
+      $emitted = $full['schema'];
+      $this->assertSame(isset($full['outputs']), $entry['outputs'] !== NULL, $id . ': an outputs component where outputs are declared.');
+      if ($entry['outputs'] !== NULL) {
+        $this->assertSame(json_encode($full['outputs']), json_encode($schemas[$entry['outputs']]), $id . ': the outputs, byte for byte.');
+      }
       $defs = $emitted['$defs'] ?? [];
       unset($emitted['$defs']);
 
@@ -319,7 +333,7 @@ class OpenApiDocumentTest extends DataSurfaceKernelTestBase {
     $this->assertSame('update', $submit['x-surface-kind']);
     $this->assertSame([TRUE, FALSE, FALSE], $this->facts($submit));
     $this->assertSame(['$ref' => SchemaComponents::POINTER . 'first.newsletter.configure'], $paths[$base . '/schema']['get']['x-surface-schema']);
-    $this->assertSame(SchemaComponents::POINTER . 'FullSchema', $paths[$base . '/schema']['get']['responses']['200']['content']['application/json']['schema']['$ref']);
+    $this->assertSame(SchemaComponents::POINTER . 'FullSchema', $paths[$base . '/schema']['get']['responses']['200']['content']['application/json']['schema']['allOf'][0]['$ref']);
     $this->assertSame(['$ref' => '#/components/headers/ContractVersion'], $paths[$base]['get']['responses']['200']['headers']['Contract-Version']);
     $this->assertSame([['$ref' => '#/components/parameters/CsrfToken']], $submit['parameters']);
 
@@ -333,6 +347,159 @@ class OpenApiDocumentTest extends DataSurfaceKernelTestBase {
     $tags = array_column($document['tags'], NULL, 'name');
     $this->assertArrayHasKey('first.newsletter', $tags);
     $this->assertArrayHasKey('tool_test.logbook', $tags);
+  }
+
+  /**
+   * Tests every answer shows the operation's components, not only metadata.
+   *
+   * The contract's and the refine's `values` are the values component or
+   * any object, their `schema` an object whose example is the component;
+   * the full schema endpoint's example is the document built for no
+   * account, its schema the component; a result's `values` are the
+   * component or any object.
+   */
+  public function testTheAnswersShowTheResource(): void {
+    $description = $this->description();
+    $document = $this->decoded($description);
+    $paths = $document['paths'];
+    $schemas = $document['components']['schemas'];
+    $answer = static fn (array $call): array => $call['responses']['200']['content']['application/json'];
+    $own = static fn (array $call, string $envelope): array => (static function (array $schema) use ($envelope): array {
+      Assert::assertSame(SchemaComponents::POINTER . $envelope, $schema['allOf'][0]['$ref']);
+      return $schema['allOf'][1]['properties'];
+    })($answer($call)['schema']);
+    $values = static fn (array $property): string => $property['anyOf'][0]['$ref'];
+
+    $base = '/surface-api/first.newsletter/configure';
+    $component = SchemaComponents::POINTER . 'first.newsletter.configure';
+    $contract = $own($paths[$base]['get'], 'Contract');
+    $this->assertSame($component, $values($contract['values']), 'The contract\'s values are the values component.');
+    $this->assertSame(['type' => 'object'], array_diff_key($contract['values']['anyOf'][1], ['description' => TRUE]), 'Or any object: a key that holds nothing is null.');
+    $this->assertSame('object', $contract['schema']['type']);
+    $this->assertSame([$schemas['first.newsletter.configure']], $contract['schema']['examples'], 'The schema shows the component by example.');
+    $this->assertSame(['values', 'stale', 'fingerprint'], $answer($paths[$base]['get'])['schema']['allOf'][1]['required']);
+    $this->assertSame(['$ref' => $component], $paths[$base]['get']['x-surface-schema'], 'Still named as metadata.');
+
+    $full = $answer($paths[$base . '/schema']['get']);
+    $this->assertSame([$schemas['first.newsletter.configure']], $own($paths[$base . '/schema']['get'], 'FullSchema')['schema']['examples']);
+    $example = $full['examples']['declared']['value'];
+    $this->assertSame('first.newsletter', $example['resource']);
+    $this->assertSame('configure', $example['operation']);
+    $this->assertSame('Configure the newsletter', $example['label']);
+    $this->assertSame($schemas['first.newsletter.configure'], $example['schema'], 'The full schema endpoint carries the component as its example.');
+    $this->assertArrayNotHasKey('outputs', $example, 'No outputs declared, none shown.');
+
+    $refine = $own($paths[$base . '/refine']['post'], 'Contract');
+    $this->assertSame($component, $values($refine['values']));
+    $this->assertSame([$schemas['first.newsletter.configure']], $refine['schema']['examples']);
+    $this->assertSame(['values', 'stale', 'discarded'], $answer($paths[$base . '/refine']['post'])['schema']['allOf'][1]['required']);
+    $this->assertSame($component, $values($own($paths[$base . '/validate']['post'], 'Result')['values']), 'A result\'s values are the values component, not the patch.');
+    $submit = $own($paths[$base . '/submit']['post'], 'SubmitResult');
+    $this->assertSame($component, $values($submit['values']));
+    $this->assertArrayNotHasKey('outputs', $submit);
+    foreach ([$base, $base . '/refine'] as $path) {
+      $method = $path === $base ? 'get' : 'post';
+      $this->assertArrayNotHasKey('outputs', $own($paths[$path][$method], 'Contract'), 'No outputs declared, none typed.');
+    }
+
+    // Every operation's values component is referenced by its answers, so
+    // none is left unused.
+    $document['paths'] = array_map(static fn (array $methods): array => array_map(static fn (array $call): array => array_diff_key($call, ['x-surface-schema' => TRUE]), $methods), $paths);
+    $referenced = [];
+    array_walk_recursive($document['paths'], static function (mixed $value, string|int $key) use (&$referenced): void {
+      if ($key === '$ref' && is_string($value)) {
+        $referenced[$value] = TRUE;
+      }
+    });
+    foreach ($description->operations as $id => $entry) {
+      $this->assertArrayHasKey(SchemaComponents::POINTER . $entry['schema'], $referenced, $id . ': its values component is in its answers.');
+    }
+  }
+
+  /**
+   * Tests a patch is written only where a request body or a patch needs it.
+   *
+   * Each `.patch` component is a request body's, or is reached from one,
+   * and one reached differs from its def; a def a patch reaches that
+   * would be the same is pointed at as it is. The examples' registration
+   * settings attach a contact and a compliance structure and choose a
+   * ticket variant, a paid ticket requiring its price and a free one
+   * requiring nothing.
+   */
+  public function testPatchOnlyWhereNeeded(): void {
+    $this->enableModules(['field', 'serialization', 'tool', 'data_surface_tool', 'data_surface_examples']);
+    $this->installConfig(['data_surface_examples']);
+    $this->container->get('router.builder')->rebuild();
+    $description = $this->description();
+    $schemas = $this->decoded($description)['components']['schemas'];
+    $bodies = array_filter(array_column($description->operations, 'request'), static fn (?string $request): bool => $request !== NULL && str_ends_with($request, SchemaComponents::PATCH));
+    $reached = [];
+    foreach ($bodies as $body) {
+      $pending = [$body];
+      while ($pending !== []) {
+        foreach ($this->pointers($schemas[array_shift($pending)]) as $pointer) {
+          $component = explode('/', substr($pointer, strlen(SchemaComponents::POINTER)))[0];
+          if (str_ends_with($component, SchemaComponents::PATCH) && !isset($reached[$component])) {
+            $reached[$component] = TRUE;
+            $pending[] = $component;
+          }
+        }
+      }
+    }
+    $patches = array_filter(array_keys($schemas), static fn (string $name): bool => str_ends_with($name, SchemaComponents::PATCH));
+    $this->assertNotEmpty($reached, 'Some def differs in a patch.');
+    $this->assertEqualsCanonicalizing($patches, array_values(array_unique(array_merge($bodies, array_keys($reached)))), 'Every patch is a request body\'s or reached from one.');
+    foreach (array_keys($reached) as $patch) {
+      $def = substr($patch, 0, -strlen(SchemaComponents::PATCH));
+      if (!in_array($patch, $bodies, TRUE)) {
+        $this->assertNotSame(json_encode($schemas[$def]), json_encode($schemas[$patch]), $patch . ' differs from its def.');
+      }
+    }
+    $step3 = $this->pointers($schemas['registration.step3.configure.patch']);
+    $this->assertContains(SchemaComponents::POINTER . 'registration.contact.patch', $step3, 'An attached child requiring a key is patched: a key it leaves out keeps what is stored.');
+    $this->assertContains(SchemaComponents::POINTER . 'registration.step3.ticket.paid.patch', $step3, 'So is a variant requiring one.');
+    $this->assertContains(SchemaComponents::POINTER . 'registration.step3.ticket.free', $step3, 'A variant requiring nothing is pointed at as it is.');
+    $this->assertArrayNotHasKey('registration.step3.ticket.free.patch', $schemas);
+  }
+
+  /**
+   * Tests declared outputs are a component, shown in every answer.
+   *
+   * A derived content entity resource declares the id it wrote as an
+   * output: the outputs component is the output schema the emitter
+   * writes, the contract's and the full schema's `outputs` show it by
+   * example, and the submit's `outputs` are the component or any object.
+   */
+  public function testDeclaredOutputsAreComponents(): void {
+    $this->enableModules(array_diff(self::ENTITY_MODULES, static::$modules));
+    $this->installEntityFixture();
+    $this->container->get('router.builder')->rebuild();
+    $description = $this->description();
+    $document = $this->decoded($description);
+    $this->assertSame([], $document['x-surface']['unavailable']);
+    $page = $description->operations['entity.content:node.page:add'] ?? NULL;
+    $this->assertNotNull($page);
+    $this->assertSame('entity.content_node.page.add.outputs', $page['outputs']);
+    $outputs = $document['components']['schemas'][$page['outputs']];
+    $this->assertSame(['id'], array_keys($outputs['properties']));
+
+    $registry = $this->container->get('data_surface.resource_registry');
+    $resources = $this->container->get('data_surface.resources');
+    $name = $registry->getDefinition('entity.content:node.page')->name();
+    $operation = $registry->getOperation($name, 'add');
+    $built = $resources->buildDeclared($name, $resources->operation($name, 'add'));
+    $full = $this->container->get('data_surface.contract_emitter')->emitFull($built, 'entity.content:node.page', 'add', $operation->label, operation: $operation->facts())->document;
+    $this->assertSame(json_encode($full['outputs']), json_encode($outputs), 'The outputs, byte for byte.');
+
+    $paths = $document['paths'];
+    $route = ['resource' => 'entity.content:node.page', 'operation' => 'add'];
+    $base = Url::fromRoute('data_surface_react.contract', $route)->toString();
+    $media = static fn (string $path, string $method): array => $paths[$path][$method]['responses']['200']['content']['application/json'];
+    $this->assertSame([$outputs], $media($base, 'get')['schema']['allOf'][1]['properties']['outputs']['examples']);
+    $this->assertSame([$outputs], $media($base . '/refine', 'post')['schema']['allOf'][1]['properties']['outputs']['examples']);
+    $this->assertSame([$outputs], $media($base . '/schema', 'get')['schema']['allOf'][1]['properties']['outputs']['examples']);
+    $this->assertSame($outputs, $media($base . '/schema', 'get')['examples']['declared']['value']['outputs']);
+    $this->assertSame(SchemaComponents::POINTER . $page['outputs'], $media($base . '/submit', 'post')['schema']['allOf'][1]['properties']['outputs']['anyOf'][0]['$ref']);
   }
 
   /**

@@ -1272,9 +1272,19 @@ dialect both documents are written in.
   take the values component; an update's take its patch
   (`first.newsletter.configure.patch`), the same with every `required`
   that can be dropped without narrowing dropped, since a key left out
-  keeps what is stored. Beside them, `Contract`, `FullSchema`, `Result`,
-  `ResultEntry` (`{path, code, message}`), `StaleEntry`, `SubmitResult`
-  and `Created`.
+  keeps what is stored. A def the patch reaches has a patch of its own
+  only where it differs, a key left out of an attached child or a
+  chosen variant keeping what is stored too. Declared outputs are a
+  component of their own (`<values>.outputs`). Beside them, `Contract`,
+  `FullSchema`, `Result`, `ResultEntry` (`{path, code, message}`),
+  `StaleEntry`, `SubmitResult` and `Created`.
+- **The resource in the answers.** Each answer is its shared envelope
+  composed with the operation's components, so a UI shows the resource
+  under every endpoint: `values` in the contract, the refine and the
+  result is the values component or any object, and `schema` and
+  `outputs` are objects whose example is the component. The `/schema`
+  answer's example is the full schema built for no account, its schema
+  and outputs as their components.
 - **For no account.** Built as the tool definitions are, every key as
   declared and each one an access answer could lock or leave out marked
   `x-surface.access: "live"`, so it is the same for everyone and

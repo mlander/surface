@@ -4523,6 +4523,18 @@ resource without reading these pages. Decided 2026-10-21.
   `items` (an item is sent whole). A create takes the full schema: it
   requires what the resource requires, as its tool does
   ([Required is the resource's](#required-is-the-resources-and-an-update-tool-requires-nothing-at-its-door)).
+  *A patch only where one is needed* (decided 2026-10-22): the request
+  body's patch is always written, so an update's body is named
+  `<values>.patch`. A def the patch reaches where it may loosen has a
+  patch of its own only when that patch differs: when the def, or a def
+  it reaches the same way, drops a `required`. Any other def is pointed
+  at as it is. A def cannot simply be pointed at whole, because absent
+  keeps holds at every level: the pipeline accepts an attached child
+  or a chosen variant against what it holds, so `{sender: {email}}`
+  keeps the stored `name`, and a def that still required `name` would
+  make the body stricter than the door. The rule took the components
+  from 147 to 140 on the demo site (40 patches to 26, 7 outputs
+  components added).
 - **Facts to HTTP.** A read only operation has its two GETs alone. How
   the operation behaves is stated beside each call as `x-surface-kind`,
   and on the submit as `x-surface-idempotent`, `x-surface-destructive`
@@ -4539,6 +4551,26 @@ resource without reading these pages. Decided 2026-10-21.
   `ResultEntry`, `notes` among them), `SubmitResult` and `Created`
   are shared. A refusal is a 200 `Result` with `ok: false`; a 403 is
   Drupal's own error page and has no body schema.
+- **The resource in every answer** (decided 2026-10-22). Each answer is
+  `allOf` its shared envelope and an object typing that envelope's
+  properties for the operation, so Swagger UI and Redoc show the
+  resource under every endpoint, not only in `x-surface-schema`, which
+  stays. `values` (the contract, the refine, the validate and submit
+  result) is `anyOf` the values component and any object: a contract
+  shows a key that holds nothing as `null` (a create's required title
+  before it is typed) and a refused run answers only what it accepted,
+  so the component alone would be stricter than the endpoint, and a
+  validating client would refuse real answers. `schema` and `outputs`
+  are JSON Schema documents, typed `{type: object}` with the component
+  as their `examples`, not as a `$ref` to the 2020-12 meta-schema: an
+  external `$ref` is fetched from json-schema.org by a linter or a UI,
+  and Redocly reads the meta-schema as a malformed schema object (a
+  `struct` error). The JSON Schema `examples` keyword, since OpenAPI 3.1
+  deprecates the schema object's `example`. The `/schema` answer also
+  carries an OpenAPI example: the full schema document built for no
+  account, its schema and outputs as their components. Declared
+  outputs are a component of their own, `<values>.outputs`, which the
+  submit's `outputs` reference the same way.
 - **Permission as security.** The session cookie is an `apiKey` scheme,
   and basic auth an `http` one where `basic_auth` is on. Each operation
   requires one of them, or none when the anonymous role holds its
