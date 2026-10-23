@@ -1,42 +1,29 @@
 # Data Surface
 
-A *data surface* is the description of a group of values a piece of software
-accepts: what each value is called, what it means, what type it is, what
-it may contain, what it defaults to, and which of its values depend on
-which others. Drupal core already has a vocabulary for all of that in its
-typed data definitions; what it has never had is a place to keep a group
-of them, hand that group to one caller after another, and have every
-caller agree about what was accepted.
+A *data surface* is what one resource accepts, settled in layers and
+then sealed. The owner, the resource's class, declares its keys and the
+rules between them. Other modules contribute under names of their own:
+they add keys at their own mount, and their rules may narrow the
+owner's keys but never widen them. Declared rules and refiners settle
+what applies to these values, ahead of time where the answer depends
+only on the values, and per request where it depends on the site, such
+as a room closed today. Access locks keys or leaves them out for the
+account that asks. The build seals the result.
 
-This module is that place. A *resource* (a thing with identity and
-storage that operations read and write: a content type, a field) or a
-*structure* (a group of keys that only something else holds: a
-block's settings) is declared once as a class, built in a context,
-sealed into a data surface, and then read: a generated form renders it,
-a pipeline accepts and validates values against it, and storage writes
-the accepted values where they live (a plugin's configuration, a
-field's settings, a content type and its base field overrides, a config
-object, or state). A resource names its own storage class; a plugin's
-host supplies the storage for the structure it holds. The same data
-surface answers a form submit, a Drush command, an agent call and a test
-without any of them owning a second copy of the rules. When a value
-depends on another (a bundle list that only makes sense once an entity
-type is chosen), a refiner narrows the definition, and the form rebuilds
-that part of itself over AJAX rather than the host re-implementing the
-dependency.
-
-The rule the module holds itself to is that refinement may only *narrow*.
-Whatever a data surface advertises when it is sealed stays true of
-everything it accepts afterwards, so a caller that read it once, or a
-machine-readable contract emitted from it, is never contradicted later,
-with one qualifier: the schema for a set of answers is exact for them,
-and the full schema, written for any answers, marks what only the
-runtime can settle (`refine`, `live`, `checkedOnServer`), where the
-pipeline may still refuse what the schema allows
-([the served contract](docs/served-contract.md#two-documents)).
-That is the property that makes a data surface worth having over a form
-array, and it is the property the module exists to prove out for
+Every door reads that one sealed data surface and nothing else: the
+generated form, the tool, MCP, ECA, HTTP with its OpenAPI document, and
+the React page. That is why they agree on what is accepted, and why one
+module can change all of them at once without touching any. The
+reason is the alter contract: a contribution is made under its module's
+own name before the seal, and after the seal nothing widens, so no door
+sees anything but the sealed result and nothing a door was told stops
+being true. The module exists to prove this out for
 [the core issue behind it](https://www.drupal.org/project/drupal/issues/3622144).
+
+To get one, write a class with a `#[Resource]` attribute, an operation
+on it, a storage class for where its values live, and its keys,
+declared with `add()`. [Your first resource](docs/first-resource.md)
+builds a settings page from those four things.
 
 ## Requirements
 
@@ -401,7 +388,7 @@ nothing on it is needed to build.
 | [The React app](modules/data_surface_react/README.md) | The served contract's endpoints and the React form drawn from them. |
 | [The OpenAPI document](modules/data_surface_openapi/README.md) | Every operation's endpoints as OpenAPI 3.1, for any OpenAPI client, generator or UI. |
 | [Installation: Tool](docs/installation.md#tool) | Enabling the tool bridge, through which an agent, MCP and Drush call each operation. |
-| [One resource, every door](docs/every-door/index.html) | An interactive 3D model: a resource, its attached structures and an alter, the doors that read its contract, and the same inputs as they are written today. Open the file in a browser. |
+| [One resource, every door](docs/every-door/index.html) | An interactive 3D model: the layers a data surface is sealed from, a resource, its attached structures and an alter, the doors that read its contract, and the same inputs as they are written today. Open the file in a browser. |
 
 **The engine and the record**
 

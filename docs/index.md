@@ -1,5 +1,16 @@
 # Data Surface
 
+A data surface is what a resource accepts, settled in layers and then
+sealed: the owner declares the keys and the rules between them, other
+modules contribute under names of their own with rules that may narrow
+the owner's keys but never widen them, declared rules and refiners
+settle what applies ahead of time or per request, and access locks keys
+or leaves them out for the account. Every door (the form, the tool, MCP,
+ECA, HTTP and OpenAPI, the React page) reads that one sealed data
+surface and nothing else, which is why they agree, and the alter
+contract is why a module can change all of them at once without
+touching any.
+
 A resource is a thing with identity and storage that operations read and
 write: a site's registration settings, a content type, a field, a basic
 page. Its form, its tool

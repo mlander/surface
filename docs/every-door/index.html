@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="description" content="An interactive 3D model of a resource, its structures and alters, its declared rules, reuse, keys from the site, access and operation facts, and how one contract feeds Form API, a headless client, OpenAPI, Tool API, MCP, agents, ECA and FlowDrop.">
+<meta name="description" content="An interactive 3D model of the layers a data surface is sealed from, then of a resource, its structures and alters, its declared rules, reuse, keys from the site, access and operation facts, and how one contract feeds Form API, a headless client, OpenAPI, Tool API, MCP, agents, ECA and FlowDrop.">
 <style>
 /* What a host page would otherwise supply. [hidden] has to win over the layout rules below. */
 :root { color-scheme: light; }
@@ -89,6 +89,9 @@ pre.code .t-n { color: var(--refine); font-weight: 500; }
 .seg button { font: 500 13px/1 var(--f-body); background: transparent; color: var(--ink); border: 0; padding: 8px 13px; cursor: pointer; }
 .seg button + button { border-left: 1px solid var(--line); }
 .seg button[aria-pressed="true"] { background: var(--owner); color: #fff; }
+.replay { align-self: flex-start; font: 500 13px/1 var(--f-body); color: var(--ink); background: transparent; border: 1px solid var(--line);
+  padding: 8px 11px; border-radius: 3px; cursor: pointer; }
+.replay:hover { border-color: var(--ink-2); }
 
 /* Doors */
 .door-list { display: flex; flex-direction: column; gap: 5px; }
@@ -166,11 +169,12 @@ table.cmp td:last-child { color: var(--owner); font-weight: 600; }
     <header>
       <p class="eyebrow">Data Surface</p>
       <h1>One resource, every door</h1>
-      <p class="about">This is a drawing of the examples that ship in the <a href="https://github.com/mlander/data_surface/tree/main/modules/data_surface_examples" target="_blank" rel="noopener"><code>data_surface_examples</code></a> module, not a live copy of them. Most views, the contract and the doors draw example 3, the settings for one event registration (a venue, a room, a capacity, a ticket and a contact), and example 4, Compliance, a second module that adds a license and stewards. Rules as data draws examples 4 and 7, Reuse examples 4 and 8, Site keys example 9, and Access and Operations example 10.</p>
+      <p class="about">This is a drawing of the examples that ship in the <a href="https://github.com/mlander/data_surface/tree/main/modules/data_surface_examples" target="_blank" rel="noopener"><code>data_surface_examples</code></a> module, not a live copy of them. Layers draws examples 3 and 4, with the fees of example 10 for access. Most other views, the contract and the doors draw example 3, the settings for one event registration (a venue, a room, a capacity, a ticket and a contact), and example 4, Compliance, a second module that adds a license and stewards. Rules as data draws examples 4 and 7, Reuse examples 4 and 8, Site keys example 9, and Access and Operations example 10.</p>
     </header>
 
     <nav class="tabs" aria-label="Layers of the model" id="tabs">
-      <button class="tab" data-ch="all" aria-pressed="true">Whole picture</button>
+      <button class="tab" data-ch="layers" aria-pressed="true">Layers</button>
+      <button class="tab" data-ch="all" aria-pressed="false">Whole picture</button>
       <button class="tab" data-ch="today" aria-pressed="false">Today</button>
       <button class="tab" data-ch="compare" aria-pressed="false">Side by side</button>
       <button class="tab" data-ch="surface" aria-pressed="false">Resource</button>
@@ -186,7 +190,16 @@ table.cmp td:last-child { color: var(--owner); font-weight: 600; }
       <button class="tab" data-ch="doors" aria-pressed="false">Doors</button>
     </nav>
 
-    <section class="chapter" id="ch-all">
+    <section class="chapter" id="ch-layers">
+      <h2>Layered, then sealed</h2>
+      <p>The owner declares the keys and the rules between them. Other modules contribute under names of their own: they add keys at their own mount, and their rules may narrow the owner's keys but never widen them.</p>
+      <p>Rules and refiners settle what applies to these values: ahead of time where the answer depends only on the values, per request where it depends on the site. Access locks keys or leaves them out for the account. The build seals the result.</p>
+      <p>Every door reads that one sealed surface and nothing else, so they agree, and one module changes all of them without touching any. That is the alter contract. Compliance's <code>alterInputs()</code>, from <code>data_surface_examples_compliance</code>, reaches every door this way:</p>
+      <pre class="code" data-code="layers"></pre>
+      <button class="replay" type="button" id="layers-replay">Build it again</button>
+    </section>
+
+    <section class="chapter" id="ch-all" hidden>
       <h2>Declare the inputs once</h2>
       <p>A resource says what it takes: its keys, their types and their limits. It says nothing about forms, routes or tools.</p>
       <p>Everything that needs those values reads the same contract. A form, a React page and an agent accept and refuse exactly the same things.</p>
@@ -290,7 +303,7 @@ table.cmp td:last-child { color: var(--owner); font-weight: 600; }
 
     <section class="chapter" id="ch-contract" hidden>
       <h2>The contract</h2>
-      <p>Ask the resource and it answers in JSON Schema, contract 2, as two documents. The schema as it stands is built for the values so far. The full schema reads no value, so it is the same whatever is stored or typed; access in it is the asking account's.</p>
+      <p>Ask the resource and it answers in JSON Schema, contract 3, as two documents. The schema as it stands is built for the values so far. The full schema reads no value, so it is the same whatever is stored or typed; access in it is the asking account's.</p>
       <p>Labeled choices are <code>oneOf</code>. A key's variants are an <code>anyOf</code> of their defs, each chosen by a conditional. A declared rule is an <code>if</code> / <code>then</code> listed under <code>x-surface.rules</code>. Where a rule cannot be stated, the key says <code>refine</code> (ask again with values) or <code>live</code> (settled at runtime).</p>
       <pre class="code" data-code="contract"></pre>
     </section>
@@ -339,7 +352,7 @@ table.cmp td:last-child { color: var(--owner); font-weight: 600; }
   </aside>
 
   <main class="stage" id="stage">
-    <canvas id="gl" tabindex="0" aria-label="3D model of a resource, its structures and the doors that read its contract. Arrow keys turn it, Shift with arrow keys moves it, plus and minus zoom."></canvas>
+    <canvas id="gl" tabindex="0" aria-label="3D model of the layers a data surface is sealed from, then of a resource, its structures and the doors that read its contract. Arrow keys turn it, Shift with arrow keys moves it, plus and minus zoom."></canvas>
     <div id="labels"></div>
     <div class="hint" id="hint">Drag to turn. Shift-drag, right-drag or two fingers to move.<br>Scroll or pinch to zoom. Pick a door to see what it reads.</div>
     <div class="fallback">The 3D model needs WebGL, which this browser did not provide. The layers are still described in the panel.</div>
@@ -353,6 +366,20 @@ table.cmp td:last-child { color: var(--owner); font-weight: 600; }
 
   /* ---------- content ---------- */
   var CODE = {
+    layers: `public function alterInputs(BlueprintAdditionsInterface $inputs): void {
+  // The structure's capacity is example 3's.
+  $inputs->attach('third_party_settings.data_surface_examples_compliance', ComplianceStructure::class, reads: ['capacity' => 'capacity']);
+  $inputs->describe('title', label: $this->t('Public event title'));
+  $inputs->describe('third_party_settings.data_surface_examples_compliance', label: $this->t('Compliance'), after: 'capacity');
+  // Without a license, no more than a hundred, whatever the room seats.
+  // The license is the structure's, which this alter reads at its mount.
+  // A license its own pattern refuses is no license: a rule never sees
+  // an invalid sibling.
+  $inputs->narrow('capacity')
+    ->when(Condition::absent('license'))
+    ->constrain('Range', ['max' => 100])
+    ->because($this->t('Up to 100 without an event license.'));
+}`,
     today: `// 1. The form
 $form['capacity'] = [
   '#type' => 'number',
@@ -426,7 +453,7 @@ final class RegistrationComplianceAlter implements AltersInputsInterface {
 
 }`,
     contract: `{
-  "x-surface": { "contract": 2,
+  "x-surface": { "contract": 3,
     "operation": { "id": "configure", "kind": "update", ... },
     "version": 1, "rules": [9] },
   "properties": {
@@ -447,7 +474,7 @@ final class RegistrationComplianceAlter implements AltersInputsInterface {
         "$ref": "#/$defs/registration.step3.ticket.paid" } } } } ]
 }`,
     rules: `// registration.step3, the full schema
-"x-surface": { "contract": 2, ..., "rules": [9] },
+"x-surface": { "contract": 3, ..., "rules": [9] },
 "allOf": [ ...,
   { "if": { "properties": { "third_party_settings": {
       "type": ["object", "null"],
@@ -515,7 +542,7 @@ public function access(OperationContext $context, AccountInterface $account): Ac
 }`,
     ops: `// event.program, the check operation, both documents
 "x-surface": {
-  "contract": 2,
+  "contract": 3,
   "operation": {
     "id": "check",
     "label": "Check a program",
@@ -571,6 +598,7 @@ public function access(OperationContext $context, AccountInterface $account): Ac
   DOORS.forEach(function (d) { DOOR[d.id] = d; });
 
   var CHAPTERS = {
+    layers:   { focus: ['layers'], solo: true, sun: -64, cam: { tx: -64, ty: 3.6, tz: -0.6, th: 0.0, ph: 1.36, r: 30.5 } },
     today:    { focus: ['today'], solo: true, cam: { tx: -27.2, ty: 1.4, tz: 0.2, th: 0.08, ph: 0.95, r: 36 } },
     compare:  { focus: null, cam: { tx: -12.5, ty: 0.6, tz: 1.2, th: 0.0, ph: 0.9, r: 62 } },
     all:      { focus: ['surface', 'storage', 'parts', 'refine', 'alter', 'contract', 'doors'], cam: { tx: 0, ty: 1.8, tz: -1.5, th: 0.18, ph: 0.97, r: 30 } },
@@ -587,17 +615,19 @@ public function access(OperationContext $context, AccountInterface $account): Ac
     doors:    { focus: ['contract', 'doors', 'surface'], cam: { tx: 0, ty: 1.4, tz: -4.6, th: 0.2, ph: 0.74, r: 31 } }
   };
 
-  /* What a link carries: #today, #side-by-side, #doors.mcp, or ?view=reuse. A bare token, so it survives any host. */
-  var SLUG = { all: '', today: 'today', compare: 'side-by-side', surface: 'surface', parts: 'structures',
+  /* What a link carries: #layers, #today, #side-by-side, #doors.mcp, or ?view=reuse. A bare token, so it survives any host.
+     With none, the page opens on the layers; the whole picture, which was the default before them, is #whole-picture. */
+  var DEFAULT = 'layers';
+  var SLUG = { layers: 'layers', all: 'whole-picture', today: 'today', compare: 'side-by-side', surface: 'surface', parts: 'structures',
     refine: 'refinement', alter: 'alters', rules: 'rules', reuse: 'reuse', siteKeys: 'site-keys', access: 'access',
     ops: 'operations', contract: 'contract', doors: 'doors' };
   var FROM_SLUG = { subsurfaces: 'parts' }; // links made before the rename
   Object.keys(SLUG).forEach(function (k) { FROM_SLUG[SLUG[k] || 'whole-picture'] = k; FROM_SLUG[k] = k; });
   /* The scenes that stand on their own ground, away from the main model: shown only in their own view. */
-  var AREA = { today: true, rule: true, reuse: true, keys: true, access: true, op: true };
+  var AREA = { layers: true, today: true, rule: true, reuse: true, keys: true, access: true, op: true };
 
   var state = { pricing: 'free', license: '' };
-  var chapter = 'all';
+  var chapter = DEFAULT;
   var selected = null;
   var gl = null; // filled in when WebGL is available
 
@@ -631,7 +661,7 @@ public function access(OperationContext $context, AccountInterface $account): Ac
   function applyHash(first) {
     var to = readHash();
     if (!to) {
-      if (!first && !location.hash && chapter !== 'all') { setChapter('all', true); }
+      if (!first && !location.hash && chapter !== DEFAULT) { setChapter(DEFAULT, true); }
       return;
     }
     if (to.ch !== chapter) { setChapter(to.ch, true); }
@@ -644,13 +674,18 @@ public function access(OperationContext $context, AccountInterface $account): Ac
       b.setAttribute('aria-pressed', String(b.getAttribute('data-ch') === id));
     });
     Object.keys(CHAPTERS).forEach(function (k) { document.getElementById('ch-' + k).hidden = k !== id; });
-    if (gl) { gl.focus(CHAPTERS[id].focus, CHAPTERS[id].solo); gl.fly(CHAPTERS[id].cam); gl.sun(CHAPTERS[id].sun); }
+    if (gl) {
+      gl.focus(CHAPTERS[id].focus, CHAPTERS[id].solo); gl.fly(CHAPTERS[id].cam); gl.sun(CHAPTERS[id].sun);
+      if (id === 'layers') { gl.build(); }
+    }
     if (!quiet) { writeHash(); }
   }
   document.getElementById('tabs').addEventListener('click', function (e) {
     var b = e.target.closest('.tab');
     if (b) { setChapter(b.getAttribute('data-ch')); }
   });
+
+  document.getElementById('layers-replay').addEventListener('click', function () { if (gl) { gl.build(); } });
 
   DOORS.forEach(function (d) {
     var b = document.createElement('button');
@@ -952,18 +987,18 @@ public function access(OperationContext $context, AccountInterface $account): Ac
     var c = arc(a, b, lift), pts = c.getPoints(48);
     if (o.cut) {
       var n = Math.round(48 * o.cut), dashed = [];
-      scene.add(lines(pts.slice(0, n + 1), 'line', tags, 0.9));
+      scene.add(lines(pts.slice(0, n + 1), 'line', tags, 0.9, o.grp));
       for (var j = n + 2; j < 47; j += 3) { dashed.push(pts[j], pts[j + 1]); }
-      scene.add(lines(dashed, 'line', tags, 0.55, null, true));
+      scene.add(lines(dashed, 'line', tags, 0.55, o.grp, true));
       var stop = flat(new T.SphereGeometry(0.13, 12, 10), 'blockBar', tags); stop.position.copy(c.getPoint(o.cut)); scene.add(stop);
     } else {
-      scene.add(lines(pts, 'line', tags, 0.9));
+      scene.add(lines(pts, 'line', tags, 0.9, o.grp));
     }
     var f = { c: c, tier: tier, door: doorId, out: [], inn: [], speed: tier === 1 ? 0.11 : 0.16, off: flows.length * 0.37,
       cut: o.cut || 0, quiet: !!o.quiet };
-    for (var i = 0; i < (tier === 1 ? 3 : 2); i++) { var ob = flat(beadGeo, 'contract', tags); scene.add(ob); f.out.push(ob); }
-    if (!o.cut) { var nb = flat(beadGeo, 'values', tags); scene.add(nb); f.inn.push(nb); }
-    f.pulse = flat(pulseGeo, 'contract', tags, 0); scene.add(f.pulse);
+    for (var i = 0; i < (tier === 1 ? 3 : 2); i++) { var ob = flat(beadGeo, 'contract', tags, 1, o.grp); scene.add(ob); f.out.push(ob); }
+    if (!o.cut) { var nb = flat(beadGeo, 'values', tags, 1, o.grp); scene.add(nb); f.inn.push(nb); }
+    f.pulse = flat(pulseGeo, 'contract', tags, 0, o.grp); scene.add(f.pulse);
     flows.push(f);
     return f;
   }
@@ -1060,7 +1095,7 @@ public function access(OperationContext $context, AccountInterface $account): Ac
 
   /* 2. the tool: the inputs again, with no dependencies and no alter */
   oldStack(XT, { name: 'A tool plugin: the inputs again', mid: 'constraints, written again', midAt: 2.4, save: 'execute()', saveAt: 3.8, saveZ: 0.4, nameAt: 3.3, nameZ: -1.8,
-    contract: "Contract 2: the tool's inputs" });
+    contract: "Contract 3: the tool's inputs" });
   ghostAlter(XT + 1.6, ALT, 0.9, 'the form alter never arrives');
   gauge(XT, 0, TD, 2.0, 'old', 'max 1000: no room, no license', 'note');
 
@@ -1180,13 +1215,13 @@ public function access(OperationContext $context, AccountInterface $account): Ac
     var b = solid(new T.CylinderGeometry(0.2, 0.3, 0.75, 18), 'values', tags); b.position.set(x, 0.375, z); scene.add(b);
     var hd = solid(new T.SphereGeometry(0.21, 16, 12), 'values', tags); hd.position.set(x, 0.98, z); scene.add(hd);
   }
-  function dashedRing(x, y, z, rx, rz, tags) {
+  function dashedRing(x, y, z, rx, rz, tags, grp) {
     var pts = [];
     for (var i = 0; i < 40; i += 2) {
       var a0 = i * Math.PI / 20, a1 = (i + 1) * Math.PI / 20;
       pts.push(v(x + rx * Math.cos(a0), y, z + rz * Math.sin(a0)), v(x + rx * Math.cos(a1), y, z + rz * Math.sin(a1)));
     }
-    scene.add(lines(pts, 'refine', tags, 1, null, true));
+    (grp || scene).add(lines(pts, 'refine', tags, 1, grp, true));
   }
 
   /* 1. Declare the rule: examples 4 and 7. A rule as data beside a coded refiner, and a key that does not apply. */
@@ -1376,6 +1411,89 @@ public function access(OperationContext $context, AccountInterface $account): Ac
   label('readOnlyHint yes, idempotentHint yes', scene, OX + 2.1, 3.15, -11.2, OU, 'note');
   label('An operation states how it behaves', scene, OX, 0.1, 4.1, OU, 'title');
 
+  /* 6. Layers: examples 3 and 4, with the fees of example 10. One plate, the layers a data surface is sealed from,
+     and the doors reading the top. Entering the view builds the stack a layer at a time, then lights the doors. */
+  var LX = -64, LU = ['layers'], LAYER = [], layerDoors = [];
+  var LB = box(9.6, 0.3, 6.4, 'slab', LU); LB.position.set(LX, 0.15, 0); scene.add(LB); edges(LB, LU);
+  label('One resource: registration.step3', scene, LX + 2.4, 0.2, 3.45, LU, 'major', { c: 'ink-2' });
+  var lPins = [];
+  [[-4.4, -2.8], [4.4, -2.8], [-4.4, 2.8], [4.4, 2.8]].forEach(function (c) { lPins.push(v(LX + c[0], 0.3, c[1]), v(LX + c[0], 5.9, c[1])); });
+  scene.add(lines(lPins, 'line', LU, 0.9, null, true));
+  function layer(y, w, d, role, title, c) {
+    var g = fadeGroup();
+    var p = box(w, 0.2, d, role, LU, 1, g); p.position.set(LX, y, 0); g.add(p); edges(p, LU, g);
+    label(title, g, LX - w / 2 + 1.2, y + 0.05, d / 2, LU, 'major', { c: c, grp: g });
+    LAYER.push(g);
+    return g;
+  }
+  var LZ = -0.7;
+  /* declared: the owner's keys */
+  var lOwn = layer(1.1, 8.4, 5.0, 'owner', 'Declared: the owner', 'owner');
+  [['title', -3], ['venue', -1.5], ['room', 0], ['capacity', 1.5], ['pricing', 3]].forEach(function (k) {
+    keyTile(lOwn, k[0], LX + k[1], LZ, 1.2, 'ownerTile', LU, 1.35, lOwn);
+  });
+  /* contributed: an alter, at its own mount */
+  var lAlt = layer(2.7, 8.4, 5.0, 'alter', 'Contributed: alters at their mounts', 'alter');
+  keyTile(lAlt, 'title: reworded', LX - 3, LZ, 2.8, 'alterTile', LU, 1.35, lAlt);
+  keyTile(lAlt, 'license', LX + 1.1, LZ, 2.8, 'alterTile', LU, 1.35, lAlt);
+  keyTile(lAlt, 'stewards', LX + 3.0, LZ, 2.8, 'alterTile', LU, 1.35, lAlt);
+  outline(LX + 2.05, 2.9, LZ, 3.6, 0.3, 1.1, 'alter', LU, 0.9, lAlt);
+  /* narrowed: the static answers stated, the live one marked */
+  var lNar = layer(4.2, 8.0, 4.6, 'refine', 'Narrowed: static stated, live marked', 'refine');
+  keyTile(lNar, 'venue rooms', LX - 2.9, LZ, 4.3, 'ownerTile', LU, 2.0, lNar);
+  keyTile(lNar, 'max 100', LX, LZ, 4.3, 'ownerTile', LU, 2.0, lNar);
+  keyTile(lNar, 'closed rooms', LX + 2.9, LZ, 4.3, 'ownerTile', LU, 2.0, lNar);
+  dashedRing(LX + 2.9, 4.42, LZ, 1.25, 0.62, LU, lNar);
+  /* access: for the account that asks */
+  var lAcc = layer(5.7, 6.8, 4.2, 'block', 'Access: for this account', 'ink-2');
+  keyTile(lAcc, 'fees: locked', LX - 1.7, LZ, 5.8, 'store', LU, 1.9, lAcc);
+  padlock(LX - 0.5, 6.12, LZ, LU, lAcc);
+  outline(LX + 1.8, 5.88, LZ, 1.9, 0.16, 0.8, 'line', LU, 0.9, lAcc);
+  label('fees: left out', lAcc, LX + 1.8, 6.22, LZ, LU, 'key', { grp: lAcc });
+  /* sealed: the data surface, which every door reads */
+  var LS = 7.3;
+  var lSeal = fadeGroup(); LAYER.push(lSeal);
+  var lRing = new T.Group(); lRing.position.set(LX, LS, 0); lSeal.add(lRing);
+  lRing.add(flat(new T.TorusGeometry(2.4, 0.05, 10, 96), 'contract', LU, 1, lSeal).rotateX(Math.PI / 2));
+  lRing.add(flat(new T.TorusGeometry(1.85, 0.018, 8, 80), 'contract', LU, 0.8, lSeal).rotateX(Math.PI / 2));
+  lRing.add(flat(new T.CircleGeometry(2.4, 64), 'contract', LU, 0.14, lSeal, { side: T.DoubleSide, transparent: true, depthWrite: false }).rotateX(-Math.PI / 2));
+  label('Sealed: the data surface', lSeal, LX, LS + 0.7, 0, LU, 'major', { c: 'contract', grp: lSeal });
+  /* the doors around it: three read the top, the others walk through one of those */
+  var gReads = fadeGroup(), layerTop = v(LX, LS, 0);
+  [['ly-form', 'Form', 9, 150], ['ly-http', 'HTTP and OpenAPI', 9, 180], ['ly-tool', 'Tool', 9, 35],
+   ['ly-react', 'React page', 12, 198, 'ly-http'], ['ly-mcp', 'MCP', 12.5, 14, 'ly-tool'], ['ly-eca', 'ECA', 12, -8, 'ly-tool']].forEach(function (d) {
+    var a = d[3] * Math.PI / 180, tier = d[4] ? 2 : 1;
+    buildDoor(d[0], d[1], v(LX + d[2] * Math.cos(a), 0, -d[2] * Math.sin(a)), v(LX, 0, 0), tier, LU, { fixed: true });
+    flow(d[4] ? doorObj[d[4]].mid : layerTop, doorObj[d[0]].mid, d[4] ? 2.0 : 1.6, tier, d[0], LU, { grp: gReads });
+    layerDoors.push(d[0]);
+  });
+  label('Layered, then sealed: every door reads the top', scene, LX, 0.1, 4.6, LU, 'title');
+  var buildAt = 0, built = false, L_FIRST = 0.4, L_STEP = 0.8;
+  function lightDoors(on) {
+    layerDoors.forEach(function (id) {
+      var o = doorObj[id]; o.lit = on;
+      o.frame.forEach(function (it) { it.role = on ? 'frameOn' : 'frame'; if (palette && palette[it.role]) { it.obj.material.color.copy(palette[it.role]); } });
+    });
+  }
+  function buildLayers() {
+    buildAt = clock || 0; built = false; lightDoors(false);
+    LAYER.concat([gReads]).forEach(function (g) { g.userData.fade = 0; g.userData.fadeGoal = 0; });
+  }
+  buildLayers();
+  motions.push(function () {
+    var t = reduce ? 99 : clock - buildAt;
+    LAYER.forEach(function (g, i) {
+      g.userData.fadeGoal = t >= L_FIRST + i * L_STEP ? 1 : 0;
+      if (reduce) { g.userData.fade = g.userData.fadeGoal; }
+      g.position.y = (1 - g.userData.fade) * 1.2;
+    });
+    var sealed = t >= L_FIRST + LAYER.length * L_STEP;
+    gReads.userData.fadeGoal = sealed ? 1 : 0;
+    if (reduce) { gReads.userData.fade = gReads.userData.fadeGoal; }
+    if (sealed && !built) { built = true; lightDoors(true); if (!reduce) { rippleAt = clock; } }
+    lRing.rotation.y = clock * 0.12;
+  });
+
   /* ---------- theme ---------- */
   var palette = {};
   function paint() {
@@ -1418,7 +1536,7 @@ public function access(OperationContext $context, AccountInterface $account): Ac
   function clampGoal() {
     goal.ph = Math.max(0.22, Math.min(1.46, goal.ph));
     goal.r = Math.max(7, Math.min(110, goal.r));
-    goal.tx = Math.max(-52, Math.min(150, goal.tx));
+    goal.tx = Math.max(-80, Math.min(150, goal.tx));
     goal.ty = Math.max(-3, Math.min(14, goal.ty));
     goal.tz = Math.max(-26, Math.min(22, goal.tz));
   }
@@ -1544,6 +1662,7 @@ public function access(OperationContext $context, AccountInterface $account): Ac
     focus: function (f, alone) { focusSet = f; solo = !!alone; },
     fly: function (c) { Object.assign(goal, c); if (reduce) { Object.assign(cam, c); } },
     state: applyState,
+    build: buildLayers,
     sun: function (x) {
       var sx = x === undefined ? -14 : x;
       sun.target.position.set(sx, 0, -2); sun.position.set(sx + 9, 24, 13);
@@ -1614,7 +1733,7 @@ public function access(OperationContext $context, AccountInterface $account): Ac
     Object.keys(doorObj).forEach(function (id) {
       var o = doorObj[id], fl = Math.max(0, 1 - (clock - o.flash) / 0.9);
       if (o.shut) { return; }
-      o.pane.boost = fl * 0.55 + (id === selected ? 0.3 : id === hover ? 0.14 : 0);
+      o.pane.boost = fl * 0.55 + (o.lit ? 0.26 : 0) + (id === selected ? 0.3 : id === hover ? 0.14 : 0);
     });
 
     items.forEach(function (it) {
