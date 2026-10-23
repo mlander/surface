@@ -10,7 +10,7 @@ use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
 /**
- * Tests examples 7 to 12 over HTTP, as the video shows them.
+ * Tests examples 7 to 12 and 14 over HTTP, as the video shows them.
  *
  * On a fresh site with only the examples enabled: every route answers an
  * administrator and refuses anonymous, the landing page lists each, and
@@ -47,6 +47,16 @@ class ExamplesConceptsRoutesTest extends BrowserTestBase {
     'surface-examples/10/check' => 'Access says whether keys may be changed, seen, or neither',
     'surface-examples/11' => 'Every stock widget, each chosen by what its key declares',
     'surface-examples/12' => 'A JSON Schema the site already has is read into a structure, keyword by keyword',
+    'surface-examples/14' => 'Two resources call a service with a credential',
+    'surface-examples/14/webhook' => 'Two resources call a service with a credential',
+  ];
+
+  /**
+   * What a page's form is saved with, where its shipped settings lack a key.
+   */
+  protected const SAVED_WITH = [
+    // The mailer's pasted key is required, and ships with none.
+    'surface-examples/14' => ['surface[credential][api_key]' => 'mk-saved-1'],
   ];
 
   /**
@@ -70,6 +80,7 @@ class ExamplesConceptsRoutesTest extends BrowserTestBase {
       'Example 10: who may change what',
       'Example 11: the stock widgets, and what nothing means',
       'Example 12: a schema read into a structure',
+      'Example 14: an optional extension',
     ] as $title) {
       $assert->pageTextContains($title);
     }
@@ -89,7 +100,7 @@ class ExamplesConceptsRoutesTest extends BrowserTestBase {
       $assert->pageTextContains('Behind the scenes: the contract, as it stands');
       $this->assertFilesPanel((int) explode('/', $path)[1]);
       // A check changes nothing, so its button says what it does.
-      $this->submitForm([], $path === 'surface-examples/10/check' ? 'Check a program' : 'Save');
+      $this->submitForm(self::SAVED_WITH[$path] ?? [], $path === 'surface-examples/10/check' ? 'Check a program' : 'Save');
       $assert->pageTextContains($path === 'surface-examples/10/check'
         ? 'The values were accepted. Check a program changes nothing, so nothing was written.'
         : 'The changes have been saved.');

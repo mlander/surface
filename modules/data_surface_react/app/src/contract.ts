@@ -54,7 +54,8 @@ export type Widget =
   | 'email'
   | 'fieldset'
   | 'variants'
-  | 'list';
+  | 'list'
+  | 'fixed';
 
 export interface EmptyOption {
   show: boolean;
@@ -107,6 +108,8 @@ export interface Extension {
   group?: boolean;
   /** On a module's fieldset inside a group: draw it right after this sibling of the group instead. */
   after?: string;
+  /** On a deciding key whose variants offer one value, its `const`: the label that value is offered as. */
+  fixed?: string;
   /**
    * The key's static refiners watch keys that each offer a list, and what
    * they answer for every value is stated as conditionals on the frame:

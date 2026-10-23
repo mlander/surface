@@ -20,10 +20,11 @@ use Drupal\data_surface\Storage\ConfigObjectStorage;
  * this is one: the contract panel it is handed, unchanged, and below it
  * what config schema alone can say about the same settings, compared
  * key by key with the full schema the resource emits, the one that reads
- * no value. Above them, for examples 7 to 12 only, what the example shows
- * (ConceptPanel), and on every example's page the files it is made of
- * (FilesPanel), between that and the contract. The form replaces them on
- * every rebuild; only the contract panel has anything new to say then.
+ * no value. Above them, for examples 7 to 12 and 14 only, what the
+ * example shows (ConceptPanel), and on every example's page the files it
+ * is made of (FilesPanel), between that and the contract. The form
+ * replaces them on every rebuild; only the contract panel has anything
+ * new to say then.
  *
  * @see \Drupal\data_surface_tool\ContractPanel
  * @see \Drupal\data_surface_examples\ConfigSchemaPanel
@@ -42,7 +43,7 @@ final class ExamplePanels implements DataSurfaceFormPanelInterface {
   public const TODAY = 'today_panel';
 
   /**
-   * The key the panel saying what examples 7 to 12 show is placed at.
+   * The key the panel saying what examples 7 to 12 and 14 show is placed at.
    */
   public const CONCEPT = 'concept_panel';
 
@@ -65,7 +66,7 @@ final class ExamplePanels implements DataSurfaceFormPanelInterface {
    * @param \Drupal\data_surface\ResourceBuild\ResourcesInterface $resources
    *   The build step, for the full schema built for the account alone.
    * @param \Drupal\data_surface_examples\ConceptPanel $conceptPanel
-   *   The panel saying what examples 7 to 12 show.
+   *   The panel saying what examples 7 to 12 and 14 show.
    * @param \Drupal\data_surface_examples\FilesPanel $filesPanel
    *   The panel listing the files an example is made of.
    */
@@ -90,7 +91,8 @@ final class ExamplePanels implements DataSurfaceFormPanelInterface {
       '#weight' => $contract_panel['#weight'] ?? 0,
       self::CONTRACT => ['#weight' => 0] + $contract_panel,
     ];
-    // Examples 7 to 12 say what they show first; 1 to 3 have nothing more.
+    // Examples 7 to 12 and 14 say what they show first; 1 to 3 have
+    // nothing more.
     $concept = $this->conceptPanel->build($served, $declared, $values);
     if ($concept !== NULL) {
       $panels[self::CONCEPT] = ['#weight' => -1] + $concept;

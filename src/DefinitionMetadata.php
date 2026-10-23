@@ -109,6 +109,15 @@ final class DefinitionMetadata {
   protected const VARIANTS_FROM_KEY = 'data_surface_variants_from';
 
   /**
+   * The offset marking a deciding key whose variants offer one value.
+   *
+   * Written by the build step on a deciding key that declares no list of
+   * its own and whose variants offer a single value: the key is a fixed
+   * value then, drawn as one and stated as `const`.
+   */
+  protected const ONE_VARIANT_KEY = 'data_surface_one_variant';
+
+  /**
    * The definition array key holding the label the owner gave a key.
    *
    * Written when an alter rewords a key it does not own, so what
@@ -504,6 +513,39 @@ final class DefinitionMetadata {
   public static function shapeDefinition(DataDefinitionInterface $definition): ?DataDefinitionInterface {
     $shape = static::shape($definition);
     return $shape === NULL ? NULL : $shape['definition'];
+  }
+
+  /**
+   * Marks a deciding key whose variants offer one value.
+   *
+   * Its list is the variants' values, and there is one: nothing to
+   * choose, so a form draws the value fixed, with its label, and both
+   * documents state it as `const`. Only a list the variants derive is
+   * marked; a list the key declares is the author's, and is drawn as
+   * declared.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The deciding key.
+   *
+   * @see docs/decisions.md#an-extension-is-a-variant-the-site-adds-or-an-alter
+   */
+  public static function setOneVariant(DataDefinitionInterface $definition): void {
+    static::arrayAccess($definition)->offsetSet(static::ONE_VARIANT_KEY, TRUE);
+  }
+
+  /**
+   * Returns whether a deciding key's variants offer one value.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The definition to read.
+   *
+   * @return bool
+   *   TRUE when its list is the variants' and holds one value.
+   */
+  public static function isOneVariant(DataDefinitionInterface $definition): bool {
+    return $definition instanceof \ArrayAccess
+      && $definition->offsetExists(static::ONE_VARIANT_KEY)
+      && (bool) $definition->offsetGet(static::ONE_VARIANT_KEY);
   }
 
   /**

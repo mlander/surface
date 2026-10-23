@@ -97,7 +97,13 @@ the record of the rework that brought the module to the pattern.
   the JSON Schema of what it chooses), asked at every build and refused
   uncacheable or varying by the account. Each variant is a structure read
   from its schema, id `<owner>.<key>.<value>`; a `#[Variant]` wins for a
-  value both name; stored open (`type: ignore` in the config schema).
+  value both name; stored open (`type: ignore` in the config schema),
+  unless the provider is closed (`ClosedVariantsInterface`, a static
+  `structures()` naming every structure it may list), whose variants are
+  written as a class's. A deciding key whose variants offer one value is
+  drawn as that value and stated `const`, its label under
+  `x-surface.fixed`; a secret of a variant not chosen is kept as stored
+  (example 14, `docs/decisions.md#an-extension-is-a-variant-the-site-adds-or-an-alter`).
   Defs the entries share are listed once, `VariantList::addDefs()`, and
   each read structure is built once per request and context, wherever it
   is attached (`Resources::buildRead()`), so variants nest: a component's
@@ -519,7 +525,7 @@ src/Widget/ src/Plugin/  Definition to form element; resolvers, hosts, constrain
 src/Options/             Option sets, the resolver plugin base and manager.
 src/Variants/            Variants from the site: ComponentProps and ComponentSlots.
 src/Refinement/          Narrowing and choice sets.
-modules/                 Sixteen experimental submodules; each has its own README.
+modules/                 Seventeen experimental submodules; each has its own README.
 tests/src/               Unit, Kernel, Functional, FunctionalJavascript.
 docs/ scripts/           Published documentation; check.sh and the generators.
 ```

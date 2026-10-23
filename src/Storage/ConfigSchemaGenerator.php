@@ -24,6 +24,7 @@ use Drupal\data_surface\DefinitionMap;
 use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Entry;
 use Drupal\data_surface\Refinement\ChoiceSet;
+use Drupal\data_surface\Resource\ClosedVariantsInterface;
 use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface\ResourceBuild\AutowiringClassResolver;
 use Drupal\data_surface\ResourceBuild\ResourceCollectorPass;
@@ -396,7 +397,8 @@ final class ConfigSchemaGenerator {
     $held = $installed === NULL ? NULL : ($installed[$entry->name] ?? NULL);
     $definition = $entry->definition;
     $label = static::label($definition, $entry->name);
-    if ($entry->variants !== NULL && DefinitionMetadata::variantsFrom($entry->variants->shell) !== NULL) {
+    $from = $entry->variants === NULL ? NULL : DefinitionMetadata::variantsFrom($entry->variants->shell);
+    if ($from !== NULL && !is_subclass_of($from, ClosedVariantsInterface::class)) {
       // Variants from the site: which there are is the site's, not the
       // code's, so no schema written once can name them. The key is open
       // here, and the variant its deciding key chooses holds it to its own
@@ -411,18 +413,35 @@ final class ConfigSchemaGenerator {
       foreach ($deciding === NULL ? [] : (ChoiceSet::of($deciding)->labels ?? []) as $value => $choice) {
         $labels[(string) $value] = $choice instanceof TranslatableMarkup ? strtr($choice->getUntranslatedString(), array_map('strval', $choice->getArguments())) : (string) $choice;
       }
-      foreach ($entry->variants->variants as $value => $variant) {
+      $variants = [];
+      if ($from !== NULL) {
+        // A closed provider: every structure it may list, whichever this
+        // site offers now.
+        // Decision: see
+        // docs/decisions.md#an-extension-is-a-variant-the-site-adds-or-an-alter.
+        foreach ($from::structures() as $value => $class) {
+          $source = $this->registry->getDefinition($class);
+          $declared = $this->resources->declaration($source->name(), $this->context($owner));
+          $variants[(string) $value] = [$declared->getDefinitions(), $source];
+        }
+      }
+      else {
+        foreach ($entry->variants->variants as $value => $variant) {
+          $source = $variant->source !== NULL && $this->registry->hasDefinition($variant->source) ? $this->registry->getDefinition($variant->source) : NULL;
+          $variants[(string) $value] = [$variant->child->getDefinitions(), $source];
+        }
+      }
+      foreach ($variants as $value => [$map, $source]) {
         $name = $path . '.' . $value;
-        $source = $variant->source !== NULL && $this->registry->hasDefinition($variant->source) ? $this->registry->getDefinition($variant->source) : NULL;
         $entries[] = [
           'module' => $source->module ?? $owner->module,
           'name' => $name,
           'resource' => $owner->id,
           'schema' => [
             'type' => 'mapping',
-            'label' => $labels[(string) $value] ?? $existing[$name]['label'] ?? (string) $value,
+            'label' => $labels[$value] ?? $existing[$name]['label'] ?? $value,
             'constraints' => ['FullyValidatable' => NULL],
-            'mapping' => $this->mapping($variant->child->getDefinitions(), $name, $owner, $entries, $existing, installed: is_array($held) && $entry->variants->chosen($installed[$by] ?? NULL) === (string) $value ? $held : NULL, at: $at . '.'),
+            'mapping' => $this->mapping($map, $name, $owner, $entries, $existing, installed: is_array($held) && $entry->variants->chosen($installed[$by] ?? NULL) === $value ? $held : NULL, at: $at . '.') + $this->keptSecrets($value, $variants),
           ],
         ];
       }
@@ -472,6 +491,41 @@ final class ConfigSchemaGenerator {
       ];
     }
     return $this->definition($definition, $label, installedEmpty: $installed !== NULL && $held === NULL, at: $at);
+  }
+
+  /**
+   * Writes the secrets of other variants that a variant's map keeps.
+   *
+   * A secret is kept as stored when its variant is not chosen, beside the
+   * chosen variant's keys, so each variant's mapping says it may be
+   * there: of its own type, never null, and absent until it is kept.
+   *
+   * Decision: see
+   * docs/decisions.md#an-extension-is-a-variant-the-site-adds-or-an-alter.
+   *
+   * @param string $value
+   *   The variant whose mapping is written.
+   * @param array<string, array{0: \Drupal\data_surface\DefinitionMap, 1: mixed}> $variants
+   *   Every variant's keys, by value.
+   *
+   * @return array
+   *   The mapping of the secrets other variants keep here, by key.
+   */
+  protected function keptSecrets(string $value, array $variants): array {
+    $own = $variants[$value][0];
+    $kept = [];
+    foreach ($variants as $other => [$map]) {
+      if ((string) $other === $value) {
+        continue;
+      }
+      foreach ($map->entries() as $name => $entry) {
+        $name = (string) $name;
+        if (!$own->has($name) && !isset($kept[$name]) && DefinitionMetadata::isSecret($entry->definition)) {
+          $kept[$name] = $this->definition($entry->definition, static::label($entry->definition, $name)) + ['requiredKey' => FALSE];
+        }
+      }
+    }
+    return $kept;
   }
 
   /**

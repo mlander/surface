@@ -800,10 +800,10 @@ final class DataSurface implements DataSurfaceInterface {
     }
     $value = $values[$entry->name] ?? NULL;
     $chosen = $entry->variants?->chosen($values[$entry->variants->by] ?? NULL);
-    if ($chosen !== NULL && !$entry->variants->fits($chosen, $value)) {
+    if ($chosen !== NULL) {
       // A value left behind by another variant says nothing about this
       // one, so the variant is refined from its own defaults.
-      $value = [];
+      $value = $entry->variants->held($chosen, $value) ?? [];
     }
     $refined = $child->refine(array_replace($child->getDefaultValues(), is_array($value) ? $value : []), $runtime);
     $cacheability->addCacheableDependency($refined);

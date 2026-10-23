@@ -37,6 +37,9 @@ and changes a thing that exists, neither creating nor read only, is
 | [`event.desk`](#eventdesk) | `InfoDeskResource` | none | `configure` |
 | [`event.doors`](#eventdoors) | `DoorsResource` | none | `configure` |
 | [`event.fees`](#eventfees) | `FeesStructure` | none | none |
+| [`event.mailer`](#eventmailer) | `MailerResource` | none | `configure` |
+| [`event.mailer.credential.managed`](#eventmailercredentialmanaged) | `ManagedCredentialStructure` | none | none |
+| [`event.mailer.credential.pasted`](#eventmailercredentialpasted) | `PastedCredentialStructure` | none | none |
 | [`event.person`](#eventperson) | `PersonStructure` | none | none |
 | [`event.press`](#eventpress) | `PressResource` | none | `configure` |
 | [`event.program`](#eventprogram) | `ProgramResource` | none | `configure`, `check` |
@@ -44,6 +47,7 @@ and changes a thing that exists, neither creating nor read only, is
 | [`event.sales`](#eventsales) | `TicketSalesResource` | none | `configure` |
 | [`event.spotlight`](#eventspotlight) | `SpotlightResource` | none | `configure` |
 | [`event.ticket_limit`](#eventticket_limit) | `TicketLimitStructure` | none | none |
+| [`event.webhook`](#eventwebhook) | `WebhookResource` | none | `configure` |
 | [`field.instance`](#fieldinstance) | `FieldInstanceResource` | `entity_type_id`, `bundle`, `field_name`, `field_type` | `add`, `reuse`, `edit` |
 | [`field.settings.address`](#fieldsettingsaddress) | `AddressFieldSettingsResource` | none | none |
 | [`field.storage`](#fieldstorage) | `FieldStorageResource` | `field_type` | `add`, `edit` |
@@ -175,6 +179,37 @@ and changes a thing that exists, neither creating nor read only, is
 
 - Altered by `Drupal\data_surface_examples_workflow\Alter\FeesWorkflowAlter` (`data_surface_examples_workflow`), in every operation; it answers access.
 
+## event.mailer
+
+`Drupal\data_surface_examples\Resource\MailerResource`, in `data_surface_examples`.
+
+- Kind: resource
+- Identity: none
+- Storage: `Drupal\data_surface_examples\Storage\MailerStorage`
+- Access: the operation's permission alone
+
+| Operation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `configure` | Configure the mailer | nothing | no | `administer site configuration` | yes | yes | `#[Operation] on MailerResource` (`data_surface_examples`) |
+
+## event.mailer.credential.managed
+
+`Drupal\data_surface_examples\Structure\ManagedCredentialStructure`, in `data_surface_examples`.
+
+- Kind: structure
+- Identity: none
+- Storage: none; its host or its parent stores it
+- Access: the operation's permission alone
+
+## event.mailer.credential.pasted
+
+`Drupal\data_surface_examples\Structure\PastedCredentialStructure`, in `data_surface_examples`.
+
+- Kind: structure
+- Identity: none
+- Storage: none; its host or its parent stores it
+- Access: the operation's permission alone
+
 ## event.person
 
 `Drupal\data_surface_examples\Structure\PersonStructure`, in `data_surface_examples`.
@@ -256,6 +291,19 @@ and changes a thing that exists, neither creating nor read only, is
 - Identity: none
 - Storage: none; its host or its parent stores it
 - Access: the operation's permission alone
+
+## event.webhook
+
+`Drupal\data_surface_examples\Resource\WebhookResource`, in `data_surface_examples`.
+
+- Kind: resource
+- Identity: none
+- Storage: `Drupal\data_surface_examples\Storage\WebhookStorage`
+- Access: the operation's permission alone
+
+| Operation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `configure` | Configure the sales webhook | nothing | no | `administer site configuration` | yes | yes | `#[Operation] on WebhookResource` (`data_surface_examples`) |
 
 ## field.instance
 

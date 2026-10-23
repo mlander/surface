@@ -159,6 +159,87 @@ final class Variants {
   }
 
   /**
+   * Reads a value as the chosen variant's, if it was written for it.
+   *
+   * What fits() answers, with the secrets kept for other variants set
+   * aside first (keptSecrets()): the value less those, when the rest is
+   * the variant's; NULL when it was written for another variant, or holds
+   * nothing but another variant's secrets.
+   *
+   * @param string $id
+   *   The chosen variant.
+   * @param mixed $value
+   *   What the key holds.
+   *
+   * @return array|null
+   *   The chosen variant's value, or NULL.
+   */
+  public function held(string $id, mixed $value): ?array {
+    if (!is_array($value)) {
+      return NULL;
+    }
+    $aside = $this->keptSecrets($id, $value);
+    $own = array_diff_key($value, $aside);
+    return $this->fits($id, $own) && ($own !== [] || $aside === []) ? $own : NULL;
+  }
+
+  /**
+   * Sets aside the secrets of variants not chosen that a value holds.
+   *
+   * A secret is never read back, so a caller who chose another variant
+   * could not send it again when choosing back: what storage holds under
+   * a key another variant declares secret, and the chosen one does not
+   * declare, is kept beside the chosen variant's keys rather than dropped.
+   * Decision: see
+   * docs/decisions.md#an-extension-is-a-variant-the-site-adds-or-an-alter.
+   *
+   * @param string $id
+   *   The chosen variant.
+   * @param array $value
+   *   What the key holds.
+   *
+   * @return array
+   *   The entries of the value kept for other variants, by key.
+   */
+  public function keptSecrets(string $id, array $value): array {
+    $kept = [];
+    foreach ($this->strangers($id, $value) as $key) {
+      foreach ($this->variants as $other => $variant) {
+        $definition = (string) $other === $id ? NULL : $variant->child->getDefinition($key);
+        if ($definition !== NULL && DefinitionMetadata::isSecret($definition)) {
+          // A secret that holds nothing has nothing to keep.
+          if ($value[$key] !== NULL && $value[$key] !== '') {
+            $kept[$key] = $value[$key];
+          }
+          break;
+        }
+      }
+    }
+    return $kept;
+  }
+
+  /**
+   * Gets the secrets of the chosen variant a value holds.
+   *
+   * @param string $id
+   *   The chosen variant.
+   * @param array $value
+   *   What the key holds, perhaps written for another variant.
+   *
+   * @return array
+   *   The entries of the value at the chosen variant's secret keys.
+   */
+  public function ownSecrets(string $id, array $value): array {
+    $own = [];
+    foreach ($this->variant($id)->child->getDefinitions()->toArray() as $key => $definition) {
+      if (array_key_exists($key, $value) && DefinitionMetadata::isSecret($definition)) {
+        $own[$key] = $value[$key];
+      }
+    }
+    return $own;
+  }
+
+  /**
    * Names, for each key, the other variants that do declare it.
    *
    * What turns "unknown key" into a message a caller can act on: the key

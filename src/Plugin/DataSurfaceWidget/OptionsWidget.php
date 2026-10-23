@@ -101,12 +101,68 @@ final class OptionsWidget extends ChoiceWidgetBase {
       $element['#size'] = min(max(count($options), 2), self::MAXIMUM_SIZE);
       $element['#required'] = FALSE;
     }
+    elseif ($set !== NULL && static::drawsFixed($definition, $set, $value)) {
+      $element = static::fixed($element, $set);
+    }
     else {
       $element = $this->singleSelect($element, $definition, $set, $value);
     }
     // The resolver said how long its answer may be reused, and this is
     // where that answer is rendered.
     return static::cachedBy($element, $set);
+  }
+
+  /**
+   * Answers whether a key is drawn as the one value it may hold.
+   *
+   * A deciding key whose variants offer one value, which may not hold
+   * nothing, holding that value or nothing yet: there is nothing to
+   * choose, so it is drawn as the value, not as a select of one. A stored
+   * value the list no longer offers is drawn as a select, under the empty
+   * option rule, so a save that leaves it keeps it.
+   *
+   * Decision: see
+   * docs/decisions.md#an-extension-is-a-variant-the-site-adds-or-an-alter.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The definition.
+   * @param \Drupal\data_surface\Options\OptionSet $set
+   *   The values it offers.
+   * @param mixed $value
+   *   What it holds, or its default.
+   *
+   * @return bool
+   *   TRUE when it is drawn fixed.
+   */
+  public static function drawsFixed(DataDefinitionInterface $definition, OptionSet $set, mixed $value): bool {
+    return !$definition instanceof ListDataDefinitionInterface
+      && DefinitionMetadata::isOneVariant($definition)
+      && DefinitionMetadata::holdsValue($definition)
+      && count($set->options) === 1
+      && (!ValueState::isConfigured($value) || $set->allows($value));
+  }
+
+  /**
+   * Draws the one value a key may hold, with its label, and posts it.
+   *
+   * @param array $element
+   *   The element so far.
+   * @param \Drupal\data_surface\Options\OptionSet $set
+   *   The one value it offers.
+   *
+   * @return array
+   *   An item showing the value's label, whose value is that value.
+   */
+  protected static function fixed(array $element, OptionSet $set): array {
+    $value = array_key_first($set->options);
+    unset($element['#options']);
+    return [
+      '#type' => 'item',
+      '#plain_text' => (string) $set->options[$value],
+      '#value' => $value,
+      // Nothing to answer, so nothing to mark as required.
+      '#required' => FALSE,
+    ] + $element;
   }
 
   /**

@@ -1,0 +1,9 @@
+name: 'Data Surface examples: managed keys'
+type: module
+description: 'Example 14 of the examples: simulates the Key module, a list of named keys the site manages, so a resource can offer one in place of a pasted secret.'
+package: Data Surface
+lifecycle: experimental
+lifecycle_link: 'https://git.drupalcode.org/project/data_surface/-/blob/1.0.x/README.md#experimental-submodules'
+core_version_requirement: ^11.3 || ^12
+dependencies:
+  - data_surface:data_surface_examples

@@ -275,7 +275,7 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
         $held = $values[$name] ?? NULL;
         $definition = $variants->definitionFor($chosen, $child->refine(array_replace(
           $child->getDefaultValues(),
-          $variants->fits($chosen, $held) ? $held : [],
+          $variants->held($chosen, $held) ?? [],
         )));
       }
       $value = match (TRUE) {
@@ -298,7 +298,7 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
         // Rendered for the variant now chosen, from that variant's
         // defaults when what is held was written for another one.
         $chosen = (string) $variants->chosen($values[$variants->by] ?? $surface->getDefault($variants->by));
-        $value = $variants->fits($chosen, $value) ? $value : $variants->defaultsOf($chosen);
+        $value = $variants->held($chosen, $value) ?? $variants->defaultsOf($chosen);
         // A variant its access locked is offered, and drawn fixed.
         // Decision: see
         // docs/decisions.md#a-variant-is-open-locked-or-not-offered.
@@ -773,10 +773,10 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
         continue;
       }
       $held = $stored[$name] ?? NULL;
-      if ($entry->variants !== NULL && !$entry->variants->fits((string) $entry->variants->chosen($values[$entry->variants->by] ?? NULL), $held)) {
+      if ($entry->variants !== NULL) {
         // What is stored was written for another variant, and says
         // nothing about this one.
-        $held = NULL;
+        $held = $entry->variants->held((string) $entry->variants->chosen($values[$entry->variants->by] ?? NULL), $held);
       }
       $child_stored = array_replace($child->getDefaultValues(), is_array($held) ? $held : []);
       [$child_discarded, $child_orphaned] = $this->settle($child, $child_stored, $input[$name]);
@@ -1957,7 +1957,7 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
       if ($entry->variants !== NULL) {
         $chosen = $entry->variants->chosen($value[$entry->variants->by] ?? NULL);
         if ($chosen !== NULL) {
-          $held = $entry->variants->fits($chosen, $held) ? $held : $entry->variants->defaultsOf($chosen);
+          $held = $entry->variants->held($chosen, $held) ?? $entry->variants->defaultsOf($chosen);
           $value[$name] = static::nestedHeld($entry->variants->variant($chosen)->child, $held);
         }
       }
@@ -2427,7 +2427,8 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
    *   The element, wired or left as it was.
    */
   protected function attachRefinementAjax(array $element, string $wrapper_id, array $path, array $replaces): array {
-    if (!isset($element['#type']) || in_array($element['#type'], self::GROUPING_TYPES, TRUE)) {
+    if (!isset($element['#type']) || in_array($element['#type'], self::GROUPING_TYPES, TRUE) || $element['#type'] === 'item') {
+      // A value drawn fixed cannot change, so nothing is rebuilt on it.
       return $element;
     }
     $element['#ajax'] = [
@@ -2556,7 +2557,7 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
         // with: its own defaults when what is held was another's.
         $chosen = $entry->variants->chosen($values[$entry->variants->by] ?? $surface->getDefault($entry->variants->by));
         $child = $chosen === NULL ? NULL : $entry->variants->variant($chosen)->child;
-        $held = $chosen !== NULL && $entry->variants->fits($chosen, $held) ? $held : NULL;
+        $held = $chosen !== NULL ? $entry->variants->held($chosen, $held) : NULL;
       }
       if ($child !== NULL) {
         $element[$name] = $this->wireRefinement(

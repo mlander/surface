@@ -35,6 +35,7 @@ class ExamplesResetTest extends DataSurfaceKernelTestBase {
     'data_surface_tool',
     'data_surface_examples',
     'data_surface_examples_compliance',
+    'data_surface_examples_keys',
   ];
 
   /**
@@ -95,6 +96,13 @@ class ExamplesResetTest extends DataSurfaceKernelTestBase {
     // Examples 7 to 11 too, and the ticket types example 9 reads.
     $this->config('data_surface_examples.bulletin')->set('frequency', 'monthly')->save();
     $this->config('data_surface_examples.ticket_types')->set('types.vip', ['label' => 'VIP', 'locked' => FALSE])->save();
+    // Example 14's managed key, its pasted key kept beside it, and the
+    // managed key another module stored on the webhook.
+    $this->config('data_surface_examples.mailer')
+      ->set('source', 'managed')
+      ->set('credential', ['key_id' => 'mail_service', 'api_key' => 'mk-1'])
+      ->save();
+    $this->config('data_surface_examples.webhook')->set('third_party_settings', ['data_surface_examples_keys' => ['key_id' => 'webhook_signing']])->save();
 
     $form_state = new FormState();
     $this->container->get('form_builder')->submitForm(ResetExamplesForm::class, $form_state);
@@ -106,6 +114,8 @@ class ExamplesResetTest extends DataSurfaceKernelTestBase {
       $three,
       'data_surface_examples.bulletin',
       'data_surface_examples.ticket_types',
+      'data_surface_examples.mailer',
+      'data_surface_examples.webhook',
     ];
     foreach ($names as $name) {
       $this->assertSame($this->shipped($name), $this->stored($name), $name);

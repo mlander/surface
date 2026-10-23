@@ -39,3 +39,12 @@ function data_surface_examples_post_update_install_missing_examples(): void {
 function data_surface_examples_post_update_install_spotlight(): void {
   data_surface_install_missing_config('data_surface_examples');
 }
+
+/**
+ * Creates example 14's mailer and webhook on a site that had the module.
+ *
+ * An object the site already has is left as it is.
+ */
+function data_surface_examples_post_update_install_mailer_and_webhook(): void {
+  data_surface_install_missing_config('data_surface_examples');
+}

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Drupal\data_surface_examples;
 
 /**
- * The tool calls examples 7 to 13 show, written down once.
+ * The tool calls examples 7 to 14 show, written down once.
  *
  * None writes anything: every call is a dry run, which accepts, validates
  * and prepares the values, answers with what would be stored and stops,
@@ -140,6 +140,49 @@ final class ConceptCalls {
         'values' => [
           'component' => 'data_surface_examples:hero',
           'props' => ['title' => 'Doors open at half past six', 'overlay' => 140],
+        ],
+      ],
+    ],
+    'event.mailer' => [
+      'pasted' => [
+        'label' => 'A key pasted, rehearsed: the secret is in no answer',
+        'values' => ['source' => 'pasted', 'credential' => ['api_key' => 'mk-example-7f3a91']],
+      ],
+      'managed' => [
+        'label' => 'A managed key chosen, rehearsed',
+        'module' => 'data_surface_examples_keys',
+        'values' => ['source' => 'managed', 'credential' => ['key_id' => 'mail_service']],
+      ],
+      'pasted_while_managed' => [
+        'label' => 'A pasted key sent while the managed source is chosen: refused, naming the source',
+        'module' => 'data_surface_examples_keys',
+        'values' => [
+          'source' => 'managed',
+          'credential' => ['key_id' => 'mail_service', 'api_key' => 'mk-example-7f3a91'],
+        ],
+      ],
+      'read' => [
+        'label' => 'The mailer read: the pasted key is left out',
+        'operation' => 'configure:read',
+        'dry_run' => FALSE,
+      ],
+    ],
+    'event.webhook' => [
+      'pasted' => [
+        'label' => 'A key pasted, rehearsed',
+        'values' => ['api_key' => 'wh-example-02c4d8'],
+      ],
+      'managed' => [
+        'label' => 'A managed key chosen, rehearsed',
+        'module' => 'data_surface_examples_keys',
+        'values' => ['third_party_settings' => ['data_surface_examples_keys' => ['key_id' => 'webhook_signing']]],
+      ],
+      'pasted_beside_managed' => [
+        'label' => 'A pasted key sent beside a managed key: refused, naming the key it depends on',
+        'module' => 'data_surface_examples_keys',
+        'values' => [
+          'api_key' => 'wh-example-02c4d8',
+          'third_party_settings' => ['data_surface_examples_keys' => ['key_id' => 'webhook_signing']],
         ],
       ],
     ],
@@ -333,11 +376,13 @@ final class ConceptCalls {
    */
   public static function drush(string $resource, string $call): string {
     $values = self::values($resource, $call);
-    $input = json_encode((self::CALLS[$resource][$call]['parameters'] ?? []) + ($values === NULL ? [] : ['values' => $values]), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION);
+    $sent = (self::CALLS[$resource][$call]['parameters'] ?? []) + ($values === NULL ? [] : ['values' => $values]);
+    $input = json_encode($sent, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION);
     $command = sprintf(
-      "drush tool:run %s --uid=1 --input='%s'%s",
+      "drush tool:run %s --uid=1%s%s",
       self::tool($resource, $call),
-      str_replace("'", "'\\''", (string) $input),
+      // A read takes nothing: it names no thing and sends no values.
+      $sent === [] ? '' : sprintf(" --input='%s'", str_replace("'", "'\\''", (string) $input)),
       (self::CALLS[$resource][$call]['dry_run'] ?? TRUE) ? ' --input=dry_run=true' : '',
     );
     $state = self::CALLS[$resource][$call]['state'] ?? [];

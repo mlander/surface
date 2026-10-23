@@ -307,6 +307,25 @@ export function TextareaField(props: FieldProps): JSX.Element {
 }
 
 /** What a key no widget claims shows, as the Form API would refuse it. */
+/**
+ * The one value a deciding key may hold, drawn as its label: nothing to
+ * choose. The value is the schema's `const`, held in the form's values
+ * from its default, and sent as any other.
+ */
+export function FixedField(props: FieldProps): JSX.Element {
+  const id = fieldId(props.path);
+  return (
+    <Item props={props} marker={false} label={false}>
+      <div className="dsr-label" id={id}>
+        {props.schema.title ?? props.name}
+      </div>
+      <div className="dsr-fixed" aria-labelledby={id}>
+        {props.schema['x-surface']?.fixed ?? String(props.schema.const)}
+      </div>
+    </Item>
+  );
+}
+
 export function UnsupportedField(props: FieldProps): JSX.Element {
   return (
     <div className="dsr-item dsr-item--none">

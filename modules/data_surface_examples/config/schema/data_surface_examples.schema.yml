@@ -407,3 +407,74 @@ data_surface_examples.spotlight:
     slots:
       type: ignore
       label: 'Slots'
+
+# Example 14, the owner's way: the credential is a variant its source chooses,
+# and both sources are written here, whichever the site offers.
+# Generated from the event.mailer resource by drush data_surface:config-schema.
+data_surface_examples.mailer:
+  type: config_object
+  label: 'Mailer, example 14'
+  constraints:
+    FullyValidatable: ~
+  mapping:
+    sender:
+      type: email
+      label: 'Sender'
+    endpoint:
+      type: uri
+      label: 'Mail service'
+    source:
+      type: string
+      label: 'Credential source'
+    credential:
+      type: 'data_surface_examples.mailer.credential.[%parent.source]'
+      label: 'Credential'
+
+# Example 14, the alter's way: a pasted key, and a mount for another module.
+# Generated from the event.webhook resource by drush data_surface:config-schema.
+data_surface_examples.webhook:
+  type: config_object
+  label: 'Sales webhook, example 14'
+  constraints:
+    FullyValidatable: ~
+  mapping:
+    endpoint:
+      type: uri
+      label: 'Endpoint'
+    api_key:
+      type: string
+      label: 'API key'
+      nullable: true
+    third_party_settings:
+      type: sequence
+      label: 'Third party settings'
+      requiredKey: false
+      sequence:
+        type: 'data_surface_examples.webhook.third_party.[%key]'
+
+# Generated from the event.mailer resource by drush data_surface:config-schema.
+data_surface_examples.mailer.credential.pasted:
+  type: mapping
+  label: 'Pasted here'
+  constraints:
+    FullyValidatable: ~
+  mapping:
+    api_key:
+      type: string
+      label: 'API key'
+      nullable: true
+
+# Generated from the event.mailer resource by drush data_surface:config-schema.
+data_surface_examples.mailer.credential.managed:
+  type: mapping
+  label: 'A managed key'
+  constraints:
+    FullyValidatable: ~
+  mapping:
+    key_id:
+      type: string
+      label: 'Key'
+    api_key:
+      type: string
+      label: 'API key'
+      requiredKey: false

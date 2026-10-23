@@ -26,7 +26,9 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * baselines instead, from the modules it installs alone: how a
  * declaration whose variants come from the site (example 12's
  * components, and the component block's) is pinned, since a site's own
- * themes would add theirs.
+ * themes would add theirs. Example 14's resources are pinned with the
+ * module that manages keys on, its second source and its alter's key in
+ * them: one baseline per declaration, so one state.
  *
  * @see docs/evolution.md
  * @see \Drupal\data_surface\Contract\ContractDiff
@@ -56,6 +58,7 @@ class ContractBaselineTest extends DataSurfaceKernelTestBase {
     'path_alias',
     'data_surface_component_block',
     'data_surface_block',
+    'data_surface_examples_keys',
   ];
 
   /**
@@ -106,6 +109,9 @@ class ContractBaselineTest extends DataSurfaceKernelTestBase {
       'event.desk',
       'event.doors',
       'event.fees',
+      'event.mailer',
+      'event.mailer.credential.managed',
+      'event.mailer.credential.pasted',
       'event.person',
       'event.press',
       'event.program',
@@ -113,6 +119,7 @@ class ContractBaselineTest extends DataSurfaceKernelTestBase {
       'event.sales',
       'event.spotlight',
       'event.ticket_limit',
+      'event.webhook',
       'first.newsletter',
       'first.store',
       'registration.compliance',

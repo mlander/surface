@@ -272,9 +272,10 @@ interface DataSurfacePipelineInterface {
    * Values are arrays, and an empty PHP array encodes as a JSON list:
    * here every map is an object, an empty one included (a map whose
    * every key does not apply, a mount with nothing in it), and every
-   * list a list, as the served contract writes its own `values`. It
-   * writes what it is handed: a door hands it what outbound() projected,
-   * never the accepted values as they are.
+   * list a list, as the served contract writes its own `values`. A
+   * secret that holds nothing is left out, since null is no value of it.
+   * It writes what it is handed: a door hands it what outbound()
+   * projected, never the accepted values as they are.
    *
    * Decision: see docs/decisions.md#a-key-that-does-not-apply, and
    * docs/decisions.md#every-door-projects-what-the-read-tool-projects.

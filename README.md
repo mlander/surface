@@ -319,12 +319,20 @@ their configuration may change without a deprecation path.
   behaves, the stock widgets, and a component's props read from its JSON
   Schema, each page saying what it shows and what its tool answers; and
   example 13, a block that embeds a component, which says to enable
-  `data_surface_component_block` and `data_surface_block`. Needs
+  `data_surface_component_block` and `data_surface_block`; and example
+  14, a credential pasted or a key the site manages, which says to
+  enable `data_surface_examples_keys`. Needs
   [Tool](https://www.drupal.org/project/tool).
 - **Data Surface Examples - Compliance**
   (`data_surface_examples_compliance`): example 4, a compliance
   structure and the one alter that attaches it to example 3's resource,
   which does not know it.
+- **Data Surface examples: managed keys**
+  (`data_surface_examples_keys`): example 14, a module that manages
+  keys, standing in for the Key module: a list of named keys, the
+  constraint and resolver that offer them, and an alter that offers one
+  on a resource that takes a pasted key, ruling the pasted key out once
+  one is chosen.
 - **Data Surface Examples - Workflow**
   (`data_surface_examples_workflow`): example 10, extended, two alters
   that answer access for the program and its fees, which do not know

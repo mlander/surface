@@ -16,7 +16,11 @@ a JSON Schema read into a structure
 ([below](#one-small-resource-per-concept)). Example 13 is example 12's
 two lines as the settings of a block, which lives in a submodule of its
 own, placed through the general placement resource of another
-([below](#example-13-a-block-that-embeds-a-component)).
+([below](#example-13-a-block-that-embeds-a-component)). Example 14 is an
+optional extension: a credential pasted as a secret, or a key the site
+manages once a submodule standing in for the Key module is on, built
+once by the owner and once by that submodule's alter
+([below](#example-14-an-optional-extension)).
 
 ```bash
 drush pm:install data_surface_examples
@@ -28,7 +32,7 @@ rooms are fixed lists inside the module, and each example keeps its
 settings in a config object of its own
 (`data_surface_examples.registration_step1` to `_step3`, then
 `data_surface_examples.bulletin`, `.press`, `.desk`, `.sales`,
-`.program`, `.doors` and `.spotlight`), so the examples never write over
+`.program`, `.doors`, `.spotlight`, `.mailer` and `.webhook`), so the examples never write over
 each other.
 
 To take the examples again from the start, follow **Reset to defaults**
@@ -2744,6 +2748,547 @@ of code, counted without blank lines or comments:
 | [`modules/data_surface_examples/components/section/section.twig`](components/section/section.twig) | the section's template | 6 |
 | [`modules/data_surface_examples/components/call_to_action/call_to_action.twig`](components/call_to_action/call_to_action.twig) | the call to action's template | 1 |
 
+## Example 14: an optional extension
+
+`/surface-examples/14`, and the webhook at `/surface-examples/14/webhook`
+
+A resource that calls a service takes a credential: a key pasted here, a
+secret, or, once a module that manages keys is on, a key the site
+manages in its place, with no pasted box beside it. That is the Key
+module's pattern. `data_surface_examples_keys` stands in for the Key
+module, so nothing contributed is installed, and the examples do not
+depend on it, so the page says how to enable it while it is off:
+
+```bash
+ddev drush pm:install data_surface_examples_keys
+```
+
+Each page shows both resources as they are now, says whether the module
+is on, and makes the calls below that the module allows. Two ways reach
+the same form, each for the case it fits: the owner declares both
+sources, or another module's alter offers the managed key
+([decision](../../docs/decisions.md#an-extension-is-a-variant-the-site-adds-or-an-alter)).
+
+### The owner's way: a variant the site adds
+
+The mailer knows the module that manages keys. It declares a source and
+a credential whose variants the source chooses, listed by a provider:
+
+<!-- code: src/Resource/MailerResource.php -->
+
+```php
+#[Resource('event.mailer', storage: MailerStorage::class)]
+#[Operation('configure',
+  label: new TranslatableMarkup('Configure the mailer'),
+  description: new TranslatableMarkup("Sets who the event's mail is sent from, the mail service it is sent through, and the credential that service is called with: a key pasted here, or a key the site manages."),
+  permission: 'administer site configuration',
+)]
+final class MailerResource implements ResourceInterface {
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function defineInputs(BlueprintInterface $inputs): void {
+    $inputs->add('sender', 'email', t('Sender'), default: 'tickets@example.com')
+      ->setRequired(TRUE);
+    $inputs->add('endpoint', 'uri', t('Mail service'), default: 'https://mail.example.com/v1/send')
+      ->setRequired(TRUE);
+    $inputs->add('source', 'string', t('Credential source'), default: 'pasted')
+      ->setRequired(TRUE);
+    $inputs->attachVariants('credential', by: 'source', from: CredentialSources::class)
+      ->setLabel(t('Credential'));
+  }
+
+}
+```
+
+The provider lists the pasted source always and the managed one while
+the module is on, cacheable by the list of modules and the keys'
+configuration, so the second source is there at the next request after
+the module is installed, with no cache rebuild. Both are structures of
+this module, named once in `structures()`: the provider is closed
+(`ClosedVariantsInterface`), so the config schema written from the
+resource gives each its own type,
+`data_surface_examples.mailer.credential.[%parent.source]`, whichever
+the site offers when it is written, where example 12's components are an
+open map.
+
+<!-- code: src/Variants/CredentialSources.php -->
+
+```php
+final class CredentialSources implements ClosedVariantsInterface, ContainerInjectionInterface {
+
+  use StringTranslationTrait;
+
+  /**
+   * The module that manages keys.
+   */
+  public const KEYS = 'data_surface_examples_keys';
+
+  /**
+   * Constructs the provider.
+   *
+   * @param \Drupal\Core\Extension\ModuleHandlerInterface $moduleHandler
+   *   The module handler.
+   * @param \Drupal\Core\StringTranslation\TranslationInterface $string_translation
+   *   The string translation service.
+   */
+  public function __construct(
+    protected readonly ModuleHandlerInterface $moduleHandler,
+    TranslationInterface $string_translation,
+  ) {
+    $this->stringTranslation = $string_translation;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function create(ContainerInterface $container): static {
+    return new static($container->get('module_handler'), $container->get('string_translation'));
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function structures(): array {
+    return [
+      'pasted' => PastedCredentialStructure::class,
+      'managed' => ManagedCredentialStructure::class,
+    ];
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function variants(): VariantList {
+    $sources = (new VariantList())
+      ->addCacheTags(['config:core.extension', 'config:' . self::KEYS . '.keys'])
+      ->addStructure('pasted', $this->t('Pasted here'), self::structures()['pasted']);
+    if ($this->moduleHandler->moduleExists(self::KEYS)) {
+      $sources->addStructure('managed', $this->t('A managed key'), self::structures()['managed']);
+    }
+    return $sources;
+  }
+
+}
+```
+
+<!-- code: src/Structure/PastedCredentialStructure.php -->
+
+```php
+#[Structure('event.mailer.credential.pasted')]
+final class PastedCredentialStructure implements StructureInterface {
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function defineInputs(BlueprintInterface $inputs): void {
+    $api_key = $inputs->add('api_key', 'string', t('API key'))
+      ->setDescription(t('The key the mail service issued, pasted here.'))
+      ->setRequired(TRUE);
+    DefinitionMetadata::setSecret($api_key);
+  }
+
+}
+```
+
+<!-- code: src/Structure/ManagedCredentialStructure.php -->
+
+```php
+#[Structure('event.mailer.credential.managed')]
+final class ManagedCredentialStructure implements StructureInterface {
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function defineInputs(BlueprintInterface $inputs): void {
+    $inputs->add('key_id', 'string', t('Key'))
+      ->setDescription(t('A key the site manages; its value is read where it is used, never stored here.'))
+      ->setRequired(TRUE)
+      ->addConstraint('ManagedKey');
+  }
+
+}
+```
+
+The managed key declares `ManagedKey`, the module's constraint, which
+its resolver reads as the keys the site manages, so the form offers them
+and both documents state them.
+
+With the module off there is one source, and nothing to choose: the
+source is drawn as that source, its label where a select would be, and
+posted as it is. Both documents state it as `const`, with the label
+under `x-surface.fixed` (the widget hint `fixed`, which the React page
+draws as the label), and the credential is the pasted source's def:
+
+```json
+{
+    "source": {
+        "title": "Credential source",
+        "type": "string",
+        "const": "pasted",
+        "default": "pasted",
+        "x-surface": {
+            "locked": false,
+            "dependsOn": [],
+            "fixed": "Pasted here"
+        }
+    },
+    "credential": {
+        "title": "Credential",
+        "anyOf": [
+            {
+                "$ref": "#/$defs/event.mailer.credential.pasted"
+            },
+            {
+                "type": "null"
+            }
+        ],
+        "x-surface": {
+            "locked": false,
+            "dependsOn": [
+                "source"
+            ],
+            "by": "source",
+            "variants": {
+                "pasted": "#/$defs/event.mailer.credential.pasted"
+            }
+        }
+    }
+}
+```
+
+With the module on, the source offers both, and the credential is
+`anyOf` of the two sources' defs, one conditional each:
+
+```json
+{
+    "source": {
+        "title": "Credential source",
+        "type": "string",
+        "oneOf": [
+            {
+                "const": "pasted",
+                "title": "Pasted here"
+            },
+            {
+                "const": "managed",
+                "title": "A managed key"
+            }
+        ],
+        "default": "pasted",
+        "x-surface": {
+            "locked": false,
+            "dependsOn": []
+        }
+    },
+    "credential": {
+        "title": "Credential",
+        "anyOf": [
+            {
+                "$ref": "#/$defs/event.mailer.credential.pasted"
+            },
+            {
+                "$ref": "#/$defs/event.mailer.credential.managed"
+            },
+            {
+                "type": "null"
+            }
+        ],
+        "x-surface": {
+            "locked": false,
+            "dependsOn": [
+                "source"
+            ],
+            "by": "source",
+            "variants": {
+                "pasted": "#/$defs/event.mailer.credential.pasted",
+                "managed": "#/$defs/event.mailer.credential.managed"
+            }
+        }
+    }
+}
+```
+
+The pasted key is a secret: the form draws an empty box, and no answer
+returns it. A pasted key stored is kept when the managed source is
+chosen, beside the managed key's name, and taken up again when the
+pasted source is chosen back, since no caller could send it again; the
+managed source's config schema says it may be there. A plain value of
+the other source goes, as between any two variants.
+
+### The alter's way: the pasted key ruled out
+
+The webhook does not know the module that manages keys. It declares an
+endpoint and a pasted key:
+
+<!-- code: src/Resource/WebhookResource.php -->
+
+```php
+#[Resource('event.webhook', storage: WebhookStorage::class)]
+#[Operation('configure',
+  label: new TranslatableMarkup('Configure the sales webhook'),
+  description: new TranslatableMarkup("Sets the address the event's sales are posted to, and the key each post is signed with."),
+  permission: 'administer site configuration',
+)]
+final class WebhookResource implements ResourceInterface {
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function defineInputs(BlueprintInterface $inputs): void {
+    $inputs->add('endpoint', 'uri', t('Endpoint'), default: 'https://hooks.example.com/sales')
+      ->setRequired(TRUE);
+    $api_key = $inputs->add('api_key', 'string', t('API key'))
+      ->setDescription(t('The key each post is signed with, pasted here.'));
+    DefinitionMetadata::setSecret($api_key);
+  }
+
+}
+```
+
+The module's alter mounts a managed key on it, draws it right after the
+pasted key, and rules the pasted key out once a key is chosen, a rule
+declared as data:
+
+<!-- code: ../data_surface_examples_keys/src/Alter/WebhookKeyAlter.php -->
+
+```php
+#[Alters(WebhookResource::class)]
+final class WebhookKeyAlter implements AltersInputsInterface {
+
+  use StringTranslationTrait;
+
+  /**
+   * Constructs the alter, which the container builds as a service.
+   *
+   * @param \Drupal\Core\StringTranslation\TranslationInterface $string_translation
+   *   The string translation service.
+   */
+  public function __construct(TranslationInterface $string_translation) {
+    $this->stringTranslation = $string_translation;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function alterInputs(BlueprintAdditionsInterface $inputs): void {
+    $inputs->add('key_id', 'string', $this->t('Key'))
+      ->setDescription($this->t('A key the site manages, used in place of a pasted one.'))
+      ->addConstraint('ManagedKey');
+    $inputs->describe('third_party_settings.data_surface_examples_keys', label: $this->t('Managed key'), after: 'api_key');
+    // A managed key chosen: a pasted one means nothing beside it.
+    $inputs->narrow('api_key')
+      ->when(Condition::present('key_id'))
+      ->doesNotApply();
+  }
+
+}
+```
+
+With a key chosen, the form draws no pasted box, a pasted key sent is
+refused naming the managed key, and what is stored for the pasted key is
+kept; with the module off, the pasted box is back and the stored key with
+it. The full schema states the rule as written, the conditional the
+webhook's frame lists under `x-surface.rules`:
+
+```json
+[
+    {
+        "if": {
+            "properties": {
+                "third_party_settings": {
+                    "type": [
+                        "object",
+                        "null"
+                    ],
+                    "properties": {
+                        "data_surface_examples_keys": {
+                            "type": [
+                                "object",
+                                "null"
+                            ],
+                            "properties": {
+                                "key_id": {
+                                    "not": {
+                                        "type": "null"
+                                    }
+                                }
+                            },
+                            "required": [
+                                "key_id"
+                            ]
+                        }
+                    },
+                    "required": [
+                        "data_surface_examples_keys"
+                    ]
+                }
+            },
+            "required": [
+                "third_party_settings"
+            ]
+        },
+        "then": {
+            "properties": {
+                "api_key": false
+            }
+        }
+    }
+]
+```
+
+The alter ships ruling out. The alternative, not shipped, locks: the
+pasted key stays drawn, fixed, and a pasted key sent is noted as not
+taken instead of refused. That leaves an empty password box that cannot
+be used, and a caller who sends both learns of it only from a note; a
+conditional lock is also no effect a declared rule has (ROADMAP item 3
+left it out), so this is the spelling it would have:
+
+```php
+// Not shipped: the pasted key drawn fixed once a managed key is
+// chosen, and a pasted key sent noted as not taken.
+$inputs->narrow('api_key')
+  ->when(Condition::present('key_id'))
+  ->lock();
+```
+
+### The gap between the two
+
+What the alter cannot do: hand the webhook's code the managed key's
+value. The code that signs a post reads `api_key`, the one key the
+webhook declares; the managed key's name is stored under
+`third_party_settings.data_surface_examples_keys.key_id`, which belongs
+to the module that mounted it, and the webhook never names another
+module's keys. So once a managed key is chosen the form, both documents
+and the tool are right, and the code that signs has no key to sign with.
+The mailer has no such gap: it declares the managed source itself, so
+its code reads `credential.key_id` and asks the key service for the
+value.
+
+An alter supplying the value it rules out, so the owner's code would
+read it at `api_key`, is [ROADMAP](../../ROADMAP.md) item 18, designed
+and not built.
+
+### The calls
+
+Made on the settings the module ships, with the module that manages
+keys on, each a dry run but the read. The first is a write rehearsed,
+since a page that makes its calls whenever it is drawn writes nothing:
+the secret is in no answer. The second chooses the managed source; the
+third sends a pasted key beside it and is refused, naming the source
+that chose the other variant; the fourth reads what is stored, with the
+pasted key left out. A managed key stored would be read by its name. The
+webhook's three: a pasted key, a managed key, and both, refused naming
+the key the pasted one depends on. With the module off, the page makes
+only the calls that need nothing of it.
+
+```bash
+drush tool:run data_surface:event.mailer:configure --uid=1 --input='{"values":{"source":"pasted","credential":{"api_key":"mk-example-7f3a91"}}}' --input=dry_run=true
+```
+
+```
+1. A key pasted, rehearsed: the secret is in no answer
+Success: Dry run of Configure the mailer: the values were accepted and prepared, and nothing was written.
+  values: {"sender":"tickets@example.com","endpoint":"https://mail.example.com/v1/send","source":"pasted","credential":[]}
+```
+
+```bash
+drush tool:run data_surface:event.mailer:configure --uid=1 --input='{"values":{"source":"managed","credential":{"key_id":"mail_service"}}}' --input=dry_run=true
+```
+
+```
+2. A managed key chosen, rehearsed
+Success: Dry run of Configure the mailer: the values were accepted and prepared, and nothing was written.
+  values: {"sender":"tickets@example.com","endpoint":"https://mail.example.com/v1/send","source":"managed","credential":{"key_id":"mail_service"}}
+```
+
+```bash
+drush tool:run data_surface:event.mailer:configure --uid=1 --input='{"values":{"source":"managed","credential":{"key_id":"mail_service","api_key":"mk-example-7f3a91"}}}' --input=dry_run=true
+```
+
+```
+3. A pasted key sent while the managed source is chosen: refused, naming the source
+Failed: The values were refused:
+/credential/api_key: credential.api_key belongs to the pasted variant, but source chose managed.
+```
+
+```bash
+drush tool:run data_surface:event.mailer:configure:read --uid=1
+```
+
+```
+4. The mailer read: the pasted key is left out
+Success: Configure the mailer: the stored values were read, and nothing was written.
+  values: {"sender":"tickets@example.com","endpoint":"https://mail.example.com/v1/send","source":"pasted","credential":[]}
+```
+
+```bash
+drush tool:run data_surface:event.webhook:configure --uid=1 --input='{"values":{"api_key":"wh-example-02c4d8"}}' --input=dry_run=true
+```
+
+```
+1. A key pasted, rehearsed
+Success: Dry run of Configure the sales webhook: the values were accepted and prepared, and nothing was written.
+  values: {"endpoint":"https://hooks.example.com/sales","third_party_settings":[]}
+```
+
+```bash
+drush tool:run data_surface:event.webhook:configure --uid=1 --input='{"values":{"third_party_settings":{"data_surface_examples_keys":{"key_id":"webhook_signing"}}}}' --input=dry_run=true
+```
+
+```
+2. A managed key chosen, rehearsed
+Success: Dry run of Configure the sales webhook: the values were accepted and prepared, and nothing was written.
+  values: {"endpoint":"https://hooks.example.com/sales","third_party_settings":{"data_surface_examples_keys":{"key_id":"webhook_signing"}}}
+```
+
+```bash
+drush tool:run data_surface:event.webhook:configure --uid=1 --input='{"values":{"api_key":"wh-example-02c4d8","third_party_settings":{"data_surface_examples_keys":{"key_id":"webhook_signing"}}}}' --input=dry_run=true
+```
+
+```
+3. A pasted key sent beside a managed key: refused, naming the key it depends on
+Failed: The values were refused:
+/api_key: API key does not apply when third_party_settings.data_surface_examples_keys.key_id is set.
+```
+
+### Files
+
+What example 14 is made of, as its pages list them, each with its lines
+of code, counted without blank lines or comments:
+
+<!-- files: 14 -->
+
+| File | What it is | Lines |
+| --- | --- | --- |
+| [`modules/data_surface_examples/src/Resource/MailerResource.php`](src/Resource/MailerResource.php) | the owner's way: a sender, a mail service, and a credential whose source a provider lists | 18 |
+| [`modules/data_surface_examples/src/Variants/CredentialSources.php`](src/Variants/CredentialSources.php) | the provider: the pasted source always, the managed source while the keys module is on, both named for storage | 28 |
+| [`modules/data_surface_examples/src/Structure/PastedCredentialStructure.php`](src/Structure/PastedCredentialStructure.php) | the pasted source: a key, a secret | 9 |
+| [`modules/data_surface_examples/src/Structure/ManagedCredentialStructure.php`](src/Structure/ManagedCredentialStructure.php) | the managed source: the name of a key the site manages | 9 |
+| [`modules/data_surface_examples/src/Storage/MailerStorage.php`](src/Storage/MailerStorage.php) | its storage: names the config object | 3 |
+| [`modules/data_surface_examples/data_surface_examples.routing.yml`](data_surface_examples.routing.yml), entry `data_surface_examples.step14` | the mailer's route | 10 |
+| [`modules/data_surface_examples/config/schema/data_surface_examples.schema.yml`](config/schema/data_surface_examples.schema.yml), entry `data_surface_examples.mailer` | the mailer's config schema, generated from the class | 18 |
+| [`modules/data_surface_examples/config/schema/data_surface_examples.schema.yml`](config/schema/data_surface_examples.schema.yml), entry `data_surface_examples.mailer.credential.pasted` | the pasted source's config schema | 10 |
+| [`modules/data_surface_examples/config/schema/data_surface_examples.schema.yml`](config/schema/data_surface_examples.schema.yml), entry `data_surface_examples.mailer.credential.managed` | the managed source's config schema, with the pasted key it keeps | 13 |
+| [`modules/data_surface_examples/config/install/data_surface_examples.mailer.yml`](config/install/data_surface_examples.mailer.yml) | the mailer's shipped settings | 5 |
+| [`modules/data_surface_examples/src/Resource/WebhookResource.php`](src/Resource/WebhookResource.php) | the alter's way: an endpoint and a pasted key, and nothing of managed keys | 15 |
+| [`modules/data_surface_examples/src/Storage/WebhookStorage.php`](src/Storage/WebhookStorage.php) | its storage: names the config object | 3 |
+| [`modules/data_surface_examples/data_surface_examples.routing.yml`](data_surface_examples.routing.yml), entry `data_surface_examples.step14_webhook` | the webhook's route | 10 |
+| [`modules/data_surface_examples/config/schema/data_surface_examples.schema.yml`](config/schema/data_surface_examples.schema.yml), entry `data_surface_examples.webhook` | the webhook's config schema, generated from the class | 19 |
+| [`modules/data_surface_examples/config/install/data_surface_examples.webhook.yml`](config/install/data_surface_examples.webhook.yml) | the webhook's shipped settings | 2 |
+| [`modules/data_surface_examples_keys/data_surface_examples_keys.info.yml`](../data_surface_examples_keys/data_surface_examples_keys.info.yml) | the module that manages keys, which the page tells you to enable | 9 |
+| [`modules/data_surface_examples_keys/data_surface_examples_keys.services.yml`](../data_surface_examples_keys/data_surface_examples_keys.services.yml) | its one service, the list of keys | 5 |
+| [`modules/data_surface_examples_keys/data_surface_examples_keys.install`](../data_surface_examples_keys/data_surface_examples_keys.install) | takes the managed key it stored on the webhook away when it is uninstalled | 11 |
+| [`modules/data_surface_examples_keys/src/Keys/ManagedKeys.php`](../data_surface_examples_keys/src/Keys/ManagedKeys.php) | the keys the site manages, read from configuration with its cacheability | 16 |
+| [`modules/data_surface_examples_keys/src/Plugin/Validation/Constraint/ManagedKeyConstraint.php`](../data_surface_examples_keys/src/Plugin/Validation/Constraint/ManagedKeyConstraint.php) | the constraint a key naming a managed key declares | 15 |
+| [`modules/data_surface_examples_keys/src/Plugin/Validation/Constraint/ManagedKeyConstraintValidator.php`](../data_surface_examples_keys/src/Plugin/Validation/Constraint/ManagedKeyConstraintValidator.php) | its validator: refuses a name the site does not manage | 19 |
+| [`modules/data_surface_examples_keys/src/Plugin/DataSurfaceOptionsResolver/ManagedKeyOptions.php`](../data_surface_examples_keys/src/Plugin/DataSurfaceOptionsResolver/ManagedKeyOptions.php) | the resolver that reads the constraint as the list of keys | 28 |
+| [`modules/data_surface_examples_keys/src/Alter/WebhookKeyAlter.php`](../data_surface_examples_keys/src/Alter/WebhookKeyAlter.php) | the alter: mounts a managed key on the webhook, and rules the pasted key out once one is chosen | 16 |
+| [`modules/data_surface_examples_keys/config/schema/data_surface_examples_keys.schema.yml`](../data_surface_examples_keys/config/schema/data_surface_examples_keys.schema.yml), entry `data_surface_examples_keys.keys` | the keys' config schema, written by hand | 17 |
+| [`modules/data_surface_examples_keys/config/schema/data_surface_examples_keys.schema.yml`](../data_surface_examples_keys/config/schema/data_surface_examples_keys.schema.yml), entry `data_surface_examples.webhook.third_party.data_surface_examples_keys` | the config schema of what it stores on the webhook | 11 |
+| [`modules/data_surface_examples_keys/config/install/data_surface_examples_keys.keys.yml`](../data_surface_examples_keys/config/install/data_surface_examples_keys.keys.yml) | the two keys it ships | 7 |
+
 ## How this page is kept true
 
 Every code block above is the file it names, from its first attribute
@@ -2752,7 +3297,7 @@ when one drifts, and so does the component example 12 quotes. Each
 example's Files table is its list in `Series`, the one its page and the
 landing page's reading order are drawn from, and `ExampleFilesTest`
 fails when a table and the list differ, or the list and the module. The Drush
-commands and answers of examples 7 to 13 are asserted by
+commands and answers of examples 7 to 14 are asserted by
 `ExamplesConceptsToolTest`. The JSON of example 1's config schema is asserted by
 `ConfigSchemaContractTest`, which also checks this page quotes it. The tool's three answers are asserted by
 `ExamplesToolTest`, which also checks this page quotes them, and the
@@ -2776,10 +3321,12 @@ Drush commands are checked against `ExampleCalls`.
 | `Functional\ServedContractEndpointsTest` | In React: the landing page's links, and example 2's contract, refine and validate over HTTP. |
 | `Functional\ServedSubmitEndpointTest` | In React: example 2 saved over HTTP, refused, and refused after someone else saved. |
 | `Kernel\ExamplesResetTest` | Reset to defaults puts every example, and what another module stored on example 3, back to the shipped files, and opens every room example 4 closed. |
-| `Kernel\ExamplesConceptsTest` | Examples 7 to 12: each form builds and saves; example 7's rules in the full schema as declared, the send day gone for a monthly bulletin and kept in storage; example 8's one def at two sites with each wiring, the mixed-in keys flat, the shape at two keys, the volunteers' collection; example 9's keys from the configuration, a type added without a cache rebuild, the locked type in both documents and on the form; example 10's fees for two accounts, locked once published, and both operations' facts and tools; example 11's widgets, the always held badges and the notes that clear; example 12's four components read as four variants at the props and again at the slots, the card's props as keys with their constraints, its text a slot, both documents stating them, the form swapped to the hero and saved with its slot, a hero too dark refused; the panel above each, and none above examples 1 to 3; each class stays screen sized; example 13's page with its modules off, saying how to enable both, then with the block alone on, its parts and no call, then with the placement resource on too, the Spotlight and Tonight blocks placed through the add operation, the three lines side by side, the block's contract cut to the four components, the hero's actions narrowed, the four placement tools and the five calls' answers, nothing written. |
+| `Kernel\ExamplesConceptsTest` | Examples 7 to 12 and 14: each form builds and saves; example 7's rules in the full schema as declared, the send day gone for a monthly bulletin and kept in storage; example 8's one def at two sites with each wiring, the mixed-in keys flat, the shape at two keys, the volunteers' collection; example 9's keys from the configuration, a type added without a cache rebuild, the locked type in both documents and on the form; example 10's fees for two accounts, locked once published, and both operations' facts and tools; example 11's widgets, the always held badges and the notes that clear; example 12's four components read as four variants at the props and again at the slots, the card's props as keys with their constraints, its text a slot, both documents stating them, the form swapped to the hero and saved with its slot, a hero too dark refused; the panel above each, and none above examples 1 to 3; each class stays screen sized; example 13's page with its modules off, saying how to enable both, then with the block alone on, its parts and no call, then with the placement resource on too, the Spotlight and Tonight blocks placed through the add operation, the three lines side by side, the block's contract cut to the four components, the hero's actions narrowed, the four placement tools and the five calls' answers, nothing written.; example 14's panel with its module off, then on: how to enable it, the one source and then two in the contract excerpt, the webhook's rule, the gap, the lock not shipped, and the calls each state allows. |
 | `Kernel\ExamplesWorkflowTest` | Example 10 with the workflow module: the fees left out of the full schema, the tool listing and the read tool for an account without "see event fees" and kept for one with it; the program locked whole once the workflow state is published, settled at call time and left unmarked in the full schema; checking still answers; the panel's paragraph, with the module and without it. |
-| `Kernel\ExamplesConceptsToolTest` | Examples 7 to 13: every call `ConceptCalls` writes down, its answer, nothing written, the two blocks included, and this page quoting each command and answer. |
-| `Functional\ExamplesConceptsRoutesTest` | Every route of examples 7 to 12 answers an administrator and refuses anonymous; the landing page lists them; each page shows its panel and its Files panel and saves through its form; example 10's check writes nothing. Example 13 refuses anonymous, says to enable its two modules, then, with them on, shows its parts and the calls' answers, and draws the Spotlight card and the Tonight section below on its page alone; its Files panel, the modules on or off. |
+| `Kernel\ExamplesConceptsToolTest` | Examples 7 to 14: every call `ConceptCalls` writes down, its answer, nothing written, the two blocks included, and this page quoting each command and answer. |
+| `Functional\ExamplesConceptsRoutesTest` | Every route of examples 7 to 12 and 14 answers an administrator and refuses anonymous; the landing page lists them; each page shows its panel and its Files panel and saves through its form; example 10's check writes nothing. Example 13 refuses anonymous, says to enable its two modules, then, with them on, shows its parts and the calls' answers, and draws the Spotlight card and the Tonight section below on its page alone; its Files panel, the modules on or off. |
+| `Kernel\ExamplesExtensionTest` | Example 14 with the module that manages keys off, then on: both resources' full schemas, whole; the one source stated as `const` and drawn fixed, then two; the second source and the managed key there with no cache rebuild, in the documents and the tool; a pasted key kept across a switch to the managed key and back, and the config schema each source's stored value holds to; the read tool leaving the pasted key out and naming the managed key; the refusals, a pasted key sent while the managed source is chosen, a pasted key beside a managed key on the webhook, a key the site does not manage; the webhook's pasted key back with its value once the module is off; and this page quoting the documents, the gap and the lock it does not ship. |
+| `Functional\ExamplesExtensionFormTest` | Example 14 through its forms without JavaScript: the one source drawn as its label and no select, then a select of two; the mailer's pasted key saved, the managed key chosen and the pasted source chosen back with nothing typed, the key kept; the webhook's pasted box gone once a managed key is saved, and back when the module is off. |
 | `Kernel\ComponentBlockTest` | Example 13's block: its structure and both documents, the hero's narrowed slot pinned, and what it renders, slots included ([its README](../data_surface_component_block/README.md)). |
 | `Kernel\ComponentSlotsTest` | What a slot expects read back from the metadata, the depth slots nest to, and each expectation a refusal. |
 | `Kernel\BlockPlacementToolsTest` | Example 13's block placed, configured, read and removed through the placement resource's tools ([its README](../data_surface_block/README.md)). |

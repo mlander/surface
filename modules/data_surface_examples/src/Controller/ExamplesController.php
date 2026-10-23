@@ -19,19 +19,26 @@ use Drupal\data_surface_examples\Form\RegistrationStep2ClassicForm;
 use Drupal\data_surface_examples\Hook\SpotlightBlockHooks;
 use Drupal\data_surface_examples\Resource\BulletinResource;
 use Drupal\data_surface_examples\Resource\DoorsResource;
+use Drupal\data_surface_examples\Resource\MailerResource;
 use Drupal\data_surface_examples\Resource\ProgramResource;
 use Drupal\data_surface_examples\Resource\RegistrationStep1Resource;
 use Drupal\data_surface_examples\Resource\RegistrationStep2Resource;
 use Drupal\data_surface_examples\Resource\RegistrationStep3Resource;
 use Drupal\data_surface_examples\Resource\SpotlightResource;
 use Drupal\data_surface_examples\Resource\TicketSalesResource;
+use Drupal\data_surface_examples\Resource\WebhookResource;
 use Drupal\data_surface_examples\Series;
 use Drupal\data_surface_examples\Shape\PhoneNumber;
 use Drupal\data_surface_examples\Storage\RegistrationStep1Storage;
 use Drupal\data_surface_examples\Storage\RegistrationStep2Storage;
+use Drupal\data_surface_examples\Storage\MailerStorage;
 use Drupal\data_surface_examples\Storage\SpotlightStorage;
+use Drupal\data_surface_examples\Storage\WebhookStorage;
+use Drupal\data_surface_examples\Structure\ManagedCredentialStructure;
+use Drupal\data_surface_examples\Structure\PastedCredentialStructure;
 use Drupal\data_surface_examples\Structure\PersonStructure;
 use Drupal\data_surface_examples\Structure\ReviewStructure;
+use Drupal\data_surface_examples\Variants\CredentialSources;
 use Drupal\data_surface\Variants\ComponentProps;
 use Drupal\data_surface\Variants\ComponentSlots;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -104,6 +111,22 @@ final class ExamplesController extends ControllerBase {
   ];
 
   /**
+   * The module that manages keys, for example 14.
+   */
+  public const KEYS = ConceptPanel::KEYS;
+
+  /**
+   * That module's list, constraint, validator, resolver and alter.
+   */
+  public const KEYS_FILES = [
+    'src/Keys/ManagedKeys.php',
+    'src/Plugin/Validation/Constraint/ManagedKeyConstraint.php',
+    'src/Plugin/Validation/Constraint/ManagedKeyConstraintValidator.php',
+    'src/Plugin/DataSurfaceOptionsResolver/ManagedKeyOptions.php',
+    'src/Alter/WebhookKeyAlter.php',
+  ];
+
+  /**
    * Constructs the controller.
    *
    * @param \Drupal\Core\Extension\ModuleExtensionList $moduleList
@@ -144,6 +167,11 @@ final class ExamplesController extends ControllerBase {
   public function index(): array {
     $steps = [];
     foreach ($this->steps() as $number => $step) {
+      if ($number === 14) {
+        $steps['extension'] = [
+          '#markup' => '<h2>' . $this->t('An optional extension') . '</h2><p>' . $this->t("Example 14 is the Key module's pattern: a credential pasted as a secret, or a key the site manages once a module that manages keys is on, which a submodule of the examples stands in for. Its page says how to enable that module, and shows the two ways to reach the same form, the owner declaring both sources or another module's alter, with the module off and on.") . '</p>',
+        ];
+      }
       if ($number === 13) {
         $steps['block'] = [
           '#markup' => '<h2>' . $this->t('The same three lines in a block') . '</h2><p>' . $this->t("Example 13 is a block plugin in a submodule of its own, whose settings are example 12's three lines: a component, its props and its slots. Its page says how to enable it, then shows the block's structure beside example 12's resource, its contract, its tools and the block placed.") . '</p>',
@@ -552,6 +580,37 @@ final class ExamplesController extends ControllerBase {
           $this->t('The structure and the block plugin: @lines lines of code.', ['@lines' => $this->componentBlockLines()]),
         ],
       ],
+      14 => [
+        'title' => $series[14]['title'],
+        'sentence' => $this->t("A credential pasted as a secret, or a key the site manages once @module is on. The mailer declares both sources and a provider lists the second only while the module is on; a source with one value is drawn as that value. The webhook declares a pasted key alone, and the module's alter offers a managed key and rules the pasted one out once it is chosen.", ['@module' => self::KEYS]),
+        'items' => [
+          $this->route('data_surface_examples.step14'),
+          $this->route('data_surface_examples.step14_webhook'),
+          $this->react('event.mailer'),
+          $this->t("The mailer, its provider, its two sources and its storage: @mailer lines of code; the webhook and its storage: @webhook; the keys module's list, constraint, validator, resolver and alter: @keys.", $this->extensionLines()),
+        ],
+      ],
+    ];
+  }
+
+  /**
+   * Counts the lines of example 14's two resources and its keys module.
+   *
+   * @return array{'@mailer': int, '@webhook': int, '@keys': int}
+   *   The lines of code of each part, the keys module's enabled or not.
+   */
+  protected function extensionLines(): array {
+    $path = DRUPAL_ROOT . '/' . $this->moduleList->getPath(self::KEYS) . '/';
+    return [
+      '@mailer' => array_sum(array_map(fn (string $class): int => CodeLines::count($this->file($class)), [
+        MailerResource::class,
+        CredentialSources::class,
+        PastedCredentialStructure::class,
+        ManagedCredentialStructure::class,
+        MailerStorage::class,
+      ])),
+      '@webhook' => CodeLines::count($this->file(WebhookResource::class)) + CodeLines::count($this->file(WebhookStorage::class)),
+      '@keys' => array_sum(array_map(static fn (string $file): int => CodeLines::count($path . $file), self::KEYS_FILES)),
     ];
   }
 

@@ -48,10 +48,12 @@ class ReadToolTest extends DataSurfaceKernelTestBase {
     'data_surface:event.bulletin:configure:read',
     'data_surface:event.desk:configure:read',
     'data_surface:event.doors:configure:read',
+    'data_surface:event.mailer:configure:read',
     'data_surface:event.press:configure:read',
     'data_surface:event.program:configure:read',
     'data_surface:event.sales:configure:read',
     'data_surface:event.spotlight:configure:read',
+    'data_surface:event.webhook:configure:read',
     'data_surface:field.instance:edit:read',
     'data_surface:field.storage:edit:read',
     'data_surface:node.type:edit:read',
@@ -224,7 +226,13 @@ class ReadToolTest extends DataSurfaceKernelTestBase {
       $this->assertTrue($values->isRequired(), $id);
       $written = $write->getInputDefinition(OperationInputs::VALUES);
       $this->assertInstanceOf(MapInputDefinition::class, $written, $id);
-      $expected = array_values(array_diff(self::properties($written), $id === 'data_surface:tool_test.vault:configure:read' ? ['token'] : []));
+      // A secret at the top is left out of the read.
+      $secrets = match ($id) {
+        'data_surface:tool_test.vault:configure:read' => ['token'],
+        'data_surface:event.webhook:configure:read' => ['api_key'],
+        default => [],
+      };
+      $expected = array_values(array_diff(self::properties($written), $secrets));
       $this->assertSame($expected, self::properties($values), $id);
       foreach ($values->getPropertyDefinitions() as $name => $property) {
         $this->assertFalse($property->isRequired(), $id . ' ' . $name);

@@ -1274,6 +1274,101 @@ alter alike, and `add()` with a NULL default means "no default", not a
 declared NULL. A second `add()` silently replacing the first would be
 an alter changing the owner's key. (`BlueprintAdapterBase::add()`)
 
+### An extension is a variant the site adds, or an alter
+
+Decided 2026-10-23, with example 14. A module that calls a service takes
+a credential pasted as a secret, and, once a module that manages keys
+is on (the Key module), offers a key the site manages in its place and
+draws no secret beside it. There are two ways to build it, and the
+examples ship both, each for the case it fits.
+
+- **The owner integrates: a variant the site adds.** When the module
+  that needs the credential knows the key module, its resource declares
+  both sources, each a structure of its own, and a provider lists them:
+  `attachVariants('credential', by: 'source', from:
+  CredentialSources::class)`, the pasted source always and the managed
+  one only while the key module is on, cacheable by `config:core.extension`
+  and the keys' configuration. Installing the key module is a second
+  source at the next request, with no cache rebuild, in the form, both
+  documents and the tool. The owner's code reads its own variant,
+  `credential.api_key` or `credential.key_id`, and asks the key service
+  for the value of the second.
+- **A closed provider: storage knows both.** The two sources are
+  structures the owner's code names, so the provider implements
+  `ClosedVariantsInterface` and names them in a static `structures()`.
+  The config schema written from the resource then gives each its own
+  type, `credential.[%parent.source]`, as it does for `#[Variant]`
+  classes, whichever the site offers when it is written; a provider
+  whose variants are read from schemas leaves the key `type: ignore`.
+  The build refuses a closed provider's list that offers a value
+  `structures()` does not name, or names it by a schema. Two spellings
+  were turned down. `#[Variant]` classes are always offered, and the
+  managed source must be offered only while the key module is on. A
+  variant's access answer could withhold it, but which sources a site
+  has is the site's, not the account's or the thing's, and that answer
+  would mark the key `access: live` in the full schema.
+- **One value to choose is a fixed value.** With the key module off the
+  provider lists one source. A deciding key whose list its variants
+  derive and that offers one value, which it may not be cleared of, is
+  drawn as that value while it holds it or nothing: the form draws an
+  item showing the value's label, posts the value, and wires no AJAX
+  trigger on it; both documents state `const`, with the label under
+  `x-surface.fixed`, and the widget hint `fixed`, which the React page
+  draws as the label. No select of one: it offers no choice, and a
+  select a person opens to find one option reads as a fault. A list the
+  deciding key declares is the author's and is drawn as declared, so a
+  nested component's `component` key narrowed to one stays a select. A
+  stored value the list no longer offers (`managed` after the key module
+  is uninstalled) is drawn as a select under the empty option rule, so a
+  save that leaves it keeps it. (`DefinitionMetadata::setOneVariant()`,
+  `OptionsWidget::drawsFixed()`, `ContractEmitter::property()`)
+- **A secret survives a switch of variants.** A value written for
+  another variant goes when the deciding key moves on
+  ([An empty variant is an empty map](#an-empty-variant-is-an-empty-map)).
+  A secret is never read back, so a caller who chose the managed key
+  could not send the pasted one again when choosing back, and the key
+  would be lost by a choice the caller made to try something. So a
+  secret another variant declares, stored and not empty, is kept beside
+  the chosen variant's keys, read by no door, and taken up again when
+  its variant is chosen; each variant's config schema says it may be
+  there (`requiredKey: false`). A plain value of a variant not chosen
+  still goes: it can be read and sent again. (`Variants::keptSecrets()`,
+  `Variants::held()`, `DataSurfacePipeline::kept()`,
+  `ConfigSchemaGenerator::keptSecrets()`)
+- **The owner does not integrate: an alter.** The webhook declares a
+  pasted key and nothing else. The key module's alter mounts `key_id` at
+  its own mount, offering the keys the site manages through a constraint
+  and its resolver, and declares
+  `narrow('api_key')->when(Condition::present('key_id'))->doesNotApply()`:
+  once a key is chosen the form draws no pasted box, a pasted key sent is
+  refused naming `key_id`, the full schema states the rule as a
+  conditional, and what is stored for `api_key` is kept for the day no
+  key is chosen. Uninstalled, the key module takes the `key_id` it
+  stored on the webhook with it (`hook_uninstall()`), since no config
+  schema describes it then and a save with schema checking on would
+  refuse the object; the pasted key is the webhook's and stays. Ruling
+  out was chosen over a lock. A lock would draw an
+  empty password box that cannot be used, and would take a pasted key
+  sent with a note instead of a refusal, so a caller who sends both
+  learns of it only from the note; the rule vocabulary has no
+  conditional lock either (ROADMAP item 3 left it out). The page quotes
+  the spelling a lock would have.
+- **What the alter cannot do.** Hand the owner's code the managed key's
+  value. The webhook's code reads `api_key`; `key_id` is under the key
+  module's mount, which the webhook never names
+  ([An alter attaches at its own mount](#an-alter-attaches-at-its-own-mount)).
+  So the alter's way corrects the form, the documents and the tool, and
+  leaves the code that signs a post with no key, while the owner's way
+  has no such gap. An alter supplying the value it rules out is
+  [ROADMAP](../ROADMAP.md) item 18, designed and not built.
+
+Open: whether a plain value of a variant not chosen is kept too (the
+rule against pruning stored values says keep it; a value left by
+another variant has gone since variants were built); and a stored
+source the site no longer offers, which is kept and shown stale, while
+the credential it chose is not built until the source is offered again.
+(`ClosedVariantsInterface`, `CredentialSources`, `WebhookKeyAlter`)
+
 ## Attached structures
 
 ### Variants nothing declares
@@ -1506,7 +1601,9 @@ nothing more to say". It renders as nothing (an empty container on the
 form, nothing on the React page), its value is an empty map, and both
 contracts and the tool state an object with no properties; a value left
 by another variant does not fit it and goes, as between any two
-variants. The map widget serves any complex definition and answers an
+variants, but a secret, which is kept
+([An extension is a variant the site adds, or an alter](#an-extension-is-a-variant-the-site-adds-or-an-alter)).
+The map widget serves any complex definition and answers an
 empty one with `[]`: a map that declares nothing can hold nothing, and
 before this the form threw for want of a widget. A key that does not
 apply at all, rather than applying with nothing to say, is
@@ -4139,7 +4236,7 @@ canonical contract the operation form's contract panel shows and
 contract, so `x-surface.widget`, the Form API mapping said for a
 renderer, and `multiple`, its qualifier, are written only when a caller
 passes `widgets: TRUE`; `data_surface_react` does, for its app. The rest
-of `x-surface` (locked, dependsOn, refined, stale, emptyOption, by,
+of `x-surface` (locked, dependsOn, refined, stale, emptyOption, fixed, by,
 variants and chosen, rules, within, checkedOnServer, enumerated,
 refine, live) is the
 data surface's own reading of a key, not a widget, and is always written.
@@ -4477,8 +4574,11 @@ A secret is advertised optional in both documents and the tool's
 what is stored (the codec's keep-on-empty); its type is the declared
 one, not nullable, `writeOnly`, with no default; the values a document
 carries for it are `null`, as the masking rule has always said, which a
-reader takes as the key left out. A required secret never set is still
-refused by the pipeline as missing. Before 2026-10-18 a required secret
+reader takes as the key left out; an accepted document leaves a secret
+that holds nothing out (`DataSurfacePipelineInterface::document()`,
+2026-10-23, found by example 14's webhook, whose key ships empty). A
+required secret never set is still refused by the pipeline as missing.
+Before 2026-10-18 a required secret
 was in `required` and its type refused the `null` its own `values`
 carried. (`ContractEmitter::required()`, `InputDefinitions::fromDefinition()`)
 

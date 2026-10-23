@@ -569,7 +569,8 @@ renames sit in A because they are cheapest before new code exists.
    states each as written (`x-surface.declared`); the compliance capacity
    was the first case and is exact now, its stewards still `dynamic`.
    Left out: a conditional lock, and an alter's rule on values it
-   offered with `extendChoices()`.
+   offered with `extendChoices()`. Example 14 rules a key out where a
+   lock was weighed, and quotes the spelling a lock would have.
 4. **Ports: a structure declares what it reads from its container.**
    DONE 2026-10-18 (`docs/decisions.md#a-port-is-a-live-sibling-value`,
    `docs/resources.md#ports`): `$inputs->reads('capacity', 'integer',
@@ -1265,6 +1266,45 @@ renames sit in A because they are cheapest before new code exists.
     (`Resources::buildRead()`) keep a site with hundreds of components
     to a def per shape. Open: the list of components on the block form;
     formatted text in a slot.
+
+18. **An alter may supply a value it rules out.** Designed, not built;
+    for a decision of its own. Found by example 14 (DONE 2026-10-23,
+    `docs/decisions.md#an-extension-is-a-variant-the-site-adds-or-an-alter`:
+    a credential pasted as a secret or a key the site manages, once as
+    the owner's variants from a closed provider, once as another
+    module's alter, at `/surface-examples/14`). The alter's way leaves
+    a gap the owner's way does not: the alter rules the pasted key out
+    once a managed key is chosen, and the owner's code, which reads
+    `api_key`, gets no key, since it never names the alter's `key_id`.
+    - **The design.** An alter that rules a key out
+      (`narrow('api_key')->when(Condition::present('key_id'))->doesNotApply()`)
+      may supply that key's value at load, from what it mounted: the
+      key service's value for the stored `key_id`, with the cacheability
+      of what it read. The owner's frame then holds the resolved value at
+      `api_key`, as the owner's code reads it, and storage never does:
+      the write path treats a supplied key as a key that does not apply,
+      keeping what is stored under it and writing nothing new.
+    - **Why it needs a decision of its own.** It is the first thing to
+      enter the owner's frame from outside after the seal. Today an
+      alter adds keys under its own mount, narrows the owner's keys and
+      answers access; nothing it reads crosses into the owner's values.
+      A supplied value does, so the owner's code would run on a value
+      no caller sent and no storage holds.
+    - **What to weigh.** Secrets never stored: a supplied secret is
+      never written and is answered by no door, as a stored secret is
+      not, and the write path must not mistake it for one sent.
+      Cacheability of the supplied value: a key service's answer may be
+      tagged or per request, and the owner's code must not cache past it,
+      so it travels with the built resource, as a provider's list does.
+      The read tool's view: it answers stored values less secrets, and a
+      supplied value is neither stored nor sent, so whether the read
+      shows a supplied non-secret value, and marked how, is part of the
+      decision. The contract's `x-surface` mark: the full schema states
+      `api_key` ruled out where `key_id` is present, and a supplied
+      value needs a mark naming who supplies it, so a client does not
+      read "does not apply" as "holds nothing".
+    - Until then, an owner that needs a managed key's value integrates
+      the key module itself, as the mailer does.
 
 ## Rejected, on the record
 

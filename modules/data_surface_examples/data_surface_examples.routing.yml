@@ -15,6 +15,9 @@
 # Examples 7 to 12 leave the registration behind: each is one small resource
 # of its own for one or two later concepts, served the same way, with a
 # third panel saying what the page shows and where the docs explain it.
+# Example 14 is two resources served the same way, the mailer and the
+# webhook, each page with the same panel; the module that manages keys is a
+# submodule the panel tells you to enable.
 
 data_surface_examples.index:
   path: '/surface-examples'
@@ -192,3 +195,25 @@ data_surface_examples.step13:
     _title: 'Example 13: a block that embeds a component'
   requirements:
     _permission: 'administer site configuration'
+
+data_surface_examples.step14:
+  path: '/surface-examples/14'
+  defaults:
+    _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
+    _title: 'Example 14: an optional extension'
+    _data_surface_resource: 'Drupal\data_surface_examples\Resource\MailerResource'
+    _data_surface_operation: 'configure'
+    _data_surface_panel: 'data_surface_examples.panels'
+  requirements:
+    _data_surface_operation_access: 'TRUE'
+
+data_surface_examples.step14_webhook:
+  path: '/surface-examples/14/webhook'
+  defaults:
+    _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
+    _title: 'Example 14, the sales webhook'
+    _data_surface_resource: 'Drupal\data_surface_examples\Resource\WebhookResource'
+    _data_surface_operation: 'configure'
+    _data_surface_panel: 'data_surface_examples.panels'
+  requirements:
+    _data_surface_operation_access: 'TRUE'

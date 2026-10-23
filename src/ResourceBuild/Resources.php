@@ -39,6 +39,7 @@ use Drupal\data_surface\Resource\KeyedList;
 use Drupal\data_surface\Resource\KeysFromSiteInterface;
 use Drupal\data_surface\Resource\VariantList;
 use Drupal\data_surface\Resource\VariantsFromSiteInterface;
+use Drupal\data_surface\Resource\ClosedVariantsInterface;
 use Drupal\data_surface\Contract\SchemaReader;
 use Drupal\data_surface\Contract\SchemaResolver;
 use Drupal\data_surface\Resource\KnowsClearableKeysInterface;
@@ -2590,6 +2591,16 @@ final class Resources implements ResourcesInterface {
     $accounts = array_filter($list->getCacheContexts(), static fn (string $context): bool => $context === 'user' || str_starts_with($context, 'user.') || $context === 'session' || str_starts_with($context, 'session.'));
     if ($accounts !== []) {
       throw new \LogicException(sprintf('%s lists the variants at "%s" on %s varying by %s. Which variants there are is the site\'s, the same for every account; one an account may not choose is access, which the variant\'s access class answers.', $from, $key, $definition->id, implode(', ', $accounts)));
+    }
+    if (is_subclass_of($from, ClosedVariantsInterface::class)) {
+      // Decision: see
+      // docs/decisions.md#an-extension-is-a-variant-the-site-adds-or-an-alter.
+      $closed = $from::structures();
+      foreach ($list->entries() as $value => $entry) {
+        if (($entry['structure'] ?? NULL) !== ($closed[(string) $value] ?? NULL)) {
+          throw new \LogicException(sprintf('%s lists "%s" for the variants at "%s" on %s, which its structures() does not name with that structure. A closed provider lists only the structures it names, each by its class (VariantList::addStructure()).', $from, $value, $key, $definition->id));
+        }
+      }
     }
     return $list;
   }

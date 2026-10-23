@@ -44,6 +44,7 @@ class ConfigSchemaDriftTest extends DataSurfaceKernelTestBase {
     'data_surface_examples',
     'data_surface_examples_compliance',
     'data_surface_examples_workflow',
+    'data_surface_examples_keys',
     'data_surface_first',
     'data_surface_resource_test',
   ];
@@ -54,6 +55,7 @@ class ConfigSchemaDriftTest extends DataSurfaceKernelTestBase {
   protected const GENERATED = [
     'data_surface_examples',
     'data_surface_examples_compliance',
+    'data_surface_examples_keys',
     'data_surface_first',
     'data_surface_resource_test',
   ];

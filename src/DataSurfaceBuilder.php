@@ -508,6 +508,12 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
         }
         (new ChoiceSet('LabeledChoice', $ids, $named))->applyTo($deciding);
       }
+      if (count($ids) === 1) {
+        // One value to choose is none: the key is that value, fixed.
+        // Decision: see
+        // docs/decisions.md#an-extension-is-a-variant-the-site-adds-or-an-alter.
+        DefinitionMetadata::setOneVariant($deciding);
+      }
     }
     else {
       // A list the key declares narrows the variants: one whose value it

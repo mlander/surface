@@ -65,6 +65,7 @@ class SchemaRoundTripTest extends DataSurfaceKernelTestBase {
     'access' => 'An access answer (a lock, a whole locked, a key marked `access: live`) is the access class\'s, not the structure\'s.',
     'alter' => 'An alter\'s mount: its keys, the rules reading them and the structures it attaches there are the alter\'s; read back, the mount is a map or a child of the owner\'s, its rules a JsonSchema constraint on the frame.',
     'site' => 'Keys from the site: the entries are a provider\'s, so an entry it locks, and the ports each entry reads, are not the document\'s to say; read back, the rules on those ports are a JsonSchema constraint on the frame.',
+    'server' => 'A constraint of a module that is not on, which only the server could check: the document names it under `checkedOnServer`, and a name is no constraint the reader can declare.',
   ];
 
   /**
@@ -72,6 +73,7 @@ class SchemaRoundTripTest extends DataSurfaceKernelTestBase {
    */
   protected const DIFFERS = [
     'event.fees:configure' => 'access',
+    'event.mailer.credential.managed:configure' => 'server',
     'event.person:configure' => 'port',
     'event.program:check' => 'access',
     'event.program:configure' => 'access',

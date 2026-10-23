@@ -333,6 +333,12 @@ Two consequences:
 - **No door answers it.** The read leaves a secret out, and so does
   every other answer: the write tool's `values`, dry run or written, and
   the API's, a dry run's included.
+- **Across a switch of variants, kept.** A secret of a variant the
+  deciding key moves away from is kept as stored, beside the chosen
+  variant's keys, and taken up again when its variant is chosen back,
+  since no caller could send it again: example 14's pasted key survives a
+  switch to a managed key and back. A plain value of the other variant
+  goes, as before ([decision](decisions.md#an-extension-is-a-variant-the-site-adds-or-an-alter)).
 
 Encryption is a separate concern and lives one layer down, at the
 storage layout: see [Storage](storage.md#secrets-at-the-codec).

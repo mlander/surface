@@ -38,12 +38,24 @@ class ExampleFilesTest extends UnitTestCase {
     'data_surface_examples_compliance',
     'data_surface_examples_workflow',
     'data_surface_component_block',
+    'data_surface_examples_keys',
   ];
 
   /**
    * The directories of a module's src/ that hold an example's parts.
    */
-  protected const PARTS = ['Resource', 'Structure', 'Shape', 'Storage', 'Access', 'Keys', 'Alter', 'Plugin', 'Hook'];
+  protected const PARTS = [
+    'Resource',
+    'Structure',
+    'Shape',
+    'Storage',
+    'Access',
+    'Keys',
+    'Variants',
+    'Alter',
+    'Plugin',
+    'Hook',
+  ];
 
   /**
    * The main module's namespace whose classes an example lists as its own.
@@ -65,7 +77,7 @@ class ExampleFilesTest extends UnitTestCase {
    * Tests every listed file is there, and is read as the docs tests read it.
    */
   public function testEveryListedFileIsThere(): void {
-    $this->assertSame(range(1, 13), array_keys(Series::examples()));
+    $this->assertSame(range(1, 14), array_keys(Series::examples()));
     foreach (Series::examples() as $number => $example) {
       $this->assertNotSame('', (string) $example['title']);
       $this->assertNotSame('', (string) $example['concept']);
@@ -97,7 +109,7 @@ class ExampleFilesTest extends UnitTestCase {
   public function testTheLineCountsAreTheSeries(): void {
     foreach (self::listed() as $file => $number) {
       [$path] = Series::split($file);
-      $expected = str_ends_with($path, '.php')
+      $expected = str_ends_with($path, '.php') || str_ends_with($path, '.install')
         ? CodeLines::count(self::ROOT . '/' . $path)
         : count(array_filter(explode("\n", Series::text($file)), static fn (string $line): bool => trim($line) !== '' && !str_starts_with(trim($line), '#')));
       $this->assertSame($expected, Series::lines($file), sprintf('Example %d counts %s otherwise.', $number, $file));
@@ -135,9 +147,10 @@ class ExampleFilesTest extends UnitTestCase {
           $parts[] = $base . $module . '.routing.yml#' . $key;
         }
       }
-      // A module of its own is an example's: its info and permissions.
+      // A module of its own is an example's: its info and permissions,
+      // its services and its install file.
       if ($module !== 'data_surface_examples') {
-        foreach (glob(self::ROOT . '/' . $base . $module . '.{info,permissions}.yml', GLOB_BRACE) ?: [] as $file) {
+        foreach (glob(self::ROOT . '/' . $base . $module . '.{info.yml,permissions.yml,services.yml,install}', GLOB_BRACE) ?: [] as $file) {
           $parts[] = $base . basename($file);
         }
       }

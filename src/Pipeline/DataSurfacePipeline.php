@@ -275,6 +275,12 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
     $document = new \stdClass();
     foreach ($values as $name => $value) {
       $entry = $surface->getDefinitions()->entry((string) $name);
+      if ($value === NULL && $entry !== NULL && DefinitionMetadata::isSecret($entry->definition)) {
+        // A secret that holds nothing is written left out: null is no value
+        // of it, and both schemas say so.
+        // Decision: see docs/decisions.md#a-secret-is-optional-never-nullable.
+        continue;
+      }
       $child = $entry?->childFor($values);
       $document->{$name} = match (TRUE) {
         $entry === NULL || !is_array($value) => $value,
@@ -356,14 +362,20 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
       }
       $below = $input === NULL ? NULL : (is_array($input[$name] ?? NULL) ? $input[$name] : []);
       $chosen = $entry->variants?->chosen($values[$entry->variants->by] ?? NULL);
-      if ($chosen !== NULL && !$entry->variants->fits($chosen, $current[$name])) {
+      // The secrets of a variant not chosen are kept as stored, beside the
+      // chosen variant's keys.
+      // Decision: see
+      // docs/decisions.md#an-extension-is-a-variant-the-site-adds-or-an-alter.
+      $aside = $chosen === NULL ? [] : $entry->variants->keptSecrets($chosen, $current[$name]);
+      $own = array_diff_key($current[$name], $aside);
+      if ($chosen !== NULL && $entry->variants->held($chosen, $current[$name]) === NULL) {
         // What it held was another variant's: the chosen one starts here,
         // and is written whole, its defaults included.
         $below = NULL;
       }
-      $kept[$name] = $child !== NULL
-        ? $this->kept($child, $values[$name], $current[$name], $below)
-        : $this->keptInMap($entry->definition, $values[$name], $current[$name], $below);
+      $kept[$name] = ($child !== NULL
+        ? $this->kept($child, $values[$name], $own, $below)
+        : $this->keptInMap($entry->definition, $values[$name], $own, $below)) + $aside;
     }
     return array_diff_key($kept + $values, $unwritten);
   }
@@ -568,12 +580,16 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
       $fallback = [];
     }
     $chosen = $entry->variants?->chosen($values[$entry->variants->by] ?? NULL);
-    if ($chosen !== NULL && !$entry->variants->fits($chosen, $fallback)) {
+    if ($chosen !== NULL) {
       // What the key held was written for another variant, and the
       // deciding key has moved on: it starts again from the chosen
       // variant's defaults rather than carrying keys that mean nothing
-      // here.
-      $fallback = $entry->variants->defaultsOf($chosen);
+      // here, and from the secrets of its own kept while it was not
+      // chosen.
+      // Decision: see
+      // docs/decisions.md#an-extension-is-a-variant-the-site-adds-or-an-alter.
+      $fallback = $entry->variants->held($chosen, $fallback)
+        ?? (is_array($fallback) ? $entry->variants->ownSecrets($chosen, $fallback) : []) + $entry->variants->defaultsOf($chosen);
     }
     if ($entry->list !== NULL) {
       return $this->acceptCollection($entry, $entry->list, $input, $fallback, $path);

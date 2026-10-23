@@ -21,11 +21,14 @@ use Drupal\data_surface_examples\Hook\SpotlightBlockHooks;
 use Drupal\data_surface_examples\Resource\BulletinResource;
 use Drupal\data_surface_examples\Resource\DoorsResource;
 use Drupal\data_surface_examples\Resource\InfoDeskResource;
+use Drupal\data_surface_examples\Resource\MailerResource;
 use Drupal\data_surface_examples\Resource\PressResource;
 use Drupal\data_surface_examples\Resource\ProgramResource;
 use Drupal\data_surface_examples\Resource\SpotlightResource;
 use Drupal\data_surface_examples\Resource\TicketSalesResource;
+use Drupal\data_surface_examples\Resource\WebhookResource;
 use Drupal\data_surface_examples\Series;
+use Drupal\data_surface_examples\Variants\CredentialSources;
 use Drupal\data_surface\Variants\ComponentProps;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use Drupal\tool\Tool\ToolOperation;
@@ -41,8 +44,8 @@ use Symfony\Component\HttpFoundation\Request;
  * a rule written as data, one part used twice, keys that come from the
  * site, access of both kinds with how each operation behaves, and the
  * stock widgets with what nothing means. Then the panel above each, and
- * none above the registration's; and example 13's page, with its module
- * off and on.
+ * none above the registration's; example 13's page, with its module
+ * off and on; and example 14's panel, with its module off and on.
  */
 #[Group('data_surface')]
 #[RunTestsInSeparateProcesses]
@@ -549,6 +552,8 @@ class ExamplesConceptsTest extends DataSurfaceKernelTestBase {
       'step10_check' => 'event.program',
       'step11' => 'event.doors',
       'step12' => 'event.spotlight',
+      'step14' => 'event.mailer',
+      'step14_webhook' => 'event.webhook',
     ];
     $order = [ExamplePanels::CONCEPT, ExamplePanels::FILES, ExamplePanels::CONTRACT, ExamplePanels::TODAY];
     foreach ($pages as $route => $id) {
@@ -686,6 +691,41 @@ class ExamplesConceptsTest extends DataSurfaceKernelTestBase {
   }
 
   /**
+   * Tests example 14: the module to enable, then both ways with it on.
+   */
+  public function testFourteenSaysToEnableTheKeysModuleThenShowsBoth(): void {
+    $index = $this->container->get('class_resolver')->getInstanceFromDefinition(ExamplesController::class)->index();
+    $this->assertSame('Example 14: an optional extension', strip_tags((string) $index[14]['title']['#markup']));
+    $this->assertArrayHasKey('extension', $index);
+
+    $concept = $this->formAt('data_surface_examples.step14')[DataSurfaceOperationForm::PANEL_KEY][ExamplePanels::CONCEPT];
+    $items = array_map(static fn ($item): string => strip_tags((string) (is_array($item) ? ($item['#markup'] ?? '') : $item)), $concept['enable']['#items']);
+    $this->assertSame('Enable it: ddev drush pm:install data_surface_examples_keys; take it away again with ddev drush pm:uninstall data_surface_examples_keys.', $items[0]);
+    $this->assertStringStartsWith('It is not enabled on this site yet: the mailer has one source', $items[1]);
+    $contract = json_decode(htmlspecialchars_decode((string) $concept['contract']['content']['#value']), TRUE);
+    $this->assertSame('pasted', $contract['event.mailer']['source']['const']);
+    $this->assertSame('Pasted here', $contract['event.mailer']['source'][ContractEmitter::EXTENSION]['fixed']);
+    $this->assertSame([], $contract['event.webhook']['rules']);
+    $this->assertSame((string) $this->container->get('data_surface_examples.concept_panel')->gap(), strip_tags((string) $concept['gap']['#markup'], '<code>'));
+    $this->assertSame(ConceptPanel::LOCKING, htmlspecialchars_decode((string) $concept['alternative']['content']['#value']));
+    $this->assertSame(['event.mailer:pasted', 'event.mailer:read', 'event.webhook:pasted'], array_values(array_filter(array_keys($concept['calls']), static fn (string $key): bool => str_contains($key, ':'))), 'With the module off, the calls that need nothing of it.');
+    $this->assertSame(array_keys($concept['calls']), array_keys($this->formAt('data_surface_examples.step14_webhook')[DataSurfaceOperationForm::PANEL_KEY][ExamplePanels::CONCEPT]['calls']), 'Both pages make both resources\' calls.');
+
+    $this->container->get('module_installer')->install([ConceptPanel::KEYS]);
+    $this->setUpCurrentUser(admin: TRUE);
+    $concept = $this->formAt('data_surface_examples.step14')[DataSurfaceOperationForm::PANEL_KEY][ExamplePanels::CONCEPT];
+    $this->assertStringStartsWith('It is enabled on this site now: the mailer offers two sources', strip_tags((string) $concept['enable']['#items'][1]));
+    $contract = json_decode(htmlspecialchars_decode((string) $concept['contract']['content']['#value']), TRUE);
+    $this->assertSame(['pasted', 'managed'], array_column($contract['event.mailer']['source']['oneOf'], 'const'));
+    $this->assertSame(['pasted', 'managed'], array_keys($contract['event.mailer']['credential'][ContractEmitter::EXTENSION]['variants']));
+    $this->assertSame(['api_key' => FALSE], $contract['event.webhook']['rules'][0]['then']['properties']);
+    $answer = static fn (string $call): string => htmlspecialchars_decode((string) $concept['calls'][$call]['answer']['#value']);
+    $this->assertStringStartsWith('Success: Dry run of Configure the mailer', $answer('event.mailer:managed'));
+    $this->assertStringStartsWith("Failed: The values were refused:\n/credential/api_key: credential.api_key belongs to the pasted variant", $answer('event.mailer:pasted_while_managed'));
+    $this->assertStringStartsWith("Failed: The values were refused:\n/api_key: API key does not apply", $answer('event.webhook:pasted_beside_managed'));
+  }
+
+  /**
    * Builds example 13's page.
    *
    * @return array
@@ -708,6 +748,9 @@ class ExamplesConceptsTest extends DataSurfaceKernelTestBase {
       DoorsResource::class,
       SpotlightResource::class,
       ComponentProps::class,
+      MailerResource::class,
+      CredentialSources::class,
+      WebhookResource::class,
     ];
     foreach ($classes as $class) {
       $lines = CodeLines::count((string) (new \ReflectionClass($class))->getFileName());

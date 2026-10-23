@@ -41,6 +41,7 @@ class ContractDiffCommandTest extends DataSurfaceKernelTestBase {
     'data_surface_examples',
     'data_surface_examples_compliance',
     'data_surface_examples_workflow',
+    'data_surface_examples_keys',
     'data_surface_first',
   ];
 
@@ -116,7 +117,7 @@ class ContractDiffCommandTest extends DataSurfaceKernelTestBase {
     $this->copyCommitted();
     [$status, $display] = $this->diff(['--module' => self::PINNED, '--dir' => $this->directory]);
     $this->assertSame(0, $status, $display);
-    $this->assertStringContainsString('20 resources and structures in contract 3, emitted for user 1', $display);
+    $this->assertStringContainsString('24 resources and structures in contract 3, emitted for user 1', $display);
     $this->assertStringContainsString('0 failing', $display);
   }
 
@@ -225,7 +226,7 @@ class ContractDiffCommandTest extends DataSurfaceKernelTestBase {
     $this->assertSame(['first.newsletter', 'first.store'], $report['written']);
     $this->assertSame(['first.gone'], $report['removed']);
     $this->assertFileDoesNotExist($this->directory . '/first.gone.json');
-    $this->assertCount(23, glob($this->directory . '/*.json'), 'The other modules\' 21 baselines and the named module\'s two.');
+    $this->assertCount(27, glob($this->directory . '/*.json'), 'The other modules\' 25 baselines and the named module\'s two.');
     $this->assertFileExists($this->directory . '/registration.step1.json');
   }
 

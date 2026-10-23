@@ -2586,7 +2586,7 @@ final class ContractEmitter {
         $reference = $this->reference($key, NULL, $subschemas);
       }
       else {
-        $own = $is_chosen && $variants->fits($id, $held) ? $held : [];
+        $own = $is_chosen ? ($variants->held($id, $held) ?? []) : [];
         $variant_stale = [];
         $inside = $full || $blank ? $this->known($child) : array_replace($child->getDefaultValues(), $own);
         [$instance, $variant_values] = $this->instance($child, $key, $inside, $path . '.', $variant->id ?? $fallback, $cacheability, $variant_stale, $subschemas, $is_chosen ? $standing : [], $frozen, $blank);
@@ -3216,8 +3216,18 @@ final class ContractEmitter {
       }
       $schema += $type + $this->keywords($definition, $type['type'] ?? NULL);
       $radios = $listed && RadiosWidget::drawsOne($definition);
-      $extension = $this->extension($listed ? ($radios ? 'radios' : 'select') : $this->widget($definition), $locked, $depends, $refined);
-      if ($listed) {
+      $fixed = $listed && OptionsWidget::drawsFixed($definition, $set, $value);
+      $extension = $this->extension($fixed ? 'fixed' : ($listed ? ($radios ? 'radios' : 'select') : $this->widget($definition)), $locked, $depends, $refined);
+      if ($fixed) {
+        // A deciding key whose variants offer one value: that value, and
+        // the label it is offered as, which the form draws fixed.
+        // Decision: see
+        // docs/decisions.md#an-extension-is-a-variant-the-site-adds-or-an-alter.
+        $only = $this->choices($set, $definition)[0];
+        $schema['const'] = $only['const'];
+        $extension['fixed'] = $only['title'];
+      }
+      elseif ($listed) {
         $schema['oneOf'] = $this->choices($set, $definition);
         // Decision: see docs/decisions.md#the-empty-option-rule.
         $configured = ValueState::isConfigured($value);

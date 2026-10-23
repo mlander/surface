@@ -9,10 +9,12 @@ namespace Drupal\data_surface_examples;
  *
  * One rule for both sides of every comparison: from the class's first
  * attribute, or its declaration when it has none, to its closing brace,
- * with every comment and every blank line left out. The namespace and
- * the use statements are not counted, because an editor folds them and
- * they say nothing about what the class does; the comments are not,
- * because the two sides of a comparison comment at different rates.
+ * with every comment and every blank line left out; in a file of
+ * functions, such as a module's .install file, from its first function.
+ * The namespace and the use statements are not counted, because an
+ * editor folds them and they say nothing about what the class does; the
+ * comments are not, because the two sides of a comparison comment at
+ * different rates.
  */
 final class CodeLines {
 
@@ -39,7 +41,7 @@ final class CodeLines {
     $counting = FALSE;
     $lines = 0;
     foreach (explode("\n", $code) as $line) {
-      $counting = $counting || (bool) preg_match('/^(#\[|(final |abstract )?class )/', $line);
+      $counting = $counting || (bool) preg_match('/^(#\[|(final |abstract )?class |function )/', $line);
       if ($counting && trim($line) !== '') {
         $lines++;
       }

@@ -741,9 +741,9 @@ final class InputDefinitions {
       }
       $child = $entry->childFor($stored);
       $chosen = $entry->variants?->chosen($stored[$entry->variants->by] ?? NULL);
-      if ($child !== NULL && $property instanceof MapInputDefinition && is_array($stored[$name])
-        && ($chosen === NULL || $entry->variants->fits($chosen, $stored[$name]))) {
-        $this->withStored($property, $child, $stored[$name]);
+      $held = $chosen === NULL || !is_array($stored[$name]) ? $stored[$name] : $entry->variants->held($chosen, $stored[$name]);
+      if ($child !== NULL && $property instanceof MapInputDefinition && is_array($held)) {
+        $this->withStored($property, $child, $held);
       }
     }
     return $map;

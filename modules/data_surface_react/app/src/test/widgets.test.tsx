@@ -821,3 +821,29 @@ describe('a select standing for a stale value', () => {
     expect(screen.getByText('*')).toBeInTheDocument();
   });
 });
+
+describe('a value drawn fixed', () => {
+  it('draws the one value a deciding key may hold as its label, with no select and no input', () => {
+    const { container } = render(
+      <Form
+        schema={object(
+          {
+            source: {
+              title: 'Credential source',
+              type: 'string',
+              const: 'pasted',
+              default: 'pasted',
+              'x-surface': x('fixed', { fixed: 'Pasted here' }),
+            },
+          },
+          ['source'],
+        )}
+        initial={{ source: 'pasted' }}
+      />,
+    );
+    expect(screen.getByText('Credential source')).toBeInTheDocument();
+    expect(screen.getByText('Pasted here')).toBeInTheDocument();
+    expect(container.querySelector('select')).toBeNull();
+    expect(container.querySelector('input')).toBeNull();
+  });
+});

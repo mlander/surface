@@ -45,7 +45,9 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * the journal and attached on the ledger, a shape at two keys on the
  * depot, access of both kinds on the exhibit and an alter's on the
  * gallery, keys that come from the site on the workshop, variants chosen
- * by a plugin and a region by a theme on a placed block),
+ * by a plugin and a region by a theme on a placed block, and on example
+ * 14 a source with one value and then two, a secret in a variant, and an
+ * alter's key ruling the owner's out),
  * a table of documents the pipeline accepts and documents it refuses.
  * Each row is asserted three times: against the pipeline (accept(), then
  * validate() over what is stored), against the full
@@ -190,9 +192,46 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
       $this->assertSame($wide_full, $this->validates($full, $document), $label . ': the full schema ' . ($wide_full ? 'accepts' : 'refuses') . ' its document.');
       $this->assertSame($wide_these, $this->validates($these['schema'], $document), $label . ': the schema for these answers ' . ($wide_these ? 'accepts' : 'refuses') . ' its document.');
       if ($accepts) {
-        $this->assertTrue($this->validates($these['schema'], $these['values']), $label . ': the schema for these answers accepts its own values.');
+        // A secret's value is masked as null there, which is read as the
+        // key left out (docs/decisions.md#a-secret-is-optional-never-nullable).
+        $values = $this->unmasked($surface, $these['values']);
+        $this->assertTrue($this->validates($these['schema'], $values), $label . ': the schema for these answers accepts its own values.');
       }
     }
+  }
+
+  /**
+   * Leaves out each secret a document's values mask as null.
+   *
+   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   *   The data surface the values are of.
+   * @param mixed $values
+   *   The values, as the document carries them, decoded with objects.
+   *
+   * @return mixed
+   *   The same, a secret holding null left out, in a child or a chosen
+   *   variant too.
+   */
+  protected function unmasked(DataSurfaceInterface $surface, mixed $values): mixed {
+    if (!$values instanceof \stdClass) {
+      return $values;
+    }
+    $values = clone $values;
+    foreach ($surface->getDefinitions()->entries() as $name => $entry) {
+      $name = (string) $name;
+      if (!property_exists($values, $name)) {
+        continue;
+      }
+      if ($values->{$name} === NULL && DefinitionMetadata::isSecret($entry->definition)) {
+        unset($values->{$name});
+        continue;
+      }
+      $child = $entry->list === NULL ? $entry->childFor(json_decode((string) json_encode($values), TRUE)) : NULL;
+      if ($child !== NULL) {
+        $values->{$name} = $this->unmasked($child, $values->{$name});
+      }
+    }
+    return $values;
   }
 
   /**
@@ -673,6 +712,54 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
       'closed, the lights as stored' => [['closed' => TRUE], TRUE],
       'a stock code for the saw' => [['codes' => ['saw' => 'BS3']], TRUE],
       'a stock code in lowercase' => [['codes' => ['saw' => 'bs3']], FALSE],
+    ]);
+  }
+
+  /**
+   * Example 14: a credential pasted or a key the site manages.
+   *
+   * The mailer with the module that manages keys off, one source stated as
+   * `const`, then on, two sources and a managed key from the keys it
+   * lists; the webhook with the module on, its pasted key ruled out by the
+   * alter's key. A pasted key sent for the managed source is another
+   * variant's key, refused by both documents; a pasted key beside a
+   * managed key is refused by the rule both state.
+   */
+  public function testExampleFourteen(): void {
+    $this->installConfig(['data_surface_examples']);
+    $pasted = ['credential' => ['api_key' => 'mk-1']];
+    $managed = static fn (string $key, array $more = []): array => [
+      'source' => 'managed',
+      'credential' => ['key_id' => $key] + $more,
+    ];
+    $this->assertTable('event.mailer', $this->build('event.mailer'), $this->stored('event.mailer'), [
+      // A required secret never set: the one place the schema is wider.
+      'as stored, no key ever pasted' => [[], FALSE, TRUE, TRUE],
+      'a pasted key' => [['credential' => ['api_key' => 'mk-1']], TRUE],
+      'the one source, and a pasted key' => [['source' => 'pasted', 'credential' => ['api_key' => 'mk-1']], TRUE],
+      'the managed source, which the site does not offer' => [$managed('mail_service'), FALSE],
+      'a sender that is no address' => [['sender' => 'tickets'] + $pasted, FALSE, TRUE, TRUE],
+    ]);
+
+    $this->container->get('module_installer')->install(['data_surface_examples_keys']);
+    $this->setUpCurrentUser(admin: TRUE);
+    $this->assertTable('event.mailer', $this->build('event.mailer'), $this->stored('event.mailer'), [
+      'a pasted key' => [['source' => 'pasted', 'credential' => ['api_key' => 'mk-1']], TRUE],
+      'a managed key' => [$managed('mail_service'), TRUE],
+      'the managed source, no key' => [['source' => 'managed', 'credential' => []], FALSE],
+      'a key the site does not manage' => [$managed('vault'), FALSE],
+      'a pasted key for the managed source' => [$managed('mail_service', ['api_key' => 'mk-1']), FALSE],
+      'a source no variant is for' => [['source' => 'vault', 'credential' => ['api_key' => 'mk-1']], FALSE],
+    ]);
+    $mount = static fn (?string $key): array => ['third_party_settings' => ['data_surface_examples_keys' => ['key_id' => $key]]];
+    $this->assertTable('event.webhook', $this->build('event.webhook'), $this->stored('event.webhook'), [
+      'as stored' => [[], TRUE],
+      'a pasted key' => [['api_key' => 'wh-1'], TRUE],
+      'a managed key' => [$mount('webhook_signing'), TRUE],
+      'a managed key, the pasted key sent empty' => [['api_key' => ''] + $mount('webhook_signing'), TRUE],
+      'a pasted key beside a managed key' => [['api_key' => 'wh-1'] + $mount('webhook_signing'), FALSE],
+      'a key the site does not manage' => [$mount('vault'), FALSE],
+      'no managed key, and a pasted key' => [['api_key' => 'wh-1'] + $mount(NULL), TRUE],
     ]);
   }
 

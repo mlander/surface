@@ -1251,6 +1251,11 @@ final class SchemaReader {
         $labels[is_bool($choice['const']) ? ($choice['const'] ? '1' : '0') : (string) $choice['const']] = $choice['title'];
       }
     }
+    if (is_scalar($deciding['const'] ?? NULL) && is_string($deciding[ContractEmitter::EXTENSION]['fixed'] ?? NULL)) {
+      // The one value a deciding key may hold, and the label it is drawn
+      // with.
+      $labels[(string) $deciding['const']] = $deciding[ContractEmitter::EXTENSION]['fixed'];
+    }
     $owner = $inputs->ownerId();
     $variants = [];
     foreach ($found['variants'] as $value => $variant) {
@@ -2133,6 +2138,13 @@ final class SchemaReader {
     else {
       if (($property['readOnly'] ?? FALSE) === TRUE || !is_scalar($property['const'])) {
         return NULL;
+      }
+      if (is_string($property[ContractEmitter::EXTENSION]['fixed'] ?? NULL)) {
+        // A deciding key whose variants offer one value: the list is the
+        // variants', so the key declares none of its own.
+        // Decision: see
+        // docs/decisions.md#an-extension-is-a-variant-the-site-adds-or-an-alter.
+        return [];
       }
       return ['Choice', ['choices' => [$property['const']]]];
     }

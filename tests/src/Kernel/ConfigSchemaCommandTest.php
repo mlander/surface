@@ -98,7 +98,7 @@ class ConfigSchemaCommandTest extends DataSurfaceKernelTestBase {
    * the compliance module's mount, with nothing said between them.
    */
   public function testModulesNotInstalledAreWrittenInOneRun(): void {
-    $modules = ['data_surface_examples', 'data_surface_examples_compliance'];
+    $modules = ['data_surface_examples', 'data_surface_examples_compliance', 'data_surface_examples_keys'];
     $installed = $this->container->get('module_handler');
     foreach ($modules as $module) {
       $this->assertFalse($installed->moduleExists($module));
@@ -112,6 +112,7 @@ class ConfigSchemaCommandTest extends DataSurfaceKernelTestBase {
       $list->getPath('data_surface_examples') . '/config/schema/data_surface_examples.schema.yml',
       $list->getPath('data_surface_examples') . '/config/install/data_surface_examples.registration_step3.yml',
       $list->getPath('data_surface_examples_compliance') . '/config/schema/data_surface_examples_compliance.schema.yml',
+      $list->getPath('data_surface_examples_keys') . '/config/schema/data_surface_examples_keys.schema.yml',
     ];
     foreach ($files as $file) {
       $this->assertFileExists($this->directory . '/' . $file);

@@ -943,7 +943,15 @@ Nothing an alter declares removes: it cannot take a key or a value away
 from the owner's declaration. A site policy that hides an owner's key
 for everyone is a later concept, not a verb here. What an alter may do
 is answer access, below, which locks or leaves out keys for an account
-or once the thing is known, as any access answer does.
+or once the thing is known, as any access answer does, and rule an
+owner's key out while a key of its own holds a value, which narrows.
+Example 14's module that manages keys rules the webhook's pasted key out
+once a managed key is chosen at its mount,
+`narrow('api_key')->when(Condition::present('key_id'))->doesNotApply()`.
+The owner's code still reads only its own keys, so the alter cannot hand
+it the managed key's value; an owner that needs it declares the managed
+key as a variant of its own ([decision](decisions.md#an-extension-is-a-variant-the-site-adds-or-an-alter),
+[ROADMAP](../ROADMAP.md) item 18).
 
 ### An alter's answer
 
@@ -1361,7 +1369,9 @@ over AJAX and the discard cascade drops input left by another variant. A
 payload carrying another variant's keys is refused by name
 (`presentation_settings.show_summary belongs to the list variant, but
 presentation chose grid.`); a stored value that does not fit a newly
-chosen variant falls back to that variant's defaults.
+chosen variant falls back to that variant's defaults, but a secret of
+another variant, which is kept beside them for the day its variant is
+chosen again ([decision](decisions.md#an-extension-is-a-variant-the-site-adds-or-an-alter)).
 
 ### Ports
 
@@ -1737,11 +1747,21 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
 - **Storage.** The key is open in the config schema written from the
   resource (`type: ignore`): which variants a site has is not the
   code's, and the chosen variant holds the value to its own keys before
-  anything is written.
+  anything is written. A provider whose every variant is a structure its
+  code names says so, `ClosedVariantsInterface` and a static
+  `structures()`, and the key is then written as a class's variants are,
+  a type per value, whichever the site offers now.
+- **One value is fixed.** A deciding key whose variants offer one value,
+  and which declares no list of its own, is drawn as that value, not as a
+  select of one, and both documents state it as `const`, its label under
+  `x-surface.fixed`.
 
 The test module's poster reads three layouts, one in draft-04, beside a
 class that wins for the banner (`VariantsFromSiteTest`); example 12
-reads every single-directory component the site has.
+reads every single-directory component the site has. Example 14's mailer
+lists two structures of its own, a credential pasted or a key the site
+manages, the second only while the module that manages keys is on
+([decision](decisions.md#an-extension-is-a-variant-the-site-adds-or-an-alter)).
 
 A placed block is the case at scale. `data_surface_block`'s
 `block.placement` attaches its `settings` with

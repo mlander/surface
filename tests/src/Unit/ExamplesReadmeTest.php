@@ -91,6 +91,19 @@ class ExamplesReadmeTest extends UnitTestCase {
     $this->assertContains('../../src/Variants/ComponentProps.php', $quoted);
     $this->assertContains('../data_surface_component_block/src/Structure/ComponentBlockStructure.php', $quoted);
     $this->assertContains('../data_surface_component_block/src/Plugin/Block/ComponentBlock.php', $quoted);
+    // Example 14: the owner's way whole, and the alter's way, whose alter
+    // is the keys module's.
+    $extension = [
+      'Resource/MailerResource',
+      'Variants/CredentialSources',
+      'Structure/PastedCredentialStructure',
+      'Structure/ManagedCredentialStructure',
+      'Resource/WebhookResource',
+    ];
+    foreach ($extension as $class) {
+      $this->assertContains('src/' . $class . '.php', $quoted);
+    }
+    $this->assertContains('../data_surface_examples_keys/src/Alter/WebhookKeyAlter.php', $quoted);
     foreach ($blocks as [, $path, $code]) {
       $file = self::MODULE . '/' . $path;
       $this->assertFileExists($file);

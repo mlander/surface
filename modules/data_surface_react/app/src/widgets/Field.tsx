@@ -3,6 +3,7 @@ import { fieldId, isObject, jsonType, resolveVariants } from '../contract';
 import {
   CheckboxesField,
   CheckboxField,
+  FixedField,
   MultipleSelectField,
   NumberField,
   RadiosField,
@@ -46,6 +47,8 @@ export function Field(props: FieldProps): JSX.Element | null {
       return <VariantsField {...props} />;
     case 'list':
       return <ListField {...props} />;
+    case 'fixed':
+      return <FixedField {...props} />;
     default:
       return <UnsupportedField {...props} />;
   }

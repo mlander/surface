@@ -32,7 +32,7 @@ use Drupal\tool\Tool\ToolManager;
 use Drupal\user\RoleInterface;
 
 /**
- * Says what one of examples 7 to 13 shows, above its contract panel.
+ * Says what one of examples 7 to 14 shows, above its contract panel.
  *
  * Each of those examples is one small resource for one or two concepts,
  * so its page says in one paragraph what it demonstrates and where the
@@ -90,7 +90,40 @@ final class ConceptPanel {
       'docs/resources.md#variants-from-the-site',
       'docs/served-contract.md#variants-are-conditionals',
     ],
+    'event.mailer' => self::EXTENSION_DOCS,
+    'event.webhook' => self::EXTENSION_DOCS,
   ];
+
+  /**
+   * Example 14: the docs pages both its resources point at.
+   */
+  protected const EXTENSION_DOCS = [
+    'docs/decisions.md#an-extension-is-a-variant-the-site-adds-or-an-alter',
+    'docs/resources.md#variants-from-the-site',
+    'docs/resources.md#alters',
+    'docs/semantics.md#secrets-keep-what-they-hold',
+    'docs/refinement.md#when-a-key-does-not-apply',
+  ];
+
+  /**
+   * Example 14: the module that manages keys, the Key module simulated.
+   */
+  public const KEYS = 'data_surface_examples_keys';
+
+  /**
+   * Example 14: the alter not shipped, which locks instead of ruling out.
+   *
+   * Quoted on the page and in the README, never run: a conditional lock is
+   * no effect a declared rule has (ROADMAP item 3 left it out), so this is
+   * the spelling it would have.
+   */
+  public const LOCKING = <<<'PHP'
+    // Not shipped: the pasted key drawn fixed once a managed key is
+    // chosen, and a pasted key sent noted as not taken.
+    $inputs->narrow('api_key')
+      ->when(Condition::present('key_id'))
+      ->lock();
+    PHP;
 
   /**
    * Example 12: the prefix of the ids of the components this module ships.
@@ -177,6 +210,7 @@ final class ConceptPanel {
       'event.program' => $this->accessAndFacts($served),
       'event.doors' => $this->widgets($declared, $values, $served),
       'event.spotlight' => $this->schemaRead($declared, $values, $served),
+      'event.mailer', 'event.webhook' => $this->extension(),
       default => NULL,
     };
     if ($blocks === NULL) {
@@ -215,8 +249,70 @@ final class ConceptPanel {
       'event.program' => $this->t('Access says whether keys may be changed, seen, or neither, and its kind is read from its cacheability, never declared. The access class of the fees locks them for an account without "set event fees", which the account alone decides, so the full schema states the lock for that account. For any other account the program decides: once it is published, the fees are fixed, which only what is stored can say, so the full schema marks the fees <code>access: live</code> and the schema for these answers settles it. Each operation also states how a call behaves: configuring changes what exists and may be repeated, and checking, at /surface-examples/10/check, changes nothing, so its tool is a read and has no read tool beside it.'),
       'event.doors' => $this->t('Every stock widget, each chosen by what its key declares: a time input for a string that asks for one, checkboxes for a short list of choices, radios for one choice that asks for them, a text area for a multiline string, and rows with "Add another" for a list of free values. The config schema is fully validatable, so the storage knows which keys may hold nothing. A key a call leaves out keeps what is stored, null clears it, and a value replaces it; the badges, which the storage always holds, refuse null and name their default. The four dry runs below show each.'),
       'event.spotlight' => $this->t("A JSON Schema the site already has is read into a structure, keyword by keyword: each single-directory component says what props it takes, and that schema is a variant at <code>props</code>, chosen by the component. The class names no component and no prop: a provider lists the components, with their schemas, and the reader turns each schema into keys with their types, labels, defaults, lists of values, bounds and required keys, and a nested object into a map. Choose another component and the props below it are that component's, over AJAX, and in React with no request. Both documents state the components as variants, <code>anyOf</code> of each component's def and one conditional per component, and the full schema of a component read back from them is the same document again. What the reader cannot say is kept, as a JsonSchema constraint the server checks, and noted. A tool that sends one component's props for another is refused, naming the component they belong to. Beside the props, the component's slots are a second key the same component chooses, read from its metadata: each slot holds text, one component or a list of them, narrowed to what the slot expects, three deep at most."),
+      'event.mailer', 'event.webhook' => $this->t("Two resources call a service with a credential: a key pasted here, a secret, or a key the site manages, once a module that manages keys is on. @module stands in for the Key module. The mailer, at /surface-examples/14, is the owner's way: it declares both sources, each a structure of its own, and a provider lists them, the pasted one always and the managed one while the module is on. With one source to choose, the source is drawn as that source and stated as <code>const</code>. A pasted key stored is kept when the managed key is chosen, and taken up again when the pasted source is chosen back. The webhook, at /surface-examples/14/webhook, is the alter's way: it declares a pasted key and knows nothing of managed keys, and the module's alter mounts a managed key beside it and rules the pasted key out once one is chosen. Install the module and reload: the second source and the managed key are there at the next request, with no cache rebuild.", ['@module' => self::KEYS]),
       default => $this->t('Not an example of this series.'),
     };
+  }
+
+  /**
+   * Example 14: the module to enable, both resources' documents, the gap.
+   *
+   * What the page shows depends on whether the module that manages keys
+   * is on, and says which: one source or two, a managed key on the
+   * webhook or none. The contract excerpts are read from both full
+   * schemas as they are emitted now.
+   *
+   * @return array
+   *   The blocks.
+   */
+  protected function extension(): array {
+    $on = $this->moduleHandler->moduleExists(self::KEYS);
+    $mailer = $this->full(NULL, 'event.mailer');
+    $webhook = $this->full(NULL, 'event.webhook');
+    $rules = array_values(array_intersect_key($webhook['allOf'] ?? [], array_flip($webhook[ContractEmitter::EXTENSION]['rules'] ?? [])));
+    return [
+      'enable' => [
+        '#theme' => 'item_list',
+        '#items' => [
+          ['#markup' => $this->t('Enable it: <code>ddev drush pm:install @module</code>; take it away again with <code>ddev drush pm:uninstall @module</code>.', ['@module' => self::KEYS])],
+          $on
+            ? $this->t('It is enabled on this site now: the mailer offers two sources, and the webhook a managed key beside its pasted one.')
+            : $this->t('It is not enabled on this site yet: the mailer has one source, drawn as that source, and the webhook a pasted key alone.'),
+        ],
+      ],
+      'contract' => $this->details(
+        $this->t('Both resources, as the full schema states them now'),
+        $on
+          ? $this->t("The mailer's source offers both sources, and its credential is <code>anyOf</code> of their two defs, one conditional each. The webhook's rule is the conditional its frame lists under <code>x-surface.rules</code>: <code>api_key</code> is <code>false</code> once a managed key is present.")
+          : $this->t("The mailer's source is <code>const</code>, the one source there is, with its label under <code>x-surface.fixed</code>, and its credential the pasted source's def. The webhook has no rule: nothing mounts a managed key."),
+        $this->json([
+          'event.mailer' => [
+            'source' => $mailer['properties']['source'] ?? NULL,
+            'credential' => $mailer['properties']['credential'] ?? NULL,
+          ],
+          'event.webhook' => [
+            'api_key' => $webhook['properties']['api_key'] ?? NULL,
+            'rules' => $rules,
+          ],
+        ]),
+      ),
+      'gap' => ['#markup' => '<p>' . $this->gap() . '</p>'],
+      'alternative' => $this->details(
+        $this->t('The alter not shipped: lock the pasted key instead of ruling it out'),
+        $this->t('A lock would keep the pasted key drawn, an empty password box that cannot be used, and would take a pasted key sent with a note instead of a refusal, so a caller who sends both learns of it only from the note. Ruling it out takes the box away, refuses the pasted key naming the managed key, and keeps what is stored, as a lock would. A conditional lock is also no effect a declared rule has, so this is the spelling it would have:'),
+        $this->pre(self::LOCKING),
+      ),
+    ];
+  }
+
+  /**
+   * Example 14: what the alter cannot do, in one paragraph.
+   *
+   * @return \Drupal\Core\StringTranslation\TranslatableMarkup
+   *   The paragraph, as safe HTML.
+   */
+  public function gap(): \Stringable {
+    return $this->t("What the alter cannot do: hand the webhook's code the managed key's value. The code that signs a post reads <code>api_key</code>, the one key the webhook declares; the managed key's name is stored under <code>third_party_settings.data_surface_examples_keys.key_id</code>, which belongs to the module that mounted it, and the webhook never names another module's keys. So once a managed key is chosen the form, both documents and the tool are right, and the code that signs has no key to sign with. The mailer has no such gap: it declares the managed source itself, so its code reads <code>credential.key_id</code> and asks the key service for the value.");
   }
 
   /**
@@ -630,7 +726,11 @@ final class ConceptPanel {
    *   A details element: per call, its Drush command and its answer.
    */
   public function calls(string $id): array {
-    $ids = $id === 'event.press' || $id === 'event.desk' ? ['event.press', 'event.desk'] : [$id];
+    $ids = match ($id) {
+      'event.press', 'event.desk' => ['event.press', 'event.desk'],
+      'event.mailer', 'event.webhook' => ['event.mailer', 'event.webhook'],
+      default => [$id],
+    };
     $calls = [
       '#type' => 'details',
       '#open' => FALSE,

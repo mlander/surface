@@ -11,13 +11,14 @@ use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
 /**
- * Tests the tool calls of examples 7 to 13, and the README quoting them.
+ * Tests the tool calls of examples 7 to 14, and the README quoting them.
  *
  * Makes every call ConceptCalls writes down, on the settings the module
  * ships, the way each example's panel makes it, with example 10's
- * workflow module on for the call that needs it, and example 13's
+ * workflow module on for the call that needs it, example 13's
  * component block and placement resource on with its Spotlight block
- * placed: what each answers is
+ * placed, and example 14's module that manages keys on: what each
+ * answers is
  * pinned here for the rule it shows, the README must quote every command
  * and every answer as made, and none of the calls writes anything.
  */
@@ -44,6 +45,7 @@ class ExamplesConceptsToolTest extends DataSurfaceKernelTestBase {
     'path_alias',
     'data_surface_component_block',
     'data_surface_block',
+    'data_surface_examples_keys',
   ];
 
   /**
@@ -52,7 +54,7 @@ class ExamplesConceptsToolTest extends DataSurfaceKernelTestBase {
   protected function setUp(): void {
     parent::setUp();
     $this->installEntitySchema('user');
-    $this->installConfig(['system', 'data_surface_examples']);
+    $this->installConfig(['system', 'data_surface_examples', 'data_surface_examples_keys']);
     $this->container->get('theme_installer')->install(['stark']);
     $this->config('system.theme')->set('default', 'stark')->save();
     $this->container->get('class_resolver')->getInstanceFromDefinition(SpotlightBlockHooks::class)->place();
@@ -119,6 +121,13 @@ class ExamplesConceptsToolTest extends DataSurfaceKernelTestBase {
     $this->assertStringContainsString('"settings":{"component":"data_surface_examples:hero","props":{"title":"Doors open at half past six","subtitle":null,"align":"start","overlay":40,"full_width":false},"slots":{"actions":{"kind":"text","text":null}}}', $answers['block.placement']['props'], 'The placed block named by its machine name, the hero read from its schema.');
     $this->assertSame("Failed: The values were refused:\n" . '/settings/slots/actions/component/component: The value you selected is not a valid choice. Choose data_surface_examples:call_to_action (Call to action).', $first($answers['block.placement']['wrong_slot']), 'A component the slot does not expect, refused naming the one it does.');
     $this->assertSame('Success: Dry run of Remove a placed block: the removal was rehearsed, and nothing was removed. The values it holds are answered.', $first($answers['block.placement']['remove']));
+    $this->assertStringNotContainsString('mk-example-7f3a91', $answers['event.mailer']['pasted'], 'A pasted key is in no answer.');
+    $this->assertStringContainsString('"source":"pasted","credential":[]', $answers['event.mailer']['pasted']);
+    $this->assertStringContainsString('"source":"managed","credential":{"key_id":"mail_service"}', $answers['event.mailer']['managed']);
+    $this->assertSame("Failed: The values were refused:\n" . '/credential/api_key: credential.api_key belongs to the pasted variant, but source chose managed.', $first($answers['event.mailer']['pasted_while_managed']), 'Refused, naming the source that chose the other variant.');
+    $this->assertSame('Success: Configure the mailer: the stored values were read, and nothing was written.', $first($answers['event.mailer']['read']));
+    $this->assertStringContainsString('"credential":{"key_id":"webhook_signing"}', str_replace('"third_party_settings":{"data_surface_examples_keys":', '"credential":', $answers['event.webhook']['managed']));
+    $this->assertSame("Failed: The values were refused:\n" . '/api_key: API key does not apply when third_party_settings.data_surface_examples_keys.key_id is set.', $first($answers['event.webhook']['pasted_beside_managed']), 'Refused, naming the key it depends on.');
 
     // The examples' README quotes every command, and every answer under
     // its call's label.

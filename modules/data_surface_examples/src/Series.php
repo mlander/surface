@@ -81,6 +81,11 @@ final class Series {
   public const BLOCK = 'modules/data_surface_component_block/';
 
   /**
+   * Example 14's module that manages keys, the Key module simulated.
+   */
+  public const KEYS = 'modules/data_surface_examples_keys/';
+
+  /**
    * Lists the examples, in the order they are read.
    *
    * @return array<int, array{title: \Stringable, concept: \Stringable, docs: string, decision: string, routes: string[], files: array<string, \Stringable>, from?: int}>
@@ -301,6 +306,41 @@ final class Series {
           self::MODULE . 'components/call_to_action/call_to_action.twig' => t("the call to action's template"),
         ],
       ],
+      14 => [
+        'title' => t('an optional extension'),
+        'concept' => t('a secret, or a managed key: a variant the site adds, or an alter'),
+        'docs' => 'docs/resources.md#variants-from-the-site',
+        'decision' => 'an-extension-is-a-variant-the-site-adds-or-an-alter',
+        'routes' => ['data_surface_examples.step14', 'data_surface_examples.step14_webhook'],
+        'files' => [
+          self::MODULE . 'src/Resource/MailerResource.php' => t("the owner's way: a sender, a mail service, and a credential whose source a provider lists"),
+          self::MODULE . 'src/Variants/CredentialSources.php' => t('the provider: the pasted source always, the managed source while the keys module is on, both named for storage'),
+          self::MODULE . 'src/Structure/PastedCredentialStructure.php' => t('the pasted source: a key, a secret'),
+          self::MODULE . 'src/Structure/ManagedCredentialStructure.php' => t('the managed source: the name of a key the site manages'),
+          self::MODULE . 'src/Storage/MailerStorage.php' => t('its storage: names the config object'),
+          self::ROUTES . 'data_surface_examples.step14' => t("the mailer's route"),
+          self::SCHEMA . 'data_surface_examples.mailer' => t("the mailer's config schema, generated from the class"),
+          self::SCHEMA . 'data_surface_examples.mailer.credential.pasted' => t("the pasted source's config schema"),
+          self::SCHEMA . 'data_surface_examples.mailer.credential.managed' => t("the managed source's config schema, with the pasted key it keeps"),
+          self::INSTALL . 'data_surface_examples.mailer.yml' => t("the mailer's shipped settings"),
+          self::MODULE . 'src/Resource/WebhookResource.php' => t("the alter's way: an endpoint and a pasted key, and nothing of managed keys"),
+          self::MODULE . 'src/Storage/WebhookStorage.php' => t('its storage: names the config object'),
+          self::ROUTES . 'data_surface_examples.step14_webhook' => t("the webhook's route"),
+          self::SCHEMA . 'data_surface_examples.webhook' => t("the webhook's config schema, generated from the class"),
+          self::INSTALL . 'data_surface_examples.webhook.yml' => t("the webhook's shipped settings"),
+          self::KEYS . 'data_surface_examples_keys.info.yml' => t('the module that manages keys, which the page tells you to enable'),
+          self::KEYS . 'data_surface_examples_keys.services.yml' => t('its one service, the list of keys'),
+          self::KEYS . 'data_surface_examples_keys.install' => t('takes the managed key it stored on the webhook away when it is uninstalled'),
+          self::KEYS . 'src/Keys/ManagedKeys.php' => t('the keys the site manages, read from configuration with its cacheability'),
+          self::KEYS . 'src/Plugin/Validation/Constraint/ManagedKeyConstraint.php' => t('the constraint a key naming a managed key declares'),
+          self::KEYS . 'src/Plugin/Validation/Constraint/ManagedKeyConstraintValidator.php' => t('its validator: refuses a name the site does not manage'),
+          self::KEYS . 'src/Plugin/DataSurfaceOptionsResolver/ManagedKeyOptions.php' => t('the resolver that reads the constraint as the list of keys'),
+          self::KEYS . 'src/Alter/WebhookKeyAlter.php' => t("the alter: mounts a managed key on the webhook, and rules the pasted key out once one is chosen"),
+          self::KEYS . 'config/schema/data_surface_examples_keys.schema.yml#data_surface_examples_keys.keys' => t("the keys' config schema, written by hand"),
+          self::KEYS . 'config/schema/data_surface_examples_keys.schema.yml#data_surface_examples.webhook.third_party.data_surface_examples_keys' => t('the config schema of what it stores on the webhook'),
+          self::KEYS . 'config/install/data_surface_examples_keys.keys.yml' => t('the two keys it ships'),
+        ],
+      ],
     ];
   }
 
@@ -430,13 +470,13 @@ final class Series {
    *
    * @return int
    *   For a PHP file, CodeLines' count: from the class's first attribute
-   *   to its closing brace, with no comment and no blank line. For any
-   *   other, the lines of what is shown that are neither blank nor a
-   *   comment.
+   *   to its closing brace, or a .install file's first function to its
+   *   end, with no comment and no blank line. For any other, the lines of
+   *   what is shown that are neither blank nor a comment.
    */
   public static function lines(string $file): int {
     [$path] = self::split($file);
-    if (str_ends_with($path, '.php')) {
+    if (str_ends_with($path, '.php') || str_ends_with($path, '.install')) {
       return CodeLines::count(self::root() . '/' . $path);
     }
     $code = array_filter(explode("\n", self::text($file)), static function (string $line): bool {

@@ -19,7 +19,7 @@ services:
   data_surface_examples.files_panel:
     class: Drupal\data_surface_examples\FilesPanel
     arguments: ['@string_translation']
-  # What examples 7 to 12 each show, the part of their documents it is
+  # What examples 7 to 12 and 14 each show, the part of their documents it is
   # about, and their tool calls, each a dry run; a call another module's
   # part needs only where that module is on, in the State it needs.
   data_surface_examples.concept_panel:
