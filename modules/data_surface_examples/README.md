@@ -15,7 +15,8 @@ used twice, keys that come from the site, access, the stock widgets, and
 a JSON Schema read into a structure
 ([below](#one-small-resource-per-concept)). Example 13 is example 12's
 two lines as the settings of a block, which lives in a submodule of its
-own ([below](#example-13-a-block-that-embeds-a-component)).
+own, placed through the general placement resource of another
+([below](#example-13-a-block-that-embeds-a-component)).
 
 ```bash
 drush pm:install data_surface_examples
@@ -2134,15 +2135,17 @@ Failed: The values were refused:
 
 Example 12's two lines are the settings of a block. The block plugin
 names a structure with `#[UsesStructure]` and renders; its settings
-form, their validation, their storage (the block's settings) and its
-tool come from the structure, through the block host
+form, their validation and their storage (the block's settings) come
+from the structure, through the block host
 ([Plugins](../../docs/resources.md#plugins)). The block lives in a
-submodule of its own, `data_surface_component_block`, which the
-examples do not depend on, so the page says how to enable it while it is
-off:
+submodule of its own, `data_surface_component_block`, and a placed
+block, of this plugin or any other, is placed, configured and removed
+through the placement resource of `data_surface_block`, the general
+case. The examples depend on neither, so the page says how to enable
+both while they are off:
 
 ```bash
-ddev drush pm:install data_surface_component_block
+ddev drush pm:install data_surface_component_block data_surface_block
 ```
 
 The structure is example 12's two lines under the block's id, from the
@@ -2282,33 +2285,57 @@ first save, and its props are there on the block's form once it is
 saved ([A plugin host cannot overlay a full
 submission](../../docs/decisions.md#a-plugin-host-cannot-overlay-a-full-submission)).
 
-With both modules on, whichever came second places one block, Spotlight,
-`data_surface_examples_spotlight`: the card, as example 12 ships it, in
-the default theme's content region, shown on `/surface-examples/13`
-alone, below what the page says.
+With all three modules on, whichever came last places one block,
+Spotlight, `data_surface_examples_spotlight`, through the placement
+resource's add operation, with the values of the first call below: the
+card, as example 12 ships it, in the default theme's content region,
+shown on `/surface-examples/13` alone, below what the page says.
 
 The page shows the block's two lines beside example 12's, the block
 structure's full schema cut to the three components this module ships
-(the same variants as example 12's, under the block's id), the two tools
+(the same variants as example 12's, under the block's id), the four tools
 a placed block has, a link to place one, and what it cost.
 
 A plugin's structure is held by its host and is no tool. A placed block
-is a config entity, with a machine name and storage of its own, so the
-submodule declares a resource, `block.placed_component`, whose identity
-is the block's machine name and which attaches the block's structure at
-`settings`, where the block keeps it: the bridge derives
-`data_surface:block.placed_component:configure`, which takes the block
-and the values, and the read tool beside it, which takes the block. The
-call below changes the Spotlight block to the hero, as a dry run:
+is a config entity, `block.block.<id>`, with a machine name and storage
+of its own, and `data_surface_block` declares it as a resource,
+`block.placement`, whose plugin chooses its settings: for this plugin,
+the block's structure, as declared; for any other, what its config schema
+says ([its README](../data_surface_block/README.md)). The three calls
+below place the Spotlight block, change it to the hero and remove it,
+each as a dry run, on a site whose default theme is Stark, where the
+values hold `"theme":"stark"`; the page sends the site's own default
+theme. The first is the call that placed it, made again: a create whose
+caller names the thing is refused for the name it took.
 
 ```bash
-drush tool:run data_surface:block.placed_component:configure --uid=1 --input='{"block":"data_surface_examples_spotlight","values":{"settings":{"component":"data_surface_examples:hero","props":{"title":"Doors open at half past six","align":"start"}}}}' --input=dry_run=true
+drush tool:run data_surface:block.placement:add --uid=1 --input='{"values":{"label":"Spotlight","id":"data_surface_examples_spotlight","label_display":true,"plugin":"data_surface_component","settings":{"component":"data_surface_examples:card","props":{"heading":"Doors open at half past six","body":"Bring your ticket, on your phone or printed.","tone":"highlight","link":{"url":"https://example.com/tickets","label":"Find your ticket"}}},"theme":"stark","region":"content","weight":100,"visibility":[{"id":"request_path","settings":{"pages":"/surface-examples/13"}}]}}' --input=dry_run=true
 ```
 
 ```
-1. The Spotlight block set to the hero
-Success: Dry run of Configure a placed component block: the values were accepted and prepared, and nothing was written.
-  values: {"block":"data_surface_examples_spotlight","settings":{"component":"data_surface_examples:hero","props":{"title":"Doors open at half past six","subtitle":null,"align":"start","overlay":40,"full_width":false}}}
+1. The Spotlight block placed through add, made again: refused for the machine name it took
+Failed: The values were refused:
+/id: The machine name data_surface_examples_spotlight is already in use: choose another.
+```
+
+```bash
+drush tool:run data_surface:block.placement:edit --uid=1 --input='{"id":"data_surface_examples_spotlight","values":{"settings":{"component":"data_surface_examples:hero","props":{"title":"Doors open at half past six","align":"start"}}}}' --input=dry_run=true
+```
+
+```
+2. The Spotlight block set to the hero
+Success: Dry run of Edit a placed block: the values were accepted and prepared, and nothing was written.
+  values: {"label":"Spotlight","id":"data_surface_examples_spotlight","label_display":true,"plugin":"data_surface_component","settings":{"component":"data_surface_examples:hero","props":{"title":"Doors open at half past six","subtitle":null,"align":"start","overlay":40,"full_width":false}},"theme":"stark","region":"content","weight":100,"status":true,"visibility":[{"id":"request_path","negate":false,"settings":{"pages":"/surface-examples/13"}}]}
+```
+
+```bash
+drush tool:run data_surface:block.placement:remove --uid=1 --input='{"id":"data_surface_examples_spotlight"}' --input=dry_run=true
+```
+
+```
+3. The Spotlight block removed, rehearsed
+Success: Dry run of Remove a placed block: the removal was rehearsed, and nothing was removed. The values it holds are answered.
+  values: {"label":"Spotlight","id":"data_surface_examples_spotlight","label_display":true,"plugin":"data_surface_component","settings":{"component":"data_surface_examples:card","props":{"heading":"Doors open at half past six","body":"Bring your ticket, on your phone or printed.","tone":"highlight","link":{"url":"https://example.com/tickets","label":"Find your ticket"}}},"theme":"stark","region":"content","weight":100,"status":true,"visibility":[{"id":"request_path","negate":false,"settings":{"pages":"/surface-examples/13"}}]}
 ```
 
 ## How this page is kept true
@@ -2339,11 +2366,12 @@ Drush commands are checked against `ExampleCalls`.
 | `Functional\ServedContractEndpointsTest` | In React: the landing page's links, and example 2's contract, refine and validate over HTTP. |
 | `Functional\ServedSubmitEndpointTest` | In React: example 2 saved over HTTP, refused, and refused after someone else saved. |
 | `Kernel\ExamplesResetTest` | Reset to defaults puts every example, and what another module stored on example 3, back to the shipped files, and opens every room example 4 closed. |
-| `Kernel\ExamplesConceptsTest` | Examples 7 to 12: each form builds and saves; example 7's rules in the full schema as declared, the send day gone for a monthly bulletin and kept in storage; example 8's one def at two sites with each wiring, the mixed-in keys flat, the shape at two keys, the volunteers' collection; example 9's keys from the configuration, a type added without a cache rebuild, the locked type in both documents and on the form; example 10's fees for two accounts, locked once published, and both operations' facts and tools; example 11's widgets, the always held badges and the notes that clear; example 12's three components read as three variants, the card's props as keys with their constraints, both documents stating them, the form swapped to the hero and saved, a hero too dark refused; the panel above each, and none above examples 1 to 3; each class stays screen sized; example 13's page with its module off, saying how to enable it, then on, the Spotlight block placed, the two lines side by side, the block's contract cut to the three components, its two tools and the call's answer, nothing written. |
+| `Kernel\ExamplesConceptsTest` | Examples 7 to 12: each form builds and saves; example 7's rules in the full schema as declared, the send day gone for a monthly bulletin and kept in storage; example 8's one def at two sites with each wiring, the mixed-in keys flat, the shape at two keys, the volunteers' collection; example 9's keys from the configuration, a type added without a cache rebuild, the locked type in both documents and on the form; example 10's fees for two accounts, locked once published, and both operations' facts and tools; example 11's widgets, the always held badges and the notes that clear; example 12's three components read as three variants, the card's props as keys with their constraints, both documents stating them, the form swapped to the hero and saved, a hero too dark refused; the panel above each, and none above examples 1 to 3; each class stays screen sized; example 13's page with its modules off, saying how to enable both, then with the block alone on, its parts and no call, then with the placement resource on too, the Spotlight block placed through the add operation, the two lines side by side, the block's contract cut to the three components, the four placement tools and the three calls' answers, nothing written. |
 | `Kernel\ExamplesWorkflowTest` | Example 10 with the workflow module: the fees left out of the full schema, the tool listing and the read tool for an account without "see event fees" and kept for one with it; the program locked whole once the workflow state is published, settled at call time and left unmarked in the full schema; checking still answers; the panel's paragraph, with the module and without it. |
 | `Kernel\ExamplesConceptsToolTest` | Examples 7 to 13: every call `ConceptCalls` writes down, its answer, nothing written, the Spotlight block included, and this page quoting each command and answer. |
-| `Functional\ExamplesConceptsRoutesTest` | Every route of examples 7 to 12 answers an administrator and refuses anonymous; the landing page lists them; each page shows its panel and saves through its form; example 10's check writes nothing. Example 13 refuses anonymous, says to enable its module, then, with it on, shows its parts and the call's answer, and draws the Spotlight card below on its page alone. |
-| `Kernel\ComponentBlockTest` | Example 13's block: its structure and both documents, its tools read and written, and what it renders ([its README](../data_surface_component_block/README.md)). |
+| `Functional\ExamplesConceptsRoutesTest` | Every route of examples 7 to 12 answers an administrator and refuses anonymous; the landing page lists them; each page shows its panel and saves through its form; example 10's check writes nothing. Example 13 refuses anonymous, says to enable its two modules, then, with them on, shows its parts and the calls' answers, and draws the Spotlight card below on its page alone. |
+| `Kernel\ComponentBlockTest` | Example 13's block: its structure and both documents, and what it renders ([its README](../data_surface_component_block/README.md)). |
+| `Kernel\BlockPlacementToolsTest` | Example 13's block placed, configured, read and removed through the placement resource's tools ([its README](../data_surface_block/README.md)). |
 | `Functional\ComponentBlockPlacementTest` | Example 13's block through the block form without JavaScript. |
 | `FunctionalJavascript\ComponentBlockAjaxTest` | Example 13's block in a browser: a component chosen draws its props over AJAX, and the block saved renders it. |
 | `FunctionalJavascript\ExamplesSpotlightAjaxTest` | Example 12 in a browser: choosing the hero swaps the card's props for the hero's over AJAX, the form saved stores the hero and its props, and the page read back draws them. |

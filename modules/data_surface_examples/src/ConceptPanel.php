@@ -23,8 +23,6 @@ use Drupal\data_surface\ResourceBuild\ResourceRegistry;
 use Drupal\data_surface\ResourceBuild\ResourcesInterface;
 use Drupal\data_surface\Variants\ComponentProps;
 use Drupal\data_surface_component_block\Plugin\Block\ComponentBlock;
-use Drupal\data_surface_component_block\Resource\PlacedComponentBlockResource;
-use Drupal\data_surface_component_block\Storage\PlacedComponentBlockStorage;
 use Drupal\data_surface_component_block\Structure\ComponentBlockStructure;
 use Drupal\data_surface_examples\Access\FeesAccess;
 use Drupal\data_surface_examples\Keys\TicketTypes;
@@ -533,10 +531,10 @@ final class ConceptPanel {
    * Example 13: the block's two lines beside example 12's, and its doors.
    *
    * The two declarations quoted from their files, the block structure's
-   * full schema cut as example 12's is, and the two tools a placed
-   * component block is configured and read through. Asked only where
-   * data_surface_component_block is on, since it names that module's
-   * classes.
+   * full schema cut as example 12's is, and the tools a placed block is
+   * placed, configured, read and removed through, where data_surface_block
+   * is on. Asked only where data_surface_component_block is on, since it
+   * names that module's classes.
    *
    * @return array
    *   The blocks.
@@ -554,8 +552,8 @@ final class ConceptPanel {
     $props_key[ContractEmitter::EXTENSION]['variants'] = array_filter((array) ($props_key[ContractEmitter::EXTENSION]['variants'] ?? []), static fn (string $id): bool => $shown($id), ARRAY_FILTER_USE_KEY);
     $conditionals = array_values(array_filter($full['allOf'] ?? [], static fn (array $branch): bool => $shown((string) ($branch['if']['properties']['component']['const'] ?? ''))));
     $tools = [];
-    foreach (['configure', 'configure:read'] as $suffix) {
-      $tool_id = 'data_surface:block.placed_component:' . $suffix;
+    foreach (['add', 'edit', 'edit:read', 'remove'] as $suffix) {
+      $tool_id = 'data_surface:block.placement:' . $suffix;
       $tool = $this->toolManager->hasDefinition($tool_id) ? $this->toolManager->getDefinition($tool_id) : NULL;
       if ($tool instanceof ToolDefinition) {
         $tools[] = [
@@ -570,8 +568,6 @@ final class ConceptPanel {
     $classes = [
       ComponentBlockStructure::class,
       ComponentBlock::class,
-      PlacedComponentBlockResource::class,
-      PlacedComponentBlockStorage::class,
     ];
     foreach ($classes as $class) {
       $lines[] = $this->t('@class: @lines lines of code.', [
@@ -602,7 +598,7 @@ final class ConceptPanel {
       ),
       'tools' => [
         '#type' => 'table',
-        '#caption' => $this->t("The tools a placed component block is configured and read through: the plugin's structure is held by its host and is no tool, so a resource names the placed block by its machine name and attaches the structure at <code>settings</code>, where the block keeps it."),
+        '#caption' => $this->t("The tools a placed block is placed, configured, read and removed through: the plugin's structure is held by its host and is no tool, so the general placement resource of data_surface_block names a placed block by its machine name, and its plugin chooses its settings, the block's structure for this plugin."),
         '#header' => [$this->t('Tool'), $this->t('Title'), $this->t('Tool API kind'), $this->t('Inputs')],
         '#rows' => $tools,
         '#attributes' => ['class' => ['data-surface-concept-tools']],
@@ -670,7 +666,11 @@ final class ConceptPanel {
       foreach (ConceptCalls::CALLS[$resource][$name]['parameters'] ?? [] as $parameter => $value) {
         $tool->setInputValue($parameter, $value);
       }
-      $tool->setInputValue(OperationInputs::VALUES, ConceptCalls::CALLS[$resource][$name]['values']);
+      $values = ConceptCalls::values($resource, $name);
+      // A delete takes none: the parameters name what it removes.
+      if ($values !== NULL) {
+        $tool->setInputValue(OperationInputs::VALUES, $values);
+      }
       // A read only operation's tool takes no dry run: it writes nothing.
       if (isset($tool->getInputDefinitions()[OperationInputs::DRY_RUN])) {
         $tool->setInputValue(OperationInputs::DRY_RUN, ConceptCalls::CALLS[$resource][$name]['dry_run'] ?? TRUE);

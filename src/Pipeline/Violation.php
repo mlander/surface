@@ -120,6 +120,11 @@ final class Violation {
   public const CONFLICT = 'conflict';
 
   /**
+   * A create names a thing that exists already: its machine name is taken.
+   */
+  public const TAKEN = 'taken';
+
+  /**
    * A storage holds settings no schema describes.
    */
   public const NO_SCHEMA = 'no_schema';

@@ -73,7 +73,8 @@ use Symfony\Component\HttpFoundation\Request;
  *   is the summary and its description the description. A run answers
  *   200, a written create 201 with `Location`, a refusal 422 and access
  *   403 as `ProblemDetails`, a stale `If-Match` 412; `?dryRun=true` is a
- *   query parameter.
+ *   query parameter. A delete is `DELETE` on the thing's path, with no
+ *   request body.
  * - **Permission as security.** The session cookie, and basic auth where
  *   `basic_auth` is on, as security schemes; each operation requires one
  *   of them, or none when the anonymous role holds its permission, and
@@ -419,14 +420,19 @@ final class OpenApiDocument {
     $written = match (TRUE) {
       $creates => (string) $this->t("The write: 201 with the created thing's Location, the envelope rebuilt and, under created, where it now lives. With dryRun, the same run stopped before anything is written, 200. A refusal is 422, nothing written."),
       $kind === OperationDefinition::READ => (string) $this->t('The run: the values checked, and nothing written at all. A refusal is 422.'),
+      $kind === OperationDefinition::DELETE => (string) $this->t('The removal, with no body, held by If-Match to the stored values its ETag named (412 when they changed): 200 with the values the thing held, and no envelope, since it is gone. With dryRun, the same run stopped before anything is removed. A refusal is 422, nothing removed.'),
       default => (string) $this->t('The write, held by If-Match to the stored values its ETag named (412 when they changed): 200 with the envelope rebuilt and the new ETag. With dryRun, the same run stopped before anything is written. A refusal is 422, nothing written.'),
     };
     $answers = [
       '200' => $this->answer(
-        $creates ? (string) $this->t('A dry run: the result, nothing written.') : (string) $this->t('The result, then outputs, contract and created.'),
+        match (TRUE) {
+          $creates => (string) $this->t('A dry run: the result, nothing written.'),
+          $kind === OperationDefinition::DELETE => (string) $this->t('The result, its values what the thing held; contract and created are null.'),
+          default => (string) $this->t('The result, then outputs, contract and created.'),
+        },
         $this->submitted($resultValues, $outputs),
         [],
-        $creates ? [] : $tagged,
+        $creates || $kind === OperationDefinition::DELETE ? [] : $tagged,
       ),
     ];
     if ($creates) {
@@ -441,11 +447,15 @@ final class OpenApiDocument {
       '412' => $creates ? NULL : (string) $this->t('If-Match no longer names what is stored: nothing written.'),
       '422' => (string) $this->t('The values were refused: each error a JSON Pointer, a code and a message; nothing written.'),
     ]));
+    $deletes = $kind === OperationDefinition::DELETE;
     $parameters = [
       ['$ref' => '#/components/parameters/CsrfToken'],
       ['$ref' => '#/components/parameters/DryRun'],
-      ['$ref' => '#/components/parameters/SurfaceStale'],
     ];
+    // A delete sends no values, so nothing of them is stale.
+    if (!$deletes) {
+      $parameters[] = ['$ref' => '#/components/parameters/SurfaceStale'];
+    }
     if (!$creates) {
       $parameters[] = ['$ref' => '#/components/parameters/IfMatch'];
     }
@@ -456,7 +466,9 @@ final class OpenApiDocument {
         'description' => $this->joined($description, $written),
       ] + $facts + [
         'parameters' => $parameters,
+      ] + ($deletes ? [] : [
         'requestBody' => $this->body($request, $kind, $method, $this->example($built, $full->document['schema'], $kind)),
+      ]) + [
         'responses' => $answers + $malformed + $denied,
       ],
     ];

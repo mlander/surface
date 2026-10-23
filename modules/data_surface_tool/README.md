@@ -226,7 +226,7 @@ drush tool:list
 `drush tool:info data_surface:field.instance:reuse` prints the input
 definitions. The title is the operation's label, and the description is
 the operation's own description followed by one line of call rules
-that names its kind (`Create:`, `Update:` or `Read only:`). A tool for an operation that creates requires each
+that names its kind (`Create:`, `Update:`, `Read only:` or `Delete:`). A tool for an operation that creates requires each
 key in `values` exactly when the resource requires it, and lists the
 declared defaults. One for an operation that changes what exists, such
 as `data_surface:registration.step3:configure` or
@@ -376,10 +376,13 @@ The routes of `data_surface_examples` name it.
 A write tool is `ToolOperation::Write`, or `ToolOperation::Read` for an
 operation that says it is read only, and destructive when its operation
 says so (`ResourceOperationToolDeriver::behaves()`); the MCP bridge
-reads both as the tool's annotations. None of the module's own
+reads both as the tool's annotations. None of this module's own
 operations says either, so every write tool here is a `Write` that
 destroys nothing, and the access answer has to be the real one, and a
-read tool asks the same question. It is the operation's permission, `administer %entity_type_id
+read tool asks the same question. A delete, such as
+`data_surface:block.placement:remove` from `data_surface_block`, is a
+destructive `Write` whose inputs are its parameters and `dry_run`, with
+no `values` and no read tool beside it. It is the operation's permission, `administer %entity_type_id
 fields`, named from the identity the operation's context knows (the
 entity type the add tool is given, or the one the storage or field it
 names is on), then `FieldInstanceAccess`, which refuses a locked

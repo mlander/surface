@@ -12,6 +12,7 @@ the operation (contract 3):
 | Narrowing | `POST .../schema` | The envelope narrowed for in-progress values, the body a values document: the AJAX rebuild's equivalent. Writes nothing. |
 | Update | `PATCH /surface-api/{resource}[/{id}]` | The default update, the body a values document (`application/merge-patch+json` or JSON): the one result shape every door answers, `{ok, committed, changed, changes, values, violations, notes, stale}`, then `outputs`, `contract` and `created`, and the new `ETag`. |
 | Create | `POST /surface-api/{resource}` | The default create: 201 with the created thing's `Location`. |
+| Delete | `DELETE /surface-api/{resource}/{id}` | The default delete, an operation that says `deletes: TRUE` (`block.placement:remove`): no body, 200 with the values the thing held and no envelope or `ETag`. |
 | Any other | `GET` and `POST .../{x}:{operation}` | An operation that is not a default, by name: `event.program:check`. |
 
 `{resource}` is the `#[Resource]` id (`registration.step2`); `{id}` the
@@ -35,7 +36,7 @@ as a refusal. The permission is asked first, before a parameter is read,
 and a refusal past it gives one fixed reason, so it never says whether
 an id exists
 ([decision](../../docs/decisions.md#every-door-projects-what-the-read-tool-projects)).
-A POST or a PATCH wants the session's CSRF token from `/session/token`
+A POST, a PATCH or a DELETE wants the session's CSRF token from `/session/token`
 in an `X-CSRF-Token` header.
 
 The contract is the main module's: this submodule asks

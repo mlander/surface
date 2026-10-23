@@ -394,7 +394,9 @@ final class ResourceOperationToolDeriver extends DeriverBase implements Containe
           // Once the operation's parameters arrive, the values input is
           // the resource built in the operation's real context.
           $parameters = array_map(static fn ($parameter): string => $parameter->name, $operation->parameters);
-          $definition->setInputDefinitionRefiners($parameters === [] ? [] : [OperationInputs::VALUES => $parameters]);
+          // A delete has no values input to refine.
+          $values = $definition->getInputDefinitions(TRUE)[OperationInputs::VALUES] ?? NULL;
+          $definition->setInputDefinitionRefiners($parameters === [] || $values === NULL ? [] : [OperationInputs::VALUES => $parameters]);
         }
         catch (\LogicException | \InvalidArgumentException $e) {
           $this->skip($id, $e);

@@ -16,7 +16,8 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * Makes every call ConceptCalls writes down, on the settings the module
  * ships, the way each example's panel makes it, with example 10's
  * workflow module on for the call that needs it, and example 13's
- * component block on with its Spotlight block placed: what each answers is
+ * component block and placement resource on with its Spotlight block
+ * placed: what each answers is
  * pinned here for the rule it shows, the README must quote every command
  * and every answer as made, and none of the calls writes anything.
  */
@@ -42,6 +43,7 @@ class ExamplesConceptsToolTest extends DataSurfaceKernelTestBase {
     'block',
     'path_alias',
     'data_surface_component_block',
+    'data_surface_block',
   ];
 
   /**
@@ -111,7 +113,9 @@ class ExamplesConceptsToolTest extends DataSurfaceKernelTestBase {
     $this->assertStringContainsString('values: {"component":"data_surface_examples:hero","props":{"title":"Doors open at half past six","subtitle":null,"align":"start","overlay":40,"full_width":false}}', $answers['event.spotlight']['hero'], 'The hero\'s props, read from its schema, its defaults filled in.');
     $this->assertSame("Failed: The values were refused:\n" . '/props/align: props.align belongs to the data_surface_examples:hero variant, but component chose data_surface_examples:card.', $first($answers['event.spotlight']['wrong_component']), 'Refused, naming the component the props belong to.');
     $this->assertSame("Failed: The values were refused:\n" . '/props/overlay: This value should be between 0 and 100.', $first($answers['event.spotlight']['out_of_bounds']));
-    $this->assertStringContainsString('values: {"block":"data_surface_examples_spotlight","settings":{"component":"data_surface_examples:hero","props":{"title":"Doors open at half past six","subtitle":null,"align":"start","overlay":40,"full_width":false}}}', $answers['block.placed_component']['hero'], 'The placed block named by its machine name, the hero read from its schema.');
+    $this->assertSame("Failed: The values were refused:\n" . '/id: The machine name data_surface_examples_spotlight is already in use: choose another.', $first($answers['block.placement']['place']), 'Placed once, the Spotlight block refuses a second add under its name.');
+    $this->assertStringContainsString('"settings":{"component":"data_surface_examples:hero","props":{"title":"Doors open at half past six","subtitle":null,"align":"start","overlay":40,"full_width":false}}', $answers['block.placement']['props'], 'The placed block named by its machine name, the hero read from its schema.');
+    $this->assertSame('Success: Dry run of Remove a placed block: the removal was rehearsed, and nothing was removed. The values it holds are answered.', $first($answers['block.placement']['remove']));
 
     // The examples' README quotes every command, and every answer under
     // its call's label.

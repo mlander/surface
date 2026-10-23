@@ -20,7 +20,7 @@ contributed. The two pages need the permission `access data surface api
 docs`: each runs a script from a CDN on the site (Swagger UI 5.29.1 from
 cdnjs, Redoc 2.5.1 from jsDelivr, each pinned and held to its integrity
 hash, `data_surface_openapi.libraries.yml`), so a site grants them to
-the roles it chooses. Swagger UI sends every POST and PATCH with the
+the roles it chooses. Swagger UI sends every POST, PATCH and DELETE with the
 token `/session/token` answers, and a write with the last `ETag` an
 answer for the same path carried as `If-Match`, so a write after
 someone else's is refused (412) as the React page's is.

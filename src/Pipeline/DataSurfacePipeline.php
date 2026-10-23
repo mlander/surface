@@ -2103,6 +2103,9 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
         new Violation('', '', $this->t('This may be seen and not changed, so nothing was written: @reason', ['@reason' => $locked]), Violation::LOCKED),
       ]), access: $access);
     }
+    if ($storage instanceof DeletingStorageInterface && $storage->deletes()) {
+      return $this->delete($surface, $input, $storage, $dry_run, $access);
+    }
     $current = $storage->load($surface);
     try {
       $values = $this->accept($surface, $input, $current);
@@ -2162,6 +2165,54 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
       $this->commit($prepared, $storage);
     }
     return new DataSurfaceResult($values, $violations, $prepared, TRUE, $access, $notes, $changes, $write);
+  }
+
+  /**
+   * Runs an operation that removes the thing its storage holds.
+   *
+   * A delete takes no values, so none is accepted or validated: what is
+   * stored is handed to prepare(), which rehearses the removal with the
+   * store's own checks, and commit() removes it, so a thing whose stored
+   * values no longer hold to the resource (a region its theme dropped) can
+   * still be removed. The values answered are what is stored, the thing
+   * removed or that a dry run would remove, and the one change is the
+   * whole document, the empty pointer.
+   *
+   * Decision: see docs/decisions.md#a-placed-block-is-a-resource.
+   *
+   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   *   The data surface, built for the delete.
+   * @param array $input
+   *   What was sent: nothing, or each key is refused.
+   * @param \Drupal\data_surface\Pipeline\DeletingStorageInterface $storage
+   *   The storage, which deletes.
+   * @param bool $dry_run
+   *   TRUE to stop after prepare().
+   * @param \Drupal\Core\Access\AccessResultInterface|null $access
+   *   The access answer, already found not forbidden.
+   *
+   * @return \Drupal\data_surface\Pipeline\DataSurfaceResult
+   *   The result.
+   */
+  protected function delete(DataSurfaceInterface $surface, array $input, DeletingStorageInterface $storage, bool $dry_run, ?AccessResultInterface $access): DataSurfaceResult {
+    $current = $storage->load($surface);
+    if ($input !== []) {
+      $refused = [];
+      foreach (array_keys($input) as $key) {
+        $refused[] = new Violation((string) $key, '', $this->t('A delete takes no values: it removes what is stored, and @key was sent.', ['@key' => $key]), Violation::UNKNOWN_KEY);
+      }
+      return new DataSurfaceResult($current, new ViolationSet($refused), access: $access);
+    }
+    try {
+      $prepared = $this->prepare($surface, $current, $storage);
+    }
+    catch (StorageViolationsException $e) {
+      return new DataSurfaceResult($current, $e->getViolations(), access: $access);
+    }
+    if (!$dry_run) {
+      $this->commit($prepared, $storage);
+    }
+    return new DataSurfaceResult($current, new ViolationSet(), $prepared, !$dry_run, $access, changes: [''], written: $current);
   }
 
   /**

@@ -86,6 +86,11 @@ final class ExamplesController extends ControllerBase {
   public const COMPONENT_BLOCK = SpotlightBlockHooks::MODULE;
 
   /**
+   * The module the placement resource of example 13's calls lives in.
+   */
+  public const PLACEMENT = SpotlightBlockHooks::PLACEMENT;
+
+  /**
    * Example 13's structure and block plugin, relative to that module.
    */
   public const COMPONENT_BLOCK_FILES = [
@@ -274,29 +279,38 @@ final class ExamplesController extends ControllerBase {
   /**
    * Shows example 13: a block that embeds a component, or how to see it.
    *
-   * The block lives in data_surface_component_block, which the examples do
-   * not depend on. While it is off the page says how to enable it and what
-   * it costs, counted from its files; once it is on, the block's two lines
-   * beside example 12's, its contract, its tools, where to place it, and
-   * one call to the tool that configures the placed Spotlight block, which
-   * is shown on this page alone, below it.
+   * The block lives in data_surface_component_block and the placement
+   * resource in data_surface_block, neither of which the examples depend
+   * on. While the block is off the page says how to enable both and what
+   * the block costs, counted from its files; once it is on, the block's two
+   * lines beside example 12's, its contract, its tools and where to place
+   * it; once the placement resource is on too, the three calls that place
+   * the Spotlight block, change its props and remove it, each a dry run,
+   * and the block itself, shown on this page alone, below it.
    *
    * @return array
    *   A render array.
    */
   public function step13(): array {
     $enabled = $this->moduleHandler()->moduleExists(self::COMPONENT_BLOCK);
+    $placement = $this->moduleHandler()->moduleExists(self::PLACEMENT);
+    $modules = ['@module' => self::COMPONENT_BLOCK, '@placement' => self::PLACEMENT];
     $build = [
       'what' => [
-        '#markup' => '<p>' . $this->t("Example 12's two lines are the settings of a block: a component chosen from those the site has, and its props, read from the schema the component declares. The block plugin names the structure with <code>#[UsesStructure]</code> and renders the component; its settings form, their validation and their storage come from the structure, through the block host, and a placed block is configured through a tool. The block lives in @module.", ['@module' => self::COMPONENT_BLOCK]) . '</p>',
+        '#markup' => '<p>' . $this->t("Example 12's two lines are the settings of a block: a component chosen from those the site has, and its props, read from the schema the component declares. The block plugin names the structure with <code>#[UsesStructure]</code> and renders the component; its settings form, their validation and their storage come from the structure, through the block host. The block lives in @module. A placed block, of this plugin or any other, is placed, configured and removed through the placement resource of @placement, the general case: its plugin chooses its settings, here the block's structure.", [
+          '@module' => self::COMPONENT_BLOCK,
+          '@placement' => self::PLACEMENT,
+        ]) . '</p>',
       ],
       'how' => [
         '#theme' => 'item_list',
         '#items' => [
-          ['#markup' => $this->t('Enable it: <code>ddev drush pm:install @module</code>', ['@module' => self::COMPONENT_BLOCK])],
-          $enabled
-            ? $this->t('It is enabled on this site now.')
-            : $this->t('It is not enabled on this site yet. Once it is, this page shows the block beside example 12, its contract, its tools and the block placed.'),
+          ['#markup' => $this->t('Enable both: <code>ddev drush pm:install @module @placement</code>', $modules)],
+          match (TRUE) {
+            $enabled && $placement => $this->t('Both are enabled on this site now.'),
+            $enabled => $this->t('The block is enabled on this site, the placement resource not yet. Once it is, this page also shows the calls that place, change and remove the Spotlight block.'),
+            default => $this->t('The block is not enabled on this site yet. Once it is, this page shows the block beside example 12, its contract, its tools and the block placed.'),
+          },
           $this->t('The structure and the block plugin: @lines lines of code.', ['@lines' => $this->componentBlockLines()]),
         ],
       ],
@@ -311,14 +325,17 @@ final class ExamplesController extends ControllerBase {
     $place = $this->t('Place a component block in @theme: @path', ['@theme' => $theme, '@path' => $add->toString()]);
     $build['how']['#items'][] = Link::fromTextAndUrl($place, $add)->toRenderable();
     $build['parts'] = $this->conceptPanel->componentBlock();
-    $build['calls'] = $this->conceptPanel->calls('block.placed_component');
+    if (!$placement) {
+      return $build;
+    }
+    $build['calls'] = $this->conceptPanel->calls('block.placement');
     $placed = $this->entityTypeManager()->getStorage('block')->load(SpotlightBlockHooks::BLOCK);
     $build['placed'] = [
       '#markup' => '<p>' . ($placed !== NULL
-        ? $this->t('Below, the Spotlight block, @block, placed in the content region of @theme when the module was enabled and shown on this page alone: the card, drawn with the props its settings hold. Change it at @path.', [
+        ? $this->t('Below, the Spotlight block, @block, placed through the add operation in the content region of @theme when the modules were enabled, and shown on this page alone: the card, drawn with the props its settings hold. Change it at @path.', [
           '@block' => SpotlightBlockHooks::BLOCK,
           '@theme' => (string) $placed->get('theme'),
-          '@path' => $placed->toUrl('edit-form')->toString(),
+          '@path' => Url::fromRoute('data_surface_block.edit', ['id' => SpotlightBlockHooks::BLOCK])->toString(),
         ])
         : $this->t('No Spotlight block is placed on this site: the default theme has no content region, or the block was taken away.')) . '</p>',
     ];
@@ -447,7 +464,10 @@ final class ExamplesController extends ControllerBase {
       ],
       13 => [
         'title' => $this->t('a block that embeds a component'),
-        'sentence' => $this->t("Example 12's two lines as a block's settings: a block plugin names them with #[UsesStructure], renders the chosen component with its props, and a placed block is configured through a tool. In @module, which the page tells you to enable.", ['@module' => self::COMPONENT_BLOCK]),
+        'sentence' => $this->t("Example 12's two lines as a block's settings: a block plugin names them with #[UsesStructure] and renders the chosen component with its props, and a placed block is placed, configured and removed through the general placement resource. In @module and @placement, which the page tells you to enable.", [
+          '@module' => self::COMPONENT_BLOCK,
+          '@placement' => self::PLACEMENT,
+        ]),
         'items' => [
           $this->route('data_surface_examples.step13'),
           $this->t('The structure and the block plugin: @lines lines of code.', ['@lines' => $this->componentBlockLines()]),

@@ -14,6 +14,7 @@ use Drupal\data_surface\DataSurfaceHostTrait;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\Pipeline\DataSurfaceStorageInterface;
 use Drupal\data_surface\ResourceBuild\OperationArguments;
+use Drupal\data_surface\ResourceBuild\OperationDefinition;
 use Drupal\data_surface\ResourceBuild\OperationRoute;
 use Drupal\data_surface\ResourceBuild\ResourceRegistry;
 use Drupal\data_surface\ResourceBuild\ResourcesInterface;
@@ -178,6 +179,9 @@ class DataSurfaceOperationForm extends FormBase {
       throw new AccessDeniedHttpException($reason ?: 'The resource this form configures may not be written by this account.');
     }
     $operation = $served->operation->id;
+    if ($served->operation->kind() === OperationDefinition::DELETE) {
+      return $this->confirmForm($form, $served, $surface, $form_state);
+    }
     $values = $this->surfaceFormValues($surface, array_replace(
       $surface->getDefaultValues(),
       $this->storedSurfaceValues($surface, $storage),
@@ -227,7 +231,11 @@ class DataSurfaceOperationForm extends FormBase {
    * {@inheritdoc}
    */
   public function validateForm(array &$form, FormStateInterface $form_state): void {
-    [, $surface, $storage] = $this->operationServed();
+    [$served, $surface, $storage] = $this->operationServed();
+    if ($served->operation->kind() === OperationDefinition::DELETE) {
+      // A delete takes no values: the pipeline judges the removal.
+      return;
+    }
     $current = $this->storedSurfaceValues($surface, $storage);
     $builder = $this->surfaceFormBuilder();
     $values = $builder->extractSurfaceValues($surface, $form[static::SURFACE_KEY], $form_state, $current);
@@ -240,7 +248,8 @@ class DataSurfaceOperationForm extends FormBase {
   public function submitForm(array &$form, FormStateInterface $form_state): void {
     [$served, $surface, $storage, $access] = $this->operationServed();
     $builder = $this->surfaceFormBuilder();
-    $values = $builder->extractSurfaceValues(
+    $deletes = $served->operation->kind() === OperationDefinition::DELETE;
+    $values = $deletes ? [] : $builder->extractSurfaceValues(
       $surface,
       $form[static::SURFACE_KEY],
       $form_state,
@@ -256,6 +265,12 @@ class DataSurfaceOperationForm extends FormBase {
       access: DataSurfaceAccess::decisive($access, 'The resource this form configures may not be written by this account.'),
     );
     if (!$result->isValid()) {
+      if ($deletes) {
+        foreach ($result->violations as $violation) {
+          $form_state->setErrorByName('', $violation->message);
+        }
+        return;
+      }
       $builder->flagSurfaceErrors($result->violations, $form[static::SURFACE_KEY], $form_state);
       return;
     }
@@ -263,7 +278,7 @@ class DataSurfaceOperationForm extends FormBase {
     $cosmetics = $this->surfaceCosmetics();
     $message = $cosmetics?->surfaceFormMessage($result, $operation, $served->subject)
       ?? ($result->committed
-        ? $this->t('The changes have been saved.')
+        ? ($deletes ? $this->t('@label: removed.', ['@label' => $served->operation->label]) : $this->t('The changes have been saved.'))
         : $this->t('The values were accepted. @label changes nothing, so nothing was written.', ['@label' => $served->operation->label]));
     if ((string) $message !== '') {
       $this->messenger()->addStatus($message);
@@ -272,6 +287,53 @@ class DataSurfaceOperationForm extends FormBase {
     if ($redirect !== NULL) {
       $form_state->setRedirectUrl($redirect);
     }
+  }
+
+  /**
+   * Builds the confirmation a delete asks before it removes anything.
+   *
+   * A delete takes no values, so the form draws none: it names what is
+   * removed, says it cannot be undone, and offers one button, the
+   * operation's label. The cosmetic layer may still arrange it.
+   *
+   * Decision: see docs/decisions.md#a-placed-block-is-a-resource.
+   *
+   * @param array $form
+   *   The form.
+   * @param \Drupal\data_surface\ResourceBuild\OperationRoute $served
+   *   The operation and its context.
+   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   *   The resource built for it.
+   * @param \Drupal\Core\Form\FormStateInterface $form_state
+   *   The form state.
+   *
+   * @return array
+   *   The form.
+   */
+  protected function confirmForm(array $form, OperationRoute $served, DataSurfaceInterface $surface, FormStateInterface $form_state): array {
+    $description = $served->operation->description === NULL ? '' : (string) $served->operation->description;
+    $form['confirm'] = [
+      '#type' => 'item',
+      '#markup' => $served->subject === NULL
+        ? $this->t('@description This cannot be undone.', ['@description' => $description])
+        : $this->t('@description %subject is removed, and this cannot be undone.', [
+          '@description' => $description,
+          '%subject' => $served->subject,
+        ]),
+    ];
+    $form['actions'] = [
+      '#type' => 'actions',
+      '#weight' => 100,
+      'submit' => [
+        '#type' => 'submit',
+        '#value' => $served->operation->label,
+        '#button_type' => 'danger',
+      ],
+    ];
+    $cosmetics = $this->surfaceCosmetics();
+    return $cosmetics === NULL
+      ? $form
+      : $cosmetics->alterSurfaceForm($form, $surface, $form_state, $served->operation->id, $served->subject);
   }
 
   /**

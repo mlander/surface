@@ -214,6 +214,7 @@ MARKDOWN;
       $operation['reads'] => 'yes',
       !$operation['standalone'] => 'no: not on its own',
       $operation['creates'] => 'no: it creates',
+      ($operation['kind'] ?? NULL) === 'delete' => 'no: it deletes',
       default => 'no: it changes nothing',
     };
   }

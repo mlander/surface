@@ -860,7 +860,13 @@ renames sit in A because they are cheapest before new code exists.
    first override (country narrows subdivisions), path alias as the
    first alter with a storage of its own, and a placed block as a
    config entity resource whose settings are variants chosen by plugin
-   id, each plugin's structure one of them. And base field items shared
+   id, each plugin's structure one of them (DONE 2026-10-23,
+   `docs/decisions.md#a-placed-block-is-a-resource`: `data_surface_block`'s
+   `block.placement`, placed, configured, moved within its theme and
+   removed through four tools, HTTP with `DELETE` for a delete, and a
+   form; `ConfigEntityStorage` a resource's storage, `NodeTypeStorage`
+   rebuilt on it; open: context-aware plugins, moving between themes,
+   Layout Builder). And base field items shared
    across bundles (11 of a basic page's 14 field items are base fields,
    derived again for every bundle), deferred here from the performance
    review's H7 because it changes the id shape.
@@ -1238,9 +1244,11 @@ renames sit in A because they are cheapest before new code exists.
     placed component block is a resource, `block.placed_component`,
     named by its machine name, with a write tool and a read tool.
     Example 13 at `/surface-examples/13`. Open: the component's slots;
-    a placed block of any plugin as one resource (item 11); placing,
-    moving and listing blocks through a tool; the add form without
-    JavaScript (After the rework, item 7).
+    listing the placed blocks; the add form without JavaScript (After
+    the rework, item 7). Closed 2026-10-23: a placed block of any plugin
+    as one resource, `block.placement` (item 11), which replaced
+    `block.placed_component`; placing, moving within a theme and
+    removing blocks through a tool.
 
 ## Rejected, on the record
 

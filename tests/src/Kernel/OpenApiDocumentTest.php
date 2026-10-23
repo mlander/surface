@@ -58,6 +58,8 @@ class OpenApiDocumentTest extends DataSurfaceKernelTestBase {
     'data_surface_openapi',
     'data_surface_first',
     'data_surface_tool_test',
+    'block',
+    'data_surface_block',
   ];
 
   /**
@@ -392,6 +394,42 @@ class OpenApiDocumentTest extends DataSurfaceKernelTestBase {
     $tags = array_column($document['tags'], NULL, 'name');
     $this->assertArrayHasKey('first.newsletter', $tags);
     $this->assertArrayHasKey('tool_test.logbook', $tags);
+  }
+
+  /**
+   * Tests a delete is DELETE on the thing's path, with no body.
+   *
+   * The placement's remove: destructive, idempotent, creating nothing,
+   * its kind a delete; no request body and nothing of values stale; If-Match
+   * and a dry run as on any write; its answer the result with no ETag, the
+   * thing being gone. Its envelope and its schema are a custom method's.
+   */
+  public function testDeleteIsTheDeleteMethod(): void {
+    $paths = $this->decoded()['paths'];
+    $item = '/surface-api/block.placement/{id}';
+    $this->assertSame(['get', 'patch', 'delete'], array_keys($paths[$item]), 'edit, the default update, and remove, the default delete.');
+    $this->assertSame(['get', 'post'], array_keys($paths['/surface-api/block.placement']), 'add, the only create, on the collection.');
+    $delete = $paths[$item]['delete'];
+    $this->assertSame('block.placement:remove:write', $delete['operationId']);
+    $this->assertSame('delete', $delete['x-surface-kind']);
+    $this->assertSame([TRUE, TRUE, FALSE], $this->facts($delete), 'Idempotent and destructive, creating nothing.');
+    $this->assertSame('Remove a placed block', $delete['summary']);
+    $this->assertArrayNotHasKey('requestBody', $delete);
+    $this->assertSame([
+      ['name' => 'id', 'in' => 'path', 'required' => TRUE],
+      ['$ref' => '#/components/parameters/CsrfToken'],
+      ['$ref' => '#/components/parameters/DryRun'],
+      ['$ref' => '#/components/parameters/IfMatch'],
+    ], array_map(static fn (array $parameter): array => array_intersect_key($parameter, array_flip([
+      'name',
+      'in',
+      'required',
+      '$ref',
+    ])), $delete['parameters']));
+    $this->assertSame(['200', '412', '422', '400', '415', '403', '404'], array_map('strval', array_keys($delete['responses'])));
+    $this->assertArrayNotHasKey('ETag', $delete['responses']['200']['headers']);
+    $this->assertSame(['get'], array_keys($paths[$item . ':remove']), 'Its envelope, as a custom method\'s; its run is DELETE.');
+    $this->assertSame(['get', 'post'], array_keys($paths[$item . ':remove/schema']));
   }
 
   /**

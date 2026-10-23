@@ -9,23 +9,21 @@ use Drupal\data_surface\Contract\ContractEmitter;
 use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface_component_block\Plugin\Block\ComponentBlock;
 use Drupal\data_surface_component_block\Structure\ComponentBlockStructure;
-use Drupal\data_surface_tool\OperationInputs;
 use Drupal\Tests\user\Traits\UserCreationTrait;
-use Drupal\tool\Tool\ToolOperation;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
 /**
- * Tests the component block: its structure, its documents and its tools.
+ * Tests the component block: its structure, its documents and its render.
  *
  * The structure is example 12's two lines under the block's id: the
  * component, from the components the site has, and its props, one variant
  * per component read from the schema it declares; here the three the
  * examples ship, which are all a test site has. Both documents are pinned
- * whole. The plugin's structure is no tool; a placed block is, through
- * the resource that names it by its machine name, read and written in
- * its settings. The plugin renders the component with the props it
- * holds, and nothing for no component or one the site does not have.
+ * whole. The plugin's structure is no tool: a placed block is, through
+ * the general placement resource (BlockPlacementToolsTest). The plugin
+ * renders the component with the props it holds, and nothing for no
+ * component or one the site does not have.
  */
 #[Group('data_surface')]
 #[RunTestsInSeparateProcesses]
@@ -70,11 +68,6 @@ class ComponentBlockTest extends DataSurfaceKernelTestBase {
     'component' => 'data_surface_examples:card',
     'props' => ['heading' => 'Doors open at half past six'],
   ];
-
-  /**
-   * The write tool, and the read tool beside it.
-   */
-  protected const TOOL = 'data_surface:block.placed_component:configure';
 
   /**
    * {@inheritdoc}
@@ -133,6 +126,7 @@ class ComponentBlockTest extends DataSurfaceKernelTestBase {
     $this->assertNull($configuration['component']);
     $this->assertNull($configuration['props']);
     $this->assertSame([], $this->container->get('data_surface.resource_catalog')->describe()['block.data_surface_component']['operations'] ?? []);
+    $this->assertFalse($this->container->get('plugin.manager.tool')->hasDefinition('data_surface:block.data_surface_component:configure'), 'The plugin\'s structure is held by its host: no tool.');
   }
 
   /**
@@ -167,75 +161,6 @@ class ComponentBlockTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests a placed block's tools: listed, read and written.
-   */
-  public function testPlacedBlockIsReadAndWrittenThroughItsTools(): void {
-    $tools = $this->container->get('plugin.manager.tool');
-    $this->assertFalse($tools->hasDefinition('data_surface:block.data_surface_component:configure'), 'The plugin\'s structure is held by its host: no tool.');
-    $write = $tools->getDefinition(self::TOOL);
-    $this->assertSame('Configure a placed component block', (string) $write->getLabel());
-    $this->assertSame(ToolOperation::Write, $write->getOperation());
-    $this->assertSame('administer blocks', $write->getPermission());
-    $this->assertSame(['block', OperationInputs::VALUES, OperationInputs::DRY_RUN], array_keys($write->getInputDefinitions()));
-    $this->assertStringContainsString('The id of the block the operation is about.', (string) $write->getInputDefinition('block')->getDescription());
-    $read = $tools->getDefinition(self::TOOL . ':read');
-    $this->assertSame(ToolOperation::Read, $read->getOperation());
-    $this->assertSame(['block'], array_keys($read->getInputDefinitions()));
-    $listed = $this->container->get('tool.definition_serializer')->normalizeInputSchema($tools->createInstance(self::TOOL));
-    $this->assertSame(['component', 'props'], array_keys($listed['properties']['values']['properties']['settings']['properties']));
-    $this->assertSame([...self::COMPONENTS, NULL], $listed['properties']['values']['properties']['settings']['properties']['component']['enum']);
-
-    $this->place('spotlight', ['component' => 'data_surface_examples:card', 'props' => self::VALUES['props']]);
-    $card = [
-      'heading' => 'Doors open at half past six',
-      'body' => NULL,
-      'tone' => 'plain',
-      'link' => NULL,
-    ];
-    $read = $this->call(self::TOOL . ':read', ['block' => 'spotlight'])['values'];
-    $this->assertSame(['settings' => ['component' => 'data_surface_examples:card', 'props' => $card]], $read, 'The read tool answers the structure\'s keys, not the host\'s.');
-
-    // A dry run writes nothing; a write keeps the host's keys.
-    $hero = [
-      'component' => 'data_surface_examples:hero',
-      'props' => ['title' => 'Doors open at six', 'align' => 'start'],
-    ];
-    $answer = $this->call(self::TOOL, ['block' => 'spotlight', 'values' => ['settings' => $hero], 'dry_run' => TRUE]);
-    $this->assertTrue($answer['success']);
-    $this->assertFalse($answer['committed']);
-    $this->assertSame('data_surface_examples:card', Block::load('spotlight')->get('settings')['component']);
-    $answer = $this->call(self::TOOL, ['block' => 'spotlight', 'values' => ['settings' => $hero]]);
-    $this->assertTrue($answer['committed']);
-    $settings = $this->container->get('entity_type.manager')->getStorage('block')->loadUnchanged('spotlight')->get('settings');
-    $this->assertSame('data_surface_examples:hero', $settings['component']);
-    $this->assertSame([
-      'title' => 'Doors open at six',
-      'subtitle' => NULL,
-      'align' => 'start',
-      'overlay' => 40,
-      'full_width' => FALSE,
-    ], $settings['props']);
-    $this->assertSame('Spotlight', $settings['label']);
-    $this->assertSame(ComponentBlock::ID, $settings['id']);
-    $this->assertSame('data_surface_component_block', $settings['provider']);
-
-    // One component's props for another are refused, naming it.
-    $mixed = ['component' => 'data_surface_examples:card', 'props' => ['overlay' => 60]];
-    $answer = $this->call(self::TOOL, ['block' => 'spotlight', 'values' => ['settings' => $mixed], 'dry_run' => TRUE]);
-    $this->assertFalse($answer['success']);
-    $this->assertStringContainsString('settings.props.overlay belongs to the data_surface_examples:hero variant, but component chose data_surface_examples:card.', $answer['message']);
-    // A block of another plugin, or none, is no component block.
-    $this->container->get('entity_type.manager')->getStorage('block')->create([
-      'id' => 'branding',
-      'theme' => 'stark',
-      'region' => 'content',
-      'plugin' => 'system_branding_block',
-    ])->save();
-    $this->assertStringContainsString('The block "branding" is a system_branding_block block, not a component block.', $this->call(self::TOOL . ':read', ['block' => 'branding'])['message']);
-    $this->assertFalse($this->call(self::TOOL . ':read', ['block' => 'nowhere'])['success']);
-  }
-
-  /**
    * Tests the plugin renders the component with the props it holds.
    */
   public function testTheBlockRendersItsComponent(): void {
@@ -263,32 +188,6 @@ class ComponentBlockTest extends DataSurfaceKernelTestBase {
       $this->assertContains('config:core.extension', $build['#cache']['tags']);
       $this->assertSame('', (string) $this->container->get('renderer')->renderInIsolation($build));
     }
-  }
-
-  /**
-   * Calls a tool and says what it answered.
-   *
-   * @param string $id
-   *   The tool.
-   * @param array $inputs
-   *   Its inputs, by name.
-   *
-   * @return array{success: bool, message: string, values: mixed, committed: bool}
-   *   What it answered.
-   */
-  protected function call(string $id, array $inputs): array {
-    $tool = $this->container->get('plugin.manager.tool')->createInstance($id);
-    foreach ($inputs as $name => $value) {
-      $tool->setInputValue($name, $value);
-    }
-    $tool->execute();
-    $result = $tool->getResult();
-    return [
-      'success' => $result->isSuccess(),
-      'message' => html_entity_decode(strip_tags((string) $result->getMessage()), ENT_QUOTES),
-      'values' => $result->getContextValues()[OperationInputs::VALUES] ?? NULL,
-      'committed' => (bool) ($result->getContextValues()[OperationInputs::COMMITTED] ?? FALSE),
-    ];
   }
 
   /**

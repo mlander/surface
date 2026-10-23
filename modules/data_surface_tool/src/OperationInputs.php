@@ -212,7 +212,11 @@ final class OperationInputs {
   public function inputs(ResourceDefinition $resource, OperationDefinition $operation): array {
     $neutral = $this->neutral($resource, $operation, TRUE);
     $inputs = $this->parameterInputs($resource, $operation, $neutral);
-    $inputs[self::VALUES] = $this->declaredValues($resource, $operation, $neutral, declared: TRUE);
+    // A delete takes no values: the parameters name what it removes.
+    // Decision: see docs/decisions.md#a-placed-block-is-a-resource.
+    if ($operation->kind() !== OperationDefinition::DELETE) {
+      $inputs[self::VALUES] = $this->declaredValues($resource, $operation, $neutral, declared: TRUE);
+    }
     if ($operation->readOnly) {
       // Nothing is written, so there is nothing to rehearse.
       // Decision: see docs/decisions.md#an-operation-states-how-it-behaves.
@@ -221,7 +225,9 @@ final class OperationInputs {
     $inputs[self::DRY_RUN] = new InputDefinition(
       data_type: 'boolean',
       label: $this->t('Dry run'),
-      description: $this->t('Accept, validate and prepare the values without writing anything.'),
+      description: $operation->kind() === OperationDefinition::DELETE
+        ? $this->t('Rehearse the removal without removing anything.')
+        : $this->t('Accept, validate and prepare the values without writing anything.'),
       required: FALSE,
       default_value: FALSE,
     );
@@ -542,7 +548,7 @@ final class OperationInputs {
    *   The operation.
    *
    * @return string
-   *   OperationDefinition::CREATE, ::UPDATE or ::READ.
+   *   OperationDefinition::CREATE, ::UPDATE, ::READ or ::DELETE.
    */
   public function kind(ResourceDefinition $resource, OperationDefinition $operation): string {
     return $operation->kind();
@@ -799,6 +805,7 @@ final class OperationInputs {
     $description = match ($operation->kind()) {
       OperationDefinition::READ => $this->t('@description Read only: nothing is written; a key left out is checked at its current value.', $arguments),
       OperationDefinition::CREATE => $this->t('@description Create: a key left out takes its default, and every key marked required must be sent.', $arguments),
+      OperationDefinition::DELETE => $this->t('@description Delete: send only what names it; the values it held are answered, and a dry run removes nothing.', $arguments),
       default => $this->t('@description Update: send only the keys to change; a key left out keeps its value, null clears it, and values {} changes nothing. The read tool returns the current values.', $arguments),
     };
     return $this->runtimeAccessWhole($resource, $operation) ? $this->withRuntimeAccessWhole($description) : $description;

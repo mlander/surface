@@ -183,16 +183,19 @@ Today `EntityForm::copyFormValuesToEntity()` sets every form value on the
 entity untyped, config entities have no `validate()`, and
 `Config::save()` casts but never validates.
 
-**Built for one.** `ConfigEntityStorage` maps the resource's keys to
-entity properties or setter methods, applies mounted third-party settings
-through `setThirdPartySetting()`, runs typed-config validation on the
-unsaved entity's export array, and commits with `save()`; no shipped
-resource uses it yet. `data_surface_demo_node_type` is the exemplar: one
-resource, `NodeTypeResource`, with an add and an edit operation, the
-machine name locked on edit because the edit operation knows it, and a
-storage class of its own, `NodeTypeStorage`, writing the node type entity
-plus its base field overrides (through the engine's
-`BaseFieldOverrideStorage`); two routes
+**Built for two.** `ConfigEntityStorage` maps the resource's keys to
+entity properties or setter methods, named on a subclass, applies
+mounted third-party settings through `setThirdPartySetting()`, runs
+typed-config validation on the unsaved entity's export array, refuses an
+id in use on add, commits with `save()`, and deletes for an operation
+that deletes. Two resources use it. `data_surface_block` makes a placed
+block one, `block.placement`, its plugin choosing its settings
+([A placed block is a resource](decisions.md#a-placed-block-is-a-resource)).
+`data_surface_demo_node_type` is the other: one resource,
+`NodeTypeResource`, with an add and an edit operation, the machine name
+locked on edit because the edit operation knows it, and its storage,
+`NodeTypeStorage`, writing the node type entity plus its base field
+overrides (through the engine's `BaseFieldOverrideStorage`); two routes
 serve it through `DataSurfaceOperationForm`, with no form class.
 
 Two things that port settled, and both generalize. Ordering is part of a

@@ -240,9 +240,14 @@ already known, and that is a **context**, an `OperationContext`:
   ([decision](decisions.md#an-operation-states-how-it-behaves)). A read
   only operation writes nothing at any door: its pipeline accepts,
   validates and prepares, stops where a dry run does, and refuses to
-  commit what it prepared. No
-  shipped operation is destructive: an edit changes the keys it is sent,
-  and a key left out keeps its value.
+  commit what it prepared. An edit
+  destroys nothing: it changes the keys it is sent, and a key left out
+  keeps its value. `deletes: TRUE`, beside `destructive: TRUE`, makes an
+  operation a delete: it takes no values, its storage removes the thing
+  its context names (`DeletableStorageInterface`), its tool takes the
+  parameters and a dry run, and HTTP serves it as `DELETE` (the
+  placement's `remove`,
+  [decision](decisions.md#a-placed-block-is-a-resource)).
 
 The content type resource is the worked example:
 
@@ -810,13 +815,15 @@ its props read from the schema the component declares
 (`ComponentProps`, the main module's provider), and renders the
 component with the props it holds. The component is not required, since
 the host builds the block from its defaults before anything is chosen.
-A placed block is a config entity with a machine name, so the submodule
-declares a resource beside the plugin, `block.placed_component`, whose
-identity is that name and which attaches the same structure at
-`settings`: the tool bridge derives a write tool and a read tool from it,
-which name the block. Its README, and example 13 at
+A placed block is a config entity with a machine name, and
+`data_surface_block` declares it as a resource, `block.placement`, whose
+plugin chooses its settings: for this plugin, the same structure, as
+declared ([Variants from the site](#variants-from-the-site)). The tool
+bridge derives its tools, which place, configure, read and remove a
+block by its name. Its README, and example 13 at
 `/surface-examples/13`, show both
-([decision](decisions.md#a-block-embeds-a-component-through-its-structure)).
+([decision](decisions.md#a-block-embeds-a-component-through-its-structure),
+[decision](decisions.md#a-placed-block-is-a-resource)).
 
 ## Alters
 
@@ -1735,6 +1742,21 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
 The test module's poster reads three layouts, one in draft-04, beside a
 class that wins for the banner (`VariantsFromSiteTest`); example 12
 reads every single-directory component the site has.
+
+A placed block is the case at scale. `data_surface_block`'s
+`block.placement` attaches its `settings` with
+`attachVariants('settings', by: 'plugin', from:
+BlockPluginStructures::class)`: one variant per block plugin the block
+layout offers. A plugin whose class names its settings with
+`#[UsesStructure]` is that structure, built as declared, which a
+provider says with `VariantList::addStructure($value, $label,
+$class)` in place of a schema; the component block's is one, its own
+variants, the components' props, inside it. Any other plugin is read
+from its config schema, `block.settings.<plugin id>`, written as JSON
+Schema for the reader. The keys every block has (its title, whether it
+shows, its theme, region, weight and status) are the resource's own, and
+its visibility a collection of conditions chosen the same way
+([decision](decisions.md#a-placed-block-is-a-resource)).
 
 ### A child that cannot be listed
 

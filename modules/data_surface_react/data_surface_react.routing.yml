@@ -6,12 +6,13 @@
 # method is the operation (contract 3): /surface-api/{resource} for a
 # singleton or a collection, /surface-api/{resource}/{id} for one thing, up
 # to four identity segments, then `schema`; `:{operation}` after the last
-# segment names an operation the method does not imply. ServedPaths reads
+# segment names an operation the method does not imply; DELETE on a thing's
+# path is its default delete. ServedPaths reads
 # the path; ResourceApiController answers it.
 #
 # One requirement on both, the operation's: its permission, then the
-# resource's access class, and no opinion is a refusal. A POST or a PATCH
-# also wants the X-CSRF-Token header a session token from /session/token
+# resource's access class, and no opinion is a refusal. A POST, a PATCH or
+# a DELETE also wants the X-CSRF-Token header a session token from /session/token
 # is, when it carries the session cookie.
 #
 # Decision: see docs/decisions.md#contract-3-the-operation-is-the-method.
@@ -33,7 +34,7 @@ data_surface_react.api:
     s3: ''
     s4: ''
     s5: ''
-  methods: [GET, POST, PATCH]
+  methods: [GET, POST, PATCH, DELETE]
   requirements:
     # One segment each; a colon in the last one names an operation.
     resource: '[^/]+'

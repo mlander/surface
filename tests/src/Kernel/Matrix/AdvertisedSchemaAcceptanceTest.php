@@ -44,7 +44,8 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * a structure's ports on the venue and the hall, structures mixed in on
  * the journal and attached on the ledger, a shape at two keys on the
  * depot, access of both kinds on the exhibit and an alter's on the
- * gallery, keys that come from the site on the workshop),
+ * gallery, keys that come from the site on the workshop, variants chosen
+ * by a plugin and a region by a theme on a placed block),
  * a table of documents the pipeline accepts and documents it refuses.
  * Each row is asserted three times: against the pipeline (accept(), then
  * validate() over what is stored), against the full
@@ -131,6 +132,8 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
     'data_surface_react',
     'data_surface_resource_test',
     'data_surface_tool_test',
+    'data_surface_component_block',
+    'data_surface_block',
   ];
 
   /**
@@ -708,6 +711,53 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
         TRUE,
         TRUE,
       ],
+    ]);
+  }
+
+  /**
+   * A placed block: its plugin chooses its settings, its theme its region.
+   *
+   * Placed in Stark, which is installed for the table: the region is
+   * enumerated per theme, so one of another theme is refused by both
+   * documents; the component block's props are its components' variants
+   * in turn; a condition reads its context. The machine name's pattern
+   * looks ahead, which no ECMA pattern both engines read alike says, so
+   * it is checked on the server alone and both documents are wider there.
+   */
+  public function testBlockPlacement(): void {
+    $this->container->get('theme_installer')->install(['stark']);
+    $hero = [
+      'label' => 'Doors',
+      'id' => 'doors_hero',
+      'plugin' => 'data_surface_component',
+      'settings' => ['component' => 'data_surface_examples:hero', 'props' => ['title' => 'Doors open at six']],
+      'theme' => 'stark',
+      'region' => 'sidebar_first',
+    ];
+    $branding = [
+      'label' => 'Branding',
+      'id' => 'branding',
+      'plugin' => 'system_branding_block',
+      'theme' => 'stark',
+      'region' => 'header',
+    ];
+    $administrators = ['visibility' => [['id' => 'user_role', 'settings' => ['roles' => ['administrator']]]]];
+    $dark = ['component' => 'data_surface_examples:hero', 'props' => ['title' => 'Doors', 'overlay' => 140]];
+    $this->assertTable('block.placement', $this->build('block.placement', 'add'), [], [
+      'a branding block in the header' => [$branding, TRUE],
+      'the branding block, its slogan off' => [['settings' => ['use_site_slogan' => FALSE]] + $branding, TRUE],
+      'a hero in the left sidebar' => [$hero, TRUE],
+      'a hero shown to administrators alone' => [$administrators + $hero, TRUE],
+      'a region of another theme' => [['region' => 'pre_content'] + $hero, FALSE],
+      'a hero too dark' => [['settings' => $dark] + $hero, FALSE],
+      'the branding block sent a hero\'s props' => [
+        ['settings' => ['props' => ['title' => 'Doors']]] + $branding,
+        FALSE,
+      ],
+      'a plugin the layout does not offer' => [['plugin' => 'broken'] + $branding, FALSE],
+      'no title' => [array_diff_key($branding, ['label' => TRUE]), FALSE],
+      'a condition the layout does not offer' => [['visibility' => [['id' => 'current_theme']]] + $branding, FALSE],
+      'a machine name with a capital, checked on the server' => [['id' => 'Branding'] + $branding, FALSE, TRUE, TRUE],
     ]);
   }
 

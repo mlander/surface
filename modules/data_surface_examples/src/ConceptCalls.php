@@ -22,13 +22,20 @@ namespace Drupal\data_surface_examples;
 final class ConceptCalls {
 
   /**
+   * A value that stands for the site's default theme, read when it is sent.
+   */
+  public const DEFAULT_THEME = '@default_theme';
+
+  /**
    * The calls, by resource id and then by name.
    *
    * Each says what it shows, the operation it calls (configure unless it
    * says), the parameters it names the thing by, if any, the values it
-   * sends, and whether it is a dry run (unless it says). A call that shows
-   * another module's part names the module, made only where it is enabled,
-   * and the State it is made in, set for the call and put back after it.
+   * sends (none for a delete), and whether it is a dry run (unless it
+   * says). A call that shows another module's part names the module, made
+   * only where it is enabled, and the State it is made in, set for the
+   * call and put back after it. A value DEFAULT_THEME is the site's
+   * default theme when the call is made (values()).
    */
   public const CALLS = [
     'event.bulletin' => [
@@ -136,17 +143,56 @@ final class ConceptCalls {
         ],
       ],
     ],
-    'block.placed_component' => [
-      'hero' => [
+    'block.placement' => [
+      'place' => [
+        'label' => 'The Spotlight block placed through add, made again: refused for the machine name it took',
+        'operation' => 'add',
+        'module' => 'data_surface_block',
+        'values' => [
+          'label' => 'Spotlight',
+          'id' => 'data_surface_examples_spotlight',
+          'label_display' => TRUE,
+          'plugin' => 'data_surface_component',
+          'settings' => [
+            'component' => 'data_surface_examples:card',
+            'props' => [
+              'heading' => 'Doors open at half past six',
+              'body' => 'Bring your ticket, on your phone or printed.',
+              'tone' => 'highlight',
+              'link' => [
+                'url' => 'https://example.com/tickets',
+                'label' => 'Find your ticket',
+              ],
+            ],
+          ],
+          'theme' => self::DEFAULT_THEME,
+          'region' => 'content',
+          'weight' => 100,
+          'visibility' => [
+            [
+              'id' => 'request_path',
+              'settings' => ['pages' => '/surface-examples/13'],
+            ],
+          ],
+        ],
+      ],
+      'props' => [
         'label' => 'The Spotlight block set to the hero',
-        'module' => 'data_surface_component_block',
-        'parameters' => ['block' => 'data_surface_examples_spotlight'],
+        'operation' => 'edit',
+        'module' => 'data_surface_block',
+        'parameters' => ['id' => 'data_surface_examples_spotlight'],
         'values' => [
           'settings' => [
             'component' => 'data_surface_examples:hero',
             'props' => ['title' => 'Doors open at half past six', 'align' => 'start'],
           ],
         ],
+      ],
+      'remove' => [
+        'label' => 'The Spotlight block removed, rehearsed',
+        'operation' => 'remove',
+        'module' => 'data_surface_block',
+        'parameters' => ['id' => 'data_surface_examples_spotlight'],
       ],
     ],
   ];
@@ -160,11 +206,36 @@ final class ConceptCalls {
    *   The modules enabled, to leave out a call whose module is not; NULL
    *   for every call.
    *
-   * @return array<string, array{label: string, operation?: string, parameters?: array<string, string>, values: array, dry_run?: bool, module?: string, state?: array<string, mixed>}>
+   * @return array<string, array{label: string, operation?: string, parameters?: array<string, string>, values?: array, dry_run?: bool, module?: string, state?: array<string, mixed>}>
    *   Its calls, by name; none for a resource with no calls.
    */
   public static function of(string $resource, ?array $modules = NULL): array {
     return array_filter(self::CALLS[$resource] ?? [], static fn (array $call): bool => $modules === NULL || !isset($call['module']) || in_array($call['module'], $modules, TRUE));
+  }
+
+  /**
+   * Gets the values a call sends, the default theme filled in.
+   *
+   * @param string $resource
+   *   The resource id.
+   * @param string $call
+   *   The call's name.
+   *
+   * @return array|null
+   *   The values, each DEFAULT_THEME the site's default theme; NULL for a
+   *   call that sends none, a delete.
+   */
+  public static function values(string $resource, string $call): ?array {
+    $values = self::CALLS[$resource][$call]['values'] ?? NULL;
+    if ($values === NULL) {
+      return NULL;
+    }
+    array_walk_recursive($values, static function (mixed &$value): void {
+      if ($value === self::DEFAULT_THEME) {
+        $value = (string) \Drupal::config('system.theme')->get('default');
+      }
+    });
+    return $values;
   }
 
   /**
@@ -202,7 +273,8 @@ final class ConceptCalls {
    *   The command.
    */
   public static function drush(string $resource, string $call): string {
-    $input = json_encode((self::CALLS[$resource][$call]['parameters'] ?? []) + ['values' => self::CALLS[$resource][$call]['values']], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION);
+    $values = self::values($resource, $call);
+    $input = json_encode((self::CALLS[$resource][$call]['parameters'] ?? []) + ($values === NULL ? [] : ['values' => $values]), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION);
     $command = sprintf(
       "drush tool:run %s --uid=1 --input='%s'%s",
       self::tool($resource, $call),

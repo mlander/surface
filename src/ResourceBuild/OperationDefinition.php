@@ -33,6 +33,11 @@ final class OperationDefinition {
   public const READ = 'read';
 
   /**
+   * The kind of an operation that removes the thing it names.
+   */
+  public const DELETE = 'delete';
+
+  /**
    * Constructs an OperationDefinition.
    *
    * @param string $id
@@ -76,10 +81,13 @@ final class OperationDefinition {
    * @param string|\Stringable|null $description
    *   What a call does to what, for whoever chooses between operations;
    *   NULL for none.
+   * @param bool $deletes
+   *   Whether a call removes the thing it names, taking no values.
    *
    * @throws \LogicException
    *   When the facts contradict each other: a read only operation that
-   *   destroys, or that is not idempotent.
+   *   destroys, or that is not idempotent; a delete that does not say it
+   *   destroys, that creates or that is read only.
    */
   public function __construct(
     public readonly string $id,
@@ -97,7 +105,21 @@ final class OperationDefinition {
     public readonly ?bool $idempotent = NULL,
     public readonly bool $creates = FALSE,
     public readonly string|\Stringable|null $description = NULL,
+    public readonly bool $deletes = FALSE,
   ) {
+    // Decision: see docs/decisions.md#a-placed-block-is-a-resource.
+    if ($deletes && (!$destructive || $creates || $readOnly)) {
+      throw new \LogicException(sprintf(
+        'The "%s" operation, %s, says it deletes, and %s. A delete removes the thing it names: it says destructive: TRUE, and it neither creates nor is read only.',
+        $id,
+        $this->describe(),
+        match (TRUE) {
+          $creates => 'also that it creates',
+          $readOnly => 'also that it changes nothing',
+          default => 'not that it is destructive',
+        },
+      ));
+    }
     if ($readOnly && ($destructive || $idempotent === FALSE)) {
       throw new \LogicException(sprintf(
         'The "%s" operation, %s, says it changes nothing and also that it %s: a read only operation destroys nothing, and asking it twice leaves what asking it once did.',
@@ -126,10 +148,11 @@ final class OperationDefinition {
   }
 
   /**
-   * Names what kind of call the operation is: a create, an update or a read.
+   * Names what kind of call the operation is.
    *
    * Derived, never declared: a read only operation is a read, one that
-   * creates is a create, and every other changes what exists, an update.
+   * creates is a create, one that deletes is a delete, and every other
+   * changes what exists, an update.
    * Read off the attribute, so it is known before anything is built.
    * What a generated tool asks for at its door follows from it: a create
    * requires the keys the resource requires, and an update requires
@@ -138,12 +161,13 @@ final class OperationDefinition {
    * Decision: see docs/decisions.md#an-operation-states-how-it-behaves.
    *
    * @return string
-   *   self::CREATE, self::UPDATE or self::READ.
+   *   self::CREATE, self::UPDATE, self::READ or self::DELETE.
    */
   public function kind(): string {
     return match (TRUE) {
       $this->readOnly => self::READ,
       $this->creates => self::CREATE,
+      $this->deletes => self::DELETE,
       default => self::UPDATE,
     };
   }

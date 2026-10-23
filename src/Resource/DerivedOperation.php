@@ -57,6 +57,8 @@ final class DerivedOperation {
    *   on the context, which must agree.
    * @param string|\Stringable|null $description
    *   What a call does to what, as on #[Operation]; NULL for none.
+   * @param bool $deletes
+   *   Whether a call removes the thing it names, as on #[Operation].
    */
   public function __construct(
     public readonly string $id,
@@ -70,6 +72,7 @@ final class DerivedOperation {
     public readonly ?bool $idempotent = NULL,
     public readonly bool $creates = FALSE,
     public readonly string|\Stringable|null $description = NULL,
+    public readonly bool $deletes = FALSE,
   ) {}
 
 }

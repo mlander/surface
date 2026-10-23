@@ -14,10 +14,10 @@ use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
 /**
- * Tests the examples', the first module's and the block's contracts.
+ * Tests the examples', the first module's and the blocks' contracts.
  *
  * The additive-diff lint, as a test any module can copy: every resource
- * and structure the four modules declare has its full schema committed
+ * and structure the five modules declare has its full schema committed
  * under tests/fixtures/contracts/, and today's emission may differ from
  * it only compatibly, or by a breaking change with its owner's version
  * raised or an allowance recorded. Any other breaking change fails here;
@@ -53,7 +53,9 @@ class ContractBaselineTest extends DataSurfaceKernelTestBase {
     'data_surface_examples_workflow',
     'data_surface_first',
     'block',
+    'path_alias',
     'data_surface_component_block',
+    'data_surface_block',
   ];
 
   /**
@@ -64,6 +66,7 @@ class ContractBaselineTest extends DataSurfaceKernelTestBase {
     'data_surface_examples_compliance',
     'data_surface_first',
     'data_surface_component_block',
+    'data_surface_block',
   ];
 
   /**
@@ -73,6 +76,8 @@ class ContractBaselineTest extends DataSurfaceKernelTestBase {
     parent::setUp();
     $this->installEntitySchema('user');
     $this->installConfig(['data_surface_examples', 'data_surface_first']);
+    // A theme, so the placement's themes and regions are pinned.
+    $this->container->get('theme_installer')->install(['stark']);
     $this->setUpCurrentUser(admin: TRUE);
   }
 
@@ -95,6 +100,8 @@ class ContractBaselineTest extends DataSurfaceKernelTestBase {
     $this->assertSame(array_keys($committed), array_keys($current), 'Every declaration is pinned, and every baseline still declared.');
     $this->assertSame([
       'block.data_surface_component',
+      'block.placement',
+      'block.placement.condition',
       'event.bulletin',
       'event.desk',
       'event.doors',

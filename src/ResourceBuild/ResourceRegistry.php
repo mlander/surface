@@ -1238,6 +1238,7 @@ final class ResourceRegistry {
               idempotent: $operation->idempotent,
               creates: $operation->creates,
               description: $operation->description,
+              deletes: $operation->deletes,
             );
             $this->assertStamps($definition);
             return $definition;
@@ -1286,6 +1287,7 @@ final class ResourceRegistry {
       idempotent: $operation->idempotent,
       creates: $operation->creates,
       description: $description,
+      deletes: $operation->deletes,
     );
   }
 

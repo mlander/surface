@@ -49,8 +49,9 @@ the record of the rework that brought the module to the pattern.
   (`docs/decisions.md#an-operation-on-the-class`). It states how a call
   behaves, `readOnly:` and `destructive:`, and idempotence, derived
   from whether it creates unless declared (a create whose caller names
-  the thing declares it), and its kind, `create`, `update` or `read`,
-  always derived from the attribute: a create's tool
+  the thing declares it), and its kind, `create`, `update`, `read` or
+  `delete` (`deletes:`, which takes no values), always derived from the
+  attribute: a create's tool
   requires what the resource requires, an update's requires nothing at
   its door
   (`docs/decisions.md#required-is-the-resources-and-an-update-tool-requires-nothing-at-its-door`); a tool
@@ -301,7 +302,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 browser would look for the site in its own container; leave the base URL
 to the environment.
 
-The baseline as of this writing: **1221 tests, 19381 assertions, 0 errors,
+The baseline as of this writing: **1426 tests, 25991 assertions, 0 errors,
 0 failures**. The test and assertion counts drift upward as work lands
 and are not the thing to check. **No test may error and no test may
 fail**, the browser tests included; any error or failure is a real
@@ -513,7 +514,7 @@ src/Widget/ src/Plugin/  Definition to form element; resolvers, hosts, constrain
 src/Options/             Option sets, the resolver plugin base and manager.
 src/Variants/            Variants from the site: ComponentProps, the components' props.
 src/Refinement/          Narrowing and choice sets.
-modules/                 Fifteen experimental submodules; each has its own README.
+modules/                 Sixteen experimental submodules; each has its own README.
 tests/src/               Unit, Kernel, Functional, FunctionalJavascript.
 docs/ scripts/           Published documentation; check.sh and the generators.
 ```

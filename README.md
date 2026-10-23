@@ -319,7 +319,7 @@ their configuration may change without a deprecation path.
   behaves, the stock widgets, and a component's props read from its JSON
   Schema, each page saying what it shows and what its tool answers; and
   example 13, a block that embeds a component, which says to enable
-  `data_surface_component_block`. Needs
+  `data_surface_component_block` and `data_surface_block`. Needs
   [Tool](https://www.drupal.org/project/tool).
 - **Data Surface Examples - Compliance**
   (`data_surface_examples_compliance`): example 4, a compliance
@@ -335,12 +335,19 @@ their configuration may change without a deprecation path.
   component: the component chosen from those the site has and its props
   read from the schema it declares, example 12's two lines named by
   `#[UsesStructure]`, so the block's form, validation and storage come
-  from them; and a placed component block configured and read through
-  two tools, by its machine name. Needs `block`.
+  from them, placed through the placement resource of
+  `data_surface_block`. Needs `block`.
+- **Data Surface block placement** (`data_surface_block`): a placed
+  block as a resource, `block.placement`, by its machine name: its
+  plugin chooses its settings (a plugin's declared structure, or its
+  config schema read), its theme its region, and its visibility is a
+  list of conditions. Placed, configured, read and removed through four
+  tools, HTTP (`DELETE` removes) and a form. Needs `block`.
 - **Data Surface - React** (`data_surface_react`): the served contract,
   an operation as JSON Schema 2020-12 with an `x-surface` extension,
   served over HTTP at `/surface-api/{resource}`, the method its
-  operation (`GET` reads, `PATCH` updates, `POST` creates), with a
+  operation (`GET` reads, `PATCH` updates, `POST` creates, `DELETE`
+  removes), with a
   narrowing that re-narrows it as answers change and a dry run that
   rehearses the write, and a React app that renders the form from it at
   `/surface-react/{resource}/{operation}`. Its built app
@@ -396,7 +403,8 @@ nothing on it is needed to build.
 | [The Tool API bridge](modules/data_surface_tool/README.md) | One tool per operation and a read tool beside it, who may run them, the contract panel, and what MCP and the Tool API are told. |
 | [The React app](modules/data_surface_react/README.md) | The served contract's endpoints and the React form drawn from them. |
 | [The OpenAPI document](modules/data_surface_openapi/README.md) | Every operation's endpoints as OpenAPI 3.1, for any OpenAPI client, generator or UI. |
-| [The component block](modules/data_surface_component_block/README.md) | A block that embeds a single-directory component, its settings a structure, and a placed one configured through a tool. |
+| [The component block](modules/data_surface_component_block/README.md) | A block that embeds a single-directory component, its settings a structure. |
+| [Block placement](modules/data_surface_block/README.md) | A placed block of any plugin as a resource: placed, configured and removed through a tool, HTTP and a form. |
 | [Installation: Tool](docs/installation.md#tool) | Enabling the tool bridge, through which an agent, MCP and Drush call each operation. |
 | [One resource, every door](docs/every-door/index.html) | An interactive 3D model: the layers a data surface is sealed from, a resource, its attached structures and an alter, the doors that read its contract, and the same inputs as they are written today. Open the file in a browser. |
 

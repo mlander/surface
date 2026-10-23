@@ -10,6 +10,7 @@ use Drupal\Core\TypedData\TypedDataInterface;
 use Drupal\data_surface\Pipeline\DataSurfacePipelineInterface;
 use Drupal\data_surface\Pipeline\ResultDocument;
 use Drupal\data_surface\Pipeline\Violation;
+use Drupal\data_surface\ResourceBuild\OperationDefinition;
 use Drupal\data_surface\ResourceBuild\StorageAdapter;
 use Drupal\data_surface_tool\Plugin\Derivative\ResourceOperationToolDeriver;
 use Drupal\data_surface_tool\InputDefinitions;
@@ -310,6 +311,9 @@ final class ResourceOperationTool extends ResourceOperationToolBase implements I
     // Decision: see docs/decisions.md#locked-at-the-top.
     return ExecutableResult::success(
       $this->withNotes(match (TRUE) {
+        // Decision: see docs/decisions.md#a-placed-block-is-a-resource.
+        $operation->kind() === OperationDefinition::DELETE && $result->committed => $this->t('@label: removed. The values it held are answered.', ['@label' => (string) $operation->label]),
+        $operation->kind() === OperationDefinition::DELETE => $this->t('Dry run of @label: the removal was rehearsed, and nothing was removed. The values it holds are answered.', ['@label' => (string) $operation->label]),
         $result->committed && !$result->changed() => $this->t('@label: the values were accepted, and they are what is stored, so nothing was written.', ['@label' => (string) $operation->label]),
         $result->committed => $this->t('@label: the values were accepted and written.', ['@label' => (string) $operation->label]),
         // Decision: see docs/decisions.md#an-operation-states-how-it-behaves.

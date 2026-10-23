@@ -109,7 +109,8 @@ of them is meant to replace core's own forms on a production site.
 | `data_surface_examples` | One resource that grows, one idea per example, each example a form beside the contract it emits, at `/surface-examples`: declaring, refining, parts, and the same contract as a tool. Needs Tool. |
 | `data_surface_examples_compliance` | Example 4: a compliance structure, and one alter that attaches it to example 3's resource, and nothing else. |
 | `data_surface_examples_workflow` | Example 10, extended: two alters that answer access for the program and its fees, with no change to the program, and nothing else. |
-| `data_surface_component_block` | Example 13: a block, "Component", that embeds a single-directory component, its settings example 12's two lines named by `#[UsesStructure]`; and a placed component block configured and read through two tools, by its machine name. Needs `block`. |
+| `data_surface_component_block` | Example 13: a block, "Component", that embeds a single-directory component, its settings example 12's two lines named by `#[UsesStructure]`. Needs `block`. |
+| `data_surface_block` | A placed block as a resource, `block.placement`: its plugin chooses its settings, its theme its region, its visibility a list of conditions; placed, configured, read and removed through four tools, HTTP and a form. Needs `block`. |
 | `data_surface_react` | The served contract: a resource over HTTP at `/surface-api/{resource}`, the method its operation, as JSON Schema with a narrowing and a dry run, and a React form rendered from it at `/surface-react/{resource}/{operation}`. Its built app is committed, so it needs no Node. |
 | `data_surface_openapi` | An OpenAPI 3.1 document of every operation's paths at `/surface-api/openapi.json` (and `.yaml`), for any OpenAPI client, generator or UI, with Swagger UI at `/surface-api/docs` and Redoc at `/surface-api/redoc`. Needs `data_surface_react`. |
 

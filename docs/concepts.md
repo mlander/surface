@@ -18,8 +18,8 @@ React by `data_surface_react`) or the first resource's
 | Concept | You need it when you ask | Skip it when | Example |
 | --- | --- | --- | --- |
 | **1** Resource, `#[Resource]` | What thing do I want a form, a tool and a schema for? | Never: everything starts here. | `/admin/config/services/surface-newsletter`, `/surface-examples/1` |
-| **1** Operation, `#[Operation]` | How is it asked for, what does a call do (`description`), which permission gates it, and does a call create (`creates`), change nothing (`readOnly`) or destroy what is there (`destructive`)? ([Resources](resources.md#operations-add-edit-and-the-rest)) | Never: a route and a tool are made from one. On the class it needs no method; leave `creates`, `readOnly` and `destructive` out when a call does none of them; whether it is safe to repeat is derived. | `/admin/config/services/surface-newsletter`; read only, `/surface-examples/10/check` |
-| **1** Storage, `ConfigObjectStorage` | Where do its values live? | A settings page: subclass `ConfigObjectStorage`, name the config object, and write its config schema and install file from the resource with `drush data_surface:config-schema --write` ([Storage](storage.md#a-schema-generated-from-the-resource)), done. | `/admin/config/services/surface-newsletter` |
+| **1** Operation, `#[Operation]` | How is it asked for, what does a call do (`description`), which permission gates it, and does a call create (`creates`), change nothing (`readOnly`), destroy what is there (`destructive`) or remove the thing, taking no values (`deletes`)? ([Resources](resources.md#operations-add-edit-and-the-rest)) | Never: a route and a tool are made from one. On the class it needs no method; leave `creates`, `readOnly`, `destructive` and `deletes` out when a call does none of them; whether it is safe to repeat is derived. | `/admin/config/services/surface-newsletter`; read only, `/surface-examples/10/check` |
+| **1** Storage, `ConfigObjectStorage` | Where do its values live? | A settings page: subclass `ConfigObjectStorage`, name the config object, and write its config schema and install file from the resource with `drush data_surface:config-schema --write` ([Storage](storage.md#a-schema-generated-from-the-resource)), done. A config entity: subclass `ConfigEntityStorage`, name the entity type and the property each key is stored under ([Storage](storage.md#a-config-entity)). | `/admin/config/services/surface-newsletter`; a config entity, `/admin/structure/block/surface/add` (with `data_surface_block`) |
 | **1** `defineInputs()` and `add()` | What keys does it take, of what type, allowing what (a constraint), defaulting to what? | Never. | `/admin/config/services/surface-newsletter` |
 | Shape, `#[Shape]` | Is one value, such as an event license, asked for at several keys with the same type, pattern and words? ([Declaring a resource](declaring-a-resource.md#named-shapes)) | The value is asked for at one key: write its constraints there. | `/surface-examples/8/desk` |
 | Declared rule, `narrow()->when(Condition::...)` | Does one key narrow when another holds a value, by a condition a schema can state, such as no license, no more than a hundred? ([Refinement](refinement.md#declaring-a-rule)) | Declare the rule when its condition and effect fit the vocabulary; write a refiner when the effect must be computed (the stewards for a capacity, `ceil(capacity / 50)`) or the condition is runtime. | `/surface-examples/7` |
@@ -75,9 +75,9 @@ directory. `NamespacesDocsTest` fails when a snippet names a class of
 the module that it does not import and this table does not list.
 
 A class in `Storage\` is one you name on `#[Resource(storage:)]` or
-extend (`ConfigObjectStorage`), or one such a class works with: a
-layout, the secret codec, `SchemaViolations`. The storages the engine
-writes through for a plugin's host, a config entity or State implement
+extend (`ConfigObjectStorage`, `ConfigEntityStorage`), or one such a
+class works with: a layout, the secret codec, `SchemaViolations`. The
+storages the engine writes through for a plugin's host or State implement
 the pipeline's `DataSurfaceStorageInterface` and live in
 `Pipeline\Storage\` beside it; naming one on `#[Resource(storage:)]` is
 refused.
@@ -97,7 +97,7 @@ refused.
 | `ComponentProps` | `use Drupal\data_surface\Variants\ComponentProps;` |
 | `CompositeStorage` | `use Drupal\data_surface\Pipeline\Storage\CompositeStorage;` |
 | `Condition` | `use Drupal\data_surface\Refinement\Condition;` |
-| `ConfigEntityStorage` | `use Drupal\data_surface\Pipeline\Storage\ConfigEntityStorage;` |
+| `ConfigEntityStorage` | `use Drupal\data_surface\Storage\ConfigEntityStorage;` |
 | `ConfigObjectStorage` | `use Drupal\data_surface\Storage\ConfigObjectStorage;` |
 | `ConfigSchemaGenerator` | `use Drupal\data_surface\Storage\ConfigSchemaGenerator;` |
 | `DataSurfaceAccess` | `use Drupal\data_surface\DataSurfaceAccess;` |
@@ -114,6 +114,7 @@ refused.
 | `DataSurfaceWidgetBase` | `use Drupal\data_surface\Widget\DataSurfaceWidgetBase;` |
 | `DefinesOutputsInterface` | `use Drupal\data_surface\Resource\DefinesOutputsInterface;` |
 | `DefinitionMetadata` | `use Drupal\data_surface\DefinitionMetadata;` |
+| `DeletableStorageInterface` | `use Drupal\data_surface\Resource\DeletableStorageInterface;` |
 | `DerivedOperation` | `use Drupal\data_surface\Resource\DerivedOperation;` |
 | `DerivedResource` | `use Drupal\data_surface\Resource\DerivedResource;` |
 | `DerivesResources` | `use Drupal\data_surface\Resource\Attribute\DerivesResources;` |

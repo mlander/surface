@@ -1,0 +1,1273 @@
+{
+    "resource": "block.placement",
+    "module": "data_surface_block",
+    "contract": 3,
+    "documents": [
+        {
+            "resource": "block.placement",
+            "operation": "add",
+            "label": "Place a block",
+            "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "title": "Place a block",
+                "description": "Places a block under a machine name the caller chooses, in a region of a theme, with the settings its plugin takes; a machine name already in use is refused.",
+                "x-surface": {
+                    "contract": 3,
+                    "operation": {
+                        "id": "add",
+                        "label": "Place a block",
+                        "description": "Places a block under a machine name the caller chooses, in a region of a theme, with the settings its plugin takes; a machine name already in use is refused.",
+                        "kind": "create",
+                        "creates": true,
+                        "destructive": false,
+                        "idempotent": true
+                    },
+                    "version": 1
+                },
+                "type": "object",
+                "properties": {
+                    "label": {
+                        "title": "Title",
+                        "description": "The title of the block as shown to the user.",
+                        "type": "string",
+                        "maxLength": 255,
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": [],
+                            "checkedOnServer": [
+                                {
+                                    "constraint": "Regex",
+                                    "message": "The title may not span lines or hold control characters."
+                                }
+                            ],
+                            "patternMessage": "The title may not span lines or hold control characters."
+                        }
+                    },
+                    "id": {
+                        "title": "Machine name",
+                        "description": "A unique name for the placed block: lowercase letters, numbers, underscores and periods, not starting with a period.",
+                        "type": "string",
+                        "maxLength": 166,
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": [],
+                            "checkedOnServer": [
+                                {
+                                    "constraint": "Regex",
+                                    "message": "The machine name may hold only lowercase letters, numbers, underscores and periods, and may not start with a period."
+                                }
+                            ],
+                            "patternMessage": "The machine name may hold only lowercase letters, numbers, underscores and periods, and may not start with a period."
+                        }
+                    },
+                    "label_display": {
+                        "title": "Display title",
+                        "description": "Whether the title is shown above the block.",
+                        "type": [
+                            "boolean",
+                            "null"
+                        ],
+                        "default": true,
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": []
+                        }
+                    },
+                    "plugin": {
+                        "title": "Block",
+                        "description": "What the block shows: a block plugin the block layout offers. A block that reads a context, such as the node of the page, is not offered yet.",
+                        "type": "string",
+                        "oneOf": [
+                            {
+                                "const": "data_surface_component",
+                                "title": "Component"
+                            },
+                            {
+                                "const": "local_actions_block",
+                                "title": "Primary admin actions"
+                            },
+                            {
+                                "const": "local_tasks_block",
+                                "title": "Tabs"
+                            },
+                            {
+                                "const": "page_title_block",
+                                "title": "Page title"
+                            },
+                            {
+                                "const": "system_branding_block",
+                                "title": "Site branding"
+                            },
+                            {
+                                "const": "system_breadcrumb_block",
+                                "title": "Breadcrumbs"
+                            },
+                            {
+                                "const": "system_clear_cache_block",
+                                "title": "Clear cache"
+                            },
+                            {
+                                "const": "system_main_block",
+                                "title": "Main page content"
+                            },
+                            {
+                                "const": "system_messages_block",
+                                "title": "Messages"
+                            },
+                            {
+                                "const": "system_powered_by_block",
+                                "title": "Powered by Drupal"
+                            },
+                            {
+                                "const": "user_login_block",
+                                "title": "User login"
+                            }
+                        ],
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": []
+                        }
+                    },
+                    "settings": {
+                        "title": "Settings",
+                        "description": "The settings of the block chosen, as its plugin declares them.",
+                        "anyOf": [
+                            {
+                                "$ref": "#/$defs/block.data_surface_component"
+                            },
+                            {
+                                "$ref": "#/$defs/block.placement.settings.local_actions_block"
+                            },
+                            {
+                                "$ref": "#/$defs/block.placement.settings.local_tasks_block"
+                            },
+                            {
+                                "$ref": "#/$defs/block.placement.settings.page_title_block"
+                            },
+                            {
+                                "$ref": "#/$defs/block.placement.settings.system_branding_block"
+                            },
+                            {
+                                "$ref": "#/$defs/block.placement.settings.system_breadcrumb_block"
+                            },
+                            {
+                                "$ref": "#/$defs/block.placement.settings.system_clear_cache_block"
+                            },
+                            {
+                                "$ref": "#/$defs/block.placement.settings.system_main_block"
+                            },
+                            {
+                                "$ref": "#/$defs/block.placement.settings.system_messages_block"
+                            },
+                            {
+                                "$ref": "#/$defs/block.placement.settings.system_powered_by_block"
+                            },
+                            {
+                                "$ref": "#/$defs/block.placement.settings.user_login_block"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": [
+                                "plugin"
+                            ],
+                            "by": "plugin",
+                            "variants": {
+                                "data_surface_component": "#/$defs/block.data_surface_component",
+                                "local_actions_block": "#/$defs/block.placement.settings.local_actions_block",
+                                "local_tasks_block": "#/$defs/block.placement.settings.local_tasks_block",
+                                "page_title_block": "#/$defs/block.placement.settings.page_title_block",
+                                "system_branding_block": "#/$defs/block.placement.settings.system_branding_block",
+                                "system_breadcrumb_block": "#/$defs/block.placement.settings.system_breadcrumb_block",
+                                "system_clear_cache_block": "#/$defs/block.placement.settings.system_clear_cache_block",
+                                "system_main_block": "#/$defs/block.placement.settings.system_main_block",
+                                "system_messages_block": "#/$defs/block.placement.settings.system_messages_block",
+                                "system_powered_by_block": "#/$defs/block.placement.settings.system_powered_by_block",
+                                "user_login_block": "#/$defs/block.placement.settings.user_login_block"
+                            }
+                        }
+                    },
+                    "theme": {
+                        "title": "Theme",
+                        "description": "The theme the block is placed in.",
+                        "type": "string",
+                        "oneOf": [
+                            {
+                                "const": "stark",
+                                "title": "Stark"
+                            }
+                        ],
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": [],
+                            "checkedOnServer": [
+                                {
+                                    "constraint": "ExtensionExists",
+                                    "message": "Extension exists"
+                                }
+                            ]
+                        }
+                    },
+                    "region": {
+                        "title": "Region",
+                        "description": "The region of the theme the block is shown in.",
+                        "type": "string",
+                        "oneOf": [
+                            {
+                                "const": "sidebar_first",
+                                "title": "Left sidebar"
+                            },
+                            {
+                                "const": "sidebar_second",
+                                "title": "Right sidebar"
+                            },
+                            {
+                                "const": "content",
+                                "title": "Content"
+                            },
+                            {
+                                "const": "header",
+                                "title": "Header"
+                            },
+                            {
+                                "const": "primary_menu",
+                                "title": "Primary menu"
+                            },
+                            {
+                                "const": "secondary_menu",
+                                "title": "Secondary menu"
+                            },
+                            {
+                                "const": "footer",
+                                "title": "Footer"
+                            },
+                            {
+                                "const": "highlighted",
+                                "title": "Highlighted"
+                            },
+                            {
+                                "const": "help",
+                                "title": "Help"
+                            },
+                            {
+                                "const": "breadcrumb",
+                                "title": "Breadcrumb"
+                            }
+                        ],
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": [
+                                "theme"
+                            ],
+                            "checkedOnServer": [
+                                {
+                                    "constraint": "DataSurfaceAnyThemeRegion",
+                                    "message": "Region of an installed theme"
+                                }
+                            ],
+                            "enumerated": true
+                        }
+                    },
+                    "weight": {
+                        "title": "Weight",
+                        "description": "The order of the block in its region: lighter blocks are shown first.",
+                        "type": "integer",
+                        "minimum": -2147483648,
+                        "maximum": 2147483647,
+                        "default": 0,
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": []
+                        }
+                    },
+                    "status": {
+                        "title": "Enabled",
+                        "description": "Whether the block is shown at all.",
+                        "type": "boolean",
+                        "default": true,
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": []
+                        }
+                    },
+                    "visibility": {
+                        "title": "Visibility",
+                        "description": "The conditions the block is shown under, each at most once; with none, it is shown on every page.",
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "items": {
+                            "$ref": "#/$defs/block.placement.condition"
+                        },
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": [],
+                            "list": true
+                        }
+                    }
+                },
+                "additionalProperties": false,
+                "required": [
+                    "label",
+                    "id",
+                    "plugin",
+                    "theme",
+                    "region"
+                ],
+                "allOf": [
+                    {
+                        "if": {
+                            "properties": {
+                                "plugin": {
+                                    "const": "data_surface_component"
+                                }
+                            },
+                            "required": [
+                                "plugin"
+                            ]
+                        },
+                        "then": {
+                            "properties": {
+                                "settings": {
+                                    "title": "Settings",
+                                    "description": "The settings of the block chosen, as its plugin declares them.",
+                                    "$ref": "#/$defs/block.data_surface_component"
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "if": {
+                            "properties": {
+                                "plugin": {
+                                    "const": "local_actions_block"
+                                }
+                            },
+                            "required": [
+                                "plugin"
+                            ]
+                        },
+                        "then": {
+                            "properties": {
+                                "settings": {
+                                    "title": "Settings",
+                                    "description": "The settings of the block chosen, as its plugin declares them.",
+                                    "$ref": "#/$defs/block.placement.settings.local_actions_block"
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "if": {
+                            "properties": {
+                                "plugin": {
+                                    "const": "local_tasks_block"
+                                }
+                            },
+                            "required": [
+                                "plugin"
+                            ]
+                        },
+                        "then": {
+                            "properties": {
+                                "settings": {
+                                    "title": "Settings",
+                                    "description": "The settings of the block chosen, as its plugin declares them.",
+                                    "$ref": "#/$defs/block.placement.settings.local_tasks_block"
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "if": {
+                            "properties": {
+                                "plugin": {
+                                    "const": "page_title_block"
+                                }
+                            },
+                            "required": [
+                                "plugin"
+                            ]
+                        },
+                        "then": {
+                            "properties": {
+                                "settings": {
+                                    "title": "Settings",
+                                    "description": "The settings of the block chosen, as its plugin declares them.",
+                                    "$ref": "#/$defs/block.placement.settings.page_title_block"
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "if": {
+                            "properties": {
+                                "plugin": {
+                                    "const": "system_branding_block"
+                                }
+                            },
+                            "required": [
+                                "plugin"
+                            ]
+                        },
+                        "then": {
+                            "properties": {
+                                "settings": {
+                                    "title": "Settings",
+                                    "description": "The settings of the block chosen, as its plugin declares them.",
+                                    "$ref": "#/$defs/block.placement.settings.system_branding_block"
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "if": {
+                            "properties": {
+                                "plugin": {
+                                    "const": "system_breadcrumb_block"
+                                }
+                            },
+                            "required": [
+                                "plugin"
+                            ]
+                        },
+                        "then": {
+                            "properties": {
+                                "settings": {
+                                    "title": "Settings",
+                                    "description": "The settings of the block chosen, as its plugin declares them.",
+                                    "$ref": "#/$defs/block.placement.settings.system_breadcrumb_block"
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "if": {
+                            "properties": {
+                                "plugin": {
+                                    "const": "system_clear_cache_block"
+                                }
+                            },
+                            "required": [
+                                "plugin"
+                            ]
+                        },
+                        "then": {
+                            "properties": {
+                                "settings": {
+                                    "title": "Settings",
+                                    "description": "The settings of the block chosen, as its plugin declares them.",
+                                    "$ref": "#/$defs/block.placement.settings.system_clear_cache_block"
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "if": {
+                            "properties": {
+                                "plugin": {
+                                    "const": "system_main_block"
+                                }
+                            },
+                            "required": [
+                                "plugin"
+                            ]
+                        },
+                        "then": {
+                            "properties": {
+                                "settings": {
+                                    "title": "Settings",
+                                    "description": "The settings of the block chosen, as its plugin declares them.",
+                                    "$ref": "#/$defs/block.placement.settings.system_main_block"
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "if": {
+                            "properties": {
+                                "plugin": {
+                                    "const": "system_messages_block"
+                                }
+                            },
+                            "required": [
+                                "plugin"
+                            ]
+                        },
+                        "then": {
+                            "properties": {
+                                "settings": {
+                                    "title": "Settings",
+                                    "description": "The settings of the block chosen, as its plugin declares them.",
+                                    "$ref": "#/$defs/block.placement.settings.system_messages_block"
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "if": {
+                            "properties": {
+                                "plugin": {
+                                    "const": "system_powered_by_block"
+                                }
+                            },
+                            "required": [
+                                "plugin"
+                            ]
+                        },
+                        "then": {
+                            "properties": {
+                                "settings": {
+                                    "title": "Settings",
+                                    "description": "The settings of the block chosen, as its plugin declares them.",
+                                    "$ref": "#/$defs/block.placement.settings.system_powered_by_block"
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "if": {
+                            "properties": {
+                                "plugin": {
+                                    "const": "user_login_block"
+                                }
+                            },
+                            "required": [
+                                "plugin"
+                            ]
+                        },
+                        "then": {
+                            "properties": {
+                                "settings": {
+                                    "title": "Settings",
+                                    "description": "The settings of the block chosen, as its plugin declares them.",
+                                    "$ref": "#/$defs/block.placement.settings.user_login_block"
+                                }
+                            }
+                        }
+                    }
+                ],
+                "$defs": {
+                    "block.data_surface_component.props.data_surface_examples:call_to_action": {
+                        "title": "block.data_surface_component.props.data_surface_examples:call_to_action",
+                        "type": "object",
+                        "properties": {
+                            "text": {
+                                "title": "Button text",
+                                "type": "string",
+                                "maxLength": 40,
+                                "x-surface": {
+                                    "locked": false,
+                                    "dependsOn": []
+                                }
+                            },
+                            "url": {
+                                "title": "Address",
+                                "type": "string",
+                                "format": "uri",
+                                "x-surface": {
+                                    "locked": false,
+                                    "dependsOn": []
+                                }
+                            },
+                            "style": {
+                                "title": "Style",
+                                "type": "string",
+                                "oneOf": [
+                                    {
+                                        "const": "primary",
+                                        "title": "Primary"
+                                    },
+                                    {
+                                        "const": "secondary",
+                                        "title": "Secondary"
+                                    }
+                                ],
+                                "default": "primary",
+                                "x-surface": {
+                                    "locked": false,
+                                    "dependsOn": []
+                                }
+                            },
+                            "new_window": {
+                                "title": "Open in a new window",
+                                "type": "boolean",
+                                "default": false,
+                                "x-surface": {
+                                    "locked": false,
+                                    "dependsOn": []
+                                }
+                            },
+                            "tags": {
+                                "title": "Tags",
+                                "description": "Up to three words the button is filed under.",
+                                "type": [
+                                    "array",
+                                    "null"
+                                ],
+                                "items": {
+                                    "type": "string",
+                                    "x-surface": {
+                                        "locked": false,
+                                        "dependsOn": []
+                                    }
+                                },
+                                "maxItems": 3,
+                                "x-surface": {
+                                    "locked": false,
+                                    "dependsOn": []
+                                }
+                            }
+                        },
+                        "additionalProperties": false,
+                        "required": [
+                            "text",
+                            "url"
+                        ]
+                    },
+                    "block.data_surface_component.props.data_surface_examples:card": {
+                        "title": "block.data_surface_component.props.data_surface_examples:card",
+                        "type": "object",
+                        "properties": {
+                            "heading": {
+                                "title": "Heading",
+                                "type": "string",
+                                "maxLength": 80,
+                                "x-surface": {
+                                    "locked": false,
+                                    "dependsOn": []
+                                }
+                            },
+                            "body": {
+                                "title": "Text",
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "x-surface": {
+                                    "locked": false,
+                                    "dependsOn": []
+                                }
+                            },
+                            "tone": {
+                                "title": "Tone",
+                                "type": "string",
+                                "oneOf": [
+                                    {
+                                        "const": "plain",
+                                        "title": "Plain"
+                                    },
+                                    {
+                                        "const": "highlight",
+                                        "title": "Highlighted"
+                                    }
+                                ],
+                                "default": "plain",
+                                "x-surface": {
+                                    "locked": false,
+                                    "dependsOn": []
+                                }
+                            },
+                            "link": {
+                                "title": "Link",
+                                "type": [
+                                    "object",
+                                    "null"
+                                ],
+                                "properties": {
+                                    "url": {
+                                        "title": "Address",
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
+                                        "format": "uri",
+                                        "x-surface": {
+                                            "locked": false,
+                                            "dependsOn": []
+                                        }
+                                    },
+                                    "label": {
+                                        "title": "Link text",
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
+                                        "x-surface": {
+                                            "locked": false,
+                                            "dependsOn": []
+                                        }
+                                    }
+                                },
+                                "additionalProperties": false,
+                                "x-surface": {
+                                    "locked": false,
+                                    "dependsOn": []
+                                }
+                            }
+                        },
+                        "additionalProperties": false,
+                        "required": [
+                            "heading"
+                        ]
+                    },
+                    "block.data_surface_component.props.data_surface_examples:hero": {
+                        "title": "block.data_surface_component.props.data_surface_examples:hero",
+                        "type": "object",
+                        "properties": {
+                            "title": {
+                                "title": "Title",
+                                "type": "string",
+                                "x-surface": {
+                                    "locked": false,
+                                    "dependsOn": []
+                                }
+                            },
+                            "subtitle": {
+                                "title": "Subtitle",
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "x-surface": {
+                                    "locked": false,
+                                    "dependsOn": []
+                                }
+                            },
+                            "align": {
+                                "title": "Alignment",
+                                "type": "string",
+                                "oneOf": [
+                                    {
+                                        "const": "start",
+                                        "title": "Start"
+                                    },
+                                    {
+                                        "const": "center",
+                                        "title": "Center"
+                                    }
+                                ],
+                                "default": "center",
+                                "x-surface": {
+                                    "locked": false,
+                                    "dependsOn": []
+                                }
+                            },
+                            "overlay": {
+                                "title": "Overlay opacity",
+                                "description": "How dark the picture is under the title, in percent.",
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 100,
+                                "default": 40,
+                                "x-surface": {
+                                    "locked": false,
+                                    "dependsOn": []
+                                }
+                            },
+                            "full_width": {
+                                "title": "Full width",
+                                "type": "boolean",
+                                "default": false,
+                                "x-surface": {
+                                    "locked": false,
+                                    "dependsOn": []
+                                }
+                            }
+                        },
+                        "additionalProperties": false,
+                        "required": [
+                            "title"
+                        ]
+                    },
+                    "block.data_surface_component": {
+                        "title": "block.data_surface_component",
+                        "type": "object",
+                        "properties": {
+                            "component": {
+                                "title": "Component",
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "oneOf": [
+                                    {
+                                        "const": "data_surface_examples:call_to_action",
+                                        "title": "Call to action"
+                                    },
+                                    {
+                                        "const": "data_surface_examples:card",
+                                        "title": "Card"
+                                    },
+                                    {
+                                        "const": "data_surface_examples:hero",
+                                        "title": "Hero"
+                                    },
+                                    {
+                                        "const": null
+                                    }
+                                ],
+                                "x-surface": {
+                                    "locked": false,
+                                    "dependsOn": []
+                                }
+                            },
+                            "props": {
+                                "title": "Props",
+                                "anyOf": [
+                                    {
+                                        "$ref": "#/$defs/block.data_surface_component.props.data_surface_examples:call_to_action"
+                                    },
+                                    {
+                                        "$ref": "#/$defs/block.data_surface_component.props.data_surface_examples:card"
+                                    },
+                                    {
+                                        "$ref": "#/$defs/block.data_surface_component.props.data_surface_examples:hero"
+                                    },
+                                    {
+                                        "type": "null"
+                                    }
+                                ],
+                                "x-surface": {
+                                    "locked": false,
+                                    "dependsOn": [
+                                        "component"
+                                    ],
+                                    "by": "component",
+                                    "variants": {
+                                        "data_surface_examples:call_to_action": "#/$defs/block.data_surface_component.props.data_surface_examples:call_to_action",
+                                        "data_surface_examples:card": "#/$defs/block.data_surface_component.props.data_surface_examples:card",
+                                        "data_surface_examples:hero": "#/$defs/block.data_surface_component.props.data_surface_examples:hero"
+                                    }
+                                }
+                            }
+                        },
+                        "additionalProperties": false,
+                        "allOf": [
+                            {
+                                "if": {
+                                    "properties": {
+                                        "component": {
+                                            "const": "data_surface_examples:call_to_action"
+                                        }
+                                    },
+                                    "required": [
+                                        "component"
+                                    ]
+                                },
+                                "then": {
+                                    "properties": {
+                                        "props": {
+                                            "title": "Props",
+                                            "$ref": "#/$defs/block.data_surface_component.props.data_surface_examples:call_to_action"
+                                        }
+                                    }
+                                }
+                            },
+                            {
+                                "if": {
+                                    "properties": {
+                                        "component": {
+                                            "const": "data_surface_examples:card"
+                                        }
+                                    },
+                                    "required": [
+                                        "component"
+                                    ]
+                                },
+                                "then": {
+                                    "properties": {
+                                        "props": {
+                                            "title": "Props",
+                                            "$ref": "#/$defs/block.data_surface_component.props.data_surface_examples:card"
+                                        }
+                                    }
+                                }
+                            },
+                            {
+                                "if": {
+                                    "properties": {
+                                        "component": {
+                                            "const": "data_surface_examples:hero"
+                                        }
+                                    },
+                                    "required": [
+                                        "component"
+                                    ]
+                                },
+                                "then": {
+                                    "properties": {
+                                        "props": {
+                                            "title": "Props",
+                                            "$ref": "#/$defs/block.data_surface_component.props.data_surface_examples:hero"
+                                        }
+                                    }
+                                }
+                            }
+                        ]
+                    },
+                    "block.placement.settings.local_actions_block": {
+                        "title": "block.placement.settings.local_actions_block",
+                        "type": "object",
+                        "properties": {},
+                        "additionalProperties": false
+                    },
+                    "block.placement.settings.local_tasks_block": {
+                        "title": "block.placement.settings.local_tasks_block",
+                        "type": "object",
+                        "properties": {
+                            "primary": {
+                                "title": "Whether primary tabs are shown",
+                                "type": "boolean",
+                                "default": true,
+                                "x-surface": {
+                                    "locked": false,
+                                    "dependsOn": []
+                                }
+                            },
+                            "secondary": {
+                                "title": "Whether secondary tabs are shown",
+                                "type": "boolean",
+                                "default": true,
+                                "x-surface": {
+                                    "locked": false,
+                                    "dependsOn": []
+                                }
+                            }
+                        },
+                        "additionalProperties": false
+                    },
+                    "block.placement.settings.page_title_block": {
+                        "title": "block.placement.settings.page_title_block",
+                        "type": "object",
+                        "properties": {},
+                        "additionalProperties": false
+                    },
+                    "block.placement.settings.system_branding_block": {
+                        "title": "block.placement.settings.system_branding_block",
+                        "type": "object",
+                        "properties": {
+                            "use_site_logo": {
+                                "title": "Use site logo",
+                                "type": "boolean",
+                                "default": true,
+                                "x-surface": {
+                                    "locked": false,
+                                    "dependsOn": []
+                                }
+                            },
+                            "use_site_name": {
+                                "title": "Use site name",
+                                "type": "boolean",
+                                "default": true,
+                                "x-surface": {
+                                    "locked": false,
+                                    "dependsOn": []
+                                }
+                            },
+                            "use_site_slogan": {
+                                "title": "Use site slogan",
+                                "type": "boolean",
+                                "default": true,
+                                "x-surface": {
+                                    "locked": false,
+                                    "dependsOn": []
+                                }
+                            }
+                        },
+                        "additionalProperties": false
+                    },
+                    "block.placement.settings.system_breadcrumb_block": {
+                        "title": "block.placement.settings.system_breadcrumb_block",
+                        "type": "object",
+                        "properties": {},
+                        "additionalProperties": false
+                    },
+                    "block.placement.settings.system_clear_cache_block": {
+                        "title": "block.placement.settings.system_clear_cache_block",
+                        "type": "object",
+                        "properties": {},
+                        "additionalProperties": false
+                    },
+                    "block.placement.settings.system_main_block": {
+                        "title": "block.placement.settings.system_main_block",
+                        "type": "object",
+                        "properties": {},
+                        "additionalProperties": false
+                    },
+                    "block.placement.settings.system_messages_block": {
+                        "title": "block.placement.settings.system_messages_block",
+                        "type": "object",
+                        "properties": {},
+                        "additionalProperties": false
+                    },
+                    "block.placement.settings.system_powered_by_block": {
+                        "title": "block.placement.settings.system_powered_by_block",
+                        "type": "object",
+                        "properties": {},
+                        "additionalProperties": false
+                    },
+                    "block.placement.settings.user_login_block": {
+                        "title": "block.placement.settings.user_login_block",
+                        "type": "object",
+                        "properties": {},
+                        "additionalProperties": false
+                    },
+                    "block.placement.condition.settings.request_path": {
+                        "title": "block.placement.condition.settings.request_path",
+                        "type": "object",
+                        "properties": {
+                            "pages": {
+                                "title": "String",
+                                "type": "string",
+                                "default": "",
+                                "x-surface": {
+                                    "locked": false,
+                                    "dependsOn": []
+                                }
+                            }
+                        },
+                        "additionalProperties": false
+                    },
+                    "block.placement.condition.settings.response_status": {
+                        "title": "block.placement.condition.settings.response_status",
+                        "type": "object",
+                        "properties": {
+                            "status_codes": {
+                                "title": "Sequence",
+                                "type": "array",
+                                "items": {
+                                    "title": "Integer",
+                                    "type": "integer",
+                                    "oneOf": [
+                                        {
+                                            "const": 200,
+                                            "title": "200"
+                                        },
+                                        {
+                                            "const": 403,
+                                            "title": "403"
+                                        },
+                                        {
+                                            "const": 404,
+                                            "title": "404"
+                                        }
+                                    ],
+                                    "x-surface": {
+                                        "locked": false,
+                                        "dependsOn": []
+                                    }
+                                },
+                                "default": [],
+                                "x-surface": {
+                                    "locked": false,
+                                    "dependsOn": []
+                                }
+                            }
+                        },
+                        "additionalProperties": false
+                    },
+                    "block.placement.condition.settings.user_role": {
+                        "title": "block.placement.condition.settings.user_role",
+                        "type": "object",
+                        "properties": {
+                            "roles": {
+                                "title": "Sequence",
+                                "type": "array",
+                                "items": {
+                                    "title": "String",
+                                    "type": "string",
+                                    "x-surface": {
+                                        "locked": false,
+                                        "dependsOn": []
+                                    }
+                                },
+                                "default": [],
+                                "x-surface": {
+                                    "locked": false,
+                                    "dependsOn": []
+                                }
+                            },
+                            "context_mapping": {
+                                "title": "Context assignments",
+                                "type": [
+                                    "object",
+                                    "null"
+                                ],
+                                "properties": {
+                                    "user": {
+                                        "title": "User",
+                                        "description": "The context the condition reads its user from.",
+                                        "type": "string",
+                                        "oneOf": [
+                                            {
+                                                "const": "@user.current_user_context:current_user",
+                                                "title": "@user.current_user_context:current_user"
+                                            }
+                                        ],
+                                        "default": "@user.current_user_context:current_user",
+                                        "x-surface": {
+                                            "locked": false,
+                                            "dependsOn": []
+                                        }
+                                    }
+                                },
+                                "additionalProperties": false,
+                                "x-surface": {
+                                    "locked": false,
+                                    "dependsOn": []
+                                }
+                            }
+                        },
+                        "additionalProperties": false
+                    },
+                    "block.placement.condition": {
+                        "title": "block.placement.condition",
+                        "type": "object",
+                        "properties": {
+                            "id": {
+                                "title": "Condition",
+                                "description": "The condition plugin.",
+                                "type": "string",
+                                "oneOf": [
+                                    {
+                                        "const": "request_path",
+                                        "title": "Request Path"
+                                    },
+                                    {
+                                        "const": "response_status",
+                                        "title": "Response status"
+                                    },
+                                    {
+                                        "const": "user_role",
+                                        "title": "User Role"
+                                    }
+                                ],
+                                "x-surface": {
+                                    "locked": false,
+                                    "dependsOn": []
+                                }
+                            },
+                            "negate": {
+                                "title": "Negate",
+                                "description": "Whether the block is shown when the condition does not hold, rather than when it does.",
+                                "type": [
+                                    "boolean",
+                                    "null"
+                                ],
+                                "default": false,
+                                "x-surface": {
+                                    "locked": false,
+                                    "dependsOn": []
+                                }
+                            },
+                            "settings": {
+                                "title": "Settings",
+                                "description": "The settings of the condition chosen.",
+                                "anyOf": [
+                                    {
+                                        "$ref": "#/$defs/block.placement.condition.settings.request_path"
+                                    },
+                                    {
+                                        "$ref": "#/$defs/block.placement.condition.settings.response_status"
+                                    },
+                                    {
+                                        "$ref": "#/$defs/block.placement.condition.settings.user_role"
+                                    },
+                                    {
+                                        "type": "null"
+                                    }
+                                ],
+                                "x-surface": {
+                                    "locked": false,
+                                    "dependsOn": [
+                                        "id"
+                                    ],
+                                    "by": "id",
+                                    "variants": {
+                                        "request_path": "#/$defs/block.placement.condition.settings.request_path",
+                                        "response_status": "#/$defs/block.placement.condition.settings.response_status",
+                                        "user_role": "#/$defs/block.placement.condition.settings.user_role"
+                                    }
+                                }
+                            }
+                        },
+                        "additionalProperties": false,
+                        "required": [
+                            "id"
+                        ],
+                        "allOf": [
+                            {
+                                "if": {
+                                    "properties": {
+                                        "id": {
+                                            "const": "request_path"
+                                        }
+                                    },
+                                    "required": [
+                                        "id"
+                                    ]
+                                },
+                                "then": {
+                                    "properties": {
+                                        "settings": {
+                                            "title": "Settings",
+                                            "description": "The settings of the condition chosen.",
+                                            "$ref": "#/$defs/block.placement.condition.settings.request_path"
+                                        }
+                                    }
+                                }
+                            },
+                            {
+                                "if": {
+                                    "properties": {
+                                        "id": {
+                                            "const": "response_status"
+                                        }
+                                    },
+                                    "required": [
+                                        "id"
+                                    ]
+                                },
+                                "then": {
+                                    "properties": {
+                                        "settings": {
+                                            "title": "Settings",
+                                            "description": "The settings of the condition chosen.",
+                                            "$ref": "#/$defs/block.placement.condition.settings.response_status"
+                                        }
+                                    }
+                                }
+                            },
+                            {
+                                "if": {
+                                    "properties": {
+                                        "id": {
+                                            "const": "user_role"
+                                        }
+                                    },
+                                    "required": [
+                                        "id"
+                                    ]
+                                },
+                                "then": {
+                                    "properties": {
+                                        "settings": {
+                                            "title": "Settings",
+                                            "description": "The settings of the condition chosen.",
+                                            "$ref": "#/$defs/block.placement.condition.settings.user_role"
+                                        }
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                }
+            }
+        }
+    ]
+}

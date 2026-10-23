@@ -56,6 +56,7 @@ class ResourceCatalogTest extends DataSurfaceKernelTestBase {
     'data_surface_entity',
     'data_surface_first',
     'data_surface_component_block',
+    'data_surface_block',
   ];
 
   /**
@@ -86,7 +87,8 @@ class ResourceCatalogTest extends DataSurfaceKernelTestBase {
       'block.data_surface_demo',
       'block.data_surface_demo.presentation.grid',
       'block.data_surface_demo.presentation.list',
-      'block.placed_component',
+      'block.placement',
+      'block.placement.condition',
       'event.bulletin',
       'event.desk',
       'event.doors',
@@ -128,6 +130,7 @@ class ResourceCatalogTest extends DataSurfaceKernelTestBase {
         'module' => 'data_surface_demo_node_type',
         'parameters' => [],
         'creates' => TRUE,
+        'kind' => 'create',
         'permission' => NodeTypeResource::PERMISSION,
         'unresolvable' => [],
         'standalone' => TRUE,
@@ -140,6 +143,7 @@ class ResourceCatalogTest extends DataSurfaceKernelTestBase {
         'module' => 'data_surface_demo_node_type',
         'parameters' => ['NodeTypeInterface $type'],
         'creates' => FALSE,
+        'kind' => 'update',
         'permission' => NodeTypeResource::PERMISSION,
         'unresolvable' => [],
         'standalone' => TRUE,

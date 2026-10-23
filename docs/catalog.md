@@ -31,7 +31,8 @@ and changes a thing that exists, neither creating nor read only, is
 | [`block.data_surface_demo`](#blockdata_surface_demo) | `DemoBlockStructure` | none | none |
 | [`block.data_surface_demo.presentation.grid`](#blockdata_surface_demopresentationgrid) | `GridPresentationStructure` | none | none |
 | [`block.data_surface_demo.presentation.list`](#blockdata_surface_demopresentationlist) | `ListPresentationStructure` | none | none |
-| [`block.placed_component`](#blockplaced_component) | `PlacedComponentBlockResource` | `block` | `configure` |
+| [`block.placement`](#blockplacement) | `BlockPlacementResource` | `id` | `add`, `edit`, `remove` |
+| [`block.placement.condition`](#blockplacementcondition) | `VisibilityConditionStructure` | none | none |
 | [`event.bulletin`](#eventbulletin) | `BulletinResource` | none | `configure` |
 | [`event.desk`](#eventdesk) | `InfoDeskResource` | none | `configure` |
 | [`event.doors`](#eventdoors) | `DoorsResource` | none | `configure` |
@@ -100,18 +101,29 @@ and changes a thing that exists, neither creating nor read only, is
 - Storage: none; its host or its parent stores it
 - Access: the operation's permission alone
 
-## block.placed_component
+## block.placement
 
-`Drupal\data_surface_component_block\Resource\PlacedComponentBlockResource`, in `data_surface_component_block`.
+`Drupal\data_surface_block\Resource\BlockPlacementResource`, in `data_surface_block`.
 
 - Kind: resource
-- Identity: `block`
-- Storage: `Drupal\data_surface_component_block\Storage\PlacedComponentBlockStorage`
+- Identity: `id`
+- Storage: `Drupal\data_surface_block\Storage\BlockPlacementStorage`
 - Access: the operation's permission alone
 
 | Operation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `configure` | Configure a placed component block | `BlockInterface $block` | no | `administer blocks` | yes | yes | `PlacedComponentBlockResource::configure()` (`data_surface_component_block`) |
+| `add` | Place a block | nothing | yes | `administer blocks` | yes | no: it creates | `#[Operation] on BlockPlacementResource` (`data_surface_block`) |
+| `edit` | Edit a placed block | `BlockInterface $id` | no | `administer blocks` | yes | yes | `BlockPlacementResource::edit()` (`data_surface_block`) |
+| `remove` | Remove a placed block | `BlockInterface $id` | no | `administer blocks` | yes | no: it deletes | `BlockPlacementResource::remove()` (`data_surface_block`) |
+
+## block.placement.condition
+
+`Drupal\data_surface_block\Structure\VisibilityConditionStructure`, in `data_surface_block`.
+
+- Kind: structure
+- Identity: none
+- Storage: none; its host or its parent stores it
+- Access: the operation's permission alone
 
 ## event.bulletin
 

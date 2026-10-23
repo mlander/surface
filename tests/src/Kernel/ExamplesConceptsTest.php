@@ -16,6 +16,7 @@ use Drupal\data_surface_examples\CodeLines;
 use Drupal\data_surface_examples\ConceptPanel;
 use Drupal\data_surface_examples\Controller\ExamplesController;
 use Drupal\data_surface_examples\ExamplePanels;
+use Drupal\data_surface_examples\ConceptCalls;
 use Drupal\data_surface_examples\Hook\SpotlightBlockHooks;
 use Drupal\data_surface_examples\Resource\BulletinResource;
 use Drupal\data_surface_examples\Resource\DoorsResource;
@@ -594,8 +595,8 @@ class ExamplesConceptsTest extends DataSurfaceKernelTestBase {
   public function testThirteenSaysWhereTheBlockIsThenShowsIt(): void {
     $page = $this->thirteen();
     $items = array_map(static fn ($item): string => strip_tags((string) (is_array($item) ? ($item['#markup'] ?? '') : $item)), $page['how']['#items']);
-    $this->assertSame('Enable it: ddev drush pm:install data_surface_component_block', $items[0]);
-    $this->assertStringStartsWith('It is not enabled on this site yet.', $items[1]);
+    $this->assertSame('Enable both: ddev drush pm:install data_surface_component_block data_surface_block', $items[0]);
+    $this->assertStringStartsWith('The block is not enabled on this site yet.', $items[1]);
     $this->assertMatchesRegularExpression('/^The structure and the block plugin: \d+ lines of code\.$/', $items[2]);
     $this->assertArrayNotHasKey('parts', $page, 'While the module is off, nothing of it is shown.');
     $index = $this->container->get('class_resolver')->getInstanceFromDefinition(ExamplesController::class)->index();
@@ -607,16 +608,23 @@ class ExamplesConceptsTest extends DataSurfaceKernelTestBase {
     $this->container->get('theme_installer')->install(['stark']);
     $this->config('system.theme')->set('default', 'stark')->save();
     $this->container->get('module_installer')->install(['path_alias', SpotlightBlockHooks::MODULE]);
+    $this->assertNull($this->container->get('entity_type.manager')->getStorage('block')->load(SpotlightBlockHooks::BLOCK), 'The Spotlight block is placed through the placement resource, which is not on yet.');
+    $page = $this->thirteen();
+    $this->assertStringStartsWith('The block is enabled on this site, the placement resource not yet.', strip_tags((string) $page['how']['#items'][1]));
+    $this->assertArrayHasKey('parts', $page);
+    $this->assertArrayNotHasKey('calls', $page);
+    $this->container->get('module_installer')->install([SpotlightBlockHooks::PLACEMENT]);
     $block = $this->container->get('entity_type.manager')->getStorage('block')->load(SpotlightBlockHooks::BLOCK);
-    $this->assertNotNull($block, 'Enabling the module placed the Spotlight block.');
+    $this->assertNotNull($block, 'Enabling both placed the Spotlight block, through the add operation.');
     $this->assertSame('stark', $block->get('theme'));
     $this->assertSame('content', $block->get('region'));
     $this->assertSame(SpotlightBlockHooks::PAGE, $block->get('visibility')['request_path']['pages']);
-    $this->assertSame(SpotlightBlockHooks::SETTINGS['props'], $block->get('settings')['props']);
+    $this->assertSame(ConceptCalls::CALLS['block.placement']['place']['values']['settings']['props'], $block->get('settings')['props']);
+    $this->assertSame('Spotlight', $block->get('settings')['label']);
 
     $page = $this->thirteen();
     $items = array_map(static fn ($item): string => strip_tags((string) (is_array($item) ? ($item['#title'] ?? $item['#markup'] ?? '') : $item)), $page['how']['#items']);
-    $this->assertSame('It is enabled on this site now.', $items[1]);
+    $this->assertSame('Both are enabled on this site now.', $items[1]);
     $this->assertSame('Place a component block in stark: /admin/structure/block/add/data_surface_component/stark', $items[4]);
     [$spotlight, $block_lines] = array_map(static fn (array $cell): string => htmlspecialchars_decode((string) $cell['data']['#value']), $page['parts']['two_lines']['#rows'][0]);
     $this->assertStringContainsString("\$inputs->attachVariants('props', by: 'component', from: ComponentProps::class)\n  ->setLabel(t('Props'));", $spotlight);
@@ -624,15 +632,18 @@ class ExamplesConceptsTest extends DataSurfaceKernelTestBase {
     $contract = json_decode(htmlspecialchars_decode((string) $page['parts']['contract']['content']['#value']), TRUE);
     $this->assertSame(self::COMPONENTS, array_column($contract['component']['oneOf'], 'const'));
     $this->assertSame('#/$defs/block.data_surface_component.props.data_surface_examples:card', $contract['props'][ContractEmitter::EXTENSION]['variants']['data_surface_examples:card']);
-    [$write, $read] = $page['parts']['tools']['#rows'];
-    $this->assertSame('data_surface:block.placed_component:configure', $write[0]);
-    $this->assertSame(['Configure a placed component block', 'write', 'block, values, dry_run'], array_slice($write, 1));
-    $this->assertSame('data_surface:block.placed_component:configure:read', $read[0]);
-    $this->assertSame(['Current values: Configure a placed component block', 'read', 'block'], array_slice($read, 1));
-    $answer = htmlspecialchars_decode((string) $page['calls']['block.placed_component:hero']['answer']['#value']);
-    $this->assertStringStartsWith('Success: Dry run of Configure a placed component block', $answer);
-    $this->assertSame('data_surface_examples:card', $this->container->get('entity_type.manager')->getStorage('block')->loadUnchanged(SpotlightBlockHooks::BLOCK)->get('settings')['component'], 'The call wrote nothing.');
-    $this->assertStringContainsString('Below, the Spotlight block, data_surface_examples_spotlight, placed in the content region of stark', (string) $page['placed']['#markup']);
+    $this->assertSame([
+      ['data_surface:block.placement:add', 'Place a block', 'write', 'values, dry_run'],
+      ['data_surface:block.placement:edit', 'Edit a placed block', 'write', 'id, values, dry_run'],
+      ['data_surface:block.placement:edit:read', 'Current values: Edit a placed block', 'read', 'id'],
+      ['data_surface:block.placement:remove', 'Remove a placed block', 'write', 'id, dry_run'],
+    ], $page['parts']['tools']['#rows']);
+    $answer = static fn (string $call): string => htmlspecialchars_decode((string) $page['calls']['block.placement:' . $call]['answer']['#value']);
+    $this->assertStringStartsWith("Failed: The values were refused:\n/id: The machine name data_surface_examples_spotlight is already in use", $answer('place'));
+    $this->assertStringStartsWith('Success: Dry run of Edit a placed block', $answer('props'));
+    $this->assertStringStartsWith('Success: Dry run of Remove a placed block', $answer('remove'));
+    $this->assertSame('data_surface_examples:card', $this->container->get('entity_type.manager')->getStorage('block')->loadUnchanged(SpotlightBlockHooks::BLOCK)->get('settings')['component'], 'No call wrote anything.');
+    $this->assertStringContainsString('Below, the Spotlight block, data_surface_examples_spotlight, placed through the add operation in the content region of stark', (string) $page['placed']['#markup']);
   }
 
   /**

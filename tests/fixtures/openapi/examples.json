@@ -1,4 +1,9 @@
 {
+    "PATCH /surface-api/block.placement/{id}": {
+        "label_display": true,
+        "weight": 0,
+        "status": true
+    },
     "PATCH /surface-api/first.newsletter": {
         "frequency": "weekly",
         "max_recipients": 500

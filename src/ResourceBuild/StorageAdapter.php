@@ -8,9 +8,11 @@ use Drupal\Component\Utility\NestedArray;
 use Drupal\Core\DependencyInjection\DependencySerializationTrait;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\Pipeline\CreatingStorageInterface;
+use Drupal\data_surface\Pipeline\DeletingStorageInterface;
 use Drupal\data_surface\Pipeline\PreparedValues;
 use Drupal\data_surface\Pipeline\StorageViolationsException;
 use Drupal\data_surface\Pipeline\ViolationSet;
+use Drupal\data_surface\Resource\DeletableStorageInterface;
 use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface\Resource\ResourceStorageInterface;
 use Drupal\data_surface\Entry;
@@ -45,12 +47,16 @@ use Drupal\data_surface\Entry;
  * under `third_party_settings` and nothing else: fromStorage() on what
  * the storage loads, toStorage() in prepare. So the storage reads and
  * writes a contributor's settings in the layout they are stored in, and
- * never has to know the contributor exists, the way the engine's own
- * ConfigEntityStorage applies the same layout.
+ * never has to know the contributor exists.
+ *
+ * For an operation that deletes, prepare() and commit() are the storage's
+ * prepareDelete() and delete(), handed what is stored: a delete takes no
+ * values. A child stored apart is not routed; removing it with its parent
+ * is the parent's storage's to do.
  *
  * @internal
  */
-final class StorageAdapter implements CreatingStorageInterface {
+final class StorageAdapter implements CreatingStorageInterface, DeletingStorageInterface {
 
   use DependencySerializationTrait;
 
@@ -83,6 +89,12 @@ final class StorageAdapter implements CreatingStorageInterface {
    *   child it stores by its dotted path: what is stored under each is
    *   handed back to the storage untouched, because the caller could not
    *   see it.
+   * @param bool $deletes
+   *   Whether the operation removes the thing: prepare() and commit() are
+   *   then the storage's prepareDelete() and delete().
+   *
+   * @throws \LogicException
+   *   When the operation deletes and the storage cannot.
    */
   public function __construct(
     protected ResourceStorageInterface $storage,
@@ -90,7 +102,11 @@ final class StorageAdapter implements CreatingStorageInterface {
     protected array $routes = [],
     protected array $identity = [],
     protected array $omitted = [],
+    protected bool $deletes = FALSE,
   ) {
+    if ($deletes && !$storage instanceof DeletableStorageInterface) {
+      throw new \LogicException(sprintf('The "%s" operation deletes, and %s cannot: a storage that removes what it holds implements %s.', $context->id, get_class($storage), DeletableStorageInterface::class));
+    }
   }
 
   /**
@@ -98,6 +114,13 @@ final class StorageAdapter implements CreatingStorageInterface {
    */
   public function creates(): bool {
     return $this->context->creates;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function deletes(): bool {
+    return $this->deletes;
   }
 
   /**
@@ -136,6 +159,10 @@ final class StorageAdapter implements CreatingStorageInterface {
    * at, the way the pipeline files a child's own.
    */
   public function prepare(DataSurfaceInterface $surface, array $values): PreparedValues {
+    if ($this->storage instanceof DeletableStorageInterface && $this->deletes) {
+      // Decision: see docs/decisions.md#a-placed-block-is-a-resource.
+      return new PreparedValues($values, $this->storage->prepareDelete($this->context));
+    }
     $own = self::applyThirdPartyLayouts($surface, $values, TRUE);
     if ($this->omitted !== []) {
       // Decision: see docs/decisions.md#omitted-is-omitted-both-ways.
@@ -190,6 +217,13 @@ final class StorageAdapter implements CreatingStorageInterface {
    */
   public function commit(PreparedValues $prepared): void {
     $artifact = $prepared->artifact;
+    if ($this->storage instanceof DeletableStorageInterface && $this->deletes) {
+      if (!is_array($artifact)) {
+        throw new \InvalidArgumentException('The prepared values did not come from this storage.');
+      }
+      $this->storage->delete($this->context, $artifact);
+      return;
+    }
     if ($this->routes === []) {
       if (!is_array($artifact)) {
         throw new \InvalidArgumentException('The prepared values did not come from this storage.');
@@ -245,7 +279,7 @@ final class StorageAdapter implements CreatingStorageInterface {
     if (!is_array($artifact)) {
       throw new \InvalidArgumentException('The prepared values did not come from this storage.');
     }
-    if ($this->routes === []) {
+    if ($this->routes === [] || $this->deletes) {
       return $artifact;
     }
     $children = [];

@@ -225,7 +225,7 @@ class ContractDiffCommandTest extends DataSurfaceKernelTestBase {
     $this->assertSame(['first.newsletter', 'first.store'], $report['written']);
     $this->assertSame(['first.gone'], $report['removed']);
     $this->assertFileDoesNotExist($this->directory . '/first.gone.json');
-    $this->assertCount(21, glob($this->directory . '/*.json'), 'The other modules\' 19 baselines and the named module\'s two.');
+    $this->assertCount(23, glob($this->directory . '/*.json'), 'The other modules\' 21 baselines and the named module\'s two.');
     $this->assertFileExists($this->directory . '/registration.step1.json');
   }
 

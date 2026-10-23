@@ -2455,13 +2455,17 @@ final class Resources implements ResourcesInterface {
       if ($from !== NULL) {
         $list = $this->variantsFrom($definition, (string) $key, $from);
         $builder->addCacheableDependency($list);
-        foreach ($list->entries() as $value => ['label' => $label, 'schema' => $schema]) {
+        foreach ($list->entries() as $value => $entry) {
           $value = (string) $value;
           if (isset($children[$value])) {
             continue;
           }
-          $children[$value] = $inputs->readStructure($definition->id . '.' . $key . '.' . $value, SchemaReader::prepared($schema), '');
-          $labels[$value] = $label;
+          // A structure the site's code declares is built as declared; any
+          // other is read from its schema.
+          $children[$value] = isset($entry['structure'])
+            ? $this->registry->getDefinition($entry['structure'])->name()
+            : $inputs->readStructure($definition->id . '.' . $key . '.' . $value, SchemaReader::prepared($entry['schema']), '');
+          $labels[$value] = $entry['label'];
         }
       }
       $variantKeys[$key] = [
@@ -2998,12 +3002,14 @@ final class Resources implements ResourcesInterface {
         }
       }
     }
+    $operation = $this->registry->getOperations($definition->name())[$context->id] ?? NULL;
     return new StorageAdapter(
       $this->instance((string) $definition->storage, ResourceStorageInterface::class),
       $context,
       $routes,
       $definition->identity,
       $this->omittedKeys($definition, $built),
+      $operation?->kind() === OperationDefinition::DELETE,
     );
   }
 

@@ -40,7 +40,7 @@ final class ResourceCatalog {
   /**
    * Describes every discovered resource and structure.
    *
-   * @return array<string, array{id: string, class: class-string|null, deriver: string|null, module: string, kind: string, identity: string[], storage: class-string|null, access: class-string|null, plugins: list<string>, operations: list<array{id: string, label: string, provider: string, module: string, parameters: string[], creates: bool, permission: string|null, unresolvable: string[], standalone: bool, reads: bool}>, alters: list<array{class: class-string, module: string, operations: string[], refines: list<array{key: string, watches: string[]}>}>, variants: array<string, array<string, class-string>>, derived: array<string, string>}>
+   * @return array<string, array{id: string, class: class-string|null, deriver: string|null, module: string, kind: string, identity: string[], storage: class-string|null, access: class-string|null, plugins: list<string>, operations: list<array{id: string, label: string, provider: string, module: string, parameters: string[], creates: bool, kind: string, permission: string|null, unresolvable: string[], standalone: bool, reads: bool}>, alters: list<array{class: class-string, module: string, operations: string[], refines: list<array{key: string, watches: string[]}>}>, variants: array<string, array<string, class-string>>, derived: array<string, string>}>
    *   The entries, keyed and sorted by id. `kind` is resource or
    *   structure. `class` is NULL for a derived one, whose `deriver` is
    *   the base id it was derived under (NULL for every other). `plugins`
@@ -82,6 +82,7 @@ final class ResourceCatalog {
           'module' => $operation->module,
           'parameters' => array_map(static fn (OperationParameter $parameter): string => $parameter->describe(), $operation->parameters),
           'creates' => $operation->creates,
+          'kind' => $operation->kind(),
           'permission' => $operation->permission,
           'unresolvable' => $operation->unresolvablePlaceholders(),
           'standalone' => static::standalone($definition, $operation, $plugins),

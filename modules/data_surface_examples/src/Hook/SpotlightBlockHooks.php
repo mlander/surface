@@ -4,22 +4,25 @@ declare(strict_types=1);
 
 namespace Drupal\data_surface_examples\Hook;
 
-use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Extension\ModuleHandlerInterface;
-use Drupal\Core\Extension\ThemeHandlerInterface;
 use Drupal\Core\Hook\Attribute\Hook;
+use Drupal\data_surface\Pipeline\DataSurfacePipelineInterface;
+use Drupal\data_surface\ResourceBuild\ResourcesInterface;
+use Drupal\data_surface_examples\ConceptCalls;
 
 /**
- * Example 13: places the Spotlight block once its plugin is there.
+ * Example 13: places the Spotlight block through the placement resource.
  *
- * The component block lives in data_surface_component_block, which the
- * examples do not depend on. When that module and this one are both on,
- * whichever came second, one block is placed: Spotlight, the card this
- * module ships, in the default theme's content region, shown on example
- * 13's page alone, below what the page says. Nothing is placed during a
- * configuration import, which brings its own blocks, or where the default
- * theme has no content region.
+ * The component block lives in data_surface_component_block and the
+ * placement resource in data_surface_block, neither of which the examples
+ * depend on. When both are on with this module, whichever came last, one
+ * block is placed through the resource's add operation, with the values
+ * example 13's first call sends: Spotlight, the card this module ships,
+ * in the default theme's content region, shown on example 13's page
+ * alone. Nothing is placed during a configuration import, which brings its
+ * own blocks, when the block is placed already, or when the resource
+ * refuses the values (a default theme with no content region).
  */
 final class SpotlightBlockHooks {
 
@@ -27,6 +30,11 @@ final class SpotlightBlockHooks {
    * The module the component block lives in.
    */
   public const MODULE = 'data_surface_component_block';
+
+  /**
+   * The module the placement resource lives in.
+   */
+  public const PLACEMENT = 'data_surface_block';
 
   /**
    * The block's machine name.
@@ -39,40 +47,22 @@ final class SpotlightBlockHooks {
   public const PAGE = '/surface-examples/13';
 
   /**
-   * The block's settings as placed: the card, as example 12 ships it.
-   */
-  public const SETTINGS = [
-    'label' => 'Spotlight',
-    'label_display' => 'visible',
-    'component' => 'data_surface_examples:card',
-    'props' => [
-      'heading' => 'Doors open at half past six',
-      'body' => 'Bring your ticket, on your phone or printed.',
-      'tone' => 'highlight',
-      'link' => [
-        'url' => 'https://example.com/tickets',
-        'label' => 'Find your ticket',
-      ],
-    ],
-  ];
-
-  /**
    * Constructs a SpotlightBlockHooks object.
    *
    * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entityTypeManager
    *   The entity type manager, for the block storage.
-   * @param \Drupal\Core\Config\ConfigFactoryInterface $configs
-   *   The config factory, for the default theme.
    * @param \Drupal\Core\Extension\ModuleHandlerInterface $moduleHandler
    *   The module handler.
-   * @param \Drupal\Core\Extension\ThemeHandlerInterface $themes
-   *   The theme handler, for the default theme's regions.
+   * @param \Drupal\data_surface\ResourceBuild\ResourcesInterface $resources
+   *   The resources, which build the placement's add operation.
+   * @param \Drupal\data_surface\Pipeline\DataSurfacePipelineInterface $pipeline
+   *   The pipeline the values are submitted through.
    */
   public function __construct(
     protected readonly EntityTypeManagerInterface $entityTypeManager,
-    protected readonly ConfigFactoryInterface $configs,
     protected readonly ModuleHandlerInterface $moduleHandler,
-    protected readonly ThemeHandlerInterface $themes,
+    protected readonly ResourcesInterface $resources,
+    protected readonly DataSurfacePipelineInterface $pipeline,
   ) {}
 
   /**
@@ -80,36 +70,28 @@ final class SpotlightBlockHooks {
    */
   #[Hook('modules_installed')]
   public function modulesInstalled(array $modules, bool $is_syncing): void {
-    if ($is_syncing || array_intersect($modules, ['data_surface_examples', self::MODULE]) === [] || !$this->moduleHandler->moduleExists(self::MODULE)) {
+    if ($is_syncing || array_intersect($modules, ['data_surface_examples', self::MODULE, self::PLACEMENT]) === []) {
       return;
     }
-    $this->place();
+    if ($this->moduleHandler->moduleExists(self::MODULE) && $this->moduleHandler->moduleExists(self::PLACEMENT)) {
+      $this->place();
+    }
   }
 
   /**
-   * Places the Spotlight block, unless it is placed or has nowhere to go.
+   * Places the Spotlight block, unless it is placed or is refused.
+   *
+   * @return bool
+   *   TRUE when it was placed now.
    */
-  public function place(): void {
-    $storage = $this->entityTypeManager->getStorage('block');
-    $theme = (string) $this->configs->get('system.theme')->get('default');
-    if ($storage->load(self::BLOCK) !== NULL || !$this->themes->themeExists($theme) || !isset($this->themes->getTheme($theme)->info['regions']['content'])) {
-      return;
+  public function place(): bool {
+    if ($this->entityTypeManager->getStorage('block')->load(self::BLOCK) !== NULL) {
+      return FALSE;
     }
-    $storage->create([
-      'id' => self::BLOCK,
-      'theme' => $theme,
-      'region' => 'content',
-      'weight' => 100,
-      'plugin' => 'data_surface_component',
-      'settings' => self::SETTINGS,
-      'visibility' => [
-        'request_path' => [
-          'id' => 'request_path',
-          'negate' => FALSE,
-          'pages' => self::PAGE,
-        ],
-      ],
-    ])->save();
+    $context = $this->resources->operation('block.placement', 'add');
+    $built = $this->resources->build('block.placement', $context);
+    $result = $this->pipeline->submit($built, ConceptCalls::values('block.placement', 'place') ?? [], $this->resources->storage('block.placement', $context, $built));
+    return $result->committed;
   }
 
 }

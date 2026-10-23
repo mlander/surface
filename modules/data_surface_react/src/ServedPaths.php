@@ -29,11 +29,14 @@ use Symfony\Component\HttpFoundation\Request;
  *   schema for it (a create's: the declared defaults);
  * - `PATCH` the path's default update;
  * - `POST` the collection's default create;
+ * - `DELETE` the path's default delete: an operation that removes the
+ *   thing, its body empty;
  * - `GET .../schema` the full schema of the operation `GET` serves, and
  *   `POST .../schema` the schema for the values sent, a query.
  *
  * The default of a kind at a path is the operation named for it (`add`
- * for a create; `configure` or `edit` for an update; `read` for a read),
+ * for a create; `configure` or `edit` for an update; `read` for a read;
+ * `remove` or `delete` for a delete),
  * or else the only operation of that kind there; a read is a default only
  * where no update is. Any other operation is a custom method on the path
  * of what it addresses: `GET .../{x}:{operation}` its envelope, `POST
@@ -94,6 +97,7 @@ final class ServedPaths {
     OperationDefinition::CREATE => ['add'],
     OperationDefinition::UPDATE => ['configure', 'edit'],
     OperationDefinition::READ => ['read'],
+    OperationDefinition::DELETE => ['remove', 'delete'],
   ];
 
   /**
@@ -190,12 +194,15 @@ final class ServedPaths {
         'GET' => $read,
         'PATCH' => $defaults[OperationDefinition::UPDATE],
         'POST' => $placement === self::COLLECTION ? $defaults[OperationDefinition::CREATE] : NULL,
+        'DELETE' => $defaults[OperationDefinition::DELETE],
       ]));
       [$id, $action] = match (TRUE) {
         $schema && $method === 'GET' => [$read, ServedTarget::SCHEMA],
         $schema && $method === 'POST' => [$read, ServedTarget::NARROW],
         !$schema && $method === 'GET' => [$read, ServedTarget::READ],
         !$schema && $method === 'PATCH' => [$defaults[OperationDefinition::UPDATE], ServedTarget::WRITE],
+        // Decision: see docs/decisions.md#a-placed-block-is-a-resource.
+        !$schema && $method === 'DELETE' => [$defaults[OperationDefinition::DELETE], ServedTarget::WRITE],
         !$schema && $method === 'POST' && $placement === self::COLLECTION => [
           $defaults[OperationDefinition::CREATE],
           ServedTarget::WRITE,
@@ -327,7 +334,7 @@ final class ServedPaths {
     }
     $defaults = [];
     foreach ($placed as $placement => $kinds) {
-      foreach ([OperationDefinition::CREATE, OperationDefinition::UPDATE, OperationDefinition::READ] as $kind) {
+      foreach (array_keys(self::NAMED) as $kind) {
         $candidates = $kinds[$kind] ?? [];
         $named = array_values(array_intersect($candidates, self::NAMED[$kind]));
         $default = match (TRUE) {
@@ -405,15 +412,19 @@ final class ServedPaths {
    *   The operation.
    *
    * @return array{0: string, 1: bool}
-   *   `PATCH` on the plain path for the default update, `POST` on the
-   *   collection for the default create, and `POST` on the custom method
-   *   for any other; and whether the path names the operation.
+   *   `PATCH` on the plain path for the default update, `DELETE` on it for
+   *   the default delete, `POST` on the collection for the default create,
+   *   and `POST` on the custom method for any other; and whether the path
+   *   names the operation.
    */
   public function writes(ResourceDefinition $definition, OperationDefinition $operation): array {
     $placement = $this->placement($definition, $operation);
     $defaults = $this->defaults($definition)[$placement];
     if ($defaults[OperationDefinition::UPDATE] === $operation->id) {
       return ['PATCH', FALSE];
+    }
+    if ($defaults[OperationDefinition::DELETE] === $operation->id) {
+      return ['DELETE', FALSE];
     }
     if ($placement === self::COLLECTION && $defaults[OperationDefinition::CREATE] === $operation->id) {
       return ['POST', FALSE];

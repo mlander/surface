@@ -179,7 +179,7 @@ grep:
 - `Pipeline\Omitted` → `Pipeline\NotEmitted`;
 - `AccessAnswer::answer()` → `AccessAnswer::getAnswer()`;
 - `Storage\StateStorage` → `Pipeline\Storage\StateStorage`;
-- `Storage\ConfigEntityStorage` → `Pipeline\Storage\ConfigEntityStorage`;
+- `Storage\ConfigEntityStorage` → `Pipeline\Storage\ConfigEntityStorage` (back in `Storage\` on 2026-10-23, a resource's storage: [A placed block is a resource](#a-placed-block-is-a-resource));
 - `Storage\FieldSettingsStorage` → `Pipeline\Storage\FieldSettingsStorage`;
 - `Storage\BaseFieldOverrideStorage` → `Pipeline\Storage\BaseFieldOverrideStorage`;
 - `Storage\PluginConfigurationStorage` → `Pipeline\Storage\PluginConfigurationStorage`;
@@ -2255,7 +2255,8 @@ moves with the site's language and its alters.
   module's own for its own refusals (`required`, `does_not_apply`,
   `unknown_key`, `locked`, `cannot_clear`, `type_mismatch`,
   `wrong_variant`, `no_variant`, `secret_in_item`, `not_found`,
-  `access`, `permission`, `conflict`, `no_schema`, `stale`). The table
+  `access`, `permission`, `conflict`, `no_schema`, `stale`, and since
+  2026-10-23 `taken`). The table
   is in [semantics](semantics.md#codes). Why the name and not Symfony's
   UUID: the name stands for it one to one (`Constraint::getErrorName()`)
   and reads in a log and a transcript. The pipeline dropped the
@@ -2681,9 +2682,11 @@ that destroys, or that is not idempotent, is refused at discovery.
   ([Whether an operation creates](#whether-an-operation-creates)), so
   idempotence is derived from it and declared only where the author
   knows better: an operation that appends is not idempotent, and a
-  create whose caller names the thing is. None of the module's own
-  operations destroys: an edit changes the keys it is sent, and a key
-  left out keeps its value.
+  create whose caller names the thing is. An edit destroys nothing: it
+  changes the keys it is sent, and a key left out keeps its value. The
+  first operation that does is the placement's `remove`, a delete
+  (decided 2026-10-23); a delete that does not say it is destructive is
+  refused at discovery.
 - **A create the caller names is idempotent** (decided 2026-10-20).
   `node.type:add`, `field.instance:add` and `field.instance:reuse`
   create a thing whose identity the caller sends, a machine name or a
@@ -2737,11 +2740,15 @@ that destroys, or that is not idempotent, is refused at discovery.
   contract diff. A document
   asked for in no operation states none.
 - **A kind, derived.** `kind` names the call in one word, `create`,
-  `update` or `read` (decided 2026-10-19): a read only operation is a
-  read, one that creates is a create, and every other an update
+  `update`, `read` or `delete` (decided 2026-10-19; `delete` 2026-10-23):
+  a read only operation is a read, one that creates is a create, one
+  that says `deletes: TRUE` a delete, which takes no values and removes
+  the thing it names
+  ([A placed block is a resource](#a-placed-block-is-a-resource)), and
+  every other an update
   (`OperationDefinition::kind()`), read off the attribute, so known
   before anything is built. It is never declared, so it
-  cannot disagree with `readOnly` and `creates`. The contract diff
+  cannot disagree with `readOnly`, `creates` and `deletes`. The contract diff
   compares it beside `creates` (until [contract 2](#contract-2) it
   compared `readOnly`, which the documents no longer state). It is the
   fact a client needs first,
@@ -3829,44 +3836,161 @@ structure of two keys, example 12's two lines under the block's id,
   definition is a title and a description, with no schema for a value a
   block could store, so the block passes props and no slot. *Open:*
   slots, filled from text with a format or from other blocks.
-- **A placed block is a resource, so an agent can configure it.** A
-  plugin's structure is held by its host and is no tool ([Tools](resources.md#tools),
-  rule 2), and no host exposes a placed block's settings through the
-  Tool API today. A placed block is a config entity with a machine name
-  and storage of its own, so the submodule declares
-  `block.placed_component`: identity `block`, the machine name; storage
-  the block config entity, reading and writing the structure's keys and
-  keeping the host's own (label, how it shows, plugin id, provider); and
-  the block's structure attached at `settings`, where the block keeps
-  it, since a structure mixed in holds no children. Its one operation,
-  `configure`, takes the block (`BlockInterface`) and refuses a block of
-  another plugin; it asks "administer blocks". The bridge derives
-  `data_surface:block.placed_component:configure` (inputs `block`,
-  `values`, `dry_run`) and the read tool beside it (input `block`), and
-  the HTTP door serves it at `/surface-api/block.placed_component/{block}`.
-  Over MCP an agent can read a placed component block's component and
-  props by its machine name, change both, rehearse the change first, and
-  is refused, by path and in the schema's words, props of another
-  component or out of their bounds. It cannot yet place a block, choose
-  its theme, region, weight or visibility, remove one, list the placed
-  blocks to learn their machine names, or configure a block of any other
-  plugin this way. The general case is ROADMAP item 11's: a placed block
-  as one config entity resource whose settings are variants chosen by
-  plugin id, each plugin's structure one of them. This is that for one
-  plugin, written so the general resource can replace it.
+- **A placed block is configured through the placement resource.**
+  *Changed 2026-10-23.* The submodule declared a resource for a placed
+  component block, `block.placed_component`, until the general case
+  landed: a placed block of any plugin is now `block.placement`, whose
+  plugin chooses its settings, this block's structure for this plugin
+  ([A placed block is a resource](#a-placed-block-is-a-resource)). The
+  stop-gap resource and its storage are gone, and its two tools with
+  them.
 
 Example 13 (`/surface-examples/13`) shows the structure beside example
-12's resource, the block's contract and tools, and a call to the tool
-that configures the Spotlight block, which the examples place in the
-default theme's content region, shown on that page alone, once both
-modules are on. *Open:* slots; one resource for a placed block of any
-plugin; placing, moving and listing blocks through a tool; the add form
-without JavaScript ([A plugin host cannot overlay a full
-submission](#a-plugin-host-cannot-overlay-a-full-submission)).
+12's resource, the block's contract, the placement's tools, and three
+calls to them: the add that placed the Spotlight block, made again, an
+edit of its props and its removal, each a dry run. The examples place
+the Spotlight block through the add operation in the default theme's
+content region, shown on that page alone, once the block and the
+placement are on. *Open:* slots; listing the placed blocks; the add
+form without JavaScript ([A plugin host cannot overlay a full
+submission](#a-plugin-host-cannot-overlay-a-full-submission)). *Closed
+2026-10-23:* one resource for a placed block of any plugin, and placing,
+moving within a theme and removing blocks through a tool
+([A placed block is a resource](#a-placed-block-is-a-resource)).
 (`ComponentBlockStructure`, `ComponentBlock`,
-`PlacedComponentBlockResource`, `PlacedComponentBlockStorage`,
 `Variants\ComponentProps`, `ComponentBlockTest`,
 `ComponentBlockPlacementTest`, `ComponentBlockAjaxTest`)
+
+### A placed block is a resource
+
+Decided 2026-10-23. A placed block, the config entity `block.block.<id>`,
+is the resource `block.placement`, and the block plugin's settings are
+the variant its `plugin` key chooses. An agent places, configures, moves
+within its theme and removes a block through the tool door, HTTP and a
+form, each validated as any resource is. Each choice, and why:
+
+- **A submodule of its own, `data_surface_block`.** The placement is the
+  block layout's, not any plugin's: every plugin's settings are one
+  variant of it. So the general resource lives beside the block layout,
+  and the component block, one plugin, needs no resource of its own: its
+  stop-gap `block.placed_component` is removed, and example 13's calls
+  are the general resource's. Neither submodule depends on the other.
+  The component block renders without the placement, and the placement
+  offers whatever plugins the site has, the component block among them
+  when it is on. Rejected: renaming `data_surface_component_block`,
+  which would tie every placed block to one plugin's module.
+- **Three operations, by the machine name.** `add` creates under an `id`
+  the caller types, idempotent since the caller names it, and refuses an
+  id in use (code `taken`, from the storage); `edit` takes the block and
+  holds its theme to the one it is in, so moving a block between themes
+  is not offered; `remove` deletes it. Each asks "administer blocks",
+  the block layout's permission.
+- **The settings are variants chosen by the plugin id.**
+  `attachVariants('settings', by: 'plugin', from:
+  BlockPluginStructures::class)`. The plugins are the ones the block
+  layout offers (`getFilteredDefinitions('block_ui')`, less the hidden
+  and the broken one), less any plugin that declares a context: which
+  context a placed block reads is open, so such plugins are not offered
+  yet, and the `plugin` key's description says so. A plugin whose class
+  carries `#[UsesStructure]` is its declared structure, built as
+  declared: `VariantList::addStructure()` names a structure class where
+  an entry otherwise carries a schema. Any other plugin is read with the
+  schema reader from `block.settings.<plugin id>`, resolved as typed
+  config resolves it (a wildcard type, and `block.settings.*` for a
+  plugin with none), less the keys every block has, written as JSON
+  Schema by `ConfigSchemaDocument`, the plugin's own defaults each key's
+  default. Why both: a declared structure keeps its refiners, children
+  and variants, which its schema read back would not (a coded refiner
+  cannot be read back), and the config schema is the one description a
+  plain plugin has. What a config schema says that JSON Schema says too
+  is carried (Choice, Range, Length, Count, NotBlank); the rest is left
+  to storage, which holds the whole block to its schema before anything
+  is written, so neither document is stricter than the block.
+- **The keys every block has are the resource's.** `label`,
+  `label_display` (a boolean, stored as core's `visible` or `0`),
+  `status`, `weight`, `theme` and `region`, beside `id`, `plugin`,
+  `settings` and `visibility`; the provider and the context mapping are
+  the storage's to write. Rejected: a structure mixed into every
+  variant, which would state the same keys in every variant's def, and
+  make a client read the chosen variant to find a block's title.
+- **The theme and the region.** The theme is core's `ExtensionExists`
+  (`theme`), which a new options resolver, `extension_exists`, reads as
+  the installed themes. The region is any installed theme's visible
+  region (`DataSurfaceAnyThemeRegion`) until the theme narrows it: a
+  static refiner adds `DataSurfaceThemeRegion` with the theme beside it,
+  and the one resolver answers the two together as that theme's visible
+  regions, the ones the block layout offers. Declared with a list, the
+  region is a select at every door from the start, which the React page,
+  choosing a widget once, needs. Both lists are cached by
+  `config:core.extension`. The themes can be
+  listed, so the full schema enumerates the region per theme
+  (`enumerated`), exact, rather than marking it `refine`. A region the
+  theme lacks is refused by name: "The olivero theme has no region named
+  header_nope."
+- **The visibility is a list of conditions.** Each item is `{id,
+  negate, settings}`, its settings the variant its condition id
+  chooses, from `ConditionPluginStructures`: the conditions the block
+  layout offers (those whose contexts the site can give, less the
+  current theme, and the language while the site has one), each its
+  declared structure or read from `condition.plugin.<id>`, with a
+  `context_mapping` of one key per context it reads, offering the
+  site's contexts that fit, the first the default, as the block layout
+  assigns it. Storage writes core's map by condition id and refuses a
+  condition held twice (`taken`, by its place in the list); a list of
+  strings is stored as core's map of each value to itself, the way the
+  block layout submits checkboxes. Rejected: a map keyed by condition
+  id, since keys from the site attach one structure per map and each
+  condition's settings differ.
+- **`ConfigEntityStorage` is a resource's storage.** Abstract, its
+  subclass naming `ENTITY_TYPE_ID` and `PROPERTIES` (a key to a
+  property, or to `['method' => 'setX']`), as `ConfigObjectStorage`
+  names its config object. `prepare()` copies the stored entity from its
+  exported array (a clone shares the plugin collections of the entity
+  the request holds), shapes the values onto it, calculates the
+  dependencies its save would, and holds it to its config schema, which
+  for a config entity is its validation; `commit()` saves that array.
+  The engine's class of the same name in `Pipeline\Storage\` is gone: no
+  host used it, and the naming review had found one short name for
+  three classes, core's included. `BlockPlacementStorage` adds the
+  settings, the visibility and the label to it; `NodeTypeStorage` is
+  rebuilt on it, its base field overrides beside, with no change to any
+  document.
+- **A delete takes no values.** `#[Operation(deletes: TRUE)]`, beside
+  `destructive: TRUE`, makes the kind `delete`. The pipeline accepts and
+  validates nothing: storage rehearses the removal
+  (`DeletableStorageInterface::prepareDelete()`) and removes it
+  (`delete()`); the values answered are what was stored, and `changes`
+  is `[""]`, the empty pointer, the whole thing. Values sent are refused
+  by name (`unknown_key`). Why a flag, not the name: whether a call
+  removes the thing is the author's fact, as whether it creates is, and
+  a name is how a door picks a default. Why nothing is validated: a
+  block whose region its theme dropped must still be removable.
+- **At each door.** The tool takes the parameters and `dry_run` and no
+  `values`, is a destructive Write, and has no read tool beside it.
+  HTTP serves a resource's default delete, the one named `remove` or
+  `delete` or the only delete at a path, as `DELETE` on the thing's
+  path, with no body; it answers 200 with the result and no envelope or
+  `ETag`, the thing being gone, and takes `dryRun` and `If-Match` as any
+  write ([Contract 3](#contract-3-the-operation-is-the-method)); the
+  OpenAPI document follows. The operation form draws a confirmation: what
+  is removed, that it cannot be undone, and one button with the
+  operation's label.
+
+*Open:* context-aware plugins (a placed block's context mapping);
+moving a block between themes; Layout Builder's components; a block in
+a region its theme hides, which edit reads as stale; a block setting
+whose sequence is a keyed map, read as a list; the add form without
+JavaScript for a plugin's settings, which are drawn once the plugin is
+chosen. (`BlockPlacementResource`, `BlockPlacementStorage`,
+`BlockPluginStructures`, `ConditionPluginStructures`,
+`ConfigSchemaDocument`, `VisibilityConditionStructure`,
+`ThemeRegionOptions`, `AnyThemeRegionConstraint`, `ExtensionExistsOptions`,
+`Storage\ConfigEntityStorage`,
+`DeletableStorageInterface`, `DeletingStorageInterface`,
+`VariantList::addStructure()`, `BlockPlacementResourceTest`,
+`BlockPlacementToolsTest`, `BlockPlacementApiTest`,
+`BlockPlacementFormTest`, `BlockPlacementReactTest`,
+`ConfigEntityStorageTest`)
 
 ## Examples
 
@@ -4639,6 +4763,12 @@ door spells a path. The endpoint table is in
   defaults and the schema a `POST` takes: there is no listing, since a
   listing would carry stored values a client caches
   ([Required is the resource's](#required-is-the-resources-and-an-update-tool-requires-nothing-at-its-door)).
+  *Added 2026-10-23:* `DELETE` on a path is its default delete, the
+  operation named `remove` or `delete`, or else the only delete there:
+  it takes no body, answers 200 with the result, and leaves no envelope
+  or `ETag`, the thing being gone; a delete that is not a default is a
+  custom method, `POST .../{x}:{operation}`, as any other
+  ([A placed block is a resource](#a-placed-block-is-a-resource)).
   (`ServedPaths::defaults()`, `ServedPaths::writes()`)
 - **A custom method for the rest.** Any other operation, of any kind, is
   `:{operation}` after the last segment of the path it addresses:
@@ -5010,7 +5140,11 @@ lists from the site, each with its schema. Each choice, and why:
   children or variants of its own, and a schema may say all three, so
   each listed variant is a structure read from its schema, built by the
   same build step as a class. A declared `#[Variant]` wins for a value
-  both name. The contract does not change: `anyOf` of each variant's
+  both name. *Added 2026-10-23:* an entry may name a structure class in
+  place of a schema (`VariantList::addStructure()`), built as declared,
+  for a value whose structure the site's code declares: a block plugin
+  naming its settings with `#[UsesStructure]`
+  ([A placed block is a resource](#a-placed-block-is-a-resource)). The contract does not change: `anyOf` of each variant's
   def, one conditional per variant, the tool listing flattening them,
   the React app narrowing locally, exactly as for a class's variants.
 - **Read structures are registered, not discovered.** Each object a

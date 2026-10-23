@@ -100,6 +100,12 @@ final class Operation {
    *   the tool's description and the top `description` of both schema
    *   documents. NULL takes the method's docblock summary, for the method
    *   form; the class form then has none.
+   * @param bool $deletes
+   *   Whether a call removes the thing it names: it takes no values, only
+   *   the parameters that name the thing, and its kind is a delete. Such
+   *   an operation says destructive: TRUE too, and neither creates nor is
+   *   read only; the facts are refused at discovery otherwise. Its tool
+   *   takes the parameters and a dry run, and HTTP serves it as DELETE.
    */
   public function __construct(
     public readonly string $id,
@@ -112,6 +118,7 @@ final class Operation {
     public readonly ?bool $idempotent = NULL,
     public readonly bool $creates = FALSE,
     public readonly string|\Stringable|null $description = NULL,
+    public readonly bool $deletes = FALSE,
   ) {}
 
 }

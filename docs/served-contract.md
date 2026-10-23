@@ -1056,6 +1056,7 @@ route, `data_surface_react.api`, answers every path below;
 | `POST /surface-api/{resource}` | The default create, on the collection of a resource with identity. |
 | `GET /surface-api/{resource}/{id}` | One thing's envelope, its default update's (or default read's). |
 | `PATCH /surface-api/{resource}/{id}` | One thing's default update. |
+| `DELETE /surface-api/{resource}/{id}` | One thing's default delete: removes it, with no body. |
 | `GET .../schema` | The full schema of the operation `GET` serves at that path, `application/schema+json`. |
 | `POST .../schema` | The envelope narrowed for the values the body sends: the schema, given these values. A query. |
 | `GET .../{x}:{operation}` | A custom method's envelope: any operation that is not a default. |
@@ -1077,12 +1078,13 @@ string: `POST /surface-api/field.instance?entity_type_id=node&bundle=article`.
 
 **Which operation is the default.** At each path, of each kind: the
 operation named for it (`add` for a create; `configure` or `edit` for
-an update; `read` for a read), or else the only operation of that kind
-at the path; two of a kind with neither named so leaves the kind with
-no default. A read is a default only where no update is. `GET` serves
-the default update, else the default read, else, on a collection, the
-default create; `PATCH` is the default update; `POST` on the collection
-is the default create. Every other operation is a custom method,
+an update; `read` for a read; `remove` or `delete` for a delete), or
+else the only operation of that kind at the path; two of a kind with
+neither named so leaves the kind with no default. A read is a default
+only where no update is. `GET` serves the default update, else the
+default read, else, on a collection, the default create; `PATCH` is the
+default update; `POST` on the collection is the default create;
+`DELETE` is the default delete. Every other operation is a custom method,
 `:{operation}` after the last segment of the path it addresses:
 example 10's `check`, read-only beside the program's `configure`, is
 `/surface-api/event.program:check`; the field instance's `reuse`, a
@@ -1102,7 +1104,7 @@ parameters.", so it never says whether an id exists, and only an
 account holding the operation's permission hears the access class's
 own, and that an id names nothing (404)
 ([decision](decisions.md#every-door-projects-what-the-read-tool-projects)).
-A `POST` or a `PATCH` carrying the session cookie requires
+A `POST`, a `PATCH` or a `DELETE` carrying the session cookie requires
 `X-CSRF-Token` from `/session/token` (`_csrf_request_header_token`).
 
 Every answer carries `Contract-Version: 3`, the version of the wire
@@ -1238,7 +1240,7 @@ same at both doors, so a program calling the API branches on them
 | 400 | A body that is not a JSON object, or a parameter the operation needs given nowhere. |
 | 403 | Access refused, at the route or by the pipeline for the whole call (code `access` or `permission`); the session's token missing. |
 | 404 | A resource, an operation or an id that names nothing. |
-| 405 | A method the path does not answer, with `Allow`: a `POST` on a singleton, a `PATCH` on a collection, a write to a resource with no storage. |
+| 405 | A method the path does not answer, with `Allow`: a `POST` on a singleton, a `PATCH` on a collection, a `DELETE` where no delete is, a write to a resource with no storage. |
 | 410 | A contract 2 path ([gone](#gone)). |
 | 412 | `If-Match` no longer names what is stored ([conflict](#conflict)). |
 | 415 | A body of a media type the method does not take; a `PATCH`'s answer names them in `Accept-Patch`. |
@@ -1279,6 +1281,34 @@ operation's envelope as `contract`, and:
 The operation form's cosmetic message and redirect are its route's;
 their HTTP equivalents are the status, `Location` and `created`, and the
 client says the rest.
+
+### The delete
+
+**`DELETE /surface-api/{resource}/{id}`** runs the path's default
+delete: an operation that says `#[Operation(deletes: TRUE)]` (and
+`destructive: TRUE`), whose kind is `delete`, named `remove` or `delete`
+or the only delete there
+([decision](decisions.md#a-placed-block-is-a-resource)). A delete takes
+no values, so the request has no body; one sent is held to JSON and each
+of its keys refused, code `unknown_key`. Nothing is accepted or
+validated: the storage rehearses the removal, and removes the thing,
+whatever its stored values hold, so a placed block whose region its
+theme no longer has can still be removed.
+
+| Request | Means |
+| --- | --- |
+| `?dryRun=true` | Rehearse the removal and remove nothing; `x-surface-dry-run: true`. |
+| `If-Match: "<ETag>"` | Remove only if what is stored is still what that `ETag` named; 412 otherwise. |
+| `X-CSRF-Token` | The session's token, with the session cookie. |
+
+It answers 200 with the one result: `values` the values the thing held,
+`changes` `[""]`, the empty pointer, the whole thing, `committed` and
+`changed` true, and `outputs` `{}`, `contract` and `created` null, with
+no `ETag`: the thing is gone, and there is no envelope to rebuild. A thing
+that is not there is a 404, as on any path. A delete that is not its
+path's default is a custom method, `POST .../{x}:{operation}`, its
+envelope `GET .../{x}:{operation}` as any other's; the placement's
+`remove` is the default, `DELETE /surface-api/block.placement/{id}`.
 
 ### Problem details
 
@@ -1431,7 +1461,11 @@ is open.
   `get` and `patch`, `/surface-api/node.type` with `get` and `post` and
   `/surface-api/node.type/{type}` with `get` and `patch`, each with a
   `/schema` path item, `get` and `post`; a custom method is a path item
-  of its own, `/surface-api/event.program:check`, `get` and `post`. An
+  of its own, `/surface-api/event.program:check`, `get` and `post`. A
+  default delete is `delete` on the thing's path item,
+  `/surface-api/block.placement/{id}` with `get`, `patch` and `delete`,
+  with no request body and no `ETag` in its answer; its envelope is its
+  custom method's, `/surface-api/block.placement/{id}:remove`, `get`. An
   identity is a path parameter, an operation's other parameters query
   parameters. Each call is tagged with the resource's id. The summary
   is the operation's label and the description its description; how it

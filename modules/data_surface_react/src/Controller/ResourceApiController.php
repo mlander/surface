@@ -15,6 +15,7 @@ use Drupal\data_surface\Form\DataSurfaceFormBuilderInterface;
 use Drupal\data_surface\Pipeline\DataSurfacePipelineInterface;
 use Drupal\data_surface\Pipeline\ResultDocument;
 use Drupal\data_surface\Pipeline\Violation;
+use Drupal\data_surface\ResourceBuild\OperationDefinition;
 use Drupal\data_surface\ResourceBuild\StorageAdapter;
 use Drupal\data_surface_react\ProblemDetails;
 use Drupal\data_surface_react\ProblemException;
@@ -299,7 +300,12 @@ final class ResourceApiController implements ContainerInjectionInterface {
       throw new ProblemException(405, $detail, headers: ['Allow' => 'GET, HEAD']);
     }
     [$method] = $this->servedPaths->writes($served->definition, $served->operation);
-    $this->assertMediaType($request, $method === 'PATCH' ? [self::MERGE_PATCH, 'application/json'] : ['application/json']);
+    $deletes = $served->operation->kind() === OperationDefinition::DELETE;
+    // A delete's body is empty: one sent is held to JSON, and its keys
+    // refused by the pipeline.
+    if (!$deletes || trim((string) $request->getContent()) !== '') {
+      $this->assertMediaType($request, $method === 'PATCH' ? [self::MERGE_PATCH, 'application/json'] : ['application/json']);
+    }
     $body = $this->servedOperations->body($request);
     $dry = in_array(strtolower((string) $request->query->get(ServedPaths::DRY_RUN, '')), ['true', '1'], TRUE);
     // Decision: see docs/decisions.md#a-fingerprint-is-opt-in.
@@ -323,8 +329,10 @@ final class ResourceApiController implements ContainerInjectionInterface {
     if ($dry) {
       return $this->respond($answer + [self::DRY_RUN => TRUE]);
     }
-    if (!$result->committed) {
-      // An operation that writes nothing, a read: its answer is the run.
+    if (!$result->committed || $deletes) {
+      // An operation that writes nothing, a read, answers the run; so does
+      // a delete, whose thing is no longer there to read.
+      // Decision: see docs/decisions.md#a-placed-block-is-a-resource.
       return $this->respond($answer);
     }
     $outputs = $served->storage instanceof StorageAdapter

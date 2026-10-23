@@ -583,7 +583,7 @@ key" is that key's pointer.
 | --- | --- | --- |
 | `required` | the key | A key, or a property of a map, that must hold a value holds none; also a required output not emitted. |
 | `does_not_apply` | the key | A value was sent for a key a rule ruled out for the values sent. |
-| `unknown_key` | the key | A key the resource does not declare, at any depth; within two edits of a key declared beside it, and fewer than half its length, the message names that key: "Unknown key venue_nmae. Did you mean venue_name?" |
+| `unknown_key` | the key | A key the resource does not declare, at any depth, or any key sent to a delete, which takes none; within two edits of a key declared beside it, and fewer than half its length, the message names that key: "Unknown key venue_nmae. Did you mean venue_name?" |
 | `type_mismatch` | the key | A value in a shape its definition cannot hold. |
 | `wrong_variant` | the key | A key sent for a variant its deciding key did not choose. |
 | `no_variant` | the key | A key with variants holds a value while its deciding key holds none. |
@@ -598,6 +598,7 @@ key" is that key's pointer.
 | `locked` | empty | The resource may be seen and not changed, so nothing was written. |
 | `not_found` | empty | The call's parameters name nothing, or a read is asked of what an operation creates. |
 | `conflict` | empty | What storage holds changed since the caller read it: the API's `If-Match` no longer names it, a 412. |
+| `taken` | the key | A create names a thing that exists already: its machine name is in use (`ConfigEntityStorage`), or a list holds a thing twice that may be held once (a placed block's condition). |
 | `locked` | the key | In `notes`: a value sent for a locked key, not taken. |
 | `stale` | the key | In `stale`: a stored value kept that the key no longer offers, with `stored`. |
 | `not_in_range`, `too_high`, `too_low` | the key | Range: a number outside its bounds. |
