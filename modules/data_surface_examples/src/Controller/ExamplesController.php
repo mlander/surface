@@ -13,6 +13,7 @@ use Drupal\data_surface_examples\CodeLines;
 use Drupal\data_surface_examples\ConceptPanel;
 use Drupal\data_surface_examples\ConfigSchemaPanel;
 use Drupal\data_surface_examples\ExampleCalls;
+use Drupal\data_surface_examples\FilesPanel;
 use Drupal\data_surface_examples\Form\RegistrationStep1ClassicForm;
 use Drupal\data_surface_examples\Form\RegistrationStep2ClassicForm;
 use Drupal\data_surface_examples\Hook\SpotlightBlockHooks;
@@ -24,6 +25,7 @@ use Drupal\data_surface_examples\Resource\RegistrationStep2Resource;
 use Drupal\data_surface_examples\Resource\RegistrationStep3Resource;
 use Drupal\data_surface_examples\Resource\SpotlightResource;
 use Drupal\data_surface_examples\Resource\TicketSalesResource;
+use Drupal\data_surface_examples\Series;
 use Drupal\data_surface_examples\Shape\PhoneNumber;
 use Drupal\data_surface_examples\Storage\RegistrationStep1Storage;
 use Drupal\data_surface_examples\Storage\RegistrationStep2Storage;
@@ -40,9 +42,11 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * Those are the two examples with no form, and the classic twins of
  * examples 1 and 2 with what config schema says under each.
  *
- * Plain on purpose: one sentence per example, where it is, and how many
- * lines of code it took, counted from the files by CodeLines rather than
- * written down, so an example that grows says so here.
+ * Plain on purpose: the order to read the examples in, then one sentence
+ * per example, where it is, and how many lines of code it took, counted
+ * from the files by CodeLines rather than written down, so an example that
+ * grows says so here. The order, each example's title and the files it is
+ * made of are Series'; each page lists those files (FilesPanel).
  */
 final class ExamplesController extends ControllerBase {
 
@@ -109,11 +113,14 @@ final class ExamplesController extends ControllerBase {
    *   The panel of what config schema can say, for the classic twins.
    * @param \Drupal\data_surface_examples\ConceptPanel $conceptPanel
    *   The panel saying what an example shows, for example 13's parts.
+   * @param \Drupal\data_surface_examples\FilesPanel $filesPanel
+   *   The panel listing the files an example is made of.
    */
   public function __construct(
     protected readonly ModuleExtensionList $moduleList,
     protected readonly ConfigSchemaPanel $configSchemaPanel,
     protected readonly ConceptPanel $conceptPanel,
+    protected readonly FilesPanel $filesPanel,
   ) {}
 
   /**
@@ -124,6 +131,7 @@ final class ExamplesController extends ControllerBase {
       $container->get('extension.list.module'),
       $container->get('data_surface_examples.config_schema_panel'),
       $container->get('data_surface_examples.concept_panel'),
+      $container->get('data_surface_examples.files_panel'),
     );
   }
 
@@ -167,7 +175,60 @@ final class ExamplesController extends ControllerBase {
         'link' => Link::fromTextAndUrl($this->t('Reset to defaults'), Url::fromRoute('data_surface_examples.reset'))->toRenderable(),
         'why' => ['#markup' => ' ' . $this->t('puts every example back to the settings the module ships with, for a retake.')],
       ],
+      'order' => $this->order(),
     ] + $steps;
+  }
+
+  /**
+   * Says what order to read the examples in, one row per example.
+   *
+   * Each row is read from Series, as the Files panel on each page is, so
+   * the two cannot disagree: the example, the concept it introduces, the
+   * docs page that explains it, the decision that says why, and how many
+   * files it is made of.
+   *
+   * @return array
+   *   A render array: a heading, the table and how to read it.
+   */
+  protected function order(): array {
+    $branch = Series::branch();
+    $github = static fn (string $page, string $text): array => Link::fromTextAndUrl($text, Url::fromUri(Series::url($page, $branch)))->toRenderable();
+    $rows = [];
+    foreach (Series::examples() as $number => $example) {
+      $title = $this->t('@number. @title', ['@number' => $number, '@title' => $example['title']]);
+      $rows[] = [
+        'data' => [
+          ['data' => $example['routes'] === [] ? ['#markup' => $title] : Link::fromTextAndUrl($title, Url::fromRoute($example['routes'][0]))->toRenderable()],
+          (string) $example['concept'],
+          ['data' => $github($example['docs'], $example['docs'])],
+          ['data' => $github('docs/decisions.md#' . $example['decision'], 'decisions.md#' . $example['decision'])],
+          count($example['files']),
+        ],
+        'data-example' => (string) $number,
+      ];
+    }
+    return [
+      '#type' => 'container',
+      '#attributes' => ['class' => ['data-surface-reading-order']],
+      'title' => ['#markup' => '<h2>' . $this->t('Read in this order') . '</h2>'],
+      'table' => [
+        '#type' => 'table',
+        '#header' => [
+          $this->t('Example'),
+          $this->t('It introduces'),
+          $this->t('Explained in'),
+          $this->t('Why'),
+          $this->t('Files'),
+        ],
+        '#rows' => $rows,
+      ],
+      'how' => [
+        '#markup' => '<p>' . $this->t('Start at <a href=":first">Your first resource</a>: one settings page from a resource, an operation, a storage and add(), and nothing else. Then read the examples in order, each adding one idea to what the last showed, and on each page open the files it is made of before the contract. Keep <a href=":concepts">Concepts</a> open beside them as the map: one row per idea, the question that makes you need it, and the example that shows it.', [
+          ':first' => Series::url('docs/first-resource.md', $branch),
+          ':concepts' => Series::url('docs/concepts.md', $branch),
+        ]) . '</p>',
+      ],
+    ];
   }
 
   /**
@@ -182,6 +243,7 @@ final class ExamplesController extends ControllerBase {
   public function step1Classic(): array {
     return [
       'form' => $this->formBuilder()->getForm(RegistrationStep1ClassicForm::class),
+      'files' => $this->filesPanel->build(1),
       'today' => $this->configSchemaPanel->build(
         RegistrationStep1Storage::CONFIG,
         note: $this->t('This form requires the event title and holds the capacity between 1 and 1000, in its own code. The config schema below states the bounds only because it is written from the resource of example 1; written for this form alone, it would state neither rule.'),
@@ -210,6 +272,7 @@ final class ExamplesController extends ControllerBase {
         ]) . '</p>',
       ],
       'form' => $this->formBuilder()->getForm(RegistrationStep2ClassicForm::class),
+      'files' => $this->filesPanel->build(2),
       'today' => $this->configSchemaPanel->build(
         RegistrationStep2Storage::CONFIG,
         note: $this->t("This form offers the rooms of the chosen venue, refuses a room of another venue, and holds the capacity between 1 and the room's seats, in its own code. The config schema below states the lower bound only because it is written from the resource of example 2; written for this form alone, it would state no rule, and it cannot say that the rooms depend on the venue."),
@@ -240,6 +303,7 @@ final class ExamplesController extends ControllerBase {
           $this->t('The structure and the alter: @lines lines of code.', ['@lines' => $this->complianceLines()]),
         ],
       ],
+      'files' => $this->filesPanel->build(4),
     ];
   }
 
@@ -274,6 +338,7 @@ final class ExamplesController extends ControllerBase {
         '#tag' => 'pre',
         '#value' => htmlspecialchars(implode("\n\n", $commands)),
       ],
+      'files' => $this->filesPanel->build(5),
     ];
   }
 
@@ -316,6 +381,7 @@ final class ExamplesController extends ControllerBase {
           $this->t('The structure and the block plugin: @lines lines of code.', ['@lines' => $this->componentBlockLines()]),
         ],
       ],
+      'files' => $this->filesPanel->build(13),
     ];
     if (!$enabled) {
       return $build;
@@ -356,13 +422,15 @@ final class ExamplesController extends ControllerBase {
   /**
    * Describes the examples, with where each is and what it cost.
    *
-   * @return array<int, array{title: \Drupal\Core\StringTranslation\TranslatableMarkup, sentence: \Drupal\Core\StringTranslation\TranslatableMarkup, items: array}>
+   * @return array<int, array{title: \Stringable, sentence: \Drupal\Core\StringTranslation\TranslatableMarkup, items: array}>
    *   The examples, keyed by number.
    */
   protected function steps(): array {
+    // The titles are the series', which the reading order shows too.
+    $series = Series::examples();
     return [
       1 => [
-        'title' => $this->t('declare what you accept'),
+        'title' => $series[1]['title'],
         'sentence' => $this->t('Three settings, each with its type, its label and what it allows, declared once; the form, its validation and a tool are all read from that one class.'),
         'items' => [
           $this->route('data_surface_examples.step1'),
@@ -373,7 +441,7 @@ final class ExamplesController extends ControllerBase {
         ],
       ],
       2 => [
-        'title' => $this->t('answers depend on answers'),
+        'title' => $series[2]['title'],
         'sentence' => $this->t('The venue narrows the rooms on offer, and the room narrows how many people fit: one small method each, whose signature says what it reads.'),
         'items' => [
           $this->route('data_surface_examples.step2'),
@@ -387,7 +455,7 @@ final class ExamplesController extends ControllerBase {
         ],
       ],
       3 => [
-        'title' => $this->t('made of parts'),
+        'title' => $series[3]['title'],
         'sentence' => $this->t('The pricing chooses between two ticket structures, the variants at one key, and a contact structure is always attached; each part is a class of its own.'),
         'items' => [
           $this->route('data_surface_examples.step3'),
@@ -396,7 +464,7 @@ final class ExamplesController extends ControllerBase {
         ],
       ],
       4 => [
-        'title' => $this->t('others get a say'),
+        'title' => $series[4]['title'],
         'sentence' => $this->t('Another module adds two keys to example 3, rewords a label, caps the capacity at a hundred until an event license is given, and asks for stewards as the capacity grows, without touching example 3.'),
         'items' => [
           $this->route('data_surface_examples.step4'),
@@ -404,7 +472,7 @@ final class ExamplesController extends ControllerBase {
         ],
       ],
       5 => [
-        'title' => $this->t('same contract, no form'),
+        'title' => $series[5]['title'],
         'sentence' => $this->t('Example 3 is already a tool, @tool, which takes what the form takes and refuses what it refuses, with a read tool beside it, @read, which answers with what is stored. Drush describes them with tool:info and calls them with tool:run.', [
           '@tool' => ExampleCalls::TOOL,
           '@read' => ExampleCalls::READ_TOOL,
@@ -412,12 +480,12 @@ final class ExamplesController extends ControllerBase {
         'items' => [$this->route('data_surface_examples.step5'), $this->t('Nothing to write: 0 lines of code.')],
       ],
       6 => [
-        'title' => $this->t('every door'),
+        'title' => $series[6]['title'],
         'sentence' => $this->t('The same contract through every door. The decoupled page is the "In React" links above: the contract served as JSON and drawn by a React app. ECA and an AI agent, through the tool of example 5, are yours to show on your own site.'),
         'items' => [$this->openApi(), $this->openApiDocs()],
       ],
       7 => [
-        'title' => $this->t('a rule written as data'),
+        'title' => $series[7]['title'],
         'sentence' => $this->t('A bulletin whose two rules read its frequency, each a condition and an effect declared beside the keys, which both schemas state as written: at most five items a week, and no send day for a monthly issue.'),
         'items' => [
           $this->route('data_surface_examples.step7'),
@@ -426,7 +494,7 @@ final class ExamplesController extends ControllerBase {
         ],
       ],
       8 => [
-        'title' => $this->t('one part, used twice'),
+        'title' => $series[8]['title'],
         'sentence' => $this->t('A person structure attached by two resources, its port wired to a different key by each; a phone shape asked for at two keys; a review mixed in; and a collection of volunteers.'),
         'items' => [
           $this->route('data_surface_examples.step8'),
@@ -436,7 +504,7 @@ final class ExamplesController extends ControllerBase {
         ],
       ],
       9 => [
-        'title' => $this->t('keys that come from the site'),
+        'title' => $series[9]['title'],
         'sentence' => $this->t('A checkbox and a set of limits per ticket type the site has, listed by a provider; a type added is a key at the next request, and a locked one is kept as stored.'),
         'items' => [
           $this->route('data_surface_examples.step9'),
@@ -445,7 +513,7 @@ final class ExamplesController extends ControllerBase {
         ],
       ],
       10 => [
-        'title' => $this->t('who may change what'),
+        'title' => $series[10]['title'],
         'sentence' => $this->t('Fees locked for an account without a permission, stated ahead of time for that account, and once the program is published, settled only by what is stored; and a check that changes nothing, and says so. With @module enabled, another module answers too, with no change to the program: the fees left out for an account that may not see them, and the whole program fixed once its workflow publishes it.', ['@module' => self::WORKFLOW]),
         'items' => [
           $this->route('data_surface_examples.step10'),
@@ -456,7 +524,7 @@ final class ExamplesController extends ControllerBase {
         ],
       ],
       11 => [
-        'title' => $this->t('the stock widgets, and what nothing means'),
+        'title' => $series[11]['title'],
         'sentence' => $this->t('A time, checkboxes, radios, a text area and rows of free values, each drawn from what its key declares; and a key left out, sent null, or sent a value.'),
         'items' => [
           $this->route('data_surface_examples.step11'),
@@ -465,7 +533,7 @@ final class ExamplesController extends ControllerBase {
         ],
       ],
       12 => [
-        'title' => $this->t('a schema read into a structure'),
+        'title' => $series[12]['title'],
         'sentence' => $this->t("A component chosen from the single-directory components the site has, and below it that component's props, read from the JSON Schema the component declares: one variant per component, which no class lists."),
         'items' => [
           $this->route('data_surface_examples.step12'),
@@ -474,7 +542,7 @@ final class ExamplesController extends ControllerBase {
         ],
       ],
       13 => [
-        'title' => $this->t('a block that embeds a component'),
+        'title' => $series[13]['title'],
         'sentence' => $this->t("Example 12's three lines as a block's settings: a block plugin names them with #[UsesStructure] and renders the chosen component with its props and slots, a section holding a card among them, and a placed block is placed, configured and removed through the general placement resource. In @module and @placement, which the page tells you to enable.", [
           '@module' => self::COMPONENT_BLOCK,
           '@placement' => self::PLACEMENT,

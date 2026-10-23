@@ -4113,6 +4113,21 @@ Generating it would need a kernel for the answers and a generator for
 prose written for a viewer; a drift test keeps the prose free and the
 code true.
 
+### An example names its files
+
+Each example lists the files it is made of once, in `Series`: its
+resource, storage, structures, shapes, providers, access class, alters,
+components, route, config schema entries and shipped settings, each with
+a line saying what it is. Its page lists them (`FilesPanel`), a file of
+fewer than 80 lines of code shown whole and collapsed, because the
+newcomer logs found whole files were what stopped the guessing; the
+landing page reads its reading order from the same list, and the
+README's Files tables are held to it by `ExampleFilesTest`, which also
+fails when the examples have a part no example lists. The links name a
+branch from `$settings['data_surface_examples_branch']`, `next` by
+default: asking git on every request costs a process, and a site need
+not be a checkout.
+
 ## Served contract
 
 ### The emitter is the main module's, and widgets are asked for

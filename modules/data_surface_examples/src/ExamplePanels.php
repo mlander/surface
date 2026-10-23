@@ -21,11 +21,13 @@ use Drupal\data_surface\Storage\ConfigObjectStorage;
  * what config schema alone can say about the same settings, compared
  * key by key with the full schema the resource emits, the one that reads
  * no value. Above them, for examples 7 to 12 only, what the example shows
- * (ConceptPanel). The form replaces them on every rebuild; only the
- * contract panel has anything new to say then.
+ * (ConceptPanel), and on every example's page the files it is made of
+ * (FilesPanel), between that and the contract. The form replaces them on
+ * every rebuild; only the contract panel has anything new to say then.
  *
  * @see \Drupal\data_surface_tool\ContractPanel
  * @see \Drupal\data_surface_examples\ConfigSchemaPanel
+ * @see \Drupal\data_surface_examples\FilesPanel
  */
 final class ExamplePanels implements DataSurfaceFormPanelInterface {
 
@@ -45,6 +47,11 @@ final class ExamplePanels implements DataSurfaceFormPanelInterface {
   public const CONCEPT = 'concept_panel';
 
   /**
+   * The key the panel of the example's files is placed at.
+   */
+  public const FILES = 'files_panel';
+
+  /**
    * Constructs ExamplePanels.
    *
    * @param \Drupal\data_surface\Form\DataSurfaceFormPanelInterface $contractPanel
@@ -59,6 +66,8 @@ final class ExamplePanels implements DataSurfaceFormPanelInterface {
    *   The build step, for the full schema built for the account alone.
    * @param \Drupal\data_surface_examples\ConceptPanel $conceptPanel
    *   The panel saying what examples 7 to 12 show.
+   * @param \Drupal\data_surface_examples\FilesPanel $filesPanel
+   *   The panel listing the files an example is made of.
    */
   public function __construct(
     protected readonly DataSurfaceFormPanelInterface $contractPanel,
@@ -67,6 +76,7 @@ final class ExamplePanels implements DataSurfaceFormPanelInterface {
     protected readonly ResourceRegistry $registry,
     protected readonly ResourcesInterface $resources,
     protected readonly ConceptPanel $conceptPanel,
+    protected readonly FilesPanel $filesPanel,
   ) {}
 
   /**
@@ -86,6 +96,11 @@ final class ExamplePanels implements DataSurfaceFormPanelInterface {
       $panels[self::CONCEPT] = ['#weight' => -1] + $concept;
     }
     $definition = $this->registry->getDefinition($served->resource);
+    // The example whose files list the resource's class.
+    $number = $definition->class === NULL ? NULL : Series::numberOf(Series::relative((string) (new \ReflectionClass($definition->class))->getFileName()));
+    if ($number !== NULL) {
+      $panels[self::FILES] = ['#weight' => -0.5] + $this->filesPanel->build($number);
+    }
     $storage = (string) $definition->storage;
     if (is_a($storage, ConfigObjectStorage::class, TRUE)) {
       // The full schema the contract panel shows, asked for again rather

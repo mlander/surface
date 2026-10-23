@@ -256,6 +256,22 @@ final class RegistrationStep1ClassicForm extends ConfigFormBase {
 }
 ```
 
+### Files
+
+What example 1 is made of, as its page lists them, each with its lines
+of code, counted without blank lines or comments:
+
+<!-- files: 1 -->
+
+| File | What it is | Lines |
+| --- | --- | --- |
+| [`modules/data_surface_examples/src/Resource/RegistrationStep1Resource.php`](src/Resource/RegistrationStep1Resource.php) | the resource: three keys, each with what it allows, and the operation that asks for them | 15 |
+| [`modules/data_surface_examples/src/Storage/RegistrationStep1Storage.php`](src/Storage/RegistrationStep1Storage.php) | the storage: names the config object | 3 |
+| [`modules/data_surface_examples/data_surface_examples.routing.yml`](data_surface_examples.routing.yml), entry `data_surface_examples.step1` | the route: the generic operation form, serving the resource | 10 |
+| [`modules/data_surface_examples/config/schema/data_surface_examples.schema.yml`](config/schema/data_surface_examples.schema.yml), entry `data_surface_examples.registration_step1` | the config schema, generated from the class | 21 |
+| [`modules/data_surface_examples/config/install/data_surface_examples.registration_step1.yml`](config/install/data_surface_examples.registration_step1.yml) | the settings the module ships with | 3 |
+| [`modules/data_surface_examples/src/Form/RegistrationStep1ClassicForm.php`](src/Form/RegistrationStep1ClassicForm.php) | the classic twin: the same settings written by hand as a config form | 30 |
+
 ## Example 2: answers depend on answers
 
 `/surface-examples/2`
@@ -511,6 +527,23 @@ final class RegistrationStep2ClassicForm extends ConfigFormBase {
 }
 ```
 
+### Files
+
+What example 2 is made of, as its page lists them, each with its lines
+of code, counted without blank lines or comments:
+
+<!-- files: 2 -->
+
+| File | What it is | Lines |
+| --- | --- | --- |
+| [`modules/data_surface_examples/src/Resource/RegistrationStep2Resource.php`](src/Resource/RegistrationStep2Resource.php) | the resource: five keys and two refiners, the rooms by the venue and the capacity by the room | 37 |
+| [`modules/data_surface_examples/src/Venues.php`](src/Venues.php) | the venues, their rooms and the seats of each: two fixed lists | 27 |
+| [`modules/data_surface_examples/src/Storage/RegistrationStep2Storage.php`](src/Storage/RegistrationStep2Storage.php) | the storage: names the config object | 3 |
+| [`modules/data_surface_examples/data_surface_examples.routing.yml`](data_surface_examples.routing.yml), entry `data_surface_examples.step2` | the route | 10 |
+| [`modules/data_surface_examples/config/schema/data_surface_examples.schema.yml`](config/schema/data_surface_examples.schema.yml), entry `data_surface_examples.registration_step2` | the config schema, generated from the class | 26 |
+| [`modules/data_surface_examples/config/install/data_surface_examples.registration_step2.yml`](config/install/data_surface_examples.registration_step2.yml) | the settings the module ships with | 5 |
+| [`modules/data_surface_examples/src/Form/RegistrationStep2ClassicForm.php`](src/Form/RegistrationStep2ClassicForm.php) | the classic twin: the same five questions and both rules, written by hand | 94 |
+
 ## Example 3: made of parts
 
 `/surface-examples/3`
@@ -654,6 +687,26 @@ Switch the pricing to paid: the ticket rebuilds with a price and a
 currency, and the panel shows the paid variant's keys. A paid ticket
 with no price is refused as `ticket.price`, an email that is no email as
 `contact.email`.
+
+### Files
+
+What example 3 is made of, as its page lists them, each with its lines
+of code, counted without blank lines or comments:
+
+<!-- files: 3 -->
+
+| File | What it is | Lines |
+| --- | --- | --- |
+| [`modules/data_surface_examples/src/Resource/RegistrationStep3Resource.php`](src/Resource/RegistrationStep3Resource.php) | the resource: six keys, the ticket's variants chosen by the pricing, and the contact attached | 43 |
+| [`modules/data_surface_examples/src/Structure/FreeTicketStructure.php`](src/Structure/FreeTicketStructure.php) | the free ticket: the variant for the pricing free, a note | 8 |
+| [`modules/data_surface_examples/src/Structure/PaidTicketStructure.php`](src/Structure/PaidTicketStructure.php) | the paid ticket: the variant for the pricing paid, a price and a currency | 12 |
+| [`modules/data_surface_examples/src/Structure/ContactStructure.php`](src/Structure/ContactStructure.php) | the contact: a structure of two keys, attached | 8 |
+| [`modules/data_surface_examples/src/Storage/RegistrationStep3Storage.php`](src/Storage/RegistrationStep3Storage.php) | the storage: names the config object | 3 |
+| [`modules/data_surface_examples/data_surface_examples.routing.yml`](data_surface_examples.routing.yml), entry `data_surface_examples.step3` | the route | 10 |
+| [`modules/data_surface_examples/config/schema/data_surface_examples.schema.yml`](config/schema/data_surface_examples.schema.yml), entry `data_surface_examples.registration_step3` | the config schema, generated from the class | 49 |
+| [`modules/data_surface_examples/config/schema/data_surface_examples.schema.yml`](config/schema/data_surface_examples.schema.yml), entry `data_surface_examples.registration_step3.ticket.free` | the free ticket's config schema | 10 |
+| [`modules/data_surface_examples/config/schema/data_surface_examples.schema.yml`](config/schema/data_surface_examples.schema.yml), entry `data_surface_examples.registration_step3.ticket.paid` | the paid ticket's config schema | 15 |
+| [`modules/data_surface_examples/config/install/data_surface_examples.registration_step3.yml`](config/install/data_surface_examples.registration_step3.yml) | the settings the module ships with | 11 |
 
 ## Example 4: others get a say
 
@@ -867,6 +920,21 @@ attendees." In the panel, the capacity's row now depends on `room` and
 on the license's path. An alter can add and tighten. It can never take
 away what the owner declared.
 
+### Files
+
+What example 4 is made of, as its page lists them, each with its lines
+of code, counted without blank lines or comments:
+
+<!-- files: 4 -->
+
+| File | What it is | Lines |
+| --- | --- | --- |
+| [`modules/data_surface_examples_compliance/data_surface_examples_compliance.info.yml`](../data_surface_examples_compliance/data_surface_examples_compliance.info.yml) | the module: a second one, which example 3 does not know | 9 |
+| [`modules/data_surface_examples_compliance/src/Alter/RegistrationComplianceAlter.php`](../data_surface_examples_compliance/src/Alter/RegistrationComplianceAlter.php) | the alter: attaches the structure, rewords the title, caps the capacity without a license, and leaves closed rooms out | 32 |
+| [`modules/data_surface_examples_compliance/src/Structure/ComplianceStructure.php`](../data_surface_examples_compliance/src/Structure/ComplianceStructure.php) | the structure it attaches: a license and the stewards, which read the capacity through a port | 19 |
+| [`modules/data_surface_examples_compliance/src/Shape/License.php`](../data_surface_examples_compliance/src/Shape/License.php) | the license: a named shape, four digits | 12 |
+| [`modules/data_surface_examples_compliance/config/schema/data_surface_examples_compliance.schema.yml`](../data_surface_examples_compliance/config/schema/data_surface_examples_compliance.schema.yml), entry `data_surface_examples.registration_step3.third_party.data_surface_examples_compliance` | the config schema of what it stores on example 3 | 18 |
+
 ## Example 5: same contract, no form
 
 `/surface-examples/5`
@@ -1012,6 +1080,11 @@ so a value outside the listing's list is answered with the list that
 applies rather than refused with none
 ([decision](../../docs/decisions.md#a-refusal-names-what-it-depends-on)).
 
+### Files
+
+Example 5 adds no file of its own: it is made from the files of
+example 3.
+
 ## In React
 
 Examples 1 to 3 again, with no Form API: the same operation served as a
@@ -1056,6 +1129,11 @@ to show on your own site. With `data_surface_openapi` enabled, the
 landing page links `/surface-api/openapi.json`, every example's paths
 described for any OpenAPI client, and `/surface-api/docs`, Swagger UI
 over it, to try each call with your session.
+
+### Files
+
+Example 6 adds no file of its own: it is made from the files of
+example 3.
 
 ## One small resource per concept
 
@@ -1154,6 +1232,21 @@ Failed: The values were refused:
 Success: Dry run of Configure the bulletin: the values were accepted and prepared, and nothing was written.
   values: {"frequency":"monthly","items":8}
 ```
+
+### Files
+
+What example 7 is made of, as its page lists them, each with its lines
+of code, counted without blank lines or comments:
+
+<!-- files: 7 -->
+
+| File | What it is | Lines |
+| --- | --- | --- |
+| [`modules/data_surface_examples/src/Resource/BulletinResource.php`](src/Resource/BulletinResource.php) | the resource: three keys and two declared rules | 29 |
+| [`modules/data_surface_examples/src/Storage/BulletinStorage.php`](src/Storage/BulletinStorage.php) | the storage: names the config object | 3 |
+| [`modules/data_surface_examples/data_surface_examples.routing.yml`](data_surface_examples.routing.yml), entry `data_surface_examples.step7` | the route | 10 |
+| [`modules/data_surface_examples/config/schema/data_surface_examples.schema.yml`](config/schema/data_surface_examples.schema.yml), entry `data_surface_examples.bulletin` | the config schema, generated from the class | 20 |
+| [`modules/data_surface_examples/config/install/data_surface_examples.bulletin.yml`](config/install/data_surface_examples.bulletin.yml) | the settings the module ships with | 3 |
 
 ## Example 8: one part, used twice
 
@@ -1344,6 +1437,29 @@ Failed: The values were refused:
 /phone: Write the number in digits, such as +1 555 0100.
 ```
 
+### Files
+
+What example 8 is made of, as its page lists them, each with its lines
+of code, counted without blank lines or comments:
+
+<!-- files: 8 -->
+
+| File | What it is | Lines |
+| --- | --- | --- |
+| [`modules/data_surface_examples/src/Structure/PersonStructure.php`](src/Structure/PersonStructure.php) | the person: three keys, and a rule that reads a port, listed | 14 |
+| [`modules/data_surface_examples/src/Shape/PhoneNumber.php`](src/Shape/PhoneNumber.php) | the phone: a named shape | 14 |
+| [`modules/data_surface_examples/src/Structure/ReviewStructure.php`](src/Structure/ReviewStructure.php) | the review: two keys and a rule, mixed into the press page | 16 |
+| [`modules/data_surface_examples/src/Resource/PressResource.php`](src/Resource/PressResource.php) | the press page: one key, the person attached, the review mixed in | 14 |
+| [`modules/data_surface_examples/src/Storage/PressStorage.php`](src/Storage/PressStorage.php) | its storage: names the config object | 3 |
+| [`modules/data_surface_examples/src/Resource/InfoDeskResource.php`](src/Resource/InfoDeskResource.php) | the information desk: the phone, the person attached, and a collection of up to four | 17 |
+| [`modules/data_surface_examples/src/Storage/InfoDeskStorage.php`](src/Storage/InfoDeskStorage.php) | its storage: names the config object | 3 |
+| [`modules/data_surface_examples/data_surface_examples.routing.yml`](data_surface_examples.routing.yml), entry `data_surface_examples.step8` | the press page's route | 10 |
+| [`modules/data_surface_examples/data_surface_examples.routing.yml`](data_surface_examples.routing.yml), entry `data_surface_examples.step8_desk` | the information desk's route | 10 |
+| [`modules/data_surface_examples/config/schema/data_surface_examples.schema.yml`](config/schema/data_surface_examples.schema.yml), entry `data_surface_examples.press` | the press page's config schema, generated from the class | 39 |
+| [`modules/data_surface_examples/config/schema/data_surface_examples.schema.yml`](config/schema/data_surface_examples.schema.yml), entry `data_surface_examples.desk` | the information desk's config schema, generated from the class | 59 |
+| [`modules/data_surface_examples/config/install/data_surface_examples.press.yml`](config/install/data_surface_examples.press.yml) | the press page's shipped settings | 7 |
+| [`modules/data_surface_examples/config/install/data_surface_examples.desk.yml`](config/install/data_surface_examples.desk.yml) | the information desk's shipped settings | 11 |
+
 ## Example 9: keys that come from the site
 
 `/surface-examples/9`
@@ -1527,6 +1643,25 @@ Success: Dry run of Configure ticket sales: the values were accepted and prepare
 Failed: The values were refused:
 /limits/student/per_order: Per order does not apply when on_sale.student is off.
 ```
+
+### Files
+
+What example 9 is made of, as its page lists them, each with its lines
+of code, counted without blank lines or comments:
+
+<!-- files: 9 -->
+
+| File | What it is | Lines |
+| --- | --- | --- |
+| [`modules/data_surface_examples/src/Resource/TicketSalesResource.php`](src/Resource/TicketSalesResource.php) | the resource: a checkbox and a set of limits per ticket type | 15 |
+| [`modules/data_surface_examples/src/Structure/TicketLimitStructure.php`](src/Structure/TicketLimitStructure.php) | one type's limits: two keys that apply while it is on sale, read through a port | 11 |
+| [`modules/data_surface_examples/src/Keys/TicketTypes.php`](src/Keys/TicketTypes.php) | the provider: lists the ticket types from the site's configuration | 17 |
+| [`modules/data_surface_examples/src/Storage/TicketSalesStorage.php`](src/Storage/TicketSalesStorage.php) | the storage: names the config object | 3 |
+| [`modules/data_surface_examples/data_surface_examples.routing.yml`](data_surface_examples.routing.yml), entry `data_surface_examples.step9` | the route | 10 |
+| [`modules/data_surface_examples/config/schema/data_surface_examples.schema.yml`](config/schema/data_surface_examples.schema.yml), entry `data_surface_examples.sales` | the config schema, generated from the class | 30 |
+| [`modules/data_surface_examples/config/schema/data_surface_examples.schema.yml`](config/schema/data_surface_examples.schema.yml), entry `data_surface_examples.ticket_types` | the ticket types' config schema, written by hand | 17 |
+| [`modules/data_surface_examples/config/install/data_surface_examples.sales.yml`](config/install/data_surface_examples.sales.yml) | the settings the module ships with | 14 |
+| [`modules/data_surface_examples/config/install/data_surface_examples.ticket_types.yml`](config/install/data_surface_examples.ticket_types.yml) | the ticket types the site has, one of them locked | 10 |
 
 ## Example 10: who may change what
 
@@ -1796,6 +1931,28 @@ This may be seen and not changed, so nothing was written: The program is publish
 Neither the program nor the fees changed, and Reset to defaults clears
 the workflow state.
 
+### Files
+
+What example 10 is made of, as its page lists them, each with its lines
+of code, counted without blank lines or comments:
+
+<!-- files: 10 -->
+
+| File | What it is | Lines |
+| --- | --- | --- |
+| [`modules/data_surface_examples/src/Resource/ProgramResource.php`](src/Resource/ProgramResource.php) | the resource: four keys, and two operations, one of which changes nothing | 23 |
+| [`modules/data_surface_examples/src/Structure/FeesStructure.php`](src/Structure/FeesStructure.php) | the fees: two keys, naming their access class | 9 |
+| [`modules/data_surface_examples/src/Access/FeesAccess.php`](src/Access/FeesAccess.php) | the access class: locks the fees by permission, then once the program is published | 18 |
+| [`modules/data_surface_examples/src/Storage/ProgramStorage.php`](src/Storage/ProgramStorage.php) | the storage: names the config object | 3 |
+| [`modules/data_surface_examples/data_surface_examples.routing.yml`](data_surface_examples.routing.yml), entry `data_surface_examples.step10` | the route that configures | 10 |
+| [`modules/data_surface_examples/data_surface_examples.routing.yml`](data_surface_examples.routing.yml), entry `data_surface_examples.step10_check` | the route that checks | 10 |
+| [`modules/data_surface_examples/config/schema/data_surface_examples.schema.yml`](config/schema/data_surface_examples.schema.yml), entry `data_surface_examples.program` | the config schema, generated from the class | 39 |
+| [`modules/data_surface_examples/config/install/data_surface_examples.program.yml`](config/install/data_surface_examples.program.yml) | the settings the module ships with | 6 |
+| [`modules/data_surface_examples_workflow/data_surface_examples_workflow.info.yml`](../data_surface_examples_workflow/data_surface_examples_workflow.info.yml) | the second module, which answers for the program and its fees | 9 |
+| [`modules/data_surface_examples_workflow/data_surface_examples_workflow.permissions.yml`](../data_surface_examples_workflow/data_surface_examples_workflow.permissions.yml) | its permission, to see the fees | 3 |
+| [`modules/data_surface_examples_workflow/src/Alter/FeesWorkflowAlter.php`](../data_surface_examples_workflow/src/Alter/FeesWorkflowAlter.php) | an alter answering for the fees: left out without the permission, locked once published | 18 |
+| [`modules/data_surface_examples_workflow/src/Alter/ProgramWorkflowAlter.php`](../data_surface_examples_workflow/src/Alter/ProgramWorkflowAlter.php) | an alter answering for the program: locked whole once published | 14 |
+
 ## Example 11: the stock widgets, and what nothing means
 
 `/surface-examples/11`
@@ -1895,6 +2052,21 @@ Success: Dry run of Configure the doors: the values were accepted and prepared, 
 Failed: The values were refused:
 /badges: Badges cannot be cleared: it always holds a value, printed (Printed at the door) by default. Leave it out to keep what it holds.
 ```
+
+### Files
+
+What example 11 is made of, as its page lists them, each with its lines
+of code, counted without blank lines or comments:
+
+<!-- files: 11 -->
+
+| File | What it is | Lines |
+| --- | --- | --- |
+| [`modules/data_surface_examples/src/Resource/DoorsResource.php`](src/Resource/DoorsResource.php) | the resource: five keys, each drawn by a stock widget | 32 |
+| [`modules/data_surface_examples/src/Storage/DoorsStorage.php`](src/Storage/DoorsStorage.php) | the storage: names the config object and the keys it always holds | 4 |
+| [`modules/data_surface_examples/data_surface_examples.routing.yml`](data_surface_examples.routing.yml), entry `data_surface_examples.step11` | the route | 10 |
+| [`modules/data_surface_examples/config/schema/data_surface_examples.schema.yml`](config/schema/data_surface_examples.schema.yml), entry `data_surface_examples.doors` | the config schema, fully validatable, generated from the class | 31 |
+| [`modules/data_surface_examples/config/install/data_surface_examples.doors.yml`](config/install/data_surface_examples.doors.yml) | the settings the module ships with | 9 |
 
 ## Example 12: a schema read into a structure
 
@@ -2202,6 +2374,27 @@ Failed: The values were refused:
 Failed: The values were refused:
 /props/overlay: This value should be between 0 and 100.
 ```
+
+### Files
+
+What example 12 is made of, as its page lists them, each with its lines
+of code, counted without blank lines or comments:
+
+<!-- files: 12 -->
+
+| File | What it is | Lines |
+| --- | --- | --- |
+| [`modules/data_surface_examples/src/Resource/SpotlightResource.php`](src/Resource/SpotlightResource.php) | the resource: a component, and its props and slots as variants the component chooses | 16 |
+| [`src/Variants/ComponentProps.php`](../../src/Variants/ComponentProps.php) | the provider of the props: one variant per component, read from its props schema; the main module's | 36 |
+| [`src/Variants/ComponentSlots.php`](../../src/Variants/ComponentSlots.php) | the provider of the slots: one variant per component, read from its metadata; the main module's | 198 |
+| [`modules/data_surface_examples/src/Storage/SpotlightStorage.php`](src/Storage/SpotlightStorage.php) | the storage: names the config object | 3 |
+| [`modules/data_surface_examples/data_surface_examples.routing.yml`](data_surface_examples.routing.yml), entry `data_surface_examples.step12` | the route | 10 |
+| [`modules/data_surface_examples/config/schema/data_surface_examples.schema.yml`](config/schema/data_surface_examples.schema.yml), entry `data_surface_examples.spotlight` | the config schema, generated from the class | 15 |
+| [`modules/data_surface_examples/config/install/data_surface_examples.spotlight.yml`](config/install/data_surface_examples.spotlight.yml) | the settings the module ships with | 11 |
+| [`modules/data_surface_examples/components/card/card.component.yml`](components/card/card.component.yml) | the card: its props schema and its slot | 41 |
+| [`modules/data_surface_examples/components/hero/hero.component.yml`](components/hero/hero.component.yml) | the hero: its props schema and its slots | 45 |
+| [`modules/data_surface_examples/components/section/section.component.yml`](components/section/section.component.yml) | the section: its props schema and a slot for other components | 16 |
+| [`modules/data_surface_examples/components/call_to_action/call_to_action.component.yml`](components/call_to_action/call_to_action.component.yml) | the call to action: its props schema | 39 |
 
 ## Example 13: a block that embeds a component
 
@@ -2532,11 +2725,33 @@ Success: Dry run of Remove a placed block: the removal was rehearsed, and nothin
   values: {"label":"Spotlight","id":"data_surface_examples_spotlight","label_display":true,"plugin":"data_surface_component","settings":{"component":"data_surface_examples:card","props":{"heading":"Doors open at half past six","tone":"highlight","link":{"url":"https://example.com/tickets","label":"Find your ticket"}},"slots":{"body":{"kind":"text","text":"Bring your ticket, on your phone or printed."}}},"theme":"stark","region":"content","weight":100,"status":true,"visibility":[{"id":"request_path","negate":false,"settings":{"pages":"/surface-examples/13"}}]}
 ```
 
+### Files
+
+What example 13 is made of, as its page lists them, each with its lines
+of code, counted without blank lines or comments:
+
+<!-- files: 13 -->
+
+| File | What it is | Lines |
+| --- | --- | --- |
+| [`modules/data_surface_component_block/data_surface_component_block.info.yml`](../data_surface_component_block/data_surface_component_block.info.yml) | the module the block lives in | 10 |
+| [`modules/data_surface_component_block/src/Structure/ComponentBlockStructure.php`](../data_surface_component_block/src/Structure/ComponentBlockStructure.php) | the block's structure: example 12's three lines under the block's id | 10 |
+| [`modules/data_surface_component_block/src/Plugin/Block/ComponentBlock.php`](../data_surface_component_block/src/Plugin/Block/ComponentBlock.php) | the block plugin: names the structure and draws the chosen component | 96 |
+| [`modules/data_surface_component_block/config/schema/data_surface_component_block.schema.yml`](../data_surface_component_block/config/schema/data_surface_component_block.schema.yml), entry `block.settings.data_surface_component` | the config schema of the block's settings | 14 |
+| [`modules/data_surface_examples/src/Hook/SpotlightBlockHooks.php`](src/Hook/SpotlightBlockHooks.php) | places the Spotlight and Tonight blocks once both modules are enabled | 36 |
+| [`modules/data_surface_examples/components/card/card.twig`](components/card/card.twig) | the card's template | 9 |
+| [`modules/data_surface_examples/components/hero/hero.twig`](components/hero/hero.twig) | the hero's template | 9 |
+| [`modules/data_surface_examples/components/section/section.twig`](components/section/section.twig) | the section's template | 6 |
+| [`modules/data_surface_examples/components/call_to_action/call_to_action.twig`](components/call_to_action/call_to_action.twig) | the call to action's template | 1 |
+
 ## How this page is kept true
 
 Every code block above is the file it names, from its first attribute
 or its class line to its closing brace, and `ExamplesReadmeTest` fails
-when one drifts, and so does the component example 12 quotes. The Drush
+when one drifts, and so does the component example 12 quotes. Each
+example's Files table is its list in `Series`, the one its page and the
+landing page's reading order are drawn from, and `ExampleFilesTest`
+fails when a table and the list differ, or the list and the module. The Drush
 commands and answers of examples 7 to 13 are asserted by
 `ExamplesConceptsToolTest`. The JSON of example 1's config schema is asserted by
 `ConfigSchemaContractTest`, which also checks this page quotes it. The tool's three answers are asserted by
@@ -2552,7 +2767,8 @@ Drush commands are checked against `ExampleCalls`.
 | `Kernel\ConfigSchemaContractTest` | What config schema can say: the plain mapping of examples 1 and 3, whole, with no list, no bound, nothing required and no keys for the ticket, the same whatever is stored or mounted; core's answer, a comment and no property; a constraint a schema does declare is said; the JSON this page quotes. |
 | `Kernel\ExamplesTodayPanelTest` | The second panel under examples 1 to 3: its two documents and its table, row by row; its rows read from the resource's full schema, so the pricing, the venue and what is stored leave every row and both documents as they were; example 4's keys on the resource's side only; the classic twins' pages, example 2's with its two line counts. |
 | `Unit\ExamplesReadmeTest` | This page against the files it quotes, its Drush commands, and the two line counts it states for example 2's twin. |
-| `Functional\ExamplesRoutesTest` | Every route answers an administrator and refuses anonymous; the landing page; both panels under example 3, and a save through it; each classic twin's page with its two documents, and a save through it; example 2's twin linked from the landing page with its line counts, and its page saying them. |
+| `Unit\ExampleFilesTest` | Each example's files in `Series`: every one there, every resource, storage, structure, shape, provider, access class, alter, component, route, config schema entry and shipped settings file of the examples listed by one example, what a listed class names listed with it or before it, each docs page and decision there, the line counts, and each Files table on this page the list's. |
+| `Functional\ExamplesRoutesTest` | Every route answers an administrator and refuses anonymous; the landing page; both panels under example 3, and a save through it; each classic twin's page with its two documents, and a save through it; example 2's twin linked from the landing page with its line counts, and its page saying them; the Files panel of examples 1 to 5, the twins included, each file linked with its lines of code and a short one shown whole; the landing page's reading order, one row per example from `Series`. |
 | `Functional\ExamplesStep2ClassicTest` | Example 2 and its twin posted the same answers without JavaScript: a room of another venue refused on the room by both, a capacity beyond the room's seats and one below 1 refused by both in the same words, and a valid set stored identically by each. |
 | `FunctionalJavascript\ExamplesStep2ClassicAjaxTest` | Example 2's twin in a browser: a new venue swaps the room's options and leaves it on "- Select -" with nothing stored changed, a room describes the capacity, the venue moved back shows the stored room again, and a save after a move writes the new venue and room. |
 | `FunctionalJavascript\ExamplesAjaxRefreshTest` | In a browser: example 2's venue replaces the room and the capacity and leaves the venue the same node, the orphaned room on its empty option with the stale marker and the capacity with no upper bound; a room then narrows the capacity and loses `- Select -`. Example 3's paid pricing swaps the note for a price and a currency, and leaves the second panel's table and its two documents as they were. |
@@ -2563,7 +2779,7 @@ Drush commands are checked against `ExampleCalls`.
 | `Kernel\ExamplesConceptsTest` | Examples 7 to 12: each form builds and saves; example 7's rules in the full schema as declared, the send day gone for a monthly bulletin and kept in storage; example 8's one def at two sites with each wiring, the mixed-in keys flat, the shape at two keys, the volunteers' collection; example 9's keys from the configuration, a type added without a cache rebuild, the locked type in both documents and on the form; example 10's fees for two accounts, locked once published, and both operations' facts and tools; example 11's widgets, the always held badges and the notes that clear; example 12's four components read as four variants at the props and again at the slots, the card's props as keys with their constraints, its text a slot, both documents stating them, the form swapped to the hero and saved with its slot, a hero too dark refused; the panel above each, and none above examples 1 to 3; each class stays screen sized; example 13's page with its modules off, saying how to enable both, then with the block alone on, its parts and no call, then with the placement resource on too, the Spotlight and Tonight blocks placed through the add operation, the three lines side by side, the block's contract cut to the four components, the hero's actions narrowed, the four placement tools and the five calls' answers, nothing written. |
 | `Kernel\ExamplesWorkflowTest` | Example 10 with the workflow module: the fees left out of the full schema, the tool listing and the read tool for an account without "see event fees" and kept for one with it; the program locked whole once the workflow state is published, settled at call time and left unmarked in the full schema; checking still answers; the panel's paragraph, with the module and without it. |
 | `Kernel\ExamplesConceptsToolTest` | Examples 7 to 13: every call `ConceptCalls` writes down, its answer, nothing written, the two blocks included, and this page quoting each command and answer. |
-| `Functional\ExamplesConceptsRoutesTest` | Every route of examples 7 to 12 answers an administrator and refuses anonymous; the landing page lists them; each page shows its panel and saves through its form; example 10's check writes nothing. Example 13 refuses anonymous, says to enable its two modules, then, with them on, shows its parts and the calls' answers, and draws the Spotlight card and the Tonight section below on its page alone. |
+| `Functional\ExamplesConceptsRoutesTest` | Every route of examples 7 to 12 answers an administrator and refuses anonymous; the landing page lists them; each page shows its panel and its Files panel and saves through its form; example 10's check writes nothing. Example 13 refuses anonymous, says to enable its two modules, then, with them on, shows its parts and the calls' answers, and draws the Spotlight card and the Tonight section below on its page alone; its Files panel, the modules on or off. |
 | `Kernel\ComponentBlockTest` | Example 13's block: its structure and both documents, the hero's narrowed slot pinned, and what it renders, slots included ([its README](../data_surface_component_block/README.md)). |
 | `Kernel\ComponentSlotsTest` | What a slot expects read back from the metadata, the depth slots nest to, and each expectation a refusal. |
 | `Kernel\BlockPlacementToolsTest` | Example 13's block placed, configured, read and removed through the placement resource's tools ([its README](../data_surface_block/README.md)). |

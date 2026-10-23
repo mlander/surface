@@ -22,19 +22,10 @@ use Drupal\data_surface\ResourceBuild\OperationRoute;
 use Drupal\data_surface\ResourceBuild\ResourceRegistry;
 use Drupal\data_surface\ResourceBuild\ResourcesInterface;
 use Drupal\data_surface\Variants\ComponentProps;
-use Drupal\data_surface\Variants\ComponentSlots;
-use Drupal\data_surface_component_block\Plugin\Block\ComponentBlock;
 use Drupal\data_surface_component_block\Structure\ComponentBlockStructure;
 use Drupal\data_surface_examples\Access\FeesAccess;
 use Drupal\data_surface_examples\Keys\TicketTypes;
-use Drupal\data_surface_examples\Resource\BulletinResource;
-use Drupal\data_surface_examples\Resource\InfoDeskResource;
-use Drupal\data_surface_examples\Resource\PressResource;
 use Drupal\data_surface_examples\Resource\SpotlightResource;
-use Drupal\data_surface_examples\Shape\PhoneNumber;
-use Drupal\data_surface_examples\Storage\SpotlightStorage;
-use Drupal\data_surface_examples\Structure\PersonStructure;
-use Drupal\data_surface_examples\Structure\ReviewStructure;
 use Drupal\data_surface_tool\OperationInputs;
 use Drupal\tool\Tool\ToolDefinition;
 use Drupal\tool\Tool\ToolManager;
@@ -229,7 +220,10 @@ final class ConceptPanel {
   }
 
   /**
-   * Example 7: the rules as declared, and as the full schema states them.
+   * Example 7: the rules, as the full schema states them.
+   *
+   * The rules as declared are the resource's file, which the Files panel
+   * beside this one shows whole.
    *
    * @param \Drupal\data_surface\ResourceBuild\OperationRoute $served
    *   What the form serves.
@@ -243,13 +237,14 @@ final class ConceptPanel {
     // Decision: see docs/decisions.md#contract-2.
     $declared = array_values(array_intersect_key($full['allOf'] ?? [], array_flip($full[ContractEmitter::EXTENSION]['rules'] ?? [])));
     return [
-      'rules' => $this->details($this->t('The rules, as declared'), $this->t('From <code>defineInputs()</code>, word for word.'), $this->pre(implode("\n", self::statements(self::file(BulletinResource::class), '$inputs->narrow(')))),
       'conditionals' => $this->details($this->t('The rules, as the full schema states them'), $this->t('Each rule, and the send day required where it applies, as one conditional the frame lists under <code>x-surface.rules</code>: what a client reads before it sends anything.'), $this->json($declared)),
     ];
   }
 
   /**
-   * Example 8: one def, two sites, and what it cost.
+   * Example 8: one def, two sites.
+   *
+   * What each part cost is in the Files panel beside this one.
    *
    * @return array
    *   The blocks.
@@ -265,27 +260,8 @@ final class ConceptPanel {
       $site['allOf'] = $full['allOf'] ?? [];
       $sites[$id] = $site;
     }
-    $lines = [];
-    $classes = [
-      PersonStructure::class,
-      PhoneNumber::class,
-      ReviewStructure::class,
-      PressResource::class,
-      InfoDeskResource::class,
-    ];
-    foreach ($classes as $class) {
-      $lines[] = $this->t('@class: @lines lines of code.', [
-        '@class' => (new \ReflectionClass($class))->getShortName(),
-        '@lines' => CodeLines::count(self::file($class)),
-      ]);
-    }
     return [
       'sites' => $this->details($this->t('One def, two sites'), $this->t('The full schemas of the two resources, cut to the parts they share: the defs each writes, the keys that use them, and the conditionals stated at each site. <code>event.person</code> is the same def in both; <code>x-surface.reads</code> says which key its port reads at each site, and the email rule is stated on the container, where that key is.'), $this->json($sites)),
-      'lines' => [
-        '#theme' => 'item_list',
-        '#title' => $this->t('What it cost'),
-        '#items' => $lines,
-      ],
     ];
   }
 
@@ -504,14 +480,6 @@ final class ConceptPanel {
       }
     }
     $notes = $this->reader->notes($props);
-    $lines = [];
-    foreach ([SpotlightResource::class, ComponentProps::class, ComponentSlots::class, SpotlightStorage::class] as $class) {
-      $lines[] = $this->t('@class: @lines lines of code.', [
-        '@class' => (new \ReflectionClass($class))->getShortName(),
-        '@lines' => CodeLines::count(self::file($class)),
-      ]);
-    }
-    $lines[] = $this->t('The four components this module ships, read like any other: no line of code, their props are schemas and their slots metadata.');
     $counted = ['@count' => $count, '@component' => $component];
     return [
       'read' => $this->details(
@@ -543,11 +511,6 @@ final class ConceptPanel {
           'allOf' => $conditional,
         ]),
       ),
-      'lines' => [
-        '#theme' => 'item_list',
-        '#title' => $this->t('What it cost'),
-        '#items' => $lines,
-      ],
     ];
   }
 
@@ -597,17 +560,6 @@ final class ConceptPanel {
         ];
       }
     }
-    $lines = [];
-    $classes = [
-      ComponentBlockStructure::class,
-      ComponentBlock::class,
-    ];
-    foreach ($classes as $class) {
-      $lines[] = $this->t('@class: @lines lines of code.', [
-        '@class' => (new \ReflectionClass($class))->getShortName(),
-        '@lines' => CodeLines::count(self::file($class)),
-      ]);
-    }
     return [
       'two_lines' => [
         '#type' => 'table',
@@ -645,11 +597,6 @@ final class ConceptPanel {
         '#header' => [$this->t('Tool'), $this->t('Title'), $this->t('Tool API kind'), $this->t('Inputs')],
         '#rows' => $tools,
         '#attributes' => ['class' => ['data-surface-concept-tools']],
-      ],
-      'lines' => [
-        '#theme' => 'item_list',
-        '#title' => $this->t('What it cost'),
-        '#items' => $lines,
       ],
     ];
   }

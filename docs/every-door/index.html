@@ -64,6 +64,8 @@ p { margin: 0; max-width: 62ch; }
 .muted { color: var(--ink-2); font-size: 13.5px; }
 .about { color: var(--ink-2); font-size: 13px; line-height: 1.45; margin-top: 11px; padding-left: 10px; border-left: 2px solid var(--line); }
 .about a { color: var(--owner); }
+.drawn { color: var(--ink-2); font-size: 13px; line-height: 1.5; padding-left: 10px; border-left: 2px solid var(--line); }
+.drawn a { color: var(--owner); }
 code { font: 400 0.92em var(--f-mono); }
 
 .tabs { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -197,6 +199,7 @@ table.cmp td:last-child { color: var(--owner); font-weight: 600; }
       <p>Every door reads that one sealed surface and nothing else, so they agree, and one module changes all of them without touching any. That is the alter contract. Compliance's <code>alterInputs()</code>, from <code>data_surface_examples_compliance</code>, reaches every door this way:</p>
       <pre class="code" data-code="layers"></pre>
       <button class="replay" type="button" id="layers-replay">Build it again</button>
+      <p class="drawn">Drawn from examples <a href="https://github.com/mlander/data_surface/blob/next/modules/data_surface_examples/README.md#example-3-made-of-parts" target="_blank" rel="noopener">3</a> and <a href="https://github.com/mlander/data_surface/blob/next/modules/data_surface_examples/README.md#example-4-others-get-a-say" target="_blank" rel="noopener">4</a>, with the fees of example <a href="https://github.com/mlander/data_surface/blob/next/modules/data_surface_examples/README.md#example-10-who-may-change-what" target="_blank" rel="noopener">10</a>: <a href="https://github.com/mlander/data_surface/blob/next/modules/data_surface_examples/src/Resource/RegistrationStep3Resource.php" target="_blank" rel="noopener"><code>RegistrationStep3Resource.php</code></a>, <a href="https://github.com/mlander/data_surface/blob/next/modules/data_surface_examples_compliance/src/Alter/RegistrationComplianceAlter.php" target="_blank" rel="noopener"><code>RegistrationComplianceAlter.php</code></a>, <a href="https://github.com/mlander/data_surface/blob/next/modules/data_surface_examples_compliance/src/Structure/ComplianceStructure.php" target="_blank" rel="noopener"><code>ComplianceStructure.php</code></a>, <a href="https://github.com/mlander/data_surface/blob/next/modules/data_surface_examples/src/Access/FeesAccess.php" target="_blank" rel="noopener"><code>FeesAccess.php</code></a>. Explained in <a href="https://github.com/mlander/data_surface/blob/next/docs/pattern.md" target="_blank" rel="noopener">The pattern</a>.</p>
     </section>
 
     <section class="chapter" id="ch-all" hidden>
@@ -204,6 +207,7 @@ table.cmp td:last-child { color: var(--owner); font-weight: 600; }
       <p>A resource says what it takes: its keys, their types and their limits. It says nothing about forms, routes or tools.</p>
       <p>Everything that needs those values reads the same contract. A form, a React page and an agent accept and refuse exactly the same things.</p>
       <p class="muted">Turn the model, pick a layer above, or change a value below and watch it reach every door.</p>
+      <p class="drawn">Drawn from example <a href="https://github.com/mlander/data_surface/blob/next/modules/data_surface_examples/README.md#example-3-made-of-parts" target="_blank" rel="noopener">3</a>: <a href="https://github.com/mlander/data_surface/blob/next/modules/data_surface_examples/src/Resource/RegistrationStep3Resource.php" target="_blank" rel="noopener"><code>RegistrationStep3Resource.php</code></a>. Explained in <a href="https://github.com/mlander/data_surface/blob/next/docs/first-resource.md" target="_blank" rel="noopener">Your first resource</a>.</p>
     </section>
 
     <section class="chapter" id="ch-today" hidden>
@@ -213,6 +217,7 @@ table.cmp td:last-child { color: var(--owner); font-weight: 600; }
       <p>A headless admin has nothing to draw from. The form's rules are PHP callbacks, and the tool's inputs carry no dependencies between keys.</p>
       <pre class="code" data-code="today"></pre>
       <p class="muted">Change the license below. Only the form's doors light up.</p>
+      <p class="drawn">Drawn from example <a href="https://github.com/mlander/data_surface/blob/next/modules/data_surface_examples/README.md#example-2-answers-depend-on-answers" target="_blank" rel="noopener">2</a>'s classic twin, the same settings by hand: <a href="https://github.com/mlander/data_surface/blob/next/modules/data_surface_examples/src/Form/RegistrationStep2ClassicForm.php" target="_blank" rel="noopener"><code>RegistrationStep2ClassicForm.php</code></a>, <a href="https://github.com/mlander/data_surface/blob/next/modules/data_surface_examples/src/Resource/RegistrationStep2Resource.php" target="_blank" rel="noopener"><code>RegistrationStep2Resource.php</code></a>. Explained in <a href="https://github.com/mlander/data_surface/blob/next/docs/core-gaps.md" target="_blank" rel="noopener">Core gaps</a>.</p>
     </section>
 
     <section class="chapter" id="ch-compare" hidden>
@@ -231,6 +236,7 @@ table.cmp td:last-child { color: var(--owner); font-weight: 600; }
           </tbody>
         </table>
       </div>
+      <p class="drawn">Drawn from example <a href="https://github.com/mlander/data_surface/blob/next/modules/data_surface_examples/README.md#example-2-answers-depend-on-answers" target="_blank" rel="noopener">2</a>'s classic twin beside its resource: <a href="https://github.com/mlander/data_surface/blob/next/modules/data_surface_examples/src/Form/RegistrationStep2ClassicForm.php" target="_blank" rel="noopener"><code>RegistrationStep2ClassicForm.php</code></a>, <a href="https://github.com/mlander/data_surface/blob/next/modules/data_surface_examples/src/Resource/RegistrationStep2Resource.php" target="_blank" rel="noopener"><code>RegistrationStep2Resource.php</code></a>. Explained in <a href="https://github.com/mlander/data_surface/blob/next/docs/core-gaps.md" target="_blank" rel="noopener">Core gaps</a>.</p>
     </section>
 
     <section class="chapter" id="ch-surface" hidden>
@@ -238,6 +244,7 @@ table.cmp td:last-child { color: var(--owner); font-weight: 600; }
       <p>One class declares the inputs and the operations that read and write them. Each key is an ordinary typed data definition with ordinary constraints.</p>
       <p>Its storage, underneath, loads the current values and commits the new ones, so the resource never knows where they are kept.</p>
       <pre class="code" data-code="surface"></pre>
+      <p class="drawn">Drawn from example <a href="https://github.com/mlander/data_surface/blob/next/modules/data_surface_examples/README.md#example-3-made-of-parts" target="_blank" rel="noopener">3</a>: <a href="https://github.com/mlander/data_surface/blob/next/modules/data_surface_examples/src/Resource/RegistrationStep3Resource.php" target="_blank" rel="noopener"><code>RegistrationStep3Resource.php</code></a>, <a href="https://github.com/mlander/data_surface/blob/next/modules/data_surface_examples/src/Storage/RegistrationStep3Storage.php" target="_blank" rel="noopener"><code>RegistrationStep3Storage.php</code></a>. Explained in <a href="https://github.com/mlander/data_surface/blob/next/docs/declaring-a-resource.md" target="_blank" rel="noopener">Declaring a resource</a>.</p>
     </section>
 
     <section class="chapter" id="ch-parts" hidden>
@@ -245,6 +252,7 @@ table.cmp td:last-child { color: var(--owner); font-weight: 600; }
       <p>A resource can attach a structure at one of its keys. The child keeps its own keys, refinement and validation, and the parent cannot reach into it. That is what makes Contact reusable anywhere.</p>
       <p>Variants are the structures a key can hold when another key's value chooses between them. Pricing decides whether the ticket is the free ticket or the paid ticket.</p>
       <pre class="code" data-code="parts"></pre>
+      <p class="drawn">Drawn from example <a href="https://github.com/mlander/data_surface/blob/next/modules/data_surface_examples/README.md#example-3-made-of-parts" target="_blank" rel="noopener">3</a>: <a href="https://github.com/mlander/data_surface/blob/next/modules/data_surface_examples/src/Structure/FreeTicketStructure.php" target="_blank" rel="noopener"><code>FreeTicketStructure.php</code></a>, <a href="https://github.com/mlander/data_surface/blob/next/modules/data_surface_examples/src/Structure/PaidTicketStructure.php" target="_blank" rel="noopener"><code>PaidTicketStructure.php</code></a>, <a href="https://github.com/mlander/data_surface/blob/next/modules/data_surface_examples/src/Structure/ContactStructure.php" target="_blank" rel="noopener"><code>ContactStructure.php</code></a>. Explained in <a href="https://github.com/mlander/data_surface/blob/next/docs/resources.md#children" target="_blank" rel="noopener">Children</a>.</p>
     </section>
 
     <section class="chapter" id="ch-refine" hidden>
@@ -252,6 +260,7 @@ table.cmp td:last-child { color: var(--owner); font-weight: 600; }
       <p>Some keys are only fully known once another value is. A refiner is a method that names the key it narrows. Its parameters are the keys it watches, so the signature is the dependency.</p>
       <p>A refiner may only tighten what was declared. Room narrows to the venue's rooms, and capacity stops at the room's seats.</p>
       <pre class="code" data-code="refine"></pre>
+      <p class="drawn">Drawn from examples <a href="https://github.com/mlander/data_surface/blob/next/modules/data_surface_examples/README.md#example-2-answers-depend-on-answers" target="_blank" rel="noopener">2</a> and <a href="https://github.com/mlander/data_surface/blob/next/modules/data_surface_examples/README.md#example-3-made-of-parts" target="_blank" rel="noopener">3</a>: <a href="https://github.com/mlander/data_surface/blob/next/modules/data_surface_examples/src/Resource/RegistrationStep3Resource.php" target="_blank" rel="noopener"><code>RegistrationStep3Resource.php</code></a>, <a href="https://github.com/mlander/data_surface/blob/next/modules/data_surface_examples/src/Venues.php" target="_blank" rel="noopener"><code>Venues.php</code></a>. Explained in <a href="https://github.com/mlander/data_surface/blob/next/docs/refinement.md#refining" target="_blank" rel="noopener">Refining</a>.</p>
     </section>
 
     <section class="chapter" id="ch-alter" hidden>
@@ -259,6 +268,7 @@ table.cmp td:last-child { color: var(--owner); font-weight: 600; }
       <p>Another module can add keys to a resource it does not own, stored under its own name. It can tighten the owner's keys and say where its fieldset is drawn.</p>
       <p>Here Compliance attaches its own structure, a license and stewards, and wires the structure's capacity to the owner's. Without a license it holds capacity at 100. The owner's class is not touched.</p>
       <pre class="code" data-code="alter"></pre>
+      <p class="drawn">Drawn from example <a href="https://github.com/mlander/data_surface/blob/next/modules/data_surface_examples/README.md#example-4-others-get-a-say" target="_blank" rel="noopener">4</a>: <a href="https://github.com/mlander/data_surface/blob/next/modules/data_surface_examples_compliance/src/Alter/RegistrationComplianceAlter.php" target="_blank" rel="noopener"><code>RegistrationComplianceAlter.php</code></a>, <a href="https://github.com/mlander/data_surface/blob/next/modules/data_surface_examples_compliance/src/Structure/ComplianceStructure.php" target="_blank" rel="noopener"><code>ComplianceStructure.php</code></a>, <a href="https://github.com/mlander/data_surface/blob/next/modules/data_surface_examples_compliance/src/Shape/License.php" target="_blank" rel="noopener"><code>License.php</code></a>. Explained in <a href="https://github.com/mlander/data_surface/blob/next/docs/resources.md#alters" target="_blank" rel="noopener">Alters</a>.</p>
     </section>
 
     <section class="chapter" id="ch-rules" hidden>
@@ -267,6 +277,7 @@ table.cmp td:last-child { color: var(--owner); font-weight: 600; }
       <p>A rule is not run: the full schema writes it as an <code>if</code> / <code>then</code> and lists it under <code>x-surface.rules</code>, so the capacity is stated exactly. The stewards watch the capacity, a number no list covers, so they stay <code>refine</code>: a client asks again with its values.</p>
       <p>A key can also not apply. While the bulletin goes out monthly, its send day is not on the form or in the documents, and storage keeps the stored day.</p>
       <pre class="code" data-code="rules"></pre>
+      <p class="drawn">Drawn from examples <a href="https://github.com/mlander/data_surface/blob/next/modules/data_surface_examples/README.md#example-4-others-get-a-say" target="_blank" rel="noopener">4</a> and <a href="https://github.com/mlander/data_surface/blob/next/modules/data_surface_examples/README.md#example-7-a-rule-written-as-data" target="_blank" rel="noopener">7</a>: <a href="https://github.com/mlander/data_surface/blob/next/modules/data_surface_examples_compliance/src/Alter/RegistrationComplianceAlter.php" target="_blank" rel="noopener"><code>RegistrationComplianceAlter.php</code></a>, <a href="https://github.com/mlander/data_surface/blob/next/modules/data_surface_examples/src/Resource/BulletinResource.php" target="_blank" rel="noopener"><code>BulletinResource.php</code></a>. Explained in <a href="https://github.com/mlander/data_surface/blob/next/docs/refinement.md#declaring-a-rule" target="_blank" rel="noopener">Declaring a rule</a>.</p>
     </section>
 
     <section class="chapter" id="ch-reuse" hidden>
@@ -275,6 +286,7 @@ table.cmp td:last-child { color: var(--owner); font-weight: 600; }
       <p>Each document writes the person once, as <code>event.person</code> under <code>$defs</code>, with its port. Each site says which key the port reads, <code>x-surface.reads</code>, and states the email rule on its own <code>allOf</code>.</p>
       <p>A mixin is merged flat: the review's two keys are the press page's own, stored beside <code>public</code> and refused as <code>reviewed_by</code>. A shape is one named value: the phone is <code>event.phone</code>, used by the person and by the desk, and the license is <code>event.license</code>.</p>
       <pre class="code" data-code="reuse"></pre>
+      <p class="drawn">Drawn from examples <a href="https://github.com/mlander/data_surface/blob/next/modules/data_surface_examples/README.md#example-4-others-get-a-say" target="_blank" rel="noopener">4</a> and <a href="https://github.com/mlander/data_surface/blob/next/modules/data_surface_examples/README.md#example-8-one-part-used-twice" target="_blank" rel="noopener">8</a>: <a href="https://github.com/mlander/data_surface/blob/next/modules/data_surface_examples/src/Structure/PersonStructure.php" target="_blank" rel="noopener"><code>PersonStructure.php</code></a>, <a href="https://github.com/mlander/data_surface/blob/next/modules/data_surface_examples/src/Resource/PressResource.php" target="_blank" rel="noopener"><code>PressResource.php</code></a>, <a href="https://github.com/mlander/data_surface/blob/next/modules/data_surface_examples/src/Resource/InfoDeskResource.php" target="_blank" rel="noopener"><code>InfoDeskResource.php</code></a>, <a href="https://github.com/mlander/data_surface/blob/next/modules/data_surface_examples/src/Structure/ReviewStructure.php" target="_blank" rel="noopener"><code>ReviewStructure.php</code></a>, <a href="https://github.com/mlander/data_surface/blob/next/modules/data_surface_examples/src/Shape/PhoneNumber.php" target="_blank" rel="noopener"><code>PhoneNumber.php</code></a>, <a href="https://github.com/mlander/data_surface/blob/next/modules/data_surface_examples_compliance/src/Structure/ComplianceStructure.php" target="_blank" rel="noopener"><code>ComplianceStructure.php</code></a>. Explained in <a href="https://github.com/mlander/data_surface/blob/next/docs/resources.md#ports" target="_blank" rel="noopener">Ports</a>.</p>
     </section>
 
     <section class="chapter" id="ch-siteKeys" hidden>
@@ -283,6 +295,7 @@ table.cmp td:last-child { color: var(--owner); font-weight: 600; }
       <p>The provider declares what it read, the configuration's cache tag, so the form, both documents and the tool listing are cached by that tag. Add a VIP type to the configuration and reload: its checkbox, its limits and its row in the tool listing appear, with no cache rebuild.</p>
       <p>The speaker type is locked in the configuration. It is drawn fixed and is <code>readOnly</code> in both documents. A value a tool sends for it is not taken, and the answer says so in a note.</p>
       <pre class="code" data-code="siteKeys"></pre>
+      <p class="drawn">Drawn from example <a href="https://github.com/mlander/data_surface/blob/next/modules/data_surface_examples/README.md#example-9-keys-that-come-from-the-site" target="_blank" rel="noopener">9</a>: <a href="https://github.com/mlander/data_surface/blob/next/modules/data_surface_examples/src/Resource/TicketSalesResource.php" target="_blank" rel="noopener"><code>TicketSalesResource.php</code></a>, <a href="https://github.com/mlander/data_surface/blob/next/modules/data_surface_examples/src/Structure/TicketLimitStructure.php" target="_blank" rel="noopener"><code>TicketLimitStructure.php</code></a>, <a href="https://github.com/mlander/data_surface/blob/next/modules/data_surface_examples/src/Keys/TicketTypes.php" target="_blank" rel="noopener"><code>TicketTypes.php</code></a>. Explained in <a href="https://github.com/mlander/data_surface/blob/next/docs/resources.md#keys-that-come-from-the-site" target="_blank" rel="noopener">Keys that come from the site</a>.</p>
     </section>
 
     <section class="chapter" id="ch-access" hidden>
@@ -291,6 +304,7 @@ table.cmp td:last-child { color: var(--owner); font-weight: 600; }
       <p>A static answer is stated ahead, for the account that asks. Without "set event fees", the fees are locked: <code>readOnly</code> in the full schema and in the tool listing. With the workflow module on, an account without "see event fees" gets no fees at all.</p>
       <p>For any other account the stored program decides: once it is published, the fees are fixed. The full schema marks them <code>access: "live"</code>, and the schema for these answers, the form and the pipeline settle it per request.</p>
       <pre class="code" data-code="access"></pre>
+      <p class="drawn">Drawn from example <a href="https://github.com/mlander/data_surface/blob/next/modules/data_surface_examples/README.md#example-10-who-may-change-what" target="_blank" rel="noopener">10</a>: <a href="https://github.com/mlander/data_surface/blob/next/modules/data_surface_examples/src/Structure/FeesStructure.php" target="_blank" rel="noopener"><code>FeesStructure.php</code></a>, <a href="https://github.com/mlander/data_surface/blob/next/modules/data_surface_examples/src/Access/FeesAccess.php" target="_blank" rel="noopener"><code>FeesAccess.php</code></a>, <a href="https://github.com/mlander/data_surface/blob/next/modules/data_surface_examples_workflow/src/Alter/FeesWorkflowAlter.php" target="_blank" rel="noopener"><code>FeesWorkflowAlter.php</code></a>. Explained in <a href="https://github.com/mlander/data_surface/blob/next/docs/resources.md#static-and-runtime-access" target="_blank" rel="noopener">Static and runtime access</a>.</p>
     </section>
 
     <section class="chapter" id="ch-ops" hidden>
@@ -299,6 +313,7 @@ table.cmp td:last-child { color: var(--owner); font-weight: 600; }
       <p>The Tool API gives a read only operation the Read kind and every other operation the Write kind. An MCP client reads its hints from that kind and from the destructive flag. Checking changes nothing, so it has no read tool beside it.</p>
       <p>The Tool API keeps idempotence on the kind, and no kind that writes is idempotent. Configuring is idempotent in both documents and reaches an MCP client as not idempotent.</p>
       <pre class="code" data-code="ops"></pre>
+      <p class="drawn">Drawn from example <a href="https://github.com/mlander/data_surface/blob/next/modules/data_surface_examples/README.md#example-10-who-may-change-what" target="_blank" rel="noopener">10</a>: <a href="https://github.com/mlander/data_surface/blob/next/modules/data_surface_examples/src/Resource/ProgramResource.php" target="_blank" rel="noopener"><code>ProgramResource.php</code></a>. Explained in <a href="https://github.com/mlander/data_surface/blob/next/docs/resources.md#operations-add-edit-and-the-rest" target="_blank" rel="noopener">Operations</a>.</p>
     </section>
 
     <section class="chapter" id="ch-contract" hidden>
@@ -306,6 +321,7 @@ table.cmp td:last-child { color: var(--owner); font-weight: 600; }
       <p>Ask the resource and it answers in JSON Schema, contract 3, as two documents. The schema as it stands is built for the values so far. The full schema reads no value, so it is the same whatever is stored or typed; access in it is the asking account's.</p>
       <p>Labeled choices are <code>oneOf</code>. A key's variants are an <code>anyOf</code> of their defs, each chosen by a conditional. A declared rule is an <code>if</code> / <code>then</code> listed under <code>x-surface.rules</code>. Where a rule cannot be stated, the key says <code>refine</code> (ask again with values) or <code>live</code> (settled at runtime).</p>
       <pre class="code" data-code="contract"></pre>
+      <p class="drawn">Drawn from examples <a href="https://github.com/mlander/data_surface/blob/next/modules/data_surface_examples/README.md#example-3-made-of-parts" target="_blank" rel="noopener">3</a> and <a href="https://github.com/mlander/data_surface/blob/next/modules/data_surface_examples/README.md#example-4-others-get-a-say" target="_blank" rel="noopener">4</a>: <a href="https://github.com/mlander/data_surface/blob/next/modules/data_surface_examples/src/Resource/RegistrationStep3Resource.php" target="_blank" rel="noopener"><code>RegistrationStep3Resource.php</code></a>, <a href="https://github.com/mlander/data_surface/blob/next/modules/data_surface_examples_compliance/src/Alter/RegistrationComplianceAlter.php" target="_blank" rel="noopener"><code>RegistrationComplianceAlter.php</code></a>. Explained in <a href="https://github.com/mlander/data_surface/blob/next/docs/served-contract.md#two-documents" target="_blank" rel="noopener">Two documents</a>.</p>
     </section>
 
     <section class="chapter" id="ch-doors" hidden>
@@ -320,6 +336,7 @@ table.cmp td:last-child { color: var(--owner); font-weight: 600; }
         <p id="dd-body"></p>
         <pre class="code" id="dd-sample"></pre>
       </div>
+      <p class="drawn">Drawn from examples <a href="https://github.com/mlander/data_surface/blob/next/modules/data_surface_examples/README.md#example-3-made-of-parts" target="_blank" rel="noopener">3</a> and <a href="https://github.com/mlander/data_surface/blob/next/modules/data_surface_examples/README.md#example-5-same-contract-no-form" target="_blank" rel="noopener">5</a>, the tool example 5 calls: <a href="https://github.com/mlander/data_surface/blob/next/modules/data_surface_examples/src/Resource/RegistrationStep3Resource.php" target="_blank" rel="noopener"><code>RegistrationStep3Resource.php</code></a>. Explained in <a href="https://github.com/mlander/data_surface/blob/next/docs/served-contract.md" target="_blank" rel="noopener">The served contract</a>.</p>
     </section>
 
     <section class="try" aria-label="Change a value">

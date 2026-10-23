@@ -43,6 +43,11 @@ JSON Schema read into a structure: a component's props. Example 13 is
 those two lines as a block's settings, with the block in a submodule of
 its own.
 
+Read in this order: [Your first resource](first-resource.md), then the
+examples 1 to 13 in order, with [Concepts](concepts.md) as the map. The
+examples index, `/surface-examples`, lists each example's concept, docs
+page, decision and files, and each example's page lists its files.
+
 [The pattern](pattern.md) is the whole of what an author writes, and
 why; [How it fits](how-it-fits.md) follows one request through the
 build step. The rest of this page is the module around it.

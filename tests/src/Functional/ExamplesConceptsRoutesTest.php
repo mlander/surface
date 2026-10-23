@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Drupal\Tests\data_surface\Functional;
 
 use Drupal\Tests\BrowserTestBase;
+use Drupal\Tests\data_surface\Traits\ExampleFilesPanelTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
@@ -19,6 +20,8 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 #[Group('data_surface')]
 #[RunTestsInSeparateProcesses]
 class ExamplesConceptsRoutesTest extends BrowserTestBase {
+
+  use ExampleFilesPanelTrait;
 
   /**
    * {@inheritdoc}
@@ -84,6 +87,7 @@ class ExamplesConceptsRoutesTest extends BrowserTestBase {
       $assert->pageTextContains($paragraph);
       $assert->pageTextContains('Ask the tool');
       $assert->pageTextContains('Behind the scenes: the contract, as it stands');
+      $this->assertFilesPanel((int) explode('/', $path)[1]);
       // A check changes nothing, so its button says what it does.
       $this->submitForm([], $path === 'surface-examples/10/check' ? 'Check a program' : 'Save');
       $assert->pageTextContains($path === 'surface-examples/10/check'
@@ -118,6 +122,8 @@ class ExamplesConceptsRoutesTest extends BrowserTestBase {
     $assert->pageTextContains('Enable both: ddev drush pm:install data_surface_component_block data_surface_block');
     $assert->pageTextContains('The block is not enabled on this site yet.');
     $assert->pageTextNotContains('Ask the tool');
+    // The block's files are listed whether or not it is on.
+    $this->assertFilesPanel(13);
 
     $this->container->get('module_installer')->install(['data_surface_component_block', 'data_surface_block']);
     $this->rebuildContainer();

@@ -130,8 +130,9 @@ class ExamplesTodayPanelTest extends DataSurfaceKernelTestBase {
    */
   public function testExampleThreeShowsWhatConfigSchemaCanSay(): void {
     $panels = $this->panelsOf(3);
-    // The contract panel as it was, and below it the new one.
-    $this->assertSame([ExamplePanels::CONTRACT, ExamplePanels::TODAY], Element::children($panels, TRUE));
+    // The files of the example, the contract panel as it was, and below it
+    // the new one.
+    $this->assertSame([ExamplePanels::FILES, ExamplePanels::CONTRACT, ExamplePanels::TODAY], Element::children($panels, TRUE));
     $this->assertSame('Behind the scenes: the contract, as it stands', (string) $panels[ExamplePanels::CONTRACT]['#title']);
     $today = $panels[ExamplePanels::TODAY];
     $this->assertSame('details', $today['#type']);
@@ -279,7 +280,7 @@ class ExamplesTodayPanelTest extends DataSurfaceKernelTestBase {
    */
   public function testTheClassicTwinShowsTheTwoDocuments(): void {
     $page = $this->container->get('class_resolver')->getInstanceFromDefinition(ExamplesController::class)->step1Classic();
-    $this->assertSame(['form', 'today'], Element::children($page));
+    $this->assertSame(['form', 'files', 'today'], Element::children($page));
     $this->assertSame('data_surface_examples_registration_step1_classic', $page['form']['#form_id']);
     $today = $page['today'];
     $this->assertSame('Without a resource: what config schema can say', (string) $today['#title']);
@@ -300,7 +301,7 @@ class ExamplesTodayPanelTest extends DataSurfaceKernelTestBase {
    */
   public function testTheSecondClassicTwinCountsItselfAndShowsTheTwoDocuments(): void {
     $page = $this->container->get('class_resolver')->getInstanceFromDefinition(ExamplesController::class)->step2Classic();
-    $this->assertSame(['about', 'form', 'today'], Element::children($page));
+    $this->assertSame(['about', 'form', 'files', 'today'], Element::children($page));
     $this->assertSame('data_surface_examples_registration_step2_classic', $page['form']['#form_id']);
     // The counts, made from the files as the page is.
     $file = static fn (string $class): string => (string) (new \ReflectionClass($class))->getFileName();

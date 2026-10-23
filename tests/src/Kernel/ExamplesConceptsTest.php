@@ -25,6 +25,7 @@ use Drupal\data_surface_examples\Resource\PressResource;
 use Drupal\data_surface_examples\Resource\ProgramResource;
 use Drupal\data_surface_examples\Resource\SpotlightResource;
 use Drupal\data_surface_examples\Resource\TicketSalesResource;
+use Drupal\data_surface_examples\Series;
 use Drupal\data_surface\Variants\ComponentProps;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use Drupal\tool\Tool\ToolOperation;
@@ -549,7 +550,7 @@ class ExamplesConceptsTest extends DataSurfaceKernelTestBase {
       'step11' => 'event.doors',
       'step12' => 'event.spotlight',
     ];
-    $order = [ExamplePanels::CONCEPT, ExamplePanels::CONTRACT, ExamplePanels::TODAY];
+    $order = [ExamplePanels::CONCEPT, ExamplePanels::FILES, ExamplePanels::CONTRACT, ExamplePanels::TODAY];
     foreach ($pages as $route => $id) {
       $panel = $this->formAt('data_surface_examples.' . $route)[DataSurfaceOperationForm::PANEL_KEY];
       $concept = $panel[ExamplePanels::CONCEPT];
@@ -566,10 +567,16 @@ class ExamplesConceptsTest extends DataSurfaceKernelTestBase {
       $this->assertSame($order, array_values(array_intersect(Element::children($panel, TRUE), $order)), $route);
     }
 
-    // Example 7's rules, quoted from the class as they are.
-    $panel = $this->formAt('data_surface_examples.step7')[DataSurfaceOperationForm::PANEL_KEY][ExamplePanels::CONCEPT];
-    $rules = htmlspecialchars_decode((string) $panel['rules']['content']['#value']);
-    $this->assertStringContainsString("\$inputs->narrow('send_day')\n  ->when(Condition::equals('frequency', 'monthly'))\n  ->doesNotApply();", $rules);
+    // Example 7's rules are its resource's, which the Files panel beside
+    // the concept panel shows whole, so the concept panel no longer quotes
+    // them.
+    $panels = $this->formAt('data_surface_examples.step7')[DataSurfaceOperationForm::PANEL_KEY];
+    $this->assertArrayNotHasKey('rules', $panels[ExamplePanels::CONCEPT]);
+    $this->assertArrayHasKey('conditionals', $panels[ExamplePanels::CONCEPT]);
+    $bulletin = $panels[ExamplePanels::FILES]['files']['#items'][0];
+    $this->assertSame(Series::MODULE . 'src/Resource/BulletinResource.php', $bulletin['#wrapper_attributes']['data-file']);
+    $rules = htmlspecialchars_decode((string) $bulletin['whole']['text']['#value']);
+    $this->assertStringContainsString("    \$inputs->narrow('send_day')\n      ->when(Condition::equals('frequency', 'monthly'))\n      ->doesNotApply();", $rules);
     // Example 10's two accounts and its facts.
     $panel = $this->formAt('data_surface_examples.step10')[DataSurfaceOperationForm::PANEL_KEY][ExamplePanels::CONCEPT];
     $accounts = json_decode(htmlspecialchars_decode((string) $panel['accounts']['content']['#value']), TRUE);
