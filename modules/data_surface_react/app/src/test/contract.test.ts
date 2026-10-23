@@ -1,5 +1,5 @@
 import type { Extension, Schema } from '../contract';
-import { assertContract, CONTRACT, ContractRefused, defName, inlineSchema, isPart, resolveSchema, resolveVariants, restored, watchedPaths } from '../contract';
+import { assertContract, assertSchema, CONTRACT, ContractRefused, defName, inlineSchema, isPart, resolveSchema, resolveVariants, restored, watchedPaths } from '../contract';
 import example3 from './fixtures/example3.json';
 import license from './fixtures/refine-example3-license.json';
 import journal from './fixtures/refine-journal.json';
@@ -237,8 +237,8 @@ describe('a key declared with a shape', () => {
   });
 
   it('reads the compliance license the server refers to its def, in both documents', () => {
-    const recorded = license as unknown as { schema: { schema: Schema }; contract: { schema: Schema } };
-    for (const document of [recorded.schema.schema, recorded.contract.schema]) {
+    const recorded = license as unknown as { schema: Schema; contract: { schema: Schema } };
+    for (const document of [recorded.schema, recorded.contract.schema]) {
       expect(document.$defs?.['event.license']).toMatchObject({ type: ['string', 'null'], pattern: '^\\d{4}$', examples: ['2048'] });
       const mount = inlineSchema(document).properties?.third_party_settings.properties?.data_surface_examples_compliance as Schema;
       expect(isPart(mount)).toBe(true);
@@ -249,15 +249,23 @@ describe('a key declared with a shape', () => {
   });
 });
 
-describe('contract 2 on the wire', () => {
+describe('contract 3 on the wire', () => {
   const said = (widget: Extension['widget'], more: Partial<Extension> = {}): Extension => ({ widget, locked: false, dependsOn: [], refined: false, stale: false, ...more });
 
   it('refuses a document of contract 1, which states no version, and one of any other', () => {
-    expect(CONTRACT).toBe(2);
+    expect(CONTRACT).toBe(3);
     expect(() => assertContract({ schema: { type: 'object' } })).toThrow(new ContractRefused('1'));
-    expect(() => assertContract({ schema: { type: 'object' } })).toThrow('This page reads contract 2; the server sent contract 1.');
-    expect(() => assertContract({ schema: { 'x-surface': { contract: 3 } as Extension } })).toThrow('This page reads contract 2; the server sent contract 3.');
-    expect(assertContract(example3 as unknown as { schema: Schema }).schema['x-surface']?.contract).toBe(2);
+    expect(() => assertContract({ schema: { type: 'object' } })).toThrow('This page reads contract 3; the server sent contract 1.');
+    expect(() => assertContract({ schema: { 'x-surface': { contract: 2 } as Extension } })).toThrow('This page reads contract 3; the server sent contract 2.');
+    expect(assertContract(example3 as unknown as { schema: Schema }).schema['x-surface']?.contract).toBe(3);
+  });
+
+  it('refuses a full schema, served bare, of any other contract', () => {
+    const recorded = license as unknown as { schema: Schema };
+    expect(assertSchema(recorded.schema)['x-surface']?.contract).toBe(3);
+    expect(() => assertSchema({ ...recorded.schema, 'x-surface': { ...recorded.schema['x-surface'], contract: 2 } as Extension })).toThrow(
+      'This page reads contract 3; the server sent contract 2.',
+    );
   });
 
   it('puts each `within` entry back at its pointer, a property left out or a `true` made an object again, and drops the map', () => {
@@ -326,7 +334,7 @@ describe('contract 2 on the wire', () => {
   });
 
   it('marks each conditional `x-surface.rules` lists as a declared rule, at the top and in a def', () => {
-    const raw = (journal as unknown as { schema: { schema: Schema } }).schema.schema;
+    const raw = (journal as unknown as { schema: Schema }).schema;
     const rules = (schema: Schema): number[] => (schema.allOf ?? []).flatMap((condition, i) => (condition['x-surface']?.declared ? [i] : []));
     expect(raw['x-surface']?.rules).toEqual([2, 4, 5]);
     const back = restored(raw);

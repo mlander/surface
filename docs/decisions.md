@@ -733,7 +733,7 @@ A `#[RefinesInput]` method is static unless its attribute says
 `runtime: TRUE`. A static refiner promises to be a pure function of the
 siblings it watches, so the served contract runs it ahead of time and
 states its answers as conditionals (`enumerated`), or says they cannot
-be listed (`refine`: ask `/refine` with values). A runtime refiner
+be listed (`refine`: ask `POST .../schema` with values, `/refine` until contract 3). A runtime refiner
 promises the schema nothing: the emitter never runs it, in either
 document; the key keeps the width its static refiners give it in the
 full schema and carries `live: true` (the markers were `dynamic` and
@@ -928,7 +928,7 @@ it as it states any static answer. Each door:
 - **React.** The page narrows it from the full schema: a met `false`
   drops the field and what it sends, a met `required` requires it again,
   and a key that did not apply when the page was loaded, whose stored
-  value the page was never handed, is asked of `/refine`.
+  value the page was never handed, is asked of the server (`POST .../schema`).
 
 A list narrowed to nothing is not a key that does not apply. It renders
 as a select offering its empty option alone, the constraint refuses any
@@ -2270,6 +2270,15 @@ moves with the site's language and its alters.
   with codes: a value sent for a locked key and not taken is `locked`,
   a stored value kept that the key no longer offers is `stale`, and
   carries the value it keeps (left out for a secret).
+- **Every path a JSON Pointer** (decided 2026-10-22, with
+  [contract 3](#contract-3-the-operation-is-the-method)). `path` in a
+  violation, a note and a stale entry, and each entry of `changes`, is a
+  JSON Pointer, `/contact/email`, at every door: the tool's result and
+  its text lines, Drush's JSON, the HTTP results and problem details.
+  The whole call is the empty pointer, as it was the empty path. Until
+  then they were dotted paths, `contact.email`. The form keeps its own
+  naming, and a message names a key as its renderer does
+  (`ResultDocument::pointer()`).
 - **At each door.** The write tool's result carries the shape as its
   context, on a refusal as on a success (`drush tool:run --json` prints
   it as `outputs`), and declares each key as an output, a read only
@@ -2278,8 +2287,10 @@ moves with the site's language and its alters.
   message", after "The values were refused:", a refusal of the whole
   call its message alone on its line, and a line per note after. The
   resource's own outputs follow the shape, never over one of its keys.
-  React's `/validate` answers the shape and nothing else; `/submit`
-  answers it with its own `outputs`, `contract` and `created` after.
+  HTTP answers it with its own `outputs`, `contract` and `created`
+  after, and a refusal as problem details whose `errors`, `notes` and
+  `stale` are its entries (until contract 3, `/validate` answered the
+  shape alone and `/submit` refused with a 200).
   The read tool answers a read, `values` alone, and its refusals in the
   shape. The form reads the same violations and renders them for a
   person.
@@ -3937,7 +3948,7 @@ boolean or a key an alter mounted stays `refine` whatever the count:
 its domain is not a list, so there is nothing to enumerate, and
 inventing one (sampling numbers, guessing at a license) would state a
 rule the refiners never made. Such a key keeps `dependsOn`, and a client
-asks `/refine` when a watched key changes, as before.
+asks the server (`POST .../schema`) when a watched key changes, as before.
 (`ContractEmitter::enumerate()`)
 
 ### A served contract is never stored
@@ -4279,6 +4290,11 @@ description read as both of its forms with a literal `@count`.
 
 ### A refused submit is an answer
 
+*Superseded 2026-10-22 by [contract 3](#contract-3-the-operation-is-the-method):
+a refusal is a 422, problem details whose `errors` are the violations,
+with `notes` and `stale` beside them; the entries a client branches on
+are unchanged.*
+
 `POST .../submit` answers a refusal with 200 and `committed: false`,
 the violations as data, never 422 or 400: a value the pipeline refuses
 is the expected outcome of asking, exactly as `/validate` reports it and
@@ -4303,6 +4319,10 @@ where its thing lives. (`ServedOperations::created()`)
 
 ### A fingerprint is opt-in
 
+*Since [contract 3](#contract-3-the-operation-is-the-method) the
+fingerprint is the read's `ETag`, sent back in `If-Match`, and a
+mismatch is a 412; still opt-in.*
+
 The contract carries a fingerprint of the stored values it was built
 from, and a submit that sends it back is refused, nothing written, when
 storage no longer matches. A submit that sends none is not checked, and
@@ -4318,14 +4338,15 @@ window to the moment between the comparison and the commit.
 ### The page resolves what the schema states
 
 The React page narrows a change itself when the full schema states the
-answer, and asks `/refine` for the rest. On a change it collects every
+answer, and asks the server for the rest (`POST .../schema`, `/refine`
+until contract 3). On a change it collects every
 key that depends on the changed one, transitively, through `dependsOn`;
 when none is marked `refine` or `live`, nor holds one inside it, it
 reads each from the full schema's conditionals for the new values and
 sends nothing. When one is, or the resolver meets anything it cannot
 read (a stale value it was handed as `null`, a reference left
 unresolved, a conditional naming a key outside its frame), it posts to
-`/refine` as before. Validate and submit always ask: the pipeline has
+the values to `.../schema` as before. A dry run and a write always ask: the pipeline has
 the last word.
 
 The full schema is fetched once, beside the contract, and never again
@@ -4339,10 +4360,10 @@ on. A site that changes an option list during a session (a bundle
 added) is answered by the server where it matters, on validate and
 submit. The page reads one contract version: a document or an answer of
 another, by its `Contract-Version` header or its `x-surface.contract`,
-is refused, not read ([Contract 2](#contract-2)).
+is refused, not read ([Contract 3](#contract-3-the-operation-is-the-method)).
 
 The page's settling mirrors the server's exactly, orphans included,
-because a local answer is a stand-in for `/refine`'s and must be the
+because a local answer is a stand-in for the server's narrowing and must be the
 same answer. An orphan is what makes a save judge the right thing: the
 stored room under a moved venue is shown on the empty option and its
 path travels back stale, so the pipeline reads it as the stored value
@@ -4352,11 +4373,16 @@ never draws and send values the server would have dropped. So the page
 applies the same discard rule and the same fixed point, down to
 re-settling every orphan on every change (a capacity typed under an
 orphaned room falls back to what is stored when the pricing changes),
-and a Vitest test holds it to recorded `/refine` answers for examples 2
+and a Vitest test holds it to recorded narrowing answers for examples 2
 and 3, keyword for keyword. (`narrow()` in `app/src/contract.ts`,
 `ResourceApiController::schema()`)
 
 ### Contract 2
+
+*Superseded 2026-10-22 by [contract 3](#contract-3-the-operation-is-the-method),
+which kept both documents as contract 2 writes them and changed the HTTP
+door: the five endpoints of an operation answer 410 now, naming the
+method and path that replace each, and every path is a JSON Pointer.*
 
 Decided 2026-10-20, from the DX reviews (group E of
 `docs/reviews-2026-10-20/synthesis.md`: section 1, B21 to B24; section
@@ -4466,13 +4492,210 @@ published yet. (`ContractEmitter::CONTRACT`, `ContractEmitter::settled()`,
 `ResourceApiController::VERSION_HEADER`, `CONTRACT` and
 `assertContract()` in `app/src/contract.ts`)
 
+### Contract 3: the operation is the method
+
+Decided 2026-10-22, from the owner's finding: on HTTP each named
+operation had grown five endpoints (`.../configure`, `/schema`,
+`/refine`, `/validate`, `/submit`), so the operation did not act like
+one, and `configure/submit` was a verb on a verb. The tool door already
+had it right: one tool per operation, with a `dry_run` flag. Contract 3
+rebuilds the HTTP door on the standard shape: the path is the resource,
+the method is the operation. `ContractEmitter::CONTRACT` is 3, the
+`Contract-Version` header says `3`, and the baselines were re-pinned
+(`ContractBaselineTest` with `DATA_SURFACE_CONTRACT_WRITE=1`, the site the
+suite builds; `drush data_surface:contract-diff --write` on the demo site
+would pin that site's own components as variants). Both documents are written exactly as contract 2 wrote them
+but for `x-surface.contract`; what changed is the door, and how every
+door spells a path. The endpoint table is in
+[the served contract](served-contract.md#the-api).
+
+- **The path is the resource.** A singleton (no identity keys) is
+  `/surface-api/{resource}`; one thing with identity is
+  `/surface-api/{resource}/{id}`, its identity as path segments in
+  declaration order, joined by `/` when there is more than one (up to
+  four). Why: a client reads a resource and writes it at one URL, as
+  HTTP means it, and an operation's name is the method's, not a path
+  segment. The identity segments are the parameters of the operation
+  that addresses the thing, which are the resource's identity keys where
+  the operation is asked by them (`node.type`'s `type`) and the thing's
+  own id where it is asked by that (a content entity's `id`, a field's
+  `field`, `node.article.field_x`): `field.instance` declares four
+  identity keys, and its edit takes none of them by name, so a path made
+  of the identity keys could not be mapped to the call. An operation
+  addresses one thing when its resource has identity, it does not
+  create, and it needs a parameter; any other is addressed at the
+  collection, `/surface-api/{resource}`, its parameters in the query
+  string (`field.instance`'s add, `?entity_type_id=node&bundle=article`).
+  (`ServedPaths::placement()`)
+- **The method is the operation.** At each path, `GET` reads, `PATCH`
+  is the default update and `POST` on the collection the default create.
+  The default of a kind is the operation named for it (`add` for a
+  create; `configure` or `edit` for an update; `read` for a read), or
+  else the only operation of that kind at the path; two of a kind with
+  neither named so leaves the kind with no default, and every operation
+  of it is a custom method. A read is a default only where no update is:
+  `GET` on a path answers what is stored, and with an update there, it
+  is the update's envelope, the values a `PATCH` changes; a read-only
+  operation beside it (example 10's `check`, which takes values and
+  checks them) is a call of its own. `GET` on a collection with no
+  update or read answers the default create's envelope, its declared
+  defaults and the schema a `POST` takes: there is no listing, since a
+  listing would carry stored values a client caches
+  ([Required is the resource's](#required-is-the-resources-and-an-update-tool-requires-nothing-at-its-door)).
+  (`ServedPaths::defaults()`, `ServedPaths::writes()`)
+- **A custom method for the rest.** Any other operation, of any kind, is
+  `:{operation}` after the last segment of the path it addresses:
+  `GET /surface-api/event.program:check` its envelope, `POST` a run of
+  it, `.../event.program:check/schema` its schema; `field.instance:reuse`
+  on the collection. The custom-method convention of resource-oriented
+  API design, because it keeps the resource as the path and names the
+  verb once, where a client looks for it. A default operation may be
+  named this way too. A resource id that carries a colon itself
+  (`entity.content:node.page`) is read whole first. Drupal's URL
+  generator encodes the colon; the module writes it back as a colon,
+  which RFC 3986 allows in a segment, and reads either.
+- **The read is the envelope.** `GET` answers `resource`, `operation`,
+  `label`, `schema` (the schema for these answers), `values`, `stale`,
+  `outputs` when declared, and `notes`, one entry per stale path, code
+  `stale`, as a write's result says a stale value it keeps. The
+  fingerprint left the body: it is the `ETag`, strong, since it names
+  the stored values whatever the bytes of the document, and `Link:
+  <.../schema>; rel="describedby"` names the full schema. The response
+  is `Cache-Control: no-store, private`: never stored, as before, and
+  saying so keeps the `ETag`, which core strips from a response it
+  marks uncacheable itself.
+- **The schema is a resource of its own.** `GET .../schema` answers the
+  full schema itself, `application/schema+json`, not an envelope around
+  it: a JSON Schema document at its own URL, the URL its `$id` and the
+  envelope's `Link` name. `POST .../schema` with a values document,
+  partial or whole, answers the envelope narrowed for those values: the
+  old `/refine`, renamed and re-homed as "the schema, given these
+  values". It answers the envelope, not the schema alone, because a
+  schema for values is read with the values it was narrowed for: an
+  orphan is shown `null` and stale, and `discarded` names the answers
+  the new choices dropped. A query: `x-surface-kind: read` in the OpenAPI
+  document, nothing written. Being a POST it still takes the session's
+  CSRF token, as core asks of every unsafe method on the route.
+- **A write's body is the values.** `PATCH` and `POST` take the values
+  document directly, no `values` wrapper, `PATCH` as
+  `application/merge-patch+json` (RFC 7396, whose rule is the module's
+  own, [absent keeps, null clears](#absent-keeps-null-clears)) or
+  `application/json`; another media type is a 415. The operation's
+  parameters come from the path and the query string; the body's
+  `parameters` are gone. The stale paths stay, in the `X-Surface-Stale`
+  request header, JSON Pointers separated by commas: leaving a stale key
+  out keeps its stored value at the top of a document, but an item of a
+  collection is sent whole, and only the path can say "keep what is
+  stored" inside it, as the form's marker does. The React app sends the
+  header.
+- **`If-Match`, not a body fingerprint.** A write sending `If-Match` is
+  refused with 412, nothing written, when the stored values changed since
+  that `ETag` was served; without it the last write wins, opt-in as
+  before ([A fingerprint is opt-in](#a-fingerprint-is-opt-in)). `*`
+  matches whatever is stored. A tag is compared by its opaque value, weak
+  or strong, which RFC 9110's strong comparison does not do: a
+  compressing proxy weakens the tag it passes on (the local ddev router
+  does), and the tag names the stored values, which compression does not
+  change, so refusing the weakened tag would refuse every client behind
+  such a proxy.
+- **A dry run is a query parameter.** `?dryRun=true` replaces
+  `/validate`: the write runs through prepare and stops before commit,
+  and answers as a successful write would, the result and its `outputs`,
+  `contract` and `created` (empty), with `x-surface-dry-run: true` added.
+  Always 200, never 201 and never a `Location`: nothing was created.
+  `If-Match` is checked on a dry run too, so a rehearsal fails where the
+  write would.
+- **A create answers 201.** A written create answers 201 with
+  `Location`, the created thing's read
+  (`/surface-api/node.type/recipe`), from where
+  [it now lives](served-contract.md#where-a-created-thing-lives); with
+  no operation that addresses it (a field added to a bundle), 201 with
+  no `Location`. The body keeps `created`, which the React page moves
+  to. This closes the point the OpenAPI entry left open.
+- **A refusal is problem details.** RFC 9457, `application/problem+json`,
+  for every error of the API: `type`, `title`, `status`, `detail`, and
+  for a refusal (422) `errors`, the result's violations, with `notes` and
+  `stale` as extensions; a 412 carries its one `conflict` error. A
+  refusal is no longer a 200 ([A refused submit is an
+  answer](#a-refused-submit-is-an-answer) is superseded): the status says
+  what happened before the body is read, which HTTP tooling (a generated
+  client, Swagger UI, a retry policy) acts on, while the body keeps the
+  one result's entries, so a program branches on `errors[].code` as it
+  did on `violations[].code`. A refusal the pipeline makes of the whole
+  call by access or permission is a 403 and one of a subject that names
+  nothing a 404, with the same members; a resource locked whole is a 422,
+  code `locked`, since the caller was let in and the values are what is
+  refused. A 403 the route's access check gives, a 404 or 405 of the
+  path, a 400 of the body and a 415 are problem details too, never
+  Drupal's HTML page (`ProblemDetailsSubscriber`). Three types are the
+  module's own, a URI under this module's served contract page:
+  `#refused` (422), `#conflict` (412) and `#gone` (410); every other
+  status is `about:blank`, its title the reason phrase.
+- **Every path is a JSON Pointer.** A path in a result, at every door,
+  is a JSON Pointer (RFC 6901): `/contact/email`, the whole call the
+  empty pointer, `~` and `/` in a key escaped. The write tool's result
+  and its text lines, `drush tool:run --json`, the HTTP results and
+  problem details, the envelope's `stale` and `notes`, the narrowing's
+  `discarded` and the `X-Surface-Stale` header. Why: one spelling a
+  client can resolve against the document without knowing the module's
+  dotted convention, the one JSON Schema itself uses (`within`, every
+  `$ref`). Not changed: a message still names a key it depends on the
+  way its renderer does, and the form names an element as the form does;
+  inside the pipeline a violation keeps its dotted path, and
+  `ResultDocument::pointer()` writes it at the door
+  ([One result at every door](#one-result-at-every-door)). The write
+  tool's output definitions say "JSON Pointer" where they said "dotted
+  path", the one change to the Tool API and MCP door's definitions.
+- **Contract 2's paths are gone, not redirected.** Every contract 2 path
+  (`.../{operation}`, `/schema`, `/refine`, `/validate`, `/submit`)
+  answers 410 with problem details naming the method and path that
+  replace it, `moved: {method, href}`, the old query's parameters moved
+  into the path (`GET /surface-api/node.type/edit?type=article` names
+  `GET /surface-api/node.type/article`). A redirect would turn a POST
+  into a GET or resend a body to a URL that reads it differently; a 410
+  tells a client its call changed shape. The price: a second segment
+  that names one of the resource's operations is read as a contract 2
+  path, so a thing whose id is an operation's id (a content type named
+  `edit`) cannot be addressed by its path, and neither can one whose id
+  is `schema`.
+- **The OpenAPI document follows.** One path item per resource path,
+  the methods on it, custom methods as path items of their own, each
+  with a `/schema` path item; an operation that addresses one thing is
+  now described, its identity as path parameters and its schema built
+  knowing no subject, as its tool's listing is, which closes the point
+  [An OpenAPI document is one more door](#an-openapi-document-is-one-more-door)
+  left open.
+- **Swagger UI and Redoc.** `GET /surface-api/docs` renders Swagger UI
+  and `GET /surface-api/redoc` Redoc over the OpenAPI document, each from
+  a CDN as a Drupal library, the version pinned and every file held to
+  its integrity hash. Swagger UI's "try it out" calls the API with the
+  logged-in session: a write carries the token `/session/token` answers
+  and, as `If-Match`, the last `ETag` an answer for the same path
+  carried. The JSON stays open, as before; the two pages are under a
+  permission of their own, `access data surface api docs`, because each
+  runs a CDN's script on the site's origin, which a site grants to the
+  roles it chooses, and `access content` belongs to node, which the
+  submodule does not need.
+
+The tool and HTTP doors now agree: one operation, one call, a dry run as
+a flag. (`ServedPaths`, `ServedTarget`, `ResourceApiController`,
+`ProblemDetails`, `ProblemException`, `ProblemDetailsSubscriber`,
+`ServedOperationAccessCheck`, `ResultDocument::pointer()`,
+`OpenApiDocument`, `OpenApiController::docs()`,
+`OpenApiController::reference()`, `ServedPathsTest`,
+`ServedContractEndpointsTest`, `ServedSubmitEndpointTest`,
+`ResultPointersTest`, `OpenApiDocumentTest`, `OpenApiEndpointTest`)
+
 ### An OpenAPI document is one more door
 
 `data_surface_openapi` serves `GET /surface-api/openapi.json` (and
-`.yaml`): an OpenAPI 3.1 document of the five endpoints of
-`data_surface_react` for every operation that can be asked on its own
-and needs no subject, so any OpenAPI client, generator or UI drives a
-resource without reading these pages. Decided 2026-10-21.
+`.yaml`): an OpenAPI 3.1 document of the API of `data_surface_react`
+for every operation that can be asked on its own, so any OpenAPI
+client, generator or UI drives a resource without reading these pages.
+Decided 2026-10-21; its paths are contract 3's since 2026-10-22
+([Contract 3](#contract-3-the-operation-is-the-method)): one path item
+per resource path, the methods on it, custom methods and `/schema` as
+path items of their own.
 
 - **3.1, because the schemas are JSON Schema 2020-12.** A 3.1 schema
   object is a 2020-12 schema, so each operation's full schema goes in as
@@ -4517,7 +4740,7 @@ resource without reading these pages. Decided 2026-10-21.
   the components are the full schema byte for byte, which a test holds
   for every operation.
 - **An update takes a patch.** A key an update leaves out keeps what is
-  stored, so its validate and submit bodies take the values component
+  stored, so its request body takes the values component
   with every `required` dropped where dropping only widens: never inside
   an `if`, a `not`, a `oneOf` or a `contains`, never inside a list's
   `items` (an item is sent whole). A create takes the full schema: it
@@ -4535,27 +4758,32 @@ resource without reading these pages. Decided 2026-10-21.
   make the body stricter than the door. The rule took the components
   from 147 to 140 on the demo site (40 patches to 26, 7 outputs
   components added).
-- **Facts to HTTP.** A read only operation has its two GETs alone. How
-  the operation behaves is stated beside each call as `x-surface-kind`,
-  and on the submit as `x-surface-idempotent`, `x-surface-destructive`
-  and `x-surface-creates` (on a read's GET contract); its label is the
-  summary and its description the description. `creates` does not pick
-  `201`: the submit answers 200 whether it refused, wrote or created,
-  with `created` saying where a created thing lives, and the document
-  says what the endpoint answers. *Open:* a committed create answering
-  `201`, a change to the endpoint and its app.
-- **The envelope and the result as components.** `Contract` (the served
-  document: `resource`, `operation`, `label`, `schema`, `values`,
-  `stale`, `outputs`, `fingerprint`, `discarded`), `FullSchema`,
-  `Result` (the one result, `{path, code, message}` entries in
-  `ResultEntry`, `notes` among them), `SubmitResult` and `Created`
-  are shared. A refusal is a 200 `Result` with `ok: false`; a 403 is
-  Drupal's own error page and has no body schema.
+- **Facts to HTTP.** How the operation behaves is stated beside each
+  call as `x-surface-kind`, and on its run as `x-surface-idempotent`,
+  `x-surface-destructive` and `x-surface-creates`; its label is the
+  summary and its description the description. Since contract 3 a run
+  answers 200, a written create 201 with a `Location` header, a refusal
+  422 and a stale `If-Match` 412, each error `ProblemDetails`;
+  `dryRun` is a query parameter and `If-Match`, `X-Surface-Stale` and
+  `X-CSRF-Token` header parameters; the read answers an `ETag` and a
+  `Link`. A read only operation is run with a POST too, a check that
+  writes nothing, taking the patch as its body. *Closed 2026-10-22:* a
+  committed create answering 201 (until then every submit answered
+  200).
+- **The envelope and the result as components.** `Contract` (the
+  envelope: `resource`, `operation`, `label`, `schema`, `values`,
+  `stale`, `outputs`, `notes`, `discarded`), `FullSchema` (the schema
+  itself), `NarrowRequest`, `Result` (the one result, `{path, code,
+  message}` entries in `ResultEntry`, each path a JSON Pointer),
+  `SubmitResult`, `Created` and `ProblemDetails` are shared. Until
+  contract 3 a refusal was a 200 `Result` with `ok: false` and a 403
+  Drupal's own error page; `fingerprint` was in `Contract` and the
+  refine's body was `RefineRequest`.
 - **The resource in every answer** (decided 2026-10-22). Each answer is
   `allOf` its shared envelope and an object typing that envelope's
   properties for the operation, so Swagger UI and Redoc show the
   resource under every endpoint, not only in `x-surface-schema`, which
-  stays. `values` (the contract, the refine, the validate and submit
+  stays. `values` (the envelope, the narrowing and a run's
   result) is `anyOf` the values component and any object: a contract
   shows a key that holds nothing as `null` (a create's required title
   before it is typed) and a refused run answers only what it accepted,
@@ -4567,27 +4795,29 @@ resource without reading these pages. Decided 2026-10-21.
   and Redocly reads the meta-schema as a malformed schema object (a
   `struct` error). The JSON Schema `examples` keyword, since OpenAPI 3.1
   deprecates the schema object's `example`. The `/schema` answer also
-  carries an OpenAPI example: the full schema document built for no
-  account, its schema and outputs as their components. Declared
+  carries an OpenAPI example: the full schema built for no account, the
+  values component (since contract 3 the answer is the schema itself,
+  `application/schema+json`). Declared
   outputs are a component of their own, `<values>.outputs`, which the
-  submit's `outputs` reference the same way.
+  run's `outputs` reference the same way.
 - **Permission as security.** The session cookie is an `apiKey` scheme,
   and basic auth an `http` one where `basic_auth` is on. Each operation
   requires one of them, or none when the anonymous role holds its
   permission, and names the permission as `x-drupal-permission`. The
   POSTs take `X-CSRF-Token`, required by core only with a session
   cookie.
-- **Examples from the declared defaults.** A submit's example is the
+- **Examples from the declared defaults.** A run's example is the
   defaults the operation is built with, the tool listing's source,
   accepted and validated by the pipeline with nothing stored, with no
   null, no empty map and no locked key; none when no default is declared
   or the pipeline refuses them (an update's required key with no default
   aside, which keeps what is stored).
-- **An operation with a subject is listed, not described.** Its
-  parameters arrive in the query string, but its schema depends on the
-  subject, so the top `x-surface.withASubject` names it with its
-  parameters. *Open:* such an operation as a path, its subject's
-  parameters stated and its schema the neutral build's.
+- **An operation with a subject is a path.** Its identity is the path's
+  parameters, `/surface-api/node.type/{type}`, and its schema the one
+  built knowing no subject, for no account, as its tool's listing is
+  (`OpenApiDocument::neutral()`). *Closed 2026-10-22:* until contract 3
+  such an operation was listed under the top `x-surface.withASubject`,
+  not described.
 
 (`OpenApiDocument`, `SchemaComponents`, `OpenApiController`,
 `OpenApiDocumentTest`, `SchemaComponentsTest`, `OpenApiEndpointTest`)

@@ -4,11 +4,11 @@
     "label": "Configure registration (step 3)",
     "schema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
-        "$id": "http://localhost/surface-api/registration.step3/configure",
+        "$id": "http://localhost/surface-api/registration.step3",
         "title": "Configure registration (step 3)",
         "description": "Sets the event registration: its title, whether it is open, the venue and room, the capacity, the pricing with its ticket, and the contact.",
         "x-surface": {
-            "contract": 2,
+            "contract": 3,
             "operation": {
                 "id": "configure",
                 "label": "Configure registration (step 3)",
@@ -495,5 +495,6 @@
             }
         }
     },
-    "stale": []
+    "stale": [],
+    "notes": []
 }

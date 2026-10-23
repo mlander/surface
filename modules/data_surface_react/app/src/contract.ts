@@ -7,12 +7,12 @@
 /**
  * The contract version this app reads.
  *
- * Both documents state theirs in `x-surface.contract` at the top of
- * `schema`, and every answer of the five endpoints in its
- * `Contract-Version` header. A document of any other version is refused,
- * never read as if it were this one.
+ * Both documents state theirs in `x-surface.contract` at their schema's
+ * top, and every answer of the API in its `Contract-Version` header. A
+ * document of any other version is refused, never read as if it were
+ * this one.
  */
-export const CONTRACT = 2;
+export const CONTRACT = 3;
 
 /** A document or an answer of a contract version this app does not read. */
 export class ContractRefused extends Error {
@@ -29,11 +29,17 @@ export class ContractRefused extends Error {
  * said nothing of its version.
  */
 export function assertContract<T extends { schema?: Schema | null }>(document: T): T {
-  const stated = document?.schema?.['x-surface']?.contract;
+  assertSchema(document?.schema);
+  return document;
+}
+
+/** Refuses a schema, the full schema as served, of a contract this app does not read. */
+export function assertSchema<T extends Schema | null | undefined>(schema: T): T {
+  const stated = schema?.['x-surface']?.contract;
   if (stated !== CONTRACT) {
     throw new ContractRefused(stated === undefined || stated === null ? '1' : String(stated));
   }
-  return document;
+  return schema;
 }
 
 export type Widget =
@@ -109,7 +115,7 @@ export interface Extension {
   enumerated?: boolean;
   /**
    * Static, but not stated: a watched key cannot be listed, or the
-   * combinations exceed the cap. Narrowed for values by /refine.
+   * combinations exceed the cap. Narrowed for values by the server's narrowing.
    */
   refine?: boolean;
   /**
@@ -226,6 +232,13 @@ export interface Schema {
 
 export type Values = Record<string, unknown>;
 
+/**
+ * The envelope: the schema for the values, and the values.
+ *
+ * Every path in it is dotted here (`ticket.price`): the API writes each
+ * as a JSON Pointer, and api.ts reads it back. The stored values'
+ * fingerprint is no member of it: it is the answer's `ETag`.
+ */
 export interface Contract {
   resource: string;
   operation: string | null;
@@ -234,8 +247,9 @@ export interface Contract {
   values: Values;
   stale: string[];
   outputs?: Schema;
-  /** The stored values' fingerprint, on a GET and a submit's contract. */
-  fingerprint?: string | null;
+  /** One note per stale path, code `stale`. */
+  notes?: Violation[];
+  /** On a narrowing: each answer the new choices orphaned. */
   discarded?: string[];
 }
 
@@ -252,9 +266,10 @@ export interface StaleValue extends Violation {
 }
 
 /**
- * The one result shape every door answers a run in (ResultDocument):
- * /validate answers exactly this, the accepted values as the read tool
- * would answer them (no secret, nothing hidden).
+ * The one result shape every door answers a run in (ResultDocument),
+ * the accepted values as the read tool would answer them (no secret,
+ * nothing hidden). A refusal arrives as problem details, which api.ts
+ * reads back into this shape.
  */
 export interface Validation {
   /** Nothing was refused. */
@@ -280,11 +295,13 @@ export interface Created {
   parameters: Record<string, string | number>;
 }
 
-/** What /submit answers: the result shape, and, when written, the fresh contract. */
+/** What a write answers: the result shape, and, when written, the fresh contract. */
 export interface Submission extends Validation {
   outputs: Values;
   contract: Contract | null;
   created: Created | null;
+  /** A dry run says it was one. */
+  'x-surface-dry-run'?: boolean;
 }
 
 /** The JSON type a schema is, null aside. */
@@ -1120,10 +1137,10 @@ export function fieldId(path: string): string {
 //
 // The full schema states every dependency that can be listed as a
 // conditional on the frame it sits in, and marks the rest: `refine` (a
-// static rule it could not list, which /refine runs for values) and
+// static rule it could not list, which the server's narrowing runs for values) and
 // `live` (a rule only the server can apply). So a change whose dependents are all stated can be narrowed
 // in the page, from the full schema, by the module's own rules; a change
-// with a `refine` or `live` dependent is asked of /refine. The page's
+// with a `refine` or `live` dependent is asked of the server. The page's
 // answer must be the server's: the same discard and orphan rule
 // (DataSurfaceFormBuilder::settle()), the same reading of a select
 // (ContractEmitter::property()), keyword for keyword.
@@ -1192,8 +1209,8 @@ export function narrowingStatus(narrowed: Narrowed): string {
  * Every key that depends on the changed one, transitively, is found
  * through `dependsOn`; one marked `refine` or `live`, one inside a
  * part that is, or one standing for a stored value the page never saw,
- * sends the change to /refine. Otherwise the change is settled here, the
- * way /refine settles it: an answer the new choices orphan is dropped and
+ * sends the change to the server. Otherwise the change is settled here, the
+ * way the server's narrowing settles it: an answer the new choices orphan is dropped and
  * falls back to what is stored, a stored value the edit orphaned is held
  * unanswered and listed stale, and every key is read from the full
  * schema's conditionals for the values that result. Anything the

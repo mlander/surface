@@ -1,3 +1,4 @@
+import { pointerToDotted } from '../api';
 import type { Contract, Extension, Marker, Schema, Settled, Values } from '../contract';
 import { holdsValue, holdsIf, inlineSchema, narrow, narrowingStatus, setAt } from '../contract';
 import example2 from './fixtures/refine-example2.json';
@@ -9,24 +10,26 @@ import journal from './fixtures/refine-journal.json';
 import sales from './fixtures/refine-sales.json';
 
 // The page's narrowing held to the server's. Each fixture is what
-// ResourceApiController answered, as uid 1 after the examples were reset:
-// the full schema, the GET contract (its fingerprint removed), and a chain
-// of changes, each posted to /refine with the values and stale paths the
-// app would send after the one before. For every change the page narrows
-// by itself, its schema (inline), values and stale paths must be the
-// server's, keyword for keyword: nothing is ignored. A change the page
-// asks about must be asked, naming the dependent and its marker.
+// ResourceApiController answered, as an administrator after the examples
+// were installed: the full schema, the envelope, and a chain of changes,
+// each posted to the schema with the values and the stale paths (in
+// X-Surface-Stale, as JSON Pointers) the app would send after the one
+// before. For every change the page narrows by itself, its schema
+// (inline), values and stale paths must be the server's, keyword for
+// keyword: nothing is ignored. A change the page asks about must be
+// asked, naming the dependent and its marker.
 
 interface Recorded {
-  schema: { schema: Schema };
+  schema: Schema;
   contract: Contract;
   steps: { changes: { path: string; value: unknown }[]; sent: { stale: string[] }; answer: Contract }[];
 }
 
 type Expected = 'local' | { key: string; marker: Marker };
 
+/** What the page holds of an envelope as recorded: its stale pointers read as dotted paths. */
 function served(contract: Contract): Settled {
-  return { schema: inlineSchema(contract.schema), values: contract.values, stale: contract.stale };
+  return { schema: inlineSchema(contract.schema), values: contract.values, stale: contract.stale.map(pointerToDotted) };
 }
 
 /**
@@ -37,7 +40,7 @@ function served(contract: Contract): Settled {
  * from the server's answer, as the app does.
  */
 function play(recorded: Recorded, expected: Expected[], fullSchema?: Schema): void {
-  const full = fullSchema ?? inlineSchema(recorded.schema.schema);
+  const full = fullSchema ?? inlineSchema(recorded.schema);
   const stored = recorded.contract.values;
   let previous = served(recorded.contract);
   recorded.steps.forEach((step, index) => {
@@ -48,7 +51,7 @@ function play(recorded: Recorded, expected: Expected[], fullSchema?: Schema): vo
       stale = stale.filter((path) => path !== change.path && !path.startsWith(`${change.path}.`));
     }
     // The page sends what the recorder sent.
-    expect(stale, `step ${index + 1}: the stale paths sent`).toEqual(step.sent.stale);
+    expect(stale, `step ${index + 1}: the stale paths sent`).toEqual(step.sent.stale.map(pointerToDotted));
     const changed = step.changes[step.changes.length - 1].path;
     const narrowed = narrow({ full, previous, stored, values, stale, changed });
     const want = expected[index];
@@ -70,7 +73,7 @@ function play(recorded: Recorded, expected: Expected[], fullSchema?: Schema): vo
   });
 }
 
-describe('narrowing here agrees with /refine', () => {
+describe('narrowing here agrees with the server', () => {
   it('on example 2: every venue and room change is narrowed here, orphans and discards included', () => {
     play(example2 as unknown as Recorded, ['local', 'local', 'local', 'local', 'local', 'local', 'local']);
   });
@@ -124,9 +127,9 @@ describe('the empty option rule, narrowed here', () => {
   it('shows no empty radio for a key that holds a value, and a select its empty option while nothing valid is chosen', () => {
     const contract = served(recorded.contract);
     const values = { ...contract.values, venue: 'library' };
-    const asSelect = narrow({ full: inlineSchema(recorded.schema.schema), previous: contract, stored: contract.values, values, stale: [], changed: 'venue' });
+    const asSelect = narrow({ full: inlineSchema(recorded.schema), previous: contract, stored: contract.values, values, stale: [], changed: 'venue' });
     const asRadios = narrow({
-      full: radios(inlineSchema(recorded.schema.schema)),
+      full: radios(inlineSchema(recorded.schema)),
       previous: { ...contract, schema: radios(contract.schema) },
       stored: contract.values,
       values,
@@ -146,7 +149,7 @@ describe('the empty option rule, narrowed here', () => {
     // Stored, under a venue nobody moved, and no longer offered: kept by a
     // save that leaves it, and the empty option says so.
     const stored = { ...contract.values, room: 'library_garden' };
-    const kept = narrow({ full: inlineSchema(recorded.schema.schema), previous: { ...contract, values: stored }, stored, values: stored, stale: [], changed: 'venue' });
+    const kept = narrow({ full: inlineSchema(recorded.schema), previous: { ...contract, values: stored }, stored, values: stored, stale: [], changed: 'venue' });
     expect(kept.local, narrowingStatus(kept)).toBe(true);
     if (!kept.local) {
       return;
@@ -166,7 +169,7 @@ describe('the empty option rule, narrowed here', () => {
 
 describe('a rule declared as data', () => {
   const recorded = license as unknown as Recorded;
-  const full = inlineSchema(recorded.schema.schema);
+  const full = inlineSchema(recorded.schema);
   const rule = (full.allOf ?? []).find((condition) => condition['x-surface']?.declared === true);
 
   it('is stated in the compliance full schema as written, and read by its own `if`', () => {
@@ -181,7 +184,7 @@ describe('a rule declared as data', () => {
     expect(holdsIf(rule?.if, {})).toBe(true);
   });
 
-  it('is narrowed here, keyword for keyword as /refine answers, where nothing to refine with values depends on it', () => {
+  it('is narrowed here, keyword for keyword as the server answers, where nothing to refine with values depends on it', () => {
     // The stewards' rule set aside: what is left of a license or room
     // change is the capacity, its room conditionals and its declared rule.
     const mount = full.properties?.third_party_settings as Schema;
@@ -202,7 +205,7 @@ describe('a rule declared as data', () => {
 
 describe('a key that does not apply', () => {
   const recorded = bulletin as unknown as Recorded;
-  const full = inlineSchema(recorded.schema.schema);
+  const full = inlineSchema(recorded.schema);
 
   it('on the bulletin: the send day is dropped monthly and back weekly, required again, narrowed here', () => {
     play(recorded, ['local', 'local', 'local', 'local']);
@@ -235,10 +238,10 @@ describe('structures mixed in', () => {
   // journal's visibility, and the timestamps, flat; its archive is
   // attached, mixes the ownership in itself, and attaches the timestamps.
   const recorded = journal as unknown as Recorded;
-  const full = inlineSchema(recorded.schema.schema);
+  const full = inlineSchema(recorded.schema);
 
   it('reads a composed frame flat: every member in its place, the frame closed', () => {
-    const raw = recorded.schema.schema;
+    const raw = recorded.schema;
     expect(raw.unevaluatedProperties).toBe(false);
     expect((raw.allOf ?? []).slice(0, 2)).toEqual([{ $ref: '#/$defs/resource_test.ownership' }, { $ref: '#/$defs/resource_test.timestamps' }]);
     expect(Object.keys(full.properties ?? {})).toEqual(['title', 'visibility', 'owner', 'shared', 'created', 'changed', 'revision', 'published', 'archive']);
@@ -293,7 +296,7 @@ describe('a key whose access only the server decides', () => {
   // the schema for these answers settles it. The journal's full schema with
   // its archive and its owner so marked stands for one such account.
   const recorded = journal as unknown as Recorded;
-  const declared = inlineSchema(recorded.schema.schema);
+  const declared = inlineSchema(recorded.schema);
   const live = (schema: Schema): Schema => ({ ...schema, 'x-surface': { ...(schema['x-surface'] as Extension), access: 'live' } });
   const full: Schema = {
     ...declared,
@@ -344,7 +347,7 @@ describe('a key whose access only the server decides', () => {
 
 describe('what is asked rather than narrowed', () => {
   const recorded = example2 as unknown as Recorded;
-  const full = inlineSchema(recorded.schema.schema);
+  const full = inlineSchema(recorded.schema);
 
   it('a dependent standing for a stored value the page was handed as nothing', () => {
     // The site narrowed the stored room away before the page loaded: only
@@ -382,7 +385,7 @@ describe('a port on an entry of a map of keys from the site', () => {
   // full schema states each type's rules on the resource's frame, an `if`
   // on `on_sale.<type>` and a `then` reaching into `limits.<type>`.
   const recorded = sales as unknown as Recorded;
-  const full = inlineSchema(recorded.schema.schema);
+  const full = inlineSchema(recorded.schema);
 
   it('is stated per type, reaching into the type\'s limits', () => {
     const student = (full.allOf ?? []).filter((condition) => JSON.stringify(condition.if).includes('"student"'));

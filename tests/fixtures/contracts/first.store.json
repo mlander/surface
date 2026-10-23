@@ -1,7 +1,7 @@
 {
     "resource": "first.store",
     "module": "data_surface_first",
-    "contract": 2,
+    "contract": 3,
     "documents": [
         {
             "resource": "first.store",
@@ -12,7 +12,7 @@
                 "title": "Configure the store location",
                 "description": "Sets the store location: its country, and a region of that country.",
                 "x-surface": {
-                    "contract": 2,
+                    "contract": 3,
                     "operation": {
                         "id": "configure",
                         "label": "Configure the store location",

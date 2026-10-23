@@ -342,15 +342,18 @@ their configuration may change without a deprecation path.
   them: the fees left out for an account that may not see them, and the
   program fixed once its workflow publishes it.
 - **Data Surface - React** (`data_surface_react`): the served contract,
-  an operation as JSON Schema 2020-12 with an `x-surface` extension, a
-  refine endpoint that re-narrows it as answers change, a validate
-  endpoint that rehearses the write, and a React app that renders the
-  form from it at `/surface-react/{resource}/{operation}`. Its built app
+  an operation as JSON Schema 2020-12 with an `x-surface` extension,
+  served over HTTP at `/surface-api/{resource}`, the method its
+  operation (`GET` reads, `PATCH` updates, `POST` creates), with a
+  narrowing that re-narrows it as answers change and a dry run that
+  rehearses the write, and a React app that renders the form from it at
+  `/surface-react/{resource}/{operation}`. Its built app
   is committed, so it needs no Node.
 - **Data Surface - OpenAPI** (`data_surface_openapi`): an OpenAPI 3.1
-  document of every operation's endpoints at `/surface-api/openapi.json`
+  document of every operation's paths at `/surface-api/openapi.json`
   (and `.yaml`), each operation's full schema as components, built for
-  no account so it is the same for everyone. Needs `data_surface_react`.
+  no account so it is the same for everyone, with Swagger UI at
+  `/surface-api/docs` and Redoc at `/surface-api/redoc`. Needs `data_surface_react`.
 
 Each submodule's README says what it shows, how to try it, and what gates
 it.

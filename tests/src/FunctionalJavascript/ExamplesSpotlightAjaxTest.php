@@ -49,7 +49,8 @@ class ExamplesSpotlightAjaxTest extends ExamplesWebDriverTestBase {
     $page->selectFieldOption('surface[props][align]', 'start');
     $overlay->setValue('60');
     $page->pressButton('Save');
-    $assert->pageTextContains('The changes have been saved.');
+    // The press returns before the saved page has loaded: wait for it.
+    $this->assertNotNull($assert->waitForText('The changes have been saved.'));
 
     $stored = $this->config('data_surface_examples.spotlight');
     $this->assertSame('data_surface_examples:hero', $stored->get('component'));

@@ -1,7 +1,7 @@
 {
     "resource": "event.sales",
     "module": "data_surface_examples",
-    "contract": 2,
+    "contract": 3,
     "documents": [
         {
             "resource": "event.sales",
@@ -12,7 +12,7 @@
                 "title": "Configure ticket sales",
                 "description": "Sets which ticket types are on sale, and for each how many tickets one order may hold and whether a waiting list opens when it sells out.",
                 "x-surface": {
-                    "contract": 2,
+                    "contract": 3,
                     "operation": {
                         "id": "configure",
                         "label": "Configure ticket sales",

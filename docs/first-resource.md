@@ -296,7 +296,7 @@ Outputs:
   ok: true
   committed: true
   changed: true
-  changes: ["sender_name","sender_email","frequency"]
+  changes: ["/sender_name","/sender_email","/frequency"]
   values: {"sender_name":"Weekly news","sender_email":"news@example.com","frequency":"monthly","max_recipients":500}
   violations: []
   notes: []

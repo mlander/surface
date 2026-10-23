@@ -221,7 +221,7 @@ class VariantsFromSiteTest extends DataSurfaceKernelTestBase {
     $tool->setInputValue(OperationInputs::VALUES, ['layout' => 'strip', 'panels' => ['columns' => 2]]);
     $tool->execute();
     $this->assertFalse($tool->getResult()->isSuccess());
-    $this->assertSame("The values were refused:\npanels.columns: panels.columns belongs to the grid variant, but layout chose strip.", PlainTextOutput::renderFromHtml((string) $tool->getResult()->getMessage()));
+    $this->assertSame("The values were refused:\n/panels/columns: panels.columns belongs to the grid variant, but layout chose strip.", PlainTextOutput::renderFromHtml((string) $tool->getResult()->getMessage()));
 
     // The strip's tags held to the schema they were read from.
     $tool = $manager->createInstance('data_surface:resource_test.poster:configure');
@@ -231,7 +231,7 @@ class VariantsFromSiteTest extends DataSurfaceKernelTestBase {
     ]);
     $tool->execute();
     $this->assertFalse($tool->getResult()->isSuccess());
-    $this->assertStringContainsString('panels.tags: This value does not hold to the schema it was read from:', PlainTextOutput::renderFromHtml((string) $tool->getResult()->getMessage()));
+    $this->assertStringContainsString('/panels/tags: This value does not hold to the schema it was read from:', PlainTextOutput::renderFromHtml((string) $tool->getResult()->getMessage()));
 
     // And written.
     $tool = $manager->createInstance('data_surface:resource_test.poster:configure');

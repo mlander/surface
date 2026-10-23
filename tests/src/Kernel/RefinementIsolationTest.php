@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\data_surface\Kernel;
 
+use Drupal\data_surface\Pipeline\ResultDocument;
 use Drupal\Component\Render\PlainTextOutput;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinition;
@@ -143,7 +144,7 @@ class RefinementIsolationTest extends DataSurfaceKernelTestBase {
         }
         $this->assertNotNull($refusal, "$case: the narrow call is refused.");
         foreach ($refused as $path) {
-          $this->assertStringContainsString($path . ':', $refusal, "$case: refused at $path.");
+          $this->assertStringContainsString(ResultDocument::pointer($path) . ':', $refusal, "$case: refused at $path.");
         }
       }
     }

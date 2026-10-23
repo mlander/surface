@@ -1067,7 +1067,7 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
     $this->assertNull($this->pipeline()->accept($surface, ['pick' => NULL], ['pick' => 'z'])['pick']);
     $emitter = $this->container->get('data_surface.contract_emitter');
     $document = $this->decoded($emitter->emit($surface, ['pick' => 'z'], 'audit')->document);
-    $this->assertSame(['pick'], $document['stale']);
+    $this->assertSame(['/pick'], $document['stale']);
     $this->assertNull($document['values']['pick']);
     // The document as served and sent back, the optional stale key null:
     // accepted, null being a value an optional key takes.
@@ -1090,7 +1090,7 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
     $step3 = $resources->build('registration.step3', $context);
     $stored = $this->stored('registration.step3');
     $served = $this->decoded($emitter->emit($step3, $stored, 'registration.step3')->document);
-    $this->assertSame(['room'], $served['stale']);
+    $this->assertSame(['/room'], $served['stale']);
     $back = $this->container->get('data_surface_react.served_operations')->keepStale($served['values'], $stored, $served['stale']);
     $result = $this->pipeline()->submit($step3, $back, $resources->storage('registration.step3', $context, $step3));
     $this->assertTrue($result->committed, 'Untouched, the stale room is kept.');

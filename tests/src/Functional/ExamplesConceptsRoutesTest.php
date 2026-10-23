@@ -93,10 +93,10 @@ class ExamplesConceptsRoutesTest extends BrowserTestBase {
 
     // The panel's calls are made as it is drawn, and their answers shown.
     $this->drupalGet('surface-examples/9');
-    $assert->pageTextContains('on_sale.speaker: Speaker is locked and kept as stored; the value sent was not taken.');
+    $assert->pageTextContains('/on_sale/speaker: Speaker is locked and kept as stored; the value sent was not taken.');
     $assert->elementExists('css', 'input[name="surface[on_sale][speaker]"][disabled]');
     $this->drupalGet('surface-examples/11');
-    $assert->pageTextContains('badges: Badges cannot be cleared: it always holds a value, printed (Printed at the door) by default.');
+    $assert->pageTextContains('/badges: Badges cannot be cleared: it always holds a value, printed (Printed at the door) by default.');
     $assert->elementExists('css', 'input[type="time"][name="surface[opens]"]');
     $assert->elementsCount('css', 'input[type="radio"][name="surface[badges]"]', 3);
   }

@@ -68,19 +68,23 @@ class LockedAccessFormTest extends BrowserTestBase {
   }
 
   /**
-   * Sends a JSON POST as the logged-in account, with its CSRF token.
+   * Sends a JSON write as the logged-in account, with its CSRF token.
    *
+   * @param string $method
+   *   The method.
    * @param string $path
    *   The path.
    * @param array $body
-   *   The body.
+   *   The values document.
+   * @param int $status
+   *   The status expected.
    *
    * @return array
-   *   The decoded 200 answer.
+   *   The decoded answer.
    */
-  protected function post(string $path, array $body): array {
+  protected function write(string $method, string $path, array $body, int $status = 200): array {
     $this->drupalGet('session/token');
-    $response = $this->getHttpClient()->request('POST', $this->buildUrl($path), [
+    $response = $this->getHttpClient()->request($method, $this->buildUrl($path), [
       'headers' => [
         'Content-Type' => 'application/json',
         'X-CSRF-Token' => $this->getSession()->getPage()->getContent(),
@@ -89,7 +93,7 @@ class LockedAccessFormTest extends BrowserTestBase {
       'body' => (string) json_encode($body),
       'http_errors' => FALSE,
     ]);
-    $this->assertSame(200, $response->getStatusCode(), (string) $response->getBody());
+    $this->assertSame($status, $response->getStatusCode(), (string) $response->getBody());
     return json_decode((string) $response->getBody(), TRUE);
   }
 
@@ -108,14 +112,15 @@ class LockedAccessFormTest extends BrowserTestBase {
     $assert->fieldValueEquals('surface[drawers]', '6');
     $assert->buttonNotExists('Save');
 
-    // The served contract says it at the top, and refuses a submit.
-    $this->drupalGet('surface-api/tool_test.cabinet/edit');
+    // The served contract says it at the top, and refuses a write: 422,
+    // the whole call's refusal, code locked.
+    $this->drupalGet('surface-api/tool_test.cabinet');
     $contract = json_decode($this->getSession()->getPage()->getContent(), TRUE);
     $this->assertTrue($contract['schema']['readOnly']);
     $this->assertTrue($contract['schema']['properties']['drawers']['readOnly']);
-    $refused = $this->post('surface-api/tool_test.cabinet/edit/submit', ['values' => ['drawers' => 9]]);
-    $this->assertFalse($refused['committed']);
-    $this->assertStringContainsString('The cabinet may be audited, not changed.', $refused['violations'][0]['message']);
+    $refused = $this->write('PATCH', 'surface-api/tool_test.cabinet', ['drawers' => 9], 422);
+    $this->assertSame(['' => 'locked'], array_column($refused['errors'], 'code', 'path'));
+    $this->assertStringContainsString('The cabinet may be audited, not changed.', $refused['errors'][0]['message']);
     $this->assertSame(self::STORED, $this->stored());
 
     // A keeper is not locked, and a keeper without codes is offered the
@@ -145,7 +150,7 @@ class LockedAccessFormTest extends BrowserTestBase {
     $this->submitForm(['surface[drawers]' => '9'], 'Count the drawers');
     $assert->pageTextContains('The values were accepted. Count the drawers changes nothing, so nothing was written.');
     $this->assertSame(self::STORED, $this->stored());
-    $answer = $this->post('surface-api/tool_test.cabinet/count/submit', ['values' => ['drawers' => 9]]);
+    $answer = $this->write('POST', 'surface-api/tool_test.cabinet:count', ['drawers' => 9]);
     $this->assertFalse($answer['committed']);
     $this->assertSame(self::STORED, $this->stored());
   }

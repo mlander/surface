@@ -889,7 +889,7 @@ Success: Configure registration (step 3): the values were accepted and written.
   ok: true
   committed: true
   changed: true
-  changes: ["title","venue","room","pricing","ticket.price","ticket.currency","ticket.note"]
+  changes: ["/title","/venue","/room","/pricing","/ticket/price","/ticket/currency","/ticket/note"]
   values: {"title":"Autumn meetup","open":true,"venue":"harbour","room":"harbour_deck","capacity":50,"pricing":"paid","ticket":{"price":12.5,"currency":"EUR"},"contact":{"email":"events@example.com","phone":""}}
   violations: []
   notes: []
@@ -897,13 +897,13 @@ Success: Configure registration (step 3): the values were accepted and written.
 
 2. A capacity above the room's
 Failed: The values were refused:
-capacity: This value should be between 1 and 30. This applies when room is library_garden (Garden room).
+/capacity: This value should be between 1 and 30. This applies when room is library_garden (Garden room).
   ok: false
   committed: false
   changed: false
   changes: []
   values: {"title":"Garden party","open":true,"venue":"library","room":"library_garden","capacity":45,"pricing":"free","ticket":{"note":null},"contact":{"email":"events@example.com","phone":""}}
-  violations: [{"path":"capacity","code":"not_in_range","message":"This value should be between 1 and 30. This applies when room is library_garden (Garden room)."}]
+  violations: [{"path":"/capacity","code":"not_in_range","message":"This value should be between 1 and 30. This applies when room is library_garden (Garden room)."}]
   notes: []
   stale: []
 
@@ -912,7 +912,7 @@ Success: Dry run of Configure registration (step 3): the values were accepted an
   ok: true
   committed: false
   changed: false
-  changes: ["title","venue","room","capacity","pricing","ticket.note","ticket.price","ticket.currency"]
+  changes: ["/title","/venue","/room","/capacity","/pricing","/ticket/note","/ticket/price","/ticket/currency"]
   values: {"title":"Winter social","open":true,"venue":"riverside","room":"riverside_east","capacity":40,"pricing":"free","ticket":{"note":"Donations welcome"},"contact":{"email":"events@example.com","phone":""}}
   violations: []
   notes: []
@@ -994,11 +994,11 @@ leaving the stewards at three. The three refusals:
 
 ```
 Failed: The values were refused:
-venue: The value you selected is not a valid choice. Choose riverside (Riverside Hall), library (Old Library) or harbour (Harbour Centre).
+/venue: The value you selected is not a valid choice. Choose riverside (Riverside Hall), library (Old Library) or harbour (Harbour Centre).
 Failed: The values were refused:
-room: The value you selected is not a valid choice. This applies when venue is riverside (Riverside Hall). Choose riverside_main (Main hall) or riverside_east (East room).
+/room: The value you selected is not a valid choice. This applies when venue is riverside (Riverside Hall). Choose riverside_main (Main hall) or riverside_east (East room).
 Failed: The values were refused:
-third_party_settings.data_surface_examples_compliance.stewards: This value should be 5 or more. This applies when capacity is 240.
+/third_party_settings/data_surface_examples_compliance/stewards: This value should be 5 or more. This applies when capacity is 240.
 ```
 
 Each time the agent reads the fix from the refusal alone and the next
@@ -1023,21 +1023,24 @@ The landing page then links each example "In React":
 `/surface-react/registration.step1/configure`,
 `/surface-react/registration.step2/configure` and
 `/surface-react/registration.step3/configure`. Each is the same resource
-as the form beside it, read from `/surface-api/registration.stepN/configure`:
+as the form beside it, read from `/surface-api/registration.stepN`:
 JSON Schema with the labels as `oneOf` titles, the bounds as `minimum`
 and `maximum`, the ticket variants as a conditional on the pricing, and an
 `x-surface` note on every key saying what the form knows about it.
 
-Change the venue on example 2: the app posts the answers to `/refine`,
-which re-narrows the contract the way the form's AJAX rebuild does, and
-the room comes back on its empty option, standing for the stored room,
-which stays on the server. Press Submit to save: the answers go to
-`/submit`, which writes what the form's Save writes, refuses what it
-refuses (each refusal beside its field and in a summary, with nothing
-written), and answers with the
+Change the venue on example 2: the app narrows the room and the
+capacity itself from the full schema, as the form's AJAX rebuild does,
+and asks the server (`POST /surface-api/registration.step2/schema`)
+only for a rule the schema cannot state; the room comes back on its
+empty option, standing for the stored room, which stays on the server.
+Press Submit to save: the answers go to
+`PATCH /surface-api/registration.step2`, which writes what the form's
+Save writes, refuses what it refuses (a 422, each refusal beside its
+field and in a summary, with nothing written), and answers with the
 contract as now stored, which the app re-renders from. If someone saved
-the example since the page loaded, the submit is refused rather than
-overwriting them. The collapsed Contract panel under the form is the
+the example since the page loaded, the write is refused (a 412: the
+`If-Match` the app sends no longer matches) rather than overwriting
+them. The collapsed Contract panel under the form is the
 contract as it stands.
 [The served contract](../../docs/served-contract.md) has the format.
 
@@ -1047,8 +1050,9 @@ The same contract through every door. The decoupled page is the one
 above, [In React](#in-react): the contract served as JSON and drawn by a
 React app. ECA and an AI agent, through the tool of example 5, are yours
 to show on your own site. With `data_surface_openapi` enabled, the
-landing page links `/surface-api/openapi.json`, every example's
-endpoints described for any OpenAPI client.
+landing page links `/surface-api/openapi.json`, every example's paths
+described for any OpenAPI client, and `/surface-api/docs`, Swagger UI
+over it, to try each call with your session.
 
 ## One small resource per concept
 
@@ -1137,11 +1141,11 @@ drush tool:run data_surface:event.bulletin:configure --uid=1 --input='{"values":
 ```
 1. A send day for a monthly bulletin
 Failed: The values were refused:
-send_day: Send day does not apply when frequency is monthly (Monthly).
+/send_day: Send day does not apply when frequency is monthly (Monthly).
 
 2. Eight items in a weekly issue
 Failed: The values were refused:
-items: This value should be between 1 and 5. This applies when frequency is weekly (Weekly).
+/items: This value should be between 1 and 5. This applies when frequency is weekly (Weekly).
 
 3. Eight items in a monthly issue, and no send day
 Success: Dry run of Configure the bulletin: the values were accepted and prepared, and nothing was written.
@@ -1316,7 +1320,7 @@ drush tool:run data_surface:event.press:configure --uid=1 --input='{"values":{"r
 ```
 1. A public contact with the email cleared
 Failed: The values were refused:
-contact.email: Email is required when public is on.
+/contact/email: Email is required when public is on.
 
 2. The same contact, not shown on the press page
 Success: Dry run of Configure the press page: the values were accepted and prepared, and nothing was written.
@@ -1324,7 +1328,7 @@ Success: Dry run of Configure the press page: the values were accepted and prepa
 
 3. A review date with no reviewer
 Failed: The values were refused:
-reviewed_by: Reviewed by is required when reviewed_on is set.
+/reviewed_by: Reviewed by is required when reviewed_on is set.
 ```
 
 ```bash
@@ -1334,7 +1338,7 @@ drush tool:run data_surface:event.desk:configure --uid=1 --input='{"values":{"ph
 ```
 1. A desk phone the shape refuses
 Failed: The values were refused:
-phone: Write the number in digits, such as +1 555 0100.
+/phone: Write the number in digits, such as +1 555 0100.
 ```
 
 ## Example 9: keys that come from the site
@@ -1513,12 +1517,12 @@ drush tool:run data_surface:event.sales:configure --uid=1 --input='{"values":{"o
 ```
 1. Speaker tickets put on sale
 Success: Dry run of Configure ticket sales: the values were accepted and prepared, and nothing was written.
-on_sale.speaker: Speaker is locked and kept as stored; the value sent was not taken.
+/on_sale/speaker: Speaker is locked and kept as stored; the value sent was not taken.
   values: {"on_sale":{"standard":true,"student":true,"speaker":false},"limits":{"standard":{"per_order":4,"waiting_list":false},"student":{"per_order":1,"waiting_list":true},"speaker":[]}}
 
 2. Student tickets taken off sale, with a new limit for them
 Failed: The values were refused:
-limits.student.per_order: Per order does not apply when on_sale.student is off.
+/limits/student/per_order: Per order does not apply when on_sale.student is off.
 ```
 
 ## Example 10: who may change what
@@ -1660,7 +1664,7 @@ Success: Check a program changes nothing: the values were accepted and prepared,
 
 2. A program with too many sessions, checked
 Failed: The values were refused:
-sessions: This value should be between 1 and 30.
+/sessions: This value should be between 1 and 30.
 ```
 
 ### Another module answers too
@@ -1886,7 +1890,7 @@ Success: Dry run of Configure the doors: the values were accepted and prepared, 
 
 4. The badges sent null: refused, since they are always held
 Failed: The values were refused:
-badges: Badges cannot be cleared: it always holds a value, printed (Printed at the door) by default. Leave it out to keep what it holds.
+/badges: Badges cannot be cleared: it always holds a value, printed (Printed at the door) by default. Leave it out to keep what it holds.
 ```
 
 ## Example 12: a schema read into a structure
@@ -2112,12 +2116,12 @@ Success: Dry run of Configure the spotlight: the values were accepted and prepar
 
 2. A card sent the props of a hero
 Failed: The values were refused:
-props.align: props.align belongs to the data_surface_examples:hero variant, but component chose data_surface_examples:card.
-props.overlay: props.overlay belongs to the data_surface_examples:hero variant, but component chose data_surface_examples:card.
+/props/align: props.align belongs to the data_surface_examples:hero variant, but component chose data_surface_examples:card.
+/props/overlay: props.overlay belongs to the data_surface_examples:hero variant, but component chose data_surface_examples:card.
 
 3. A hero darker than its schema allows
 Failed: The values were refused:
-props.overlay: This value should be between 0 and 100.
+/props/overlay: This value should be between 0 and 100.
 ```
 
 ## How this page is kept true

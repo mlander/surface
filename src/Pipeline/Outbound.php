@@ -17,8 +17,8 @@ use Drupal\data_surface\Refinement\DoesNotApply;
  *
  * One projection, the one the read tool has always applied, for every
  * document a door returns: the read tool's `values`, the write tool's
- * accepted `values` on a dry run and on a write, React's `/validate`
- * document. A key the build left out for the caller (an omitted child,
+ * accepted `values` on a dry run and on a write, the HTTP API's dry run
+ * and write. A key the build left out for the caller (an omitted child,
  * at any depth) is not there, since what is not in the built data
  * surface is nothing the caller may see; a secret is not there, at any
  * depth, under every variant that keeps it secret and inside

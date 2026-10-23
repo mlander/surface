@@ -142,19 +142,19 @@ class ReadWriteRoundTripTest extends DataSurfaceKernelTestBase {
   public function testWriteListsWhatItChanges(): void {
     $read = $this->read();
     [, $dry] = $this->write(['capacity' => 45] + $read, TRUE);
-    $this->assertSame(['capacity'], $dry[OperationInputs::CHANGES]);
+    $this->assertSame(['/capacity'], $dry[OperationInputs::CHANGES]);
     $this->assertSame(50, $this->config(self::CONFIG)->get('capacity'), 'A dry run writes nothing.');
 
     // Null clears, and a key holding the empty string holds nothing
     // already, so clearing it keeps the stored representation.
     [, $outputs] = $this->write(['capacity' => 45, 'contact' => ['phone' => NULL]]);
-    $this->assertSame(['capacity'], $outputs[OperationInputs::CHANGES]);
+    $this->assertSame(['/capacity'], $outputs[OperationInputs::CHANGES]);
     $this->assertSame(45, $this->config(self::CONFIG)->get('capacity'));
     $this->assertSame('', $this->config(self::CONFIG)->get('contact.phone'));
     [, $outputs] = $this->write(['contact' => ['phone' => '555 0100']]);
-    $this->assertSame(['contact.phone'], $outputs[OperationInputs::CHANGES]);
+    $this->assertSame(['/contact/phone'], $outputs[OperationInputs::CHANGES]);
     [, $outputs] = $this->write(['contact' => ['phone' => '']]);
-    $this->assertSame(['contact.phone'], $outputs[OperationInputs::CHANGES], 'The empty string sent clears a value.');
+    $this->assertSame(['/contact/phone'], $outputs[OperationInputs::CHANGES], 'The empty string sent clears a value.');
     $this->assertNull($this->config(self::CONFIG)->get('contact.phone'));
 
     // A key storage never held reads as its default: sent as that
@@ -162,11 +162,11 @@ class ReadWriteRoundTripTest extends DataSurfaceKernelTestBase {
     // sent another value, it is written.
     $compliance = ['data_surface_examples_compliance' => ['license' => '', 'stewards' => 1]];
     [, $outputs] = $this->write(['capacity' => 50, 'third_party_settings' => $compliance]);
-    $this->assertSame(['capacity'], $outputs[OperationInputs::CHANGES]);
+    $this->assertSame(['/capacity'], $outputs[OperationInputs::CHANGES]);
     $this->assertNull($this->config(self::CONFIG)->get('third_party_settings'));
     $compliance = ['data_surface_examples_compliance' => ['license' => '2048', 'stewards' => 1]];
     [, $outputs] = $this->write(['third_party_settings' => $compliance]);
-    $this->assertSame(['third_party_settings'], $outputs[OperationInputs::CHANGES]);
+    $this->assertSame(['/third_party_settings'], $outputs[OperationInputs::CHANGES]);
     $this->assertSame('2048', $this->config(self::CONFIG)->get('third_party_settings.data_surface_examples_compliance.license'));
   }
 

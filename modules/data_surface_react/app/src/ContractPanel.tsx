@@ -1,5 +1,4 @@
 import { useMemo } from 'react';
-import type { FullSchema } from './api';
 import type { Contract, Schema, Values } from './contract';
 import { choices, inlineSchema, isObject, jsonType, resolveVariants } from './contract';
 
@@ -126,7 +125,7 @@ function rows(schema: Schema, values: Values, prefix = ''): Row[] {
  * operation form shows. The rows read each key's effective schema, its
  * references resolved (`schema`: the server's last answer, or what the
  * form narrowed from the full schema since); the JSON is each document as
- * served, `$defs` and all. One line says how the last change was
+ * served, `$defs` and all, the envelope's paths dotted as the app holds them. One line says how the last change was
  * narrowed: here, naming the keys, or by the server, naming the key and
  * the marker that sent it there.
  */
@@ -138,7 +137,7 @@ export function ContractPanel({
   narrowing,
 }: {
   contract: Contract;
-  full?: FullSchema | null;
+  full?: Schema | null;
   schema?: Schema;
   values: Values;
   narrowing?: string | null;

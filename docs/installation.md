@@ -109,8 +109,8 @@ of them is meant to replace core's own forms on a production site.
 | `data_surface_examples` | One resource that grows, one idea per example, each example a form beside the contract it emits, at `/surface-examples`: declaring, refining, parts, and the same contract as a tool. Needs Tool. |
 | `data_surface_examples_compliance` | Example 4: a compliance structure, and one alter that attaches it to example 3's resource, and nothing else. |
 | `data_surface_examples_workflow` | Example 10, extended: two alters that answer access for the program and its fees, with no change to the program, and nothing else. |
-| `data_surface_react` | The served contract: an operation as JSON Schema with refine and validate endpoints, and a React form rendered from it at `/surface-react/{resource}/{operation}`. Its built app is committed, so it needs no Node. |
-| `data_surface_openapi` | An OpenAPI 3.1 document of every operation's endpoints at `/surface-api/openapi.json` (and `.yaml`), for any OpenAPI client, generator or UI. Needs `data_surface_react`. |
+| `data_surface_react` | The served contract: a resource over HTTP at `/surface-api/{resource}`, the method its operation, as JSON Schema with a narrowing and a dry run, and a React form rendered from it at `/surface-react/{resource}/{operation}`. Its built app is committed, so it needs no Node. |
+| `data_surface_openapi` | An OpenAPI 3.1 document of every operation's paths at `/surface-api/openapi.json` (and `.yaml`), for any OpenAPI client, generator or UI, with Swagger UI at `/surface-api/docs` and Redoc at `/surface-api/redoc`. Needs `data_surface_react`. |
 
 Each submodule's own README says what it shows, how to try it, and which
 tests gate it.
@@ -138,7 +138,7 @@ drush pm:install data_surface_react
 ```
 
 With `data_surface_openapi` as well, `/surface-api/openapi.json` describes
-every operation's endpoints for an OpenAPI client, and the landing page
+every operation's paths for an OpenAPI client, and the landing page
 links it under example 6:
 
 ```bash

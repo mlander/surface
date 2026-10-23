@@ -155,7 +155,7 @@ description, and always present:
 | `ok` | Whether nothing was refused. |
 | `committed` | Whether the values were written; false for a dry run, a refusal and a read only operation. |
 | `changed` | Whether the write moved a stored value; false when the values were what is stored, and then nothing was saved. |
-| `changes` | The dotted path of each stored value the write changed, or a dry run would, so writing back what the read tool returned changes nothing ([decision](../../docs/decisions.md#absent-keeps-null-clears)). |
+| `changes` | The JSON Pointer of each stored value the write changed, or a dry run would, so writing back what the read tool returned changes nothing ([decision](../../docs/decisions.md#absent-keeps-null-clears)). |
 | `values` | The accepted values, as the read tool would answer them after the write: no secret, no key this account may not see, and no key never stored that the write left at its default (a mounted key not sent). |
 | `violations` | Each refusal, `{path, code, message}`; a refusal of the whole call has an empty path. |
 | `notes` | Each value sent for a locked key and not taken, `{path, code, message}`, code `locked`. |
@@ -188,8 +188,8 @@ drush tool:run data_surface:registration.step3:configure --uid=1 --json \
    "ok": false, "committed": false, "changed": false, "changes": [],
    "values": {"title": "Spring meetup", "open": true, "venue": "riverside", "room": "harbour_deck", "capacity": 500, ...},
    "violations": [
-     {"path": "room", "code": "no_such_choice", "message": "The value you selected is not a valid choice. This applies when venue is riverside (Riverside Hall). Choose riverside_main (Main hall) or riverside_east (East room)."},
-     {"path": "capacity", "code": "not_in_range", "message": "This value should be between 1 and 100. This applies when room is empty (harbour_deck was refused) and third_party_settings.data_surface_examples_compliance.license is empty."}],
+     {"path": "/room", "code": "no_such_choice", "message": "The value you selected is not a valid choice. This applies when venue is riverside (Riverside Hall). Choose riverside_main (Main hall) or riverside_east (East room)."},
+     {"path": "/capacity", "code": "not_in_range", "message": "This value should be between 1 and 100. This applies when room is empty (harbour_deck was refused) and third_party_settings.data_surface_examples_compliance.license is empty."}],
    "notes": [], "stale": []}}
 ```
 
@@ -259,8 +259,11 @@ is `free`), or every variant's keys with none required before anything
 chooses. The full contract, with an `if`/`then` per variant on the key
 that chooses it, is the main module's `data_surface.contract_emitter`:
 see it in the contract panel below, or, with `data_surface_react`
-enabled, at `/surface-api/{resource}/{operation}`
-([`docs/served-contract.md`](../../docs/served-contract.md)).
+enabled, at `/surface-api/{resource}`
+([`docs/served-contract.md`](../../docs/served-contract.md)). Since
+contract 3 the tool and HTTP agree: one call per operation, with a dry
+run as a flag (`dry_run` here, `?dryRun=true` there), and every path
+in a result a JSON Pointer.
 
 ## The read tool
 
@@ -363,9 +366,9 @@ The routes of `data_surface_examples` name it.
 | `Kernel\ReadToolTest` | The read tools: one per operation that changes a thing that exists and none for one that creates, a read operation taking exactly the parameters, an output map of the write tool's keys, step 3's stored values with the compliance module's mounted keys before and after a write, the content type read by its type, an unknown parameter failing as for the write tool, access as the write tool's, and a secret never returned. |
 | `Kernel\OperationFactsTest` | How an operation behaves: the attribute's defaults, `creates` read off the attribute and stamped on the context, idempotence derived from it, an operation on the class with no method, a method's context taking the attribute's id and `creates` and its docblock summary as its description, a context naming another id or creating against its attribute refused at discovery, contradicting facts refused, the Tool API's kind and destructive flag as the MCP bridge reads them, no read tool beside a read only operation, and `x-surface.operation` and the description at the top of both documents. |
 | `Kernel\ToolFeedbackTest` | What the listing and a refusal say: each key another narrows naming what it depends on, once, through a port at its site; every refusal form (a list, a list another key narrows, a long list capped, a bound, a pattern, a key that does not apply); `values` held to its shape before the tool runs; and an agent's retry loop on example 3 fixing each key from its refusal in one try, through the runner MCP and ECA call. |
-| `Kernel\ToolResultShapeTest` | What a tool answers: exactly the result shape's keys, refused or not, at the write tool, a read only one and React's `/validate` and `/submit`, the same refusal by paths at the tool and by labels at React, with one path and code; the failure category; one violation per line, each the entry's path and message; `values` required and never null, `{}` changing nothing. |
+| `Kernel\ToolResultShapeTest` | What a tool answers: exactly the result shape's keys, refused or not, at the write tool, a read only one and the HTTP door (a refusal there as problem details), the same refusal by paths at the tool and by labels at React, with one JSON Pointer and code; the failure category; one violation per line, each the entry's path and message; `values` required and never null, `{}` changing nothing. |
 | `Kernel\ResultCodesTest` | Every refusal path's code, by path: the module's own, a constraint's, a refusal of the whole call with an empty path, a note and a stale reference. |
-| `Kernel\SecurityProjectionTest` | Every door projecting what the read projects: a dry run and React `/validate` answering no key access left out and no `prepared`, no door echoing a secret, a collection item keeping its position's secret or refused when positions moved, a note saying nothing of a secret, the React and tool doors asking the permission first and naming no id, a child permission nothing can name refused, and the cached definitions no account's. |
+| `Kernel\SecurityProjectionTest` | Every door projecting what the read projects: a dry run and an HTTP dry run answering no key access left out and no `prepared`, no door echoing a secret, a collection item keeping its position's secret or refused when positions moved, a note saying nothing of a secret, the React and tool doors asking the permission first and naming no id, a child permission nothing can name refused, and the cached definitions no account's. |
 | `Kernel\DerivedToolDefinitionsTest` | Tool Explorer showing every derived tool, read tools included, installing a module deriving its tools, and each tool declaring its operation's permission unless it has a placeholder. |
 
 ## Who may run them

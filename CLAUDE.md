@@ -370,17 +370,18 @@ It names no widget unless asked
 (`emit(..., widgets: TRUE)`); `data_surface_tool`'s contract panel shows
 it without, beside what the Tool API can advertise (which flattens
 variants, and is what `tool:info` prints). `modules/data_surface_react`
-serves it with the widget hints, through the main module's service:
-`/surface-api/{resource}/{operation}` serves it, `/refine` re-narrows it
-(the AJAX rebuild's equivalent, emitted from the form builder's `refinementOverlay()`, so an orphan is
-held unanswered and listed `stale`), `/validate` runs the pipeline
-dry and `/submit` writes, answering a refusal as 200 data
-(`committed: false`), a write with the rebuilt contract, and a create
-with the operation the created thing now lives at (`created`, from the
-outputs or identity, checked by building that operation). The GET
-contract carries a `fingerprint` of the stored values; a submit that
-sends it back is refused when storage changed since, and one that sends
-none is not checked (opt-in; the app sends it).
+serves it with the widget hints, through the main module's service, on
+an API where the path is the resource and the method the operation
+(contract 3, `ServedPaths`): `GET /surface-api/{resource}[/{id}]` the
+envelope, its `ETag` the stored values' fingerprint; `GET .../schema` the
+full schema itself; `POST .../schema` the envelope narrowed for values
+in progress (the AJAX rebuild's equivalent, emitted from the form
+builder's `refinementOverlay()`, so an orphan is held unanswered and
+listed `stale`); `PATCH` the default update, `POST` on the collection
+the default create (201 with `Location`), `:{operation}` any other,
+`?dryRun=true` a run that writes nothing, `If-Match` a 412 when storage
+changed since, a refusal 422 problem details, every path a JSON Pointer
+and every contract 2 path a 410.
 `/surface-react/{resource}/{operation}` renders it with a React app.
 `docs/served-contract.md` has the format, with children and variants
 as `$defs` that the properties reference; `docs/decisions.md` (Served

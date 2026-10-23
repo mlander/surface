@@ -1,7 +1,7 @@
 {
     "resource": "event.doors",
     "module": "data_surface_examples",
-    "contract": 2,
+    "contract": 3,
     "documents": [
         {
             "resource": "event.doors",
@@ -12,7 +12,7 @@
                 "title": "Configure the doors",
                 "description": "Sets when the doors open, the badges checked at the door and the notes for the door team.",
                 "x-surface": {
-                    "contract": 2,
+                    "contract": 3,
                     "operation": {
                         "id": "configure",
                         "label": "Configure the doors",

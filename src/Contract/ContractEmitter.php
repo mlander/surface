@@ -37,6 +37,7 @@ use Drupal\data_surface\Port;
 use Drupal\data_surface\ResourceBuild\RefinesInputRefiner;
 use Drupal\data_surface\Entry;
 use Drupal\data_surface\Collection;
+use Drupal\data_surface\Pipeline\ResultDocument;
 
 /**
  * Turns a sealed data surface and its values into the served contract.
@@ -154,10 +155,13 @@ final class ContractEmitter {
    * its stored values: this counts the changes to how every document is
    * spelled. Stated as `x-surface.contract` at the top of both documents
    * and answered as the `Contract-Version` header by the routes serving
-   * them. Contract 1 is what the module served until 2026-10-20.
-   * Decision: see docs/decisions.md#contract-2.
+   * them. Contract 1 is what the module served until 2026-10-20, contract
+   * 2 until 2026-10-22; contract 3 changed the HTTP door (the operation is
+   * the method) and spells every path on the wire as a JSON Pointer, and
+   * left both documents as contract 2 wrote them.
+   * Decision: see docs/decisions.md#contract-3-the-operation-is-the-method.
    */
-  public const CONTRACT = 2;
+  public const CONTRACT = 3;
 
   /**
    * The keywords whose subschemas carry no `x-surface` in contract 2.
@@ -359,7 +363,9 @@ final class ContractEmitter {
         'label' => $label === NULL ? NULL : PlainText::of($label),
         'schema' => $this->top($surface, $schema, $label, $operation, $id),
         'values' => $shown,
-        'stale' => $stale,
+        // Each a JSON Pointer, the one spelling a path has on the wire.
+        // Decision: see docs/decisions.md#one-result-at-every-door.
+        'stale' => array_map(ResultDocument::pointer(...), $stale),
       ];
       $outputs = $this->outputs($surface, $cacheability);
       if ($outputs !== NULL) {

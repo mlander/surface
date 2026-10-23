@@ -1,7 +1,7 @@
 {
     "resource": "first.newsletter",
     "module": "data_surface_first",
-    "contract": 2,
+    "contract": 3,
     "documents": [
         {
             "resource": "first.newsletter",
@@ -12,7 +12,7 @@
                 "title": "Configure the newsletter",
                 "description": "Sets who the newsletter is sent from, how often it goes out and how many recipients one send reaches.",
                 "x-surface": {
-                    "contract": 2,
+                    "contract": 3,
                     "operation": {
                         "id": "configure",
                         "label": "Configure the newsletter",

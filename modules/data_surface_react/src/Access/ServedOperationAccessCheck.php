@@ -11,20 +11,23 @@ use Drupal\Core\Routing\Access\AccessInterface;
 use Drupal\Core\Routing\RouteMatchInterface;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\data_surface\DataSurfaceAccess;
+use Drupal\data_surface_react\ProblemException;
 use Drupal\data_surface_react\ServedOperations;
+use Drupal\data_surface_react\ServedPaths;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
-use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 
 /**
- * Gates the React page and the contract endpoints by their operation.
+ * Gates the React page and the API by the operation they serve.
  *
  * The same answer OperationAccessCheck gives an operation's form route,
- * for a path that names the resource and the operation by id rather than
- * in route defaults: the operation's permission, then the resource's
- * access class, no opinion read as a refusal. A route opts in with the
- * requirement `_data_surface_react_access: 'TRUE'`.
+ * for a path that names the resource and the operation by id (the page)
+ * or the resource and the method that implies the operation (the API,
+ * read by ServedPaths), rather than in route defaults: the operation's
+ * permission, then the resource's access class, no opinion read as a
+ * refusal. A route opts in with the requirement
+ * `_data_surface_react_access: 'TRUE'`.
  *
  * The operation's permission is asked first, from the two ids alone,
  * before the request's parameters are read, the subject loaded or
@@ -33,7 +36,8 @@ use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
  * whether a parameter named nothing or the access class refused what it
  * named, so the reason never says whether an id exists, and the real one
  * goes to the log; only an account holding the operation's permission
- * for what the parameters name hears the access class's reason.
+ * for what the parameters name hears the access class's reason, and on
+ * the API, that an id names nothing (404).
  *
  * Decision: see
  * docs/decisions.md#every-door-projects-what-the-read-tool-projects.
@@ -45,6 +49,8 @@ final class ServedOperationAccessCheck implements AccessInterface {
    *
    * @param \Drupal\data_surface_react\ServedOperations $servedOperations
    *   What reads an operation off a request.
+   * @param \Drupal\data_surface_react\ServedPaths $servedPaths
+   *   What reads an API path.
    * @param \Symfony\Component\HttpFoundation\RequestStack $requestStack
    *   The request stack, for a check made with no request handed in.
    * @param \Psr\Log\LoggerInterface|null $logger
@@ -52,6 +58,7 @@ final class ServedOperationAccessCheck implements AccessInterface {
    */
   public function __construct(
     protected readonly ServedOperations $servedOperations,
+    protected readonly ServedPaths $servedPaths,
     protected readonly RequestStack $requestStack,
     protected readonly ?LoggerInterface $logger = NULL,
   ) {}
@@ -62,10 +69,11 @@ final class ServedOperationAccessCheck implements AccessInterface {
   public const REFUSED = 'The operation cannot be served to this account with these parameters.';
 
   /**
-   * Checks access to a page or endpoint serving one operation.
+   * Checks access to the page or an API path serving one operation.
    *
    * @param \Drupal\Core\Routing\RouteMatchInterface $route_match
-   *   The route match, carrying the resource and operation ids.
+   *   The route match: the page's carries the resource and operation ids,
+   *   the API's the resource and the segments its path names.
    * @param \Drupal\Core\Session\AccountInterface $account
    *   The account.
    * @param \Symfony\Component\HttpFoundation\Request|null $request
@@ -76,10 +84,12 @@ final class ServedOperationAccessCheck implements AccessInterface {
    * @return \Drupal\Core\Access\AccessResultInterface
    *   The operation's answer. A resource, operation or parameter that
    *   names nothing is refused rather than thrown: an access question is
-   *   never answered with an exception. A POST body that is not a JSON
-   *   object is not an access question: the operation is read from the
-   *   query string alone, and if that is allowed the controller refuses
-   *   the body with a 400.
+   *   never answered with an exception. An API path that names nothing,
+   *   or is gone, is let through for the controller to answer with its
+   *   problem (404, 405, 410); what a path names is the code's, never a
+   *   stored value. An id that names nothing is a 404 for an account that
+   *   holds the operation's permission, and the fixed refusal for any
+   *   other.
    */
   public function access(RouteMatchInterface $route_match, AccountInterface $account, ?Request $request = NULL): AccessResultInterface {
     // Access is also asked outside a request's own dispatch: a link, a
@@ -90,7 +100,24 @@ final class ServedOperationAccessCheck implements AccessInterface {
       return AccessResult::forbidden('No request to read the operation from.');
     }
     $resource = (string) $route_match->getRawParameter('resource');
-    $operation = (string) $route_match->getRawParameter('operation');
+    $operation = $route_match->getRawParameter('operation');
+    $parameters = NULL;
+    if ($operation === NULL) {
+      // The API: the operation is what the path and the method name.
+      $segments = array_map(static fn (string $name): string => (string) $route_match->getRawParameter($name), ServedPaths::SEGMENTS);
+      try {
+        $target = $this->servedPaths->target($request, $resource, $segments);
+      }
+      catch (ProblemException) {
+        // Nothing is served, so nothing is disclosed: the controller
+        // answers the problem.
+        return AccessResult::allowed()->setCacheMaxAge(0);
+      }
+      $resource = $target->definition->id;
+      $operation = $target->operation->id;
+      $parameters = $target->parameters;
+    }
+    $operation = (string) $operation;
     try {
       $permission = $this->servedOperations->permissionAccess($resource, $operation, $account);
     }
@@ -106,14 +133,17 @@ final class ServedOperationAccessCheck implements AccessInterface {
     // from it, and nothing is built for a response the page cache answers.
     // Decision: see docs/decisions.md#a-build-is-not-cached-across-requests.
     try {
-      try {
-        $context = $this->servedOperations->contextFromRequest($resource, $operation, $request);
-      }
-      catch (BadRequestHttpException) {
-        $context = $this->servedOperations->contextFromRequest($resource, $operation, $request, FALSE);
-      }
+      $context = $parameters === NULL
+        ? $this->servedOperations->contextFromRequest($resource, $operation, $request)
+        : $this->servedOperations->context($resource, $operation, $parameters);
     }
     catch (\InvalidArgumentException $e) {
+      if ($parameters !== NULL && $permission !== NULL) {
+        // The account holds the operation's permission, which is the same
+        // whatever the id: it may hear that the id names nothing, a 404
+        // the controller answers.
+        return AccessResult::allowed()->setCacheMaxAge(0);
+      }
       return $this->refused($e->getMessage());
     }
     $access = $this->servedOperations->contextAccess($resource, $context, $account);

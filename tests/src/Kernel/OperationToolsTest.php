@@ -285,7 +285,7 @@ class OperationToolsTest extends DataSurfaceKernelTestBase {
     $tool->setInputValue(OperationInputs::VALUES, ['name' => '', 'description' => 'Plates']);
     $tool->execute();
     $this->assertFalse($tool->getResult()->isSuccess());
-    $this->assertSame("The values were refused:\n" . 'name: Name is required.', PlainTextOutput::renderFromHtml((string) $tool->getResult()->getMessage()));
+    $this->assertSame("The values were refused:\n" . '/name: Name is required.', PlainTextOutput::renderFromHtml((string) $tool->getResult()->getMessage()));
     $this->container->get('entity_type.manager')->getStorage('node_type')->resetCache();
     $this->assertSame('Dishes', NodeType::load('recipe')->getDescription());
 
@@ -337,7 +337,7 @@ class OperationToolsTest extends DataSurfaceKernelTestBase {
     $tool->setInputValue(OperationInputs::DRY_RUN, TRUE);
     $tool->execute();
     $this->assertFalse($tool->getResult()->isSuccess());
-    $this->assertStringContainsString('name: The name may not span lines or hold control characters.', (string) $tool->getResult()->getMessage());
+    $this->assertStringContainsString('/name: The name may not span lines or hold control characters.', (string) $tool->getResult()->getMessage());
   }
 
   /**
@@ -390,7 +390,7 @@ class OperationToolsTest extends DataSurfaceKernelTestBase {
     // Refused when the tool runs: the pipeline holds the values to the
     // has-data constraint the storage's edit operation added.
     $this->assertFalse($tool->getResult()->isSuccess());
-    $this->assertStringContainsString('storage.cardinality: This value should be 3 or more.', (string) $tool->getResult()->getMessage());
+    $this->assertStringContainsString('/storage/cardinality: This value should be 3 or more.', (string) $tool->getResult()->getMessage());
     $this->assertSame(3, FieldStorageConfig::loadByName('entity_test', 'field_address')->getCardinality());
   }
 

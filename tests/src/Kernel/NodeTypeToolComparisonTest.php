@@ -1042,16 +1042,17 @@ class NodeTypeToolComparisonTest extends DataSurfaceKernelTestBase {
    *   The prefix of that violation in the failure message.
    */
   protected static function refusedAt(string $key, string|int|null $leaf = NULL): string {
-    return implode('.', ['third_party_settings', self::EXTRAS, $key]) . ($leaf === NULL ? '' : '.' . $leaf) . ': ';
+    return '/' . implode('/', ['third_party_settings', self::EXTRAS, $key]) . ($leaf === NULL ? '' : '/' . $leaf) . ': ';
   }
 
   /**
    * Reduces a refusal to its paths and messages.
    *
    * The Tool API reports each violation as a typed data dump with the
-   * path spelled as "(property a) (property b) (item 0)"; the pipeline
-   * reports "a.b.0: message". Both come out as the dotted path and the
-   * message, with paths sharing a message listed together.
+   * path spelled as "(property a) (property b) (item 0)", which comes
+   * out as the dotted path; the pipeline reports "/a/b/0: message", its
+   * JSON Pointer, which comes out as it is. Each with its message, paths
+   * sharing a message listed together.
    *
    * @param string $message
    *   The failure message.

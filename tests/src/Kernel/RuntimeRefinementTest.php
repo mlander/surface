@@ -281,7 +281,7 @@ class RuntimeRefinementTest extends DataSurfaceKernelTestBase {
     $this->assertSame(['shelf'], $discarded(['aisle' => 'south', 'shelf' => 'south_1']));
     $this->assertSame([], $discarded(['aisle' => 'south', 'shelf' => 'south_2', 'tag' => 'red']));
     $document = $this->container->get('data_surface.contract_emitter')->emit($surface, $stored, 'resource_test.stockroom')->document;
-    $this->assertSame(['shelf', 'tag'], $document['stale']);
+    $this->assertSame(['/shelf', '/tag'], $document['stale']);
     $this->assertSame([NULL, NULL], [$document['values']['shelf'], $document['values']['tag']]);
   }
 

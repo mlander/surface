@@ -266,7 +266,7 @@ class ContentEntityStorageTest extends DataSurfaceKernelTestBase {
       OperationInputs::VALUES => ['title' => ['value' => 'Forbidden'], 'field_description' => ['value' => 'x']],
     ]);
     $this->assertFalse($refused['success']);
-    $this->assertStringContainsString('title.value', $refused['message']);
+    $this->assertStringContainsString('/title/value', $refused['message']);
   }
 
   /**

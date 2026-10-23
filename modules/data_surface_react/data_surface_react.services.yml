@@ -4,10 +4,20 @@ services:
   data_surface_react.served_operations:
     class: Drupal\data_surface_react\ServedOperations
     arguments: ['@data_surface.resource_registry', '@data_surface.resources']
-  # Gates the page and the three endpoints by the operation they name:
-  # its permission, then the resource's access class.
+  # Reads which operation a path and a method name, and writes the path of
+  # an operation: contract 3's paths.
+  data_surface_react.served_paths:
+    class: Drupal\data_surface_react\ServedPaths
+    arguments: ['@data_surface.resource_registry', '@string_translation']
+  # Gates the page and the API by the operation they name: its permission,
+  # then the resource's access class.
   data_surface_react.access:
     class: Drupal\data_surface_react\Access\ServedOperationAccessCheck
-    arguments: ['@data_surface_react.served_operations', '@request_stack', '@logger.channel.data_surface']
+    arguments: ['@data_surface_react.served_operations', '@data_surface_react.served_paths', '@request_stack', '@logger.channel.data_surface']
     tags:
       - { name: access_check, applies_to: _data_surface_react_access }
+  # Answers every HTTP error of the API as problem details.
+  data_surface_react.problem_details:
+    class: Drupal\data_surface_react\EventSubscriber\ProblemDetailsSubscriber
+    tags:
+      - { name: event_subscriber }

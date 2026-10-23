@@ -1,7 +1,7 @@
 services:
   # Builds the OpenAPI document: every resource operation that can be asked
-  # on its own and needs no subject, its five endpoints, and its full
-  # schema, built for no account, as components.
+  # on its own, its paths on the API, and its full schema, built for no
+  # account, as components.
   data_surface_openapi.document:
     class: Drupal\data_surface_openapi\OpenApiDocument
     arguments:
@@ -10,6 +10,7 @@ services:
       - '@data_surface.resource_plugins'
       - '@data_surface.contract_emitter'
       - '@data_surface.pipeline'
+      - '@data_surface_react.served_paths'
       - '@config.factory'
       - '@module_handler'
       - '@session_configuration'

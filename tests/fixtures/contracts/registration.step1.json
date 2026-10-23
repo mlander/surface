@@ -1,7 +1,7 @@
 {
     "resource": "registration.step1",
     "module": "data_surface_examples",
-    "contract": 2,
+    "contract": 3,
     "documents": [
         {
             "resource": "registration.step1",
@@ -12,7 +12,7 @@
                 "title": "Configure registration (step 1)",
                 "description": "Sets the event title, its capacity and whether registration is open.",
                 "x-surface": {
-                    "contract": 2,
+                    "contract": 3,
                     "operation": {
                         "id": "configure",
                         "label": "Configure registration (step 1)",

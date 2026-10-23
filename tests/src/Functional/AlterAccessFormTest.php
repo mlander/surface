@@ -68,9 +68,9 @@ class AlterAccessFormTest extends BrowserTestBase {
    *   The schema.
    */
   protected function fullSchema(): array {
-    $this->drupalGet('surface-api/resource_test.gallery/configure/schema');
+    $this->drupalGet('surface-api/resource_test.gallery/schema');
     $this->assertSession()->statusCodeEquals(200);
-    return json_decode($this->getSession()->getPage()->getContent(), TRUE)['schema'];
+    return json_decode($this->getSession()->getPage()->getContent(), TRUE);
   }
 
   /**

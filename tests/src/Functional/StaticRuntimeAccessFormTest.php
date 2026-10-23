@@ -69,9 +69,9 @@ class StaticRuntimeAccessFormTest extends BrowserTestBase {
    *   The schema.
    */
   protected function fullSchema(): array {
-    $this->drupalGet('surface-api/resource_test.exhibit/configure/schema');
+    $this->drupalGet('surface-api/resource_test.exhibit/schema');
     $this->assertSession()->statusCodeEquals(200);
-    return json_decode($this->getSession()->getPage()->getContent(), TRUE)['schema'];
+    return json_decode($this->getSession()->getPage()->getContent(), TRUE);
   }
 
   /**
@@ -85,7 +85,7 @@ class StaticRuntimeAccessFormTest extends BrowserTestBase {
     $this->drupalLogin($this->drupalCreateUser([]));
     $this->drupalGet('surface-test/exhibit');
     $assert->statusCodeEquals(403);
-    $this->drupalGet('surface-api/resource_test.exhibit/configure/schema');
+    $this->drupalGet('surface-api/resource_test.exhibit/schema');
     $assert->statusCodeEquals(403);
 
     $this->drupalLogin($this->drupalCreateUser(['keep an exhibit', 'inspect exhibit']));
@@ -126,7 +126,7 @@ class StaticRuntimeAccessFormTest extends BrowserTestBase {
       $assert->fieldDisabled($name);
     }
     $this->assertSame('live', $this->fullSchema()['properties']['loan']['x-surface']['access'], 'The full schema is the same whatever is stored.');
-    $this->drupalGet('surface-api/resource_test.exhibit/configure');
+    $this->drupalGet('surface-api/resource_test.exhibit');
     $contract = json_decode($this->getSession()->getPage()->getContent(), TRUE);
     $this->assertTrue($contract['schema']['properties']['loan']['readOnly'], 'The schema for these answers settles it.');
 

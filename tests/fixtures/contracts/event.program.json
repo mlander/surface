@@ -1,7 +1,7 @@
 {
     "resource": "event.program",
     "module": "data_surface_examples",
-    "contract": 2,
+    "contract": 3,
     "documents": [
         {
             "resource": "event.program",
@@ -12,7 +12,7 @@
                 "title": "Configure the program",
                 "description": "Sets the program: its headline, how many sessions it has, whether it is published, and its fees.",
                 "x-surface": {
-                    "contract": 2,
+                    "contract": 3,
                     "operation": {
                         "id": "configure",
                         "label": "Configure the program",
@@ -123,7 +123,7 @@
                 "title": "Check a program",
                 "description": "Checks a program against every rule the program configuration applies, and saves nothing.",
                 "x-surface": {
-                    "contract": 2,
+                    "contract": 3,
                     "operation": {
                         "id": "check",
                         "label": "Check a program",

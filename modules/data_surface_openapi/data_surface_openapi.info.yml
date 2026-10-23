@@ -1,6 +1,6 @@
 name: Data Surface - OpenAPI
 type: module
-description: 'Serves an OpenAPI 3.1 document of every resource operation the React submodule serves over HTTP: its five endpoints, their bodies and answers, and each operation''s full schema as components.'
+description: 'Serves an OpenAPI 3.1 document of every resource operation the React submodule serves over HTTP: its paths and methods, their bodies and answers, and each operation''s full schema as components; with Swagger UI and Redoc over it.'
 package: Data Surface
 lifecycle: experimental
 lifecycle_link: 'https://git.drupalcode.org/project/data_surface/-/blob/1.0.x/README.md#experimental-submodules'

@@ -86,8 +86,10 @@ class ExamplesEntryPortsTest extends ExamplesWebDriverTestBase {
     $page->checkField('dsr-on_sale-student');
     $this->assertNotNull($assert->waitForElement('css', '#dsr-limits-student-per_order'));
     $this->assertSame('1', $page->findById('dsr-limits-student-per_order')->getValue());
-    $refined = (int) $this->getSession()->evaluateScript("performance.getEntriesByType('resource').filter((entry) => new URL(entry.name).pathname.endsWith('/refine')).length");
-    $this->assertSame(0, $refined);
+    // The full schema's path, fetched once with GET as the page loads;
+    // a narrowing asked of the server would be a POST to it.
+    $schema = (int) $this->getSession()->evaluateScript("performance.getEntriesByType('resource').filter((entry) => new URL(entry.name).pathname.endsWith('/event.sales/schema')).length");
+    $this->assertSame(1, $schema);
   }
 
 }

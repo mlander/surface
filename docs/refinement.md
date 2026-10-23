@@ -267,7 +267,7 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
   value its watched siblings could take, and writes each answer down as
   a JSON Schema conditional (`enumerated`), or, where the values cannot
   be listed, says the key is `refine`: it can be asked about with
-  values, at `/refine`. Which rooms a venue has is static.
+  values, at `POST .../schema`. Which rooms a venue has is static.
 - **Runtime, `runtime: TRUE`.** A rule whose answer depends on something
   no schema can state: a lookup in the database or a remote service,
   uniqueness (a machine name nobody has taken), the current account,

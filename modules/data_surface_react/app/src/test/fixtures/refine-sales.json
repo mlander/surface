@@ -1,473 +1,468 @@
 {
     "schema": {
-        "resource": "event.sales",
-        "operation": "configure",
-        "label": "Configure ticket sales",
-        "schema": {
-            "$schema": "https://json-schema.org/draft/2020-12/schema",
-            "$id": "http://localhost/surface-api/event.sales/configure/schema",
-            "title": "Configure ticket sales",
-            "description": "Sets which ticket types are on sale, and for each how many tickets one order may hold and whether a waiting list opens when it sells out.",
-            "x-surface": {
-                "contract": 2,
-                "operation": {
-                    "id": "configure",
-                    "label": "Configure ticket sales",
-                    "description": "Sets which ticket types are on sale, and for each how many tickets one order may hold and whether a waiting list opens when it sells out.",
-                    "kind": "update",
-                    "creates": false,
-                    "destructive": false,
-                    "idempotent": true
-                },
-                "version": 1,
-                "rules": [
-                    0,
-                    1,
-                    2,
-                    3,
-                    4,
-                    5
-                ]
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "http://localhost/surface-api/event.sales/schema",
+        "title": "Configure ticket sales",
+        "description": "Sets which ticket types are on sale, and for each how many tickets one order may hold and whether a waiting list opens when it sells out.",
+        "x-surface": {
+            "contract": 3,
+            "operation": {
+                "id": "configure",
+                "label": "Configure ticket sales",
+                "description": "Sets which ticket types are on sale, and for each how many tickets one order may hold and whether a waiting list opens when it sells out.",
+                "kind": "update",
+                "creates": false,
+                "destructive": false,
+                "idempotent": true
             },
-            "type": "object",
-            "properties": {
-                "on_sale": {
-                    "title": "On sale",
-                    "description": "Which ticket types can be bought.",
-                    "allOf": [
-                        {
-                            "$ref": "#/$defs/event.sales.on_sale"
-                        },
-                        {
-                            "type": "object",
-                            "properties": {
-                                "speaker": {
-                                    "default": false,
-                                    "readOnly": true
-                                }
-                            }
-                        }
-                    ],
-                    "x-surface": {
-                        "widget": "fieldset",
-                        "locked": false,
-                        "dependsOn": [],
-                        "within": {
-                            "/allOf/1/properties/speaker": {
-                                "widget": "checkbox",
-                                "locked": true,
-                                "dependsOn": []
+            "version": 1,
+            "rules": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5
+            ]
+        },
+        "type": "object",
+        "properties": {
+            "on_sale": {
+                "title": "On sale",
+                "description": "Which ticket types can be bought.",
+                "allOf": [
+                    {
+                        "$ref": "#/$defs/event.sales.on_sale"
+                    },
+                    {
+                        "type": "object",
+                        "properties": {
+                            "speaker": {
+                                "default": false,
+                                "readOnly": true
                             }
                         }
                     }
-                },
-                "limits": {
-                    "title": "Limits",
-                    "allOf": [
-                        {
-                            "$ref": "#/$defs/event.sales.limits"
-                        },
-                        {
-                            "type": "object",
-                            "properties": {
-                                "speaker": {
-                                    "allOf": [
-                                        {
-                                            "$ref": "#/$defs/event.ticket_limit"
-                                        },
-                                        {
-                                            "type": "object",
-                                            "properties": {
-                                                "per_order": {
-                                                    "readOnly": true
-                                                },
-                                                "waiting_list": {
-                                                    "readOnly": true
-                                                }
+                ],
+                "x-surface": {
+                    "widget": "fieldset",
+                    "locked": false,
+                    "dependsOn": [],
+                    "within": {
+                        "/allOf/1/properties/speaker": {
+                            "widget": "checkbox",
+                            "locked": true,
+                            "dependsOn": []
+                        }
+                    }
+                }
+            },
+            "limits": {
+                "title": "Limits",
+                "allOf": [
+                    {
+                        "$ref": "#/$defs/event.sales.limits"
+                    },
+                    {
+                        "type": "object",
+                        "properties": {
+                            "speaker": {
+                                "allOf": [
+                                    {
+                                        "$ref": "#/$defs/event.ticket_limit"
+                                    },
+                                    {
+                                        "type": "object",
+                                        "properties": {
+                                            "per_order": {
+                                                "readOnly": true
+                                            },
+                                            "waiting_list": {
+                                                "readOnly": true
                                             }
                                         }
-                                    ],
-                                    "readOnly": true
-                                }
+                                    }
+                                ],
+                                "readOnly": true
                             }
                         }
+                    }
+                ],
+                "x-surface": {
+                    "widget": "fieldset",
+                    "locked": false,
+                    "dependsOn": [
+                        "on_sale.standard",
+                        "on_sale.student",
+                        "on_sale.speaker"
                     ],
-                    "x-surface": {
-                        "widget": "fieldset",
-                        "locked": false,
-                        "dependsOn": [
-                            "on_sale.standard",
-                            "on_sale.student",
-                            "on_sale.speaker"
-                        ],
-                        "reads": {
-                            "selling": "on_sale"
+                    "reads": {
+                        "selling": "on_sale"
+                    },
+                    "declared": true,
+                    "within": {
+                        "/allOf/1/properties/speaker": {
+                            "widget": "fieldset",
+                            "locked": true,
+                            "dependsOn": []
                         },
-                        "declared": true,
-                        "within": {
-                            "/allOf/1/properties/speaker": {
-                                "widget": "fieldset",
-                                "locked": true,
-                                "dependsOn": []
+                        "/allOf/1/properties/speaker/allOf/1/properties/per_order": {
+                            "widget": "number",
+                            "locked": true,
+                            "dependsOn": [
+                                "selling"
+                            ]
+                        },
+                        "/allOf/1/properties/speaker/allOf/1/properties/waiting_list": {
+                            "widget": "checkbox",
+                            "locked": true,
+                            "dependsOn": [
+                                "selling"
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "additionalProperties": false,
+        "allOf": [
+            {
+                "if": {
+                    "properties": {
+                        "on_sale": {
+                            "type": "object",
+                            "properties": {
+                                "standard": {
+                                    "const": false
+                                }
                             },
-                            "/allOf/1/properties/speaker/allOf/1/properties/per_order": {
-                                "widget": "number",
-                                "locked": true,
-                                "dependsOn": [
-                                    "selling"
-                                ]
-                            },
-                            "/allOf/1/properties/speaker/allOf/1/properties/waiting_list": {
-                                "widget": "checkbox",
-                                "locked": true,
-                                "dependsOn": [
-                                    "selling"
-                                ]
+                            "required": [
+                                "standard"
+                            ]
+                        }
+                    },
+                    "required": [
+                        "on_sale"
+                    ]
+                },
+                "then": {
+                    "properties": {
+                        "limits": {
+                            "type": "object",
+                            "properties": {
+                                "standard": {
+                                    "type": "object",
+                                    "properties": {
+                                        "per_order": false
+                                    }
+                                }
                             }
                         }
                     }
                 }
             },
-            "additionalProperties": false,
-            "allOf": [
-                {
-                    "if": {
-                        "properties": {
-                            "on_sale": {
-                                "type": "object",
-                                "properties": {
-                                    "standard": {
-                                        "const": false
-                                    }
-                                },
-                                "required": [
-                                    "standard"
-                                ]
-                            }
-                        },
-                        "required": [
-                            "on_sale"
-                        ]
-                    },
-                    "then": {
-                        "properties": {
-                            "limits": {
-                                "type": "object",
-                                "properties": {
-                                    "standard": {
-                                        "type": "object",
-                                        "properties": {
-                                            "per_order": false
-                                        }
-                                    }
+            {
+                "if": {
+                    "properties": {
+                        "on_sale": {
+                            "type": "object",
+                            "properties": {
+                                "standard": {
+                                    "const": false
                                 }
-                            }
+                            },
+                            "required": [
+                                "standard"
+                            ]
                         }
-                    }
-                },
-                {
-                    "if": {
-                        "properties": {
-                            "on_sale": {
-                                "type": "object",
-                                "properties": {
-                                    "standard": {
-                                        "const": false
-                                    }
-                                },
-                                "required": [
-                                    "standard"
-                                ]
-                            }
-                        },
-                        "required": [
-                            "on_sale"
-                        ]
                     },
-                    "then": {
-                        "properties": {
-                            "limits": {
-                                "type": "object",
-                                "properties": {
-                                    "standard": {
-                                        "type": "object",
-                                        "properties": {
-                                            "waiting_list": false
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
+                    "required": [
+                        "on_sale"
+                    ]
                 },
-                {
-                    "if": {
-                        "properties": {
-                            "on_sale": {
-                                "type": "object",
-                                "properties": {
-                                    "student": {
-                                        "const": false
-                                    }
-                                },
-                                "required": [
-                                    "student"
-                                ]
-                            }
-                        },
-                        "required": [
-                            "on_sale"
-                        ]
-                    },
-                    "then": {
-                        "properties": {
-                            "limits": {
-                                "type": "object",
-                                "properties": {
-                                    "student": {
-                                        "type": "object",
-                                        "properties": {
-                                            "per_order": false
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                },
-                {
-                    "if": {
-                        "properties": {
-                            "on_sale": {
-                                "type": "object",
-                                "properties": {
-                                    "student": {
-                                        "const": false
-                                    }
-                                },
-                                "required": [
-                                    "student"
-                                ]
-                            }
-                        },
-                        "required": [
-                            "on_sale"
-                        ]
-                    },
-                    "then": {
-                        "properties": {
-                            "limits": {
-                                "type": "object",
-                                "properties": {
-                                    "student": {
-                                        "type": "object",
-                                        "properties": {
-                                            "waiting_list": false
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                },
-                {
-                    "if": {
-                        "properties": {
-                            "on_sale": {
-                                "type": "object",
-                                "properties": {
-                                    "speaker": {
-                                        "const": false
-                                    }
-                                },
-                                "required": [
-                                    "speaker"
-                                ]
-                            }
-                        },
-                        "required": [
-                            "on_sale"
-                        ]
-                    },
-                    "then": {
-                        "properties": {
-                            "limits": {
-                                "type": "object",
-                                "properties": {
-                                    "speaker": {
-                                        "type": "object",
-                                        "properties": {
-                                            "per_order": false
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                },
-                {
-                    "if": {
-                        "properties": {
-                            "on_sale": {
-                                "type": "object",
-                                "properties": {
-                                    "speaker": {
-                                        "const": false
-                                    }
-                                },
-                                "required": [
-                                    "speaker"
-                                ]
-                            }
-                        },
-                        "required": [
-                            "on_sale"
-                        ]
-                    },
-                    "then": {
-                        "properties": {
-                            "limits": {
-                                "type": "object",
-                                "properties": {
-                                    "speaker": {
-                                        "type": "object",
-                                        "properties": {
-                                            "waiting_list": false
-                                        }
+                "then": {
+                    "properties": {
+                        "limits": {
+                            "type": "object",
+                            "properties": {
+                                "standard": {
+                                    "type": "object",
+                                    "properties": {
+                                        "waiting_list": false
                                     }
                                 }
                             }
                         }
                     }
                 }
-            ],
-            "$defs": {
-                "event.sales.on_sale": {
-                    "title": "event.sales.on_sale",
-                    "type": "object",
+            },
+            {
+                "if": {
                     "properties": {
-                        "standard": {
-                            "title": "Standard",
-                            "type": [
-                                "boolean",
-                                "null"
-                            ],
-                            "default": false,
-                            "x-surface": {
-                                "widget": "checkbox",
-                                "locked": false,
-                                "dependsOn": []
-                            }
-                        },
-                        "student": {
-                            "title": "Student",
-                            "type": [
-                                "boolean",
-                                "null"
-                            ],
-                            "default": false,
-                            "x-surface": {
-                                "widget": "checkbox",
-                                "locked": false,
-                                "dependsOn": []
-                            }
-                        },
-                        "speaker": {
-                            "title": "Speaker",
-                            "type": [
-                                "boolean",
-                                "null"
-                            ],
-                            "x-surface": {
-                                "widget": "checkbox",
-                                "locked": false,
-                                "dependsOn": []
-                            }
+                        "on_sale": {
+                            "type": "object",
+                            "properties": {
+                                "student": {
+                                    "const": false
+                                }
+                            },
+                            "required": [
+                                "student"
+                            ]
                         }
                     },
-                    "additionalProperties": false
+                    "required": [
+                        "on_sale"
+                    ]
                 },
-                "event.ticket_limit": {
-                    "title": "event.ticket_limit",
-                    "type": "object",
+                "then": {
                     "properties": {
-                        "per_order": {
-                            "title": "Per order",
-                            "type": [
-                                "integer",
-                                "null"
-                            ],
-                            "minimum": 1,
-                            "maximum": 10,
-                            "default": 4,
-                            "x-surface": {
-                                "widget": "number",
-                                "locked": false,
-                                "dependsOn": [
-                                    "selling"
-                                ]
-                            }
-                        },
-                        "waiting_list": {
-                            "title": "Waiting list when sold out",
-                            "type": [
-                                "boolean",
-                                "null"
-                            ],
-                            "default": false,
-                            "x-surface": {
-                                "widget": "checkbox",
-                                "locked": false,
-                                "dependsOn": [
-                                    "selling"
-                                ]
-                            }
-                        }
-                    },
-                    "additionalProperties": false,
-                    "x-surface": {
-                        "ports": {
-                            "selling": {
-                                "type": "boolean",
-                                "required": false
+                        "limits": {
+                            "type": "object",
+                            "properties": {
+                                "student": {
+                                    "type": "object",
+                                    "properties": {
+                                        "per_order": false
+                                    }
+                                }
                             }
                         }
                     }
-                },
-                "event.sales.limits": {
-                    "title": "event.sales.limits",
-                    "type": "object",
+                }
+            },
+            {
+                "if": {
                     "properties": {
-                        "standard": {
-                            "title": "Standard",
-                            "$ref": "#/$defs/event.ticket_limit",
-                            "x-surface": {
-                                "widget": "fieldset",
-                                "locked": false,
-                                "dependsOn": []
-                            }
-                        },
-                        "student": {
-                            "title": "Student",
-                            "$ref": "#/$defs/event.ticket_limit",
-                            "x-surface": {
-                                "widget": "fieldset",
-                                "locked": false,
-                                "dependsOn": []
-                            }
-                        },
-                        "speaker": {
-                            "title": "Speaker",
-                            "$ref": "#/$defs/event.ticket_limit",
-                            "x-surface": {
-                                "widget": "fieldset",
-                                "locked": false,
-                                "dependsOn": []
-                            }
+                        "on_sale": {
+                            "type": "object",
+                            "properties": {
+                                "student": {
+                                    "const": false
+                                }
+                            },
+                            "required": [
+                                "student"
+                            ]
                         }
                     },
-                    "additionalProperties": false
+                    "required": [
+                        "on_sale"
+                    ]
+                },
+                "then": {
+                    "properties": {
+                        "limits": {
+                            "type": "object",
+                            "properties": {
+                                "student": {
+                                    "type": "object",
+                                    "properties": {
+                                        "waiting_list": false
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
+            },
+            {
+                "if": {
+                    "properties": {
+                        "on_sale": {
+                            "type": "object",
+                            "properties": {
+                                "speaker": {
+                                    "const": false
+                                }
+                            },
+                            "required": [
+                                "speaker"
+                            ]
+                        }
+                    },
+                    "required": [
+                        "on_sale"
+                    ]
+                },
+                "then": {
+                    "properties": {
+                        "limits": {
+                            "type": "object",
+                            "properties": {
+                                "speaker": {
+                                    "type": "object",
+                                    "properties": {
+                                        "per_order": false
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            {
+                "if": {
+                    "properties": {
+                        "on_sale": {
+                            "type": "object",
+                            "properties": {
+                                "speaker": {
+                                    "const": false
+                                }
+                            },
+                            "required": [
+                                "speaker"
+                            ]
+                        }
+                    },
+                    "required": [
+                        "on_sale"
+                    ]
+                },
+                "then": {
+                    "properties": {
+                        "limits": {
+                            "type": "object",
+                            "properties": {
+                                "speaker": {
+                                    "type": "object",
+                                    "properties": {
+                                        "waiting_list": false
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        ],
+        "$defs": {
+            "event.sales.on_sale": {
+                "title": "event.sales.on_sale",
+                "type": "object",
+                "properties": {
+                    "standard": {
+                        "title": "Standard",
+                        "type": [
+                            "boolean",
+                            "null"
+                        ],
+                        "default": false,
+                        "x-surface": {
+                            "widget": "checkbox",
+                            "locked": false,
+                            "dependsOn": []
+                        }
+                    },
+                    "student": {
+                        "title": "Student",
+                        "type": [
+                            "boolean",
+                            "null"
+                        ],
+                        "default": false,
+                        "x-surface": {
+                            "widget": "checkbox",
+                            "locked": false,
+                            "dependsOn": []
+                        }
+                    },
+                    "speaker": {
+                        "title": "Speaker",
+                        "type": [
+                            "boolean",
+                            "null"
+                        ],
+                        "x-surface": {
+                            "widget": "checkbox",
+                            "locked": false,
+                            "dependsOn": []
+                        }
+                    }
+                },
+                "additionalProperties": false
+            },
+            "event.ticket_limit": {
+                "title": "event.ticket_limit",
+                "type": "object",
+                "properties": {
+                    "per_order": {
+                        "title": "Per order",
+                        "type": [
+                            "integer",
+                            "null"
+                        ],
+                        "minimum": 1,
+                        "maximum": 10,
+                        "default": 4,
+                        "x-surface": {
+                            "widget": "number",
+                            "locked": false,
+                            "dependsOn": [
+                                "selling"
+                            ]
+                        }
+                    },
+                    "waiting_list": {
+                        "title": "Waiting list when sold out",
+                        "type": [
+                            "boolean",
+                            "null"
+                        ],
+                        "default": false,
+                        "x-surface": {
+                            "widget": "checkbox",
+                            "locked": false,
+                            "dependsOn": [
+                                "selling"
+                            ]
+                        }
+                    }
+                },
+                "additionalProperties": false,
+                "x-surface": {
+                    "ports": {
+                        "selling": {
+                            "type": "boolean",
+                            "required": false
+                        }
+                    }
+                }
+            },
+            "event.sales.limits": {
+                "title": "event.sales.limits",
+                "type": "object",
+                "properties": {
+                    "standard": {
+                        "title": "Standard",
+                        "$ref": "#/$defs/event.ticket_limit",
+                        "x-surface": {
+                            "widget": "fieldset",
+                            "locked": false,
+                            "dependsOn": []
+                        }
+                    },
+                    "student": {
+                        "title": "Student",
+                        "$ref": "#/$defs/event.ticket_limit",
+                        "x-surface": {
+                            "widget": "fieldset",
+                            "locked": false,
+                            "dependsOn": []
+                        }
+                    },
+                    "speaker": {
+                        "title": "Speaker",
+                        "$ref": "#/$defs/event.ticket_limit",
+                        "x-surface": {
+                            "widget": "fieldset",
+                            "locked": false,
+                            "dependsOn": []
+                        }
+                    }
+                },
+                "additionalProperties": false
             }
         }
     },
@@ -477,11 +472,11 @@
         "label": "Configure ticket sales",
         "schema": {
             "$schema": "https://json-schema.org/draft/2020-12/schema",
-            "$id": "http://localhost/surface-api/event.sales/configure",
+            "$id": "http://localhost/surface-api/event.sales",
             "title": "Configure ticket sales",
             "description": "Sets which ticket types are on sale, and for each how many tickets one order may hold and whether a waiting list opens when it sells out.",
             "x-surface": {
-                "contract": 2,
+                "contract": 3,
                 "operation": {
                     "id": "configure",
                     "label": "Configure ticket sales",
@@ -762,7 +757,8 @@
                 "speaker": {}
             }
         },
-        "stale": []
+        "stale": [],
+        "notes": []
     },
     "steps": [
         {
@@ -781,11 +777,11 @@
                 "label": "Configure ticket sales",
                 "schema": {
                     "$schema": "https://json-schema.org/draft/2020-12/schema",
-                    "$id": "http://localhost/surface-api/event.sales/configure",
+                    "$id": "http://localhost/surface-api/event.sales",
                     "title": "Configure ticket sales",
                     "description": "Sets which ticket types are on sale, and for each how many tickets one order may hold and whether a waiting list opens when it sells out.",
                     "x-surface": {
-                        "contract": 2,
+                        "contract": 3,
                         "operation": {
                             "id": "configure",
                             "label": "Configure ticket sales",
@@ -1094,6 +1090,7 @@
                     }
                 },
                 "stale": [],
+                "notes": [],
                 "discarded": []
             }
         },
@@ -1113,11 +1110,11 @@
                 "label": "Configure ticket sales",
                 "schema": {
                     "$schema": "https://json-schema.org/draft/2020-12/schema",
-                    "$id": "http://localhost/surface-api/event.sales/configure",
+                    "$id": "http://localhost/surface-api/event.sales",
                     "title": "Configure ticket sales",
                     "description": "Sets which ticket types are on sale, and for each how many tickets one order may hold and whether a waiting list opens when it sells out.",
                     "x-surface": {
-                        "contract": 2,
+                        "contract": 3,
                         "operation": {
                             "id": "configure",
                             "label": "Configure ticket sales",
@@ -1399,6 +1396,7 @@
                     }
                 },
                 "stale": [],
+                "notes": [],
                 "discarded": []
             }
         },
@@ -1418,11 +1416,11 @@
                 "label": "Configure ticket sales",
                 "schema": {
                     "$schema": "https://json-schema.org/draft/2020-12/schema",
-                    "$id": "http://localhost/surface-api/event.sales/configure",
+                    "$id": "http://localhost/surface-api/event.sales",
                     "title": "Configure ticket sales",
                     "description": "Sets which ticket types are on sale, and for each how many tickets one order may hold and whether a waiting list opens when it sells out.",
                     "x-surface": {
-                        "contract": 2,
+                        "contract": 3,
                         "operation": {
                             "id": "configure",
                             "label": "Configure ticket sales",
@@ -1704,6 +1702,7 @@
                     }
                 },
                 "stale": [],
+                "notes": [],
                 "discarded": []
             }
         },
@@ -1723,11 +1722,11 @@
                 "label": "Configure ticket sales",
                 "schema": {
                     "$schema": "https://json-schema.org/draft/2020-12/schema",
-                    "$id": "http://localhost/surface-api/event.sales/configure",
+                    "$id": "http://localhost/surface-api/event.sales",
                     "title": "Configure ticket sales",
                     "description": "Sets which ticket types are on sale, and for each how many tickets one order may hold and whether a waiting list opens when it sells out.",
                     "x-surface": {
-                        "contract": 2,
+                        "contract": 3,
                         "operation": {
                             "id": "configure",
                             "label": "Configure ticket sales",
@@ -2036,6 +2035,7 @@
                     }
                 },
                 "stale": [],
+                "notes": [],
                 "discarded": []
             }
         },
@@ -2055,11 +2055,11 @@
                 "label": "Configure ticket sales",
                 "schema": {
                     "$schema": "https://json-schema.org/draft/2020-12/schema",
-                    "$id": "http://localhost/surface-api/event.sales/configure",
+                    "$id": "http://localhost/surface-api/event.sales",
                     "title": "Configure ticket sales",
                     "description": "Sets which ticket types are on sale, and for each how many tickets one order may hold and whether a waiting list opens when it sells out.",
                     "x-surface": {
-                        "contract": 2,
+                        "contract": 3,
                         "operation": {
                             "id": "configure",
                             "label": "Configure ticket sales",
@@ -2341,6 +2341,7 @@
                     }
                 },
                 "stale": [],
+                "notes": [],
                 "discarded": []
             }
         }

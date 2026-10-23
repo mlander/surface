@@ -2,12 +2,13 @@
 
 A resource built in one of its operations, served as a JSON document a
 client with no PHP can render a form from, re-narrow as answers change,
-validate against before anything is written, and then write through. The
-emitter is the main module's; the five endpoints and a React app that
-renders from them are the experimental submodule `data_surface_react`.
+rehearse a write against before anything is written, and then write
+through. The emitter is the main module's; the API, where the path is
+the resource and the method the operation, and a React app that renders
+from it are the experimental submodule `data_surface_react`.
 
-This is the roadmap's "served contract" in its first shape: one
-operation at a time, read, rehearsed and written.
+This is the roadmap's "served contract": one operation at a time, read,
+rehearsed and written.
 
 ## Where the emitter lives
 
@@ -43,10 +44,10 @@ JSON Schema cannot say them. This one can.
   say": the same settings described from config schema alone, set
   beside the full schema key by key
   (`modules/data_surface_examples/README.md`).
-- **Over HTTP.** `GET /surface-api/{resource}/{operation}`, the
-  resource's id and the operation's id, with `data_surface_react`
+- **Over HTTP.** `GET /surface-api/{resource}`, or
+  `/surface-api/{resource}/{id}` for one thing, with `data_surface_react`
   enabled: the whole document, widget hints included. The full schema is
-  `GET /surface-api/{resource}/{operation}/schema` beside it.
+  `GET .../schema` beside it ([the API](#the-api)).
 - **Not `drush tool:info`.** That prints the Tool API's rendering of the
   derived tool, which cannot say keys a sibling chooses: variants are
   flattened to one map, the variant the stored values choose, or every
@@ -57,18 +58,43 @@ JSON Schema cannot say them. This one can.
   definition has no conditional, so the tool's schema stays as loose as
   the unrefined data surface.
 
-## Contract 2
+## Contract 3
 
 A contract version is the version of the wire format both documents are
 written in, distinct from a resource's `version`: it counts the changes
 to how every document is spelled, and a client refuses one it does not
 know ([Evolving a resource](evolution.md#the-contracts-own-version)).
 Both documents state it first under the top `x-surface`, `"contract":
-2`, and every answer of the five endpoints that is not an error in its
-`Contract-Version` header. Contract 1 is what the module served until 2026-10-20, and
-what every document was before it had a number; this page describes
-contract 2. What moved, all at once so a client moves once
-([decision](decisions.md#contract-2)):
+3`, and every answer of the API in its `Contract-Version` header.
+Contract 1 is what the module served until 2026-10-20, contract 2 until
+2026-10-22; this page describes contract 3, which changed the HTTP door
+and kept both documents as contract 2 writes them, but for the number
+([decision](decisions.md#contract-3-the-operation-is-the-method)):
+
+| In contract 2 | In contract 3 | Why |
+| --- | --- | --- |
+| Five endpoints per operation, `/surface-api/{resource}/{operation}` and its `/schema`, `/refine`, `/validate`, `/submit` | One path per resource, `/surface-api/{resource}[/{id}]`: `GET` reads, `PATCH` updates, `POST` to the collection creates, `:{operation}` names any other ([the API](#the-api)) | The operation is the method; one operation is one call |
+| The operation's parameters in the query string and a POST body's `parameters` | The identity in the path, the rest in the query string | The thing is the URL |
+| `/refine` | `POST .../schema` | The schema, given these values |
+| `/validate` | The write with `?dryRun=true` | One call, a flag, as the tool's `dry_run` |
+| A body `{values, stale, parameters, fingerprint}` | The values document itself; stale paths in `X-Surface-Stale` | A merge patch is the body |
+| `fingerprint` in the GET document and the submit body | `ETag` on the read, `If-Match` on the write, 412 when it no longer matches | The HTTP way to say it |
+| `GET .../schema` answered `{resource, operation, label, schema, outputs}` | The full schema itself, `application/schema+json` | A schema at its own URL |
+| A refusal a 200, `ok: false` | 422 problem details, `errors`, `notes` and `stale` | The status says it before the body |
+| 403 Drupal's HTML page | Problem details for every error | One error format |
+| A create answered 200 | 201 with `Location` | Where the created thing is read |
+| Dotted paths, `contact.email` | JSON Pointers, `/contact/email`, at every door | The spelling JSON Schema uses |
+| `Contract-Version` only on answers that were not errors | On every answer | A client reads it first |
+
+Every contract 2 path answers 410 with what replaces it
+([gone](#gone)). The documents are compared by the contract diff as
+before; a baseline of contract 2 is reported once, "contract version 2
+to 3", and re-pinned.
+
+## Contract 2
+
+What contract 2 moved, from contract 1, all at once so a client moves
+once ([decision](decisions.md#contract-2)):
 
 | In contract 1 | In contract 2 | Why |
 | --- | --- | --- |
@@ -100,8 +126,8 @@ The emitter writes two documents from one data surface, by one code path.
   Hall stored the room offers Riverside's two rooms. A runtime refiner
   is run for it like any other, because this document is the present
   moment: with the East room closed, Riverside offers the main hall
-  alone. It is what a form is drawn from, and what `/surface-api` and
-  `/refine` serve. It describes those values and no others, at the
+  alone. It is what a form is drawn from, and what the read and
+  `POST .../schema` serve. It describes those values and no others, at the
   moment it was emitted: do not validate an arbitrary submission against
   it.
 - **The full schema**, `emitFull()`, reads no value, so it is the same
@@ -208,7 +234,7 @@ In contract 1, `refine` was `dynamic` and `live` was `runtime`.
 | Marker | Means | In the full schema | In the schema for these answers |
 | --- | --- | --- | --- |
 | `enumerated` | Captured exactly. The key's static refiners watch only keys that offer a list, within the cap, so what they answer for every combination is written as conditionals on the parent. | On every such key, always: no value is read. | Only while a sibling its static refiners watch holds nothing; once all do, the key is refined for them and carries neither this nor `refine`. |
-| `refine` | Static by declaration, but not captured here: a watched key cannot be listed (free text, a number, a key an alter mounted) or the combinations exceed `ENUMERATION_CAP`. The key keeps its declared schema; a client can ask, with values, at `/refine`. | On every such key. | As for `enumerated`. |
+| `refine` | Static by declaration, but not captured here: a watched key cannot be listed (free text, a number, a key an alter mounted) or the combinations exceed `ENUMERATION_CAP`. The key keeps its declared schema; a client can ask, with values, at `POST .../schema`. | On every such key. | As for `enumerated`. |
 | `live` | Declared impossible to capture: a runtime refiner narrows the key with a rule no schema can state (a lookup, uniqueness, the account, the time). Never run ahead of time and never in a conditional. | On the key, which keeps the width its static refiners give it: wider than the pipeline, by design. | On the key, always; the key is refined by the runtime refiner for these values, so this document is valid for those values, at that moment, and no others. |
 
 A key with a static and a runtime refiner, example 4's room, is
@@ -242,14 +268,17 @@ Example 2's full schema, abbreviated:
 | `label` | The operation's label. |
 | `schema` | JSON Schema 2020-12 for the inputs, `x-surface` on every property, and at the top how the operation behaves, `x-surface.operation` ([below](#the-schema)). |
 | `values` | The values the schema describes now: what storage holds over the declared defaults (which carry an operation's starting values and known identity), with any in-progress answers over that. Every key is present. A secret is `null` (masked: read as the key left out); a stale value is `null`, its path in `stale`. |
-| `stale` | The dotted paths shown on the empty option in place of a stored value. |
+| `stale` | The JSON Pointers shown on the empty option in place of a stored value (dotted paths until contract 3). |
 | `outputs` | The output schema, when the resource or structure declares outputs. |
-| `fingerprint` | On the GET and in a submit's answer: a keyed hash of the stored values the document was built from, for a submit to send back ([the fingerprint rule](#the-fingerprint-rule)); `null` for a resource or structure with no storage. Not on a refine. |
-| `discarded` | On a refine only: the keys whose answer the new choices orphaned. |
+| `notes` | Served by the API: one entry per stale path, `{path, code, message}`, code `stale`, as a write's result says a stale value it keeps. |
+| `discarded` | On a narrowing only (`POST .../schema`): the JSON Pointer of each answer the new choices orphaned. |
 
-`created` uses the same two keys. Contract 1 spelled them `surface` and
+The fingerprint of the stored values is the read's `ETag`
+([`If-Match`](#if-match)); contract 2 carried it as `fingerprint`.
+
+A write's `created` uses the same two keys. Contract 1 spelled them `surface` and
 `situation`, the product's retired words; the `x-surface` keyword keeps
-the product's name ([Contract 2](#contract-2)).
+the product's name ([Contract 2](#contract-2), [Contract 3](#contract-3)).
 
 ### The schema
 
@@ -257,17 +286,17 @@ At the top, after `$schema`, the `$id` of a document a route serves,
 the `title` that is the operation's label and the `description` that is
 its description (what a call does to what, when the operation says
 one), the top's `x-surface` says first which version of the contract
-the document is written in, `contract` ([above](#contract-2)), then how
+the document is written in, `contract` ([above](#contract-3)), then how
 the operation behaves, as `#[Operation]` states it
 ([decision](decisions.md#an-operation-states-how-it-behaves)), in both
 documents alike:
 
 ```json
-"$id": "https://example.com/surface-api/registration.step3/configure",
+"$id": "https://example.com/surface-api/registration.step3",
 "title": "Configure registration (step 3)",
 "description": "Sets the event registration: its title, whether it is open, the venue and room, the capacity, the pricing with its ticket, and the contact.",
 "x-surface": {
-  "contract": 2,
+  "contract": 3,
   "operation": {
     "id": "configure",
     "label": "Configure registration (step 3)",
@@ -281,10 +310,11 @@ documents alike:
 }
 ```
 
-`$id` is the absolute URL the document is served at, the operation's
-parameters as its query string: `/surface-api/{resource}/{operation}`
-for the GET contract, a refine answer and a submit's `contract`, and
-`/surface-api/{resource}/{operation}/schema` for the full schema. The
+`$id` is the absolute URL the document is served at: the read's path,
+`/surface-api/{resource}[/{id}]` (or its custom method's), for the
+envelope, a narrowing and a write's `contract`, and that path's
+`/schema` for the full schema, the operation's parameters that are not
+in the path as its query string. The
 references inside it are all local, so with it they resolve against
 the document wherever it is embedded (an OpenAPI bundler, one validator
 holding two documents). A document no route serves (the contract
@@ -345,13 +375,13 @@ under `$defs`, and referred to ([reusable subschemas](#reusable-subschemas)).
 | a key under a runtime access answer, in the full schema | there and writable, as the static answers leave it, with `x-surface.access: "live"`: it may be locked or left out once the subject is known; the schema for these answers says which, and marks nothing ([Static and runtime access](resources.md#static-and-runtime-access)) |
 | a secret | `writeOnly: true`, its declared type, never in `required` (left out or `null`, the stored secret stands), no default, `null` in `values` ([decision](decisions.md#a-secret-is-optional-never-nullable)) |
 | a key a refiner answers [does not apply](refinement.md#when-a-key-does-not-apply) for these values | no property, not in `required`, not in `values`; the frame's own `x-surface.doesNotApply` names it with what it depends on. In the full schema, `false` under each conditional that rules it out, and `required` under each where it applies and is required ([decision](decisions.md#a-key-that-does-not-apply)) |
-| any other constraint | named in `x-surface.checkedOnServer` with what it checks: the schema is not the whole story, ask `/validate` |
+| any other constraint | named in `x-surface.checkedOnServer` with what it checks: the schema is not the whole story, ask with `?dryRun=true` |
 
 ### `x-surface`
 
 | Keyword | Holds |
 | --- | --- |
-| `contract` | At the top always, first: the version of the wire format the document is written in, `2` ([Contract 2](#contract-2)), which the `Contract-Version` header of every answer that is not an error says too. A client refuses a version it does not know ([Evolving a resource](evolution.md#the-contracts-own-version)). |
+| `contract` | At the top always, first: the version of the wire format the document is written in, `3` ([Contract 3](#contract-3)), which the `Contract-Version` header of every answer of the API says too. A client refuses a version it does not know ([Evolving a resource](evolution.md#the-contracts-own-version)). |
 | `widget` | Only when the caller asks for widget hints (`data_surface_react` does). The Form API-equivalent hint, the stock widget's choice ([the widget mapping](#the-widget-mapping)): `select`, `radios`, `checkboxes`, `checkbox`, `number`, `text`, `textarea`, `email`, `time`, `fieldset`, `variants` (a key with variants; `slot` in contract 1), `list` (a list of free values, and a collection); `null` when no widget would claim the key. |
 | `locked` | Identity the operation knows, or a key of a child or a variant whose access answered locked: shown, never changed. At the top, beside `readOnly: true`, when the resource's own access locked it whole: every key is `readOnly`, a submit is refused, and a renderer offers none ([decision](decisions.md#locked-at-the-top)). |
 | `access` | Only `"live"` (`"runtime"` in contract 1), and only in [the full schema](#two-documents): an access answer that waits for the subject (it read a stored value, State, the `user` context) was set aside for this account, so the key is as the account's static answers leave it and may be locked or left out once the subject is known. The answer may be the owner's access class's or an alter's, each read by itself, so a key the account's static answers lock is `readOnly` and marked too. On every key of the document when the answer set aside is the resource's own at the top, which may lock it whole. A client keeps what the schema for these answers says for it rather than narrowing it from the full schema. On a key with variants: a variant offered may be withheld. |
@@ -848,7 +878,7 @@ the variants': an `if` naming each watched sibling's value as a `const`,
 and a `then` saying what the key's schema says differently from the
 unrefined one. The property carries `x-surface.enumerated: true`. A
 generic JSON Schema validator then refuses what the server refuses, with
-no `/refine` round trip.
+no round trip to `POST .../schema`.
 
 - **Every watched sibling must offer a list.** Its own definition, as
   refined for the combination so far, resolves to an option set (a
@@ -865,9 +895,10 @@ no `/refine` round trip.
   `x-surface.refine: true` instead: its schema is the unrefined one and
   `dependsOn` says what to refine on, as before
   ([decision](decisions.md#enumeration-is-capped)).
-- **Each conditional is what `/refine` answers, less the runtime.** It
-  is computed by refining the whole data surface against the values with the
-  combination over them, the same call `/refine` makes with the runtime
+- **Each conditional is what `POST .../schema` answers, less the
+  runtime.** It is computed by refining the whole data surface against
+  the values with the combination over them, the same call a narrowing
+  makes with the runtime
   refiners left out, so chains compose (the room per venue, the capacity
   per room) and an alter's static refiners in the chain are included. A
   runtime refiner is never called for a conditional; only the siblings
@@ -899,7 +930,7 @@ no `/refine` round trip.
   sibling with a default is shown refined against that default, not
   enumerated.
 - **With values, nothing changes.** A key whose watched siblings hold
-  values is refined, as the GET and `/refine` serve it, and carries
+  values is refined, as the read and `POST .../schema` serve it, and carries
   neither keyword. That is the schema as it stands;
   [the full schema](#two-documents) is handed no values, so there every
   listable key is enumerated, always.
@@ -956,7 +987,7 @@ Riverside Hall and its main hall, as `/surface-api` serves it:
     "$id": "https://example.com/surface-api/registration.step2/configure",
     "title": "Configure registration (step 2)",
     "description": "Sets the event title, whether registration is open, the venue, a room at that venue and a capacity the room can hold.",
-    "x-surface": {"contract": 2, "operation": {"id": "configure", "kind": "update", ...}, "version": 1},
+    "x-surface": {"contract": 3, "operation": {"id": "configure", "kind": "update", ...}, "version": 1},
     "type": "object",
     "properties": {
       "title": {"title": "Event title", "type": "string", "x-surface": {"widget": "text", ...}},
@@ -1011,71 +1042,124 @@ the hint's words: `radios`, `checkboxes`, `select`, `time`.
 | a locked key | `#disabled`, "Fixed for this operation." | `locked: true` | disabled, the same note |
 | a locked child | its fieldset `#disabled`, every element inside with it | `locked: true` on the fieldset and on every key inside | a fieldset of disabled keys |
 
-## The endpoints
+## The API
 
-All six routes take the operation's parameters from the query string
-(and a POST body's `parameters`), and are gated by
-`_data_surface_react_access`: the operation's permission, then the
-access class the resource or structure names, through
-`Resources::access()`, with no opinion read as a refusal. The
+The path is the resource and the method is the operation
+([decision](decisions.md#contract-3-the-operation-is-the-method)). One
+route, `data_surface_react.api`, answers every path below;
+`ServedPaths` reads which operation a path and a method name.
+
+| Method and path | What it does |
+| --- | --- |
+| `GET /surface-api/{resource}` | A singleton's envelope: what is stored and the schema for it. On a collection, the default create's envelope: its declared defaults and the schema a `POST` takes. |
+| `PATCH /surface-api/{resource}` | A singleton's default update. |
+| `POST /surface-api/{resource}` | The default create, on the collection of a resource with identity. |
+| `GET /surface-api/{resource}/{id}` | One thing's envelope, its default update's (or default read's). |
+| `PATCH /surface-api/{resource}/{id}` | One thing's default update. |
+| `GET .../schema` | The full schema of the operation `GET` serves at that path, `application/schema+json`. |
+| `POST .../schema` | The envelope narrowed for the values the body sends: the schema, given these values. A query. |
+| `GET .../{x}:{operation}` | A custom method's envelope: any operation that is not a default. |
+| `POST .../{x}:{operation}` | A run of that operation: a create, an update, or a read that checks and writes nothing. |
+| `GET` and `POST .../{x}:{operation}/schema` | Its full schema, and its schema for values. |
+
+`{id}` is the identity: the parameters of the operation that addresses
+one thing, as path segments in declaration order, joined by `/` when
+there is more than one (up to four). It is the identity key where the
+operation is asked by it (`/surface-api/node.type/recipe`) and the
+thing's own id where it is asked by that
+(`/surface-api/entity.content:node.page/12`,
+`/surface-api/field.instance/node.article.field_x`). An operation
+addresses one thing when its resource has identity keys, it does not
+create, and it needs a parameter; any other, a create and every
+operation of a singleton, is addressed at `/surface-api/{resource}`.
+An operation's parameters that are not in the path arrive in the query
+string: `POST /surface-api/field.instance?entity_type_id=node&bundle=article`.
+
+**Which operation is the default.** At each path, of each kind: the
+operation named for it (`add` for a create; `configure` or `edit` for
+an update; `read` for a read), or else the only operation of that kind
+at the path; two of a kind with neither named so leaves the kind with
+no default. A read is a default only where no update is. `GET` serves
+the default update, else the default read, else, on a collection, the
+default create; `PATCH` is the default update; `POST` on the collection
+is the default create. Every other operation is a custom method,
+`:{operation}` after the last segment of the path it addresses:
+example 10's `check`, read-only beside the program's `configure`, is
+`/surface-api/event.program:check`; the field instance's `reuse`, a
+second create beside `add`, is `/surface-api/field.instance:reuse`. A
+resource id with a colon of its own, `entity.content:node.page`, is read
+whole first. A default may be named the same way.
+
+Every path is gated by `_data_surface_react_access`: the operation's
+permission, then the access class the resource or structure names,
+through `Resources::access()`, with no opinion read as a refusal. The
 permission is asked first, from the two ids alone, before a parameter
-is read or the subject loaded; a refusal past it (a resource, operation
-or parameter that names nothing, or an access class refusing what it
-names) gives one fixed reason, "The operation cannot be served to this
-account with these parameters.", so it never says whether an id exists,
-and only an account holding the operation's permission for what the
-parameters name hears the access class's own
+is read or the subject loaded; a refusal past it (an access class
+refusing what the parameters name, or an id that names nothing for an
+account without the operation's permission) gives one fixed reason,
+"The operation cannot be served to this account with these
+parameters.", so it never says whether an id exists, and only an
+account holding the operation's permission hears the access class's
+own, and that an id names nothing (404)
 ([decision](decisions.md#every-door-projects-what-the-read-tool-projects)).
-The POSTs require
-`X-CSRF-Token` from `/session/token`
-(`_csrf_request_header_token`). A POST body that is not a JSON object is
-a 400: the access check reads the operation from the query string alone
-when it cannot read the body, and the controller refuses the body.
+A `POST` or a `PATCH` carrying the session cookie requires
+`X-CSRF-Token` from `/session/token` (`_csrf_request_header_token`).
 
-Every answer of the five endpoints that is not an error (a 400, 403 or
-404 says nothing of a document) carries the response header
-`Contract-Version: 2`, the version of the wire format its documents are
-written in ([Contract 2](#contract-2)), as `x-surface.contract` says
-inside them. A client reads it before the body and refuses a version it
-does not know; the React app does, by the header or by the document.
+Every answer carries `Contract-Version: 3`, the version of the wire
+format its documents are written in ([Contract 3](#contract-3)), as
+`x-surface.contract` says inside them; an error too. A client reads it
+before the body and refuses a version it does not know; the React app
+does, by the header or by the document.
 
-**`GET /surface-api/{resource}/{operation}`**, `{resource}` the
-resource's id and `{operation}` the operation's id, answers the document
-for the values the operation form would open with, and their
-`fingerprint`. Its `$id` is this route's URL, absolute, with the
-operation's parameters as its query string
-([above](#the-schema)).
+### The read
 
-**`GET /surface-api/{resource}/{operation}/schema`** answers
-[the full schema](#two-documents) for the operation, with the widget
-hints: `resource`, `operation`, `label`, `schema` and, when declared,
-`outputs`; no `values`, `stale` or `fingerprint`. Its `$id` is this
-route's URL, with the operation's parameters. It reads no value, so
-it is the same whatever is stored or typed, and it is the one document
-that may be cached ([below](#cacheability)); a client holding one of
-another contract version fetches it again. It is the account's: built
-for the account alone, its static access answers stated and its runtime
-ones marked `x-surface.access: "live"`. The same access as the GET
-contract: an account the operation's permission does not admit is
-refused (403), the operation's first static answer.
+**`GET /surface-api/{resource}[/{id}]`** answers the envelope for the
+values the operation form would open with:
+[the document](#the-document), `resource`, `operation`, `label`,
+`schema`, `values`, `stale`, `outputs` when declared, and `notes`. Its
+`$id` is the path it was read at, absolute, the operation's other
+parameters as its query string ([above](#the-schema)). Its headers:
 
-**`POST .../refine`**, body `{values, stale}`, answers the document
-re-narrowed against the values, which is what the form's AJAX rebuild
-computes, the same way (its `$id` is the GET contract's, the document
-it stands in for):
+| Header | Holds |
+| --- | --- |
+| `ETag` | The fingerprint of the stored values the envelope was built from ([`If-Match`](#if-match)), strong; none for a create or a resource with no storage. A proxy may pass it on weakened, `W/"..."`. |
+| `Link` | `<.../schema>; rel="describedby"`: the full schema. |
+| `Cache-Control` | `no-store, private`: never stored ([cacheability](#cacheability)). |
 
-1. The values are narrowed to the data surface's keys and overlaid on what
-   the operation opens with.
-2. A path in `stale` whose value comes back empty stands for the stored
-   value again: the served form of the marker the operation form's
-   container posts. The stored value never travels; the path does.
+`HEAD` answers the same headers and no body.
+
+**`GET .../schema`** answers [the full schema](#two-documents) itself,
+`application/schema+json`, with the widget hints: the JSON Schema
+document, its `$id` this path, with no envelope around it (contract 2
+answered `{resource, operation, label, schema, outputs}`; the outputs
+are the envelope's). It reads no value, so it is the same whatever is
+stored or typed, and it is the one document that may be cached
+([below](#cacheability)); a client holding one of another contract
+version fetches it again. It is the account's: built for the account
+alone, its static access answers stated and its runtime ones marked
+`x-surface.access: "live"`. An account the operation's permission does
+not admit is refused (403).
+
+**`POST .../schema`**, the body a values document, partial or whole,
+answers the envelope narrowed against the values, which is what the
+form's AJAX rebuild computes, the same way, and `discarded` after it.
+It writes nothing; it was `/refine` until contract 3. Its `$id` is the
+read's, the document it stands in for:
+
+1. The values are narrowed to the data surface's keys and overlaid on
+   what the operation opens with.
+2. A path in the `X-Surface-Stale` request header whose value comes back
+   empty stands for the stored value again: the served form of the
+   marker the operation form's container posts. The stored value never
+   travels; the path does.
 3. The form builder's discard rule (`discardedRefinementInput()`) drops
    an answer the new choice of its dependency orphans: it falls back to
    what is stored, and if that is not offered either, it is shown on the
    empty option, `stale`, with the stored value kept on the server.
    Changing the venue answers the library's room as `null`, `stale:
-   ["room"]`, `discarded: ["room", "capacity"]`; putting the venue back,
-   with the stale path sent, shows the reading room chosen again.
+   ["/room"]`, `discarded: ["/room", "/capacity"]`; putting the venue
+   back, with `X-Surface-Stale: /room` sent, shows the reading room
+   chosen again.
 
 The document is emitted from the form's own overlay,
 `refinementOverlay()`, settled to [the same fixed point](forms.md#the-in-form-half-discarding-orphaned-input)
@@ -1086,116 +1170,187 @@ is held unanswered, so nothing below it is refined against the value it
 stands for, and it is listed in `stale` with `x-surface.stale: true` and
 a `null` value, whatever its widget. `discarded` names the inputs
 dropped on the way there; `stale` names what is shown standing for a
-stored value, orphans and keys the site narrowed away alike. So moving
-the venue off the library leaves the capacity as declared, `minimum:
-1` and no `maximum`, with no room's description under it, rather than
-capped by a reading room no longer on the screen. A client sends the
-`stale` paths back with the next refine, validate or submit; empty there
-stands for the stored value again, so a refine answers the same orphan,
-and a save judges the stored room under the venue the same submission
-moved, and refuses it, as the form's Save does.
+stored value, orphans and keys the site narrowed away alike, and
+`notes` says each again as an entry, code `stale`. So moving the venue
+off the library leaves the capacity as declared, `minimum: 1` and no
+`maximum`, with no room's description under it, rather than capped by a
+reading room no longer on the screen. A client sends the `stale` paths
+back in `X-Surface-Stale` with the next narrowing or write; empty there
+stands for the stored value again, so a narrowing answers the same
+orphan, and a write judges the stored room under the venue the same
+document moved, and refuses it, as the form's Save does.
 
-**`POST .../validate`**, body `{values, stale}`, is the pipeline's dry
-run: `submit(dry_run: TRUE)` with the access answer. Every value was
-sent on purpose, so nothing is discarded, the full-submit rule: a stale
-path sent empty is read as the stored value, and the run judges it, so a
-room left stale after its venue moved is refused. It answers the one
-result shape every door answers a run in
+### The write
+
+**`PATCH`** (the default update), **`POST`** on the collection (the
+default create) and **`POST .../{x}:{operation}`** (any other) run the
+pipeline over the values document the body is: `submit()` with the
+access answer, and a write when nothing is refused. The body is the
+values themselves, no `values` wrapper: an update's a patch, a key left
+out keeping what is stored and `null` clearing it
+([semantics](semantics.md#absent-null-or-a-value)), which is RFC 7396's
+rule, so `PATCH` takes `application/merge-patch+json` as well as
+`application/json`; a create's the keys it sends, the rest taking their
+defaults. Every value was sent on purpose, so nothing is discarded, the
+full-submit rule: a stale path sent empty is read as the stored value,
+and the run judges it, so a room left stale after its venue moved is
+refused.
+
+| Request | Means |
+| --- | --- |
+| `?dryRun=true` | Run through prepare and stop before commit: nothing is written, and the answer is the one a write would give, with `x-surface-dry-run: true`. Always 200, never a `Location`. It was `/validate`. |
+| `If-Match: "<ETag>"` | Write only if what is stored is still what that `ETag` named; 412 otherwise, nothing written. `*` matches whatever is stored. Opt-in: with none, the last write wins ([below](#if-match)). Checked on a dry run too. |
+| `X-Surface-Stale: /room, /ticket/price` | The stale paths the envelope named that the body sends empty: each stands for the stored value. |
+| `X-CSRF-Token` | The session's token, with the session cookie. |
+
+It answers the one result shape every door answers a run in
 ([decision](decisions.md#one-result-at-every-door)), every key always
-present, and nothing else. Example 2's harbour sent with the library's
-garden room:
-
-```json
-{
-  "ok": false, "committed": false, "changed": false, "changes": [],
-  "values": {"title": "Spring meetup", "open": true, "venue": "harbour", "room": "library_garden", "capacity": 50},
-  "violations": [{"path": "room", "code": "no_such_choice", "message": "The value you selected is not a valid choice. This applies when Venue is Harbour Centre. Choose Auditorium or Upper deck."}],
-  "notes": [], "stale": []
-}
-```
+present, then three keys of its own:
 
 | Key | Holds |
 | --- | --- |
-| `ok` | Whether nothing was refused. |
-| `committed` | Whether the values were written; `false` here, always. |
+| `ok` | Whether nothing was refused; `true` on every 2xx. |
+| `committed` | Whether the values were written; `false` on a dry run and for a read-only operation. |
 | `changed` | Whether the write moved a stored value; `false` unless committed. |
-| `changes` | The dotted path of each stored value the write changes, or on a dry run would change, a map by its own keys, a list whole: a plan, empty when the values are what is stored, and on a refusal ([decision](decisions.md#absent-keeps-null-clears)). |
+| `changes` | The JSON Pointer of each stored value the write changes, or on a dry run would change, a map by its own keys, a list whole: a plan, empty when the values are what is stored ([decision](decisions.md#absent-keeps-null-clears)). |
 | `values` | What `accept()` made of the input, as the read tool would answer it once written: no key the build left out for this account, no secret, no key that does not apply, and no key never stored that the run left at its default. |
-| `violations` | Each refusal, `{path, code, message}`: the full dotted path (`ticket.price`, `contact.email`; empty for a refusal of the whole call), a stable [code](semantics.md#codes), and the message as plain text, rendered for a person as the form renders it, a key it depends on and a value by their labels alone. The tool renders the same refusal for a machine, a key by its path and a value by what is sent with its label beside it; the path and the code are the same at both doors, so a program calling this endpoint branches on them ([decision](decisions.md#one-result-at-every-door)). |
+| `violations` | Empty on a 2xx; a refusal is [problem details](#problem-details). |
 | `notes` | Each value sent for a locked key that the key did not take, `{path, code, message}`, code `locked`, once per key: "Machine name is locked and kept as stored; the value sent was not taken." The key keeps what it holds and nothing is refused ([decision](decisions.md#locked-at-the-top)); a value sent as it is held says nothing. |
 | `stale` | Each stale reference kept, `{path, code, message, stored}`, code `stale`, with the stored value it keeps: the operation form's warning, said out loud. |
+| `outputs` | The declared outputs as storage reads them back after the write (`StorageAdapter::outputs()`), the tool's same answer; `{}` when none are declared or nothing was written. |
+| `contract` | On a write, the envelope rebuilt from what is stored now, its `$id` the read's, so a client re-renders without a second request; `null` otherwise. Its fingerprint is the answer's `ETag`. |
+| `created` | On a write by an operation that creates, where the created thing now lives: `{resource, operation, parameters}` ([below](#where-a-created-thing-lives)); otherwise `null`. |
+| `x-surface-dry-run` | `true`, on a dry run only. |
+
+Every path is a JSON Pointer (RFC 6901): `/contact/email`, the whole
+call the empty pointer, `~` and `/` inside a key written `~0` and `~1`.
+The message is plain text, rendered for a person as the form renders
+it, a key it depends on and a value by their labels alone; the tool
+renders the same refusal for a machine, a key by its path and a value
+by what is sent with its label beside it; the path and the code are the
+same at both doors, so a program calling the API branches on them
+([decision](decisions.md#one-result-at-every-door)).
+
+| Status | When |
+| --- | --- |
+| 200 | A run that wrote an update, checked a read, or was dry; with the update's new `ETag`. |
+| 201 | A create written, with `Location`, the created thing's read (`/surface-api/node.type/recipe`); no `Location` when no operation addresses it (a field added to a bundle). |
+| 400 | A body that is not a JSON object, or a parameter the operation needs given nowhere. |
+| 403 | Access refused, at the route or by the pipeline for the whole call (code `access` or `permission`); the session's token missing. |
+| 404 | A resource, an operation or an id that names nothing. |
+| 405 | A method the path does not answer, with `Allow`: a `POST` on a singleton, a `PATCH` on a collection, a write to a resource with no storage. |
+| 410 | A contract 2 path ([gone](#gone)). |
+| 412 | `If-Match` no longer names what is stored ([conflict](#conflict)). |
+| 415 | A body of a media type the method does not take; a `PATCH`'s answer names them in `Accept-Patch`. |
+| 422 | The values were refused ([refused](#refused)). |
 
 What storage rehearsed is not served: it holds what the caller may not
 see, so a dry run answers the accepted document and its verdict
-([decision](decisions.md#every-door-projects-what-the-read-tool-projects);
-`prepared` was answered until 2026-10-20). Nothing is written. Until
-2026-10-20 it answered `valid` for `ok`, entries without a code, and a
-refusal of the whole call under the path `@access`.
+([decision](decisions.md#every-door-projects-what-the-read-tool-projects)).
 
-**`POST .../submit`**, body `{values, stale, parameters, fingerprint?}`,
-is the same run, not dry: validate's body, validate's stale rule, the
-same access answer handed to `submit()`, and a write when nothing is
-refused. A refusal is data, not an error: the answer is 200 with
-`ok: false` and `committed: false`, and nothing is written
-([decision](decisions.md#a-refused-submit-is-an-answer)). 403 is for a
-request access refuses, or that carries no token; 400 for a malformed
-body (not an object; `values` or `parameters` not an object; `stale`
-not a list of strings; `fingerprint` neither a string nor `null`) or a
-resource or structure with no storage. It answers validate's shape,
-every key always present, `changes` and `changed` now of the write
-itself (a write of what is stored changes nothing, and nothing was
-saved), and three keys of its own after it:
-
-| Key | Holds |
-| --- | --- |
-| `outputs` | The declared outputs as storage reads them back after the write (`StorageAdapter::outputs()`), the tool's same answer; `{}` when none are declared, as the examples, the content type and the field do. |
-| `contract` | On a write, the whole document rebuilt from what is stored now, `fingerprint` included, its `$id` the GET contract's, so a client re-renders without a second request; `null` on a refusal. |
-| `created` | On a write by an operation that creates, where the created thing now lives: `{resource, operation, parameters}` (`{surface, situation, parameters}` in contract 1): the resource's id, the id of an operation of it that does not create ([below](#where-a-created-thing-lives)), and that operation's parameters; otherwise `null`. |
-
-A submit whose `fingerprint` no longer matches is refused whole, its
-one violation's path empty and its code `conflict`
-([below](#the-fingerprint-rule)).
-
-A refused example 2, the library's garden room sent with the harbour:
-
-```json
-{
-  "ok": false, "committed": false, "changed": false, "changes": [],
-  "values": {"title": "Spring meetup", "open": true, "venue": "harbour", "room": "library_garden", "capacity": 50},
-  "violations": [{"path": "room", "code": "no_such_choice", "message": "The value you selected is not a valid choice. This applies when Venue is Harbour Centre. Choose Auditorium or Upper deck."}],
-  "notes": [], "stale": [], "outputs": {}, "contract": null, "created": null
-}
-```
-
-The harbour's deck, written:
+Example 2, the harbour's deck written with `PATCH
+/surface-api/registration.step2`, `If-Match` the read's `ETag`:
 
 ```json
 {
   "ok": true, "committed": true, "changed": true,
-  "changes": ["title", "venue", "room", "capacity"],
+  "changes": ["/title", "/venue", "/room", "/capacity"],
   "values": {"title": "Autumn meetup", "open": true, "venue": "harbour", "room": "harbour_deck", "capacity": 90},
   "violations": [], "notes": [], "stale": [], "outputs": {},
   "contract": {
     "resource": "registration.step2", "operation": "configure", "label": "Configure registration (step 2)",
     "schema": {...},
     "values": {"title": "Autumn meetup", "open": true, "venue": "harbour", "room": "harbour_deck", "capacity": 90},
-    "stale": [],
-    "fingerprint": "Bczjfcce6B4UTbwYT4FM8ZU3kl8Ue4_ZUuFfgBv72DY"
+    "stale": [], "notes": []
   },
   "created": null
 }
 ```
 
-A content type added at `node.type/add` as `served_demo` answers the
-same, with the add operation's empty contract, and:
+A content type added with `POST /surface-api/node.type` as
+`served_demo` answers 201, `Location:
+https://example.com/surface-api/node.type/served_demo`, the add
+operation's envelope as `contract`, and:
 
 ```json
 "created": {"resource": "node.type", "operation": "edit", "parameters": {"type": "served_demo"}}
 ```
 
-The operation form's cosmetic message and redirect are its route's, and
-the API has no route default to read them from; their JSON equivalents
-are `committed` and `created`, and the client says the rest.
+The operation form's cosmetic message and redirect are its route's;
+their HTTP equivalents are the status, `Location` and `created`, and the
+client says the rest.
+
+### Problem details
+
+Every error of the API is problem details, RFC 9457,
+`application/problem+json`, never Drupal's HTML error page
+(`ProblemDetailsSubscriber`): `type`, `title`, `status`, `detail`, and
+for a refusal the result's entries as extension members. Three types
+are the module's own, each a heading below; every other status is
+`about:blank`, its title the reason phrase.
+
+#### Refused
+
+422, the values refused, nothing written: `errors` are the run's
+violations, `{path, code, message}`, and `notes` and `stale` are the
+result's. Example 2's harbour sent with the library's garden room:
+
+```json
+{
+  "type": "https://git.drupalcode.org/project/data_surface/-/blob/1.0.x/docs/served-contract.md#refused",
+  "title": "The values were refused",
+  "status": 422,
+  "detail": "One value was refused; nothing was written.",
+  "errors": [{"path": "/room", "code": "no_such_choice", "message": "The value you selected is not a valid choice. This applies when Venue is Harbour Centre. Choose Auditorium or Upper deck."}],
+  "notes": [],
+  "stale": []
+}
+```
+
+A refusal of the whole call has an empty path: a resource locked whole,
+code `locked`, is a 422; one by access (`access`, `permission`) a 403
+and one of a subject that names nothing (`not_found`) a 404, with the
+same members.
+
+#### Conflict
+
+412, `If-Match` no longer names what is stored: one error of the whole
+call, code `conflict`, "The stored values changed since this form was
+loaded. Reload it to see them, then make your changes again.", and
+nothing written.
+
+#### Gone
+
+410, a contract 2 path: `/surface-api/{resource}/{operation}` and its
+`/schema`, `/refine`, `/validate` and `/submit`. `moved` names the
+method and path that replace it, the old query's parameters moved into
+the path:
+
+| Contract 2 | Contract 3 |
+| --- | --- |
+| `GET .../registration.step2/configure` | `GET /surface-api/registration.step2` |
+| `GET .../registration.step2/configure/schema` | `GET /surface-api/registration.step2/schema` |
+| `POST .../registration.step2/configure/refine` | `POST /surface-api/registration.step2/schema` |
+| `POST .../registration.step2/configure/validate` | `PATCH /surface-api/registration.step2?dryRun=true` |
+| `POST .../registration.step2/configure/submit` | `PATCH /surface-api/registration.step2` |
+| `GET .../node.type/edit?type=article` | `GET /surface-api/node.type/article` |
+| `POST .../node.type/add/submit` | `POST /surface-api/node.type` |
+| `GET .../event.program/check` | `GET /surface-api/event.program:check` |
+
+```json
+{
+  "type": "https://git.drupalcode.org/project/data_surface/-/blob/1.0.x/docs/served-contract.md#gone",
+  "title": "This path is gone",
+  "status": 410,
+  "detail": "Contract 2 addressed an operation by its path; contract 3 addresses the resource, and the method is the operation: PATCH /surface-api/registration.step2?dryRun=true.",
+  "moved": {"method": "PATCH", "href": "/surface-api/registration.step2?dryRun=true"}
+}
+```
+
+So a second segment that names one of the resource's operations is
+read as a contract 2 path: a thing whose id is an operation's id (a
+content type named `edit`) cannot be addressed by its path, and neither
+can one whose id is `schema`.
 
 ### Where a created thing lives
 
@@ -1209,40 +1364,42 @@ assumed: the operation is built from those parameters (an entity
 parameter loads what its id names), its context must not create, and
 every identity key it knows must equal what was written. The content
 type's `edit(NodeTypeInterface $type)` is answered by the `type` the
-write accepted. A field added at `field.instance:add` gets `null`: its
+write accepted, and its read is the `Location`. A field added at
+`field.instance:add` gets `null` and no `Location`: its
 `edit(FieldConfigInterface $field)` takes the field's own id
 (`node.article.field_x`), which neither its outputs (it declares none)
 nor its identity keys carry by that name; declaring a `field` output
 would answer it. Example 2's `configure` creates nothing, so `null`.
 
-### The fingerprint rule
+### If-Match
 
-Optional, and off unless a client sends one. The GET contract carries
-`fingerprint`, an HMAC (the site's hash salt) of the resource's id and
+Optional, and off unless a client sends it. The read's `ETag` is a
+fingerprint, an HMAC (the site's hash salt) of the resource's id and
 the stored values `load()` returned, narrowed to the data surface's keys
-(`ServedOperations::fingerprint()`). A submit body may send it back.
-When it is sent and no longer matches what storage holds when the
-submit arrives, the submit is refused before the pipeline runs:
-`ok: false`, `committed: false` and one violation at path `''`, code
-`conflict`, "The stored values
-changed since this form was loaded. Reload it to see them, then make
-your changes again.", with nothing written. When it is not sent (absent
-or `null`), the last write wins, as on the operation form
-([decision](decisions.md#a-fingerprint-is-opt-in)). A refine never
-carries one: it re-reads storage, so a client that took its fingerprint
-would always match. A write's answer carries the new one, for the next
-submit. It is a check, not a lock: a write between the comparison and
-the commit, a few milliseconds, still wins.
+(`ServedOperations::fingerprint()`). A write may send it back as
+`If-Match`. When it is sent and no longer matches what storage holds
+when the write arrives, the write is refused before the pipeline runs,
+412 [conflict](#conflict), with nothing written. When it is not sent,
+the last write wins, as on the operation form
+([decision](decisions.md#a-fingerprint-is-opt-in)). A tag is compared
+by its opaque value, weak or strong: a compressing proxy weakens the tag
+it passes on, and the tag names the stored values, which compression
+does not change. A narrowing never carries one: it re-reads storage. A
+write's answer carries the new one. It is a check, not a lock: a write
+between the comparison and the commit, a few milliseconds, still wins.
+Contract 2 sent it as the body's `fingerprint`.
 
 ### Cacheability
 
-The contract carries what the refined data surface and every option list in
-it depend on, those an [enumerated](#exact-where-it-can-be) conditional
-was read from included, the access answer's own, and `url.query_args`, as HTTP
-cache metadata on a `CacheableJsonResponse`. It is never stored: the
-values in it come from storage, and storage says nothing about how
-long what it loaded holds ([decision](decisions.md#a-served-contract-is-never-stored)).
-The full schema carries the same metadata, and
+The envelope carries what the refined data surface and every option list
+in it depend on, those an [enumerated](#exact-where-it-can-be)
+conditional was read from included, the access answer's own, and
+`url.query_args`, but is never stored: the values in it come from
+storage, and storage says nothing about how long what it loaded holds
+([decision](decisions.md#a-served-contract-is-never-stored)). It is
+answered `Cache-Control: no-store, private`, which also keeps its `ETag`
+(core strips the tag from a response it marks uncacheable itself). The
+full schema carries the same metadata, and
 `languages:language_interface` for its labels, but is not max-age 0: no
 stored value is in it, so what it says it depends on is all it depends
 on. Its access is the account's: it varies by what the static answers
@@ -1258,61 +1415,71 @@ another account's labels
 
 With `data_surface_openapi` enabled, `GET /surface-api/openapi.json`
 (and `/surface-api/openapi.yaml`) answers an OpenAPI 3.1 document of the
-endpoints above, for every operation that can be asked on its own and
-needs no subject, so an OpenAPI client, a code generator or a UI drives
-a resource from it ([decision](decisions.md#an-openapi-document-is-one-more-door)).
+API above, for every operation that can be asked on its own, so an
+OpenAPI client, a code generator or a UI drives a resource from it
+([decision](decisions.md#an-openapi-document-is-one-more-door)).
 OpenAPI 3.1, because its schema objects are JSON Schema 2020-12, the
-dialect both documents are written in.
+dialect both documents are written in. `GET /surface-api/docs` renders
+Swagger UI over it, whose "try it out" calls the API with the logged-in
+session, sending the token and, as `If-Match`, the last `ETag` it saw
+for the path; `GET /surface-api/redoc` renders Redoc, to read. Both
+pages need the permission `access data surface api docs`; the document
+is open.
 
-- **Paths.** Each operation's five endpoints, a read only operation's
-  two GETs alone, tagged with the resource's id. The summary is the
-  operation's label and the description its description; how it behaves
-  is `x-surface-kind`, and on the submit `x-surface-idempotent`,
-  `x-surface-destructive` and `x-surface-creates`. Every answer that is
-  not an error carries the `Contract-Version` header; a refusal is a 200
-  with `ok: false`, and a submit answers 200 when it creates too, with
-  `created`.
+- **Paths.** One path item per resource path, the methods on it as
+  [the API](#the-api) answers them: `/surface-api/first.newsletter` with
+  `get` and `patch`, `/surface-api/node.type` with `get` and `post` and
+  `/surface-api/node.type/{type}` with `get` and `patch`, each with a
+  `/schema` path item, `get` and `post`; a custom method is a path item
+  of its own, `/surface-api/event.program:check`, `get` and `post`. An
+  identity is a path parameter, an operation's other parameters query
+  parameters. Each call is tagged with the resource's id. The summary
+  is the operation's label and the description its description; how it
+  behaves is `x-surface-kind` on every call, and on its run
+  `x-surface-idempotent`, `x-surface-destructive` and
+  `x-surface-creates`. `dryRun` is a query parameter; `If-Match`,
+  `X-Surface-Stale` and `X-CSRF-Token` header parameters; the read
+  answers `ETag` and `Link`, a written create `Location`. Every answer
+  carries the `Contract-Version` header; every error is `ProblemDetails`.
 - **Components.** Each operation's full schema, as `emitFull()` writes
   it with no widget hints and no `$id`: each def under `$defs` a
   component named by its def id, the root the operation's values
   component (`first.newsletter.configure`), each def pointer, in a
   `$ref` or `x-surface.variants`, pointing at the component, and every
-  other `x-surface` keyword where it was. A create's validate and submit
-  take the values component; an update's take its patch
+  other `x-surface` keyword where it was. A create's body takes the
+  values component; any other's its patch
   (`first.newsletter.configure.patch`), the same with every `required`
   that can be dropped without narrowing dropped, since a key left out
   keeps what is stored. A def the patch reaches has a patch of its own
   only where it differs, a key left out of an attached child or a
   chosen variant keeping what is stored too. Declared outputs are a
-  component of their own (`<values>.outputs`). Beside them, `Contract`,
-  `FullSchema`, `Result`, `ResultEntry` (`{path, code, message}`),
-  `StaleEntry`, `SubmitResult` and `Created`.
+  component of their own (`<values>.outputs`). Beside them, `Contract`
+  (the envelope), `FullSchema`, `NarrowRequest`, `Result`,
+  `ResultEntry` (`{path, code, message}`, the path a JSON Pointer),
+  `StaleEntry`, `SubmitResult`, `Created` and `ProblemDetails`.
 - **The resource in the answers.** Each answer is its shared envelope
   composed with the operation's components, so a UI shows the resource
-  under every endpoint: `values` in the contract, the refine and the
+  under every call: `values` in the envelope, the narrowing and the
   result is the values component or any object, and `schema` and
   `outputs` are objects whose example is the component. The `/schema`
-  answer's example is the full schema built for no account, its schema
-  and outputs as their components.
+  answer's example is the full schema built for no account.
 - **For no account.** Built as the tool definitions are, every key as
   declared and each one an access answer could lock or leave out marked
   `x-surface.access: "live"`, so it is the same for everyone and
-  cacheable. The GET contract and `/schema` answer for the account that
-  asks; the GET's `x-surface-schema` names the component its schema was
-  built from for no account.
+  cacheable; an operation that addresses one thing is built knowing no
+  subject, as its tool's listing is. The read and `/schema` answer for
+  the account that asks; the read's `x-surface-schema` names the
+  component its schema was built from for no account.
 - **Security.** The session cookie, and basic auth with `basic_auth`
   on; an operation whose permission the anonymous role holds requires
-  neither. `x-drupal-permission` names the permission; the POSTs take
-  `X-CSRF-Token`.
-- **Examples.** A submit's example is the operation's declared
+  neither. `x-drupal-permission` names the permission.
+- **Examples.** A run's request example is the operation's declared
   defaults, as the pipeline accepts them with nothing stored.
-- **Not described yet.** An operation that needs a subject is listed
-  under the top `x-surface.withASubject`, with its parameters.
 
 ## A drawing client that narrows locally
 
 The schema for these answers is still what a drawing client loads first:
-it carries the values, the stale paths and the fingerprint, and it is
+it carries the values and the stale paths, its `ETag` the fingerprint, and it is
 refined by the runtime refiners for those values. Beside it, once, the
 client may fetch the full schema, and from then on answer most changes
 itself. The rule, as `data_surface_react` applies it:
@@ -1333,9 +1500,9 @@ itself. The rule, as `data_surface_react` applies it:
   of what is sent and of `required`; one that says `required` requires
   it. A key that did not apply when the page was loaded, and applies
   now, holds what is stored, which the page was never handed, so the
-  page asks `/refine` for it.
-- **Settle as `/refine` does.** The answer must be the server's, so the
-  client mirrors the [discard rule](#the-endpoints): an answer the new
+  page asks `POST .../schema` for it.
+- **Settle as the server does.** The answer must be the server's, so the
+  client mirrors the [discard rule](#the-read): an answer the new
   choices orphan is dropped and falls back to what is stored; a stored
   value its moved dependency no longer offers is held unanswered, shown
   on the empty option, and listed in `stale`; and the reading of a select
@@ -1344,11 +1511,11 @@ itself. The rule, as `data_surface_react` applies it:
   default) is the emitter's. A number above a lowered maximum is kept,
   as the server keeps it, and the pipeline refuses it on submit.
 - **Ask when a dependent is `refine` or `live`.** Its rule is not in
-  the full schema, so the client posts to `/refine` as before. It also
+  the full schema, so the client posts the values to `.../schema`. It also
   asks for anything it cannot settle: a stale value it was handed as
   `null`, whose stored value only the server knows; a reference left
   unresolved; a conditional naming a key outside its frame.
-- **Validate and submit always ask.** The pipeline has the last word,
+- **A dry run and a write always ask.** The pipeline has the last word,
   and the full schema is never stricter than it, but not always as
   strict.
 
@@ -1364,10 +1531,10 @@ here: the ticket's variants are stated whole.
 
 What this list asked for before Submit was wired, and where each is now:
 
-- `POST .../submit` running `submit()` without `dry_run`, the same body
-  and the same stale rule as validate. **Done**; the cosmetic message
-  and redirect have JSON equivalents in `committed` and `created`, and
-  the app says "Saved" itself.
+- A write running `submit()` without `dry_run`, the same body and the
+  same stale rule as the dry run. **Done**; the cosmetic message and
+  redirect have HTTP equivalents in the status, `Location` and
+  `created`, and the app says "Saved" itself.
 - Its stale references said out loud, as the form's warning is.
   **Done**: `stale` on every answer.
 - An operation that creates (`add`) answering where the created thing now
@@ -1376,5 +1543,5 @@ What this list asked for before Submit was wired, and where each is now:
   or identity answer (the content type); not for the field instance,
   [above](#where-a-created-thing-lives).
 - A decision on concurrent edits. **Done**: the opt-in
-  [fingerprint](#the-fingerprint-rule); without it the last write wins,
-  as on the form.
+  [`If-Match`](#if-match); without it the last write wins, as on the
+  form.

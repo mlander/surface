@@ -195,7 +195,7 @@ the method below it:
 
   ```
   Failed: The values were refused:
-  region: The value you selected is not a valid choice. This applies when country is US (United States). Choose US-CA (California), US-NY (New York) or US-TX (Texas).
+  /region: The value you selected is not a valid choice. This applies when country is US (United States). Choose US-CA (California), US-NY (New York) or US-TX (Texas).
   ```
 
   ```

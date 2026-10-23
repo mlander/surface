@@ -163,11 +163,19 @@ class BuildMemoTest extends DataSurfaceKernelTestBase {
     $node->save();
     $check = $this->container->get('data_surface_react.access');
     assert($check instanceof ServedOperationAccessCheck);
-    $ids = ['resource' => 'entity.content:node.page', 'operation' => 'edit'];
-    $route_match = new RouteMatch('data_surface_react.contract', new Route('/surface-api/{resource}/{operation}'), $ids, $ids);
+    // The API's route, the page's id the path's one identity segment.
+    $ids = [
+      'resource' => 'entity.content:node.page',
+      's1' => (string) $node->id(),
+      's2' => '',
+      's3' => '',
+      's4' => '',
+      's5' => '',
+    ];
+    $route_match = new RouteMatch('data_surface_react.api', new Route('/surface-api/{resource}/{s1}/{s2}/{s3}/{s4}/{s5}'), $ids, $ids);
     $this->resources()->forgetBuilds();
     $this->assertSame([0, 0], $this->counted(function () use ($check, $route_match, $node): void {
-      $request = Request::create('/surface-api/entity.content:node.page/edit', 'GET', ['id' => $node->id()]);
+      $request = Request::create('/surface-api/entity.content:node.page/' . $node->id());
       $this->assertTrue($check->access($route_match, $this->container->get('current_user'), $request)->isAllowed());
     }));
   }

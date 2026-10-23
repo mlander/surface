@@ -708,11 +708,11 @@ final class OperationInputs {
       ),
       self::CHANGES => new ListOutputDefinition(
         label: $this->t('Changes'),
-        description: $this->t('The dotted path of each stored value the write changed, or a dry run would change, a list as a whole. Empty when it changes nothing, and then nothing is saved: writing back what the read tool returned changes nothing.'),
+        description: $this->t('The JSON Pointer of each stored value the write changed, or a dry run would change, a list as a whole. Empty when it changes nothing, and then nothing is saved: writing back what the read tool returned changes nothing.'),
         item_definition: new OutputDefinition(
           data_type: 'string',
           label: $this->t('Path'),
-          description: $this->t('A dotted path in the values.'),
+          description: $this->t('A JSON Pointer into the values.'),
         ),
       ),
       self::VALUES => new OutputDefinition(
@@ -722,15 +722,15 @@ final class OperationInputs {
       ),
       self::VIOLATIONS => $this->entries(
         $this->t('Violations'),
-        $this->t('Each refusal: the dotted path of the key refused (empty for a refusal of the whole call), a stable code to branch on, and the message, which names a key it depends on by its path and a value by what is sent.'),
+        $this->t('Each refusal: the JSON Pointer of the key refused (empty for a refusal of the whole call), a stable code to branch on, and the message, which names a key it depends on by its path and a value by what is sent.'),
       ),
       self::NOTES => $this->entries(
         $this->t('Values not taken'),
-        $this->t('Each value sent for a key that is locked, by its dotted path, code locked, with why it kept what it holds. The call succeeded, but not as sent.'),
+        $this->t('Each value sent for a key that is locked, by its JSON Pointer, code locked, with why it kept what it holds. The call succeeded, but not as sent.'),
       ),
       self::STALE => $this->entries(
         $this->t('Values no longer available'),
-        $this->t('Each stored value kept that may no longer be chosen, by its dotted path, code stale, with what to do and the value kept. The call succeeded; choose a new value when you can.'),
+        $this->t('Each stored value kept that may no longer be chosen, by its JSON Pointer, code stale, with what to do and the value kept. The call succeeded; choose a new value when you can.'),
         TRUE,
       ),
     ];
@@ -756,7 +756,7 @@ final class OperationInputs {
    */
   protected function entries(TranslatableMarkup $label, TranslatableMarkup $description, bool $stored = FALSE): ListOutputDefinition {
     $properties = [
-      'path' => new OutputDefinition(data_type: 'string', label: $this->t('Path'), description: $this->t('A dotted path in the values; empty for the whole call.')),
+      'path' => new OutputDefinition(data_type: 'string', label: $this->t('Path'), description: $this->t('A JSON Pointer into the values; empty for the whole call.')),
       'code' => new OutputDefinition(data_type: 'string', label: $this->t('Code'), description: $this->t('A stable code: the same whatever the language and whatever the message says.')),
       'message' => new OutputDefinition(data_type: 'string', label: $this->t('Message'), description: $this->t('What to say about it, as plain text.')),
     ];

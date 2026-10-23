@@ -304,8 +304,9 @@ door may return them (what `outbound()` projected), each violation and
 note `{path, code, message}` and each stale reference `{path, code,
 message, stored}`, the message as plain text, rendered by the door's
 choice: for a machine at the tool, as the form renders it at React.
-The write tool, React's `/validate` and `/submit` and Drush's `tool:run
---json` all answer it ([decision](decisions.md#one-result-at-every-door)).
+The write tool, the HTTP API (a refusal there as problem details, its
+`errors` the violations) and Drush's `tool:run --json` all answer it,
+every path a JSON Pointer ([decision](decisions.md#one-result-at-every-door)).
 Every violation carries a stable `code`; the table is in
 [Value semantics](semantics.md#codes).
 
@@ -388,8 +389,8 @@ for the caller, at any depth; no secret, at any depth, under every
 variant that keeps it secret and inside each item of a list;
 no key that does not apply to the values; a locked key as stored. The
 read tool answers what storage loads through it, the write tool answers
-its accepted `values` through it, dry run or written, and React's
-`/validate` writes its `values` document from it. `document()` writes
+its accepted `values` through it, dry run or written, and the HTTP API
+writes its `values` document from it. `document()` writes
 what it is handed, so a door hands it what this projected. The
 `prepared` artifact is never handed to a caller: it is storage's own
 shape, with what the caller could not see put back
@@ -400,8 +401,8 @@ shape, with what the caller could not see put back
 `submit()` takes a `$dry_run` flag: everything up to and including
 `prepare()` runs, and the artifact comes back with `committed` false.
 Nothing has been written, and a PHP caller has the exact object a commit
-would have stored. A door does not hand it on: the write tool and React's
-`/validate` answer the accepted values through `outbound()`, and the
+would have stored. A door does not hand it on: the write tool and the
+HTTP API's `?dryRun=true` answer the accepted values through `outbound()`, and the
 run's verdict, which says whether storage's own checks passed.
 
 Config entities write through the container's config factory, so an

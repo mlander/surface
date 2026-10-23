@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace Drupal\data_surface_openapi\Controller;
 
 use Drupal\Core\Cache\CacheableJsonResponse;
+use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\Cache\CacheableResponse;
 use Drupal\Core\DependencyInjection\ContainerInjectionInterface;
+use Drupal\Core\Url;
 use Drupal\data_surface\Contract\ContractEmitter;
 use Drupal\data_surface_openapi\OpenApiDocument;
 use Drupal\data_surface_react\Controller\ResourceApiController;
@@ -16,7 +18,11 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Yaml\Yaml;
 
 /**
- * Serves the OpenAPI document, as JSON and as YAML.
+ * Serves the OpenAPI document, as JSON and as YAML, and two pages over it.
+ *
+ * Swagger UI (`/surface-api/docs`), whose "try it out" calls the API with
+ * the logged-in session, and Redoc (`/surface-api/redoc`), a reference to
+ * read; both from a CDN, pinned, held to their integrity hashes.
  *
  * The document is built for no account, so it is the same for everyone
  * and cached under the tags of what it was read from: discovery, every
@@ -88,6 +94,60 @@ final class OpenApiController implements ContainerInjectionInterface {
     $response->headers->set(ResourceApiController::VERSION_HEADER, (string) ContractEmitter::CONTRACT);
     $response->addCacheableDependency($description);
     return $response;
+  }
+
+  /**
+   * Renders Swagger UI over the document.
+   *
+   * @return array
+   *   A render array: the element Swagger UI mounts into, and where it
+   *   finds the document and the session's CSRF token.
+   */
+  public function docs(): array {
+    return $this->page('data-surface-openapi-docs', 'data_surface_openapi/docs');
+  }
+
+  /**
+   * Renders Redoc over the document.
+   *
+   * @return array
+   *   A render array: the element Redoc mounts into, and where it finds
+   *   the document.
+   */
+  public function reference(): array {
+    return $this->page('data-surface-openapi-reference', 'data_surface_openapi/reference');
+  }
+
+  /**
+   * Renders a page a library draws the document into.
+   *
+   * @param string $id
+   *   The id of the element it mounts into.
+   * @param string $library
+   *   The library.
+   *
+   * @return array
+   *   The render array.
+   */
+  protected function page(string $id, string $library): array {
+    $document = Url::fromRoute('data_surface_openapi.json')->toString(TRUE);
+    $token = Url::fromRoute('system.csrftoken')->toString(TRUE);
+    $build = [
+      '#type' => 'html_tag',
+      '#tag' => 'div',
+      '#attributes' => ['id' => $id],
+      '#attached' => [
+        'library' => [$library],
+        'drupalSettings' => [
+          'dataSurfaceOpenApi' => [
+            'document' => $document->getGeneratedUrl(),
+            'token' => $token->getGeneratedUrl(),
+          ],
+        ],
+      ],
+    ];
+    CacheableMetadata::createFromObject($document)->merge(CacheableMetadata::createFromObject($token))->applyTo($build);
+    return $build;
   }
 
 }

@@ -328,11 +328,11 @@ Two consequences:
   write loop sends, since no read returns the secret). With items added
   or removed, a position may hold another item, so an item that leaves
   out a secret stored where it now sits is refused by the secret's path
-  (`mirrors.0.password`): send it again, or the marker
+  (`/mirrors/0/password`): send it again, or the marker
   ([decision](decisions.md#every-door-projects-what-the-read-tool-projects)).
 - **No door answers it.** The read leaves a secret out, and so does
   every other answer: the write tool's `values`, dry run or written, and
-  React's `/validate`.
+  the API's, a dry run's included.
 
 Encryption is a separate concern and lives one layer down, at the
 storage layout: see [Storage](storage.md#secrets-at-the-codec).
@@ -539,9 +539,9 @@ values a caller sends and a value by what is sent, its label beside
 it: "... This applies when venue is riverside (Riverside Hall). Choose
 riverside_main (Main hall) or riverside_east (East room)." The keys and
 values are `Pipeline\Named` placeholders, so a translator still meets
-one source per sentence. The renderer is the door's choice: React's
-`/validate` and `/submit`, a person's door, render `message` as the
-form does, with the same `path` and `code` as the tool.
+one source per sentence. The renderer is the door's choice: the API, a
+person's door through the React page, renders `message` as the form
+does, with the same `path` and `code` as the tool.
 
 There are exactly three places a message becomes text, all of them
 exception messages, because PHP has nowhere to put an object in one:
@@ -566,6 +566,19 @@ sets no code is named for itself, in snake case
 makes itself has one of its own (`Pipeline\Violation`'s constants). A
 refusal of the whole call has an empty path.
 
+Every path a result carries, at every door, is a JSON Pointer
+(RFC 6901) into the values: `/contact/email`, `/shelves/1/unit`,
+`/third_party_settings/data_surface_examples_compliance/license`, a `~`
+or a `/` inside a key written `~0` and `~1`, and the whole call the
+empty pointer. So is each entry of `changes`. The write tool's result
+and its text lines, `drush tool:run --json`, the API's results and
+problem details all spell it so; inside the pipeline a violation keeps
+its dotted path (`Violation::fullPath()`), which the door writes as a
+pointer (`ResultDocument::pointer()`), and the form names an element as
+the form does. Until contract 3 every door answered the dotted path
+([decision](decisions.md#one-result-at-every-door)). In the table, "the
+key" is that key's pointer.
+
 | Code | Path | Says |
 | --- | --- | --- |
 | `required` | the key | A key, or a property of a map, that must hold a value holds none; also a required output not emitted. |
@@ -584,7 +597,7 @@ refusal of the whole call has an empty path.
 | `permission` | empty | The operation's permission refused the whole call. |
 | `locked` | empty | The resource may be seen and not changed, so nothing was written. |
 | `not_found` | empty | The call's parameters name nothing, or a read is asked of what an operation creates. |
-| `conflict` | empty | What storage holds changed since the caller read it (React's fingerprint). |
+| `conflict` | empty | What storage holds changed since the caller read it: the API's `If-Match` no longer names it, a 412. |
 | `locked` | the key | In `notes`: a value sent for a locked key, not taken. |
 | `stale` | the key | In `stale`: a stored value kept that the key no longer offers, with `stored`. |
 | `not_in_range`, `too_high`, `too_low` | the key | Range: a number outside its bounds. |
@@ -609,7 +622,7 @@ the value. This is why editing an entity whose id is locked no longer
 resets it to the default. A value sent for it that is not what it holds
 is said, though, once per key and blocking nothing: the run's notes
 (`DataSurfaceResult::$notes`), which the tool puts after its message
-and the React `/validate` and `/submit` answer as `notes`, say "Machine
+and the API answers as `notes`, say "Machine
 name is locked and kept as stored; the value sent was not taken." The
 form says nothing, since it draws the key disabled
 ([decision](decisions.md#locked-at-the-top)).

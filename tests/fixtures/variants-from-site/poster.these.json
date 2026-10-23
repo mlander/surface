@@ -6,7 +6,7 @@
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "title": "Configure the poster",
         "x-surface": {
-            "contract": 2,
+            "contract": 3,
             "version": 1
         },
         "type": "object",

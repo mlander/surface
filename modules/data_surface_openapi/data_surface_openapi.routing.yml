@@ -1,5 +1,6 @@
-# The OpenAPI document of the endpoints data_surface_react serves, as JSON
-# and as YAML. Open to every account: it is built for no account, from what
+# The OpenAPI document of the API data_surface_react serves, as JSON and as
+# YAML, and Swagger UI and Redoc over it. The document is open to every
+# account: it is built for no account, from what
 # the code and the site's structure declare, and is the same for everyone;
 # what an account may do is the per-request contract's and schema's to say.
 # Decision: see docs/decisions.md#an-openapi-document-is-one-more-door.
@@ -23,3 +24,24 @@ data_surface_openapi.yaml:
     # Open: built for no account, the same for everyone; the operations'
     # own endpoints still answer by their permissions.
     _access: 'TRUE'
+
+# Swagger UI and Redoc over the document. Under a permission of their own,
+# not open: each page runs a CDN's script on the site's origin, so a site
+# grants them to the roles it chooses. The document itself stays open.
+data_surface_openapi.docs:
+  path: '/surface-api/docs'
+  defaults:
+    _controller: '\Drupal\data_surface_openapi\Controller\OpenApiController::docs'
+    _title: 'API: try it out'
+  methods: [GET]
+  requirements:
+    _permission: 'access data surface api docs'
+
+data_surface_openapi.reference:
+  path: '/surface-api/redoc'
+  defaults:
+    _controller: '\Drupal\data_surface_openapi\Controller\OpenApiController::reference'
+    _title: 'API reference'
+  methods: [GET]
+  requirements:
+    _permission: 'access data surface api docs'

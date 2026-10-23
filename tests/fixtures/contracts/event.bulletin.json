@@ -1,7 +1,7 @@
 {
     "resource": "event.bulletin",
     "module": "data_surface_examples",
-    "contract": 2,
+    "contract": 3,
     "documents": [
         {
             "resource": "event.bulletin",
@@ -12,7 +12,7 @@
                 "title": "Configure the bulletin",
                 "description": "Sets how often the event bulletin goes out, the day it is sent and how many items an issue holds.",
                 "x-surface": {
-                    "contract": 2,
+                    "contract": 3,
                     "operation": {
                         "id": "configure",
                         "label": "Configure the bulletin",

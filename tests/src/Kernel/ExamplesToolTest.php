@@ -103,7 +103,7 @@ class ExamplesToolTest extends DataSurfaceKernelTestBase {
     $this->assertTrue($results['valid']['outputs'][OperationInputs::COMMITTED]);
 
     $this->assertFalse($results['over_capacity']['success']);
-    $this->assertSame("The values were refused:\n" . 'capacity: This value should be between 1 and 30. This applies when room is library_garden (Garden room).', $results['over_capacity']['message']);
+    $this->assertSame("The values were refused:\n" . '/capacity: This value should be between 1 and 30. This applies when room is library_garden (Garden room).', $results['over_capacity']['message']);
 
     $this->assertTrue($results['dry_run']['success'], $results['dry_run']['message']);
     $this->assertSame('Dry run of Configure registration (step 3): the values were accepted and prepared, and nothing was written.', $results['dry_run']['message']);
@@ -259,7 +259,7 @@ class ExamplesToolTest extends DataSurfaceKernelTestBase {
     $tool->setInputValue(OperationInputs::VALUES, ExampleCalls::CALLS['valid']['values'] + ['contact' => NULL]);
     $tool->execute();
     $this->assertFalse($tool->getResult()->isSuccess(), 'The tool door.');
-    $this->assertSame("The values were refused:\n" . 'contact.email: Email is required.', PlainTextOutput::renderFromHtml((string) $tool->getResult()->getMessage()));
+    $this->assertSame("The values were refused:\n" . '/contact/email: Email is required.', PlainTextOutput::renderFromHtml((string) $tool->getResult()->getMessage()));
     $this->assertSame('events@example.com', $this->config('data_surface_examples.registration_step3')->get('contact.email'), 'Nothing was written.');
   }
 
@@ -291,7 +291,7 @@ class ExamplesToolTest extends DataSurfaceKernelTestBase {
     $tool->execute();
     $result = $tool->getResult();
     $this->assertFalse($result->isSuccess());
-    $this->assertSame("The values were refused:\n" . 'title: Event title is required.', PlainTextOutput::renderFromHtml((string) $result->getMessage()));
+    $this->assertSame("The values were refused:\n" . '/title: Event title is required.', PlainTextOutput::renderFromHtml((string) $result->getMessage()));
     $this->assertSame(30, $this->config('data_surface_examples.registration_step3')->get('capacity'), 'Nothing was written.');
 
     $tool = $this->container->get('plugin.manager.tool')->createInstance(ExampleCalls::TOOL);

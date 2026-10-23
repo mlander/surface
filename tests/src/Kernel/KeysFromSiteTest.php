@@ -217,10 +217,10 @@ class KeysFromSiteTest extends DataSurfaceKernelTestBase {
     $tool->setInputValue(OperationInputs::VALUES, ['lights' => ['press' => TRUE]]);
     $tool->execute();
     $this->assertTrue($tool->getResult()->isSuccess(), (string) $tool->getResult()->getMessage());
-    $this->assertSame("Configure the workshop: the values were accepted, and they are what is stored, so nothing was written.\nlights.press: Drill press is locked and kept as stored; the value sent was not taken.", PlainTextOutput::renderFromHtml((string) $tool->getResult()->getMessage()));
+    $this->assertSame("Configure the workshop: the values were accepted, and they are what is stored, so nothing was written.\n/lights/press: Drill press is locked and kept as stored; the value sent was not taken.", PlainTextOutput::renderFromHtml((string) $tool->getResult()->getMessage()));
     $this->assertSame([
       [
-        'path' => 'lights.press',
+        'path' => '/lights/press',
         'code' => 'locked',
         'message' => 'Drill press is locked and kept as stored; the value sent was not taken.',
       ],
@@ -334,7 +334,7 @@ class KeysFromSiteTest extends DataSurfaceKernelTestBase {
     ]);
     $tool->execute();
     $this->assertFalse($tool->getResult()->isSuccess());
-    $this->assertStringContainsString('benches.saw.hours', strip_tags((string) $tool->getResult()->getMessage()));
+    $this->assertStringContainsString('/benches/saw/hours', strip_tags((string) $tool->getResult()->getMessage()));
 
     $tool = $manager->createInstance('data_surface:resource_test.workshop:configure');
     $tool->setInputValue(OperationInputs::VALUES, [

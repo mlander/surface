@@ -4,11 +4,11 @@
     "label": "Configure registration (step 2)",
     "schema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
-        "$id": "http://localhost/surface-api/registration.step2/configure",
+        "$id": "http://localhost/surface-api/registration.step2",
         "title": "Configure registration (step 2)",
         "description": "Sets the event title, whether registration is open, the venue, a room at that venue and a capacity the room can hold.",
         "x-surface": {
-            "contract": 2,
+            "contract": 3,
             "operation": {
                 "id": "configure",
                 "label": "Configure registration (step 2)",
@@ -139,5 +139,6 @@
         "room": "riverside_main",
         "capacity": 50
     },
-    "stale": []
+    "stale": [],
+    "notes": []
 }

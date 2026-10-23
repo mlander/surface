@@ -308,7 +308,7 @@ final class ExamplesController extends ControllerBase {
       6 => [
         'title' => $this->t('every door'),
         'sentence' => $this->t('The same contract through every door. The decoupled page is the "In React" links above: the contract served as JSON and drawn by a React app. ECA and an AI agent, through the tool of example 5, are yours to show on your own site.'),
-        'items' => [$this->openApi()],
+        'items' => [$this->openApi(), $this->openApiDocs()],
       ],
       7 => [
         'title' => $this->t('a rule written as data'),
@@ -411,7 +411,7 @@ final class ExamplesController extends ControllerBase {
   /**
    * Links the OpenAPI document, or says where it will be.
    *
-   * Every example's endpoints, described for any OpenAPI client; the
+   * Every example's paths, described for any OpenAPI client; the
    * examples do not depend on that module, so while it is off the path is
    * named rather than linked.
    *
@@ -424,6 +424,23 @@ final class ExamplesController extends ControllerBase {
     }
     $url = Url::fromRoute('data_surface_openapi.json');
     return Link::fromTextAndUrl($this->t('As OpenAPI: @path', ['@path' => $url->toString()]), $url)->toRenderable();
+  }
+
+  /**
+   * Links Swagger UI over the OpenAPI document, or says where it will be.
+   *
+   * Each example's calls, to try with the logged-in session; named rather
+   * than linked while the module is off.
+   *
+   * @return array|\Drupal\Core\StringTranslation\TranslatableMarkup
+   *   A link render array, or the sentence naming the path.
+   */
+  protected function openApiDocs(): array|TranslatableMarkup {
+    if (!$this->moduleHandler()->moduleExists(self::OPENAPI)) {
+      return $this->t('To try out at /surface-api/docs, once @module is enabled.', ['@module' => self::OPENAPI]);
+    }
+    $url = Url::fromRoute('data_surface_openapi.docs');
+    return Link::fromTextAndUrl($this->t('To try out: @path', ['@path' => $url->toString()]), $url)->toRenderable();
   }
 
   /**

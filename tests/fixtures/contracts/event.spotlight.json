@@ -1,7 +1,7 @@
 {
     "resource": "event.spotlight",
     "module": "data_surface_examples",
-    "contract": 2,
+    "contract": 3,
     "documents": [
         {
             "resource": "event.spotlight",
@@ -12,7 +12,7 @@
                 "title": "Configure the spotlight",
                 "description": "Sets the component the event home page spotlights, chosen from the components the site has, and the props it is drawn with.",
                 "x-surface": {
-                    "contract": 2,
+                    "contract": 3,
                     "operation": {
                         "id": "configure",
                         "label": "Configure the spotlight",

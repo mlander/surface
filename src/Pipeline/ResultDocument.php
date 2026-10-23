@@ -18,7 +18,7 @@ use Drupal\Component\Render\PlainTextOutput;
  * - `committed`: the values were written; a dry run and a refusal never.
  * - `changed`: the write moved a stored value; FALSE when it wrote what
  *   is stored, or was not committed.
- * - `changes`: the dotted path of each stored value the write changed,
+ * - `changes`: the JSON Pointer of each stored value the write changed,
  *   or a dry run would; empty on a refusal.
  * - `values`: the accepted values, as the read tool would answer them.
  * - `violations`: each refusal, `{path, code, message}`; a refusal of the
@@ -27,6 +27,11 @@ use Drupal\Component\Render\PlainTextOutput;
  *   message}`: a value sent for a locked key, not taken, code `locked`.
  * - `stale`: each stored value kept that the key no longer offers,
  *   `{path, code, message, stored}`, code `stale`.
+ *
+ * Every path is a JSON Pointer (RFC 6901), `/contact/email`, the whole
+ * call the empty pointer: the one spelling every door answers a path in
+ * since contract 3, where a violation carries a dotted path inside the
+ * pipeline and the form names it as the form does.
  *
  * A message is rendered here, as plain text, by the renderer the door
  * chooses: for a machine (Sentences::machine()), the tool's, a key a
@@ -64,7 +69,7 @@ final class ResultDocument {
       'ok' => $result->isValid(),
       'committed' => $result->committed,
       'changed' => $result->changed(),
-      'changes' => $result->changes ?? [],
+      'changes' => array_map(self::pointer(...), $result->changes ?? []),
       'values' => $values,
       'violations' => array_map($entry, iterator_to_array($result->violations, FALSE)),
       'notes' => array_map($entry, array_values($result->notes)),
@@ -107,11 +112,12 @@ final class ResultDocument {
    *   Whether its message is rendered for a machine or for a person.
    *
    * @return array{path: string, code: string, message: string}
-   *   Its full dotted path, its code, and its message, as plain text.
+   *   Its full path as a JSON Pointer, its code, and its message, as plain
+   *   text.
    */
   public static function entry(Violation $violation, bool $machine = TRUE): array {
     return [
-      'path' => $violation->fullPath(),
+      'path' => self::pointer($violation->fullPath()),
       'code' => $violation->code,
       'message' => self::message($violation, $machine),
     ];
@@ -155,8 +161,8 @@ final class ResultDocument {
   /**
    * Writes violations as text, one per line, "path: message".
    *
-   * A refusal of the whole call, whose path is empty, is its message
-   * alone.
+   * The path is the JSON Pointer the structured result carries. A refusal
+   * of the whole call, whose path is empty, is its message alone.
    *
    * @param \Drupal\data_surface\Pipeline\Violation ...$violations
    *   The violations.
@@ -167,10 +173,49 @@ final class ResultDocument {
   public static function lines(Violation ...$violations): string {
     $lines = [];
     foreach ($violations as $violation) {
-      $path = $violation->fullPath();
+      $path = self::pointer($violation->fullPath());
       $lines[] = ($path === '' ? '' : $path . ': ') . self::message($violation);
     }
     return implode("\n", $lines);
+  }
+
+  /**
+   * Writes a dotted path as a JSON Pointer (RFC 6901).
+   *
+   * Each segment is escaped, `~` as `~0` and `/` as `~1`, and the empty
+   * path, the whole call, is the empty pointer.
+   *
+   * Decision: see docs/decisions.md#one-result-at-every-door.
+   *
+   * @param string $dotted
+   *   The path as the pipeline holds it: `contact.email`, `shelves.1.unit`.
+   *
+   * @return string
+   *   The pointer: `/contact/email`, `/shelves/1/unit`; empty for empty.
+   */
+  public static function pointer(string $dotted): string {
+    if ($dotted === '') {
+      return '';
+    }
+    $escaped = static fn (string $segment): string => strtr($segment, ['~' => '~0', '/' => '~1']);
+    return '/' . implode('/', array_map($escaped, explode('.', $dotted)));
+  }
+
+  /**
+   * Reads a JSON Pointer back into the dotted path the pipeline holds.
+   *
+   * @param string $pointer
+   *   The pointer, `/contact/email`; one that does not start with `/` is
+   *   read as a dotted path already.
+   *
+   * @return string
+   *   The dotted path: `contact.email`; empty for the empty pointer.
+   */
+  public static function dotted(string $pointer): string {
+    if ($pointer === '' || !str_starts_with($pointer, '/')) {
+      return $pointer;
+    }
+    return implode('.', array_map(static fn (string $segment): string => strtr($segment, ['~1' => '/', '~0' => '~']), explode('/', substr($pointer, 1))));
   }
 
 }

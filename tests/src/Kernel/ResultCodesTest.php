@@ -4,18 +4,17 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\data_surface\Kernel;
 
+use Drupal\Tests\data_surface\Traits\ServedControllerTrait;
 use Drupal\Core\Access\AccessResult;
 use Drupal\data_surface\Pipeline\ResultDocument;
 use Drupal\data_surface\Pipeline\Violation;
 use Drupal\data_surface_examples\ConceptCalls;
-use Drupal\data_surface_react\Controller\ResourceApiController;
 use Drupal\data_surface_tool\OperationInputs;
 use Drupal\data_surface_tool_test\Storage\VaultStorage;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use Drupal\tool\Tool\ToolInterface;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
-use Symfony\Component\HttpFoundation\Request;
 
 /**
  * Tests every refusal path answers a stable code, in the one result shape.
@@ -30,6 +29,8 @@ use Symfony\Component\HttpFoundation\Request;
 #[Group('data_surface')]
 #[RunTestsInSeparateProcesses]
 class ResultCodesTest extends DataSurfaceKernelTestBase {
+
+  use ServedControllerTrait;
 
   use UserCreationTrait;
 
@@ -155,26 +156,26 @@ class ResultCodesTest extends DataSurfaceKernelTestBase {
     $concept = static fn (string $resource, string $call): array => ConceptCalls::CALLS[$resource][$call]['values'];
     $cases = [
       // The module's own.
-      ['registration.step3', ['title' => NULL], ['title' => Violation::REQUIRED]],
-      ['registration.step3', ['nope' => 1], ['nope' => Violation::UNKNOWN_KEY]],
+      ['registration.step3', ['title' => NULL], ['/title' => Violation::REQUIRED]],
+      ['registration.step3', ['nope' => 1], ['/nope' => Violation::UNKNOWN_KEY]],
       [
         'registration.step3',
         ['pricing' => 'free', 'ticket' => ['price' => 5]],
-        ['ticket.price' => Violation::WRONG_VARIANT],
+        ['/ticket/price' => Violation::WRONG_VARIANT],
       ],
       [
         'registration.step3',
         ['pricing' => NULL],
-        ['pricing' => Violation::REQUIRED, 'ticket' => Violation::NO_VARIANT],
+        ['/pricing' => Violation::REQUIRED, '/ticket' => Violation::NO_VARIANT],
       ],
-      ['event.bulletin', $concept('event.bulletin', 'monthly_with_day'), ['send_day' => Violation::DOES_NOT_APPLY]],
-      ['event.doors', $concept('event.doors', 'always_held'), ['badges' => Violation::CANNOT_CLEAR]],
-      ['event.press', $concept('event.press', 'listed_without_email'), ['contact.email' => Violation::REQUIRED]],
+      ['event.bulletin', $concept('event.bulletin', 'monthly_with_day'), ['/send_day' => Violation::DOES_NOT_APPLY]],
+      ['event.doors', $concept('event.doors', 'always_held'), ['/badges' => Violation::CANNOT_CLEAR]],
+      ['event.press', $concept('event.press', 'listed_without_email'), ['/contact/email' => Violation::REQUIRED]],
       // A constraint's, by the name it gives Symfony's code.
-      ['registration.step3', ['room' => 'harbour_deck'], ['room' => 'no_such_choice']],
-      ['registration.step3', ['room' => 'riverside_east', 'capacity' => 500], ['capacity' => 'not_in_range']],
-      ['event.desk', $concept('event.desk', 'phone_with_dashes'), ['phone' => 'regex_failed']],
-      ['event.program', $concept('event.program', 'check_too_many'), ['sessions' => 'not_in_range'], 'check'],
+      ['registration.step3', ['room' => 'harbour_deck'], ['/room' => 'no_such_choice']],
+      ['registration.step3', ['room' => 'riverside_east', 'capacity' => 500], ['/capacity' => 'not_in_range']],
+      ['event.desk', $concept('event.desk', 'phone_with_dashes'), ['/phone' => 'regex_failed']],
+      ['event.program', $concept('event.program', 'check_too_many'), ['/sessions' => 'not_in_range'], 'check'],
     ];
     foreach ($cases as $case) {
       [$resource, $values, $expected] = $case;
@@ -192,7 +193,7 @@ class ResultCodesTest extends DataSurfaceKernelTestBase {
     $context = $resources->operation('registration.step3', 'configure');
     $built = $resources->build('registration.step3', $context);
     $result = $this->pipeline()->submit($built, ['contact' => 'events@example.com'], $resources->storage('registration.step3', $context, $built), TRUE);
-    $this->assertSame(['contact' => Violation::TYPE_MISMATCH], static::codes($result->document([])['violations']));
+    $this->assertSame(['/contact' => Violation::TYPE_MISMATCH], static::codes($result->document([])['violations']));
   }
 
   /**
@@ -208,7 +209,7 @@ class ResultCodesTest extends DataSurfaceKernelTestBase {
     $removed = $this->runTool('data_surface:tool_test.vault:configure', [OperationInputs::VALUES => ['mirrors' => [['host' => 'west.example.com']]]]);
     $this->assertFalse($removed['success']);
     $this->assertShape($removed['outputs']);
-    $this->assertSame(['mirrors.0.password' => Violation::SECRET_IN_ITEM], static::codes($removed['outputs']['violations']));
+    $this->assertSame(['/mirrors/0/password' => Violation::SECRET_IN_ITEM], static::codes($removed['outputs']['violations']));
   }
 
   /**
@@ -270,12 +271,10 @@ class ResultCodesTest extends DataSurfaceKernelTestBase {
     $this->assertSame(['' => 'is_null'], static::codes($left_out['outputs']['violations']));
 
     // What storage holds changed since the form was loaded.
-    $body = (string) json_encode(['values' => ['title' => 'Late'], 'fingerprint' => 'not-what-is-stored']);
-    $request = Request::create('/surface-api/registration.step2/configure/submit', 'POST', [], [], [], ['CONTENT_TYPE' => 'application/json'], $body);
-    $answer = json_decode((string) ResourceApiController::create($this->container)->submit($request, 'registration.step2', 'configure')->getContent(), TRUE, 512, JSON_THROW_ON_ERROR);
-    $this->assertShape($answer, ['outputs', 'contract', 'created']);
-    $this->assertSame(['' => Violation::CONFLICT], static::codes($answer['violations']));
-    $this->assertSame([], $answer['values']);
+    // A 412, its one error the whole call's.
+    $answer = $this->servedJson('PATCH', '/surface-api/registration.step2', ['title' => 'Late'], ['If-Match' => '"not-what-is-stored"']);
+    $this->assertSame(412, $answer['status']);
+    $this->assertSame(['' => Violation::CONFLICT], static::codes($answer['errors']));
   }
 
   /**
@@ -285,14 +284,14 @@ class ResultCodesTest extends DataSurfaceKernelTestBase {
     $sales = $this->dryRun('event.sales', ConceptCalls::CALLS['event.sales']['speaker_on_sale']['values']);
     $this->assertShape($sales);
     $this->assertTrue($sales['ok']);
-    $this->assertSame(['on_sale.speaker' => Violation::LOCKED], static::codes($sales['notes']));
+    $this->assertSame(['/on_sale/speaker' => Violation::LOCKED], static::codes($sales['notes']));
 
     // A room stored that the venue stored no longer offers.
     $this->config('data_surface_examples.registration_step2')->set('venue', 'harbour')->set('room', 'library_garden')->save();
     $kept = $this->dryRun('registration.step2', []);
     $this->assertShape($kept);
     $this->assertTrue($kept['ok']);
-    $this->assertSame(['room' => Violation::STALE], static::codes($kept['stale']));
+    $this->assertSame(['/room' => Violation::STALE], static::codes($kept['stale']));
     $this->assertSame('library_garden', $kept['stale'][0]['stored']);
     $this->assertSame([], $kept['violations']);
   }

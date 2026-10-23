@@ -587,7 +587,7 @@ class CollectionTest extends DataSurfaceKernelTestBase {
     // The pipeline holds each item to the child's rules, and names the
     // second item's spices by its full path.
     $this->assertFalse($refused['success']);
-    $this->assertStringContainsString('racks.1.spices: This value should be between 0 and 40.', $refused['message']);
+    $this->assertStringContainsString('/racks/1/spices: This value should be between 0 and 40.', $refused['message']);
 
     // The read tool answers with the list.
     $read = $this->runTool(self::READ_TOOL, ['larder' => 'main']);
