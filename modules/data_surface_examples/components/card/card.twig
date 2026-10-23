@@ -1,0 +1,9 @@
+<article class="data-surface-card data-surface-card--{{ tone|default('plain') }}">
+  <h3>{{ heading }}</h3>
+  {% if body %}
+    <p>{{ body }}</p>
+  {% endif %}
+  {% if link.url %}
+    <a href="{{ link.url }}">{{ link.label|default(link.url) }}</a>
+  {% endif %}
+</article>

@@ -24,10 +24,11 @@ makes you need it.
 To see them on a site, enable the examples module and visit
 `/surface-examples` (its README is
 `modules/data_surface_examples/README.md`). Examples 1 to 6 grow one
-registration form, one idea at a time; examples 7 to 11 are a small
+registration form, one idea at a time; examples 7 to 12 are a small
 resource each, for a rule written as data, one part used twice, keys
-that come from the site, access and how an operation behaves, and the
-stock widgets with what a key left out, null or a value means.
+that come from the site, access and how an operation behaves, the
+stock widgets with what a key left out, null or a value means, and a
+JSON Schema read into a structure: a component's props.
 
 [The pattern](pattern.md) is the whole of what an author writes, and
 why; [How it fits](how-it-fits.md) follows one request through the
@@ -168,7 +169,8 @@ The pages fall in the same groups as the README's documentation table.
   (and [on a plugin](declaring-a-resource.md#on-a-plugin)), [Resources
   and structures](resources.md), which opens with [Which way to
   compose](resources.md#which-way-to-compose), then
-  [Refinement](refinement.md), [Options](options.md),
+  [Refinement](refinement.md), [Reading a schema](reading-a-schema.md),
+  [Options](options.md),
   [Storage](storage.md), [Outputs](outputs.md), [Widgets](widgets.md),
   [Generated forms](forms.md) and [Content entities](entities.md).
 - **The doors**: [The served contract](served-contract.md), [The

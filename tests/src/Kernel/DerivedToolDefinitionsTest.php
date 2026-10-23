@@ -204,6 +204,8 @@ class DerivedToolDefinitionsTest extends DataSurfaceKernelTestBase {
       'data_surface:event.program:configure:read',
       'data_surface:event.sales:configure',
       'data_surface:event.sales:configure:read',
+      'data_surface:event.spotlight:configure',
+      'data_surface:event.spotlight:configure:read',
       'data_surface:registration.step1:configure',
       'data_surface:registration.step1:configure:read',
       'data_surface:registration.step2:configure',

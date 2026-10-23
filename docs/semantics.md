@@ -577,6 +577,8 @@ refusal of the whole call has an empty path.
 | `cannot_clear` | the key | Null sent for a key its storage always holds. |
 | `secret_in_item` | the secret | A secret stored for a collection's item whose position items added or removed have moved. |
 | `no_schema` | the module's mount | A storage holds settings no config schema describes. |
+| `not_valid` | the key, or the object | A value, or an object's values, a JSON Schema read into the structure refuses, where no constraint of the vocabulary says it ([Reading a schema](reading-a-schema.md#what-is-kept)). |
+| `unresolved` | the key, or the object | A value only a document the schema refers to could decide, which is never fetched. |
 | `has_data` | `settings` | A field's storage settings would change its columns while it has data. |
 | `access` | empty | The resource's access answer refused the whole call. |
 | `permission` | empty | The operation's permission refused the whole call. |

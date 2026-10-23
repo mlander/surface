@@ -81,6 +81,8 @@ class ExamplesReadmeTest extends UnitTestCase {
       'Access/FeesAccess',
       'Resource/ProgramResource',
       'Resource/DoorsResource',
+      'Resource/SpotlightResource',
+      'Variants/ComponentProps',
     ];
     foreach ($concepts as $class) {
       $this->assertContains('src/' . $class . '.php', $quoted);
@@ -89,6 +91,17 @@ class ExamplesReadmeTest extends UnitTestCase {
       $file = self::MODULE . '/' . $path;
       $this->assertFileExists($file);
       $this->assertSame(self::excerpt($file), $code, sprintf('The README quotes %s as it no longer is; copy the file from its class attributes down into the block.', $path));
+    }
+  }
+
+  /**
+   * Tests each component the README quotes is the file it names, whole.
+   */
+  public function testTheComponentBlocksMatchTheFiles(): void {
+    preg_match_all('/<!-- component: (\S+) -->\n\n```yaml\n(.*?)\n```/s', self::readme(), $blocks, PREG_SET_ORDER);
+    $this->assertSame(['components/card/card.component.yml'], array_column($blocks, 1));
+    foreach ($blocks as [, $path, $yaml]) {
+      $this->assertSame(rtrim((string) file_get_contents(self::MODULE . '/' . $path), "\n"), $yaml, sprintf('The README quotes %s as it no longer is.', $path));
     }
   }
 

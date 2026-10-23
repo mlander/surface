@@ -4592,6 +4592,129 @@ resource without reading these pages. Decided 2026-10-21.
 (`OpenApiDocument`, `SchemaComponents`, `OpenApiController`,
 `OpenApiDocumentTest`, `SchemaComponentsTest`, `OpenApiEndpointTest`)
 
+### A schema can be read back into a structure
+
+Decided 2026-10-22. A JSON Schema document is read into a blueprint by
+`Contract\SchemaReader`: the emitter run backwards, each keyword read
+as the declaration the emitter writes it from
+([Reading a schema](reading-a-schema.md) has the mapping). Two ways in:
+`$inputs->fromSchema($document)` in a class, and variants a provider
+lists from the site, each with its schema. Each choice, and why:
+
+- **The emitter's own mapping, reversed.** A keyword is read as what
+  the emitter writes it from, not by a vocabulary of the reader's own,
+  so what the module states and what it reads are one table, and the
+  full schema of a shipped declaration, read back, is that document
+  again. `SchemaRoundTripTest` holds that for every declaration of the
+  examples, the first resource and the test fixtures with no runtime
+  refiner: 34 documents byte for byte, and each that differs listed
+  with its kind (a coded refiner read back as a declared rule, a rule on
+  a port of a structure emitted alone, access, an alter's mount, keys
+  from the site), the coded ones held to differing in their markers
+  alone. A coded refiner cannot be read back: what it computes is code,
+  and the document holds its answers, which are read as declared rules,
+  or its `refine` marker, which is not read.
+- **Kept, not refused, not dropped.** What the vocabulary cannot say
+  (`not`, `uniqueItems`, `patternProperties`, `dependentSchemas`, a type
+  that is several types, a conditional outside the vocabulary or one
+  that widens, a reference to another document) is the part of the
+  schema left over, kept as a `JsonSchema` constraint on the key it is
+  about, or on the frame for what is said of the object, and checked by
+  the pipeline against that part. Refused, a document with one such
+  keyword would be no structure at all, and most documents written
+  outside this module have one; dropped, the structure would accept what
+  its schema refuses. Kept, the pipeline holds a value to exactly what
+  the schema says, and both documents name it under `checkedOnServer`,
+  wider than the pipeline there and never stricter
+  ([Two documents](#two-documents-never-stricter-than-the-runtime)). The
+  entry carries the schema beside its keywords, so a reader of a
+  document reads the same constraint back. A frame keeps its own on its
+  definition map, checked after its keys, its refusal path the frame's,
+  code `not_valid`, and named under the frame's own `checkedOnServer`.
+  Both are additive to contract 2: no document of a declaration written
+  in code changes. Refused
+  outright is only what cannot be read at all, naming its pointer: no
+  object at the root or a def, a key holding a dot, a reference to a
+  def the document lacks, a type JSON Schema does not have.
+- **opis/json-schema at runtime.** A kept part is checked with
+  opis/json-schema (Apache-2.0), a runtime dependency of the module now,
+  where it was the suite's alone; the README names its license. It reads
+  2020-12, the dialect every document here is written in, and it is the
+  validator the suite already holds both documents to, so the server
+  reads a kept part as the suite reads the whole. Core's validator for
+  single-directory components, justinrainbow/json-schema, reads drafts 3
+  to 7. It runs as a standard client does: extensions off, so no default
+  is filled before `required` is read; `format` not asserted, as an
+  annotation ([`format` is an annotation](#format-is-an-annotation)).
+  A reference to another document is never fetched: no loader is
+  registered, and a value it would decide is refused, naming the
+  reference, code `unresolved`, rather than accepted unchecked.
+- **Open objects.** A structure is closed: the pipeline refuses a key
+  nobody declared before it reads anything else, and such a key would
+  have no type, no label, no widget and no config schema. So a frame
+  read from an object that leaves `additionalProperties` out, or `true`,
+  is read closed, noted at its pointer: narrower than its source for a
+  document that relied on extra keys, which the note says. An object at
+  a key with no properties (`{"type": "object"}`), a value whose keys
+  nobody declares, is a value of type `any` held whole to its schema by
+  a `JsonSchema` constraint: a map with no declared keys, stored as it
+  is sent. Refusing either was turned down: single-directory components
+  and most tools leave `additionalProperties` out, and a component
+  closes its props at the root itself.
+- **Older drafts converted first.** Single-directory components write
+  draft-04 and many tools draft-07; `SchemaReader::upconvert()` turns
+  each into 2020-12 (`definitions`, boolean exclusive bounds, `id`,
+  `nullable`, tuple `items`, `dependencies`) before anything is read,
+  so there is one reader, for the dialect the emitter writes, and each
+  conversion applies whatever `$schema` says, since it reads a spelling
+  2020-12 does not have.
+- **Variants from a provider.** `attachVariants($key, by:, from:
+  Provider::class)` names a service implementing
+  `VariantsFromSiteInterface`, whose `variants()` answers a `VariantList`:
+  per value of the deciding key, its label and the schema of the
+  structure it chooses. Asked at every build, as a keys provider is
+  ([Keys that come from the site](#keys-that-come-from-the-site)), and
+  refused when it cannot be cached or varies by the account, for the
+  same reasons. `KeysFromSiteInterface` was weighed and turned down: its
+  entry is a key, with a starting value and a lock, where a variant is a
+  structure chosen by a value, so the default and the lock would mean
+  nothing and the schema would have no place. Derived variants were
+  turned down too: a derived variant is plain definitions with no rules,
+  children or variants of its own, and a schema may say all three, so
+  each listed variant is a structure read from its schema, built by the
+  same build step as a class. A declared `#[Variant]` wins for a value
+  both name. The contract does not change: `anyOf` of each variant's
+  def, one conditional per variant, the tool listing flattening them,
+  the React app narrowing locally, exactly as for a class's variants.
+- **Read structures are registered, not discovered.** Each object a
+  document holds as a structure (a def, an object a map cannot hold, a
+  variant) is registered by `ResourceRegistry::defineRead()` under
+  `schema:<id>:<hash>`, listed by no catalog, baseline or tool, and built
+  by name as any structure is. Its id is the def's key, `<owner>.<key>`
+  for an inline object and `<owner>.<key>.<value>` for a variant a
+  provider lists: the names the emitter gives a child with no class, so
+  a document read back writes the same defs.
+- **Rules at a site belong to the child.** A rule the container states
+  for a child it wires a port to (an `if` on the wired key, a `then`
+  reaching into the child) is moved into the child's def first, on the
+  port, once however many sites state it, so one def is one structure.
+- **Storage of variants from the site is open.** Which variants a site
+  has is not the code's, so no config schema written once can name
+  them: the generated schema types the key `ignore`, the variant the
+  deciding key chooses holds the value to its own keys before anything
+  is written, and the check that a resource advertises nothing its
+  config schema refuses reads `ignore` as refusing nothing.
+
+Open: a structure mixed in with its ports wired, whose wiring no
+document states; what a site narrows of a child (a lock its context
+made); a per-entry wiring of keys from the site; a `format` beyond
+`date`, `time` and `uuid` with a constraint of its own; a schema stored
+in configuration a site edits, as a provider of variants.
+(`Contract\SchemaReader`, `Resource\VariantsFromSiteInterface`,
+`Resource\VariantList`, `Plugin\Validation\Constraint\JsonSchemaConstraint`,
+`ResourceRegistry::defineRead()`, `DefinitionMap::frameConstraints()`,
+`SchemaReaderTest`, `SchemaRoundTripTest`, `VariantsFromSiteTest`)
+
 ## Evolution
 
 ### A resource evolves in the open

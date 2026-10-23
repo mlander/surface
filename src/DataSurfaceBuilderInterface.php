@@ -287,6 +287,27 @@ interface DataSurfaceBuilderInterface {
   public function addMixin(Mixin $mixin): static;
 
   /**
+   * Holds the frame as a whole to a JSON Schema its keys cannot say.
+   *
+   * What a schema document read into the frame says of the object rather
+   * than of one key (a conditional outside the vocabulary of declared
+   * rules, `dependentSchemas`, `not` over the object), checked by the
+   * pipeline against the frame's accepted values, and named under the
+   * frame's `x-surface.checkedOnServer` in both documents.
+   *
+   * Decision: see docs/decisions.md#a-schema-can-be-read-back-into-a-structure.
+   *
+   * @param array $schema
+   *   The JSON Schema 2020-12, as decoded with objects as arrays.
+   *
+   * @return $this
+   *
+   * @throws \LogicException
+   *   When the builder is already sealed.
+   */
+  public function constrainFrame(array $schema): static;
+
+  /**
    * Extends an existing definition's declared choices with more values.
    *
    * The contribution API for widening at build time (decision D2): the

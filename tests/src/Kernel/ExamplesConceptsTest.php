@@ -20,7 +20,9 @@ use Drupal\data_surface_examples\Resource\DoorsResource;
 use Drupal\data_surface_examples\Resource\InfoDeskResource;
 use Drupal\data_surface_examples\Resource\PressResource;
 use Drupal\data_surface_examples\Resource\ProgramResource;
+use Drupal\data_surface_examples\Resource\SpotlightResource;
 use Drupal\data_surface_examples\Resource\TicketSalesResource;
+use Drupal\data_surface_examples\Variants\ComponentProps;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use Drupal\tool\Tool\ToolOperation;
 use PHPUnit\Framework\Attributes\Group;
@@ -28,7 +30,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use Symfony\Component\HttpFoundation\Request;
 
 /**
- * Tests examples 7 to 11: one small resource per concept.
+ * Tests examples 7 to 12: one small resource per concept.
  *
  * Each through what a person sees, its form built and saved by the
  * generic operation form, and what a client reads, its two documents:
@@ -55,6 +57,25 @@ class ExamplesConceptsTest extends DataSurfaceKernelTestBase {
     'data_surface',
     'data_surface_tool',
     'data_surface_examples',
+  ];
+
+  /**
+   * Example 12: the components this module ships, by id.
+   */
+  protected const COMPONENTS = [
+    'data_surface_examples:call_to_action',
+    'data_surface_examples:card',
+    'data_surface_examples:hero',
+  ];
+
+  /**
+   * Example 12: the hero's props as its form posts them, less the overlay.
+   */
+  protected const HERO = [
+    'title' => 'Doors open at six',
+    'subtitle' => '',
+    'align' => 'start',
+    'full_width' => NULL,
   ];
 
   /**
@@ -433,7 +454,71 @@ class ExamplesConceptsTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests the panel above examples 7 to 11, and none above 1 to 3.
+   * Tests example 12: a component chosen, and its props read from its schema.
+   */
+  public function testTwelveReadsEachComponentsProps(): void {
+    $built = $this->container->get('data_surface.resources')->buildOperation(SpotlightResource::class, 'configure');
+    $variants = $built->getDefinitions()->entry('props')->variants;
+    $ours = array_values(array_filter(array_keys($variants->variants), static fn (string $id): bool => str_starts_with($id, 'data_surface_examples:')));
+    $this->assertSame(self::COMPONENTS, $ours, 'The three components this module ships are three variants.');
+    $this->assertContains('config:core.extension', $built->getCacheTags());
+    $this->assertSame('Card', (string) $this->options()->resolve($built->getDefinition('component'))->options['data_surface_examples:card']);
+
+    // The card's props, read: each a key with its type and constraints.
+    $card = $variants->variants['data_surface_examples:card']->child;
+    $this->assertSame(['heading', 'body', 'tone', 'link'], $card->getDefinitions()->names());
+    $this->assertTrue($card->getDefinition('heading')->isRequired());
+    $this->assertSame(['max' => 80], $card->getDefinition('heading')->getConstraint('Length'));
+    $this->assertSame([
+      'choices' => ['plain', 'highlight'],
+      'labels' => ['plain' => 'Plain', 'highlight' => 'Highlighted'],
+    ], $card->getDefinition('tone')->getConstraint('LabeledChoice'));
+    $this->assertSame('plain', $card->getDefault('tone'));
+    $this->assertSame('uri', $card->getDefinition('link')->getPropertyDefinition('url')->getDataType());
+    $hero = $variants->variants['data_surface_examples:hero']->child;
+    $this->assertSame(['min' => 0, 'max' => 100], $hero->getDefinition('overlay')->getConstraint('Range'));
+    $cta = $variants->variants['data_surface_examples:call_to_action']->child;
+    $this->assertSame(['max' => 3], $cta->getDefinition('tags')->getConstraint('Count'));
+
+    // Both documents state the components as variants.
+    $full = $this->full(SpotlightResource::class);
+    $this->assertSame('component', $full['properties']['props'][ContractEmitter::EXTENSION]['by']);
+    $this->assertSame('#/$defs/event.spotlight.props.data_surface_examples:card', $full['properties']['props'][ContractEmitter::EXTENSION]['variants']->{'data_surface_examples:card'});
+    $this->assertSame(['heading'], $full['$defs']['event.spotlight.props.data_surface_examples:card']['required']);
+
+    // The form draws the stored component's props; another chosen, its own.
+    $form = $this->formAt('data_surface_examples.step12');
+    $this->assertSame(['heading', 'body', 'tone', 'link'], Element::children($form['props']));
+    $this->assertSame('Doors open at half past six', $form['props']['heading']['#default_value']);
+    $state = $this->submitTheForm([
+      'component' => 'data_surface_examples:hero',
+      'props' => self::HERO + ['overlay' => '60'],
+    ]);
+    $this->assertSame([], $state->getErrors());
+    $this->assertSame([
+      'component' => 'data_surface_examples:hero',
+      'props' => [
+        'title' => 'Doors open at six',
+        'subtitle' => NULL,
+        'align' => 'start',
+        'overlay' => 60,
+        'full_width' => FALSE,
+      ],
+    ], $this->stored('data_surface_examples.spotlight'));
+    $this->assertCount(0, $this->container->get('config.typed')->get('data_surface_examples.spotlight')->validate(), 'What is stored is valid: the props are open in the config schema, and the hero held them to its own.');
+    $form = $this->formAt('data_surface_examples.step12');
+    $this->assertSame(['title', 'subtitle', 'align', 'overlay', 'full_width'], Element::children($form['props']));
+
+    // A hero darker than its schema allows is refused, as the schema says.
+    $state = $this->submitTheForm([
+      'component' => 'data_surface_examples:hero',
+      'props' => self::HERO + ['overlay' => '140'],
+    ]);
+    $this->assertStringContainsString('Overlay opacity: This value should be between', strip_tags((string) current($state->getErrors())));
+  }
+
+  /**
+   * Tests the panel above examples 7 to 12, and none above 1 to 3.
    */
   public function testThePanelSaysWhatEachShows(): void {
     $panel = $this->formAt('data_surface_examples.step3')[DataSurfaceOperationForm::PANEL_KEY];
@@ -447,6 +532,7 @@ class ExamplesConceptsTest extends DataSurfaceKernelTestBase {
       'step10' => 'event.program',
       'step10_check' => 'event.program',
       'step11' => 'event.doors',
+      'step12' => 'event.spotlight',
     ];
     $order = [ExamplePanels::CONCEPT, ExamplePanels::CONTRACT, ExamplePanels::TODAY];
     foreach ($pages as $route => $id) {
@@ -487,6 +573,16 @@ class ExamplesConceptsTest extends DataSurfaceKernelTestBase {
       'readOnlyHint true, destructiveHint false, idempotentHint true',
       'false',
     ], $panel['facts']['#rows'][1]);
+    // Example 12's component, its schema beside the structure it became.
+    $panel = $this->formAt('data_surface_examples.step12')[DataSurfaceOperationForm::PANEL_KEY][ExamplePanels::CONCEPT];
+    $read = json_decode(htmlspecialchars_decode((string) $panel['read']['content']['#value']), TRUE);
+    $this->assertSame(['heading'], $read['schema']['required']);
+    $this->assertSame('event.spotlight.props.data_surface_examples:card', $read['structure']['title']);
+    $notes = json_decode(htmlspecialchars_decode((string) $panel['notes']['content']['#value']), TRUE);
+    $this->assertSame(['/properties/link/additionalProperties' => 'Read closed: a map holds the keys it declares, and a key the schema leaves open is refused.'], $notes);
+    $contract = json_decode(htmlspecialchars_decode((string) $panel['contract']['content']['#value']), TRUE);
+    $this->assertSame(self::COMPONENTS, array_column($contract['component']['oneOf'], 'const'));
+    $this->assertSame('data_surface_examples:card', $contract['allOf'][0]['if']['properties']['component']['const']);
   }
 
   /**
@@ -500,6 +596,8 @@ class ExamplesConceptsTest extends DataSurfaceKernelTestBase {
       TicketSalesResource::class,
       ProgramResource::class,
       DoorsResource::class,
+      SpotlightResource::class,
+      ComponentProps::class,
     ];
     foreach ($classes as $class) {
       $lines = CodeLines::count((string) (new \ReflectionClass($class))->getFileName());

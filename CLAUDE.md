@@ -89,6 +89,30 @@ the record of the rework that brought the module to the pattern.
   none, any module may declare one.
 - **Variant**: one structure (or resource) among the variants, for one
   value of the deciding key, `#[Variant(of:, at:, for:)]`.
+- **Variants from the site**: variants a provider lists rather than
+  classes declare, `attachVariants($key, by: $sibling, from:
+  Provider::class)`; the provider implements `VariantsFromSiteInterface`,
+  whose `variants()` answers a `VariantList` (per value, its label and
+  the JSON Schema of what it chooses), asked at every build and refused
+  uncacheable or varying by the account. Each variant is a structure read
+  from its schema, id `<owner>.<key>.<value>`; a `#[Variant]` wins for a
+  value both name; stored open (`type: ignore` in the config schema)
+  (`docs/resources.md#variants-from-the-site`).
+- **Reading a schema**: `Contract\SchemaReader`
+  (`data_surface.schema_reader`), the emitter's mapping run backwards: a
+  JSON Schema document (2020-12; draft-04 to -07 converted first,
+  `upconvert()`) read into a blueprint, `$inputs->fromSchema($document)`,
+  or registered as a structure, `structure($document, $id)`. A def is one
+  structure (a read structure, registered by
+  `ResourceRegistry::defineRead()` as `schema:<id>:<hash>` and listed by
+  nothing), a conditional of the vocabulary a declared rule. What no
+  keyword says is a **foreign constraint**: the part left over, a
+  `JsonSchema` constraint on the key, or on the frame
+  (`DefinitionMap::frameConstraints()`), checked with opis and named
+  under `checkedOnServer` with its schema. The full schema of a
+  declaration reads back to itself (`SchemaRoundTripTest`)
+  (`docs/reading-a-schema.md`,
+  `docs/decisions.md#a-schema-can-be-read-back-into-a-structure`).
 - **Collection**: a list of child instances at a key, `attachList()`.
 - **Keys from the site**: one key per thing the site has, in a map at a
   key, `addEach('forms', 'boolean', from: Provider::class)` (a value of
@@ -283,11 +307,13 @@ and are not the thing to check. **No test may error and no test may
 fail**, the browser tests included; any error or failure is a real
 regression.
 
-The suite needs two packages a site may not have, both listed under
-`require-dev` in `composer.json`: the Tool Belt module
-(`drupal/tool_belt`), which the two tool comparison tests install, and
-`opis/json-schema`, which `ServedContractTest` validates the emitted
-schemas with. On a site where this module is a checkout and not a
+The suite needs two packages a site may not have: the Tool Belt module
+(`drupal/tool_belt`, under `require-dev` in `composer.json`), which the
+two tool comparison tests install, and `opis/json-schema`, which
+`ServedContractTest` validates the emitted schemas with and which the
+module itself needs at runtime, under `require`, to check what a
+structure read from a JSON Schema keeps of it (the `JsonSchema`
+constraint). On a site where this module is a checkout and not a
 Composer package, require both at the site root. Without them those
 tests error; they do not skip.
 

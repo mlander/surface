@@ -390,3 +390,17 @@ data_surface_examples.registration_step3.ticket.paid:
     currency:
       type: string
       label: 'Currency'
+
+# Generated from the event.spotlight resource by drush data_surface:config-schema.
+data_surface_examples.spotlight:
+  type: config_object
+  label: 'Spotlight, example 12'
+  constraints:
+    FullyValidatable: ~
+  mapping:
+    component:
+      type: string
+      label: 'Component'
+    props:
+      type: ignore
+      label: 'Props'

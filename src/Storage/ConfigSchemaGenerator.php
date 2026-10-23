@@ -396,6 +396,15 @@ final class ConfigSchemaGenerator {
     $held = $installed === NULL ? NULL : ($installed[$entry->name] ?? NULL);
     $definition = $entry->definition;
     $label = static::label($definition, $entry->name);
+    if ($entry->variants !== NULL && DefinitionMetadata::variantsFrom($entry->variants->shell) !== NULL) {
+      // Variants from the site: which there are is the site's, not the
+      // code's, so no schema written once can name them. The key is open
+      // here, and the variant its deciding key chooses holds it to its own
+      // keys before anything is written.
+      // Decision: see
+      // docs/decisions.md#a-schema-can-be-read-back-into-a-structure.
+      return ['type' => 'ignore', 'label' => $label];
+    }
     if ($entry->variants !== NULL) {
       $by = $entry->variants->by;
       $labels = [];

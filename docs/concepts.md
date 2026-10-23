@@ -8,8 +8,9 @@ time of day, a multi-select, a text area and the other keys a settings
 page often asks for are [Common settings recipes](recipes.md), one
 snippet each. Six rows are ways to make one resource or structure of
 others (an attached child, a mixin, a port, variants, a collection, keys
-from the site); [Which way to compose](resources.md#which-way-to-compose)
-sets them side by side. The last column is a page that shows the concept
+from the site), and variants may come from the site too;
+[Which way to compose](resources.md#which-way-to-compose) sets them side
+by side. The last column is a page that shows the concept
 on a site, of the examples module (`data_surface_examples`, drawn in
 React by `data_surface_react`) or the first resource's
 (`data_surface_first`), and a dash where none does.
@@ -55,6 +56,8 @@ React by `data_surface_react`) or the first resource's
 | Data surface | Do I call the build or the pipeline myself? | You write resources: the build is the module's. | - |
 | Child operations, `withChild()` | Should a parent's operation hand a child a context of its own, or invoke the child's operation? | No child has storage of its own. | - |
 | Keys from the site, `addEach()` and `attachEach()` | Is there one key per thing the site has, such as a checkbox per form or a select per character another module may add? ([Resources](resources.md#keys-that-come-from-the-site)) | Your class can list every key; or each thing is a resource of its own, with operations or storage, which a deriver makes. | `/surface-examples/9` |
+| Variants from the site, `attachVariants(..., from:)` | Does each thing the site has, such as each component its themes provide, choose a group of keys of its own, which a JSON Schema already describes? ([Resources](resources.md#variants-from-the-site)) | Each variant can be a class: `#[Variant]`. | `/surface-examples/12` |
+| Reading a schema, `fromSchema()` | Is what a resource takes described already, as a JSON Schema: a component's props, a tool's input, an OpenAPI component? ([Reading a schema](reading-a-schema.md)) | You write the keys in the class. | `/surface-examples/12` |
 | Derived resource, `#[DerivesResources]` | Are the keys the site's (one per bundle, one per field), not the code's? | Your class says every key. | - |
 | Derived variants | Can the variants at a key be read from a description that exists, such as config schema? | Each variant is a class. | - |
 | Catalog | What resources and operations does this site have? ([Catalog](catalog.md)) | You know your own. | - |
@@ -135,6 +138,7 @@ refused.
 | `ResourceDeriverInterface` | `use Drupal\data_surface\Resource\ResourceDeriverInterface;` |
 | `ResourceInterface` | `use Drupal\data_surface\Resource\ResourceInterface;` |
 | `ResourceStorageInterface` | `use Drupal\data_surface\Resource\ResourceStorageInterface;` |
+| `SchemaReader` | `use Drupal\data_surface\Contract\SchemaReader;` |
 | `SchemaViolations` | `use Drupal\data_surface\Storage\SchemaViolations;` |
 | `Shape` | `use Drupal\data_surface\Resource\Attribute\Shape;` |
 | `ShapeInterface` | `use Drupal\data_surface\Resource\ShapeInterface;` |
@@ -145,5 +149,7 @@ refused.
 | `StructureInterface` | `use Drupal\data_surface\Resource\StructureInterface;` |
 | `UsesStructure` | `use Drupal\data_surface\Resource\Attribute\UsesStructure;` |
 | `Variant` | `use Drupal\data_surface\Resource\Attribute\Variant;` |
+| `VariantList` | `use Drupal\data_surface\Resource\VariantList;` |
+| `VariantsFromSiteInterface` | `use Drupal\data_surface\Resource\VariantsFromSiteInterface;` |
 | `Violation` | `use Drupal\data_surface\Pipeline\Violation;` |
 | `ViolationSet` | `use Drupal\data_surface\Pipeline\ViolationSet;` |

@@ -156,7 +156,13 @@ resource the command writes:
   key of an entry free to be absent, since an entry is stored as it was
   accepted), and variants as a type their deciding key names,
   `<config>.<key>.[%parent.<deciding key>]`, each variant's mapping
-  written in the schema file of the module that declares it.
+  written in the schema file of the module that declares it. Variants
+  from the site are `type: ignore`: which there are is the site's, so no
+  schema written once can name them, and the chosen variant holds the
+  value to its own keys before anything is written
+  ([Variants from the site](resources.md#variants-from-the-site)); the
+  check that a resource offers nothing its schema refuses reads `ignore`
+  as refusing nothing.
 - **The install file**, `config/install/<config>.yml`: every key the
   object stores, in declaration order, the value the file already gives
   it (what a site starts from, which may differ from the default), the

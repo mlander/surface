@@ -68,6 +68,14 @@ services:
   data_surface.contract_emitter:
     class: Drupal\data_surface\Contract\ContractEmitter
     arguments: ['@data_surface.options', '@string_translation', '@validation.constraint']
+  # The emitter run backwards: a JSON Schema document read into the keys,
+  # children and rules of a structure, what it cannot say kept as a
+  # JsonSchema constraint. A blueprint's fromSchema() reads with it; a
+  # caller with a document of its own registers it here to build it.
+  data_surface.schema_reader:
+    class: Drupal\data_surface\Contract\SchemaReader
+    arguments: ['@data_surface.resource_registry', '@typed_data_manager']
+  Drupal\data_surface\Contract\SchemaReader: '@data_surface.schema_reader'
   # The additive-diff lint: each module's committed contract baselines,
   # and today's full schemas judged against them.
   data_surface.contract_baselines:

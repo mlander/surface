@@ -105,6 +105,14 @@ trait HeldToConfigSchemaTrait {
       return;
     }
     $type = (string) ($property['type'] ?? 'undefined');
+    if ($type === 'ignore') {
+      // The schema checks nothing here, so it refuses nothing the resource
+      // offers: variants from the site, which the chosen one holds to
+      // its own keys.
+      // Decision: see
+      // docs/decisions.md#a-schema-can-be-read-back-into-a-structure.
+      return;
+    }
     if ($entry->variants !== NULL) {
       $by = $entry->variants->by;
       foreach ($entry->variants->variants as $value => $variant) {

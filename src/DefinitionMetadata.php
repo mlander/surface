@@ -104,6 +104,11 @@ final class DefinitionMetadata {
   protected const EACH_KEY = 'data_surface_each';
 
   /**
+   * The offset where a key's variants say the provider that lists them.
+   */
+  protected const VARIANTS_FROM_KEY = 'data_surface_variants_from';
+
+  /**
    * The definition array key holding the label the owner gave a key.
    *
    * Written when an alter rewords a key it does not own, so what
@@ -567,6 +572,38 @@ final class DefinitionMetadata {
     }
     $each = $definition->offsetGet(static::EACH_KEY);
     return $each instanceof DataDefinitionInterface || is_string($each) ? $each : NULL;
+  }
+
+  /**
+   * Says that a key's variants come from the site, and from which provider.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The map attachVariants() declared.
+   * @param string $from
+   *   The provider's class.
+   *
+   * @see docs/decisions.md#a-schema-can-be-read-back-into-a-structure
+   */
+  public static function setVariantsFrom(DataDefinitionInterface $definition, string $from): void {
+    static::arrayAccess($definition)->offsetSet(static::VARIANTS_FROM_KEY, $from);
+  }
+
+  /**
+   * Reads which provider lists a key's variants from the site.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The definition to read.
+   *
+   * @return string|null
+   *   The provider's class; NULL for any other key, its variants classes
+   *   alone or none.
+   */
+  public static function variantsFrom(DataDefinitionInterface $definition): ?string {
+    if (!$definition instanceof \ArrayAccess || !$definition->offsetExists(static::VARIANTS_FROM_KEY)) {
+      return NULL;
+    }
+    $from = $definition->offsetGet(static::VARIANTS_FROM_KEY);
+    return is_string($from) ? $from : NULL;
   }
 
   /**

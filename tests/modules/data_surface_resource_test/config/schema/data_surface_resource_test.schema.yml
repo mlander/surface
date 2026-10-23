@@ -739,3 +739,18 @@ data_surface_resource_test.studio.third_party.data_surface_resource_test:
       constraints:
         Range:
           min: 0
+
+# The poster fixture: variants from the site, one per layout.
+# Generated from the resource_test.poster resource by drush data_surface:config-schema.
+data_surface_resource_test.poster:
+  type: config_object
+  label: 'Poster'
+  constraints:
+    FullyValidatable: ~
+  mapping:
+    layout:
+      type: string
+      label: 'Layout'
+    panels:
+      type: ignore
+      label: 'Panels'

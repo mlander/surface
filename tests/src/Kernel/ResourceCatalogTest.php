@@ -93,6 +93,7 @@ class ResourceCatalogTest extends DataSurfaceKernelTestBase {
       'event.program',
       'event.review',
       'event.sales',
+      'event.spotlight',
       'event.ticket_limit',
       'field.instance',
       'field.settings.address',

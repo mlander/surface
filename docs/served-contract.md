@@ -364,7 +364,7 @@ under `$defs`, and referred to ([reusable subschemas](#reusable-subschemas)).
 | `by`, `variants`, `chosen` | On a key with variants: the deciding key; a map from each value that chooses a variant to its def's pointer, `{"free": "#/$defs/registration.step3.ticket.free", "paid": "#/$defs/registration.step3.ticket.paid"}` (a list of the values in contract 1); and the value chosen now. |
 | `group` | Only when `true`, on `third_party_settings`: the object only groups one object per contributing module, each that module's fieldset, so it has no `title` or `description` and a renderer draws nothing around them, as the form does. |
 | `after` | On a module's object inside a `group`, when its alter placed it (`describe(..., after:)`): draw this fieldset after the named property of the object that contains its group. Only where it is drawn: its properties stay in the group, where its values are sent, and the schema's order and nesting do not move. |
-| `checkedOnServer` | Constraints no keyword states, each `{constraint, message}`: the constraint's plugin id, and what it checks, the constraint's own `message` where it was given one (a Regex's), else its plugin's label, else the id: `[{"constraint": "DataSurfaceUniqueNodeType", "message": "Unique content type machine name"}]`. A list of plugin ids in contract 1. |
+| `checkedOnServer` | Constraints no keyword states, each `{constraint, message}`: the constraint's plugin id, and what it checks, the constraint's own `message` where it was given one (a Regex's), else its plugin's label, else the id: `[{"constraint": "DataSurfaceUniqueNodeType", "message": "Unique content type machine name"}]`. A list of plugin ids in contract 1. A `JsonSchema` entry, what a structure read from a schema kept of it, carries the schema beside its message, `{"constraint": "JsonSchema", "message": "Checked on the server against the schema it was read from: uniqueItems.", "schema": {"uniqueItems": true}}`; on an object (the top, a def) it is what that schema says of the object as a whole ([Reading a schema](reading-a-schema.md#what-is-kept)). |
 | `patternMessage` | On a key with a `pattern`: the Regex's own message, which is how a person is told what the pattern allows. The pattern is for machines; a renderer explains the key by this, never by the pattern. |
 | `enumerated` | Only when `true`: the key's static refiners have nothing to refine against yet, and what they answer for every value they could be handed is stated as conditionals on the parent ([below](#exact-where-it-can-be)). Captured exactly: the schema is exact for this key with no round trip, less what `live` adds. |
 | `refine` | Only when `true` (`dynamic` in contract 1): the key's static refiners have nothing to refine against yet, and what they would answer cannot be listed (a watched key with no list of values, or too many combinations). Static by declaration, not captured here: the schema is the unrefined, looser one, wider than the pipeline and never narrower ([decision](decisions.md#two-documents-never-stricter-than-the-runtime)); refine when a `dependsOn` key changes. In [the full schema](#two-documents) every key that cannot be listed carries it. |
@@ -378,6 +378,15 @@ under `$defs`, and referred to ([reusable subschemas](#reusable-subschemas)).
 | `operation` | At the top only, after `contract`: how the operation behaves, `{id, label, description?, kind, creates, destructive, idempotent}` ([above](#the-schema)). Contract 1 also carried `readOnly`, which `kind: "read"` says. |
 | `version` | At the top always, after `operation`; on a def only above 1, absent reading as 1: which version of its stored values the resource or structure describes, counting the breaking changes made to them. A compatible change never moves it; a client compares it before trusting a cached document ([Evolving a resource](evolution.md#the-version)). |
 | `doesNotApply` | On an object, the top or a child's frame, never on a property: the keys of it a refiner answered [do not apply](refinement.md#when-a-key-does-not-apply) to these values, each with the keys it depends on, `{"send_day": ["frequency"]}`. They are no properties of it; a client refines when one of those changes. |
+
+A document is read as well as written. `Contract\SchemaReader` reads a
+JSON Schema into a structure by this page's table run backwards, and the
+full schema of a declaration, read back, is the same document again, but
+for what a coded refiner, an access answer, an alter's mount or a
+provider of keys says and no document can
+([Reading a schema](reading-a-schema.md#the-round-trip)). Variants a
+provider lists from the site, each read from its own schema, are stated
+here exactly as a class's variants are.
 
 Contract 1 also wrote `variant` on a variant's conditional, with the
 widget and the key's other facts, saying which value it was for.

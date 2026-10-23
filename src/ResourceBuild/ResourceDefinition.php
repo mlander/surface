@@ -94,6 +94,10 @@ final class ResourceDefinition {
    * @param int $version
    *   Which version of its stored values it describes: the attribute's,
    *   or 1 for a derived one and a plugin that carries no attribute.
+   * @param string|null $readAs
+   *   For a structure read from a schema document, the name it is asked
+   *   for by, which is not its id: the id is the document's, and may be a
+   *   discovered structure's too (ResourceRegistry::defineRead()).
    */
   public function __construct(
     public readonly ?string $class,
@@ -116,6 +120,7 @@ final class ResourceDefinition {
     public readonly array $cacheTags = [],
     public readonly string $kind = self::RESOURCE,
     public readonly int $version = 1,
+    public readonly ?string $readAs = NULL,
   ) {}
 
   /**
@@ -132,11 +137,22 @@ final class ResourceDefinition {
    * Gets the name it is asked for by.
    *
    * @return string
-   *   Its class, or a derived resource's id: what the registry is keyed
-   *   by, and what every caller hands the build step.
+   *   Its class, a derived resource's id, or the name a structure read
+   *   from a schema document was registered under: what the registry is
+   *   keyed by, and what every caller hands the build step.
    */
   public function name(): string {
-    return $this->class ?? $this->id;
+    return $this->readAs ?? $this->class ?? $this->id;
+  }
+
+  /**
+   * Answers whether it was read from a schema document.
+   *
+   * @return bool
+   *   TRUE for a structure SchemaReader made, which no discovery lists.
+   */
+  public function isRead(): bool {
+    return $this->readAs !== NULL;
   }
 
   /**
@@ -214,6 +230,7 @@ final class ResourceDefinition {
       cacheTags: $this->cacheTags,
       kind: $this->kind,
       version: $this->version,
+      readAs: $this->readAs,
     );
   }
 

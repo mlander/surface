@@ -20,12 +20,15 @@ use Drupal\data_surface_examples\Resource\ProgramResource;
 use Drupal\data_surface_examples\Resource\RegistrationStep1Resource;
 use Drupal\data_surface_examples\Resource\RegistrationStep2Resource;
 use Drupal\data_surface_examples\Resource\RegistrationStep3Resource;
+use Drupal\data_surface_examples\Resource\SpotlightResource;
 use Drupal\data_surface_examples\Resource\TicketSalesResource;
 use Drupal\data_surface_examples\Shape\PhoneNumber;
 use Drupal\data_surface_examples\Storage\RegistrationStep1Storage;
 use Drupal\data_surface_examples\Storage\RegistrationStep2Storage;
+use Drupal\data_surface_examples\Storage\SpotlightStorage;
 use Drupal\data_surface_examples\Structure\PersonStructure;
 use Drupal\data_surface_examples\Structure\ReviewStructure;
+use Drupal\data_surface_examples\Variants\ComponentProps;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -110,7 +113,7 @@ final class ExamplesController extends ControllerBase {
     foreach ($this->steps() as $number => $step) {
       if ($number === 7) {
         $steps['concepts'] = [
-          '#markup' => '<h2>' . $this->t('One small resource per concept') . '</h2><p>' . $this->t('Examples 7 to 11 leave the registration behind. Each is a small resource of its own for one or two concepts the registration does not need, and its page says first, above the contract, what it shows, where the docs explain it, and what its tool answers.') . '</p>',
+          '#markup' => '<h2>' . $this->t('One small resource per concept') . '</h2><p>' . $this->t('Examples 7 to 12 leave the registration behind. Each is a small resource of its own for one or two concepts the registration does not need, and its page says first, above the contract, what it shows, where the docs explain it, and what its tool answers.') . '</p>',
         ];
       }
       $steps[$number] = [
@@ -355,6 +358,15 @@ final class ExamplesController extends ControllerBase {
           $this->lines(DoorsResource::class),
         ],
       ],
+      12 => [
+        'title' => $this->t('a schema read into a structure'),
+        'sentence' => $this->t("A component chosen from the single-directory components the site has, and below it that component's props, read from the JSON Schema the component declares: one variant per component, which no class lists."),
+        'items' => [
+          $this->route('data_surface_examples.step12'),
+          $this->react('event.spotlight'),
+          $this->t("The resource, its provider and its storage: @lines lines of code; the components' schemas are no code.", ['@lines' => $this->spotlightLines()]),
+        ],
+      ],
     ];
   }
 
@@ -442,6 +454,16 @@ final class ExamplesController extends ControllerBase {
       'classic' => CodeLines::count($this->file(RegistrationStep2ClassicForm::class)),
       'resource' => CodeLines::count($this->file(RegistrationStep2Resource::class)) + CodeLines::count($this->file(RegistrationStep2Storage::class)),
     ];
+  }
+
+  /**
+   * Counts the lines of example 12's resource, provider and storage.
+   *
+   * @return int
+   *   The lines of code; the components' schemas are none.
+   */
+  protected function spotlightLines(): int {
+    return CodeLines::count($this->file(SpotlightResource::class)) + CodeLines::count($this->file(ComponentProps::class)) + CodeLines::count($this->file(SpotlightStorage::class));
   }
 
   /**

@@ -674,6 +674,44 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
   }
 
   /**
+   * Example 12: each component's props, read from its schema, as variants.
+   *
+   * The full schema states every component's def and one conditional per
+   * component, so both documents refuse what the pipeline refuses of the
+   * props: a bound, a length, a count, a value not on a list, a required
+   * prop missing, another component's prop. A URI is a format, advisory
+   * in both documents and checked by the pipeline's own type.
+   */
+  public function testExampleTwelve(): void {
+    $hero = ['component' => 'data_surface_examples:hero', 'props' => ['title' => 'Doors open at six']];
+    $cta = static fn (array $tags): array => [
+      'component' => 'data_surface_examples:call_to_action',
+      'props' => ['text' => 'Buy a ticket', 'url' => 'https://example.com/tickets', 'tags' => $tags],
+    ];
+    $this->assertTable('event.spotlight', $this->build('event.spotlight'), $this->stored('event.spotlight'), [
+      'as stored' => [[], TRUE],
+      'the hero, its title given' => [$hero, TRUE],
+      'the hero, as dark as its schema allows' => [['props' => ['overlay' => 100] + $hero['props']] + $hero, TRUE],
+      'the call to action with three tags' => [$cta(['music', 'film', 'talks']), TRUE],
+      'the card with its link cleared' => [['props' => ['link' => NULL]], TRUE],
+      'the call to action with four tags' => [$cta(['music', 'film', 'talks', 'food']), FALSE],
+      'a hero too dark' => [['props' => ['overlay' => 140] + $hero['props']] + $hero, FALSE],
+      'a hero with no title' => [['component' => 'data_surface_examples:hero', 'props' => ['align' => 'start']], FALSE],
+      'a heading too long' => [['props' => ['heading' => str_repeat('a', 81)]], FALSE],
+      'a tone the card does not offer' => [['props' => ['tone' => 'loud']], FALSE],
+      'a link with no address' => [['props' => ['link' => ['label' => 'Tickets']]], TRUE],
+      'a hero\'s prop sent for the card' => [['props' => ['overlay' => 60]], FALSE],
+      'a component the site does not have' => [['component' => 'data_surface_examples:banner'], FALSE],
+      'format is advisory: an address that is no URI' => [
+        ['props' => ['link' => ['url' => 'not a uri']]],
+        FALSE,
+        TRUE,
+        TRUE,
+      ],
+    ]);
+  }
+
+  /**
    * The exhibit: a key under each kind of access answer, posted.
    *
    * The full schema is emitted from the exhibit built for the account

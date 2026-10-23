@@ -1,0 +1,4 @@
+layout: grid
+panels:
+  columns: 3
+  gap: small

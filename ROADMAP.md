@@ -1210,6 +1210,24 @@ renames sit in A because they are cheapest before new code exists.
       `LongLivedWorkerMemoryTest`. Open: the Tool API's single item,
       read whole by every listing; H7 is ROADMAP item 11.
 
+15. **Reading a schema.** DONE 2026-10-22
+    (`docs/decisions.md#a-schema-can-be-read-back-into-a-structure`,
+    `docs/reading-a-schema.md`). `Contract\SchemaReader` reads a JSON
+    Schema (2020-12, draft-04 to -07 converted first) into a blueprint,
+    the emitter's mapping run backwards: `$inputs->fromSchema()`, and
+    variants from the site, `attachVariants(..., from:)` with a
+    `VariantsFromSiteInterface` provider, each variant read from its own
+    schema. What no keyword says is kept as a `JsonSchema` constraint on
+    the key or the frame, checked with opis/json-schema, now a runtime
+    dependency, and named under `checkedOnServer` with its schema. The
+    full schema of every shipped declaration with no runtime refiner
+    reads back to itself, or differs in what its kind says
+    (`SchemaRoundTripTest`). Example 12 reads every single-directory
+    component's props (`/surface-examples/12`). Open: a mixin's port
+    wiring and a site's lock, which no document states; a per-entry
+    wiring of keys from the site; more `format`s with a constraint of
+    their own; a preview of the chosen component on example 12's page.
+
 ## Rejected, on the record
 
 So they are not re-proposed: imperative input-mutation hooks before

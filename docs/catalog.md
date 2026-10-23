@@ -39,6 +39,7 @@ and changes a thing that exists, neither creating nor read only, is
 | [`event.program`](#eventprogram) | `ProgramResource` | none | `configure`, `check` |
 | [`event.review`](#eventreview) | `ReviewStructure` | none | none |
 | [`event.sales`](#eventsales) | `TicketSalesResource` | none | `configure` |
+| [`event.spotlight`](#eventspotlight) | `SpotlightResource` | none | `configure` |
 | [`event.ticket_limit`](#eventticket_limit) | `TicketLimitStructure` | none | none |
 | [`field.instance`](#fieldinstance) | `FieldInstanceResource` | `entity_type_id`, `bundle`, `field_name`, `field_type` | `add`, `reuse`, `edit` |
 | [`field.settings.address`](#fieldsettingsaddress) | `AddressFieldSettingsResource` | none | none |
@@ -196,6 +197,19 @@ and changes a thing that exists, neither creating nor read only, is
 | Operation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `configure` | Configure ticket sales | nothing | no | `administer site configuration` | yes | yes | `#[Operation] on TicketSalesResource` (`data_surface_examples`) |
+
+## event.spotlight
+
+`Drupal\data_surface_examples\Resource\SpotlightResource`, in `data_surface_examples`.
+
+- Kind: resource
+- Identity: none
+- Storage: `Drupal\data_surface_examples\Storage\SpotlightStorage`
+- Access: the operation's permission alone
+
+| Operation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `configure` | Configure the spotlight | nothing | no | `administer site configuration` | yes | yes | `#[Operation] on SpotlightResource` (`data_surface_examples`) |
 
 ## event.ticket_limit
 

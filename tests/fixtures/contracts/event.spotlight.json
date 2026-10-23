@@ -1,0 +1,385 @@
+{
+    "resource": "event.spotlight",
+    "module": "data_surface_examples",
+    "contract": 2,
+    "documents": [
+        {
+            "resource": "event.spotlight",
+            "operation": "configure",
+            "label": "Configure the spotlight",
+            "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "title": "Configure the spotlight",
+                "description": "Sets the component the event home page spotlights, chosen from the components the site has, and the props it is drawn with.",
+                "x-surface": {
+                    "contract": 2,
+                    "operation": {
+                        "id": "configure",
+                        "label": "Configure the spotlight",
+                        "description": "Sets the component the event home page spotlights, chosen from the components the site has, and the props it is drawn with.",
+                        "kind": "update",
+                        "creates": false,
+                        "destructive": false,
+                        "idempotent": true
+                    },
+                    "version": 1
+                },
+                "type": "object",
+                "properties": {
+                    "component": {
+                        "title": "Component",
+                        "type": "string",
+                        "oneOf": [
+                            {
+                                "const": "data_surface_examples:call_to_action",
+                                "title": "Call to action"
+                            },
+                            {
+                                "const": "data_surface_examples:card",
+                                "title": "Card"
+                            },
+                            {
+                                "const": "data_surface_examples:hero",
+                                "title": "Hero"
+                            }
+                        ],
+                        "default": "data_surface_examples:card",
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": []
+                        }
+                    },
+                    "props": {
+                        "title": "Props",
+                        "anyOf": [
+                            {
+                                "$ref": "#/$defs/event.spotlight.props.data_surface_examples:call_to_action"
+                            },
+                            {
+                                "$ref": "#/$defs/event.spotlight.props.data_surface_examples:card"
+                            },
+                            {
+                                "$ref": "#/$defs/event.spotlight.props.data_surface_examples:hero"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": [
+                                "component"
+                            ],
+                            "by": "component",
+                            "variants": {
+                                "data_surface_examples:call_to_action": "#/$defs/event.spotlight.props.data_surface_examples:call_to_action",
+                                "data_surface_examples:card": "#/$defs/event.spotlight.props.data_surface_examples:card",
+                                "data_surface_examples:hero": "#/$defs/event.spotlight.props.data_surface_examples:hero"
+                            }
+                        }
+                    }
+                },
+                "additionalProperties": false,
+                "required": [
+                    "component"
+                ],
+                "allOf": [
+                    {
+                        "if": {
+                            "properties": {
+                                "component": {
+                                    "const": "data_surface_examples:call_to_action"
+                                }
+                            },
+                            "required": [
+                                "component"
+                            ]
+                        },
+                        "then": {
+                            "properties": {
+                                "props": {
+                                    "title": "Props",
+                                    "$ref": "#/$defs/event.spotlight.props.data_surface_examples:call_to_action"
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "if": {
+                            "properties": {
+                                "component": {
+                                    "const": "data_surface_examples:card"
+                                }
+                            },
+                            "required": [
+                                "component"
+                            ]
+                        },
+                        "then": {
+                            "properties": {
+                                "props": {
+                                    "title": "Props",
+                                    "$ref": "#/$defs/event.spotlight.props.data_surface_examples:card"
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "if": {
+                            "properties": {
+                                "component": {
+                                    "const": "data_surface_examples:hero"
+                                }
+                            },
+                            "required": [
+                                "component"
+                            ]
+                        },
+                        "then": {
+                            "properties": {
+                                "props": {
+                                    "title": "Props",
+                                    "$ref": "#/$defs/event.spotlight.props.data_surface_examples:hero"
+                                }
+                            }
+                        }
+                    }
+                ],
+                "$defs": {
+                    "event.spotlight.props.data_surface_examples:call_to_action": {
+                        "title": "event.spotlight.props.data_surface_examples:call_to_action",
+                        "type": "object",
+                        "properties": {
+                            "text": {
+                                "title": "Button text",
+                                "type": "string",
+                                "maxLength": 40,
+                                "x-surface": {
+                                    "locked": false,
+                                    "dependsOn": []
+                                }
+                            },
+                            "url": {
+                                "title": "Address",
+                                "type": "string",
+                                "format": "uri",
+                                "x-surface": {
+                                    "locked": false,
+                                    "dependsOn": []
+                                }
+                            },
+                            "style": {
+                                "title": "Style",
+                                "type": "string",
+                                "oneOf": [
+                                    {
+                                        "const": "primary",
+                                        "title": "Primary"
+                                    },
+                                    {
+                                        "const": "secondary",
+                                        "title": "Secondary"
+                                    }
+                                ],
+                                "default": "primary",
+                                "x-surface": {
+                                    "locked": false,
+                                    "dependsOn": []
+                                }
+                            },
+                            "new_window": {
+                                "title": "Open in a new window",
+                                "type": "boolean",
+                                "default": false,
+                                "x-surface": {
+                                    "locked": false,
+                                    "dependsOn": []
+                                }
+                            },
+                            "tags": {
+                                "title": "Tags",
+                                "description": "Up to three words the button is filed under.",
+                                "type": [
+                                    "array",
+                                    "null"
+                                ],
+                                "items": {
+                                    "type": "string",
+                                    "x-surface": {
+                                        "locked": false,
+                                        "dependsOn": []
+                                    }
+                                },
+                                "maxItems": 3,
+                                "x-surface": {
+                                    "locked": false,
+                                    "dependsOn": []
+                                }
+                            }
+                        },
+                        "additionalProperties": false,
+                        "required": [
+                            "text",
+                            "url"
+                        ]
+                    },
+                    "event.spotlight.props.data_surface_examples:card": {
+                        "title": "event.spotlight.props.data_surface_examples:card",
+                        "type": "object",
+                        "properties": {
+                            "heading": {
+                                "title": "Heading",
+                                "type": "string",
+                                "maxLength": 80,
+                                "x-surface": {
+                                    "locked": false,
+                                    "dependsOn": []
+                                }
+                            },
+                            "body": {
+                                "title": "Text",
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "x-surface": {
+                                    "locked": false,
+                                    "dependsOn": []
+                                }
+                            },
+                            "tone": {
+                                "title": "Tone",
+                                "type": "string",
+                                "oneOf": [
+                                    {
+                                        "const": "plain",
+                                        "title": "Plain"
+                                    },
+                                    {
+                                        "const": "highlight",
+                                        "title": "Highlighted"
+                                    }
+                                ],
+                                "default": "plain",
+                                "x-surface": {
+                                    "locked": false,
+                                    "dependsOn": []
+                                }
+                            },
+                            "link": {
+                                "title": "Link",
+                                "type": [
+                                    "object",
+                                    "null"
+                                ],
+                                "properties": {
+                                    "url": {
+                                        "title": "Address",
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
+                                        "format": "uri",
+                                        "x-surface": {
+                                            "locked": false,
+                                            "dependsOn": []
+                                        }
+                                    },
+                                    "label": {
+                                        "title": "Link text",
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
+                                        "x-surface": {
+                                            "locked": false,
+                                            "dependsOn": []
+                                        }
+                                    }
+                                },
+                                "additionalProperties": false,
+                                "x-surface": {
+                                    "locked": false,
+                                    "dependsOn": []
+                                }
+                            }
+                        },
+                        "additionalProperties": false,
+                        "required": [
+                            "heading"
+                        ]
+                    },
+                    "event.spotlight.props.data_surface_examples:hero": {
+                        "title": "event.spotlight.props.data_surface_examples:hero",
+                        "type": "object",
+                        "properties": {
+                            "title": {
+                                "title": "Title",
+                                "type": "string",
+                                "x-surface": {
+                                    "locked": false,
+                                    "dependsOn": []
+                                }
+                            },
+                            "subtitle": {
+                                "title": "Subtitle",
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "x-surface": {
+                                    "locked": false,
+                                    "dependsOn": []
+                                }
+                            },
+                            "align": {
+                                "title": "Alignment",
+                                "type": "string",
+                                "oneOf": [
+                                    {
+                                        "const": "start",
+                                        "title": "Start"
+                                    },
+                                    {
+                                        "const": "center",
+                                        "title": "Center"
+                                    }
+                                ],
+                                "default": "center",
+                                "x-surface": {
+                                    "locked": false,
+                                    "dependsOn": []
+                                }
+                            },
+                            "overlay": {
+                                "title": "Overlay opacity",
+                                "description": "How dark the picture is under the title, in percent.",
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 100,
+                                "default": 40,
+                                "x-surface": {
+                                    "locked": false,
+                                    "dependsOn": []
+                                }
+                            },
+                            "full_width": {
+                                "title": "Full width",
+                                "type": "boolean",
+                                "default": false,
+                                "x-surface": {
+                                    "locked": false,
+                                    "dependsOn": []
+                                }
+                            }
+                        },
+                        "additionalProperties": false,
+                        "required": [
+                            "title"
+                        ]
+                    }
+                }
+            }
+        }
+    ]
+}

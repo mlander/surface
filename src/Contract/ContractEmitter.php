@@ -20,6 +20,7 @@ use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\DefinitionMap;
 use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Plugin\DataSurfaceWidget\CheckboxesWidget;
+use Drupal\data_surface\Plugin\Validation\Constraint\JsonSchemaConstraint;
 use Drupal\data_surface\Plugin\DataSurfaceWidget\OptionsWidget;
 use Drupal\data_surface\Plugin\DataSurfaceWidget\RadiosWidget;
 use Drupal\data_surface\Plugin\DataSurfaceWidget\TimeWidget;
@@ -1299,6 +1300,13 @@ final class ContractEmitter {
         'type' => $port->type,
         'required' => $port->required,
       ] + ($port->shape === NULL ? [] : ['shape' => $port->shape]), $listed);
+    }
+    if ($advertised->frameConstraints() !== []) {
+      // What a schema read into this frame says of the object as a whole,
+      // which no keyword here states: checked by the pipeline.
+      // Decision: see
+      // docs/decisions.md#a-schema-can-be-read-back-into-a-structure.
+      $schema[self::EXTENSION]['checkedOnServer'] = array_map(fn (array $foreign): array => static::foreign($foreign, $this->stringTranslation), $advertised->frameConstraints());
     }
     if ($advertised->mixins() !== []) {
       // Decision: see docs/decisions.md#a-mixin-is-merged-flat.
@@ -3692,6 +3700,14 @@ final class ContractEmitter {
    *   The entry.
    */
   protected function checked(string $name, mixed $options): array {
+    if ($name === 'JsonSchema' && is_array($options)) {
+      // What a structure read from a schema kept of it and no keyword of
+      // this document states: the keywords, and the schema itself, so a
+      // reader reads it back as the same constraint.
+      // Decision: see
+      // docs/decisions.md#a-schema-can-be-read-back-into-a-structure.
+      return static::foreign(is_array($options['schema'] ?? NULL) ? $options['schema'] : [], $this->stringTranslation);
+    }
     $message = is_array($options) ? ($options['message'] ?? NULL) : NULL;
     if (is_string($message) && $message !== '') {
       // phpcs:ignore Drupal.Semantics.FunctionT.NotLiteralString
@@ -3702,6 +3718,26 @@ final class ContractEmitter {
       $message = $label instanceof \Stringable || (is_string($label) && $label !== '') ? $label : $name;
     }
     return ['constraint' => $name, 'message' => PlainText::of($message)];
+  }
+
+  /**
+   * Names a JSON Schema only the server checks, and says which keywords.
+   *
+   * @param array $schema
+   *   The schema a JsonSchema constraint holds a value, or a frame, to.
+   * @param \Drupal\Core\StringTranslation\TranslationInterface $translation
+   *   The string translation service, for the message.
+   *
+   * @return array{constraint: string, message: string, schema: array|\stdClass}
+   *   The entry: `checkedOnServer`'s, with the schema beside the message.
+   */
+  public static function foreign(array $schema, TranslationInterface $translation): array {
+    $keywords = JsonSchemaConstraint::keywords($schema);
+    return [
+      'constraint' => 'JsonSchema',
+      'message' => PlainText::of(new TranslatableMarkup('Checked on the server against the schema it was read from: @keywords.', ['@keywords' => implode(', ', $keywords)], [], $translation)),
+      'schema' => $schema === [] ? new \stdClass() : $schema,
+    ];
   }
 
   /**
@@ -3780,7 +3816,9 @@ final class ContractEmitter {
   protected function choices(OptionSet $set, DataDefinitionInterface $definition): array {
     $choices = [];
     foreach ($set->options as $value => $label) {
-      $choice = ['const' => $this->cast($value, $definition), 'title' => PlainText::of($label)];
+      // A Choice of numbers is labeled by them, as numbers.
+      $title = PlainText::of(is_int($label) || is_float($label) ? (string) $label : $label);
+      $choice = ['const' => $this->cast($value, $definition), 'title' => $title];
       if (isset($set->descriptions[$value])) {
         $choice['description'] = PlainText::of($set->descriptions[$value]);
       }

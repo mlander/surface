@@ -40,8 +40,11 @@ array, and it is the property the module exists to prove out for
 
 ## Requirements
 
-Drupal 11.3 or 12, PHP 8.3 or newer. No dependencies beyond core, and no
-configuration of its own.
+Drupal 11.3 or 12, PHP 8.3 or newer, and
+[opis/json-schema](https://github.com/opis/json-schema) (Apache-2.0),
+which checks what a structure read from a JSON Schema keeps of it
+([Reading a schema](docs/reading-a-schema.md#what-is-kept)); Composer
+installs it with the module. No configuration of its own.
 
 ## Installation
 
@@ -323,11 +326,11 @@ their configuration may change without a deprecation path.
   that grows, one idea per example, at `/surface-examples`: each
   example a form beside the contract it emits, a classic twin for
   examples 1 and 2, and example 3 called as a tool with no form, with a reset
-  to the shipped settings for a retake. Then examples 7 to 11, a small
+  to the shipped settings for a retake. Then examples 7 to 12, a small
   resource each for a later concept: a rule written as data, one part
   used twice, keys that come from the site, access and how an operation
-  behaves, and the stock widgets, each page saying what it shows and
-  what its tool answers. Needs
+  behaves, the stock widgets, and a component's props read from its JSON
+  Schema, each page saying what it shows and what its tool answers. Needs
   [Tool](https://www.drupal.org/project/tool).
 - **Data Surface Examples - Compliance**
   (`data_surface_examples_compliance`): example 4, a compliance
@@ -374,7 +377,8 @@ nothing on it is needed to build.
 | Page | What it covers |
 | --- | --- |
 | [Declaring a resource or structure](docs/declaring-a-resource.md) | The class, adopting it on a plugin, defaults, locking, secrets, required. |
-| [Resources and structures](docs/resources.md) | Which way to compose, operations, alters, attached structures and variants, ports, mixins, collections, keys from the site, access, storage, tools, the catalog. |
+| [Resources and structures](docs/resources.md) | Which way to compose, operations, alters, attached structures and variants, variants from the site, ports, mixins, collections, keys from the site, access, storage, tools, the catalog. |
+| [Reading a schema](docs/reading-a-schema.md) | A JSON Schema read into a structure: the mapping, what is kept and checked on the server, what is noted and refused, older drafts, the round trip. |
 | [Refinement](docs/refinement.md) | An alter offering values and a refiner narrowing them, a rule declared as data, a key that does not apply, the narrowing table, cacheability, a worked example, and what it does not reach yet. |
 | [Options and resolvers](docs/options.md) | `LabeledChoice`, the resolver plugin type, the stock resolvers. |
 | [Storage](docs/storage.md) | What storage is, prepare and commit, the seven engine storage classes (a simple config object first), config schema, settings layouts, secrets, the serialization rule. |

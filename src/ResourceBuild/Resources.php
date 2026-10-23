@@ -37,6 +37,9 @@ use Drupal\data_surface\Resource\DefinesOutputsInterface;
 use Drupal\data_surface\Resource\AltersStorageLayoutInterface;
 use Drupal\data_surface\Resource\KeyedList;
 use Drupal\data_surface\Resource\KeysFromSiteInterface;
+use Drupal\data_surface\Resource\VariantList;
+use Drupal\data_surface\Resource\VariantsFromSiteInterface;
+use Drupal\data_surface\Contract\SchemaReader;
 use Drupal\data_surface\Resource\KnowsClearableKeysInterface;
 use Drupal\data_surface\Resource\AccessAnswer;
 use Drupal\data_surface\Resource\Attribute\Variant;
@@ -647,7 +650,7 @@ final class Resources implements ResourcesInterface {
         ));
       }
     }
-    $variantKeys = $this->variantKeysOf($definition, $inputs, $input_keys);
+    $variantKeys = $this->variantKeysOf($definition, $inputs, $input_keys, $builder);
 
     $this->applyContext($builder, $definition, $context, $input_keys, $attached, $lists);
     $ports = $inputs->ports();
@@ -814,7 +817,7 @@ final class Resources implements ResourcesInterface {
       }
       $declared = [...array_map('strval', array_keys($variants)), ...$withheld];
       static::assertListNarrowsVariants($builder, $definition, $key, $by, $declared);
-      $builder->attachVariants($key, $by, $variants, static::variantLabels($children));
+      $builder->attachVariants($key, $by, $variants, $variantKeys[$key]['labels'] + static::variantLabels($children));
       if ($runtime_variant) {
         $builder->markRuntimeAccess($key);
       }
@@ -1617,7 +1620,7 @@ final class Resources implements ResourcesInterface {
         $ruling[] = $refiner->key;
       }
     }
-    $this->bindRefiners($builder, $structure, static::resourceClass($structure), $structure->refiners, $keys, [], ports: $ports, translated: $reads);
+    $this->bindRefiners($builder, $structure, $structure->isDerived() ? $structure->name() : static::resourceClass($structure), $structure->refiners, $keys, [], ports: $ports, translated: $reads);
     $this->bindRules($builder, $structure, $mixin['blueprint']->rules(), NULL, $keys, [], [], [], [], [], $ruling, $ports, translated: $reads);
     foreach ($structure->alters as $alter) {
       if (!$alter->appliesIn($context->id)) {
@@ -2407,15 +2410,21 @@ final class Resources implements ResourcesInterface {
    *   The owner's input blueprint.
    * @param string[] $input_keys
    *   The owner's plain input keys.
+   * @param \Drupal\data_surface\DataSurfaceBuilderInterface $builder
+   *   The owner's builder, which what a provider of variants read reaches.
    *
-   * @return array<string, array{by: string, children: array<string, class-string>}>
+   * @return array<string, array{by: string, children: array<string, string>, labels: array<string, string|\Stringable>}>
    *   The variants at each key, filled from discovery's #[Variant]
-   *   classes.
+   *   classes, then from what a schema read into the blueprint states and
+   *   what a provider of variants from the site lists, each of those a
+   *   read structure by name, with the label each of those gives its
+   *   value.
    *
    * @throws \LogicException
-   *   When a deciding key is not a plain input of the owner.
+   *   When a deciding key is not a plain input of the owner, or a provider
+   *   of variants answers what cannot be kept.
    */
-  protected function variantKeysOf(ResourceDefinition $definition, ResourceBlueprint $inputs, array $input_keys): array {
+  protected function variantKeysOf(ResourceDefinition $definition, ResourceBlueprint $inputs, array $input_keys, DataSurfaceBuilderInterface $builder): array {
     $variantKeys = [];
     foreach ($inputs->variants() as $key => $by) {
       if (!in_array($by, $input_keys, TRUE)) {
@@ -2429,12 +2438,69 @@ final class Resources implements ResourcesInterface {
       // Every structure whose #[Variant] names this class and key is
       // one of the variants; the parent names none.
       // Decision: see docs/decisions.md#variants-nothing-declares.
+      $children = $this->registry->getVariants($definition->name(), $key);
+      $labels = [];
+      // A variant a schema read into the blueprint states, or one a
+      // provider lists from the site: a structure read from its schema,
+      // beside the declared ones, which win for a value both name.
+      // Decision: see
+      // docs/decisions.md#a-schema-can-be-read-back-into-a-structure.
+      foreach ($inputs->readVariants()[$key] ?? [] as $value => ['name' => $name, 'label' => $label]) {
+        $children[(string) $value] ??= $name;
+        if ($label !== NULL) {
+          $labels[(string) $value] = $label;
+        }
+      }
+      $from = $inputs->variantsFrom()[$key] ?? NULL;
+      if ($from !== NULL) {
+        $list = $this->variantsFrom($definition, (string) $key, $from);
+        $builder->addCacheableDependency($list);
+        foreach ($list->entries() as $value => ['label' => $label, 'schema' => $schema]) {
+          $value = (string) $value;
+          if (isset($children[$value])) {
+            continue;
+          }
+          $children[$value] = $inputs->readStructure($definition->id . '.' . $key . '.' . $value, SchemaReader::prepared($schema), '');
+          $labels[$value] = $label;
+        }
+      }
       $variantKeys[$key] = [
         'by' => $by,
-        'children' => $this->registry->getVariants($definition->name(), $key),
+        'children' => $children,
+        'labels' => $labels,
       ];
     }
     return $variantKeys;
+  }
+
+  /**
+   * Asks a provider for its variants, refusing a list that cannot be kept.
+   *
+   * Decision: see docs/decisions.md#a-schema-can-be-read-back-into-a-structure.
+   *
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   *   The owner, for the messages.
+   * @param string $key
+   *   The key the variants sit at, for the messages.
+   * @param class-string<\Drupal\data_surface\Resource\VariantsFromSiteInterface> $from
+   *   The provider's class.
+   *
+   * @return \Drupal\data_surface\Resource\VariantList
+   *   What it listed.
+   *
+   * @throws \LogicException
+   *   When the list cannot be cached, or varies by the account.
+   */
+  protected function variantsFrom(ResourceDefinition $definition, string $key, string $from): VariantList {
+    $list = $this->instance($from, VariantsFromSiteInterface::class)->variants();
+    if ($list->getCacheMaxAge() === 0) {
+      throw new \LogicException(sprintf('%s lists the variants at "%s" on %s with max-age 0. Variants from the site must be cacheable, since the form, both schema documents and the tool listing are kept with them: declare the cache tags of what it reads instead.', $from, $key, $definition->id));
+    }
+    $accounts = array_filter($list->getCacheContexts(), static fn (string $context): bool => $context === 'user' || str_starts_with($context, 'user.') || $context === 'session' || str_starts_with($context, 'session.'));
+    if ($accounts !== []) {
+      throw new \LogicException(sprintf('%s lists the variants at "%s" on %s varying by %s. Which variants there are is the site\'s, the same for every account; one an account may not choose is access, which the variant\'s access class answers.', $from, $key, $definition->id, implode(', ', $accounts)));
+    }
+    return $list;
   }
 
   /**

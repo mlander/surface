@@ -10,7 +10,7 @@ use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
 /**
- * Tests the tool calls of examples 7 to 11, and the README quoting them.
+ * Tests the tool calls of examples 7 to 12, and the README quoting them.
  *
  * Makes every call ConceptCalls writes down, on the settings the module
  * ships, the way each example's panel makes it, with example 10's
@@ -100,6 +100,9 @@ class ExamplesConceptsToolTest extends DataSurfaceKernelTestBase {
     $this->assertStringContainsString('"notes":null', $answers['event.doors']['null'], 'Null: cleared.');
     $this->assertStringContainsString('"notes":"Doors close at ten."', $answers['event.doors']['value'], 'A value: replaced.');
     $this->assertSame("Failed: The values were refused:\n" . 'badges: Badges cannot be cleared: it always holds a value, printed (Printed at the door) by default. Leave it out to keep what it holds.', $first($answers['event.doors']['always_held']));
+    $this->assertStringContainsString('values: {"component":"data_surface_examples:hero","props":{"title":"Doors open at half past six","subtitle":null,"align":"start","overlay":40,"full_width":false}}', $answers['event.spotlight']['hero'], 'The hero\'s props, read from its schema, its defaults filled in.');
+    $this->assertSame("Failed: The values were refused:\n" . 'props.align: props.align belongs to the data_surface_examples:hero variant, but component chose data_surface_examples:card.', $first($answers['event.spotlight']['wrong_component']), 'Refused, naming the component the props belong to.');
+    $this->assertSame("Failed: The values were refused:\n" . 'props.overlay: This value should be between 0 and 100.', $first($answers['event.spotlight']['out_of_bounds']));
 
     // The examples' README quotes every command, and every answer under
     // its call's label.

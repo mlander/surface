@@ -12,7 +12,7 @@
 # adding a line to it. Examples 4 and 5 change no resource, so their pages
 # say what to do and where to look.
 #
-# Examples 7 to 11 leave the registration behind: each is one small resource
+# Examples 7 to 12 leave the registration behind: each is one small resource
 # of its own for one or two later concepts, served the same way, with a
 # third panel saying what the page shows and where the docs explain it.
 
@@ -169,6 +169,17 @@ data_surface_examples.step11:
     _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
     _title: 'Example 11: the stock widgets, and what nothing means'
     _data_surface_resource: 'Drupal\data_surface_examples\Resource\DoorsResource'
+    _data_surface_operation: 'configure'
+    _data_surface_panel: 'data_surface_examples.panels'
+  requirements:
+    _data_surface_operation_access: 'TRUE'
+
+data_surface_examples.step12:
+  path: '/surface-examples/12'
+  defaults:
+    _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
+    _title: 'Example 12: a schema read into a structure'
+    _data_surface_resource: 'Drupal\data_surface_examples\Resource\SpotlightResource'
     _data_surface_operation: 'configure'
     _data_surface_panel: 'data_surface_examples.panels'
   requirements:

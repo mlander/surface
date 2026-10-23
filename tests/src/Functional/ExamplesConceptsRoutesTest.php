@@ -9,7 +9,7 @@ use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
 /**
- * Tests examples 7 to 11 over HTTP, as the video shows them.
+ * Tests examples 7 to 12 over HTTP, as the video shows them.
  *
  * On a fresh site with only the examples enabled: every route answers an
  * administrator and refuses anonymous, the landing page lists each, and
@@ -43,6 +43,7 @@ class ExamplesConceptsRoutesTest extends BrowserTestBase {
     'surface-examples/10' => 'Access says whether keys may be changed, seen, or neither',
     'surface-examples/10/check' => 'Access says whether keys may be changed, seen, or neither',
     'surface-examples/11' => 'Every stock widget, each chosen by what its key declares',
+    'surface-examples/12' => 'A JSON Schema the site already has is read into a structure, keyword by keyword',
   ];
 
   /**
@@ -65,6 +66,7 @@ class ExamplesConceptsRoutesTest extends BrowserTestBase {
       'Example 9: keys that come from the site',
       'Example 10: who may change what',
       'Example 11: the stock widgets, and what nothing means',
+      'Example 12: a schema read into a structure',
     ] as $title) {
       $assert->pageTextContains($title);
     }

@@ -19,6 +19,7 @@ use Drupal\data_surface\Resource\Attribute\Structure;
 use Drupal\data_surface\Resource\Attribute\Variant;
 use Drupal\data_surface\Resource\DerivedOperation;
 use Drupal\data_surface\Resource\OperationContext;
+use Drupal\data_surface\Resource\ResourceCallable;
 use Drupal\data_surface\Resource\DefinesOutputsInterface;
 use Drupal\data_surface\Resource\AltersAccessInterface;
 use Drupal\data_surface\Resource\AltersInputsInterface;
@@ -132,6 +133,17 @@ final class ResourceRegistry {
    * @var array<string, array{resources: array<string, \Drupal\data_surface\ResourceBuild\ResourceDefinition>, shapes: array<class-string, \Drupal\data_surface\ResourceBuild\ShapeDefinition>}>
    */
   protected array $provisional = [];
+
+  /**
+   * The structures read from a schema document, by the name each is asked by.
+   *
+   * Kept for the life of this service and listed by nothing: no catalog,
+   * baseline or tool sees them. Each is registered again, under the same
+   * name, whenever what reads it is built.
+   *
+   * @var array<string, \Drupal\data_surface\ResourceBuild\ResourceDefinition>
+   */
+  protected array $read = [];
 
   /**
    * How discovery was read in this request, for a performance budget.
@@ -553,6 +565,47 @@ final class ResourceRegistry {
   }
 
   /**
+   * Registers a structure read from a schema document, to be built by name.
+   *
+   * A document's object at a key, a def it refers to, a variant it states
+   * or one a provider supplies is a structure with no class: its inputs
+   * are what SchemaReader reads from the document. It is asked for by the
+   * name this answers, `schema:<id>:<hash>`, which the hash of what it
+   * was read from keeps the same for the same document and apart for
+   * another one claiming the same id; its id is the document's own.
+   *
+   * Decision: see docs/decisions.md#a-schema-can-be-read-back-into-a-structure.
+   *
+   * @param string $id
+   *   The id it has in the document: a def's key, or `<owner>.<key>`.
+   * @param string $module
+   *   The module of what reads it, which it is reported under.
+   * @param \Drupal\data_surface\Resource\ResourceCallable $inputs
+   *   What fills its blueprint.
+   * @param string $hash
+   *   A hash of what it is read from.
+   *
+   * @return string
+   *   The name it is built by.
+   */
+  public function defineRead(string $id, string $module, ResourceCallable $inputs, string $hash): string {
+    $name = 'schema:' . $id . ':' . $hash;
+    $this->read[$name] ??= new ResourceDefinition(
+      class: NULL,
+      id: $id,
+      module: $module,
+      identity: [],
+      storage: NULL,
+      access: NULL,
+      refiners: [],
+      inputs: $inputs,
+      kind: ResourceDefinition::STRUCTURE,
+      readAs: $name,
+    );
+    return $name;
+  }
+
+  /**
    * Gets every discovered shape.
    *
    * @return array<class-string, \Drupal\data_surface\ResourceBuild\ShapeDefinition>
@@ -746,6 +799,9 @@ final class ResourceRegistry {
    *   The definition, or NULL.
    */
   protected function find(string $resource): ?ResourceDefinition {
+    if (isset($this->read[$resource])) {
+      return $this->read[$resource];
+    }
     $provisional = $this->provisional();
     if ($provisional !== NULL) {
       if (isset($provisional['resources'][$resource])) {

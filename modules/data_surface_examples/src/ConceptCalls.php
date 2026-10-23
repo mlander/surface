@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Drupal\data_surface_examples;
 
 /**
- * The tool calls examples 7 to 11 show, written down once.
+ * The tool calls examples 7 to 12 show, written down once.
  *
  * None writes anything: every call is a dry run, which accepts, validates
  * and prepares the values, answers with what would be stored and stops,
@@ -111,6 +111,29 @@ final class ConceptCalls {
       'always_held' => [
         'label' => 'The badges sent null: refused, since they are always held',
         'values' => ['opens' => '19:00', 'days' => ['fri'], 'badges' => NULL],
+      ],
+    ],
+    'event.spotlight' => [
+      'hero' => [
+        'label' => 'The hero, with props it takes',
+        'values' => [
+          'component' => 'data_surface_examples:hero',
+          'props' => ['title' => 'Doors open at half past six', 'align' => 'start'],
+        ],
+      ],
+      'wrong_component' => [
+        'label' => 'A card sent the props of a hero',
+        'values' => [
+          'component' => 'data_surface_examples:card',
+          'props' => ['align' => 'start', 'overlay' => 60],
+        ],
+      ],
+      'out_of_bounds' => [
+        'label' => 'A hero darker than its schema allows',
+        'values' => [
+          'component' => 'data_surface_examples:hero',
+          'props' => ['title' => 'Doors open at half past six', 'overlay' => 140],
+        ],
       ],
     ],
   ];

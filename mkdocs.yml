@@ -33,6 +33,7 @@ nav:
   - The pattern: pattern.md
   - How it fits: how-it-fits.md
   - Resources and structures: resources.md
+  - Reading a schema: reading-a-schema.md
   - Catalog: catalog.md
   - Content entities: entities.md
   - Declaring a resource: declaring-a-resource.md

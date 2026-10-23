@@ -158,6 +158,7 @@ class OperationKindsTest extends DataSurfaceKernelTestBase {
       'data_surface:event.program:check' => 'read',
       'data_surface:event.program:configure' => 'update',
       'data_surface:event.sales:configure' => 'update',
+      'data_surface:event.spotlight:configure' => 'update',
       'data_surface:field.instance:add' => 'create',
       'data_surface:field.instance:edit' => 'update',
       'data_surface:field.instance:reuse' => 'create',

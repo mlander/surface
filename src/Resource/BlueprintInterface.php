@@ -36,20 +36,74 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
    * #[RefinesInput] method on an `any` key returning the narrower
    * definition itself; no verb is needed for it.
    *
+   * Variants from the site: `from:` names a provider implementing
+   * VariantsFromSiteInterface, asked at every build as a keys provider is,
+   * whose entries are one variant each, read from the JSON Schema each
+   * carries (SchemaReader), beside every #[Variant] at the key; a declared
+   * variant wins for a value both name. Each entry's label is what $by
+   * offers its value as.
+   *
+   * @code
+   * $inputs->attachVariants('props', by: 'component', from: ComponentProps::class)
+   *   ->setLabel(t('Props'));
+   * @endcode
+   *
    * @param string $key
    *   The key the structure sits at.
    * @param string $by
    *   The sibling input key whose value chooses the structure.
+   * @param string|null $from
+   *   The provider of variants from the site, by class, or NULL for the
+   *   #[Variant] classes alone.
    *
    * @return \Drupal\Core\TypedData\MapDataDefinition
    *   The map at the key, for the owner to label and describe with the
    *   core setters, as attach() returns it.
    *
    * @throws \LogicException
-   *   When the key is already declared, or for outputs, which do not
-   *   attach yet.
+   *   When the key is already declared, for outputs, which do not attach
+   *   yet, or when the provider implements no VariantsFromSiteInterface.
+   *
+   * @see docs/resources.md#variants-from-the-site
    */
-  public function attachVariants(string $key, string $by): MapDataDefinition;
+  public function attachVariants(string $key, string $by, ?string $from = NULL): MapDataDefinition;
+
+  /**
+   * Declares the keys a JSON Schema document describes.
+   *
+   * The document is read as SchemaReader reads it: JSON Schema 2020-12,
+   * or draft-04, -06 or -07 converted first; each property a key with
+   * its type, its label and description, its default and examples, and
+   * the constraints its keywords say; a nested object a map, or a
+   * structure attached at the key where it says more than a map can; a
+   * def it refers to one structure wherever it is used; an array a list
+   * or a collection; a `oneOf` of objects a sibling's `const` chooses
+   * between, variants; a conditional in the vocabulary of declared
+   * rules, a rule. What none of these can say is kept as a JsonSchema
+   * constraint, checked at runtime and named under `checkedOnServer`.
+   *
+   * @code
+   * $inputs->fromSchema([
+   *   'type' => 'object',
+   *   'properties' => ['heading' => ['type' => 'string', 'title' => 'Heading', 'maxLength' => 80]],
+   *   'required' => ['heading'],
+   * ]);
+   * @endcode
+   *
+   * @param array $document
+   *   The schema, decoded with objects as arrays: an object at its root.
+   *
+   * @return array<string, string>
+   *   What was read otherwise than as a key or a rule, or not at all, by
+   *   the JSON pointer of where it stands in the document: a keyword
+   *   dropped, kept as a foreign constraint, or read more narrowly.
+   *
+   * @throws \InvalidArgumentException
+   *   For a keyword the reader refuses, naming its pointer.
+   *
+   * @see docs/reading-a-schema.md
+   */
+  public function fromSchema(array $document): array;
 
   /**
    * A map with one value per thing the site has: keys from the site.

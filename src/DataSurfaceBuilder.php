@@ -196,6 +196,13 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
   protected array $mixins = [];
 
   /**
+   * What the frame as a whole is held to beyond its keys, in order.
+   *
+   * @var array<int, array>
+   */
+  protected array $frameConstraints = [];
+
+  /**
    * The wirings refinement edges came from, by target, then dependency.
    *
    * @var array<string, array<string, string>>
@@ -381,6 +388,15 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
     $this->assertMutable();
     $this->mixins[] = $mixin;
     $this->cacheability->addCacheableDependency($mixin->structure->child);
+    return $this;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function constrainFrame(array $schema): static {
+    $this->assertMutable();
+    $this->frameConstraints[] = $schema;
     return $this;
   }
 
@@ -799,6 +815,7 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
         held: $held,
         runtimeAccess: $this->runtimeAccessWhole ? array_map('strval', array_keys($definitions)) : array_values(array_intersect($this->runtimeAccess, array_keys($definitions))),
         lockReasons: array_intersect_key($this->lockReasons, $definitions),
+        frameConstraints: $this->frameConstraints,
       ),
       $this->cacheability,
       DefinitionMap::fromArrays(definitions: $outputs),

@@ -51,6 +51,7 @@ class ReadToolTest extends DataSurfaceKernelTestBase {
     'data_surface:event.press:configure:read',
     'data_surface:event.program:configure:read',
     'data_surface:event.sales:configure:read',
+    'data_surface:event.spotlight:configure:read',
     'data_surface:field.instance:edit:read',
     'data_surface:field.storage:edit:read',
     'data_surface:node.type:edit:read',

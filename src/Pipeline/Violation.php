@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Drupal\data_surface\Pipeline;
 
 use Symfony\Component\Validator\ConstraintViolationInterface;
+use Drupal\data_surface\Plugin\Validation\Constraint\JsonSchemaConstraint;
 use Symfony\Component\Validator\Constraints\Choice;
 use Symfony\Component\Validator\Constraints\Count;
 use Symfony\Component\Validator\Constraints\Email;
@@ -129,6 +130,21 @@ final class Violation {
   public const STALE = 'stale';
 
   /**
+   * Values a schema read into a structure refuses, beyond any key's rules.
+   *
+   * The code of a JsonSchema constraint's refusal too, read off its own
+   * code by codeOf().
+   */
+  public const NOT_VALID = 'not_valid';
+
+  /**
+   * Values a schema read into a structure cannot decide here.
+   *
+   * It refers to a document outside it, which is never fetched.
+   */
+  public const UNRESOLVED = 'unresolved';
+
+  /**
    * Symfony's constraints whose codes name a violation that lost its own.
    */
   protected const SYMFONY = [
@@ -141,6 +157,7 @@ final class Violation {
     Regex::class,
     Email::class,
     Type::class,
+    JsonSchemaConstraint::class,
   ];
 
   /**

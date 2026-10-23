@@ -23,6 +23,8 @@ use Drupal\data_surface\Options\DataSurfaceOptions;
 use Drupal\data_surface\Refinement\DoesNotApply;
 use Drupal\data_surface\Entry;
 use Drupal\data_surface\Collection;
+use Drupal\data_surface\Plugin\Validation\Constraint\JsonSchemaConstraint;
+use Drupal\data_surface\Plugin\Validation\Constraint\JsonSchemaConstraintValidator;
 use Symfony\Component\Validator\Constraints\Choice;
 
 /**
@@ -1092,6 +1094,20 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
         continue;
       }
       $errors = array_merge($errors, $this->sayingWhatIsAllowed($refusals, $surface, $refined, $name, $values, $choices));
+    }
+    foreach ($refined->getDefinitions()->frameConstraints() as $schema) {
+      // What a schema read into this frame says of the object as a whole,
+      // which no key and no rule could say, held to the values as accepted.
+      // Decision: see
+      // docs/decisions.md#a-schema-can-be-read-back-into-a-structure.
+      $verdict = JsonSchemaConstraintValidator::verdict($this->document($refined, $values), $schema);
+      if ($verdict === NULL) {
+        continue;
+      }
+      [$code, $said] = $verdict;
+      $errors[] = $code === JsonSchemaConstraint::UNRESOLVED_ERROR
+        ? new Violation('', '', $this->t('These values cannot be checked here: the schema they were read from refers to @reference, which is outside it.', ['@reference' => $said]), Violation::UNRESOLVED)
+        : new Violation('', '', $this->t('These values do not hold to the schema they were read from: @error', ['@error' => $said]), Violation::NOT_VALID);
     }
     return $errors;
   }

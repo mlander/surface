@@ -1,0 +1,8 @@
+component: 'data_surface_examples:card'
+props:
+  heading: 'Doors open at half past six'
+  body: 'Bring your ticket, on your phone or printed.'
+  tone: highlight
+  link:
+    url: 'https://example.com/tickets'
+    label: 'Find your ticket'

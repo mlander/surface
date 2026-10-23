@@ -12,7 +12,9 @@ use Drupal\Core\Session\UserSession;
 use Drupal\Core\State\StateInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslationInterface;
+use Drupal\Core\Theme\ComponentPluginManager;
 use Drupal\data_surface\Contract\ContractEmitter;
+use Drupal\data_surface\Contract\SchemaReader;
 use Drupal\data_surface\Contract\SchemaResolver;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\ResourceBuild\OperationRoute;
@@ -23,16 +25,19 @@ use Drupal\data_surface_examples\Keys\TicketTypes;
 use Drupal\data_surface_examples\Resource\BulletinResource;
 use Drupal\data_surface_examples\Resource\InfoDeskResource;
 use Drupal\data_surface_examples\Resource\PressResource;
+use Drupal\data_surface_examples\Resource\SpotlightResource;
 use Drupal\data_surface_examples\Shape\PhoneNumber;
 use Drupal\data_surface_examples\Structure\PersonStructure;
+use Drupal\data_surface_examples\Storage\SpotlightStorage;
 use Drupal\data_surface_examples\Structure\ReviewStructure;
+use Drupal\data_surface_examples\Variants\ComponentProps;
 use Drupal\data_surface_tool\OperationInputs;
 use Drupal\tool\Tool\ToolDefinition;
 use Drupal\tool\Tool\ToolManager;
 use Drupal\user\RoleInterface;
 
 /**
- * Says what one of examples 7 to 11 shows, above its contract panel.
+ * Says what one of examples 7 to 12 shows, above its contract panel.
  *
  * Each of those examples is one small resource for one or two concepts,
  * so its page says in one paragraph what it demonstrates and where the
@@ -85,7 +90,17 @@ final class ConceptPanel {
       'docs/semantics.md#absent-null-or-a-value',
       'docs/storage.md#a-schema-generated-from-the-resource',
     ],
+    'event.spotlight' => [
+      'docs/reading-a-schema.md',
+      'docs/resources.md#variants-from-the-site',
+      'docs/served-contract.md#variants-are-conditionals',
+    ],
   ];
+
+  /**
+   * Example 12: the prefix of the ids of the components this module ships.
+   */
+  public const COMPONENTS = 'data_surface_examples:';
 
   /**
    * Example 10's other module, whose alters answer for the program too.
@@ -123,6 +138,10 @@ final class ConceptPanel {
    *   The module handler, for the calls another module's part needs.
    * @param \Drupal\Core\State\StateInterface $state
    *   The State, set for a call that needs it and put back after.
+   * @param \Drupal\Core\Theme\ComponentPluginManager $components
+   *   The single-directory components, for example 12's chosen one.
+   * @param \Drupal\data_surface\Contract\SchemaReader $reader
+   *   The schema reader, for what it noted of example 12's chosen one.
    */
   public function __construct(
     protected readonly ContractEmitter $emitter,
@@ -134,6 +153,8 @@ final class ConceptPanel {
     TranslationInterface $string_translation,
     protected readonly ModuleHandlerInterface $moduleHandler,
     protected readonly StateInterface $state,
+    protected readonly ComponentPluginManager $components,
+    protected readonly SchemaReader $reader,
   ) {
     $this->stringTranslation = $string_translation;
   }
@@ -160,6 +181,7 @@ final class ConceptPanel {
       'event.sales' => $this->keysFromTheSite($declared, $values, $served),
       'event.program' => $this->accessAndFacts($served),
       'event.doors' => $this->widgets($declared, $values, $served),
+      'event.spotlight' => $this->schemaRead($declared, $values, $served),
       default => NULL,
     };
     if ($blocks === NULL) {
@@ -197,6 +219,7 @@ final class ConceptPanel {
       'event.sales' => $this->t("The ticket types are the site's, not the code's: one checkbox and one set of limits per type, listed by a provider that reads the site's configuration and says so in its cacheability. Add a type and reload: the form, both documents and the tool have its keys at the next request, with no cache rebuild. Each type's limits read whether that type is on sale, through a port the resource wires per type, <code>reads: ['selling' => 'on_sale']</code>: untick a type and its limits go, tick it and they return as stored. The full schema states the rule once per type, an <code>if</code> on <code>on_sale.&lt;type&gt;</code> and a <code>then</code> reaching into <code>limits.&lt;type&gt;</code>, and a tool that sends a limit for a type off sale is refused. The speaker type is locked there, so it is drawn fixed, <code>readOnly</code> in both documents, and a value a tool sends for it is not taken, which the answer says."),
       'event.program' => $this->t('Access says whether keys may be changed, seen, or neither, and its kind is read from its cacheability, never declared. The access class of the fees locks them for an account without "set event fees", which the account alone decides, so the full schema states the lock for that account. For any other account the program decides: once it is published, the fees are fixed, which only what is stored can say, so the full schema marks the fees <code>access: live</code> and the schema for these answers settles it. Each operation also states how a call behaves: configuring changes what exists and may be repeated, and checking, at /surface-examples/10/check, changes nothing, so its tool is a read and has no read tool beside it.'),
       'event.doors' => $this->t('Every stock widget, each chosen by what its key declares: a time input for a string that asks for one, checkboxes for a short list of choices, radios for one choice that asks for them, a text area for a multiline string, and rows with "Add another" for a list of free values. The config schema is fully validatable, so the storage knows which keys may hold nothing. A key a call leaves out keeps what is stored, null clears it, and a value replaces it; the badges, which the storage always holds, refuse null and name their default. The four dry runs below show each.'),
+      'event.spotlight' => $this->t("A JSON Schema the site already has is read into a structure, keyword by keyword: each single-directory component says what props it takes, and that schema is a variant at <code>props</code>, chosen by the component. The class names no component and no prop: a provider lists the components, with their schemas, and the reader turns each schema into keys with their types, labels, defaults, lists of values, bounds and required keys, and a nested object into a map. Choose another component and the props below it are that component's, over AJAX, and in React with no request. Both documents state the components as variants, <code>anyOf</code> of each component's def and one conditional per component, and the full schema of a component read back from them is the same document again. What the reader cannot say is kept, as a JsonSchema constraint the server checks, and noted. A tool that sends one component's props for another is refused, naming the component they belong to."),
       default => $this->t('Not an example of this series.'),
     };
   }
@@ -436,6 +459,67 @@ final class ConceptPanel {
         '#header' => [$this->t('Key'), $this->t('Widget'), $this->t('Type'), $this->t('Null sent for it')],
         '#rows' => $rows,
         '#attributes' => ['class' => ['data-surface-concept-widgets']],
+      ],
+    ];
+  }
+
+  /**
+   * Example 12: the chosen component's schema, and the structure it became.
+   *
+   * @param \Drupal\data_surface\DataSurfaceInterface $declared
+   *   The resource as built.
+   * @param array $values
+   *   The values the form is built with.
+   * @param \Drupal\data_surface\ResourceBuild\OperationRoute $served
+   *   What the form serves.
+   *
+   * @return array
+   *   The blocks.
+   */
+  protected function schemaRead(DataSurfaceInterface $declared, array $values, OperationRoute $served): array {
+    $component = is_string($values['component'] ?? NULL) && $this->components->hasDefinition($values['component']) ? $values['component'] : (string) $declared->getDefault('component');
+    $props = ComponentProps::props($this->components->getDefinition($component)['props'] ?? []);
+    $full = $this->full($served);
+    $def = 'event.spotlight.props.' . $component;
+    $component_key = $full['properties']['component'] ?? [];
+    $props_key = $full['properties']['props'] ?? [];
+    $count = count($component_key['oneOf'] ?? []);
+    // Cut to the components this module ships and the one chosen.
+    $shown = static fn (string $id): bool => str_starts_with($id, self::COMPONENTS) || $id === $component;
+    $component_key['oneOf'] = array_values(array_filter($component_key['oneOf'] ?? [], static fn (array $choice): bool => $shown((string) ($choice['const'] ?? ''))));
+    $props_key['anyOf'] = array_values(array_filter($props_key['anyOf'] ?? [], static fn (array $member): bool => !isset($member['$ref']) || $shown(substr((string) $member['$ref'], strlen(ContractEmitter::DEFS . 'event.spotlight.props.')))));
+    $props_key[ContractEmitter::EXTENSION]['variants'] = array_filter((array) ($props_key[ContractEmitter::EXTENSION]['variants'] ?? []), static fn (string $id): bool => $shown($id), ARRAY_FILTER_USE_KEY);
+    $conditional = array_values(array_filter($full['allOf'] ?? [], static fn (array $branch): bool => ($branch['if']['properties']['component']['const'] ?? NULL) === $component));
+    $notes = $this->reader->notes($props);
+    $lines = [];
+    foreach ([SpotlightResource::class, ComponentProps::class, SpotlightStorage::class] as $class) {
+      $lines[] = $this->t('@class: @lines lines of code.', [
+        '@class' => (new \ReflectionClass($class))->getShortName(),
+        '@lines' => CodeLines::count(self::file($class)),
+      ]);
+    }
+    $lines[] = $this->t('The three components this module ships, read like any other: no line of code, their props are schemas.');
+    $counted = ['@count' => $count, '@component' => $component];
+    return [
+      'read' => $this->details(
+        $this->t('@component: its props, and the structure they became', ['@component' => $component]),
+        $this->t('The props schema the component declares (<code>schema</code>), and its def in the full schema (<code>structure</code>), which the reader wrote it into: a key per prop, with its type, label, default, list of values and bounds, and the required props required.'),
+        $this->json(['schema' => $props, 'structure' => $full['$defs'][$def] ?? NULL]),
+      ),
+      'notes' => $this->details(
+        $this->t('What the reader noted'),
+        $this->t("Each keyword of the component's schema read otherwise than said, or not at all, by its JSON pointer: none means every keyword became a key, a constraint or a rule."),
+        $this->json($notes === [] ? ['none' => TRUE] : $notes),
+      ),
+      'contract' => $this->details(
+        $this->t('The variants, as the full schema states them'),
+        $this->t("The component key offers the @count components the site has, cut here to the three this module ships and the one chosen, and the props key is the union of their defs; the conditional below chooses @component's def, one of @count, one per component.", $counted),
+        $this->json(['component' => $component_key, 'props' => $props_key, 'allOf' => $conditional]),
+      ),
+      'lines' => [
+        '#theme' => 'item_list',
+        '#title' => $this->t('What it cost'),
+        '#items' => $lines,
       ],
     ];
   }

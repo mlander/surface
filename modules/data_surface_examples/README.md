@@ -9,9 +9,10 @@ Schema a caller with no form is handed. Below that, collapsed too, is
 the before picture: what the same caller could be told today, from
 config schema alone.
 
-Examples 7 to 11 leave the registration behind: each is a small resource
+Examples 7 to 12 leave the registration behind: each is a small resource
 of its own for one or two later concepts, a rule written as data, a part
-used twice, keys that come from the site, access, and the stock widgets
+used twice, keys that come from the site, access, the stock widgets, and
+a JSON Schema read into a structure
 ([below](#one-small-resource-per-concept)).
 
 ```bash
@@ -24,7 +25,8 @@ rooms are fixed lists inside the module, and each example keeps its
 settings in a config object of its own
 (`data_surface_examples.registration_step1` to `_step3`, then
 `data_surface_examples.bulletin`, `.press`, `.desk`, `.sales`,
-`.program` and `.doors`), so the examples never write over each other.
+`.program`, `.doors` and `.spotlight`), so the examples never write over
+each other.
 
 To take the examples again from the start, follow **Reset to defaults**
 on the landing page (`/surface-examples/reset`). It puts every config
@@ -1050,7 +1052,7 @@ endpoints described for any OpenAPI client.
 
 ## One small resource per concept
 
-Examples 7 to 11 leave the registration behind. Each is a small
+Examples 7 to 12 leave the registration behind. Each is a small
 resource of its own, for one or two concepts the registration form does
 not need, served the way examples 1 to 3 are: the generic operation form,
 the contract panel and what config schema can say. Above them, open, a
@@ -1887,12 +1889,244 @@ Failed: The values were refused:
 badges: Badges cannot be cleared: it always holds a value, printed (Printed at the door) by default. Leave it out to keep what it holds.
 ```
 
+## Example 12: a schema read into a structure
+
+`/surface-examples/12`
+
+A component chosen from the single-directory components the site has,
+and below it the props that component takes. The class lists neither:
+each component says what props it takes, in the JSON Schema of its
+`*.component.yml`, and a provider hands each schema to the reader, which
+writes it into a structure
+([Reading a schema](../../docs/reading-a-schema.md)). The components are
+variants at `props`, which the component chooses between, one per
+component the site has
+([Variants from the site](../../docs/resources.md#variants-from-the-site)).
+
+<!-- code: src/Resource/SpotlightResource.php -->
+
+```php
+#[Resource('event.spotlight', storage: SpotlightStorage::class)]
+#[Operation('configure',
+  label: new TranslatableMarkup('Configure the spotlight'),
+  description: new TranslatableMarkup('Sets the component the event home page spotlights, chosen from the components the site has, and the props it is drawn with.'),
+  permission: 'administer site configuration',
+)]
+final class SpotlightResource implements ResourceInterface {
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function defineInputs(BlueprintInterface $inputs): void {
+    $inputs->add('component', 'string', t('Component'), default: 'data_surface_examples:card')
+      ->setRequired(TRUE);
+    $inputs->attachVariants('props', by: 'component', from: ComponentProps::class)
+      ->setLabel(t('Props'));
+  }
+
+}
+```
+
+The provider lists every component, its own three among them, each by
+its id and its name, with its props as the component declares them. A
+prop typed by a PHP class takes a value only Twig code passes, which
+nothing stores: that type is left out, as the reader would refuse it.
+
+<!-- code: src/Variants/ComponentProps.php -->
+
+```php
+final class ComponentProps implements VariantsFromSiteInterface, ContainerInjectionInterface {
+
+  /**
+   * The JSON Schema types; a component may also name a PHP class.
+   */
+  protected const JSON_TYPES = ['array', 'boolean', 'integer', 'null', 'number', 'object', 'string'];
+
+  /**
+   * Constructs the provider.
+   *
+   * @param \Drupal\Core\Theme\ComponentPluginManager $components
+   *   The single-directory components the site has.
+   */
+  public function __construct(
+    protected readonly ComponentPluginManager $components,
+  ) {}
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function create(ContainerInterface $container): static {
+    return new static($container->get('plugin.manager.sdc'));
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function variants(): VariantList {
+    $variants = (new VariantList())->addCacheTags(['config:core.extension']);
+    $components = $this->components->getDefinitions();
+    ksort($components);
+    foreach ($components as $id => $component) {
+      $variants->add((string) $id, (string) ($component['name'] ?? $id), self::props($component['props'] ?? []));
+    }
+    return $variants;
+  }
+
+  /**
+   * Writes a component's props as the JSON Schema it is checked with.
+   *
+   * Closed, as core reads them. A prop typed by a PHP class takes a value
+   * only Twig code passes, which nothing stores: that type is left out,
+   * and a prop with no other type with it.
+   *
+   * @param array $props
+   *   The props as the component declares them.
+   *
+   * @return array
+   *   The schema.
+   */
+  public static function props(array $props): array {
+    $props += ['type' => 'object', 'properties' => []];
+    foreach ($props['properties'] as $name => $prop) {
+      $types = (array) ($prop['type'] ?? []);
+      $json = array_values(array_intersect($types, self::JSON_TYPES));
+      if (count($json) === count($types)) {
+        continue;
+      }
+      if ($json === []) {
+        unset($props['properties'][$name]);
+        $props['required'] = array_values(array_diff($props['required'] ?? [], [$name]));
+        continue;
+      }
+      $props['properties'][$name]['type'] = $json;
+    }
+    $props['additionalProperties'] = FALSE;
+    return $props;
+  }
+
+}
+```
+
+The module ships three components, so the page holds something whatever
+the site's themes provide: a card, a hero and a call to action, with
+props of every type, lists of values, bounds, required props, a nested
+object and an array between them. The card, as it declares itself:
+
+<!-- component: components/card/card.component.yml -->
+
+```yaml
+$schema: https://git.drupalcode.org/project/drupal/-/raw/HEAD/core/assets/schemas/v1/metadata.schema.json
+name: Card
+status: stable
+description: 'A heading, a line of text and a link. Example 12 reads its props into a structure.'
+props:
+  type: object
+  required:
+    - heading
+  properties:
+    heading:
+      type: string
+      title: Heading
+      maxLength: 80
+    body:
+      type: ['string', 'null']
+      title: Text
+    tone:
+      type: string
+      title: Tone
+      enum:
+        - plain
+        - highlight
+      meta:enum:
+        plain: Plain
+        highlight: Highlighted
+      default: plain
+    link:
+      type: object
+      title: Link
+      properties:
+        url:
+          type: string
+          format: uri
+          title: Address
+        label:
+          type: ['string', 'null']
+          title: Link text
+```
+
+Read, each prop is a key. The heading is a required string of up to 80
+characters, the text a string that may be cleared, the tone a choice of
+Plain and Highlighted, labeled by `meta:enum` and starting from plain,
+and the link a map whose address is a URI. The page shows the card's
+schema beside the def it became in the full schema, what the reader
+noted (the link is an object that leaves `additionalProperties` out,
+read closed), and the variants as the full schema states them, one
+conditional per component:
+
+```json
+"props": {
+  "title": "Props",
+  "anyOf": [..., {"$ref": "#/$defs/event.spotlight.props.data_surface_examples:card"}, ...],
+  "x-surface": {"dependsOn": ["component"], "by": "component",
+                "variants": {..., "data_surface_examples:card": "#/$defs/event.spotlight.props.data_surface_examples:card", ...}}
+},
+...
+"allOf": [
+  ...,
+  {"if": {"properties": {"component": {"const": "data_surface_examples:card"}}, "required": ["component"]},
+   "then": {"properties": {"props": {"title": "Props", "$ref": "#/$defs/event.spotlight.props.data_surface_examples:card"}}}},
+  ...
+]
+```
+
+Choose another component and the props below it are that component's:
+the form rebuilds them over AJAX, and the React page draws them with no
+request, since the full schema states every component's def. The card's
+def read back is the card again, byte for byte, as every document of
+these examples a runtime refiner does not narrow reads back to itself
+([the round trip](../../docs/reading-a-schema.md#the-round-trip)).
+
+The config object holds the component's id and its props. Its config
+schema is written from the resource, and the props are `type: ignore`
+there: which components a site has is the site's, so no schema written
+once can name their props, and the variant the component chooses holds
+them to its keys before anything is written. The resource, its provider
+and its storage are the code; the components' schemas are none.
+
+A tool that sends one component's props for another is refused, naming
+the component they belong to; one that sends a hero darker than its
+schema allows is refused by the bound the schema states.
+
+```bash
+drush tool:run data_surface:event.spotlight:configure --uid=1 --input='{"values":{"component":"data_surface_examples:hero","props":{"title":"Doors open at half past six","align":"start"}}}' --input=dry_run=true
+
+drush tool:run data_surface:event.spotlight:configure --uid=1 --input='{"values":{"component":"data_surface_examples:card","props":{"align":"start","overlay":60}}}' --input=dry_run=true
+
+drush tool:run data_surface:event.spotlight:configure --uid=1 --input='{"values":{"component":"data_surface_examples:hero","props":{"title":"Doors open at half past six","overlay":140}}}' --input=dry_run=true
+```
+
+```
+1. The hero, with props it takes
+Success: Dry run of Configure the spotlight: the values were accepted and prepared, and nothing was written.
+  values: {"component":"data_surface_examples:hero","props":{"title":"Doors open at half past six","subtitle":null,"align":"start","overlay":40,"full_width":false}}
+
+2. A card sent the props of a hero
+Failed: The values were refused:
+props.align: props.align belongs to the data_surface_examples:hero variant, but component chose data_surface_examples:card.
+props.overlay: props.overlay belongs to the data_surface_examples:hero variant, but component chose data_surface_examples:card.
+
+3. A hero darker than its schema allows
+Failed: The values were refused:
+props.overlay: This value should be between 0 and 100.
+```
+
 ## How this page is kept true
 
 Every code block above is the file it names, from its first attribute
 or its class line to its closing brace, and `ExamplesReadmeTest` fails
-when one drifts. The Drush commands and answers of examples 7 to 11 are
-asserted by `ExamplesConceptsToolTest`. The JSON of example 1's config schema is asserted by
+when one drifts, and so does the component example 12 quotes. The Drush
+commands and answers of examples 7 to 12 are asserted by
+`ExamplesConceptsToolTest`. The JSON of example 1's config schema is asserted by
 `ConfigSchemaContractTest`, which also checks this page quotes it. The tool's three answers are asserted by
 `ExamplesToolTest`, which also checks this page quotes them, and the
 Drush commands are checked against `ExampleCalls`.
@@ -1914,7 +2148,9 @@ Drush commands are checked against `ExampleCalls`.
 | `Functional\ServedContractEndpointsTest` | In React: the landing page's links, and example 2's contract, refine and validate over HTTP. |
 | `Functional\ServedSubmitEndpointTest` | In React: example 2 saved over HTTP, refused, and refused after someone else saved. |
 | `Kernel\ExamplesResetTest` | Reset to defaults puts every example, and what another module stored on example 3, back to the shipped files, and opens every room example 4 closed. |
-| `Kernel\ExamplesConceptsTest` | Examples 7 to 11: each form builds and saves; example 7's rules in the full schema as declared, the send day gone for a monthly bulletin and kept in storage; example 8's one def at two sites with each wiring, the mixed-in keys flat, the shape at two keys, the volunteers' collection; example 9's keys from the configuration, a type added without a cache rebuild, the locked type in both documents and on the form; example 10's fees for two accounts, locked once published, and both operations' facts and tools; example 11's widgets, the always held badges and the notes that clear; the panel above each, and none above examples 1 to 3; each class stays screen sized. |
+| `Kernel\ExamplesConceptsTest` | Examples 7 to 12: each form builds and saves; example 7's rules in the full schema as declared, the send day gone for a monthly bulletin and kept in storage; example 8's one def at two sites with each wiring, the mixed-in keys flat, the shape at two keys, the volunteers' collection; example 9's keys from the configuration, a type added without a cache rebuild, the locked type in both documents and on the form; example 10's fees for two accounts, locked once published, and both operations' facts and tools; example 11's widgets, the always held badges and the notes that clear; example 12's three components read as three variants, the card's props as keys with their constraints, both documents stating them, the form swapped to the hero and saved, a hero too dark refused; the panel above each, and none above examples 1 to 3; each class stays screen sized. |
 | `Kernel\ExamplesWorkflowTest` | Example 10 with the workflow module: the fees left out of the full schema, the tool listing and the read tool for an account without "see event fees" and kept for one with it; the program locked whole once the workflow state is published, settled at call time and left unmarked in the full schema; checking still answers; the panel's paragraph, with the module and without it. |
-| `Kernel\ExamplesConceptsToolTest` | Examples 7 to 11: every call `ConceptCalls` writes down, its answer, nothing written, and this page quoting each command and answer. |
-| `Functional\ExamplesConceptsRoutesTest` | Every route of examples 7 to 11 answers an administrator and refuses anonymous; the landing page lists them; each page shows its panel and saves through its form; example 10's check writes nothing. |
+| `Kernel\ExamplesConceptsToolTest` | Examples 7 to 12: every call `ConceptCalls` writes down, its answer, nothing written, and this page quoting each command and answer. |
+| `Functional\ExamplesConceptsRoutesTest` | Every route of examples 7 to 12 answers an administrator and refuses anonymous; the landing page lists them; each page shows its panel and saves through its form; example 10's check writes nothing. |
+| `FunctionalJavascript\ExamplesSpotlightAjaxTest` | Example 12 in a browser: choosing the hero swaps the card's props for the hero's over AJAX, the form saved stores the hero and its props, and the page read back draws them. |
+| `Kernel\SchemaRoundTripTest` | Every example's full schema, read back by the reader, is itself again, byte for byte, or differs only as its listed kind says. |

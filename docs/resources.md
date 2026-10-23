@@ -27,7 +27,7 @@ page of its own.
 | Is this group of keys a thing of its own? | `attach($key, Child::class)`: a fixed child, its keys stored as a map under the key, behind the wall; the schema refers to the child's def at the key. | The contact, `/surface-examples/3`; the press contact, `/surface-examples/8` | [Children](#children) |
 | Are these keys shared members that are part of this thing? | `mixIn(Structure::class)`: a mixin, its members the owner's own keys, stored flat beside them; the schema is `allOf` of the structure's def and the owner's properties. | The review, `/surface-examples/8` | [Mixins](#mixins) |
 | Does a structure need a value its container holds? | `reads($port, $type)` in the structure, wired by `attach(..., reads: [$port => $key])`: a port, the value kept at the container's key and stored by nothing in the structure; the def lists its ports, and what depends on one is stated on the container's `allOf`. | The person's `listed`, `/surface-examples/8` and `/surface-examples/8/desk` | [Ports](#ports) |
-| Does one key's value choose which further keys apply? | `attachVariants($key, by: $sibling)` and a `#[Variant]` per value: variants, the chosen variant's keys stored under the key; the schema is an `if`/`then` on the sibling for each variant. | The ticket, `/surface-examples/3` | [Variants](#variants) |
+| Does one key's value choose which further keys apply? | `attachVariants($key, by: $sibling)` and a `#[Variant]` per value, or `from:` a provider that lists them from the site, each with its schema: variants, the chosen variant's keys stored under the key; the schema is an `if`/`then` on the sibling for each variant. | The ticket, `/surface-examples/3`; a component's props, `/surface-examples/12` | [Variants](#variants), [from the site](#variants-from-the-site) |
 | Does a group of keys repeat? | `attachList($key, Child::class, min:, max:)`: a collection, a list under the key whose every item is the child's keys; the schema is an array whose `items` refer to the child's def, its Count as `minItems` and `maxItems`. | The volunteers, `/surface-examples/8/desk` | [Collections](#collections) |
 | Is there one key per thing the site has? | `addEach()` or `attachEach()` with a provider: keys from the site, a map under the key with one entry per thing the provider lists at every build; the schema states every entry, the map a def of the owner's. | The ticket types, `/surface-examples/9` | [Keys that come from the site](#keys-that-come-from-the-site) |
 
@@ -1656,6 +1656,71 @@ and `settings.max_length` on `data_surface:field.storage:edit`. The
 catalog lists the declared variants per key, and says where the
 derived ones come from.
 
+### Variants from the site
+
+Some variants are the site's, not the code's: one per component a
+site's themes provide, one per layout its configuration lists. No class
+can be written for each, and each says what it holds already, in a
+JSON Schema. `attachVariants()` names a provider that lists them, each
+with its schema, and the reader writes each schema into a variant
+([Reading a schema](reading-a-schema.md)):
+
+```php
+// SpotlightResource, example 12
+$inputs->add('component', 'string', t('Component'), default: 'data_surface_examples:card')
+  ->setRequired(TRUE);
+$inputs->attachVariants('props', by: 'component', from: ComponentProps::class)
+  ->setLabel(t('Props'));
+
+// ComponentProps, a service
+final class ComponentProps implements VariantsFromSiteInterface {
+
+  public function variants(): VariantList {
+    $variants = (new VariantList())->addCacheTags(['config:core.extension']);
+    $components = $this->components->getDefinitions();
+    ksort($components);
+    foreach ($components as $id => $component) {
+      $variants->add((string) $id, (string) ($component['name'] ?? $id), self::props($component['props'] ?? []));
+    }
+    return $variants;
+  }
+
+}
+```
+
+Each class's `use` line: [Namespaces](concepts.md#namespaces).
+
+- **The provider** implements `VariantsFromSiteInterface`: `variants()`
+  answers a `VariantList`, per value of the deciding key its label and
+  the schema of what it chooses, an object in JSON Schema 2020-12 or an
+  older draft. It is built by the class resolver, and asked at every
+  build, as a provider of [keys from the site](#keys-that-come-from-the-site)
+  is, with the same rules for its cacheability: what it read is the
+  built resource's, a list with max-age 0 is refused, and so is one that
+  varies by the account.
+- **Each variant is a structure read from its schema**, its id
+  `<owner>.<key>.<value>` (`event.spotlight.props.data_surface_examples:card`),
+  built by the build step as a class is: its keys, their constraints,
+  its maps, children, variants and rules, what its schema says.
+- **Beside the classes.** Every `#[Variant]` at the key is a variant as
+  before, and wins for a value both name; the deciding key offers each
+  value under the provider's label, unless it declares a list of its
+  own, which narrows them as it narrows a class's.
+- **Stated as variants are.** Both documents write each variant as a
+  def and the key as `anyOf` of them, with one conditional per value;
+  the tool lists them, the form swaps the keys over AJAX, the React page
+  narrows locally, and a payload carrying another variant's keys is
+  refused by name: `props.align belongs to the data_surface_examples:hero
+  variant, but component chose data_surface_examples:card.`
+- **Storage.** The key is open in the config schema written from the
+  resource (`type: ignore`): which variants a site has is not the
+  code's, and the chosen variant holds the value to its own keys before
+  anything is written.
+
+The test module's poster reads three layouts, one in draft-04, beside a
+class that wins for the banner (`VariantsFromSiteTest`); example 12
+reads every single-directory component the site has.
+
 ### A child that cannot be listed
 
 Variants cover a child chosen from a set of values someone can name. A
@@ -1809,7 +1874,10 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
 A deriver ([below](#derived-resources)) is for what is a resource or
 structure of its own: operations, storage, identity, or a use at many
 sites. Keys that only one resource asks for, one per thing, are this
-([decision](decisions.md#keys-that-come-from-the-site)).
+([decision](decisions.md#keys-that-come-from-the-site)). Where each
+thing chooses a group of keys of its own, a schema per thing, the
+spelling is [variants from the site](#variants-from-the-site):
+`attachVariants($key, by: $sibling, from: Provider::class)`.
 
 ### Ports on an entry
 

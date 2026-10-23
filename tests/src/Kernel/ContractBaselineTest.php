@@ -22,7 +22,10 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * it only compatibly, or by a breaking change with its owner's version
  * raised or an allowance recorded. Any other breaking change fails here;
  * `drush data_surface:contract-diff --write` pins a change once it is
- * accepted.
+ * accepted. Run with DATA_SURFACE_CONTRACT_WRITE=1, this test writes the
+ * baselines instead, from the modules it installs alone: how a
+ * declaration whose variants come from the site (example 12's
+ * components) is pinned, since a site's own themes would add theirs.
  *
  * @see docs/evolution.md
  * @see \Drupal\data_surface\Contract\ContractDiff
@@ -76,6 +79,15 @@ class ContractBaselineTest extends DataSurfaceKernelTestBase {
     $baselines = $this->container->get('data_surface.contract_baselines');
     $current = $baselines->emit(self::PINNED);
     $committed = $baselines->read($baselines->directory('data_surface'));
+    if (getenv('DATA_SURFACE_CONTRACT_WRITE')) {
+      // A declaration whose variants come from the site is pinned where
+      // the site holds only these modules: the drush command, run on a
+      // site with more, would pin that site's.
+      foreach ($current as $id => $baseline) {
+        $baselines->write($baselines->directory('data_surface'), $baseline + ['allowed' => $committed[$id]['allowed'] ?? []]);
+      }
+      $this->markTestSkipped(sprintf('%d baselines written.', count($current)));
+    }
     $this->assertSame(array_keys($committed), array_keys($current), 'Every declaration is pinned, and every baseline still declared.');
     $this->assertSame([
       'event.bulletin',
@@ -87,6 +99,7 @@ class ContractBaselineTest extends DataSurfaceKernelTestBase {
       'event.program',
       'event.review',
       'event.sales',
+      'event.spotlight',
       'event.ticket_limit',
       'first.newsletter',
       'first.store',
