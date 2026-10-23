@@ -40,6 +40,7 @@ use Drupal\data_surface\Resource\KeysFromSiteInterface;
 use Drupal\data_surface\Resource\VariantList;
 use Drupal\data_surface\Resource\VariantsFromSiteInterface;
 use Drupal\data_surface\Contract\SchemaReader;
+use Drupal\data_surface\Contract\SchemaResolver;
 use Drupal\data_surface\Resource\KnowsClearableKeysInterface;
 use Drupal\data_surface\Resource\AccessAnswer;
 use Drupal\data_surface\Resource\Attribute\Variant;
@@ -226,6 +227,32 @@ final class Resources implements ResourcesInterface {
    * @var array<string, array{surface: \Drupal\data_surface\DataSurfaceInterface, tags: string[]}>
    */
   protected array $builds = [];
+
+  /**
+   * How many read structures are kept, the least recently built let go.
+   */
+  protected const READ_KEPT = 4096;
+
+  /**
+   * The structures read from a schema built lately, by how they were asked.
+   *
+   * A read structure is its schema and nothing more: no class, alter,
+   * storage, access class or provider of its own, and its name holds the
+   * hash of the document it was read from. So one built in a context is
+   * the same wherever it is attached, and a def a document uses at many
+   * sites (a component's props in every slot that offers it) is built
+   * once and held at each.
+   *
+   * @var array<string, array{surface: \Drupal\data_surface\DataSurfaceInterface, tags: string[]}>
+   */
+  protected array $readBuilds = [];
+
+  /**
+   * The ports and keys of each read structure, once read, by name.
+   *
+   * @var array<string, array{0: array<string, \Drupal\data_surface\Port>, 1: string[]}>
+   */
+  protected array $readPorts = [];
 
   /**
    * How many builds were made and how many were answered from the memo.
@@ -476,6 +503,11 @@ final class Resources implements ResourcesInterface {
         unset($this->builds[$key]);
       }
     }
+    foreach ($this->readBuilds as $key => $kept) {
+      if (array_intersect($tags, $kept['tags']) !== []) {
+        unset($this->readBuilds[$key]);
+      }
+    }
   }
 
   /**
@@ -488,6 +520,8 @@ final class Resources implements ResourcesInterface {
    */
   public function forgetBuilds(): void {
     $this->builds = [];
+    $this->readBuilds = [];
+    $this->readPorts = [];
     $this->childrenDeclared = [];
     $this->refusing = [];
   }
@@ -1036,9 +1070,12 @@ final class Resources implements ResourcesInterface {
     if ($storedAt !== NULL) {
       $frame['storedAt'] = $storedAt;
     }
+    $locked = $whole && $access?->isLocked() ? static::lockReason($access) : NULL;
     return [
       new Attachment(
-        $this->buildResource($definition->name(), $child_context, [...$ancestry, $frame], $whole && $access?->isLocked() ? static::lockReason($access) : NULL),
+        $definition->isRead() && $access === NULL && $locked === NULL
+          ? $this->buildRead($definition->name(), $child_context, [...$ancestry, $frame])
+          : $this->buildResource($definition->name(), $child_context, [...$ancestry, $frame], $locked),
         $definition->name(),
         $definition->id,
       ),
@@ -1046,6 +1083,39 @@ final class Resources implements ResourcesInterface {
       $child_context,
       $runtime,
     ];
+  }
+
+  /**
+   * Builds a structure read from a schema once for every site it is at.
+   *
+   * Kept for the rest of the request by its name, its context and the
+   * kind of build, as a top build is (memo()), when it reads no port of a
+   * container, which each site would bind its own way, and may be kept.
+   *
+   * @param string $name
+   *   The read structure's name.
+   * @param \Drupal\data_surface\Resource\OperationContext $context
+   *   The context it is invoked in.
+   * @param array $ancestry
+   *   Where it is first attached, for messages and the cycle check.
+   *
+   * @return \Drupal\data_surface\DataSurfaceInterface
+   *   The sealed structure.
+   */
+  protected function buildRead(string $name, OperationContext $context, array $ancestry): DataSurfaceInterface {
+    $key = hash('xxh3', serialize([$name, $context, $this->accountAlone, $this->declaring, $this->holdsToSchema]));
+    if (isset($this->readBuilds[$key])) {
+      $this->buildCounts['reused']++;
+      return $this->readBuilds[$key]['surface'];
+    }
+    $built = $this->buildResource($name, $context, $ancestry);
+    if ($built->getPortValues() === [] && static::keepable($built)) {
+      $this->readBuilds[$key] = ['surface' => $built, 'tags' => $built->getCacheTags()];
+      if (count($this->readBuilds) > self::READ_KEPT) {
+        unset($this->readBuilds[array_key_first($this->readBuilds)]);
+      }
+    }
+    return $built;
   }
 
   /**
@@ -1880,9 +1950,17 @@ final class Resources implements ResourcesInterface {
    */
   protected function portsOf(string $child): array {
     $definition = $this->registry->getDefinition($child);
+    // A read structure's name holds the hash of what it was read from.
+    if ($definition->isRead() && isset($this->readPorts[$definition->name()])) {
+      return $this->readPorts[$definition->name()];
+    }
     $blueprint = $this->blueprint(new DataSurfaceBuilder(), $definition);
     $this->fillBlueprints($definition, $blueprint);
-    return [$blueprint->ports(), $blueprint->declared()];
+    $ports = [$blueprint->ports(), $blueprint->declared()];
+    if ($definition->isRead()) {
+      $this->readPorts[$definition->name()] = $ports;
+    }
+    return $ports;
   }
 
   /**
@@ -2455,6 +2533,9 @@ final class Resources implements ResourcesInterface {
       if ($from !== NULL) {
         $list = $this->variantsFrom($definition, (string) $key, $from);
         $builder->addCacheableDependency($list);
+        // The defs the entries share, read once for all of them.
+        $shared = $list->defs() === [] ? NULL : SchemaReader::prepared(['$defs' => $list->defs()]);
+        $shared_hash = $shared === NULL ? NULL : ResourceBlueprint::documentHash($shared);
         foreach ($list->entries() as $value => $entry) {
           $value = (string) $value;
           if (isset($children[$value])) {
@@ -2462,9 +2543,15 @@ final class Resources implements ResourcesInterface {
           }
           // A structure the site's code declares is built as declared; any
           // other is read from its schema.
-          $children[$value] = isset($entry['structure'])
-            ? $this->registry->getDefinition($entry['structure'])->name()
-            : $inputs->readStructure($definition->id . '.' . $key . '.' . $value, SchemaReader::prepared($entry['schema']), '');
+          $id = $definition->id . '.' . $key . '.' . $value;
+          $reference = is_string($entry['schema']['$ref'] ?? NULL) && count($entry['schema']) === 1 ? SchemaResolver::defName($entry['schema']['$ref']) : NULL;
+          $shared_def = $shared !== NULL && $reference !== NULL && isset($shared['$defs'][$reference]);
+          $pointer = '/$defs/' . str_replace(['~', '/'], ['~0', '~1'], (string) $reference);
+          $children[$value] = match (TRUE) {
+            isset($entry['structure']) => $this->registry->getDefinition($entry['structure'])->name(),
+            $shared_def => $inputs->readStructure($id, $shared, $pointer, $shared_hash),
+            default => $inputs->readStructure($id, SchemaReader::prepared($entry['schema'] + ($list->defs() === [] ? [] : ['$defs' => $list->defs()])), ''),
+          };
           $labels[$value] = $entry['label'];
         }
       }

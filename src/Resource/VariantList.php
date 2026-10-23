@@ -37,6 +37,13 @@ final class VariantList implements RefinableCacheableDependencyInterface {
   protected array $entries = [];
 
   /**
+   * The defs every entry's schema may refer to, by name.
+   *
+   * @var array<string, array>
+   */
+  protected array $defs = [];
+
+  /**
    * Adds an entry.
    *
    * @param string $value
@@ -81,6 +88,34 @@ final class VariantList implements RefinableCacheableDependencyInterface {
     $this->add($value, $label, []);
     $this->entries[$value]['structure'] = $structure;
     return $this;
+  }
+
+  /**
+   * Adds defs every entry's schema may refer to, `#/$defs/<name>`.
+   *
+   * Read once for the whole list, so a def several entries use is one
+   * structure, built once wherever it is attached. An entry whose schema
+   * is that reference alone is the def; any other is read with the defs
+   * beside it.
+   *
+   * @param array<string, array> $defs
+   *   The defs, by name: JSON Schema, decoded with objects as arrays.
+   *
+   * @return $this
+   */
+  public function addDefs(array $defs): static {
+    $this->defs = $defs + $this->defs;
+    return $this;
+  }
+
+  /**
+   * Gets the defs every entry's schema may refer to.
+   *
+   * @return array<string, array>
+   *   The defs, by name.
+   */
+  public function defs(): array {
+    return $this->defs;
   }
 
   /**

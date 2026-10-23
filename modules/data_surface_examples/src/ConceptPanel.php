@@ -22,6 +22,7 @@ use Drupal\data_surface\ResourceBuild\OperationRoute;
 use Drupal\data_surface\ResourceBuild\ResourceRegistry;
 use Drupal\data_surface\ResourceBuild\ResourcesInterface;
 use Drupal\data_surface\Variants\ComponentProps;
+use Drupal\data_surface\Variants\ComponentSlots;
 use Drupal\data_surface_component_block\Plugin\Block\ComponentBlock;
 use Drupal\data_surface_component_block\Structure\ComponentBlockStructure;
 use Drupal\data_surface_examples\Access\FeesAccess;
@@ -222,7 +223,7 @@ final class ConceptPanel {
       'event.sales' => $this->t("The ticket types are the site's, not the code's: one checkbox and one set of limits per type, listed by a provider that reads the site's configuration and says so in its cacheability. Add a type and reload: the form, both documents and the tool have its keys at the next request, with no cache rebuild. Each type's limits read whether that type is on sale, through a port the resource wires per type, <code>reads: ['selling' => 'on_sale']</code>: untick a type and its limits go, tick it and they return as stored. The full schema states the rule once per type, an <code>if</code> on <code>on_sale.&lt;type&gt;</code> and a <code>then</code> reaching into <code>limits.&lt;type&gt;</code>, and a tool that sends a limit for a type off sale is refused. The speaker type is locked there, so it is drawn fixed, <code>readOnly</code> in both documents, and a value a tool sends for it is not taken, which the answer says."),
       'event.program' => $this->t('Access says whether keys may be changed, seen, or neither, and its kind is read from its cacheability, never declared. The access class of the fees locks them for an account without "set event fees", which the account alone decides, so the full schema states the lock for that account. For any other account the program decides: once it is published, the fees are fixed, which only what is stored can say, so the full schema marks the fees <code>access: live</code> and the schema for these answers settles it. Each operation also states how a call behaves: configuring changes what exists and may be repeated, and checking, at /surface-examples/10/check, changes nothing, so its tool is a read and has no read tool beside it.'),
       'event.doors' => $this->t('Every stock widget, each chosen by what its key declares: a time input for a string that asks for one, checkboxes for a short list of choices, radios for one choice that asks for them, a text area for a multiline string, and rows with "Add another" for a list of free values. The config schema is fully validatable, so the storage knows which keys may hold nothing. A key a call leaves out keeps what is stored, null clears it, and a value replaces it; the badges, which the storage always holds, refuse null and name their default. The four dry runs below show each.'),
-      'event.spotlight' => $this->t("A JSON Schema the site already has is read into a structure, keyword by keyword: each single-directory component says what props it takes, and that schema is a variant at <code>props</code>, chosen by the component. The class names no component and no prop: a provider lists the components, with their schemas, and the reader turns each schema into keys with their types, labels, defaults, lists of values, bounds and required keys, and a nested object into a map. Choose another component and the props below it are that component's, over AJAX, and in React with no request. Both documents state the components as variants, <code>anyOf</code> of each component's def and one conditional per component, and the full schema of a component read back from them is the same document again. What the reader cannot say is kept, as a JsonSchema constraint the server checks, and noted. A tool that sends one component's props for another is refused, naming the component they belong to."),
+      'event.spotlight' => $this->t("A JSON Schema the site already has is read into a structure, keyword by keyword: each single-directory component says what props it takes, and that schema is a variant at <code>props</code>, chosen by the component. The class names no component and no prop: a provider lists the components, with their schemas, and the reader turns each schema into keys with their types, labels, defaults, lists of values, bounds and required keys, and a nested object into a map. Choose another component and the props below it are that component's, over AJAX, and in React with no request. Both documents state the components as variants, <code>anyOf</code> of each component's def and one conditional per component, and the full schema of a component read back from them is the same document again. What the reader cannot say is kept, as a JsonSchema constraint the server checks, and noted. A tool that sends one component's props for another is refused, naming the component they belong to. Beside the props, the component's slots are a second key the same component chooses, read from its metadata: each slot holds text, one component or a list of them, narrowed to what the slot expects, three deep at most."),
       default => $this->t('Not an example of this series.'),
     };
   }
@@ -492,22 +493,40 @@ final class ConceptPanel {
     $component_key['oneOf'] = array_values(array_filter($component_key['oneOf'] ?? [], static fn (array $choice): bool => $shown((string) ($choice['const'] ?? ''))));
     $props_key['anyOf'] = array_values(array_filter($props_key['anyOf'] ?? [], static fn (array $member): bool => !isset($member['$ref']) || $shown(substr((string) $member['$ref'], strlen(ContractEmitter::DEFS . 'event.spotlight.props.')))));
     $props_key[ContractEmitter::EXTENSION]['variants'] = array_filter((array) ($props_key[ContractEmitter::EXTENSION]['variants'] ?? []), static fn (string $id): bool => $shown($id), ARRAY_FILTER_USE_KEY);
+    $slots_key = self::cut($full['properties']['slots'] ?? [], ContractEmitter::DEFS . 'event.spotlight.slots.', $shown);
     $conditional = array_values(array_filter($full['allOf'] ?? [], static fn (array $branch): bool => ($branch['if']['properties']['component']['const'] ?? NULL) === $component));
+    $slots_def = $full['$defs']['event.spotlight.slots.' . $component] ?? [];
+    $slot_defs = [];
+    foreach ((array) ($slots_def['properties'] ?? []) as $slot) {
+      $name = substr((string) ($slot['$ref'] ?? ''), strlen(ContractEmitter::DEFS));
+      if ($name !== '' && isset($full['$defs'][$name])) {
+        $slot_defs[$name] = $full['$defs'][$name];
+      }
+    }
     $notes = $this->reader->notes($props);
     $lines = [];
-    foreach ([SpotlightResource::class, ComponentProps::class, SpotlightStorage::class] as $class) {
+    foreach ([SpotlightResource::class, ComponentProps::class, ComponentSlots::class, SpotlightStorage::class] as $class) {
       $lines[] = $this->t('@class: @lines lines of code.', [
         '@class' => (new \ReflectionClass($class))->getShortName(),
         '@lines' => CodeLines::count(self::file($class)),
       ]);
     }
-    $lines[] = $this->t('The three components this module ships, read like any other: no line of code, their props are schemas.');
+    $lines[] = $this->t('The four components this module ships, read like any other: no line of code, their props are schemas and their slots metadata.');
     $counted = ['@count' => $count, '@component' => $component];
     return [
       'read' => $this->details(
         $this->t('@component: its props, and the structure they became', ['@component' => $component]),
         $this->t('The props schema the component declares (<code>schema</code>), and its def in the full schema (<code>structure</code>), which the reader wrote it into: a key per prop, with its type, label, default, list of values and bounds, and the required props required.'),
         $this->json(['schema' => $props, 'structure' => $full['$defs'][$def] ?? NULL]),
+      ),
+      'slots' => $this->details(
+        $this->t('@component: its slots, and the structure they became', ['@component' => $component]),
+        $this->t("The slots the component's metadata declares (<code>metadata</code>), and their def in the full schema (<code>structure</code>): a key per slot, each a def holding a <code>kind</code> and what each kind holds (<code>slot</code>), text, one component or a list of them, narrowed to what the slot expects. A slot that expects no component holds text alone."),
+        $this->json([
+          'metadata' => $this->components->getDefinition($component)['slots'] ?? [],
+          'structure' => $slots_def,
+          'slot' => $slot_defs,
+        ]),
       ),
       'notes' => $this->details(
         $this->t('What the reader noted'),
@@ -516,8 +535,13 @@ final class ConceptPanel {
       ),
       'contract' => $this->details(
         $this->t('The variants, as the full schema states them'),
-        $this->t("The component key offers the @count components the site has, cut here to the three this module ships and the one chosen, and the props key is the union of their defs; the conditional below chooses @component's def, one of @count, one per component.", $counted),
-        $this->json(['component' => $component_key, 'props' => $props_key, 'allOf' => $conditional]),
+        $this->t("The component key offers the @count components the site has, cut here to the four this module ships and the one chosen, and the props and slots keys are each the union of their defs; the two conditionals below choose @component's defs, one of @count each, one per component and key.", $counted),
+        $this->json([
+          'component' => $component_key,
+          'props' => $props_key,
+          'slots' => $slots_key,
+          'allOf' => $conditional,
+        ]),
       ),
       'lines' => [
         '#theme' => 'item_list',
@@ -528,7 +552,7 @@ final class ConceptPanel {
   }
 
   /**
-   * Example 13: the block's two lines beside example 12's, and its doors.
+   * Example 13: the block's three lines beside example 12's, and its doors.
    *
    * The two declarations quoted from their files, the block structure's
    * full schema cut as example 12's is, and the tools a placed block is
@@ -550,7 +574,16 @@ final class ConceptPanel {
     $props_key = $full['properties']['props'] ?? [];
     $props_key['anyOf'] = array_values(array_filter($props_key['anyOf'] ?? [], static fn (array $member): bool => !isset($member['$ref']) || $shown(substr((string) $member['$ref'], strlen($prefix)))));
     $props_key[ContractEmitter::EXTENSION]['variants'] = array_filter((array) ($props_key[ContractEmitter::EXTENSION]['variants'] ?? []), static fn (string $id): bool => $shown($id), ARRAY_FILTER_USE_KEY);
+    $slots_key = self::cut($full['properties']['slots'] ?? [], ContractEmitter::DEFS . $structure->id . '.slots.', $shown);
     $conditionals = array_values(array_filter($full['allOf'] ?? [], static fn (array $branch): bool => $shown((string) ($branch['if']['properties']['component']['const'] ?? ''))));
+    $actions = [];
+    $defs = [
+      'component.slot.' . self::COMPONENTS . 'hero.actions.1',
+      'component.nested.' . self::COMPONENTS . 'call_to_action.1',
+    ];
+    foreach ($defs as $def) {
+      $actions[$def] = $full['$defs'][$def] ?? NULL;
+    }
     $tools = [];
     foreach (['add', 'edit', 'edit:read', 'remove'] as $suffix) {
       $tool_id = 'data_surface:block.placement:' . $suffix;
@@ -578,7 +611,7 @@ final class ConceptPanel {
     return [
       'two_lines' => [
         '#type' => 'table',
-        '#caption' => $this->t("The same two lines: example 12's resource and the block's structure, from <code>defineInputs()</code>, word for word. The block's component may be left empty, since the block is built before anything is chosen."),
+        '#caption' => $this->t("The same three lines: example 12's resource and the block's structure, from <code>defineInputs()</code>, word for word. The block's component may be left empty, since the block is built before anything is chosen."),
         '#header' => [
           $this->t('Example 12, @id', ['@id' => 'event.spotlight']),
           $this->t('The block, @id', ['@id' => $structure->id]),
@@ -593,8 +626,18 @@ final class ConceptPanel {
       ],
       'contract' => $this->details(
         $this->t("The block's settings, as the full schema states them"),
-        $this->t("The component key offers the @count components the site has, cut here to the three the examples ship, and the props key is the union of their defs, one conditional per component: what example 12 states, under the block structure's id.", ['@count' => $count]),
-        $this->json(['component' => $component_key, 'props' => $props_key, 'allOf' => $conditionals]),
+        $this->t("The component key offers the @count components the site has, cut here to the four the examples ship, and the props and slots keys are each the union of their defs, one conditional per component and key: what example 12 states, under the block structure's id.", ['@count' => $count]),
+        $this->json([
+          'component' => $component_key,
+          'props' => $props_key,
+          'slots' => $slots_key,
+          'allOf' => $conditionals,
+        ]),
+      ),
+      'actions' => $this->details(
+        $this->t("The hero's actions slot, narrowed to what it expects"),
+        $this->t("The hero declares its <code>actions</code> slot expecting <code>data_surface_examples:call_to_action</code>, two at most. Its def offers text, one component or a list of at most two (<code>maxItems</code>), and the component it holds offers the call to action alone: its <code>component</code> key one choice, its props and slots keys that component's defs. A hero sent there is refused, naming the one it expects. The section's <code>content</code> slot expects the tag <code>block</code>, so it offers the card and the hero, which carry it."),
+        $this->json($actions),
       ),
       'tools' => [
         '#type' => 'table',
@@ -609,6 +652,25 @@ final class ConceptPanel {
         '#items' => $lines,
       ],
     ];
+  }
+
+  /**
+   * Cuts a key holding variants to the components shown.
+   *
+   * @param array $key
+   *   The key, as the full schema states it.
+   * @param string $prefix
+   *   The reference each variant's def starts with, before the component.
+   * @param callable(string): bool $shown
+   *   Whether a component is shown.
+   *
+   * @return array
+   *   The key, its `anyOf` and its variants cut to those shown.
+   */
+  protected static function cut(array $key, string $prefix, callable $shown): array {
+    $key['anyOf'] = array_values(array_filter($key['anyOf'] ?? [], static fn (array $member): bool => !isset($member['$ref']) || $shown(substr((string) $member['$ref'], strlen($prefix)))));
+    $key[ContractEmitter::EXTENSION]['variants'] = array_filter((array) ($key[ContractEmitter::EXTENSION]['variants'] ?? []), static fn (string $id): bool => $shown($id), ARRAY_FILTER_USE_KEY);
+    return $key;
   }
 
   /**

@@ -3834,8 +3834,10 @@ structure of two keys, example 12's two lines under the block's id,
   goes with that module or theme.
 - **Props only.** A slot is markup another part of the site fills: its
   definition is a title and a description, with no schema for a value a
-  block could store, so the block passes props and no slot. *Open:*
-  slots, filled from text with a format or from other blocks.
+  block could store, so the block passes props and no slot. *Changed
+  2026-10-23:* each slot holds text, one component or a list of them,
+  narrowed to what the slot expects ([A slot holds text, a component, or
+  components](#a-slot-holds-text-a-component-or-components)).
 - **A placed block is configured through the placement resource.**
   *Changed 2026-10-23.* The submodule declared a resource for a placed
   component block, `block.placed_component`, until the general case
@@ -3851,15 +3853,106 @@ calls to them: the add that placed the Spotlight block, made again, an
 edit of its props and its removal, each a dry run. The examples place
 the Spotlight block through the add operation in the default theme's
 content region, shown on that page alone, once the block and the
-placement are on. *Open:* slots; listing the placed blocks; the add
+placement are on. *Open:* listing the placed blocks; the add
 form without JavaScript ([A plugin host cannot overlay a full
 submission](#a-plugin-host-cannot-overlay-a-full-submission)). *Closed
 2026-10-23:* one resource for a placed block of any plugin, and placing,
 moving within a theme and removing blocks through a tool
-([A placed block is a resource](#a-placed-block-is-a-resource)).
+([A placed block is a resource](#a-placed-block-is-a-resource)); the
+component's slots ([A slot holds text, a component, or
+components](#a-slot-holds-text-a-component-or-components)).
 (`ComponentBlockStructure`, `ComponentBlock`,
 `Variants\ComponentProps`, `ComponentBlockTest`,
 `ComponentBlockPlacementTest`, `ComponentBlockAjaxTest`)
+
+### A slot holds text, a component, or components
+
+Decided 2026-10-23. The component block and example 12 store a
+component's slots beside its props: `slots`, one key per slot the
+component's metadata declares. Core lets a slot say what it expects,
+`expected`, `minItems` and `maxItems` (core issue 3514072), and leaves
+how strictly to apply them to a display builder. Each choice, and why:
+
+- **Two keys one component chooses, from two providers.** `props` from
+  `ComponentProps` and `slots` from `ComponentSlots`, each
+  `attachVariants(..., by: 'component', from: ...)`. One variant per
+  component holding both was weighed first, so that one `anyOf` would
+  state both. It would move the props every placed block and example 12
+  store one key down, a breaking change to every stored value, and the
+  engine has no variants whose keys are the owner's own. Two keys leave
+  the stored props where they are and add `slots` beside them; the
+  contract states each as `anyOf` of its defs, with one conditional per
+  component and key. A component with no slot is a variant with no
+  keys, so both keys offer the same components, and neither narrows the
+  component to fewer.
+- **A slot holds one of three things, chosen by `kind`.** `text`, a
+  plain string; `component`, one nested component, the top's three keys
+  again (`component`, `props`, `slots`); `components`, a list of those.
+  Each kind's key does not apply while `kind` says another (a declared
+  rule), so what is stored is what the kind holds and nothing beside it.
+  `kind` starts from `text`.
+- **Text is a plain string.** Rendered as `#plain_text`, escaped where
+  the slot prints it. Formatted text was turned down: the formats a
+  person may use depend on the account, and a provider's list is refused
+  when it varies by the account; a format is also configuration the
+  block would depend on. A slot's metadata says nothing of its value's
+  type to choose otherwise.
+- **Expectations are refusals.** `expected` narrows the nested
+  `component` key to the ids it names, and, for an entry with no colon,
+  to the components whose `tags` hold it; an empty list offers no
+  component, so the slot holds text alone (the card's `body`). The
+  `components` list gets `minItems` and `maxItems` as its Count, and a
+  `maxItems` of 1 leaves no list. A slot that expects nothing offers any
+  component. Why refusals, where core says expectations: the contract
+  states what a slot offers, and a contract that lists an expectation
+  and accepts anything would be stricter on paper than in practice. A
+  component outside the list is refused naming the ones the slot
+  expects: "Choose data_surface_examples:call_to_action (Call to
+  action)."
+- **Three deep.** `ComponentSlots::DEPTH` is 3. The slots of the
+  component a block names are at depth 1, those of a component in one of
+  them at 2, and a slot at depth 3 holds text alone. The cap is in the
+  structure, so both documents state it: the def at the cap offers the
+  one kind `text`, and a component sent there is an unknown key. Every
+  level states each offered component's props and slots, so without a
+  cap the schema would not end.
+- **Each shape is one def, built once.** The provider lists every
+  variant's defs once (`VariantList::addDefs()`):
+  `component.props.<id>`, `component.slots.<id>.<depth>`,
+  `component.slot.<id>.<slot>.<depth>`, `component.slot.text`, and
+  `component.nested.<expected>.<depth>` for the component a slot holds,
+  named for what the slot expects (`any` for nothing in particular). A
+  read structure is built once per request and context and held at every
+  key it is attached at (`Resources::buildRead()`), and what a walker
+  asks of a child is answered once per child. On a site with three
+  hundred components whose slots expect nothing, a structure per place
+  it is used grows with the product of the components at each depth; a
+  structure per def grows with their sum: 2,465 defs and a build of
+  about two seconds on the development site.
+- **Rendering.** `ComponentBlock::build()` turns each stored slot into
+  `#slots`: text as `#plain_text`, a component as `#type => 'component'`
+  with its props held and its own `#slots`, a list as a render array of
+  each. A slot that holds nothing, or only components the site no longer
+  has, is not passed. The render array carries the built structure's
+  cacheability, both providers' lists; the block depends on the
+  extension of every component it embeds, at any depth.
+- **On the block form.** Text and one component are drawn at any depth,
+  a nested component's props and slots swapped over AJAX as the top's
+  are, each drawn from its own defaults where it was chosen afresh
+  (`DataSurfaceFormBuilder::nestedHeld()`), and a submission is read a
+  level at a time, each variant through what its own deciding key chose
+  (`DataSurfaceFormBuilder::extractFrame()`).
+  A list of components inside a slot is not drawn there: what it holds
+  is kept, and the tool, HTTP and the React page set it.
+
+*Open:* the `components` list on the block form; formatted text in a
+slot; a component that drops a prop a placed block still stores, whose
+edit is refused until the stored prop is removed; whether an empty
+`expected` is how a component should say it takes text; a slot's
+`examples`. (`Variants\ComponentSlots`, `VariantList::addDefs()`,
+`Resources::buildRead()`, `ComponentBlock::filled()`,
+`ComponentSlotsTest`, `ComponentBlockTest`, `BlockPlacementToolsTest`,
+`ComponentBlockAjaxTest`, `ReactNarrowingTest`)
 
 ### A placed block is a resource
 

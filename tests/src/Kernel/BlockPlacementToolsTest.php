@@ -17,9 +17,11 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  *
  * The agent's errand: place a hero in the sidebar with these props, a
  * dry run first, then for real, then change its props, read it back,
- * rehearse its removal and remove it. A region of another theme is
- * refused by name, props of another component by path, a machine name
- * taken by name, and values sent to a removal for what they are.
+ * rehearse its removal and remove it; place a section holding a card. A
+ * region of another theme is refused by name, props of another component
+ * by path, a component a slot does not expect naming the ones it does, a
+ * machine name taken by name, and values sent to a removal for what they
+ * are.
  */
 #[Group('data_surface')]
 #[RunTestsInSeparateProcesses]
@@ -187,6 +189,73 @@ class BlockPlacementToolsTest extends DataSurfaceKernelTestBase {
         'message' => 'The machine name doors_hero is already in use: choose another.',
       ],
     ], $again['violations']);
+  }
+
+  /**
+   * Tests a section holding a card, placed, and a slot's expectation held.
+   */
+  public function testSlotsThroughTheTools(): void {
+    $section = [
+      'label' => 'Tonight',
+      'id' => 'tonight',
+      'plugin' => 'data_surface_component',
+      'settings' => [
+        'component' => 'data_surface_examples:section',
+        'props' => ['heading' => 'Tonight'],
+        'slots' => [
+          'content' => [
+            'kind' => 'component',
+            'component' => [
+              'component' => 'data_surface_examples:card',
+              'props' => ['heading' => 'Talks start at seven'],
+              'slots' => ['body' => ['kind' => 'text', 'text' => 'In the main hall.']],
+            ],
+          ],
+        ],
+      ],
+      'theme' => 'stark',
+      'region' => 'sidebar_first',
+    ];
+    $placed = $this->call('add', ['values' => $section]);
+    $this->assertTrue($placed['committed'], $placed['message'] . json_encode($placed['violations'] ?? []));
+    $card = [
+      'component' => 'data_surface_examples:card',
+      'props' => ['heading' => 'Talks start at seven', 'tone' => 'plain', 'link' => NULL],
+      'slots' => ['body' => ['kind' => 'text', 'text' => 'In the main hall.']],
+    ];
+    $this->assertSame(['content' => ['kind' => 'component', 'component' => $card]], $placed['values']['settings']['slots'], 'Only what the kind holds is kept: no text and no list beside the card.');
+    $block = $this->container->get('entity_type.manager')->getStorage('block')->loadUnchanged('tonight');
+    $this->assertSame($placed['values']['settings']['slots'], $block->get('settings')['slots']);
+    $build = $block->getPlugin()->build();
+    $html = (string) $this->container->get('renderer')->renderInIsolation($build);
+    $this->assertStringContainsString('<h3>Talks start at seven</h3>', $html);
+    $read = $this->call('edit:read', ['id' => 'tonight']);
+    $this->assertSame($placed['values']['settings']['slots'], $read['values']['settings']['slots']);
+
+    // A hero where the hero's actions expect a call to action: refused,
+    // naming the one it expects; and a call to action in the section,
+    // whose content expects a tag the call to action does not carry.
+    $hero = self::HERO;
+    $inside = ['component' => 'data_surface_examples:hero', 'props' => ['title' => 'Inside']];
+    $hero['settings']['slots'] = ['actions' => ['kind' => 'component', 'component' => $inside]];
+    $this->assertSame([
+      [
+        'path' => '/settings/slots/actions/component/component',
+        'code' => 'no_such_choice',
+        'message' => 'The value you selected is not a valid choice. Choose data_surface_examples:call_to_action (Call to action).',
+      ],
+    ], $this->call('add', ['values' => $hero, 'dry_run' => TRUE])['violations']);
+    $cta = [
+      'component' => 'data_surface_examples:call_to_action',
+      'props' => ['text' => 'Go', 'url' => 'https://example.com'],
+    ];
+    $settings = [
+      'component' => 'data_surface_examples:section',
+      'slots' => ['content' => ['kind' => 'component', 'component' => $cta]],
+    ];
+    $wrong_tag = $this->call('edit', ['id' => 'tonight', 'values' => ['settings' => $settings], 'dry_run' => TRUE]);
+    $this->assertSame('/settings/slots/content/component/component', $wrong_tag['violations'][0]['path']);
+    $this->assertSame('The value you selected is not a valid choice. Choose data_surface_examples:card (Card) or data_surface_examples:hero (Hero).', $wrong_tag['violations'][0]['message']);
   }
 
   /**

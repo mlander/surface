@@ -1,0 +1,6 @@
+name: 'Data Surface component test'
+type: module
+description: 'A component whose slots expect itself, for the depth slots nest to and a slot holding one component at most.'
+package: Testing
+version: VERSION
+core_version_requirement: ^11.3 || ^12

@@ -404,3 +404,6 @@ data_surface_examples.spotlight:
     props:
       type: ignore
       label: 'Props'
+    slots:
+      type: ignore
+      label: 'Slots'

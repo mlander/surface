@@ -61,6 +61,7 @@ class BlockPlacementResourceTest extends DataSurfaceKernelTestBase {
     'data_surface_examples:call_to_action',
     'data_surface_examples:card',
     'data_surface_examples:hero',
+    'data_surface_examples:section',
   ];
 
   /**
@@ -219,6 +220,7 @@ class BlockPlacementResourceTest extends DataSurfaceKernelTestBase {
     $component = $variants->variants['data_surface_component'];
     $this->assertSame(ComponentBlockStructure::class, $component->source);
     $this->assertSame(self::COMPONENTS, array_keys($component->child->getDefinitions()->entry('props')->variants->variants));
+    $this->assertSame(self::COMPONENTS, array_keys($component->child->getDefinitions()->entry('slots')->variants->variants));
     // A core block, read from block.settings.system_branding_block, less
     // the keys every block has, its defaults the plugin's own.
     $branding = $variants->variants['system_branding_block']->child;

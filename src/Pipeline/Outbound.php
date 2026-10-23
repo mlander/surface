@@ -116,6 +116,13 @@ final class Outbound {
    *   where one below it is. Empty when nothing is.
    */
   public static function secrets(DataSurfaceInterface $surface): array {
+    // A sealed data surface never changes, and one child may be held at
+    // many keys (a read structure, built once): each is asked once.
+    static $asked = NULL;
+    $asked ??= new \WeakMap();
+    if (isset($asked[$surface])) {
+      return $asked[$surface];
+    }
     $secrets = [];
     foreach ($surface->getDefinitions()->entries() as $name => $entry) {
       $found = static::secretsAt($entry);
@@ -123,7 +130,7 @@ final class Outbound {
         $secrets[(string) $name] = $found;
       }
     }
-    return $secrets;
+    return $asked[$surface] = $secrets;
   }
 
   /**

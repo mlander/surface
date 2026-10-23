@@ -82,7 +82,13 @@ final class SchemaResolver {
    *   The effective schema.
    */
   public static function resolve(array $schema, array $root, array &$followed = []): array {
-    return self::untitled(self::resolveAt(self::restored($schema), self::restored($root), $followed));
+    // A caller resolves many schemas of one document: its root is restored
+    // once for all of them.
+    static $restored = [NULL, []];
+    if ($restored[0] !== $root) {
+      $restored = [$root, self::restored($root)];
+    }
+    return self::untitled(self::resolveAt(self::restored($schema), $restored[1], $followed));
   }
 
   /**

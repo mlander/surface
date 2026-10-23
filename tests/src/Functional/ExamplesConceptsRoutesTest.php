@@ -127,16 +127,21 @@ class ExamplesConceptsRoutesTest extends BrowserTestBase {
     $this->drupalGet('surface-examples/13');
     $assert->statusCodeEquals(200);
     $assert->pageTextContains('Both are enabled on this site now.');
-    $assert->pageTextContains("The same two lines: example 12's resource and the block's structure");
+    $assert->pageTextContains("The same three lines: example 12's resource and the block's structure");
+    $assert->pageTextContains("The hero's actions slot, narrowed to what it expects");
     $assert->pageTextContains('data_surface:block.placement:edit:read');
     $assert->pageTextContains('Ask the tool');
     $assert->pageTextContains('Success: Dry run of Edit a placed block');
     $assert->pageTextContains('Success: Dry run of Remove a placed block');
     $assert->linkByHrefExists('/admin/structure/block/add/data_surface_component/stark');
-    // The Spotlight block, placed through the add operation when the
-    // modules were enabled, below.
+    // The Spotlight and Tonight blocks, placed through the add operation
+    // when the modules were enabled, below.
     $card = $assert->elementExists('css', 'article.data-surface-card.data-surface-card--highlight');
     $this->assertSame('Doors open at half past six', $card->find('css', 'h3')?->getText());
+    $this->assertSame('Bring your ticket, on your phone or printed.', $card->find('css', 'p')?->getText(), 'Its text, held by its slot.');
+    // The Tonight block below it: a section holding a card.
+    $section = $assert->elementExists('css', 'section.data-surface-section');
+    $this->assertSame('Talks start at seven', $section->find('css', 'article.data-surface-card h3')?->getText());
     $this->drupalGet('surface-examples/12');
     $assert->elementNotExists('css', 'article.data-surface-card');
   }

@@ -379,6 +379,9 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
    *   The document, as SchemaReader prepared it.
    * @param string $pointer
    *   The JSON pointer of the structure's object in it.
+   * @param string|null $hash
+   *   The document's hash (documentHash()), when the caller took it
+   *   already; NULL to take it here.
    *
    * @return string
    *   The name it is attached, listed, mixed in or chosen by.
@@ -386,17 +389,36 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
    * @internal
    *   For SchemaReader alone.
    */
-  public function readStructure(string $id, array $root, string $pointer): string {
+  public function readStructure(string $id, array $root, string $pointer, ?string $hash = NULL): string {
     if ($this->registry === NULL) {
       throw new \LogicException(sprintf('The document read into %s holds a structure at %s, and this blueprint has no registry to build one by.', $this->name($this->owner), $pointer === '' ? 'its root' : $pointer));
     }
     $owner = $this->owner === NULL ? NULL : $this->registry->getDefinition($this->owner);
+    // A document is read a frame at a time, each naming the structures it
+    // holds: its hash is taken once and handed on with it.
+    $hash ??= static::documentHash($root);
     return $this->registry->defineRead(
       $id,
       $owner->module ?? 'data_surface',
-      new ResourceCallable(SchemaReader::class, 'fill', [$root, $pointer]),
-      hash('xxh128', serialize([$id, $root, $pointer])),
+      new ResourceCallable(SchemaReader::class, 'fill', [$root, $pointer, $hash]),
+      hash('xxh128', serialize([$id, $hash, $pointer])),
     );
+  }
+
+  /**
+   * Hashes a document a structure is read from.
+   *
+   * @param array $root
+   *   The document, as SchemaReader prepared it.
+   *
+   * @return string
+   *   Its hash: the same for two documents that say the same.
+   *
+   * @internal
+   *   For SchemaReader alone.
+   */
+  public static function documentHash(array $root): string {
+    return hash('xxh128', serialize($root));
   }
 
   /**

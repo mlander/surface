@@ -12,17 +12,18 @@ use Drupal\data_surface\ResourceBuild\ResourcesInterface;
 use Drupal\data_surface_examples\ConceptCalls;
 
 /**
- * Example 13: places the Spotlight block through the placement resource.
+ * Example 13: places two component blocks through the placement resource.
  *
  * The component block lives in data_surface_component_block and the
  * placement resource in data_surface_block, neither of which the examples
- * depend on. When both are on with this module, whichever came last, one
- * block is placed through the resource's add operation, with the values
- * example 13's first call sends: Spotlight, the card this module ships,
- * in the default theme's content region, shown on example 13's page
- * alone. Nothing is placed during a configuration import, which brings its
- * own blocks, when the block is placed already, or when the resource
- * refuses the values (a default theme with no content region).
+ * depend on. When both are on with this module, whichever came last, two
+ * blocks are placed through the resource's add operation, with the values
+ * example 13's first two calls send: Spotlight, the card this module
+ * ships with a line of text in its slot, and Tonight, a section holding a
+ * card, each in the default theme's content region, shown on example 13's
+ * page alone. Nothing is placed during a configuration import, which
+ * brings its own blocks, when a block is placed already, or when the
+ * resource refuses the values (a default theme with no content region).
  */
 final class SpotlightBlockHooks {
 
@@ -37,9 +38,19 @@ final class SpotlightBlockHooks {
   public const PLACEMENT = 'data_surface_block';
 
   /**
-   * The block's machine name.
+   * The Spotlight block's machine name.
    */
   public const BLOCK = 'data_surface_examples_spotlight';
+
+  /**
+   * The Tonight block's machine name: a section holding a card.
+   */
+  public const SECTION = 'data_surface_examples_section';
+
+  /**
+   * The calls that place them, by machine name (ConceptCalls).
+   */
+  public const CALLS = [self::BLOCK => 'place', self::SECTION => 'section'];
 
   /**
    * The page the block is shown on.
@@ -79,19 +90,23 @@ final class SpotlightBlockHooks {
   }
 
   /**
-   * Places the Spotlight block, unless it is placed or is refused.
+   * Places the two blocks, each unless it is placed or is refused.
    *
    * @return bool
-   *   TRUE when it was placed now.
+   *   TRUE when either was placed now.
    */
   public function place(): bool {
-    if ($this->entityTypeManager->getStorage('block')->load(self::BLOCK) !== NULL) {
-      return FALSE;
+    $placed = FALSE;
+    foreach (self::CALLS as $block => $call) {
+      if ($this->entityTypeManager->getStorage('block')->load($block) !== NULL) {
+        continue;
+      }
+      $context = $this->resources->operation('block.placement', 'add');
+      $built = $this->resources->build('block.placement', $context);
+      $result = $this->pipeline->submit($built, ConceptCalls::values('block.placement', $call) ?? [], $this->resources->storage('block.placement', $context, $built));
+      $placed = $result->committed || $placed;
     }
-    $context = $this->resources->operation('block.placement', 'add');
-    $built = $this->resources->build('block.placement', $context);
-    $result = $this->pipeline->submit($built, ConceptCalls::values('block.placement', 'place') ?? [], $this->resources->storage('block.placement', $context, $built));
-    return $result->committed;
+    return $placed;
   }
 
 }

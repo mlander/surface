@@ -97,8 +97,13 @@ the record of the rework that brought the module to the pattern.
   the JSON Schema of what it chooses), asked at every build and refused
   uncacheable or varying by the account. Each variant is a structure read
   from its schema, id `<owner>.<key>.<value>`; a `#[Variant]` wins for a
-  value both name; stored open (`type: ignore` in the config schema)
-  (`docs/resources.md#variants-from-the-site`).
+  value both name; stored open (`type: ignore` in the config schema).
+  Defs the entries share are listed once, `VariantList::addDefs()`, and
+  each read structure is built once per request and context, wherever it
+  is attached (`Resources::buildRead()`), so variants nest: a component's
+  slots, each holding a component with its own props and slots
+  (`docs/resources.md#variants-from-the-site`,
+  `docs/decisions.md#a-slot-holds-text-a-component-or-components`).
 - **Reading a schema**: `Contract\SchemaReader`
   (`data_surface.schema_reader`), the emitter's mapping run backwards: a
   JSON Schema document (2020-12; draft-04 to -07 converted first,
@@ -512,7 +517,7 @@ src/Drush/               The contract diff's Drush command.
 src/Form/                Form builder, host traits, the operation form.
 src/Widget/ src/Plugin/  Definition to form element; resolvers, hosts, constraints.
 src/Options/             Option sets, the resolver plugin base and manager.
-src/Variants/            Variants from the site: ComponentProps, the components' props.
+src/Variants/            Variants from the site: ComponentProps and ComponentSlots.
 src/Refinement/          Narrowing and choice sets.
 modules/                 Sixteen experimental submodules; each has its own README.
 tests/src/               Unit, Kernel, Functional, FunctionalJavascript.

@@ -96,6 +96,35 @@ class ReactNarrowingTest extends ExamplesWebDriverTestBase {
   }
 
   /**
+   * Tests example 12: a slot's kind and a nested component, narrowed here.
+   *
+   * The section's content slot switched to one component draws the
+   * component it holds, offering what the slot expects; a card chosen
+   * there draws the card's props and its own slot, and a hero swaps them
+   * for the hero's: every level from the full schema's conditionals, with
+   * no request.
+   */
+  public function testTwelveNarrowsNestedSlotsHere(): void {
+    $assert = $this->assertSession();
+    $page = $this->getSession()->getPage();
+    $this->drupalGet('surface-react/event.spotlight/configure');
+    $this->assertNotNull($assert->waitForElement('css', '#dsr-component'));
+    $page->selectFieldOption('dsr-component', 'Section');
+    $this->assertNotNull($assert->waitForElement('css', '#dsr-slots-content-kind'));
+    $page->selectFieldOption('dsr-slots-content-kind', 'A component');
+    $this->assertNotNull($assert->waitForElement('css', '#dsr-slots-content-component-component'));
+    $assert->optionExists('dsr-slots-content-component-component', 'Card');
+    $assert->optionNotExists('dsr-slots-content-component-component', 'Call to action');
+    $page->selectFieldOption('dsr-slots-content-component-component', 'Card');
+    $this->assertNotNull($assert->waitForElement('css', '#dsr-slots-content-component-props-heading'));
+    $this->assertNotNull($assert->waitForElement('css', '#dsr-slots-content-component-slots-body-text'));
+    $page->selectFieldOption('dsr-slots-content-component-component', 'Hero');
+    $this->assertNotNull($assert->waitForElement('css', '#dsr-slots-content-component-props-overlay'));
+    $assert->elementNotExists('css', '#dsr-slots-content-component-props-heading');
+    $this->assertSame(0, $this->askedTheServer());
+  }
+
+  /**
    * Tests example 3 with compliance: the room asks, the pricing does not.
    */
   public function testExampleThreeAsksForTheRuntimeRoom(): void {

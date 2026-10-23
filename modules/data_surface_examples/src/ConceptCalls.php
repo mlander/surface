@@ -157,17 +157,55 @@ final class ConceptCalls {
             'component' => 'data_surface_examples:card',
             'props' => [
               'heading' => 'Doors open at half past six',
-              'body' => 'Bring your ticket, on your phone or printed.',
               'tone' => 'highlight',
               'link' => [
                 'url' => 'https://example.com/tickets',
                 'label' => 'Find your ticket',
               ],
             ],
+            'slots' => [
+              'body' => ['kind' => 'text', 'text' => 'Bring your ticket, on your phone or printed.'],
+            ],
           ],
           'theme' => self::DEFAULT_THEME,
           'region' => 'content',
           'weight' => 100,
+          'visibility' => [
+            [
+              'id' => 'request_path',
+              'settings' => ['pages' => '/surface-examples/13'],
+            ],
+          ],
+        ],
+      ],
+      'section' => [
+        'label' => 'The Tonight block, a section holding a card, placed through add, made again: refused for the machine name it took',
+        'operation' => 'add',
+        'module' => 'data_surface_block',
+        'values' => [
+          'label' => 'Tonight',
+          'id' => 'data_surface_examples_section',
+          'label_display' => FALSE,
+          'plugin' => 'data_surface_component',
+          'settings' => [
+            'component' => 'data_surface_examples:section',
+            'props' => ['heading' => 'Tonight'],
+            'slots' => [
+              'content' => [
+                'kind' => 'component',
+                'component' => [
+                  'component' => 'data_surface_examples:card',
+                  'props' => ['heading' => 'Talks start at seven'],
+                  'slots' => [
+                    'body' => ['kind' => 'text', 'text' => 'In the main hall, first floor.'],
+                  ],
+                ],
+              ],
+            ],
+          ],
+          'theme' => self::DEFAULT_THEME,
+          'region' => 'content',
+          'weight' => 101,
           'visibility' => [
             [
               'id' => 'request_path',
@@ -185,6 +223,27 @@ final class ConceptCalls {
           'settings' => [
             'component' => 'data_surface_examples:hero',
             'props' => ['title' => 'Doors open at half past six', 'align' => 'start'],
+          ],
+        ],
+      ],
+      'wrong_slot' => [
+        'label' => "A hero in the hero's actions, which expect a call to action: refused, naming the one it expects",
+        'operation' => 'edit',
+        'module' => 'data_surface_block',
+        'parameters' => ['id' => 'data_surface_examples_spotlight'],
+        'values' => [
+          'settings' => [
+            'component' => 'data_surface_examples:hero',
+            'props' => ['title' => 'Doors open at half past six'],
+            'slots' => [
+              'actions' => [
+                'kind' => 'component',
+                'component' => [
+                  'component' => 'data_surface_examples:hero',
+                  'props' => ['title' => 'Find your ticket'],
+                ],
+              ],
+            ],
           ],
         ],
       ],

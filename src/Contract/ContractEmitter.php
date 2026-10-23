@@ -1411,6 +1411,12 @@ final class ContractEmitter {
    *   Their ids: each one's def is written open in this document.
    */
   protected function mixedIn(DataSurfaceInterface $surface): array {
+    // A sealed child never changes, and may be held at many keys.
+    static $asked = NULL;
+    $asked ??= new \WeakMap();
+    if (isset($asked[$surface])) {
+      return $asked[$surface];
+    }
     $ids = [];
     foreach ($surface->getDefinitions()->mixins() as $mixin) {
       $ids[] = (string) ($mixin->structure->id ?? $mixin->structure->source);
@@ -1427,7 +1433,7 @@ final class ContractEmitter {
         array_push($ids, ...$this->mixedIn($child->child));
       }
     }
-    return array_values(array_unique($ids));
+    return $asked[$surface] = array_values(array_unique($ids));
   }
 
   /**
@@ -2314,6 +2320,21 @@ final class ContractEmitter {
    *   TRUE when a key of it, or of a child inside it, is locked or marked.
    */
   protected function locks(DataSurfaceInterface $surface): bool {
+    static $asked = NULL;
+    $asked ??= new \WeakMap();
+    return $asked[$surface] ??= $this->locksBelow($surface);
+  }
+
+  /**
+   * Answers locks() for a data surface not asked about before.
+   *
+   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   *   The data surface.
+   *
+   * @return bool
+   *   TRUE when a key of it, or of a child inside it, is locked or marked.
+   */
+  protected function locksBelow(DataSurfaceInterface $surface): bool {
     foreach ($surface->getDefinitions()->entries() as $entry) {
       $children = match (TRUE) {
         $entry->variants !== NULL => $entry->variants->variants,

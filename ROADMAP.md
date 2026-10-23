@@ -1243,12 +1243,28 @@ renames sit in A because they are cheapest before new code exists.
     moved to the main module, shared by example 12 and the block. A
     placed component block is a resource, `block.placed_component`,
     named by its machine name, with a write tool and a read tool.
-    Example 13 at `/surface-examples/13`. Open: the component's slots;
-    listing the placed blocks; the add form without JavaScript (After
-    the rework, item 7). Closed 2026-10-23: a placed block of any plugin
-    as one resource, `block.placement` (item 11), which replaced
+    Example 13 at `/surface-examples/13`. Open: listing the placed
+    blocks; the add form without JavaScript (After the rework, item 7).
+    Closed 2026-10-23: a placed block of any plugin as one resource,
+    `block.placement` (item 11), which replaced
     `block.placed_component`; placing, moving within a theme and
-    removing blocks through a tool.
+    removing blocks through a tool; the component's slots (item 17).
+
+17. **A component's slots.** DONE 2026-10-23
+    (`docs/decisions.md#a-slot-holds-text-a-component-or-components`).
+    `slots` beside `props`, one key per slot a component's metadata
+    declares, from a second provider, `ComponentSlots`, chosen by the
+    same component; each slot holds text, one component (the same three
+    keys again) or a list of them, three deep at most. What a slot
+    expects (`expected` by id or tag, `minItems`, `maxItems`) is a
+    refusal both documents state. The shipped components gained slots:
+    the card's `body`, the hero's `actions`, and a fourth, `section`,
+    whose `content` takes any component tagged `block`. Example 13
+    places a section holding a card. Shared defs a provider lists once
+    (`VariantList::addDefs()`) and read structures built once
+    (`Resources::buildRead()`) keep a site with hundreds of components
+    to a def per shape. Open: the list of components on the block form;
+    formatted text in a slot.
 
 ## Rejected, on the record
 

@@ -1901,13 +1901,14 @@ Failed: The values were refused:
 `/surface-examples/12`
 
 A component chosen from the single-directory components the site has,
-and below it the props that component takes. The class lists neither:
-each component says what props it takes, in the JSON Schema of its
-`*.component.yml`, and a provider hands each schema to the reader, which
-writes it into a structure
-([Reading a schema](../../docs/reading-a-schema.md)). The components are
-variants at `props`, which the component chooses between, one per
-component the site has
+and below it the props that component takes and its slots. The class
+lists none of them: each component says what props it takes, in the JSON
+Schema of its `*.component.yml`, and a provider hands each schema to the
+reader, which writes it into a structure
+([Reading a schema](../../docs/reading-a-schema.md)); its slots are in
+the same file, and a second provider writes them as a schema too. The
+components are variants at `props` and again at `slots`, which the
+component chooses between, one per component the site has
 ([Variants from the site](../../docs/resources.md#variants-from-the-site)).
 
 <!-- code: src/Resource/SpotlightResource.php -->
@@ -1929,12 +1930,14 @@ final class SpotlightResource implements ResourceInterface {
       ->setRequired(TRUE);
     $inputs->attachVariants('props', by: 'component', from: ComponentProps::class)
       ->setLabel(t('Props'));
+    $inputs->attachVariants('slots', by: 'component', from: ComponentSlots::class)
+      ->setLabel(t('Slots'));
   }
 
 }
 ```
 
-The provider lists every component, the three this module ships among
+The provider lists every component, the four this module ships among
 them, each by its id and its name, with its props as the component
 declares them. A prop typed by a PHP class takes a value only Twig code
 passes, which nothing stores: that type is left out, as the reader would
@@ -2016,10 +2019,25 @@ final class ComponentProps implements VariantsFromSiteInterface, ContainerInject
 }
 ```
 
-The module ships three components, so the page holds something whatever
-the site's themes provide: a card, a hero and a call to action, with
-props of every type, lists of values, bounds, required props, a nested
-object and an array between them. The card, as it declares itself:
+Its sibling, [`ComponentSlots`](../../src/Variants/ComponentSlots.php),
+lists the same components, each with the object of its slots: one key
+per slot its metadata declares, and none for a component with no slot.
+Each slot holds one of three things, chosen by a `kind` key: `text`, a
+plain string; `component`, one nested component, its `component`, its
+`props` and its own `slots`, the same keys again; or `components`, a list
+of those. What a slot's metadata expects narrows it, as a refusal: the
+components it names under `expected`, by id or by a tag a component lists
+under `tags`, and no component for an empty list; `minItems` and
+`maxItems` bound the list, and a `maxItems` of 1 leaves no list. Slots
+nest three deep, and a slot at that depth holds text alone
+([A slot holds text, a component, or
+components](../../docs/decisions.md#a-slot-holds-text-a-component-or-components)).
+
+The module ships four components, so the page holds something whatever
+the site's themes provide: a card, a hero, a call to action and a
+section, with props of every type, lists of values, bounds, required
+props, a nested object and an array between them, and a slot each but
+the call to action. The card, as it declares itself:
 
 <!-- component: components/card/card.component.yml -->
 
@@ -2027,7 +2045,9 @@ object and an array between them. The card, as it declares itself:
 $schema: https://git.drupalcode.org/project/drupal/-/raw/HEAD/core/assets/schemas/v1/metadata.schema.json
 name: Card
 status: stable
-description: 'A heading, a line of text and a link. Example 12 reads its props into a structure.'
+description: 'A heading, a line of text and a link. Example 12 reads its props into a structure, and its slot beside them.'
+tags:
+  - block
 props:
   type: object
   required:
@@ -2037,9 +2057,6 @@ props:
       type: string
       title: Heading
       maxLength: 80
-    body:
-      type: ['string', 'null']
-      title: Text
     tone:
       type: string
       title: Tone
@@ -2061,11 +2078,16 @@ props:
         label:
           type: ['string', 'null']
           title: Link text
+slots:
+  body:
+    title: Text
+    description: 'A line under the heading.'
+    # No component: the slot holds text alone.
+    expected: []
 ```
 
 Read, each prop is a key. The heading is a required string of up to 80
-characters, the text a string that may be cleared, the tone a choice of
-Plain and Highlighted, labeled by `meta:enum` and starting from plain,
+characters, the tone a choice of Plain and Highlighted, labeled by `meta:enum` and starting from plain,
 and the link a map whose address is a URI. The page shows the card's
 schema beside the def it became in the full schema, what the reader
 noted (the link is an object that leaves `additionalProperties` out,
@@ -2088,6 +2110,57 @@ conditional per component:
 ]
 ```
 
+The card's text is its `body` slot, which expects no component, so it
+holds text alone. The hero's `actions` slot expects the call to action,
+two at most, and the section's `content` slot any component tagged
+`block`, which the card and the hero are:
+
+```yaml
+# hero.component.yml
+slots:
+  actions:
+    title: Actions
+    description: 'Up to two buttons under the title.'
+    expected:
+      - 'data_surface_examples:call_to_action'
+    maxItems: 2
+
+# section.component.yml
+slots:
+  content:
+    title: Content
+    description: 'The components the section holds.'
+    expected:
+      - block
+```
+
+The full schema states the slots as it states the props, one conditional
+per component, each slot a def of its own: the hero's actions offer
+text, one component or a list of two at most, and the component they
+hold offers the call to action alone.
+
+```json
+"component.slot.data_surface_examples:hero.actions.1": {
+  "properties": {
+    "kind": {"title": "Holds", "type": "string", "oneOf": [{"const": "text", ...}, {"const": "component", ...}, {"const": "components", ...}], "default": "text"},
+    "text": {"title": "Text", "type": ["string", "null"]},
+    "component": {"title": "Component", "$ref": "#/$defs/component.nested.data_surface_examples:call_to_action.1"},
+    "components": {"title": "Components", "type": "array", "maxItems": 2,
+                   "items": {"$ref": "#/$defs/component.nested.data_surface_examples:call_to_action.1"}}
+  },
+  "allOf": [{"if": {"not": {"properties": {"kind": {"const": "text"}}, "required": ["kind"]}},
+             "then": {"properties": {"text": false}}}, ...]
+},
+"component.nested.data_surface_examples:call_to_action.1": {
+  "properties": {
+    "component": {"title": "Component", "type": "string", "oneOf": [{"const": "data_surface_examples:call_to_action", "title": "Call to action"}]},
+    "props": {"anyOf": [{"$ref": "#/$defs/component.props.data_surface_examples:call_to_action"}, ...], "x-surface": {"by": "component", ...}},
+    "slots": {"anyOf": [{"$ref": "#/$defs/component.slots.data_surface_examples:call_to_action.2"}, ...], "x-surface": {"by": "component", ...}}
+  },
+  "required": ["component"]
+}
+```
+
 Choose another component and the props below it are that component's:
 the form rebuilds them over AJAX, and the React page draws them with no
 request, since the full schema states every component's def. The card's
@@ -2095,12 +2168,13 @@ def read back is the card again, byte for byte, as every document of
 these examples a runtime refiner does not narrow reads back to itself
 ([the round trip](../../docs/reading-a-schema.md#the-round-trip)).
 
-The config object holds the component's id and its props. Its config
-schema is written from the resource, and the props are `type: ignore`
-there: which components a site has is the site's, so no schema written
-once can name their props, and the variant the component chooses holds
-them to its keys before anything is written. The resource, its provider
-and its storage are the code; the components' schemas are none.
+The config object holds the component's id, its props and its slots.
+Its config schema is written from the resource, and the props and the
+slots are `type: ignore` there: which components a site has is the
+site's, so no schema written once can name their props or slots, and the
+variant the component chooses holds them to its keys before anything is
+written. The resource, its two providers and its storage are the code;
+the components' schemas and metadata are none.
 
 A tool that sends one component's props for another is refused, naming
 the component they belong to; one that sends a hero darker than its
@@ -2117,7 +2191,7 @@ drush tool:run data_surface:event.spotlight:configure --uid=1 --input='{"values"
 ```
 1. The hero, with props it takes
 Success: Dry run of Configure the spotlight: the values were accepted and prepared, and nothing was written.
-  values: {"component":"data_surface_examples:hero","props":{"title":"Doors open at half past six","subtitle":null,"align":"start","overlay":40,"full_width":false}}
+  values: {"component":"data_surface_examples:hero","props":{"title":"Doors open at half past six","subtitle":null,"align":"start","overlay":40,"full_width":false},"slots":{"actions":{"kind":"text","text":null}}}
 
 2. A card sent the props of a hero
 Failed: The values were refused:
@@ -2133,7 +2207,7 @@ Failed: The values were refused:
 
 `/surface-examples/13`
 
-Example 12's two lines are the settings of a block. The block plugin
+Example 12's three lines are the settings of a block. The block plugin
 names a structure with `#[UsesStructure]` and renders; its settings
 form, their validation and their storage (the block's settings) come
 from the structure, through the block host
@@ -2148,8 +2222,8 @@ both while they are off:
 ddev drush pm:install data_surface_component_block data_surface_block
 ```
 
-The structure is example 12's two lines under the block's id, from the
-same provider:
+The structure is example 12's three lines under the block's id, from the
+same providers:
 
 <!-- code: ../data_surface_component_block/src/Structure/ComponentBlockStructure.php -->
 
@@ -2164,6 +2238,8 @@ final class ComponentBlockStructure implements StructureInterface {
     $inputs->add('component', 'string', t('Component'));
     $inputs->attachVariants('props', by: 'component', from: ComponentProps::class)
       ->setLabel(t('Props'));
+    $inputs->attachVariants('slots', by: 'component', from: ComponentSlots::class)
+      ->setLabel(t('Slots'));
   }
 
 }
@@ -2176,8 +2252,13 @@ component is one every site has to start from; a block with no
 component renders nothing. The plugin renders the component it holds
 with its props, less a prop that holds nothing, which core's check of
 the props refuses for a prop that may not be null; a component the site
-no longer has renders nothing too. It names the extension that provides
-the component as a dependency, so the block goes with it:
+no longer has renders nothing too. Each slot renders what it holds: text
+as a plain string, escaped where the slot prints it; one component as its
+own render array, its props held and its slots filled the same way; a
+list as each of those. A slot that holds nothing is not passed, so the
+component prints nothing there. The block names the extension that
+provides each component it embeds, at any depth, as a dependency, so the
+block goes with any of them:
 
 <!-- code: ../data_surface_component_block/src/Plugin/Block/ComponentBlock.php -->
 
@@ -2215,20 +2296,75 @@ final class ComponentBlock extends DataSurfaceBlockBase implements ContainerFact
    * {@inheritdoc}
    */
   public function build(): array {
-    $configuration = $this->getConfiguration();
-    $component = $configuration['component'] ?? NULL;
-    $build = [];
-    if (is_string($component) && $component !== '' && $this->components->getDefinition($component, FALSE) !== NULL) {
-      $build = [
-        '#type' => 'component',
-        '#component' => $component,
-        '#props' => self::held(is_array($configuration['props'] ?? NULL) ? $configuration['props'] : []),
-      ];
-    }
-    // The components the structure was built from: a module or theme
-    // installed or taken away may add or remove the one stored.
+    $build = $this->element($this->getConfiguration()) ?? [];
+    // The components the structure was built from, its props' and its
+    // slots' at every depth: a module or theme installed or taken away
+    // may add or remove one stored.
     CacheableMetadata::createFromObject($this->memoizedDataSurface())->applyTo($build);
     return $build;
+  }
+
+  /**
+   * Renders one component as stored: its props held, its slots filled.
+   *
+   * @param mixed $stored
+   *   What is stored for it: its `component`, `props` and `slots`.
+   *
+   * @return array|null
+   *   The component's render array, or NULL for no component, or one the
+   *   site no longer has.
+   */
+  protected function element(mixed $stored): ?array {
+    $component = is_array($stored) ? ($stored['component'] ?? NULL) : NULL;
+    if (!is_string($component) || $component === '' || $this->components->getDefinition($component, FALSE) === NULL) {
+      return NULL;
+    }
+    $element = [
+      '#type' => 'component',
+      '#component' => $component,
+      '#props' => self::held(is_array($stored['props'] ?? NULL) ? $stored['props'] : []),
+    ];
+    $slots = $this->filled(is_array($stored['slots'] ?? NULL) ? $stored['slots'] : []);
+    if ($slots !== []) {
+      $element['#slots'] = $slots;
+    }
+    return $element;
+  }
+
+  /**
+   * Turns the stored slots into what each slot renders.
+   *
+   * Text is a plain string, escaped where it is printed; one component is
+   * its render array, slots and all; a list is a render array of each.
+   * A slot that holds nothing, or only components the site no longer has,
+   * is left out, so the component prints nothing there.
+   * Decision: see
+   * docs/decisions.md#a-slot-holds-text-a-component-or-components.
+   *
+   * @param array $slots
+   *   The slots as stored, by name: each its `kind` and what that holds.
+   *
+   * @return array<string, array>
+   *   A render array per slot that holds something, by name.
+   */
+  protected function filled(array $slots): array {
+    $filled = [];
+    foreach ($slots as $name => $slot) {
+      if (!is_array($slot)) {
+        continue;
+      }
+      $items = is_array($slot['components'] ?? NULL) ? $slot['components'] : [];
+      $content = match ($slot['kind'] ?? NULL) {
+        'text' => is_string($slot['text'] ?? NULL) && $slot['text'] !== '' ? ['#plain_text' => $slot['text']] : NULL,
+        'component' => $this->element($slot['component'] ?? NULL),
+        'components' => array_values(array_filter(array_map($this->element(...), $items))) ?: NULL,
+        default => NULL,
+      };
+      if ($content !== NULL) {
+        $filled[(string) $name] = $content;
+      }
+    }
+    return $filled;
   }
 
   /**
@@ -2261,16 +2397,48 @@ final class ComponentBlock extends DataSurfaceBlockBase implements ContainerFact
   /**
    * {@inheritdoc}
    *
-   * The extension that provides the component, so the block goes with it.
+   * The extensions that provide its components, the one it names and each
+   * one its slots hold, so the block goes with any of them.
    */
   public function calculateDependencies(): array {
-    $component = $this->getConfiguration()['component'] ?? NULL;
-    $definition = is_string($component) && $component !== '' ? $this->components->getDefinition($component, FALSE) : NULL;
-    if (!is_array($definition) || !isset($definition['provider'], $definition['extension_type'])) {
+    $dependencies = [];
+    foreach ($this->embedded($this->getConfiguration()) as $component) {
+      $definition = $this->components->getDefinition($component, FALSE);
+      if (!is_array($definition) || !isset($definition['provider'], $definition['extension_type'])) {
+        continue;
+      }
+      $type = $definition['extension_type'] instanceof \BackedEnum ? $definition['extension_type']->value : (string) $definition['extension_type'];
+      $dependencies[$type][] = $definition['provider'];
+    }
+    return array_map(static fn (array $providers): array => array_values(array_unique($providers)), $dependencies);
+  }
+
+  /**
+   * Lists the components a stored component embeds, itself included.
+   *
+   * @param mixed $stored
+   *   What is stored for it.
+   *
+   * @return string[]
+   *   The ids, the component first, then each its slots hold, in order.
+   */
+  protected function embedded(mixed $stored): array {
+    $component = is_array($stored) ? ($stored['component'] ?? NULL) : NULL;
+    if (!is_string($component) || $component === '') {
       return [];
     }
-    $type = $definition['extension_type'] instanceof \BackedEnum ? $definition['extension_type']->value : (string) $definition['extension_type'];
-    return [$type => [$definition['provider']]];
+    $ids = [$component];
+    foreach (is_array($stored['slots'] ?? NULL) ? $stored['slots'] : [] as $slot) {
+      $nested = match (is_array($slot) ? ($slot['kind'] ?? NULL) : NULL) {
+        'component' => [$slot['component'] ?? NULL],
+        'components' => is_array($slot['components'] ?? NULL) ? $slot['components'] : [],
+        default => [],
+      };
+      foreach ($nested as $item) {
+        array_push($ids, ...$this->embedded($item));
+      }
+    }
+    return $ids;
   }
 
 }
@@ -2285,31 +2453,37 @@ first save, and its props are there on the block's form once it is
 saved ([A plugin host cannot overlay a full
 submission](../../docs/decisions.md#a-plugin-host-cannot-overlay-a-full-submission)).
 
-With all three modules on, whichever came last places one block,
-Spotlight, `data_surface_examples_spotlight`, through the placement
-resource's add operation, with the values of the first call below: the
-card, as example 12 ships it, in the default theme's content region,
-shown on `/surface-examples/13` alone, below what the page says.
+With all three modules on, whichever came last places two blocks
+through the placement resource's add operation, with the values of the
+first two calls below, each in the default theme's content region and
+shown on `/surface-examples/13` alone, below what the page says:
+Spotlight, `data_surface_examples_spotlight`, the card as example 12
+ships it, a line of text in its slot; and Tonight,
+`data_surface_examples_section`, a section whose slot holds a card,
+whose own slot holds a line of text.
 
-The page shows the block's two lines beside example 12's, the block
-structure's full schema cut to the three components this module ships
-(the same variants as example 12's, under the block's id), the four tools
-a placed block has, a link to place one, and what it cost.
+The page shows the block's three lines beside example 12's, the block
+structure's full schema cut to the four components this module ships
+(the same variants as example 12's, under the block's id), the hero's
+actions slot as the full schema narrows it, the four tools a placed
+block has, a link to place one, and what it cost.
 
 A plugin's structure is held by its host and is no tool. A placed block
 is a config entity, `block.block.<id>`, with a machine name and storage
 of its own, and `data_surface_block` declares it as a resource,
 `block.placement`, whose plugin chooses its settings: for this plugin,
 the block's structure, as declared; for any other, what its config schema
-says ([its README](../data_surface_block/README.md)). The three calls
-below place the Spotlight block, change it to the hero and remove it,
-each as a dry run, on a site whose default theme is Stark, where the
+says ([its README](../data_surface_block/README.md)). The five calls
+below place the Spotlight and Tonight blocks, change the Spotlight block
+to the hero, send a hero where the hero's actions expect a call to
+action, and remove the Spotlight block, each as a dry run, on a site whose default theme is Stark, where the
 values hold `"theme":"stark"`; the page sends the site's own default
-theme. The first is the call that placed it, made again: a create whose
-caller names the thing is refused for the name it took.
+theme. The first two are the calls that placed them, made again: a
+create whose caller names the thing is refused for the name it took. The
+fourth is refused naming the one component the slot expects.
 
 ```bash
-drush tool:run data_surface:block.placement:add --uid=1 --input='{"values":{"label":"Spotlight","id":"data_surface_examples_spotlight","label_display":true,"plugin":"data_surface_component","settings":{"component":"data_surface_examples:card","props":{"heading":"Doors open at half past six","body":"Bring your ticket, on your phone or printed.","tone":"highlight","link":{"url":"https://example.com/tickets","label":"Find your ticket"}}},"theme":"stark","region":"content","weight":100,"visibility":[{"id":"request_path","settings":{"pages":"/surface-examples/13"}}]}}' --input=dry_run=true
+drush tool:run data_surface:block.placement:add --uid=1 --input='{"values":{"label":"Spotlight","id":"data_surface_examples_spotlight","label_display":true,"plugin":"data_surface_component","settings":{"component":"data_surface_examples:card","props":{"heading":"Doors open at half past six","tone":"highlight","link":{"url":"https://example.com/tickets","label":"Find your ticket"}},"slots":{"body":{"kind":"text","text":"Bring your ticket, on your phone or printed."}}},"theme":"stark","region":"content","weight":100,"visibility":[{"id":"request_path","settings":{"pages":"/surface-examples/13"}}]}}' --input=dry_run=true
 ```
 
 ```
@@ -2319,13 +2493,33 @@ Failed: The values were refused:
 ```
 
 ```bash
+drush tool:run data_surface:block.placement:add --uid=1 --input='{"values":{"label":"Tonight","id":"data_surface_examples_section","label_display":false,"plugin":"data_surface_component","settings":{"component":"data_surface_examples:section","props":{"heading":"Tonight"},"slots":{"content":{"kind":"component","component":{"component":"data_surface_examples:card","props":{"heading":"Talks start at seven"},"slots":{"body":{"kind":"text","text":"In the main hall, first floor."}}}}}},"theme":"stark","region":"content","weight":101,"visibility":[{"id":"request_path","settings":{"pages":"/surface-examples/13"}}]}}' --input=dry_run=true
+```
+
+```
+2. The Tonight block, a section holding a card, placed through add, made again: refused for the machine name it took
+Failed: The values were refused:
+/id: The machine name data_surface_examples_section is already in use: choose another.
+```
+
+```bash
 drush tool:run data_surface:block.placement:edit --uid=1 --input='{"id":"data_surface_examples_spotlight","values":{"settings":{"component":"data_surface_examples:hero","props":{"title":"Doors open at half past six","align":"start"}}}}' --input=dry_run=true
 ```
 
 ```
-2. The Spotlight block set to the hero
+3. The Spotlight block set to the hero
 Success: Dry run of Edit a placed block: the values were accepted and prepared, and nothing was written.
-  values: {"label":"Spotlight","id":"data_surface_examples_spotlight","label_display":true,"plugin":"data_surface_component","settings":{"component":"data_surface_examples:hero","props":{"title":"Doors open at half past six","subtitle":null,"align":"start","overlay":40,"full_width":false}},"theme":"stark","region":"content","weight":100,"status":true,"visibility":[{"id":"request_path","negate":false,"settings":{"pages":"/surface-examples/13"}}]}
+  values: {"label":"Spotlight","id":"data_surface_examples_spotlight","label_display":true,"plugin":"data_surface_component","settings":{"component":"data_surface_examples:hero","props":{"title":"Doors open at half past six","subtitle":null,"align":"start","overlay":40,"full_width":false},"slots":{"actions":{"kind":"text","text":null}}},"theme":"stark","region":"content","weight":100,"status":true,"visibility":[{"id":"request_path","negate":false,"settings":{"pages":"/surface-examples/13"}}]}
+```
+
+```bash
+drush tool:run data_surface:block.placement:edit --uid=1 --input='{"id":"data_surface_examples_spotlight","values":{"settings":{"component":"data_surface_examples:hero","props":{"title":"Doors open at half past six"},"slots":{"actions":{"kind":"component","component":{"component":"data_surface_examples:hero","props":{"title":"Find your ticket"}}}}}}}' --input=dry_run=true
+```
+
+```
+4. A hero in the hero's actions, which expect a call to action: refused, naming the one it expects
+Failed: The values were refused:
+/settings/slots/actions/component/component: The value you selected is not a valid choice. Choose data_surface_examples:call_to_action (Call to action).
 ```
 
 ```bash
@@ -2333,9 +2527,9 @@ drush tool:run data_surface:block.placement:remove --uid=1 --input='{"id":"data_
 ```
 
 ```
-3. The Spotlight block removed, rehearsed
+5. The Spotlight block removed, rehearsed
 Success: Dry run of Remove a placed block: the removal was rehearsed, and nothing was removed. The values it holds are answered.
-  values: {"label":"Spotlight","id":"data_surface_examples_spotlight","label_display":true,"plugin":"data_surface_component","settings":{"component":"data_surface_examples:card","props":{"heading":"Doors open at half past six","body":"Bring your ticket, on your phone or printed.","tone":"highlight","link":{"url":"https://example.com/tickets","label":"Find your ticket"}}},"theme":"stark","region":"content","weight":100,"status":true,"visibility":[{"id":"request_path","negate":false,"settings":{"pages":"/surface-examples/13"}}]}
+  values: {"label":"Spotlight","id":"data_surface_examples_spotlight","label_display":true,"plugin":"data_surface_component","settings":{"component":"data_surface_examples:card","props":{"heading":"Doors open at half past six","tone":"highlight","link":{"url":"https://example.com/tickets","label":"Find your ticket"}},"slots":{"body":{"kind":"text","text":"Bring your ticket, on your phone or printed."}}},"theme":"stark","region":"content","weight":100,"status":true,"visibility":[{"id":"request_path","negate":false,"settings":{"pages":"/surface-examples/13"}}]}
 ```
 
 ## How this page is kept true
@@ -2366,13 +2560,14 @@ Drush commands are checked against `ExampleCalls`.
 | `Functional\ServedContractEndpointsTest` | In React: the landing page's links, and example 2's contract, refine and validate over HTTP. |
 | `Functional\ServedSubmitEndpointTest` | In React: example 2 saved over HTTP, refused, and refused after someone else saved. |
 | `Kernel\ExamplesResetTest` | Reset to defaults puts every example, and what another module stored on example 3, back to the shipped files, and opens every room example 4 closed. |
-| `Kernel\ExamplesConceptsTest` | Examples 7 to 12: each form builds and saves; example 7's rules in the full schema as declared, the send day gone for a monthly bulletin and kept in storage; example 8's one def at two sites with each wiring, the mixed-in keys flat, the shape at two keys, the volunteers' collection; example 9's keys from the configuration, a type added without a cache rebuild, the locked type in both documents and on the form; example 10's fees for two accounts, locked once published, and both operations' facts and tools; example 11's widgets, the always held badges and the notes that clear; example 12's three components read as three variants, the card's props as keys with their constraints, both documents stating them, the form swapped to the hero and saved, a hero too dark refused; the panel above each, and none above examples 1 to 3; each class stays screen sized; example 13's page with its modules off, saying how to enable both, then with the block alone on, its parts and no call, then with the placement resource on too, the Spotlight block placed through the add operation, the two lines side by side, the block's contract cut to the three components, the four placement tools and the three calls' answers, nothing written. |
+| `Kernel\ExamplesConceptsTest` | Examples 7 to 12: each form builds and saves; example 7's rules in the full schema as declared, the send day gone for a monthly bulletin and kept in storage; example 8's one def at two sites with each wiring, the mixed-in keys flat, the shape at two keys, the volunteers' collection; example 9's keys from the configuration, a type added without a cache rebuild, the locked type in both documents and on the form; example 10's fees for two accounts, locked once published, and both operations' facts and tools; example 11's widgets, the always held badges and the notes that clear; example 12's four components read as four variants at the props and again at the slots, the card's props as keys with their constraints, its text a slot, both documents stating them, the form swapped to the hero and saved with its slot, a hero too dark refused; the panel above each, and none above examples 1 to 3; each class stays screen sized; example 13's page with its modules off, saying how to enable both, then with the block alone on, its parts and no call, then with the placement resource on too, the Spotlight and Tonight blocks placed through the add operation, the three lines side by side, the block's contract cut to the four components, the hero's actions narrowed, the four placement tools and the five calls' answers, nothing written. |
 | `Kernel\ExamplesWorkflowTest` | Example 10 with the workflow module: the fees left out of the full schema, the tool listing and the read tool for an account without "see event fees" and kept for one with it; the program locked whole once the workflow state is published, settled at call time and left unmarked in the full schema; checking still answers; the panel's paragraph, with the module and without it. |
-| `Kernel\ExamplesConceptsToolTest` | Examples 7 to 13: every call `ConceptCalls` writes down, its answer, nothing written, the Spotlight block included, and this page quoting each command and answer. |
-| `Functional\ExamplesConceptsRoutesTest` | Every route of examples 7 to 12 answers an administrator and refuses anonymous; the landing page lists them; each page shows its panel and saves through its form; example 10's check writes nothing. Example 13 refuses anonymous, says to enable its two modules, then, with them on, shows its parts and the calls' answers, and draws the Spotlight card below on its page alone. |
-| `Kernel\ComponentBlockTest` | Example 13's block: its structure and both documents, and what it renders ([its README](../data_surface_component_block/README.md)). |
+| `Kernel\ExamplesConceptsToolTest` | Examples 7 to 13: every call `ConceptCalls` writes down, its answer, nothing written, the two blocks included, and this page quoting each command and answer. |
+| `Functional\ExamplesConceptsRoutesTest` | Every route of examples 7 to 12 answers an administrator and refuses anonymous; the landing page lists them; each page shows its panel and saves through its form; example 10's check writes nothing. Example 13 refuses anonymous, says to enable its two modules, then, with them on, shows its parts and the calls' answers, and draws the Spotlight card and the Tonight section below on its page alone. |
+| `Kernel\ComponentBlockTest` | Example 13's block: its structure and both documents, the hero's narrowed slot pinned, and what it renders, slots included ([its README](../data_surface_component_block/README.md)). |
+| `Kernel\ComponentSlotsTest` | What a slot expects read back from the metadata, the depth slots nest to, and each expectation a refusal. |
 | `Kernel\BlockPlacementToolsTest` | Example 13's block placed, configured, read and removed through the placement resource's tools ([its README](../data_surface_block/README.md)). |
 | `Functional\ComponentBlockPlacementTest` | Example 13's block through the block form without JavaScript. |
-| `FunctionalJavascript\ComponentBlockAjaxTest` | Example 13's block in a browser: a component chosen draws its props over AJAX, and the block saved renders it. |
+| `FunctionalJavascript\ComponentBlockAjaxTest` | Example 13's block in a browser: a component chosen draws its props and slots over AJAX, a slot's kind switched draws what it holds, a nested component chosen draws its own props, and the block saved renders it. |
 | `FunctionalJavascript\ExamplesSpotlightAjaxTest` | Example 12 in a browser: choosing the hero swaps the card's props for the hero's over AJAX, the form saved stores the hero and its props, and the page read back draws them. |
 | `Kernel\SchemaRoundTripTest` | Every example's full schema, read back by the reader, is itself again, byte for byte, or differs only as its listed kind says. |

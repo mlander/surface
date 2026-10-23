@@ -60,7 +60,7 @@ class ExamplesConceptsToolTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Reads every config object the examples ship, and the Spotlight block.
+   * Reads every config object the examples ship, and the two blocks.
    *
    * @return array<string, array>
    *   The stored values, by config object.
@@ -69,7 +69,8 @@ class ExamplesConceptsToolTest extends DataSurfaceKernelTestBase {
     $factory = $this->container->get('config.factory');
     $factory->reset();
     $stored = [];
-    foreach ([...$factory->listAll('data_surface_examples.'), 'block.block.' . SpotlightBlockHooks::BLOCK] as $name) {
+    $blocks = ['block.block.' . SpotlightBlockHooks::BLOCK, 'block.block.' . SpotlightBlockHooks::SECTION];
+    foreach ([...$factory->listAll('data_surface_examples.'), ...$blocks] as $name) {
       $stored[$name] = $factory->get($name)->getRawData();
     }
     return $stored;
@@ -110,11 +111,13 @@ class ExamplesConceptsToolTest extends DataSurfaceKernelTestBase {
     $this->assertStringContainsString('"notes":null', $answers['event.doors']['null'], 'Null: cleared.');
     $this->assertStringContainsString('"notes":"Doors close at ten."', $answers['event.doors']['value'], 'A value: replaced.');
     $this->assertSame("Failed: The values were refused:\n" . '/badges: Badges cannot be cleared: it always holds a value, printed (Printed at the door) by default. Leave it out to keep what it holds.', $first($answers['event.doors']['always_held']));
-    $this->assertStringContainsString('values: {"component":"data_surface_examples:hero","props":{"title":"Doors open at half past six","subtitle":null,"align":"start","overlay":40,"full_width":false}}', $answers['event.spotlight']['hero'], 'The hero\'s props, read from its schema, its defaults filled in.');
+    $this->assertStringContainsString('values: {"component":"data_surface_examples:hero","props":{"title":"Doors open at half past six","subtitle":null,"align":"start","overlay":40,"full_width":false},"slots":{"actions":{"kind":"text","text":null}}}', $answers['event.spotlight']['hero'], 'The hero\'s props, read from its schema, its defaults filled in, and its slot holding text.');
     $this->assertSame("Failed: The values were refused:\n" . '/props/align: props.align belongs to the data_surface_examples:hero variant, but component chose data_surface_examples:card.', $first($answers['event.spotlight']['wrong_component']), 'Refused, naming the component the props belong to.');
     $this->assertSame("Failed: The values were refused:\n" . '/props/overlay: This value should be between 0 and 100.', $first($answers['event.spotlight']['out_of_bounds']));
     $this->assertSame("Failed: The values were refused:\n" . '/id: The machine name data_surface_examples_spotlight is already in use: choose another.', $first($answers['block.placement']['place']), 'Placed once, the Spotlight block refuses a second add under its name.');
-    $this->assertStringContainsString('"settings":{"component":"data_surface_examples:hero","props":{"title":"Doors open at half past six","subtitle":null,"align":"start","overlay":40,"full_width":false}}', $answers['block.placement']['props'], 'The placed block named by its machine name, the hero read from its schema.');
+    $this->assertSame("Failed: The values were refused:\n" . '/id: The machine name data_surface_examples_section is already in use: choose another.', $first($answers['block.placement']['section']), 'Placed once, the Tonight block refuses a second add under its name.');
+    $this->assertStringContainsString('"settings":{"component":"data_surface_examples:hero","props":{"title":"Doors open at half past six","subtitle":null,"align":"start","overlay":40,"full_width":false},"slots":{"actions":{"kind":"text","text":null}}}', $answers['block.placement']['props'], 'The placed block named by its machine name, the hero read from its schema.');
+    $this->assertSame("Failed: The values were refused:\n" . '/settings/slots/actions/component/component: The value you selected is not a valid choice. Choose data_surface_examples:call_to_action (Call to action).', $first($answers['block.placement']['wrong_slot']), 'A component the slot does not expect, refused naming the one it does.');
     $this->assertSame('Success: Dry run of Remove a placed block: the removal was rehearsed, and nothing was removed. The values it holds are answered.', $first($answers['block.placement']['remove']));
 
     // The examples' README quotes every command, and every answer under

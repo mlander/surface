@@ -302,6 +302,11 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
         // A variant its access locked is offered, and drawn fixed.
         // Decision: see
         // docs/decisions.md#a-variant-is-open-locked-or-not-offered.
+        if ($chosen !== '' && static::nestsVariants($variants->variant($chosen)->child)) {
+          // Each variant inside it drawn from what it holds, or from its
+          // own defaults where its deciding key chose it afresh.
+          $value = static::nestedHeld($variants->variant($chosen)->child, $value);
+        }
         $variant = $chosen !== '' ? $variants->variant($chosen)->child->lockedWhole() : NULL;
         $locked = $locked || $variant !== NULL;
         $reason ??= $variant;
@@ -1881,9 +1886,20 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
       $resolved = $definitions->withVariantsResolved($raw + $current + $surface->getDefaultValues());
       foreach ($variantKeys as $name) {
         $definition = $resolved->get((string) $name);
-        if ($definition !== NULL && DefinitionMetadata::variantsBy($definition) === NULL) {
-          $raw += $this->extractKey((string) $name, $definition, $container, $form_state);
+        if ($definition === NULL || DefinitionMetadata::variantsBy($definition) !== NULL) {
+          continue;
         }
+        $variants = $definitions->entry((string) $name)->variants;
+        $chosen = $variants->chosen($raw[$variants->by] ?? $current[$variants->by] ?? $surface->getDefault($variants->by));
+        $child = $chosen === NULL ? NULL : $variants->variant($chosen)->child;
+        if ($child !== NULL && static::nestsVariants($child) && is_array($container[$name] ?? NULL) && empty($container[$name][self::PLACEHOLDER_KEY])) {
+          // Variants inside the variant (a component's slots, each holding
+          // a component that chooses its own props): each level is read
+          // through what its own deciding key chose in this submission.
+          $raw[$name] = $this->extractFrame($child, $container[$name], $form_state);
+          continue;
+        }
+        $raw += $this->extractKey((string) $name, $definition, $container, $form_state);
       }
     }
     // A key drawn as nothing when the page was drawn sent nothing, even
@@ -1896,6 +1912,103 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
     // the same accept() a payload goes through, which is also where
     // locked keys take the value the data surface declares.
     return $this->pipeline->accept($surface, $raw, $current);
+  }
+
+  /**
+   * Answers whether a child holds variants below a key of its own.
+   *
+   * @param \Drupal\data_surface\DataSurfaceInterface $child
+   *   The child.
+   *
+   * @return bool
+   *   TRUE when a key of it, or of a child attached inside it, holds
+   *   variants.
+   */
+  protected static function nestsVariants(DataSurfaceInterface $child): bool {
+    foreach ($child->getDefinitions()->entries() as $entry) {
+      if ($entry->variants !== NULL || ($entry->attachment !== NULL && static::nestsVariants($entry->attachment->child))) {
+        return TRUE;
+      }
+    }
+    return FALSE;
+  }
+
+  /**
+   * Gives each variant inside a child what it is drawn from.
+   *
+   * What the variant holds when it fits the variant its deciding key
+   * chose, and that variant's defaults when it does not (chosen afresh, or
+   * written for another), at every depth, as the top of a form does.
+   *
+   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   *   The child.
+   * @param mixed $value
+   *   What it holds.
+   *
+   * @return mixed
+   *   The same, each variant inside it drawn from what fits it.
+   */
+  protected static function nestedHeld(DataSurfaceInterface $surface, mixed $value): mixed {
+    if (!is_array($value)) {
+      return $value;
+    }
+    foreach ($surface->getDefinitions()->entries() as $name => $entry) {
+      $held = $value[$name] ?? NULL;
+      if ($entry->variants !== NULL) {
+        $chosen = $entry->variants->chosen($value[$entry->variants->by] ?? NULL);
+        if ($chosen !== NULL) {
+          $held = $entry->variants->fits($chosen, $held) ? $held : $entry->variants->defaultsOf($chosen);
+          $value[$name] = static::nestedHeld($entry->variants->variant($chosen)->child, $held);
+        }
+      }
+      elseif ($entry->attachment !== NULL && is_array($held)) {
+        $value[$name] = static::nestedHeld($entry->attachment->child, $held);
+      }
+    }
+    return $value;
+  }
+
+  /**
+   * Reads a child's keys out of its element, a level at a time.
+   *
+   * A key is read through its widget; an attached child through its own
+   * keys; variants through the variant their deciding key chose in what
+   * was just read, so an element drawn for another variant gives nothing
+   * of its own. A collection below the top is not drawn, so nothing is
+   * read for it, and what it holds is kept.
+   *
+   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   *   The child.
+   * @param array $element
+   *   Its element.
+   * @param \Drupal\Core\Form\FormStateInterface $form_state
+   *   The form state.
+   *
+   * @return array
+   *   The raw values read, by key.
+   */
+  protected function extractFrame(DataSurfaceInterface $surface, array $element, FormStateInterface $form_state): array {
+    $raw = [];
+    foreach ($surface->getDefinitions()->entries() as $name => $entry) {
+      $name = (string) $name;
+      $at = $element[$name] ?? NULL;
+      if (!is_array($at) || !empty($at[self::PLACEHOLDER_KEY]) || $entry->list !== NULL) {
+        continue;
+      }
+      if ($entry->variants !== NULL) {
+        $chosen = $entry->variants->chosen($raw[$entry->variants->by] ?? $surface->getDefault($entry->variants->by));
+        if ($chosen !== NULL) {
+          $raw[$name] = $this->extractFrame($entry->variants->variant($chosen)->child, $at, $form_state);
+        }
+        continue;
+      }
+      if ($entry->attachment !== NULL) {
+        $raw[$name] = $this->extractFrame($entry->attachment->child, $at, $form_state);
+        continue;
+      }
+      $raw += $this->extractKey($name, $entry->definition, $element, $form_state);
+    }
+    return $raw;
   }
 
   /**

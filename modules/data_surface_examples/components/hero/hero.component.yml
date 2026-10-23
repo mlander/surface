@@ -1,7 +1,9 @@
 $schema: https://git.drupalcode.org/project/drupal/-/raw/HEAD/core/assets/schemas/v1/metadata.schema.json
 name: Hero
 status: stable
-description: 'A title across the top of a page, over a darkened picture. Example 12 reads its props into a structure.'
+description: 'A title across the top of a page, over a darkened picture. Example 12 reads its props into a structure, and its slot beside them.'
+tags:
+  - block
 props:
   type: object
   required:
@@ -34,3 +36,10 @@ props:
       type: boolean
       title: Full width
       default: false
+slots:
+  actions:
+    title: Actions
+    description: 'Up to two buttons under the title.'
+    expected:
+      - 'data_surface_examples:call_to_action'
+    maxItems: 2

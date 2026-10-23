@@ -10,6 +10,7 @@ use Drupal\Core\Render\Element;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
+use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\data_surface\Attribute\DataSurfaceWidget;
 use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Form\DataSurfaceFormBuilderInterface;
@@ -111,6 +112,27 @@ final class MapWidget extends DataSurfaceWidgetBase implements ContainerFactoryP
         $element[$property_name] = static::arranged($ruled_out, $property_definition);
         continue;
       }
+      if ($property_definition->getDataType() === 'any' && DefinitionMetadata::variantsBy($property_definition) !== NULL) {
+        // Variants inside a child whose deciding key chose nothing yet:
+        // nothing to draw until it does, as at the top of a form.
+        $placeholder = ['#markup' => '', DataSurfaceFormBuilderInterface::PLACEHOLDER_KEY => TRUE];
+        $element[$property_name] = static::arranged($placeholder, $property_definition);
+        continue;
+      }
+      if ($property_definition instanceof ListDataDefinitionInterface && $property_definition->getItemDefinition() instanceof ComplexDataDefinitionInterface) {
+        // A collection inside a child's map: the form draws one at the top
+        // of a frame or inside an item, not here, so what it holds is kept
+        // and set through the other doors.
+        // Decision: see
+        // docs/decisions.md#a-slot-holds-text-a-component-or-components.
+        $element[$property_name] = static::arranged([
+          '#type' => 'item',
+          '#title' => $property_definition->getLabel(),
+          '#markup' => (string) new TranslatableMarkup('A list of these is not drawn on this form; what it holds is kept. Set it through the tool, over HTTP or on the React page.'),
+          DataSurfaceFormBuilderInterface::PLACEHOLDER_KEY => TRUE,
+        ], $property_definition);
+        continue;
+      }
       // Each key drawn as its arrangement says, whichever widget drew it.
       // Decision: see docs/decisions.md#arrangement-is-declared-once.
       $element[$property_name] = static::arranged($this->widgetManager
@@ -135,6 +157,11 @@ final class MapWidget extends DataSurfaceWidgetBase implements ContainerFactoryP
       // write that NULL over a stored value, which is the same rule the
       // top level already applies to whole keys.
       if (!isset($element[$property_name]) || !is_array($element[$property_name]) || !empty($element[$property_name][DataSurfaceFormBuilderInterface::PLACEHOLDER_KEY])) {
+        continue;
+      }
+      if ($property_definition->getDataType() === 'any' && DefinitionMetadata::variantsBy($property_definition) !== NULL) {
+        // Drawn for a variant its deciding key no longer chooses: what was
+        // posted for it belongs to that variant, and is dropped with it.
         continue;
       }
       // A rendered property is collected empty or not: what an empty

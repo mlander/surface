@@ -1758,6 +1758,19 @@ shows, its theme, region, weight and status) are the resource's own, and
 its visibility a collection of conditions chosen the same way
 ([decision](decisions.md#a-placed-block-is-a-resource)).
 
+Variants from the site nest. A schema a provider lists may hold
+variants of its own, a sibling's `const` choosing among objects, and
+those again: a component's slots each hold a component, whose own props
+and slots are variants of the component it names, three deep
+(`ComponentSlots`, beside `ComponentProps` at `slots`;
+[decision](decisions.md#a-slot-holds-text-a-component-or-components)).
+The same shape stands at many places in such a tree, so a provider hands
+the defs its entries share once, `VariantList::addDefs($defs)`, and an
+entry whose schema is a `$ref` into them is that def. Each def is one
+read structure, built once per request and context and held at every key
+it is attached at, so a site with hundreds of components builds a
+structure per def, not one per place a def is used.
+
 ### A child that cannot be listed
 
 Variants cover a child chosen from a set of values someone can name. A

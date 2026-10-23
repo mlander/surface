@@ -209,7 +209,7 @@ final class InputDefinitions {
    *   The same map.
    */
   public function withDependencies(MapInputDefinition $map, DataSurfaceInterface $surface): MapInputDefinition {
-    foreach (static::dependencies($surface) as $path => $keys) {
+    foreach (static::dependencies($surface, shown: $map) as $path => $keys) {
       $target = $map;
       foreach (explode('.', $path) as $property) {
         $target = match (TRUE) {
@@ -237,15 +237,21 @@ final class InputDefinitions {
    * @param array<string, string> $ports
    *   The frame's ports, each mapped to the path in the values map of the
    *   key it reads.
+   * @param \Drupal\tool\TypedData\MapInputDefinition|null $shown
+   *   The frame as the listing shows it: a child it shows no map for, as
+   *   variants inside variants, which it holds as a value of any type, is
+   *   not walked, since nothing inside it is listed. NULL to walk all.
    *
    * @return array<string, string[]>
    *   The paths each key depends on, keyed by its own path; a key that
    *   depends on nothing is not there.
    */
-  protected static function dependencies(DataSurfaceInterface $surface, string $prefix = '', array $ports = []): array {
+  protected static function dependencies(DataSurfaceInterface $surface, string $prefix = '', array $ports = [], ?MapInputDefinition $shown = NULL): array {
     $found = [];
     foreach ($surface->getDefinitions()->entries() as $name => $entry) {
       $at = $prefix . $name;
+      $shown_at = $shown?->getPropertyDefinition((string) $name);
+      $walked = $shown === NULL || $shown_at instanceof MapInputDefinition;
       $resolve = static fn (string $key): string => $ports[$key] ?? $prefix . $key;
       $children = [];
       if ($entry->attachment !== NULL) {
@@ -272,13 +278,14 @@ final class InputDefinitions {
           $found[$at] = array_map($resolve, $own);
         }
       }
-      foreach ($children as [$attachment, $below]) {
-        $found += static::dependencies($attachment->child, $below, array_map($resolve, $attachment->reads));
+      foreach ($walked ? $children : [] as [$attachment, $below]) {
+        $found += static::dependencies($attachment->child, $below, array_map($resolve, $attachment->reads), $shown_at instanceof MapInputDefinition ? $shown_at : NULL);
       }
       // Inside a collection's item, a key names its siblings by their
       // keys in the item, the frame a caller sends them in together.
-      if ($entry->list !== NULL) {
-        foreach (static::dependencies($entry->list->item->child) as $path => $keys) {
+      $item = $shown_at instanceof ListInputDefinition ? $shown_at->getItemDefinition() : NULL;
+      if ($entry->list !== NULL && ($shown === NULL || $item instanceof MapInputDefinition)) {
+        foreach (static::dependencies($entry->list->item->child, shown: $item instanceof MapInputDefinition ? $item : NULL) as $path => $keys) {
           $found[$at . '.' . self::EACH . '.' . $path] = $keys;
         }
       }

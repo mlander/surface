@@ -682,14 +682,27 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
    * The full schema states every component's def and one conditional per
    * component, so both documents refuse what the pipeline refuses of the
    * props: a bound, a length, a count, a value not on a list, a required
-   * prop missing, another component's prop. A URI is a format, advisory
-   * in both documents and checked by the pipeline's own type.
+   * prop missing, another component's prop; and of the slots: a kind a
+   * slot does not offer, more items than it holds, a component it does
+   * not expect, by id or by tag, another component's slot. A URI is a
+   * format, advisory in both documents and checked by the pipeline's own
+   * type.
    */
   public function testExampleTwelve(): void {
     $hero = ['component' => 'data_surface_examples:hero', 'props' => ['title' => 'Doors open at six']];
     $cta = static fn (array $tags): array => [
       'component' => 'data_surface_examples:call_to_action',
       'props' => ['text' => 'Buy a ticket', 'url' => 'https://example.com/tickets', 'tags' => $tags],
+    ];
+    $actions = static fn (string $kind, array $held): array => [
+      'slots' => ['actions' => ['kind' => $kind, $kind => $held]],
+    ];
+    $text = ['body' => ['kind' => 'text', 'text' => 'Bring your ticket.']];
+    $card = ['component' => 'data_surface_examples:card', 'props' => ['heading' => 'Talks']];
+    $section = static fn (array $held): array => [
+      'component' => 'data_surface_examples:section',
+      'props' => [],
+      'slots' => ['content' => ['kind' => 'component', 'component' => $held]],
     ];
     $this->assertTable('event.spotlight', $this->build('event.spotlight'), $this->stored('event.spotlight'), [
       'as stored' => [[], TRUE],
@@ -705,6 +718,14 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
       'a link with no address' => [['props' => ['link' => ['label' => 'Tickets']]], TRUE],
       'a hero\'s prop sent for the card' => [['props' => ['overlay' => 60]], FALSE],
       'a component the site does not have' => [['component' => 'data_surface_examples:banner'], FALSE],
+      'the card with text in its slot' => [['slots' => $text], TRUE],
+      'a component in the card\'s text slot' => [['slots' => ['body' => ['kind' => 'component']]], FALSE],
+      'the hero with two calls to action' => [$actions('components', [$cta(['music']), $cta([])]) + $hero, TRUE],
+      'the hero with three calls to action' => [$actions('components', [$cta([]), $cta([]), $cta([])]) + $hero, FALSE],
+      'a hero in the hero\'s actions' => [$actions('component', $hero) + $hero, FALSE],
+      'a section holding a card' => [$section($card), TRUE],
+      'a section holding a call to action, which has no tag block' => [$section($cta([])), FALSE],
+      'a hero\'s slot sent for the card' => [['slots' => ['actions' => ['kind' => 'text']]], FALSE],
       'format is advisory: an address that is no URI' => [
         ['props' => ['link' => ['url' => 'not a uri']]],
         FALSE,
@@ -743,6 +764,13 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
     ];
     $administrators = ['visibility' => [['id' => 'user_role', 'settings' => ['roles' => ['administrator']]]]];
     $dark = ['component' => 'data_surface_examples:hero', 'props' => ['title' => 'Doors', 'overlay' => 140]];
+    $cta = [
+      'component' => 'data_surface_examples:call_to_action',
+      'props' => ['text' => 'Buy a ticket', 'url' => 'https://example.com/tickets'],
+    ];
+    $holding = static fn (array $held): array => [
+      'settings' => ['slots' => ['actions' => ['kind' => 'component', 'component' => $held]]] + $hero['settings'],
+    ] + $hero;
     $this->assertTable('block.placement', $this->build('block.placement', 'add'), [], [
       'a branding block in the header' => [$branding, TRUE],
       'the branding block, its slogan off' => [['settings' => ['use_site_slogan' => FALSE]] + $branding, TRUE],
@@ -750,6 +778,8 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
       'a hero shown to administrators alone' => [$administrators + $hero, TRUE],
       'a region of another theme' => [['region' => 'pre_content'] + $hero, FALSE],
       'a hero too dark' => [['settings' => $dark] + $hero, FALSE],
+      'a hero with a call to action in its actions' => [$holding($cta), TRUE],
+      'a hero with a hero in its actions' => [$holding($hero['settings']), FALSE],
       'the branding block sent a hero\'s props' => [
         ['settings' => ['props' => ['title' => 'Doors']]] + $branding,
         FALSE,

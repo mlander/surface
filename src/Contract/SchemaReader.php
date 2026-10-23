@@ -280,6 +280,13 @@ final class SchemaReader {
   protected array $frames = [];
 
   /**
+   * The document being read, and its hash, once taken.
+   *
+   * @var array{0: array, 1: string}|null
+   */
+  protected ?array $hashed = NULL;
+
+  /**
    * Constructs a SchemaReader.
    *
    * @param \Drupal\data_surface\ResourceBuild\ResourceRegistry|null $registry
@@ -329,9 +336,14 @@ final class SchemaReader {
    *   The document, as prepared().
    * @param string $pointer
    *   The JSON pointer of the structure's object in it.
+   * @param string|null $hash
+   *   The document's hash, as ResourceBlueprint::readStructure() took it:
+   *   handed on to each structure the frame holds, so it is taken once.
    */
-  public static function fill(BlueprintInterface $inputs, array $root, string $pointer): void {
-    (new static())->frame(static::at($root, $pointer), $pointer, static::blueprintOf($inputs), $root);
+  public static function fill(BlueprintInterface $inputs, array $root, string $pointer, ?string $hash = NULL): void {
+    $reader = new static();
+    $reader->hashed = $hash === NULL ? NULL : [$root, $hash];
+    $reader->frame(static::at($root, $pointer), $pointer, static::blueprintOf($inputs), $root);
   }
 
   /**
@@ -2525,7 +2537,10 @@ final class SchemaReader {
    */
   protected function structureAt(ResourceBlueprint $inputs, string $id, array $root, string $pointer): string {
     $this->frames[] = $pointer;
-    return $inputs->readStructure($id, $root, $pointer);
+    if ($this->hashed === NULL || $this->hashed[0] !== $root) {
+      $this->hashed = [$root, ResourceBlueprint::documentHash($root)];
+    }
+    return $inputs->readStructure($id, $root, $pointer, $this->hashed[1]);
   }
 
 }

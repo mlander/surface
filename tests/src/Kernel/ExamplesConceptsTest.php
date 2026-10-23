@@ -70,6 +70,7 @@ class ExamplesConceptsTest extends DataSurfaceKernelTestBase {
     'data_surface_examples:call_to_action',
     'data_surface_examples:card',
     'data_surface_examples:hero',
+    'data_surface_examples:section',
   ];
 
   /**
@@ -464,13 +465,17 @@ class ExamplesConceptsTest extends DataSurfaceKernelTestBase {
     $built = $this->container->get('data_surface.resources')->buildOperation(SpotlightResource::class, 'configure');
     $variants = $built->getDefinitions()->entry('props')->variants;
     $ours = array_values(array_filter(array_keys($variants->variants), static fn (string $id): bool => str_starts_with($id, 'data_surface_examples:')));
-    $this->assertSame(self::COMPONENTS, $ours, 'The three components this module ships are three variants.');
+    $this->assertSame(self::COMPONENTS, $ours, 'The four components this module ships are four variants.');
+    $slots = $built->getDefinitions()->entry('slots')->variants;
+    $this->assertSame(array_keys($variants->variants), array_keys($slots->variants), 'The same component chooses its slots.');
+    $this->assertSame(['body'], $slots->variants['data_surface_examples:card']->child->getDefinitions()->names());
+    $this->assertSame(['actions'], $slots->variants['data_surface_examples:hero']->child->getDefinitions()->names());
     $this->assertContains('config:core.extension', $built->getCacheTags());
     $this->assertSame('Card', (string) $this->options()->resolve($built->getDefinition('component'))->options['data_surface_examples:card']);
 
     // The card's props, read: each a key with its type and constraints.
     $card = $variants->variants['data_surface_examples:card']->child;
-    $this->assertSame(['heading', 'body', 'tone', 'link'], $card->getDefinitions()->names());
+    $this->assertSame(['heading', 'tone', 'link'], $card->getDefinitions()->names());
     $this->assertTrue($card->getDefinition('heading')->isRequired());
     $this->assertSame(['max' => 80], $card->getDefinition('heading')->getConstraint('Length'));
     $this->assertSame([
@@ -489,14 +494,19 @@ class ExamplesConceptsTest extends DataSurfaceKernelTestBase {
     $this->assertSame('component', $full['properties']['props'][ContractEmitter::EXTENSION]['by']);
     $this->assertSame('#/$defs/event.spotlight.props.data_surface_examples:card', $full['properties']['props'][ContractEmitter::EXTENSION]['variants']->{'data_surface_examples:card'});
     $this->assertSame(['heading'], $full['$defs']['event.spotlight.props.data_surface_examples:card']['required']);
+    $this->assertSame('component', $full['properties']['slots'][ContractEmitter::EXTENSION]['by']);
+    $this->assertSame('#/$defs/component.slot.text', $full['$defs']['event.spotlight.slots.data_surface_examples:card']['properties']['body']['$ref']);
 
     // The form draws the stored component's props; another chosen, its own.
     $form = $this->formAt('data_surface_examples.step12');
-    $this->assertSame(['heading', 'body', 'tone', 'link'], Element::children($form['props']));
+    $this->assertSame(['heading', 'tone', 'link'], Element::children($form['props']));
     $this->assertSame('Doors open at half past six', $form['props']['heading']['#default_value']);
+    $this->assertSame(['body'], Element::children($form['slots']));
+    $this->assertSame('Bring your ticket, on your phone or printed.', $form['slots']['body']['text']['#default_value']);
     $state = $this->submitTheForm([
       'component' => 'data_surface_examples:hero',
       'props' => self::HERO + ['overlay' => '60'],
+      'slots' => ['actions' => ['kind' => 'text', 'text' => 'Tickets at the door.']],
     ]);
     $this->assertSame([], $state->getErrors());
     $this->assertSame([
@@ -508,6 +518,7 @@ class ExamplesConceptsTest extends DataSurfaceKernelTestBase {
         'overlay' => 60,
         'full_width' => FALSE,
       ],
+      'slots' => ['actions' => ['kind' => 'text', 'text' => 'Tickets at the door.']],
     ], $this->stored('data_surface_examples.spotlight'));
     $this->assertCount(0, $this->container->get('config.typed')->get('data_surface_examples.spotlight')->validate(), 'What is stored is valid: the props are open in the config schema, and the hero held them to its own.');
     $form = $this->formAt('data_surface_examples.step12');
@@ -587,6 +598,12 @@ class ExamplesConceptsTest extends DataSurfaceKernelTestBase {
     $contract = json_decode(htmlspecialchars_decode((string) $panel['contract']['content']['#value']), TRUE);
     $this->assertSame(self::COMPONENTS, array_column($contract['component']['oneOf'], 'const'));
     $this->assertSame('data_surface_examples:card', $contract['allOf'][0]['if']['properties']['component']['const']);
+    $this->assertSame(['props', 'slots'], array_merge(...array_map(static fn (array $branch): array => array_keys($branch['then']['properties']), $contract['allOf'])), 'One conditional per key the component chooses.');
+    $this->assertSame('#/$defs/event.spotlight.slots.data_surface_examples:card', $contract['slots'][ContractEmitter::EXTENSION]['variants']['data_surface_examples:card']);
+    $slots = json_decode(htmlspecialchars_decode((string) $panel['slots']['content']['#value']), TRUE);
+    $this->assertSame([], $slots['metadata']['body']['expected']);
+    $this->assertSame('event.spotlight.slots.data_surface_examples:card', $slots['structure']['title']);
+    $this->assertSame(['component.slot.text'], array_keys($slots['slot']));
   }
 
   /**
@@ -620,18 +637,30 @@ class ExamplesConceptsTest extends DataSurfaceKernelTestBase {
     $this->assertSame('content', $block->get('region'));
     $this->assertSame(SpotlightBlockHooks::PAGE, $block->get('visibility')['request_path']['pages']);
     $this->assertSame(ConceptCalls::CALLS['block.placement']['place']['values']['settings']['props'], $block->get('settings')['props']);
+    $this->assertSame(ConceptCalls::CALLS['block.placement']['place']['values']['settings']['slots'], $block->get('settings')['slots']);
     $this->assertSame('Spotlight', $block->get('settings')['label']);
+    $section = $this->container->get('entity_type.manager')->getStorage('block')->load(SpotlightBlockHooks::SECTION);
+    $this->assertNotNull($section, 'And the Tonight block, a section holding a card.');
+    $this->assertSame('data_surface_examples:card', $section->get('settings')['slots']['content']['component']['component']);
+    $this->assertSame(['body' => ['kind' => 'text', 'text' => 'In the main hall, first floor.']], $section->get('settings')['slots']['content']['component']['slots']);
+    $modules = ['data_surface_component_block', 'data_surface_examples', 'system'];
+    $this->assertSame(['module' => $modules, 'theme' => ['stark']], $section->getDependencies());
 
     $page = $this->thirteen();
     $items = array_map(static fn ($item): string => strip_tags((string) (is_array($item) ? ($item['#title'] ?? $item['#markup'] ?? '') : $item)), $page['how']['#items']);
     $this->assertSame('Both are enabled on this site now.', $items[1]);
     $this->assertSame('Place a component block in stark: /admin/structure/block/add/data_surface_component/stark', $items[4]);
     [$spotlight, $block_lines] = array_map(static fn (array $cell): string => htmlspecialchars_decode((string) $cell['data']['#value']), $page['parts']['two_lines']['#rows'][0]);
-    $this->assertStringContainsString("\$inputs->attachVariants('props', by: 'component', from: ComponentProps::class)\n  ->setLabel(t('Props'));", $spotlight);
-    $this->assertSame("\$inputs->add('component', 'string', t('Component'));\n\$inputs->attachVariants('props', by: 'component', from: ComponentProps::class)\n  ->setLabel(t('Props'));", $block_lines);
+    $lines = "\$inputs->attachVariants('props', by: 'component', from: ComponentProps::class)\n  ->setLabel(t('Props'));\n\$inputs->attachVariants('slots', by: 'component', from: ComponentSlots::class)\n  ->setLabel(t('Slots'));";
+    $this->assertStringContainsString($lines, $spotlight);
+    $this->assertSame("\$inputs->add('component', 'string', t('Component'));\n" . $lines, $block_lines);
     $contract = json_decode(htmlspecialchars_decode((string) $page['parts']['contract']['content']['#value']), TRUE);
     $this->assertSame(self::COMPONENTS, array_column($contract['component']['oneOf'], 'const'));
     $this->assertSame('#/$defs/block.data_surface_component.props.data_surface_examples:card', $contract['props'][ContractEmitter::EXTENSION]['variants']['data_surface_examples:card']);
+    $this->assertSame('#/$defs/block.data_surface_component.slots.data_surface_examples:hero', $contract['slots'][ContractEmitter::EXTENSION]['variants']['data_surface_examples:hero']);
+    $actions = json_decode(htmlspecialchars_decode((string) $page['parts']['actions']['content']['#value']), TRUE);
+    $this->assertSame(['data_surface_examples:call_to_action'], array_column($actions['component.nested.data_surface_examples:call_to_action.1']['properties']['component']['oneOf'], 'const'), 'The actions offer the call to action alone.');
+    $this->assertSame(2, $actions['component.slot.data_surface_examples:hero.actions.1']['properties']['components']['maxItems']);
     $this->assertSame([
       ['data_surface:block.placement:add', 'Place a block', 'write', 'values, dry_run'],
       ['data_surface:block.placement:edit', 'Edit a placed block', 'write', 'id, values, dry_run'],
@@ -640,10 +669,13 @@ class ExamplesConceptsTest extends DataSurfaceKernelTestBase {
     ], $page['parts']['tools']['#rows']);
     $answer = static fn (string $call): string => htmlspecialchars_decode((string) $page['calls']['block.placement:' . $call]['answer']['#value']);
     $this->assertStringStartsWith("Failed: The values were refused:\n/id: The machine name data_surface_examples_spotlight is already in use", $answer('place'));
+    $this->assertStringStartsWith("Failed: The values were refused:\n/id: The machine name data_surface_examples_section is already in use", $answer('section'));
     $this->assertStringStartsWith('Success: Dry run of Edit a placed block', $answer('props'));
+    $this->assertStringStartsWith("Failed: The values were refused:\n/settings/slots/actions/component/component: The value you selected is not a valid choice. Choose data_surface_examples:call_to_action (Call to action).", $answer('wrong_slot'));
     $this->assertStringStartsWith('Success: Dry run of Remove a placed block', $answer('remove'));
     $this->assertSame('data_surface_examples:card', $this->container->get('entity_type.manager')->getStorage('block')->loadUnchanged(SpotlightBlockHooks::BLOCK)->get('settings')['component'], 'No call wrote anything.');
     $this->assertStringContainsString('Below, the Spotlight block, data_surface_examples_spotlight, placed through the add operation in the content region of stark', (string) $page['placed']['#markup']);
+    $this->assertStringContainsString('Below it, the Tonight block, data_surface_examples_section, placed the same way', (string) $page['section']['#markup']);
   }
 
   /**

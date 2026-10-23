@@ -12,3 +12,8 @@ block.settings.data_surface_component:
     props:
       type: ignore
       label: 'Props'
+    # The same for the slots: the variant the component chooses holds them
+    # to its slots, and each nested component to its own.
+    slots:
+      type: ignore
+      label: 'Slots'

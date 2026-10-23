@@ -31,6 +31,7 @@ use Drupal\data_surface_examples\Storage\SpotlightStorage;
 use Drupal\data_surface_examples\Structure\PersonStructure;
 use Drupal\data_surface_examples\Structure\ReviewStructure;
 use Drupal\data_surface\Variants\ComponentProps;
+use Drupal\data_surface\Variants\ComponentSlots;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -137,7 +138,7 @@ final class ExamplesController extends ControllerBase {
     foreach ($this->steps() as $number => $step) {
       if ($number === 13) {
         $steps['block'] = [
-          '#markup' => '<h2>' . $this->t('The same two lines in a block') . '</h2><p>' . $this->t("Example 13 is a block plugin in a submodule of its own, whose settings are example 12's two lines: a component and its props. Its page says how to enable it, then shows the block's structure beside example 12's resource, its contract, its tools and the block placed.") . '</p>',
+          '#markup' => '<h2>' . $this->t('The same three lines in a block') . '</h2><p>' . $this->t("Example 13 is a block plugin in a submodule of its own, whose settings are example 12's three lines: a component, its props and its slots. Its page says how to enable it, then shows the block's structure beside example 12's resource, its contract, its tools and the block placed.") . '</p>',
         ];
       }
       if ($number === 7) {
@@ -284,9 +285,10 @@ final class ExamplesController extends ControllerBase {
    * on. While the block is off the page says how to enable both and what
    * the block costs, counted from its files; once it is on, the block's two
    * lines beside example 12's, its contract, its tools and where to place
-   * it; once the placement resource is on too, the three calls that place
-   * the Spotlight block, change its props and remove it, each a dry run,
-   * and the block itself, shown on this page alone, below it.
+   * it; once the placement resource is on too, the calls that place the
+   * Spotlight and Tonight blocks, change the Spotlight's props, refuse a
+   * component its slot does not expect and remove it, each a dry run, and
+   * the two blocks themselves, shown on this page alone, below it.
    *
    * @return array
    *   A render array.
@@ -297,7 +299,7 @@ final class ExamplesController extends ControllerBase {
     $modules = ['@module' => self::COMPONENT_BLOCK, '@placement' => self::PLACEMENT];
     $build = [
       'what' => [
-        '#markup' => '<p>' . $this->t("Example 12's two lines are the settings of a block: a component chosen from those the site has, and its props, read from the schema the component declares. The block plugin names the structure with <code>#[UsesStructure]</code> and renders the component; its settings form, their validation and their storage come from the structure, through the block host. The block lives in @module. A placed block, of this plugin or any other, is placed, configured and removed through the placement resource of @placement, the general case: its plugin chooses its settings, here the block's structure.", [
+        '#markup' => '<p>' . $this->t("Example 12's three lines are the settings of a block: a component chosen from those the site has, its props, read from the schema the component declares, and its slots, read from its metadata, each holding text, one component or a list of them. The block plugin names the structure with <code>#[UsesStructure]</code> and renders the component; its settings form, their validation and their storage come from the structure, through the block host. The block lives in @module. A placed block, of this plugin or any other, is placed, configured and removed through the placement resource of @placement, the general case: its plugin chooses its settings, here the block's structure.", [
           '@module' => self::COMPONENT_BLOCK,
           '@placement' => self::PLACEMENT,
         ]) . '</p>',
@@ -330,15 +332,24 @@ final class ExamplesController extends ControllerBase {
     }
     $build['calls'] = $this->conceptPanel->calls('block.placement');
     $placed = $this->entityTypeManager()->getStorage('block')->load(SpotlightBlockHooks::BLOCK);
+    $section = $this->entityTypeManager()->getStorage('block')->load(SpotlightBlockHooks::SECTION);
     $build['placed'] = [
       '#markup' => '<p>' . ($placed !== NULL
-        ? $this->t('Below, the Spotlight block, @block, placed through the add operation in the content region of @theme when the modules were enabled, and shown on this page alone: the card, drawn with the props its settings hold. Change it at @path.', [
+        ? $this->t('Below, the Spotlight block, @block, placed through the add operation in the content region of @theme when the modules were enabled, and shown on this page alone: the card, drawn with the props its settings hold and a line of text in its slot. Change it at @path.', [
           '@block' => SpotlightBlockHooks::BLOCK,
           '@theme' => (string) $placed->get('theme'),
           '@path' => Url::fromRoute('data_surface_block.edit', ['id' => SpotlightBlockHooks::BLOCK])->toString(),
         ])
         : $this->t('No Spotlight block is placed on this site: the default theme has no content region, or the block was taken away.')) . '</p>',
     ];
+    if ($section !== NULL) {
+      $build['section'] = [
+        '#markup' => '<p>' . $this->t('Below it, the Tonight block, @block, placed the same way: a section whose slot holds a card, whose own slot holds a line of text. Change it at @path.', [
+          '@block' => SpotlightBlockHooks::SECTION,
+          '@path' => Url::fromRoute('data_surface_block.edit', ['id' => SpotlightBlockHooks::SECTION])->toString(),
+        ]) . '</p>',
+      ];
+    }
     return $build;
   }
 
@@ -459,12 +470,12 @@ final class ExamplesController extends ControllerBase {
         'items' => [
           $this->route('data_surface_examples.step12'),
           $this->react('event.spotlight'),
-          $this->t("The resource, its provider and its storage: @lines lines of code; the components' schemas are no code.", ['@lines' => $this->spotlightLines()]),
+          $this->t("The resource, its two providers and its storage: @lines lines of code; the components' schemas and metadata are no code.", ['@lines' => $this->spotlightLines()]),
         ],
       ],
       13 => [
         'title' => $this->t('a block that embeds a component'),
-        'sentence' => $this->t("Example 12's two lines as a block's settings: a block plugin names them with #[UsesStructure] and renders the chosen component with its props, and a placed block is placed, configured and removed through the general placement resource. In @module and @placement, which the page tells you to enable.", [
+        'sentence' => $this->t("Example 12's three lines as a block's settings: a block plugin names them with #[UsesStructure] and renders the chosen component with its props and slots, a section holding a card among them, and a placed block is placed, configured and removed through the general placement resource. In @module and @placement, which the page tells you to enable.", [
           '@module' => self::COMPONENT_BLOCK,
           '@placement' => self::PLACEMENT,
         ]),
@@ -586,7 +597,7 @@ final class ExamplesController extends ControllerBase {
    *   The lines of code; the components' schemas are none.
    */
   protected function spotlightLines(): int {
-    return CodeLines::count($this->file(SpotlightResource::class)) + CodeLines::count($this->file(ComponentProps::class)) + CodeLines::count($this->file(SpotlightStorage::class));
+    return CodeLines::count($this->file(SpotlightResource::class)) + CodeLines::count($this->file(ComponentProps::class)) + CodeLines::count($this->file(ComponentSlots::class)) + CodeLines::count($this->file(SpotlightStorage::class));
   }
 
   /**

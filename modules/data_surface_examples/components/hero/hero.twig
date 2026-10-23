@@ -3,4 +3,7 @@
   {% if subtitle %}
     <p>{{ subtitle }}</p>
   {% endif %}
+  {% if actions %}
+    <div class="data-surface-hero__actions">{% block actions %}{% endblock %}</div>
+  {% endif %}
 </header>
