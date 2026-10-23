@@ -5,16 +5,18 @@ declare(strict_types=1);
 namespace Drupal\Tests\data_surface\Kernel;
 
 use Drupal\data_surface_examples\ConceptCalls;
+use Drupal\data_surface_examples\Hook\SpotlightBlockHooks;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
 /**
- * Tests the tool calls of examples 7 to 12, and the README quoting them.
+ * Tests the tool calls of examples 7 to 13, and the README quoting them.
  *
  * Makes every call ConceptCalls writes down, on the settings the module
  * ships, the way each example's panel makes it, with example 10's
- * workflow module on for the call that needs it: what each answers is
+ * workflow module on for the call that needs it, and example 13's
+ * component block on with its Spotlight block placed: what each answers is
  * pinned here for the rule it shows, the README must quote every command
  * and every answer as made, and none of the calls writes anything.
  */
@@ -37,6 +39,9 @@ class ExamplesConceptsToolTest extends DataSurfaceKernelTestBase {
     'data_surface_tool',
     'data_surface_examples',
     'data_surface_examples_workflow',
+    'block',
+    'path_alias',
+    'data_surface_component_block',
   ];
 
   /**
@@ -45,12 +50,15 @@ class ExamplesConceptsToolTest extends DataSurfaceKernelTestBase {
   protected function setUp(): void {
     parent::setUp();
     $this->installEntitySchema('user');
-    $this->installConfig(['data_surface_examples']);
+    $this->installConfig(['system', 'data_surface_examples']);
+    $this->container->get('theme_installer')->install(['stark']);
+    $this->config('system.theme')->set('default', 'stark')->save();
+    $this->container->get('class_resolver')->getInstanceFromDefinition(SpotlightBlockHooks::class)->place();
     $this->setUpCurrentUser(admin: TRUE);
   }
 
   /**
-   * Reads every config object the examples ship, as stored.
+   * Reads every config object the examples ship, and the Spotlight block.
    *
    * @return array<string, array>
    *   The stored values, by config object.
@@ -59,7 +67,7 @@ class ExamplesConceptsToolTest extends DataSurfaceKernelTestBase {
     $factory = $this->container->get('config.factory');
     $factory->reset();
     $stored = [];
-    foreach ($factory->listAll('data_surface_examples.') as $name) {
+    foreach ([...$factory->listAll('data_surface_examples.'), 'block.block.' . SpotlightBlockHooks::BLOCK] as $name) {
       $stored[$name] = $factory->get($name)->getRawData();
     }
     return $stored;
@@ -103,6 +111,7 @@ class ExamplesConceptsToolTest extends DataSurfaceKernelTestBase {
     $this->assertStringContainsString('values: {"component":"data_surface_examples:hero","props":{"title":"Doors open at half past six","subtitle":null,"align":"start","overlay":40,"full_width":false}}', $answers['event.spotlight']['hero'], 'The hero\'s props, read from its schema, its defaults filled in.');
     $this->assertSame("Failed: The values were refused:\n" . '/props/align: props.align belongs to the data_surface_examples:hero variant, but component chose data_surface_examples:card.', $first($answers['event.spotlight']['wrong_component']), 'Refused, naming the component the props belong to.');
     $this->assertSame("Failed: The values were refused:\n" . '/props/overlay: This value should be between 0 and 100.', $first($answers['event.spotlight']['out_of_bounds']));
+    $this->assertStringContainsString('values: {"block":"data_surface_examples_spotlight","settings":{"component":"data_surface_examples:hero","props":{"title":"Doors open at half past six","subtitle":null,"align":"start","overlay":40,"full_width":false}}}', $answers['block.placed_component']['hero'], 'The placed block named by its machine name, the hero read from its schema.');
 
     // The examples' README quotes every command, and every answer under
     // its call's label.

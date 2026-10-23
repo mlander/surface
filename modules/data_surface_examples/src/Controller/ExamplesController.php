@@ -10,10 +10,12 @@ use Drupal\Core\Link;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\Url;
 use Drupal\data_surface_examples\CodeLines;
+use Drupal\data_surface_examples\ConceptPanel;
 use Drupal\data_surface_examples\ConfigSchemaPanel;
 use Drupal\data_surface_examples\ExampleCalls;
 use Drupal\data_surface_examples\Form\RegistrationStep1ClassicForm;
 use Drupal\data_surface_examples\Form\RegistrationStep2ClassicForm;
+use Drupal\data_surface_examples\Hook\SpotlightBlockHooks;
 use Drupal\data_surface_examples\Resource\BulletinResource;
 use Drupal\data_surface_examples\Resource\DoorsResource;
 use Drupal\data_surface_examples\Resource\ProgramResource;
@@ -28,7 +30,7 @@ use Drupal\data_surface_examples\Storage\RegistrationStep2Storage;
 use Drupal\data_surface_examples\Storage\SpotlightStorage;
 use Drupal\data_surface_examples\Structure\PersonStructure;
 use Drupal\data_surface_examples\Structure\ReviewStructure;
-use Drupal\data_surface_examples\Variants\ComponentProps;
+use Drupal\data_surface\Variants\ComponentProps;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -79,6 +81,19 @@ final class ExamplesController extends ControllerBase {
   public const OPENAPI = 'data_surface_openapi';
 
   /**
+   * The module the component block of example 13 lives in.
+   */
+  public const COMPONENT_BLOCK = SpotlightBlockHooks::MODULE;
+
+  /**
+   * Example 13's structure and block plugin, relative to that module.
+   */
+  public const COMPONENT_BLOCK_FILES = [
+    'src/Structure/ComponentBlockStructure.php',
+    'src/Plugin/Block/ComponentBlock.php',
+  ];
+
+  /**
    * Constructs the controller.
    *
    * @param \Drupal\Core\Extension\ModuleExtensionList $moduleList
@@ -86,10 +101,13 @@ final class ExamplesController extends ControllerBase {
    *   enabled.
    * @param \Drupal\data_surface_examples\ConfigSchemaPanel $configSchemaPanel
    *   The panel of what config schema can say, for the classic twins.
+   * @param \Drupal\data_surface_examples\ConceptPanel $conceptPanel
+   *   The panel saying what an example shows, for example 13's parts.
    */
   public function __construct(
     protected readonly ModuleExtensionList $moduleList,
     protected readonly ConfigSchemaPanel $configSchemaPanel,
+    protected readonly ConceptPanel $conceptPanel,
   ) {}
 
   /**
@@ -99,6 +117,7 @@ final class ExamplesController extends ControllerBase {
     return new static(
       $container->get('extension.list.module'),
       $container->get('data_surface_examples.config_schema_panel'),
+      $container->get('data_surface_examples.concept_panel'),
     );
   }
 
@@ -111,6 +130,11 @@ final class ExamplesController extends ControllerBase {
   public function index(): array {
     $steps = [];
     foreach ($this->steps() as $number => $step) {
+      if ($number === 13) {
+        $steps['block'] = [
+          '#markup' => '<h2>' . $this->t('The same two lines in a block') . '</h2><p>' . $this->t("Example 13 is a block plugin in a submodule of its own, whose settings are example 12's two lines: a component and its props. Its page says how to enable it, then shows the block's structure beside example 12's resource, its contract, its tools and the block placed.") . '</p>',
+        ];
+      }
       if ($number === 7) {
         $steps['concepts'] = [
           '#markup' => '<h2>' . $this->t('One small resource per concept') . '</h2><p>' . $this->t('Examples 7 to 12 leave the registration behind. Each is a small resource of its own for one or two concepts the registration does not need, and its page says first, above the contract, what it shows, where the docs explain it, and what its tool answers.') . '</p>',
@@ -248,6 +272,60 @@ final class ExamplesController extends ControllerBase {
   }
 
   /**
+   * Shows example 13: a block that embeds a component, or how to see it.
+   *
+   * The block lives in data_surface_component_block, which the examples do
+   * not depend on. While it is off the page says how to enable it and what
+   * it costs, counted from its files; once it is on, the block's two lines
+   * beside example 12's, its contract, its tools, where to place it, and
+   * one call to the tool that configures the placed Spotlight block, which
+   * is shown on this page alone, below it.
+   *
+   * @return array
+   *   A render array.
+   */
+  public function step13(): array {
+    $enabled = $this->moduleHandler()->moduleExists(self::COMPONENT_BLOCK);
+    $build = [
+      'what' => [
+        '#markup' => '<p>' . $this->t("Example 12's two lines are the settings of a block: a component chosen from those the site has, and its props, read from the schema the component declares. The block plugin names the structure with <code>#[UsesStructure]</code> and renders the component; its settings form, their validation and their storage come from the structure, through the block host, and a placed block is configured through a tool. The block lives in @module.", ['@module' => self::COMPONENT_BLOCK]) . '</p>',
+      ],
+      'how' => [
+        '#theme' => 'item_list',
+        '#items' => [
+          ['#markup' => $this->t('Enable it: <code>ddev drush pm:install @module</code>', ['@module' => self::COMPONENT_BLOCK])],
+          $enabled
+            ? $this->t('It is enabled on this site now.')
+            : $this->t('It is not enabled on this site yet. Once it is, this page shows the block beside example 12, its contract, its tools and the block placed.'),
+          $this->t('The structure and the block plugin: @lines lines of code.', ['@lines' => $this->componentBlockLines()]),
+        ],
+      ],
+    ];
+    if (!$enabled) {
+      return $build;
+    }
+    $theme = (string) $this->config('system.theme')->get('default');
+    $layout = Url::fromRoute('block.admin_display');
+    $build['how']['#items'][] = Link::fromTextAndUrl($this->t('The block layout: @path', ['@path' => $layout->toString()]), $layout)->toRenderable();
+    $add = Url::fromRoute('block.admin_add', ['plugin_id' => 'data_surface_component', 'theme' => $theme]);
+    $place = $this->t('Place a component block in @theme: @path', ['@theme' => $theme, '@path' => $add->toString()]);
+    $build['how']['#items'][] = Link::fromTextAndUrl($place, $add)->toRenderable();
+    $build['parts'] = $this->conceptPanel->componentBlock();
+    $build['calls'] = $this->conceptPanel->calls('block.placed_component');
+    $placed = $this->entityTypeManager()->getStorage('block')->load(SpotlightBlockHooks::BLOCK);
+    $build['placed'] = [
+      '#markup' => '<p>' . ($placed !== NULL
+        ? $this->t('Below, the Spotlight block, @block, placed in the content region of @theme when the module was enabled and shown on this page alone: the card, drawn with the props its settings hold. Change it at @path.', [
+          '@block' => SpotlightBlockHooks::BLOCK,
+          '@theme' => (string) $placed->get('theme'),
+          '@path' => $placed->toUrl('edit-form')->toString(),
+        ])
+        : $this->t('No Spotlight block is placed on this site: the default theme has no content region, or the block was taken away.')) . '</p>',
+    ];
+    return $build;
+  }
+
+  /**
    * Describes the examples, with where each is and what it cost.
    *
    * @return array<int, array{title: \Drupal\Core\StringTranslation\TranslatableMarkup, sentence: \Drupal\Core\StringTranslation\TranslatableMarkup, items: array}>
@@ -367,6 +445,14 @@ final class ExamplesController extends ControllerBase {
           $this->t("The resource, its provider and its storage: @lines lines of code; the components' schemas are no code.", ['@lines' => $this->spotlightLines()]),
         ],
       ],
+      13 => [
+        'title' => $this->t('a block that embeds a component'),
+        'sentence' => $this->t("Example 12's two lines as a block's settings: a block plugin names them with #[UsesStructure], renders the chosen component with its props, and a placed block is configured through a tool. In @module, which the page tells you to enable.", ['@module' => self::COMPONENT_BLOCK]),
+        'items' => [
+          $this->route('data_surface_examples.step13'),
+          $this->t('The structure and the block plugin: @lines lines of code.', ['@lines' => $this->componentBlockLines()]),
+        ],
+      ],
     ];
   }
 
@@ -481,6 +567,17 @@ final class ExamplesController extends ControllerBase {
    */
   protected function spotlightLines(): int {
     return CodeLines::count($this->file(SpotlightResource::class)) + CodeLines::count($this->file(ComponentProps::class)) + CodeLines::count($this->file(SpotlightStorage::class));
+  }
+
+  /**
+   * Counts the lines of example 13's structure and block, enabled or not.
+   *
+   * @return int
+   *   The lines of code.
+   */
+  protected function componentBlockLines(): int {
+    $path = DRUPAL_ROOT . '/' . $this->moduleList->getPath(self::COMPONENT_BLOCK) . '/';
+    return array_sum(array_map(static fn (string $file): int => CodeLines::count($path . $file), self::COMPONENT_BLOCK_FILES));
   }
 
   /**

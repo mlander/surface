@@ -10,7 +10,7 @@ use Drupal\data_surface\Resource\Attribute\Resource;
 use Drupal\data_surface\Resource\BlueprintInterface;
 use Drupal\data_surface\Resource\ResourceInterface;
 use Drupal\data_surface_examples\Storage\SpotlightStorage;
-use Drupal\data_surface_examples\Variants\ComponentProps;
+use Drupal\data_surface\Variants\ComponentProps;
 
 /**
  * Example 12: a component the site has, and the props it takes.

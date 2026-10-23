@@ -101,4 +101,42 @@ class ExamplesConceptsRoutesTest extends BrowserTestBase {
     $assert->elementsCount('css', 'input[type="radio"][name="surface[badges]"]', 3);
   }
 
+  /**
+   * Tests example 13: how to enable it, then the block, placed and drawn.
+   */
+  public function testThirteenSaysToEnableItThenShowsTheBlock(): void {
+    $assert = $this->assertSession();
+    $this->drupalGet('surface-examples/13');
+    $assert->statusCodeEquals(403);
+    $this->drupalLogin($this->drupalCreateUser(['administer site configuration']));
+    $this->drupalGet('surface-examples');
+    $assert->pageTextContains('Example 13: a block that embeds a component');
+    $assert->linkByHrefExists('/surface-examples/13');
+
+    $this->drupalGet('surface-examples/13');
+    $assert->statusCodeEquals(200);
+    $assert->pageTextContains('Enable it: ddev drush pm:install data_surface_component_block');
+    $assert->pageTextContains('It is not enabled on this site yet.');
+    $assert->pageTextNotContains('Ask the tool');
+
+    $this->container->get('module_installer')->install(['data_surface_component_block']);
+    $this->rebuildContainer();
+    // The tool configures a placed block, which asks for "administer
+    // blocks".
+    $this->drupalLogin($this->drupalCreateUser(['administer site configuration', 'administer blocks']));
+    $this->drupalGet('surface-examples/13');
+    $assert->statusCodeEquals(200);
+    $assert->pageTextContains('It is enabled on this site now.');
+    $assert->pageTextContains("The same two lines: example 12's resource and the block's structure");
+    $assert->pageTextContains('data_surface:block.placed_component:configure:read');
+    $assert->pageTextContains('Ask the tool');
+    $assert->pageTextContains('Success: Dry run of Configure a placed component block');
+    $assert->linkByHrefExists('/admin/structure/block/add/data_surface_component/stark');
+    // The Spotlight block, placed when the module was enabled, below.
+    $card = $assert->elementExists('css', 'article.data-surface-card.data-surface-card--highlight');
+    $this->assertSame('Doors open at half past six', $card->find('css', 'h3')?->getText());
+    $this->drupalGet('surface-examples/12');
+    $assert->elementNotExists('css', 'article.data-surface-card');
+  }
+
 }

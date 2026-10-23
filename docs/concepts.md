@@ -94,6 +94,7 @@ refused.
 | `BaseFieldOverrideStorage` | `use Drupal\data_surface\Pipeline\Storage\BaseFieldOverrideStorage;` |
 | `BlueprintAdditionsInterface` | `use Drupal\data_surface\Resource\BlueprintAdditionsInterface;` |
 | `BlueprintInterface` | `use Drupal\data_surface\Resource\BlueprintInterface;` |
+| `ComponentProps` | `use Drupal\data_surface\Variants\ComponentProps;` |
 | `CompositeStorage` | `use Drupal\data_surface\Pipeline\Storage\CompositeStorage;` |
 | `Condition` | `use Drupal\data_surface\Refinement\Condition;` |
 | `ConfigEntityStorage` | `use Drupal\data_surface\Pipeline\Storage\ConfigEntityStorage;` |

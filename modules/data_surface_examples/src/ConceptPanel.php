@@ -17,9 +17,15 @@ use Drupal\data_surface\Contract\ContractEmitter;
 use Drupal\data_surface\Contract\SchemaReader;
 use Drupal\data_surface\Contract\SchemaResolver;
 use Drupal\data_surface\DataSurfaceInterface;
+use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface\ResourceBuild\OperationRoute;
 use Drupal\data_surface\ResourceBuild\ResourceRegistry;
 use Drupal\data_surface\ResourceBuild\ResourcesInterface;
+use Drupal\data_surface\Variants\ComponentProps;
+use Drupal\data_surface_component_block\Plugin\Block\ComponentBlock;
+use Drupal\data_surface_component_block\Resource\PlacedComponentBlockResource;
+use Drupal\data_surface_component_block\Storage\PlacedComponentBlockStorage;
+use Drupal\data_surface_component_block\Structure\ComponentBlockStructure;
 use Drupal\data_surface_examples\Access\FeesAccess;
 use Drupal\data_surface_examples\Keys\TicketTypes;
 use Drupal\data_surface_examples\Resource\BulletinResource;
@@ -27,17 +33,16 @@ use Drupal\data_surface_examples\Resource\InfoDeskResource;
 use Drupal\data_surface_examples\Resource\PressResource;
 use Drupal\data_surface_examples\Resource\SpotlightResource;
 use Drupal\data_surface_examples\Shape\PhoneNumber;
-use Drupal\data_surface_examples\Structure\PersonStructure;
 use Drupal\data_surface_examples\Storage\SpotlightStorage;
+use Drupal\data_surface_examples\Structure\PersonStructure;
 use Drupal\data_surface_examples\Structure\ReviewStructure;
-use Drupal\data_surface_examples\Variants\ComponentProps;
 use Drupal\data_surface_tool\OperationInputs;
 use Drupal\tool\Tool\ToolDefinition;
 use Drupal\tool\Tool\ToolManager;
 use Drupal\user\RoleInterface;
 
 /**
- * Says what one of examples 7 to 12 shows, above its contract panel.
+ * Says what one of examples 7 to 13 shows, above its contract panel.
  *
  * Each of those examples is one small resource for one or two concepts,
  * so its page says in one paragraph what it demonstrates and where the
@@ -525,6 +530,92 @@ final class ConceptPanel {
   }
 
   /**
+   * Example 13: the block's two lines beside example 12's, and its doors.
+   *
+   * The two declarations quoted from their files, the block structure's
+   * full schema cut as example 12's is, and the two tools a placed
+   * component block is configured and read through. Asked only where
+   * data_surface_component_block is on, since it names that module's
+   * classes.
+   *
+   * @return array
+   *   The blocks.
+   */
+  public function componentBlock(): array {
+    $structure = $this->registry->getDefinition(ComponentBlockStructure::class);
+    $full = $this->emitter->emitFull($this->resources->buildStatic($structure->name(), new OperationContext('configure')), $structure->id)->document['schema'];
+    $prefix = ContractEmitter::DEFS . $structure->id . '.props.';
+    $shown = static fn (string $id): bool => str_starts_with($id, self::COMPONENTS);
+    $component_key = $full['properties']['component'] ?? [];
+    $count = count($component_key['oneOf'] ?? []);
+    $component_key['oneOf'] = array_values(array_filter($component_key['oneOf'] ?? [], static fn (array $choice): bool => $shown((string) ($choice['const'] ?? ''))));
+    $props_key = $full['properties']['props'] ?? [];
+    $props_key['anyOf'] = array_values(array_filter($props_key['anyOf'] ?? [], static fn (array $member): bool => !isset($member['$ref']) || $shown(substr((string) $member['$ref'], strlen($prefix)))));
+    $props_key[ContractEmitter::EXTENSION]['variants'] = array_filter((array) ($props_key[ContractEmitter::EXTENSION]['variants'] ?? []), static fn (string $id): bool => $shown($id), ARRAY_FILTER_USE_KEY);
+    $conditionals = array_values(array_filter($full['allOf'] ?? [], static fn (array $branch): bool => $shown((string) ($branch['if']['properties']['component']['const'] ?? ''))));
+    $tools = [];
+    foreach (['configure', 'configure:read'] as $suffix) {
+      $tool_id = 'data_surface:block.placed_component:' . $suffix;
+      $tool = $this->toolManager->hasDefinition($tool_id) ? $this->toolManager->getDefinition($tool_id) : NULL;
+      if ($tool instanceof ToolDefinition) {
+        $tools[] = [
+          $tool_id,
+          (string) $tool->getLabel(),
+          $tool->getOperation()->value,
+          implode(', ', array_keys($tool->getInputDefinitions())),
+        ];
+      }
+    }
+    $lines = [];
+    $classes = [
+      ComponentBlockStructure::class,
+      ComponentBlock::class,
+      PlacedComponentBlockResource::class,
+      PlacedComponentBlockStorage::class,
+    ];
+    foreach ($classes as $class) {
+      $lines[] = $this->t('@class: @lines lines of code.', [
+        '@class' => (new \ReflectionClass($class))->getShortName(),
+        '@lines' => CodeLines::count(self::file($class)),
+      ]);
+    }
+    return [
+      'two_lines' => [
+        '#type' => 'table',
+        '#caption' => $this->t("The same two lines: example 12's resource and the block's structure, from <code>defineInputs()</code>, word for word. The block's component may be left empty, since the block is built before anything is chosen."),
+        '#header' => [
+          $this->t('Example 12, @id', ['@id' => 'event.spotlight']),
+          $this->t('The block, @id', ['@id' => $structure->id]),
+        ],
+        '#rows' => [
+          [
+            ['data' => $this->pre(implode("\n", self::statements(self::file(SpotlightResource::class), '$inputs->')))],
+            ['data' => $this->pre(implode("\n", self::statements(self::file(ComponentBlockStructure::class), '$inputs->')))],
+          ],
+        ],
+        '#attributes' => ['class' => ['data-surface-concept-two-lines']],
+      ],
+      'contract' => $this->details(
+        $this->t("The block's settings, as the full schema states them"),
+        $this->t("The component key offers the @count components the site has, cut here to the three the examples ship, and the props key is the union of their defs, one conditional per component: what example 12 states, under the block structure's id.", ['@count' => $count]),
+        $this->json(['component' => $component_key, 'props' => $props_key, 'allOf' => $conditionals]),
+      ),
+      'tools' => [
+        '#type' => 'table',
+        '#caption' => $this->t("The tools a placed component block is configured and read through: the plugin's structure is held by its host and is no tool, so a resource names the placed block by its machine name and attaches the structure at <code>settings</code>, where the block keeps it."),
+        '#header' => [$this->t('Tool'), $this->t('Title'), $this->t('Tool API kind'), $this->t('Inputs')],
+        '#rows' => $tools,
+        '#attributes' => ['class' => ['data-surface-concept-tools']],
+      ],
+      'lines' => [
+        '#theme' => 'item_list',
+        '#title' => $this->t('What it cost'),
+        '#items' => $lines,
+      ],
+    ];
+  }
+
+  /**
    * Makes an example's calls, as dry runs, and shows what each answered.
    *
    * @param string $id
@@ -533,7 +624,7 @@ final class ConceptPanel {
    * @return array
    *   A details element: per call, its Drush command and its answer.
    */
-  protected function calls(string $id): array {
+  public function calls(string $id): array {
     $ids = $id === 'event.press' || $id === 'event.desk' ? ['event.press', 'event.desk'] : [$id];
     $calls = [
       '#type' => 'details',
@@ -576,6 +667,9 @@ final class ConceptPanel {
     $this->state->setMultiple($state);
     try {
       $tool = $this->toolManager->createInstance($tool_id);
+      foreach (ConceptCalls::CALLS[$resource][$name]['parameters'] ?? [] as $parameter => $value) {
+        $tool->setInputValue($parameter, $value);
+      }
       $tool->setInputValue(OperationInputs::VALUES, ConceptCalls::CALLS[$resource][$name]['values']);
       // A read only operation's tool takes no dry run: it writes nothing.
       if (isset($tool->getInputDefinitions()[OperationInputs::DRY_RUN])) {

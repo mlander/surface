@@ -1228,6 +1228,20 @@ renames sit in A because they are cheapest before new code exists.
     wiring of keys from the site; more `format`s with a constraint of
     their own; a preview of the chosen component on example 12's page.
 
+16. **A block embeds a component.** DONE 2026-10-23
+    (`docs/decisions.md#a-block-embeds-a-component-through-its-structure`).
+    `data_surface_component_block`: a block, "Component", whose settings
+    are example 12's two lines named by `#[UsesStructure]`, so its form,
+    validation and storage come from the block host, and which renders
+    the component with the props it holds. The provider, `ComponentProps`,
+    moved to the main module, shared by example 12 and the block. A
+    placed component block is a resource, `block.placed_component`,
+    named by its machine name, with a write tool and a read tool.
+    Example 13 at `/surface-examples/13`. Open: the component's slots;
+    a placed block of any plugin as one resource (item 11); placing,
+    moving and listing blocks through a tool; the add form without
+    JavaScript (After the rework, item 7).
+
 ## Rejected, on the record
 
 So they are not re-proposed: imperative input-mutation hooks before

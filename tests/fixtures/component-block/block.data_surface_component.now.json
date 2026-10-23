@@ -1,0 +1,437 @@
+{
+    "resource": "block.data_surface_component",
+    "operation": null,
+    "label": null,
+    "schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "x-surface": {
+            "contract": 3,
+            "version": 1
+        },
+        "type": "object",
+        "properties": {
+            "component": {
+                "title": "Component",
+                "type": [
+                    "string",
+                    "null"
+                ],
+                "oneOf": [
+                    {
+                        "const": "data_surface_examples:call_to_action",
+                        "title": "Call to action"
+                    },
+                    {
+                        "const": "data_surface_examples:card",
+                        "title": "Card"
+                    },
+                    {
+                        "const": "data_surface_examples:hero",
+                        "title": "Hero"
+                    },
+                    {
+                        "const": null
+                    }
+                ],
+                "x-surface": {
+                    "locked": false,
+                    "dependsOn": [],
+                    "refined": false,
+                    "stale": false,
+                    "emptyOption": {
+                        "show": true,
+                        "label": "- None -"
+                    }
+                }
+            },
+            "props": {
+                "title": "Props",
+                "anyOf": [
+                    {
+                        "$ref": "#/$defs/block.data_surface_component.props.data_surface_examples:call_to_action"
+                    },
+                    {
+                        "$ref": "#/$defs/block.data_surface_component.props.data_surface_examples:card"
+                    },
+                    {
+                        "$ref": "#/$defs/block.data_surface_component.props.data_surface_examples:hero"
+                    },
+                    {
+                        "type": "null"
+                    }
+                ],
+                "x-surface": {
+                    "locked": false,
+                    "dependsOn": [
+                        "component"
+                    ],
+                    "refined": true,
+                    "stale": false,
+                    "by": "component",
+                    "variants": {
+                        "data_surface_examples:call_to_action": "#/$defs/block.data_surface_component.props.data_surface_examples:call_to_action",
+                        "data_surface_examples:card": "#/$defs/block.data_surface_component.props.data_surface_examples:card",
+                        "data_surface_examples:hero": "#/$defs/block.data_surface_component.props.data_surface_examples:hero"
+                    },
+                    "chosen": "data_surface_examples:card"
+                }
+            }
+        },
+        "additionalProperties": false,
+        "allOf": [
+            {
+                "if": {
+                    "properties": {
+                        "component": {
+                            "const": "data_surface_examples:call_to_action"
+                        }
+                    },
+                    "required": [
+                        "component"
+                    ]
+                },
+                "then": {
+                    "properties": {
+                        "props": {
+                            "title": "Props",
+                            "$ref": "#/$defs/block.data_surface_component.props.data_surface_examples:call_to_action"
+                        }
+                    }
+                }
+            },
+            {
+                "if": {
+                    "properties": {
+                        "component": {
+                            "const": "data_surface_examples:card"
+                        }
+                    },
+                    "required": [
+                        "component"
+                    ]
+                },
+                "then": {
+                    "properties": {
+                        "props": {
+                            "title": "Props",
+                            "$ref": "#/$defs/block.data_surface_component.props.data_surface_examples:card"
+                        }
+                    }
+                }
+            },
+            {
+                "if": {
+                    "properties": {
+                        "component": {
+                            "const": "data_surface_examples:hero"
+                        }
+                    },
+                    "required": [
+                        "component"
+                    ]
+                },
+                "then": {
+                    "properties": {
+                        "props": {
+                            "title": "Props",
+                            "$ref": "#/$defs/block.data_surface_component.props.data_surface_examples:hero"
+                        }
+                    }
+                }
+            }
+        ],
+        "$defs": {
+            "block.data_surface_component.props.data_surface_examples:call_to_action": {
+                "title": "block.data_surface_component.props.data_surface_examples:call_to_action",
+                "type": "object",
+                "properties": {
+                    "text": {
+                        "title": "Button text",
+                        "type": "string",
+                        "maxLength": 40,
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": [],
+                            "refined": false,
+                            "stale": false
+                        }
+                    },
+                    "url": {
+                        "title": "Address",
+                        "type": "string",
+                        "format": "uri",
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": [],
+                            "refined": false,
+                            "stale": false
+                        }
+                    },
+                    "style": {
+                        "title": "Style",
+                        "type": "string",
+                        "oneOf": [
+                            {
+                                "const": "primary",
+                                "title": "Primary"
+                            },
+                            {
+                                "const": "secondary",
+                                "title": "Secondary"
+                            }
+                        ],
+                        "default": "primary",
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": [],
+                            "refined": false,
+                            "stale": false,
+                            "emptyOption": {
+                                "show": false,
+                                "label": "- Select -"
+                            }
+                        }
+                    },
+                    "new_window": {
+                        "title": "Open in a new window",
+                        "type": "boolean",
+                        "default": false,
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": [],
+                            "refined": false,
+                            "stale": false
+                        }
+                    },
+                    "tags": {
+                        "title": "Tags",
+                        "description": "Up to three words the button is filed under.",
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "items": {
+                            "type": "string",
+                            "x-surface": {
+                                "locked": false,
+                                "dependsOn": [],
+                                "refined": false,
+                                "stale": false
+                            }
+                        },
+                        "maxItems": 3,
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": [],
+                            "refined": false,
+                            "stale": false
+                        }
+                    }
+                },
+                "additionalProperties": false,
+                "required": [
+                    "text",
+                    "url"
+                ]
+            },
+            "block.data_surface_component.props.data_surface_examples:card": {
+                "title": "block.data_surface_component.props.data_surface_examples:card",
+                "type": "object",
+                "properties": {
+                    "heading": {
+                        "title": "Heading",
+                        "type": "string",
+                        "maxLength": 80,
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": [],
+                            "refined": false,
+                            "stale": false
+                        }
+                    },
+                    "body": {
+                        "title": "Text",
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": [],
+                            "refined": false,
+                            "stale": false
+                        }
+                    },
+                    "tone": {
+                        "title": "Tone",
+                        "type": "string",
+                        "oneOf": [
+                            {
+                                "const": "plain",
+                                "title": "Plain"
+                            },
+                            {
+                                "const": "highlight",
+                                "title": "Highlighted"
+                            }
+                        ],
+                        "default": "plain",
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": [],
+                            "refined": false,
+                            "stale": false,
+                            "emptyOption": {
+                                "show": false,
+                                "label": "- Select -"
+                            }
+                        }
+                    },
+                    "link": {
+                        "title": "Link",
+                        "type": [
+                            "object",
+                            "null"
+                        ],
+                        "properties": {
+                            "url": {
+                                "title": "Address",
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "format": "uri",
+                                "x-surface": {
+                                    "locked": false,
+                                    "dependsOn": [],
+                                    "refined": false,
+                                    "stale": false
+                                }
+                            },
+                            "label": {
+                                "title": "Link text",
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "x-surface": {
+                                    "locked": false,
+                                    "dependsOn": [],
+                                    "refined": false,
+                                    "stale": false
+                                }
+                            }
+                        },
+                        "additionalProperties": false,
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": [],
+                            "refined": false,
+                            "stale": false
+                        }
+                    }
+                },
+                "additionalProperties": false,
+                "required": [
+                    "heading"
+                ]
+            },
+            "block.data_surface_component.props.data_surface_examples:hero": {
+                "title": "block.data_surface_component.props.data_surface_examples:hero",
+                "type": "object",
+                "properties": {
+                    "title": {
+                        "title": "Title",
+                        "type": "string",
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": [],
+                            "refined": false,
+                            "stale": false
+                        }
+                    },
+                    "subtitle": {
+                        "title": "Subtitle",
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": [],
+                            "refined": false,
+                            "stale": false
+                        }
+                    },
+                    "align": {
+                        "title": "Alignment",
+                        "type": "string",
+                        "oneOf": [
+                            {
+                                "const": "start",
+                                "title": "Start"
+                            },
+                            {
+                                "const": "center",
+                                "title": "Center"
+                            }
+                        ],
+                        "default": "center",
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": [],
+                            "refined": false,
+                            "stale": false,
+                            "emptyOption": {
+                                "show": false,
+                                "label": "- Select -"
+                            }
+                        }
+                    },
+                    "overlay": {
+                        "title": "Overlay opacity",
+                        "description": "How dark the picture is under the title, in percent.",
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 100,
+                        "default": 40,
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": [],
+                            "refined": false,
+                            "stale": false
+                        }
+                    },
+                    "full_width": {
+                        "title": "Full width",
+                        "type": "boolean",
+                        "default": false,
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": [],
+                            "refined": false,
+                            "stale": false
+                        }
+                    }
+                },
+                "additionalProperties": false,
+                "required": [
+                    "title"
+                ]
+            }
+        }
+    },
+    "values": {
+        "component": "data_surface_examples:card",
+        "props": {
+            "heading": "Doors open at half past six",
+            "body": null,
+            "tone": "plain",
+            "link": {
+                "url": null,
+                "label": null
+            }
+        }
+    },
+    "stale": []
+}

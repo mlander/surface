@@ -82,11 +82,15 @@ class ExamplesReadmeTest extends UnitTestCase {
       'Resource/ProgramResource',
       'Resource/DoorsResource',
       'Resource/SpotlightResource',
-      'Variants/ComponentProps',
     ];
     foreach ($concepts as $class) {
       $this->assertContains('src/' . $class . '.php', $quoted);
     }
+    // Example 12's provider is the main module's, and example 13 is the
+    // component block's submodule.
+    $this->assertContains('../../src/Variants/ComponentProps.php', $quoted);
+    $this->assertContains('../data_surface_component_block/src/Structure/ComponentBlockStructure.php', $quoted);
+    $this->assertContains('../data_surface_component_block/src/Plugin/Block/ComponentBlock.php', $quoted);
     foreach ($blocks as [, $path, $code]) {
       $file = self::MODULE . '/' . $path;
       $this->assertFileExists($file);

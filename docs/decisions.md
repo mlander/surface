@@ -3752,7 +3752,11 @@ because the dependent's select still offers the stored parent's choices.
 With JavaScript the parent's AJAX rebuild offers the new choices first
 and the case does not arise, and an invalid pair is refused either way.
 The fix is a host supplying its subform's parents to
-`surfaceSubmissionPath()`. `DemoBlockTest` pins today's refusal.
+`surfaceSubmissionPath()`. `DemoBlockTest` pins today's refusal. The
+component block's add form is the same case with variants: without
+JavaScript the props are drawn for the component stored, none, so a
+component chosen and saved at once is refused for the props it requires
+("Heading is required."), which `ComponentBlockPlacementTest` pins.
 (`DataSurfaceHostTrait::surfaceSubmissionPath()`)
 
 ### Static defaults
@@ -3770,6 +3774,99 @@ demo's own, `DataSurfaceDemoBundleField`, and its options resolver.
 The pattern fetches such a list through an options source, which is
 not built yet, and no core constraint names a bundle's fields.
 (`DemoBlockStructure::fieldOfBundle()`)
+
+### A block embeds a component through its structure
+
+Decided 2026-10-23. `data_surface_component_block` ships a block,
+"Component" (`data_surface_component`), that embeds a single-directory
+component: a component chosen from those the site has, and its props
+read from the schema the component declares. Its settings are a
+structure of two keys, example 12's two lines under the block's id,
+`block.data_surface_component`. Each choice, and why:
+
+- **A structure and a host, as for any plugin.** The plugin names the
+  structure with `#[UsesStructure]` on `DataSurfaceBlockBase`, so the
+  block host builds it in its `configure` context, draws the settings
+  form, holds what is submitted to the structure and stores it in the
+  block's settings ([A plugin host's
+  context](#a-plugin-hosts-context)). The plugin's own code is
+  `build()`: `#type => 'component'` with the component and its props.
+  No `defaultConfiguration()`, `blockForm()`, `blockValidate()` or
+  `blockSubmit()`. Choosing a component swaps the props below it for its
+  own over AJAX, as it does on example 12's page, because the variants
+  are the same. The config schema is written by hand, the props
+  `type: ignore`, since a plugin's settings schema is not generated yet
+  (ROADMAP Phase B, item 5) and which components a site has is the
+  site's ([A schema can be read back into a
+  structure](#a-schema-can-be-read-back-into-a-structure)).
+- **One provider, in the main module.** `ComponentProps` moved from the
+  examples to `Drupal\data_surface\Variants\ComponentProps`. Example 12
+  must keep working with the submodule off and the submodule must work
+  without the examples, so the provider can live in neither; the main
+  module needs nothing new for it, since the component plugin manager is
+  core's. One class means the two declarations list the same components
+  with the same schemas, and both documents write the same defs under
+  each owner's id. Rejected: a copy in the submodule, two places that
+  decide which prop types are stored; the provider in the submodule,
+  which would make the examples depend on the block module.
+- **The component is not required**, where example 12's is. The block
+  host constructs the plugin from the declared defaults through the
+  pipeline (the block form, the block listing), so a required key needs
+  a default the site has, and no component is one every site has: with
+  the key required, installing the module failed with "Component is
+  required." A block with no component renders nothing, and so does one
+  whose component the site no longer has, with no error.
+- **The props as stored, less what holds nothing.** The pipeline stores
+  null for a prop given no value, and core's check of the props at
+  render refuses null for a prop whose type has no null (the card's
+  link). A null means the prop holds nothing, so the block leaves it
+  out and the component reads its own default, as a prop never passed.
+  The render array carries the built structure's cacheability, which is
+  the component list's (`config:core.extension`), and the block names
+  the extension providing its component as a dependency, so the block
+  goes with that module or theme.
+- **Props only.** A slot is markup another part of the site fills: its
+  definition is a title and a description, with no schema for a value a
+  block could store, so the block passes props and no slot. *Open:*
+  slots, filled from text with a format or from other blocks.
+- **A placed block is a resource, so an agent can configure it.** A
+  plugin's structure is held by its host and is no tool ([Tools](resources.md#tools),
+  rule 2), and no host exposes a placed block's settings through the
+  Tool API today. A placed block is a config entity with a machine name
+  and storage of its own, so the submodule declares
+  `block.placed_component`: identity `block`, the machine name; storage
+  the block config entity, reading and writing the structure's keys and
+  keeping the host's own (label, how it shows, plugin id, provider); and
+  the block's structure attached at `settings`, where the block keeps
+  it, since a structure mixed in holds no children. Its one operation,
+  `configure`, takes the block (`BlockInterface`) and refuses a block of
+  another plugin; it asks "administer blocks". The bridge derives
+  `data_surface:block.placed_component:configure` (inputs `block`,
+  `values`, `dry_run`) and the read tool beside it (input `block`), and
+  the HTTP door serves it at `/surface-api/block.placed_component/{block}`.
+  Over MCP an agent can read a placed component block's component and
+  props by its machine name, change both, rehearse the change first, and
+  is refused, by path and in the schema's words, props of another
+  component or out of their bounds. It cannot yet place a block, choose
+  its theme, region, weight or visibility, remove one, list the placed
+  blocks to learn their machine names, or configure a block of any other
+  plugin this way. The general case is ROADMAP item 11's: a placed block
+  as one config entity resource whose settings are variants chosen by
+  plugin id, each plugin's structure one of them. This is that for one
+  plugin, written so the general resource can replace it.
+
+Example 13 (`/surface-examples/13`) shows the structure beside example
+12's resource, the block's contract and tools, and a call to the tool
+that configures the Spotlight block, which the examples place in the
+default theme's content region, shown on that page alone, once both
+modules are on. *Open:* slots; one resource for a placed block of any
+plugin; placing, moving and listing blocks through a tool; the add form
+without JavaScript ([A plugin host cannot overlay a full
+submission](#a-plugin-host-cannot-overlay-a-full-submission)).
+(`ComponentBlockStructure`, `ComponentBlock`,
+`PlacedComponentBlockResource`, `PlacedComponentBlockStorage`,
+`Variants\ComponentProps`, `ComponentBlockTest`,
+`ComponentBlockPlacementTest`, `ComponentBlockAjaxTest`)
 
 ## Examples
 

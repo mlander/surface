@@ -27,9 +27,11 @@ and changes a thing that exists, neither creating nor read only, is
 
 | Resource or structure | Class | Identity | Operations |
 | --- | --- | --- | --- |
+| [`block.data_surface_component`](#blockdata_surface_component) | `ComponentBlockStructure` | none | none |
 | [`block.data_surface_demo`](#blockdata_surface_demo) | `DemoBlockStructure` | none | none |
 | [`block.data_surface_demo.presentation.grid`](#blockdata_surface_demopresentationgrid) | `GridPresentationStructure` | none | none |
 | [`block.data_surface_demo.presentation.list`](#blockdata_surface_demopresentationlist) | `ListPresentationStructure` | none | none |
+| [`block.placed_component`](#blockplaced_component) | `PlacedComponentBlockResource` | `block` | `configure` |
 | [`event.bulletin`](#eventbulletin) | `BulletinResource` | none | `configure` |
 | [`event.desk`](#eventdesk) | `InfoDeskResource` | none | `configure` |
 | [`event.doors`](#eventdoors) | `DoorsResource` | none | `configure` |
@@ -55,6 +57,16 @@ and changes a thing that exists, neither creating nor read only, is
 | [`registration.step3`](#registrationstep3) | `RegistrationStep3Resource` | none | `configure` |
 | [`registration.step3.ticket.free`](#registrationstep3ticketfree) | `FreeTicketStructure` | none | none |
 | [`registration.step3.ticket.paid`](#registrationstep3ticketpaid) | `PaidTicketStructure` | none | none |
+
+## block.data_surface_component
+
+`Drupal\data_surface_component_block\Structure\ComponentBlockStructure`, in `data_surface_component_block`.
+
+- Kind: structure
+- Identity: none
+- Storage: none; its host or its parent stores it
+- Access: the operation's permission alone
+- Used by: `block:data_surface_component`; configured through the plugin's host, never on its own.
 
 ## block.data_surface_demo
 
@@ -87,6 +99,19 @@ and changes a thing that exists, neither creating nor read only, is
 - Identity: none
 - Storage: none; its host or its parent stores it
 - Access: the operation's permission alone
+
+## block.placed_component
+
+`Drupal\data_surface_component_block\Resource\PlacedComponentBlockResource`, in `data_surface_component_block`.
+
+- Kind: resource
+- Identity: `block`
+- Storage: `Drupal\data_surface_component_block\Storage\PlacedComponentBlockStorage`
+- Access: the operation's permission alone
+
+| Operation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `configure` | Configure a placed component block | `BlockInterface $block` | no | `administer blocks` | yes | yes | `PlacedComponentBlockResource::configure()` (`data_surface_component_block`) |
 
 ## event.bulletin
 

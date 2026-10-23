@@ -55,6 +55,7 @@ class ResourceCatalogTest extends DataSurfaceKernelTestBase {
     'data_surface_examples_workflow',
     'data_surface_entity',
     'data_surface_first',
+    'data_surface_component_block',
   ];
 
   /**
@@ -81,9 +82,11 @@ class ResourceCatalogTest extends DataSurfaceKernelTestBase {
   public function testTheCatalogueReadsTheStaticLayer(): void {
     $catalog = $this->catalog();
     $this->assertSame([
+      'block.data_surface_component',
       'block.data_surface_demo',
       'block.data_surface_demo.presentation.grid',
       'block.data_surface_demo.presentation.list',
+      'block.placed_component',
       'event.bulletin',
       'event.desk',
       'event.doors',

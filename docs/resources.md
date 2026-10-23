@@ -803,6 +803,21 @@ plugin in the test module are written this way; the demo formatter and
 the test module's sticky note block are their own structure. What a
 plugin holds is never a tool (see Tools).
 
+`data_surface_component_block` is the case of a plugin whose settings
+are variants from the site: its block, "Component", names a structure of
+example 12's two lines, a component chosen from those the site has and
+its props read from the schema the component declares
+(`ComponentProps`, the main module's provider), and renders the
+component with the props it holds. The component is not required, since
+the host builds the block from its defaults before anything is chosen.
+A placed block is a config entity with a machine name, so the submodule
+declares a resource beside the plugin, `block.placed_component`, whose
+identity is that name and which attaches the same structure at
+`settings`: the tool bridge derives a write tool and a read tool from it,
+which name the block. Its README, and example 13 at
+`/surface-examples/13`, show both
+([decision](decisions.md#a-block-embeds-a-component-through-its-structure)).
+
 ## Alters
 
 An alter says which resource or structure it applies to with `#[Alters]`
@@ -1672,7 +1687,7 @@ $inputs->add('component', 'string', t('Component'), default: 'data_surface_examp
 $inputs->attachVariants('props', by: 'component', from: ComponentProps::class)
   ->setLabel(t('Props'));
 
-// ComponentProps, a service
+// ComponentProps, the main module's, built by the class resolver
 final class ComponentProps implements VariantsFromSiteInterface {
 
   public function variants(): VariantList {

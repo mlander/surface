@@ -39,7 +39,9 @@ registration form, one idea at a time; examples 7 to 12 are a small
 resource each, for a rule written as data, one part used twice, keys
 that come from the site, access and how an operation behaves, the
 stock widgets with what a key left out, null or a value means, and a
-JSON Schema read into a structure: a component's props.
+JSON Schema read into a structure: a component's props. Example 13 is
+those two lines as a block's settings, with the block in a submodule of
+its own.
 
 [The pattern](pattern.md) is the whole of what an author writes, and
 why; [How it fits](how-it-fits.md) follows one request through the
@@ -202,7 +204,7 @@ The pages fall in the same groups as the README's documentation table.
 The module ships no resources of its own on a production site. It
 provides the model, the pipeline, the two plugin types and the host
 adoption layer; resources and structures come from the modules that
-declare them. Fourteen experimental submodules demonstrate the model and
+declare them. Fifteen experimental submodules demonstrate the model and
 double as the fixtures the tests run against: see
 [Installation](installation.md).
 

@@ -14,10 +14,10 @@ use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
 /**
- * Tests the examples' and the first module's contracts against baselines.
+ * Tests the examples', the first module's and the block's contracts.
  *
  * The additive-diff lint, as a test any module can copy: every resource
- * and structure the three modules declare has its full schema committed
+ * and structure the four modules declare has its full schema committed
  * under tests/fixtures/contracts/, and today's emission may differ from
  * it only compatibly, or by a breaking change with its owner's version
  * raised or an allowance recorded. Any other breaking change fails here;
@@ -25,7 +25,8 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * accepted. Run with DATA_SURFACE_CONTRACT_WRITE=1, this test writes the
  * baselines instead, from the modules it installs alone: how a
  * declaration whose variants come from the site (example 12's
- * components) is pinned, since a site's own themes would add theirs.
+ * components, and the component block's) is pinned, since a site's own
+ * themes would add theirs.
  *
  * @see docs/evolution.md
  * @see \Drupal\data_surface\Contract\ContractDiff
@@ -51,6 +52,8 @@ class ContractBaselineTest extends DataSurfaceKernelTestBase {
     'data_surface_examples_compliance',
     'data_surface_examples_workflow',
     'data_surface_first',
+    'block',
+    'data_surface_component_block',
   ];
 
   /**
@@ -60,6 +63,7 @@ class ContractBaselineTest extends DataSurfaceKernelTestBase {
     'data_surface_examples',
     'data_surface_examples_compliance',
     'data_surface_first',
+    'data_surface_component_block',
   ];
 
   /**
@@ -90,6 +94,7 @@ class ContractBaselineTest extends DataSurfaceKernelTestBase {
     }
     $this->assertSame(array_keys($committed), array_keys($current), 'Every declaration is pinned, and every baseline still declared.');
     $this->assertSame([
+      'block.data_surface_component',
       'event.bulletin',
       'event.desk',
       'event.doors',

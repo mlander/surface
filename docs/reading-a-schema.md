@@ -182,8 +182,9 @@ What cannot be read at all, naming its pointer:
 - a property whose name holds a dot, which a key cannot;
 - a local reference to a def the document does not hold;
 - a type JSON Schema does not have (a single-directory component may
-  name a PHP class, which a provider leaves out first: example 12's
-  `ComponentProps::props()`).
+  name a PHP class, which a provider leaves out first: the main module's
+  `ComponentProps::props()`, which example 12 and the component block
+  use).
 
 ## Older drafts
 

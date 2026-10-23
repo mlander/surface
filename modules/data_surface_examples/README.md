@@ -13,7 +13,9 @@ Examples 7 to 12 leave the registration behind: each is a small resource
 of its own for one or two later concepts, a rule written as data, a part
 used twice, keys that come from the site, access, the stock widgets, and
 a JSON Schema read into a structure
-([below](#one-small-resource-per-concept)).
+([below](#one-small-resource-per-concept)). Example 13 is example 12's
+two lines as the settings of a block, which lives in a submodule of its
+own ([below](#example-13-a-block-that-embeds-a-component)).
 
 ```bash
 drush pm:install data_surface_examples
@@ -1931,12 +1933,14 @@ final class SpotlightResource implements ResourceInterface {
 }
 ```
 
-The provider lists every component, its own three among them, each by
-its id and its name, with its props as the component declares them. A
-prop typed by a PHP class takes a value only Twig code passes, which
-nothing stores: that type is left out, as the reader would refuse it.
+The provider lists every component, the three this module ships among
+them, each by its id and its name, with its props as the component
+declares them. A prop typed by a PHP class takes a value only Twig code
+passes, which nothing stores: that type is left out, as the reader would
+refuse it. It is the main module's, not this module's, since example 13's
+block reads the components through it too.
 
-<!-- code: src/Variants/ComponentProps.php -->
+<!-- code: ../../src/Variants/ComponentProps.php -->
 
 ```php
 final class ComponentProps implements VariantsFromSiteInterface, ContainerInjectionInterface {
@@ -2124,12 +2128,195 @@ Failed: The values were refused:
 /props/overlay: This value should be between 0 and 100.
 ```
 
+## Example 13: a block that embeds a component
+
+`/surface-examples/13`
+
+Example 12's two lines are the settings of a block. The block plugin
+names a structure with `#[UsesStructure]` and renders; its settings
+form, their validation, their storage (the block's settings) and its
+tool come from the structure, through the block host
+([Plugins](../../docs/resources.md#plugins)). The block lives in a
+submodule of its own, `data_surface_component_block`, which the
+examples do not depend on, so the page says how to enable it while it is
+off:
+
+```bash
+ddev drush pm:install data_surface_component_block
+```
+
+The structure is example 12's two lines under the block's id, from the
+same provider:
+
+<!-- code: ../data_surface_component_block/src/Structure/ComponentBlockStructure.php -->
+
+```php
+#[Structure('block.data_surface_component')]
+final class ComponentBlockStructure implements StructureInterface {
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function defineInputs(BlueprintInterface $inputs): void {
+    $inputs->add('component', 'string', t('Component'));
+    $inputs->attachVariants('props', by: 'component', from: ComponentProps::class)
+      ->setLabel(t('Props'));
+  }
+
+}
+```
+
+One difference: the component is not required. The block host builds
+the block from the declared defaults before anything is chosen, the
+block form and the block listing among the places that do, and no
+component is one every site has to start from; a block with no
+component renders nothing. The plugin renders the component it holds
+with its props, less a prop that holds nothing, which core's check of
+the props refuses for a prop that may not be null; a component the site
+no longer has renders nothing too. It names the extension that provides
+the component as a dependency, so the block goes with it:
+
+<!-- code: ../data_surface_component_block/src/Plugin/Block/ComponentBlock.php -->
+
+```php
+#[Block(
+  id: self::ID,
+  admin_label: new TranslatableMarkup('Component'),
+)]
+#[UsesStructure(ComponentBlockStructure::class)]
+final class ComponentBlock extends DataSurfaceBlockBase implements ContainerFactoryPluginInterface {
+
+  /**
+   * The plugin id.
+   */
+  public const ID = 'data_surface_component';
+
+  /**
+   * The single-directory components the site has.
+   */
+  protected ComponentPluginManager $components;
+
+  /**
+   * {@inheritdoc}
+   *
+   * Set after the constructor, which runs the configuration through the
+   * pipeline before any property of this class could be.
+   */
+  public static function create(ContainerInterface $container, array $configuration, $plugin_id, $plugin_definition): static {
+    $block = new static($configuration, $plugin_id, $plugin_definition);
+    $block->components = $container->get('plugin.manager.sdc');
+    return $block;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function build(): array {
+    $configuration = $this->getConfiguration();
+    $component = $configuration['component'] ?? NULL;
+    $build = [];
+    if (is_string($component) && $component !== '' && $this->components->getDefinition($component, FALSE) !== NULL) {
+      $build = [
+        '#type' => 'component',
+        '#component' => $component,
+        '#props' => self::held(is_array($configuration['props'] ?? NULL) ? $configuration['props'] : []),
+      ];
+    }
+    // The components the structure was built from: a module or theme
+    // installed or taken away may add or remove the one stored.
+    CacheableMetadata::createFromObject($this->memoizedDataSurface())->applyTo($build);
+    return $build;
+  }
+
+  /**
+   * Leaves out each prop that holds nothing, at any depth.
+   *
+   * What is stored holds null for a prop no value was given, which core's
+   * check of the props refuses for a prop of a type that is not null, an
+   * object or a string with no null beside it. Left out, the component
+   * reads its own default, as a prop never passed.
+   *
+   * @param array $props
+   *   The props as stored.
+   *
+   * @return array
+   *   The props that hold a value.
+   */
+  public static function held(array $props): array {
+    if (array_is_list($props)) {
+      return $props;
+    }
+    $held = [];
+    foreach ($props as $name => $value) {
+      if ($value !== NULL) {
+        $held[$name] = is_array($value) ? self::held($value) : $value;
+      }
+    }
+    return $held;
+  }
+
+  /**
+   * {@inheritdoc}
+   *
+   * The extension that provides the component, so the block goes with it.
+   */
+  public function calculateDependencies(): array {
+    $component = $this->getConfiguration()['component'] ?? NULL;
+    $definition = is_string($component) && $component !== '' ? $this->components->getDefinition($component, FALSE) : NULL;
+    if (!is_array($definition) || !isset($definition['provider'], $definition['extension_type'])) {
+      return [];
+    }
+    $type = $definition['extension_type'] instanceof \BackedEnum ? $definition['extension_type']->value : (string) $definition['extension_type'];
+    return [$type => [$definition['provider']]];
+  }
+
+}
+```
+
+Place it through the block layout, `/admin/structure/block`: "Place
+block", then "Component". Choose a component and its props are drawn
+below it over AJAX, read from its schema; choose another and they are
+that component's. Without JavaScript the props are drawn for what is
+stored, so a component whose props require something is refused on the
+first save, and its props are there on the block's form once it is
+saved ([A plugin host cannot overlay a full
+submission](../../docs/decisions.md#a-plugin-host-cannot-overlay-a-full-submission)).
+
+With both modules on, whichever came second places one block, Spotlight,
+`data_surface_examples_spotlight`: the card, as example 12 ships it, in
+the default theme's content region, shown on `/surface-examples/13`
+alone, below what the page says.
+
+The page shows the block's two lines beside example 12's, the block
+structure's full schema cut to the three components this module ships
+(the same variants as example 12's, under the block's id), the two tools
+a placed block has, a link to place one, and what it cost.
+
+A plugin's structure is held by its host and is no tool. A placed block
+is a config entity, with a machine name and storage of its own, so the
+submodule declares a resource, `block.placed_component`, whose identity
+is the block's machine name and which attaches the block's structure at
+`settings`, where the block keeps it: the bridge derives
+`data_surface:block.placed_component:configure`, which takes the block
+and the values, and the read tool beside it, which takes the block. The
+call below changes the Spotlight block to the hero, as a dry run:
+
+```bash
+drush tool:run data_surface:block.placed_component:configure --uid=1 --input='{"block":"data_surface_examples_spotlight","values":{"settings":{"component":"data_surface_examples:hero","props":{"title":"Doors open at half past six","align":"start"}}}}' --input=dry_run=true
+```
+
+```
+1. The Spotlight block set to the hero
+Success: Dry run of Configure a placed component block: the values were accepted and prepared, and nothing was written.
+  values: {"block":"data_surface_examples_spotlight","settings":{"component":"data_surface_examples:hero","props":{"title":"Doors open at half past six","subtitle":null,"align":"start","overlay":40,"full_width":false}}}
+```
+
 ## How this page is kept true
 
 Every code block above is the file it names, from its first attribute
 or its class line to its closing brace, and `ExamplesReadmeTest` fails
 when one drifts, and so does the component example 12 quotes. The Drush
-commands and answers of examples 7 to 12 are asserted by
+commands and answers of examples 7 to 13 are asserted by
 `ExamplesConceptsToolTest`. The JSON of example 1's config schema is asserted by
 `ConfigSchemaContractTest`, which also checks this page quotes it. The tool's three answers are asserted by
 `ExamplesToolTest`, which also checks this page quotes them, and the
@@ -2152,9 +2339,12 @@ Drush commands are checked against `ExampleCalls`.
 | `Functional\ServedContractEndpointsTest` | In React: the landing page's links, and example 2's contract, refine and validate over HTTP. |
 | `Functional\ServedSubmitEndpointTest` | In React: example 2 saved over HTTP, refused, and refused after someone else saved. |
 | `Kernel\ExamplesResetTest` | Reset to defaults puts every example, and what another module stored on example 3, back to the shipped files, and opens every room example 4 closed. |
-| `Kernel\ExamplesConceptsTest` | Examples 7 to 12: each form builds and saves; example 7's rules in the full schema as declared, the send day gone for a monthly bulletin and kept in storage; example 8's one def at two sites with each wiring, the mixed-in keys flat, the shape at two keys, the volunteers' collection; example 9's keys from the configuration, a type added without a cache rebuild, the locked type in both documents and on the form; example 10's fees for two accounts, locked once published, and both operations' facts and tools; example 11's widgets, the always held badges and the notes that clear; example 12's three components read as three variants, the card's props as keys with their constraints, both documents stating them, the form swapped to the hero and saved, a hero too dark refused; the panel above each, and none above examples 1 to 3; each class stays screen sized. |
+| `Kernel\ExamplesConceptsTest` | Examples 7 to 12: each form builds and saves; example 7's rules in the full schema as declared, the send day gone for a monthly bulletin and kept in storage; example 8's one def at two sites with each wiring, the mixed-in keys flat, the shape at two keys, the volunteers' collection; example 9's keys from the configuration, a type added without a cache rebuild, the locked type in both documents and on the form; example 10's fees for two accounts, locked once published, and both operations' facts and tools; example 11's widgets, the always held badges and the notes that clear; example 12's three components read as three variants, the card's props as keys with their constraints, both documents stating them, the form swapped to the hero and saved, a hero too dark refused; the panel above each, and none above examples 1 to 3; each class stays screen sized; example 13's page with its module off, saying how to enable it, then on, the Spotlight block placed, the two lines side by side, the block's contract cut to the three components, its two tools and the call's answer, nothing written. |
 | `Kernel\ExamplesWorkflowTest` | Example 10 with the workflow module: the fees left out of the full schema, the tool listing and the read tool for an account without "see event fees" and kept for one with it; the program locked whole once the workflow state is published, settled at call time and left unmarked in the full schema; checking still answers; the panel's paragraph, with the module and without it. |
-| `Kernel\ExamplesConceptsToolTest` | Examples 7 to 12: every call `ConceptCalls` writes down, its answer, nothing written, and this page quoting each command and answer. |
-| `Functional\ExamplesConceptsRoutesTest` | Every route of examples 7 to 12 answers an administrator and refuses anonymous; the landing page lists them; each page shows its panel and saves through its form; example 10's check writes nothing. |
+| `Kernel\ExamplesConceptsToolTest` | Examples 7 to 13: every call `ConceptCalls` writes down, its answer, nothing written, the Spotlight block included, and this page quoting each command and answer. |
+| `Functional\ExamplesConceptsRoutesTest` | Every route of examples 7 to 12 answers an administrator and refuses anonymous; the landing page lists them; each page shows its panel and saves through its form; example 10's check writes nothing. Example 13 refuses anonymous, says to enable its module, then, with it on, shows its parts and the call's answer, and draws the Spotlight card below on its page alone. |
+| `Kernel\ComponentBlockTest` | Example 13's block: its structure and both documents, its tools read and written, and what it renders ([its README](../data_surface_component_block/README.md)). |
+| `Functional\ComponentBlockPlacementTest` | Example 13's block through the block form without JavaScript. |
+| `FunctionalJavascript\ComponentBlockAjaxTest` | Example 13's block in a browser: a component chosen draws its props over AJAX, and the block saved renders it. |
 | `FunctionalJavascript\ExamplesSpotlightAjaxTest` | Example 12 in a browser: choosing the hero swaps the card's props for the hero's over AJAX, the form saved stores the hero and its props, and the page read back draws them. |
 | `Kernel\SchemaRoundTripTest` | Every example's full schema, read back by the reader, is itself again, byte for byte, or differs only as its listed kind says. |

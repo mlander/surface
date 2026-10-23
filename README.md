@@ -317,7 +317,9 @@ their configuration may change without a deprecation path.
   resource each for a later concept: a rule written as data, one part
   used twice, keys that come from the site, access and how an operation
   behaves, the stock widgets, and a component's props read from its JSON
-  Schema, each page saying what it shows and what its tool answers. Needs
+  Schema, each page saying what it shows and what its tool answers; and
+  example 13, a block that embeds a component, which says to enable
+  `data_surface_component_block`. Needs
   [Tool](https://www.drupal.org/project/tool).
 - **Data Surface Examples - Compliance**
   (`data_surface_examples_compliance`): example 4, a compliance
@@ -328,6 +330,13 @@ their configuration may change without a deprecation path.
   that answer access for the program and its fees, which do not know
   them: the fees left out for an account that may not see them, and the
   program fixed once its workflow publishes it.
+- **Data Surface component block** (`data_surface_component_block`):
+  example 13, a block, "Component", that embeds a single-directory
+  component: the component chosen from those the site has and its props
+  read from the schema it declares, example 12's two lines named by
+  `#[UsesStructure]`, so the block's form, validation and storage come
+  from them; and a placed component block configured and read through
+  two tools, by its machine name. Needs `block`.
 - **Data Surface - React** (`data_surface_react`): the served contract,
   an operation as JSON Schema 2020-12 with an `x-surface` extension,
   served over HTTP at `/surface-api/{resource}`, the method its
@@ -387,6 +396,7 @@ nothing on it is needed to build.
 | [The Tool API bridge](modules/data_surface_tool/README.md) | One tool per operation and a read tool beside it, who may run them, the contract panel, and what MCP and the Tool API are told. |
 | [The React app](modules/data_surface_react/README.md) | The served contract's endpoints and the React form drawn from them. |
 | [The OpenAPI document](modules/data_surface_openapi/README.md) | Every operation's endpoints as OpenAPI 3.1, for any OpenAPI client, generator or UI. |
+| [The component block](modules/data_surface_component_block/README.md) | A block that embeds a single-directory component, its settings a structure, and a placed one configured through a tool. |
 | [Installation: Tool](docs/installation.md#tool) | Enabling the tool bridge, through which an agent, MCP and Drush call each operation. |
 | [One resource, every door](docs/every-door/index.html) | An interactive 3D model: the layers a data surface is sealed from, a resource, its attached structures and an alter, the doors that read its contract, and the same inputs as they are written today. Open the file in a browser. |
 

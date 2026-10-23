@@ -14,7 +14,9 @@ use Drupal\data_surface\Form\DataSurfaceFormBuilder;
 use Drupal\data_surface\Form\DataSurfaceOperationForm;
 use Drupal\data_surface_examples\CodeLines;
 use Drupal\data_surface_examples\ConceptPanel;
+use Drupal\data_surface_examples\Controller\ExamplesController;
 use Drupal\data_surface_examples\ExamplePanels;
+use Drupal\data_surface_examples\Hook\SpotlightBlockHooks;
 use Drupal\data_surface_examples\Resource\BulletinResource;
 use Drupal\data_surface_examples\Resource\DoorsResource;
 use Drupal\data_surface_examples\Resource\InfoDeskResource;
@@ -22,7 +24,7 @@ use Drupal\data_surface_examples\Resource\PressResource;
 use Drupal\data_surface_examples\Resource\ProgramResource;
 use Drupal\data_surface_examples\Resource\SpotlightResource;
 use Drupal\data_surface_examples\Resource\TicketSalesResource;
-use Drupal\data_surface_examples\Variants\ComponentProps;
+use Drupal\data_surface\Variants\ComponentProps;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use Drupal\tool\Tool\ToolOperation;
 use PHPUnit\Framework\Attributes\Group;
@@ -30,14 +32,15 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use Symfony\Component\HttpFoundation\Request;
 
 /**
- * Tests examples 7 to 12: one small resource per concept.
+ * Tests examples 7 to 13: one small resource per concept, then a block.
  *
  * Each through what a person sees, its form built and saved by the
  * generic operation form, and what a client reads, its two documents:
  * a rule written as data, one part used twice, keys that come from the
  * site, access of both kinds with how each operation behaves, and the
  * stock widgets with what nothing means. Then the panel above each, and
- * none above the registration's.
+ * none above the registration's; and example 13's page, with its module
+ * off and on.
  */
 #[Group('data_surface')]
 #[RunTestsInSeparateProcesses]
@@ -583,6 +586,63 @@ class ExamplesConceptsTest extends DataSurfaceKernelTestBase {
     $contract = json_decode(htmlspecialchars_decode((string) $panel['contract']['content']['#value']), TRUE);
     $this->assertSame(self::COMPONENTS, array_column($contract['component']['oneOf'], 'const'));
     $this->assertSame('data_surface_examples:card', $contract['allOf'][0]['if']['properties']['component']['const']);
+  }
+
+  /**
+   * Tests example 13: where the block is, then the block beside example 12.
+   */
+  public function testThirteenSaysWhereTheBlockIsThenShowsIt(): void {
+    $page = $this->thirteen();
+    $items = array_map(static fn ($item): string => strip_tags((string) (is_array($item) ? ($item['#markup'] ?? '') : $item)), $page['how']['#items']);
+    $this->assertSame('Enable it: ddev drush pm:install data_surface_component_block', $items[0]);
+    $this->assertStringStartsWith('It is not enabled on this site yet.', $items[1]);
+    $this->assertMatchesRegularExpression('/^The structure and the block plugin: \d+ lines of code\.$/', $items[2]);
+    $this->assertArrayNotHasKey('parts', $page, 'While the module is off, nothing of it is shown.');
+    $index = $this->container->get('class_resolver')->getInstanceFromDefinition(ExamplesController::class)->index();
+    $this->assertSame('Example 13: a block that embeds a component', strip_tags((string) $index[13]['title']['#markup']));
+    $this->assertArrayHasKey('block', $index);
+
+    // On, with a default theme that has a content region.
+    $this->installConfig(['system']);
+    $this->container->get('theme_installer')->install(['stark']);
+    $this->config('system.theme')->set('default', 'stark')->save();
+    $this->container->get('module_installer')->install(['path_alias', SpotlightBlockHooks::MODULE]);
+    $block = $this->container->get('entity_type.manager')->getStorage('block')->load(SpotlightBlockHooks::BLOCK);
+    $this->assertNotNull($block, 'Enabling the module placed the Spotlight block.');
+    $this->assertSame('stark', $block->get('theme'));
+    $this->assertSame('content', $block->get('region'));
+    $this->assertSame(SpotlightBlockHooks::PAGE, $block->get('visibility')['request_path']['pages']);
+    $this->assertSame(SpotlightBlockHooks::SETTINGS['props'], $block->get('settings')['props']);
+
+    $page = $this->thirteen();
+    $items = array_map(static fn ($item): string => strip_tags((string) (is_array($item) ? ($item['#title'] ?? $item['#markup'] ?? '') : $item)), $page['how']['#items']);
+    $this->assertSame('It is enabled on this site now.', $items[1]);
+    $this->assertSame('Place a component block in stark: /admin/structure/block/add/data_surface_component/stark', $items[4]);
+    [$spotlight, $block_lines] = array_map(static fn (array $cell): string => htmlspecialchars_decode((string) $cell['data']['#value']), $page['parts']['two_lines']['#rows'][0]);
+    $this->assertStringContainsString("\$inputs->attachVariants('props', by: 'component', from: ComponentProps::class)\n  ->setLabel(t('Props'));", $spotlight);
+    $this->assertSame("\$inputs->add('component', 'string', t('Component'));\n\$inputs->attachVariants('props', by: 'component', from: ComponentProps::class)\n  ->setLabel(t('Props'));", $block_lines);
+    $contract = json_decode(htmlspecialchars_decode((string) $page['parts']['contract']['content']['#value']), TRUE);
+    $this->assertSame(self::COMPONENTS, array_column($contract['component']['oneOf'], 'const'));
+    $this->assertSame('#/$defs/block.data_surface_component.props.data_surface_examples:card', $contract['props'][ContractEmitter::EXTENSION]['variants']['data_surface_examples:card']);
+    [$write, $read] = $page['parts']['tools']['#rows'];
+    $this->assertSame('data_surface:block.placed_component:configure', $write[0]);
+    $this->assertSame(['Configure a placed component block', 'write', 'block, values, dry_run'], array_slice($write, 1));
+    $this->assertSame('data_surface:block.placed_component:configure:read', $read[0]);
+    $this->assertSame(['Current values: Configure a placed component block', 'read', 'block'], array_slice($read, 1));
+    $answer = htmlspecialchars_decode((string) $page['calls']['block.placed_component:hero']['answer']['#value']);
+    $this->assertStringStartsWith('Success: Dry run of Configure a placed component block', $answer);
+    $this->assertSame('data_surface_examples:card', $this->container->get('entity_type.manager')->getStorage('block')->loadUnchanged(SpotlightBlockHooks::BLOCK)->get('settings')['component'], 'The call wrote nothing.');
+    $this->assertStringContainsString('Below, the Spotlight block, data_surface_examples_spotlight, placed in the content region of stark', (string) $page['placed']['#markup']);
+  }
+
+  /**
+   * Builds example 13's page.
+   *
+   * @return array
+   *   The render array.
+   */
+  protected function thirteen(): array {
+    return $this->container->get('class_resolver')->getInstanceFromDefinition(ExamplesController::class)->step13();
   }
 
   /**

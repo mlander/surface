@@ -184,3 +184,11 @@ data_surface_examples.step12:
     _data_surface_panel: 'data_surface_examples.panels'
   requirements:
     _data_surface_operation_access: 'TRUE'
+
+data_surface_examples.step13:
+  path: '/surface-examples/13'
+  defaults:
+    _controller: '\Drupal\data_surface_examples\Controller\ExamplesController::step13'
+    _title: 'Example 13: a block that embeds a component'
+  requirements:
+    _permission: 'administer site configuration'
