@@ -219,7 +219,8 @@ class VenueResourceTest extends DataSurfaceKernelTestBase {
     // the venue, its values what is stored; the listing's values its
     // defaults; the reorder's values every venue's id and weight.
     $edit = json_decode((string) file_get_contents(self::FIXTURES . 'update.emit.json'), TRUE);
-    $this->assertTrue($edit['schema']['properties']['id']['x-surface']['locked']);
+    $this->assertTrue($edit['schema']['properties']['id']['readOnly']);
+    $this->assertSame('library', $edit['schema']['properties']['id']['const']);
     $stored = array_intersect_key($edit['values'], ['label' => TRUE, 'id' => TRUE, 'capacity' => TRUE]);
     $this->assertSame(['label' => 'Old Library', 'id' => 'library', 'capacity' => 90], $stored);
     $list = json_decode((string) file_get_contents(self::FIXTURES . 'list.emit.json'), TRUE);

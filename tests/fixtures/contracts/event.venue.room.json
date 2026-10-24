@@ -1,7 +1,7 @@
 {
     "resource": "event.venue.room",
     "module": "data_surface_examples",
-    "contract": 3,
+    "contract": 4,
     "documents": [
         {
             "resource": "event.venue.room",
@@ -10,7 +10,7 @@
             "schema": {
                 "$schema": "https://json-schema.org/draft/2020-12/schema",
                 "x-surface": {
-                    "contract": 3,
+                    "contract": 4,
                     "version": 1
                 },
                 "type": "object",
@@ -21,29 +21,19 @@
                         "pattern": "^[a-z0-9_]+$",
                         "maxLength": 64,
                         "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
                             "patternMessage": "A room id holds only lowercase letters, numbers and underscores."
                         }
                     },
                     "label": {
                         "title": "Room name",
                         "type": "string",
-                        "maxLength": 128,
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": []
-                        }
+                        "maxLength": 128
                     },
                     "seats": {
                         "title": "Seats",
                         "type": "integer",
                         "minimum": 1,
-                        "maximum": 10000,
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": []
-                        }
+                        "maximum": 10000
                     }
                 },
                 "additionalProperties": false,

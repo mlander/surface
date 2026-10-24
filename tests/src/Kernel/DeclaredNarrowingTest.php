@@ -474,9 +474,16 @@ class DeclaredNarrowingTest extends DataSurfaceKernelTestBase {
       'note',
       'third_party_settings',
     ];
+    // What the frame's rules state, by their conditionals' effects.
+    $stating = [];
+    foreach ($full['x-surface']['rules'] as $index) {
+      $then = $full['allOf'][$index]['then'];
+      array_push($stating, ...array_keys($then['properties'] ?? []), ...($then['required'] ?? []));
+    }
     foreach ($declared as $key) {
-      $this->assertTrue($full['properties'][$key]['x-surface']['declared'] ?? FALSE, $key . ' is declared.');
-      $this->assertArrayNotHasKey('refine', $full['properties'][$key]['x-surface'], $key . ' is exact.');
+      $this->assertContains($key, $stating, $key . ' is stated by a rule the frame names.');
+      $this->assertArrayNotHasKey('declared', $full['properties'][$key]['x-surface'] ?? [], $key . ' carries no marker.');
+      $this->assertArrayNotHasKey('refine', $full['properties'][$key]['x-surface'] ?? [], $key . ' is exact.');
     }
     $this->assertArrayNotHasKey('required', $full['properties']['third_party_settings']['properties']['data_surface_resource_test']);
     // Listed by the frame, none marked on the conditional: no x-surface

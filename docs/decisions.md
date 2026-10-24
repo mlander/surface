@@ -216,7 +216,10 @@ counted every public name an author writes or a client reads and asked
 of each whether it is used, whether it says what it does, and whether
 another name already says it. Groups A (renames), B (merges) and C
 (drops) were approved and built; group D, the wire changes, is contract
-4, built apart. No emitted document of the examples moved but one
+4, built apart the same day
+([Contract 4](#contract-4-fewer-keywords-nothing-new-on-the-wire)):
+`locked`, `declared` and `access` gone, `fetch` and `entries` inside
+`deferred`, `list` renamed `collection`, which makes the total 177. No emitted document of the examples moved but one
 label, the `committed` output's title, now "Committed" (A6).
 
 | Kind | Before | After |
@@ -227,7 +230,7 @@ label, the `committed` output's title, now "Committed" (A6).
 | Interfaces an author implements or names | 24 | 20 |
 | `OperationContext` public methods | 9 | 8, beside `constraints()`, the build's |
 | Settings | 2 | 2 |
-| `x-surface` keywords | 35 | 35 (contract 4 cuts them) |
+| `x-surface` keywords | 35 | 35, 30 since contract 4 |
 | Module result codes | 20 | 20 |
 | Rule methods and conditions | 17 | 17 |
 | Widget words | 18 | 15 |
@@ -335,8 +338,9 @@ are read; one that keeps `alterOutputs()` is refused where the alters
 are read. Each removal is additive to bring back, and no tag has carried
 any of them.
 
-Held: D5, `access: "live"` into `live`, until a client says whether it
-needs to tell "may vanish" from "may narrow". D1 to D4 are contract 4.
+Group D, the wire changes, was held for contract 4 and approved,
+D5 with it, on 2026-10-24
+([Contract 4](#contract-4-fewer-keywords-nothing-new-on-the-wire)).
 (`PublicSurfaceTest`, `ResourceRegistry::REMOVED_ARGUMENTS`,
 `ResourceCollectorPass::reflect()`, `OperationRouteSubscriber`,
 `OperationRouteAccessTest`)
@@ -1284,8 +1288,10 @@ condition is runtime. Each choice, and why:
   what changed, `false` where it does not apply, `required` where only
   there), after the key's enumerated conditionals, its index listed in
   the owning object's `x-surface.rules` (since [contract 2](#contract-2);
-  before, `x-surface.declared` sat beside its `if`); the key says
-  `x-surface.declared: true` and is no longer `refine` for a rule.
+  before, `x-surface.declared` sat beside its `if`); the key is no
+  longer `refine` for a rule, and carries no marker of its own
+  (`x-surface.declared: true` until
+  [contract 4](#contract-4-fewer-keywords-nothing-new-on-the-wire)).
   Only the coded refiners are enumerated
   there. The schema for these answers evaluates the rules for its values,
   as a coded refiner whose gate is open is applied, and writes none.
@@ -2369,12 +2375,13 @@ is known. Decided 2026-10-18, point by point.
   without the runtime mark to what `build()` applies in each sampled
   situation (a stored value changed, a State flag set).
 - **Stated for the account that asks.** The full schema is emitted from
-  `buildStatic()`: a key a static answer locked is `readOnly` and
-  `x-surface.locked`, one it left out is not there, as the schema for
-  these answers always had them; a key a runtime answer may lock or
-  leave out is there, as the static answers leave it, marked
-  `x-surface.access: "live"` (`"runtime"` until
-  [contract 2](#contract-2)), and the schema for these answers, from
+  `buildStatic()`: a key a static answer locked is `readOnly`, one it
+  left out is not there, as the schema for these answers always had
+  them; a key a runtime answer may lock or leave out is there, as the
+  static answers leave it, marked `x-surface.live` (`access: "runtime"`
+  until [contract 2](#contract-2), `access: "live"` until
+  [contract 4](#contract-4-fewer-keywords-nothing-new-on-the-wire)),
+  and the schema for these answers, from
   `build()`, settles it and marks nothing. So the full schema is
   account-dependent only through static answers: its cacheability
   carries what they read and the cache contexts of the answers set
@@ -2476,6 +2483,17 @@ flag); the loan's insurance is runtime for everyone
 `Resources::childAccess()`, `ContractEmitter::frame()`,
 `InputDefinitions::runtimeAccessNote()`)
 
+*Changed 2026-10-24, with
+[contract 4](#contract-4-fewer-keywords-nothing-new-on-the-wire):* the
+mark is `x-surface.live`, the runtime refiner's, and no longer
+`access: "live"`. A client does the same for both: the key's final
+state is per request, the schema for these answers settles it, and
+nothing about it is cached. The two kinds stay apart where a person
+reads: the tool listing's description of such a key still says
+"Whether this may be changed is decided once the thing it belongs to is
+known: a call may find it locked or left out.", and the build still
+tells them apart (`Entry::$runtimeAccess`, `Entry::isRefinedAtRuntime()`).
+
 ### An alter may answer access, and the stricter stands
 
 Until this, a resource or structure had exactly one access answer, the
@@ -2556,7 +2574,7 @@ closing that gap (found 2026-10-19), point by point.
   build with alters answering, as it does without.
 - **At the top, set aside marks every key.** A runtime answer set aside
   at the top, an access class's or an alter's, now marks every key of
-  the resource (`x-surface.access: "live"` in the full schema, the
+  the resource (`x-surface.live` in the full schema, the
   words in the tool listing), since the whole of it may be found locked
   once the subject is known. *Changed with this decision: until then
   nothing was marked, and the full schema stated open keys the build
@@ -2969,8 +2987,10 @@ reading under which a locked answer at the top was a refusal.
   React `/submit` and `/validate` refuse alike, the write tool in the
   Tool API's `Access` category, since no other values would be taken
   (2026-10-20, B13); the read tool answers.
-  Both documents say `readOnly: true` and `x-surface.locked: true` at
-  the top, beside every key `readOnly`, and the React page offers no
+  Both documents say `readOnly: true` at the top (beside
+  `x-surface.locked: true` until
+  [contract 4](#contract-4-fewer-keywords-nothing-new-on-the-wire)),
+  beside every key `readOnly`, and the React page offers no
   Submit for such a document.
 
 Why refused at the pipeline rather than at access: locked is the
@@ -3026,7 +3046,7 @@ is offered read only (decided 2026-10-19, replacing "not offered"): it
 is built locked whole, every key held to what is stored, so it can be
 chosen and is drawn fixed. Chosen anew, it starts from its own
 defaults, as any variant chosen anew does, and holds them. Its keys are
-`readOnly` and `x-surface.locked` where the variants are stated, the form
+`readOnly` where the variants are stated, the form
 draws its fieldset disabled, and a value posted for it is kept as
 stored. A locked variant chosen by a locked deciding key no longer
 refuses its parent ([A chosen variant may
@@ -5272,11 +5292,11 @@ site (`addEach()`, `attachEach()`). Each key is counted at its own
 level: a component in a slot counts the components the slot offers.
 
 - **Past the limit, open and `deferred`.** In the full schema a key with
-  variants is an open object marked `x-surface.deferred: true`, with
+  variants is an open object marked `x-surface.deferred`, with
   `x-surface.by` naming its deciding key and no def and no conditional
   per variant. A map of keys from the site is an open object marked
-  `deferred`, its entries under `x-surface.entries` by id and label
-  alone. Each carries `x-surface.fetch`, the full schema with one choice
+  `deferred`, its entries under `x-surface.deferred.entries` by id and
+  label alone. Each `deferred` carries `fetch`, the full schema with one choice
   stated ([the next entry](#a-list-left-out-for-size-is-deferred-not-refined)).
   The tool listing states both as an open map, and its description
   names both ways to learn the keys: "Too many to list: choose
@@ -5382,10 +5402,13 @@ for what the site decides](#a-budget-for-what-the-site-decides) in place
 (its marker and its tool text); the budget itself, the limit and how a
 key is counted, is unchanged.
 
-- **The marker.** `x-surface.deferred: true` is on a key with variants,
-  or a map of keys from the site, past `site_list_limit`, at its own
-  level as before. The key keeps `by`, the chooser keeps its options,
-  and a map keeps `entries`. `refine` means one thing again: a static
+- **The marker.** `x-surface.deferred` is on a key with variants, or a
+  map of keys from the site, past `site_list_limit`, at its own level as
+  before. The key keeps `by`, the chooser keeps its options, and a map
+  names its entries. *Changed 2026-10-24, with
+  [contract 4](#contract-4-fewer-keywords-nothing-new-on-the-wire):* the
+  marker is an object holding `fetch` and, on a map, `entries`; it was
+  `deferred: true` with the two beside it. `refine` means one thing again: a static
   rule that cannot be written out (a coded refiner over a number, too
   many combinations); `live` stays a rule only the runtime knows.
 - **Why a marker of its own.** An invoker treats each kind differently:
@@ -5395,7 +5418,7 @@ key is counted, is unchanged.
   described as ask-every-time: a client that believes it pays one round
   trip per change for a schema it could have held, and an agent reads
   "call with your values" where "fetch once per component" is true.
-- **The fetch.** Beside the marker, `x-surface.fetch` is an RFC 6570
+- **The fetch.** In the marker, `x-surface.deferred.fetch` is an RFC 6570
   template: the full schema's URL with `choose=<pointer>={value}` for
   the key, and a `choose` for each variant on the way to it, so a key
   inside a chosen variant names that choice too
@@ -5991,6 +6014,10 @@ published yet. (`ContractEmitter::CONTRACT`, `ContractEmitter::settled()`,
 
 ### Contract 3: the operation is the method
 
+*Superseded 2026-10-24 by [contract 4](#contract-4-fewer-keywords-nothing-new-on-the-wire),
+which kept every path, method and status below and cut the `x-surface`
+keywords that said nothing or said it twice; nothing answers 410 for it.*
+
 Decided 2026-10-22, from the owner's finding: on HTTP each named
 operation had grown five endpoints (`.../configure`, `/schema`,
 `/refine`, `/validate`, `/submit`), so the operation did not act like
@@ -6205,6 +6232,88 @@ a flag. (`ServedPaths`, `ServedTarget`, `ResourceApiController`,
 `ServedContractEndpointsTest`, `ServedSubmitEndpointTest`,
 `ResultPointersTest`, `OpenApiDocumentTest`, `OpenApiEndpointTest`)
 
+### Contract 4: fewer keywords, nothing new on the wire
+
+Decided 2026-10-24, by the owner, from group D of [the API
+consolidation review](reviews-2026-10-24/api-consolidation.md) (section
+2.5, D1 to D5), held when groups A to C were built
+([The surface was counted and cut](#the-surface-was-counted-and-cut)).
+`ContractEmitter::CONTRACT` is 4, the `Contract-Version` header says
+`4`, the OpenAPI document's `info.version` is `4`, and the baselines
+were re-pinned (`ContractBaselineTest` with
+`DATA_SURFACE_CONTRACT_WRITE=1`). No path, method or status changed:
+contract 3's door stands, so nothing new answers 410; the number is the
+signal. Every change removes or moves a keyword; none adds one.
+
+- **D1. No `declared` on a key.** The frame's `x-surface.rules` lists
+  every conditional that states a declared rule, and its `then` names
+  the key it narrows, so the key's own `declared: true` said it twice:
+  the two appeared in exactly the same documents. A client finds a
+  key's rules by filtering the conditionals `rules` lists by the key
+  their `then` names, which the React app now does for every key.
+  `SchemaResolver::restored()` and the app's `restored()` still mark
+  each listed conditional `declared` in the inline reading, a mark no
+  document carries.
+- **D2. `fetch` and `entries` inside `deferred`.** Neither appeared
+  without `deferred: true`: one state, three keywords. `deferred` is
+  now `{fetch, entries}`, `entries` only on a map of keys from the
+  site, and `deferred: true` is written nowhere. `by` stays beside it,
+  since a key with variants says `by` under the limit too.
+- **D3. No `locked`, and nothing written that says nothing.** Every
+  locked key was `readOnly: true` already, with `const` where it holds
+  a value; the one `readOnly` key that is not locked is computed, which
+  `x-surface.computed` says. In the 33 baselines `locked` said `false`
+  381 times of 385. A resource locked whole is `readOnly: true` at the
+  top, as before, without `x-surface.locked`. The module's own rule for
+  requiredness, appear only when it says something, now holds for its
+  keywords: `dependsOn` only where it names a key (297 of 385 were
+  `[]`), `refined` and `stale` only when `true`, `chosen` only once a
+  variant is chosen, `variants` only where one is declared, `rules`,
+  `within` and `checkedOnServer` only when not empty (as they already
+  were), and no `x-surface` at all where nothing is left to say. A
+  site's narrowing that differed from its def only by `locked` or a
+  key's `declared` is no longer written, nor an enumerated conditional
+  that carried only such a narrowing; `readOnly` and `const` still say
+  the lock. The envelope's `stale` and `notes` stay, always present:
+  they are members of an answer every door shares, not keywords.
+  Every door that read `locked` reads `readOnly`: the React widgets and
+  panel, `NeverStricterTrait`, the matrix and `StaticAccessAgreementTrait`.
+- **D4. `collection`, not `list`.** The collection's marker is the
+  glossary's word; `list` stays the widget hint for rows of free values,
+  which it also named.
+- **D5. `live` for a runtime access answer too.** `access` had one
+  value, `"live"`, beside the runtime refiner's `live`, and both told a
+  client the same: the key's final state is decided per request and the
+  schema for these answers settles it. A key under a runtime access
+  answer is `live` now, and the React page treats the one marker one
+  way: what the server last settled for the key stands, a change it
+  depends on is asked of the narrowing, and nothing is cached. A person
+  still reads the difference: the tool listing's words for runtime
+  access stay on the key's description
+  ([Access is static or runtime](#access-is-static-or-runtime-read-from-its-cacheability)).
+  The round trip tells the two apart by the declaration: a document
+  whose `live` keys come only from access is read back, and reported as
+  an access answer (`SchemaRoundTripTrait::readBack()`).
+- **The rule for keywords.** A keyword added within a contract is
+  additive: a client must ignore an `x-surface` keyword it does not
+  know, and reads an absent one as its empty value. A keyword removed or
+  moved breaks a client that reads it, so it is what makes a new
+  contract, and the new number is how a client tells: a client of
+  contract 3 refuses a contract 4 document rather than reading a key
+  with no `locked` as open. The contract diff reports a baseline of
+  contract 3 once, "contract version 3 to 4", as before.
+
+The examples' documents differ in these changes and the number alone;
+their tool input schemas are byte for byte as before, since the
+listing is built from the data surface, not from the document, but for
+the description of a map of keys from the site past the limit, which
+names `x-surface.deferred.entries`. (`ContractEmitter::extension()`,
+`ContractEmitter::frame()`, `ContractEmitter::variants()`,
+`ContractEmitter::withoutWidgets()`, `ContractEmitter::withoutPresent()`,
+`SchemaReader::droppedExtension()`, `CONTRACT` and `compacted()` in
+`app/src/contract.ts`, `ContractBaselineTest`, `SiteListBudgetTest`,
+`StaticRuntimeAccessTest`, `SchemaRoundTripTest`)
+
 ### An OpenAPI document is one more door
 
 `data_surface_openapi` serves `GET /surface-api/openapi.json` (and
@@ -6236,7 +6345,7 @@ path items of their own.
   ([A static tool definition is no account's](#a-static-tool-definition-is-no-accounts)):
   each operation is built with `buildDeclared()` as the anonymous
   account, every key as declared, each one an access answer could lock
-  or leave out marked `x-surface.access: "live"`. So the document is
+  or leave out marked `x-surface.live`. So the document is
   the same for every account and cached under the tags of what it was
   read from: discovery's index and entries, every build and option list,
   the site's name, the modules and the anonymous role. It drops the

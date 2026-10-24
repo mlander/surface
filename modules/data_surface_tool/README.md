@@ -356,7 +356,7 @@ beside the write and read tools, asked with the values:
 A key inside a variant names the choice on the way,
 `?choose=/settings=data_surface_component&choose=/settings/props={component}`;
 a map of keys from the site names an entry's id, `{id}`, which the full
-schema lists under `x-surface.entries`. The fetch answers a schema that
+schema lists under `x-surface.deferred.entries`. The fetch answers a schema that
 changes only when the site's list does, so an agent keeps it per value;
 the tool answers for the values sent, so it is asked again when a choice
 changes. The narrowing tool's own description says both.
@@ -506,7 +506,7 @@ normalizes an instance's inputs see the caller's own listing:
   and writable, and its description ends with "Whether this may be
   changed is decided once the thing it belongs to is known: a call may
   find it locked or left out." The served contract says the same with
-  `x-surface.access: "live"`; the Tool API's normalizer writes its
+  `x-surface.live`; the Tool API's normalizer writes its
   schema from typed definitions, which carry a description and no
   extension keyword, so the listing says it in words;
 - when that answer is the resource's own, at the top, it marks every

@@ -211,7 +211,9 @@ class ExamplesConceptsTest extends DataSurfaceKernelTestBase {
     $this->assertFalse($declared[0]['then']['properties']['send_day']);
     $this->assertSame(['send_day'], $declared[1]['then']['required']);
     $this->assertSame(['type' => ['integer', 'null'], 'description' => 'Up to 5 in a weekly issue.', 'maximum' => 5], $declared[2]['then']['properties']['items'], 'The declared type beside the bound.');
-    $this->assertTrue($full['properties']['send_day'][ContractEmitter::EXTENSION]['declared']);
+    // The frame's rules name the send day's conditionals; the key carries
+    // no marker.
+    $this->assertArrayNotHasKey('declared', $full['properties']['send_day'][ContractEmitter::EXTENSION] ?? []);
     $this->assertSame(['frequency'], $full['required']);
 
     // Weekly, as shipped: the send day is drawn, required, and the items
@@ -303,7 +305,7 @@ class ExamplesConceptsTest extends DataSurfaceKernelTestBase {
     $on_sale = SchemaResolver::resolve($full['properties']['on_sale'], $full);
     $this->assertSame(['standard', 'student', 'speaker'], array_keys($on_sale['properties']));
     $this->assertTrue($on_sale['properties']['speaker']['readOnly']);
-    $this->assertTrue($on_sale['properties']['speaker'][ContractEmitter::EXTENSION]['locked']);
+    $this->assertArrayNotHasKey('locked', $on_sale['properties']['speaker'][ContractEmitter::EXTENSION] ?? [], '`readOnly` says it.');
     $this->assertArrayNotHasKey('readOnly', $on_sale['properties']['standard']);
     $limits = SchemaResolver::resolve($full['properties']['limits'], $full);
     $this->assertTrue($limits['properties']['speaker']['readOnly']);
@@ -346,7 +348,7 @@ class ExamplesConceptsTest extends DataSurfaceKernelTestBase {
   public function testTenLocksTheFeesStaticallyAndAtRuntime(): void {
     // An account that may set event fees: the program decides, marked.
     $fees = $this->full(ProgramResource::class)['properties']['fees'];
-    $this->assertSame('live', $fees[ContractEmitter::EXTENSION]['access']);
+    $this->assertTrue($fees[ContractEmitter::EXTENSION]['live']);
     $this->assertArrayNotHasKey('readOnly', $fees);
     $this->assertArrayNotHasKey('#disabled', $this->formAt('data_surface_examples.step10')['fees']);
 
@@ -365,14 +367,13 @@ class ExamplesConceptsTest extends DataSurfaceKernelTestBase {
     $stored = $this->stored('data_surface_examples.program');
     $this->assertSame(9, $stored['sessions']);
     $this->assertEquals(['standard' => 20.0, 'concession' => 10.0], $stored['fees']);
-    $this->assertSame('live', $this->full(ProgramResource::class)['properties']['fees'][ContractEmitter::EXTENSION]['access'], 'The full schema reads no stored value.');
+    $this->assertTrue($this->full(ProgramResource::class)['properties']['fees'][ContractEmitter::EXTENSION]['live'], 'The full schema reads no stored value.');
 
     // An account without the permission: locked, stated ahead of time.
     $this->setUpCurrentUser(permissions: ['administer site configuration']);
     $fees = $this->full(ProgramResource::class)['properties']['fees'];
     $this->assertTrue($fees['readOnly']);
-    $this->assertTrue($fees[ContractEmitter::EXTENSION]['locked']);
-    $this->assertArrayNotHasKey('access', $fees[ContractEmitter::EXTENSION]);
+    $this->assertArrayNotHasKey('live', $fees[ContractEmitter::EXTENSION] ?? []);
   }
 
   /**
@@ -586,7 +587,7 @@ class ExamplesConceptsTest extends DataSurfaceKernelTestBase {
     // Example 10's two accounts and its facts.
     $panel = $this->formAt('data_surface_examples.step10')[DataSurfaceOperationForm::PANEL_KEY][ExamplePanels::CONCEPT];
     $accounts = json_decode(htmlspecialchars_decode((string) $panel['accounts']['content']['#value']), TRUE);
-    $this->assertSame('live', $accounts['you']['property'][ContractEmitter::EXTENSION]['access']);
+    $this->assertTrue($accounts['you']['property'][ContractEmitter::EXTENSION]['live']);
     $this->assertTrue($accounts['without the permission']['property']['readOnly']);
     $this->assertStringContainsString('Enable data_surface_examples_workflow and reload', (string) $panel['workflow']['#markup'], 'Without the workflow module, the panel says how to see its answers.');
     $this->assertArrayNotHasKey('event.program:published_in_workflow', $panel['calls'], 'A call another module\'s part needs is made only where it is on.');
@@ -703,7 +704,7 @@ class ExamplesConceptsTest extends DataSurfaceKernelTestBase {
     $page = $this->thirteen();
     $contract = json_decode(htmlspecialchars_decode((string) $page['parts']['contract']['content']['#value']), TRUE);
     $this->assertSame(self::COMPONENTS, array_column($contract['component']['oneOf'], 'const'), 'The chooser keeps its options.');
-    $this->assertTrue($contract['props'][ContractEmitter::EXTENSION]['deferred']);
+    $this->assertArrayHasKey('fetch', $contract['props'][ContractEmitter::EXTENSION]['deferred']);
     $this->assertArrayNotHasKey('anyOf', $contract['props']);
     $this->assertSame([], $contract['allOf']);
     $this->assertStringContainsString('more than 2, the site list limit', (string) $page['parts']['contract']['note']['#markup']);
@@ -719,8 +720,7 @@ class ExamplesConceptsTest extends DataSurfaceKernelTestBase {
     $read = json_decode(htmlspecialchars_decode((string) $panel['read']['content']['#value']), TRUE);
     $this->assertSame('event.spotlight.props.data_surface_examples:card', $read['structure']['title'], 'The chosen component\'s def, from the full schema fetched with it chosen.');
     $contract = json_decode(htmlspecialchars_decode((string) $panel['contract']['content']['#value']), TRUE);
-    $this->assertTrue($contract['props'][ContractEmitter::EXTENSION]['deferred']);
-    $this->assertSame('?choose=/props={value}', $contract['props'][ContractEmitter::EXTENSION]['fetch'], 'Its query alone: the panel shows a document no route serves.');
+    $this->assertSame(['fetch' => '?choose=/props={value}'], $contract['props'][ContractEmitter::EXTENSION]['deferred'], 'Its query alone: the panel shows a document no route serves.');
     $this->assertSame('data_surface_examples:card', $contract['allOf'][0]['if']['properties']['component']['const']);
     $this->assertCount(2, $contract['allOf'], 'The card\'s two conditionals, one per key.');
   }

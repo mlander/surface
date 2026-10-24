@@ -54,7 +54,7 @@ use Symfony\Component\HttpFoundation\Request;
  *   (ResourcesInterface::buildDeclared()), and as the anonymous account,
  *   so an option list is never a privileged account's: every key as
  *   declared, each one an access answer could lock or leave out marked
- *   `x-surface.access: "live"`. An operation that addresses one thing is
+ *   `x-surface.live`. An operation that addresses one thing is
  *   built knowing none, as its tool's listing is. The document is the
  *   same for everyone and cacheable; the per-request read and schema
  *   answer for the account that asks.
@@ -378,7 +378,7 @@ final class OpenApiDocument {
             'name' => Choices::PARAMETER,
             'in' => 'query',
             'required' => FALSE,
-            'description' => (string) $this->t("A choice of a key marked deferred, its list too long to write out: the key's JSON Pointer, =, then a value of its deciding key or an entry's id, choose=/props=card. The answer is the full schema with that variant or entry stated in full, the rest as without it. Once per choice; a key inside a variant is named with the variant's choice beside it, choose=/settings=data_surface_component&choose=/settings/props=card. The key's x-surface.fetch is this URL as an RFC 6570 template. A choice of no such key or value is a 404 naming the pointer."),
+            'description' => (string) $this->t("A choice of a key marked deferred, its list too long to write out: the key's JSON Pointer, =, then a value of its deciding key or an entry's id, choose=/props=card. The answer is the full schema with that variant or entry stated in full, the rest as without it. Once per choice; a key inside a variant is named with the variant's choice beside it, choose=/settings=data_surface_component&choose=/settings/props=card. The key's x-surface.deferred.fetch is this URL as an RFC 6570 template. A choice of no such key or value is a 404 naming the pointer."),
             'style' => 'form',
             'explode' => TRUE,
             'schema' => ['type' => 'array', 'items' => ['type' => 'string', 'pattern' => '^/?[^=]+=.+$']],
@@ -1131,7 +1131,7 @@ final class OpenApiDocument {
     $site = (string) $this->configFactory->get('system.site')->get('name');
     return [
       'title' => (string) $this->t('@site: resources', ['@site' => $site === '' ? $request->getHttpHost() : $site]),
-      'description' => (string) $this->t('Every operation of every resource on this site that can be asked on its own, on the API of the Data Surface React module, written by the Data Surface OpenAPI module. The path is the resource, the method the operation: GET reads, PATCH updates, POST to the collection creates, and :{operation} names any other. Built for no account: every key as declared, each one an access answer could lock or leave out marked x-surface.access "live", so the document is the same for everyone. GET /surface-api/{resource}[/{id}] and its /schema answer for the account that asks: its static access applied, a key it may not see left out, and the first narrowed to the stored values. info.version is the version of the contract the schemas are written in.'),
+      'description' => (string) $this->t('Every operation of every resource on this site that can be asked on its own, on the API of the Data Surface React module, written by the Data Surface OpenAPI module. The path is the resource, the method the operation: GET reads, PATCH updates, POST to the collection creates, and :{operation} names any other. Built for no account: every key as declared, each one an access answer could lock or leave out marked x-surface.live, so the document is the same for everyone. GET /surface-api/{resource}[/{id}] and its /schema answer for the account that asks: its static access applied, a key it may not see left out, and the first narrowed to the stored values. info.version is the version of the contract the schemas are written in.'),
       'version' => (string) ContractEmitter::CONTRACT,
     ];
   }

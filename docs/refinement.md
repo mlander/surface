@@ -192,8 +192,8 @@ things set it apart:
   and a rule requiring a key a refiner may rule out.
 
 The full schema states each rule as written, one conditional whose
-index the parent's `x-surface.rules` lists, without running anything,
-and the key carries `x-surface.declared: true`
+index the parent's `x-surface.rules` lists, without running anything;
+the key carries no marker of its own
 ([served contract](served-contract.md#x-surface)). The schema for one
 set of values evaluates it, as the pipeline does. The decision, with
 what was weighed: [A rule declared as data](decisions.md#a-rule-declared-as-data).

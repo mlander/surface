@@ -6,7 +6,7 @@
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "title": "Configure the workshop",
         "x-surface": {
-            "contract": 3,
+            "contract": 4,
             "version": 1
         },
         "type": "object",
@@ -17,13 +17,7 @@
                     "boolean",
                     "null"
                 ],
-                "default": false,
-                "x-surface": {
-                    "locked": false,
-                    "dependsOn": [],
-                    "refined": false,
-                    "stale": false
-                }
+                "default": false
             },
             "benches": {
                 "title": "Benches",
@@ -34,14 +28,6 @@
                     {
                         "type": "object",
                         "properties": {
-                            "lathe": {
-                                "allOf": [
-                                    {
-                                        "$ref": "#/$defs/resource_test.workshop.bench"
-                                    },
-                                    true
-                                ]
-                            },
                             "press": {
                                 "allOf": [
                                     {
@@ -80,39 +66,7 @@
                     }
                 ],
                 "x-surface": {
-                    "locked": false,
-                    "dependsOn": [],
-                    "refined": false,
-                    "stale": false,
                     "within": {
-                        "/allOf/1/properties/lathe/allOf/1/properties/hours": {
-                            "locked": false,
-                            "dependsOn": [
-                                "enabled"
-                            ],
-                            "refined": false,
-                            "stale": false
-                        },
-                        "/allOf/1/properties/press": {
-                            "locked": true,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        },
-                        "/allOf/1/properties/press/allOf/1/properties/enabled": {
-                            "locked": true,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        },
-                        "/allOf/1/properties/press/allOf/1/properties/hours": {
-                            "locked": true,
-                            "dependsOn": [
-                                "enabled"
-                            ],
-                            "refined": false,
-                            "stale": false
-                        },
                         "/allOf/1/properties/saw/allOf/1": {
                             "doesNotApply": {
                                 "hours": [
@@ -142,20 +96,9 @@
                     }
                 ],
                 "x-surface": {
-                    "locked": false,
                     "dependsOn": [
                         "closed"
-                    ],
-                    "refined": false,
-                    "stale": false,
-                    "within": {
-                        "/allOf/1/properties/press": {
-                            "locked": true,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
-                    }
+                    ]
                 }
             },
             "codes": {
@@ -173,22 +116,7 @@
                             }
                         }
                     }
-                ],
-                "x-surface": {
-                    "locked": false,
-                    "dependsOn": [],
-                    "refined": false,
-                    "stale": false,
-                    "within": {
-                        "/allOf/1/properties/press": {
-                            "locked": true,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false,
-                            "patternMessage": "A stock code is two capitals and digits, such as AB12."
-                        }
-                    }
-                }
+                ]
             }
         },
         "additionalProperties": false,
@@ -203,13 +131,7 @@
                             "boolean",
                             "null"
                         ],
-                        "default": true,
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
+                        "default": true
                     },
                     "hours": {
                         "title": "Hours a day",
@@ -221,13 +143,9 @@
                         "maximum": 12,
                         "default": 1,
                         "x-surface": {
-                            "locked": false,
                             "dependsOn": [
                                 "enabled"
-                            ],
-                            "refined": false,
-                            "stale": false,
-                            "declared": true
+                            ]
                         }
                     }
                 },
@@ -263,33 +181,15 @@
                 "properties": {
                     "lathe": {
                         "title": "Lathe",
-                        "$ref": "#/$defs/resource_test.workshop.bench",
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
+                        "$ref": "#/$defs/resource_test.workshop.bench"
                     },
                     "press": {
                         "title": "Drill press",
-                        "$ref": "#/$defs/resource_test.workshop.bench",
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
+                        "$ref": "#/$defs/resource_test.workshop.bench"
                     },
                     "saw": {
                         "title": "Band saw",
-                        "$ref": "#/$defs/resource_test.workshop.bench",
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
+                        "$ref": "#/$defs/resource_test.workshop.bench"
                     }
                 },
                 "additionalProperties": false
@@ -304,26 +204,14 @@
                             "boolean",
                             "null"
                         ],
-                        "default": false,
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
+                        "default": false
                     },
                     "press": {
                         "title": "Drill press",
                         "type": [
                             "boolean",
                             "null"
-                        ],
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
+                        ]
                     },
                     "saw": {
                         "title": "Band saw",
@@ -331,13 +219,7 @@
                             "boolean",
                             "null"
                         ],
-                        "default": false,
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
+                        "default": false
                     }
                 },
                 "additionalProperties": false
@@ -350,10 +232,6 @@
                         "$ref": "#/$defs/resource_test.sku",
                         "title": "Lathe",
                         "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false,
                             "patternMessage": "A stock code is two capitals and digits, such as AB12."
                         }
                     },
@@ -361,10 +239,6 @@
                         "$ref": "#/$defs/resource_test.sku",
                         "title": "Drill press",
                         "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false,
                             "patternMessage": "A stock code is two capitals and digits, such as AB12."
                         }
                     },
@@ -372,10 +246,6 @@
                         "$ref": "#/$defs/resource_test.sku",
                         "title": "Band saw",
                         "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false,
                             "patternMessage": "A stock code is two capitals and digits, such as AB12."
                         }
                     }

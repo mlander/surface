@@ -6,7 +6,7 @@
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "title": "Configure the workshop",
         "x-surface": {
-            "contract": 3,
+            "contract": 4,
             "version": 1,
             "rules": [
                 0
@@ -20,11 +20,7 @@
                     "boolean",
                     "null"
                 ],
-                "default": false,
-                "x-surface": {
-                    "locked": false,
-                    "dependsOn": []
-                }
+                "default": false
             },
             "benches": {
                 "title": "Benches",
@@ -56,28 +52,7 @@
                             }
                         }
                     }
-                ],
-                "x-surface": {
-                    "locked": false,
-                    "dependsOn": [],
-                    "within": {
-                        "/allOf/1/properties/press": {
-                            "locked": true,
-                            "dependsOn": []
-                        },
-                        "/allOf/1/properties/press/allOf/1/properties/enabled": {
-                            "locked": true,
-                            "dependsOn": []
-                        },
-                        "/allOf/1/properties/press/allOf/1/properties/hours": {
-                            "locked": true,
-                            "dependsOn": [
-                                "enabled"
-                            ],
-                            "declared": true
-                        }
-                    }
-                }
+                ]
             },
             "lights": {
                 "title": "Lights",
@@ -97,17 +72,9 @@
                     }
                 ],
                 "x-surface": {
-                    "locked": false,
                     "dependsOn": [
                         "closed"
-                    ],
-                    "declared": true,
-                    "within": {
-                        "/allOf/1/properties/press": {
-                            "locked": true,
-                            "dependsOn": []
-                        }
-                    }
+                    ]
                 }
             },
             "codes": {
@@ -124,18 +91,7 @@
                             }
                         }
                     }
-                ],
-                "x-surface": {
-                    "locked": false,
-                    "dependsOn": [],
-                    "within": {
-                        "/allOf/1/properties/press": {
-                            "locked": true,
-                            "dependsOn": [],
-                            "patternMessage": "A stock code is two capitals and digits, such as AB12."
-                        }
-                    }
-                }
+                ]
             }
         },
         "additionalProperties": false,
@@ -169,11 +125,7 @@
                             "boolean",
                             "null"
                         ],
-                        "default": true,
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": []
-                        }
+                        "default": true
                     },
                     "hours": {
                         "title": "Hours a day",
@@ -185,11 +137,9 @@
                         "maximum": 12,
                         "default": 1,
                         "x-surface": {
-                            "locked": false,
                             "dependsOn": [
                                 "enabled"
-                            ],
-                            "declared": true
+                            ]
                         }
                     }
                 },
@@ -225,27 +175,15 @@
                 "properties": {
                     "lathe": {
                         "title": "Lathe",
-                        "$ref": "#/$defs/resource_test.workshop.bench",
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": []
-                        }
+                        "$ref": "#/$defs/resource_test.workshop.bench"
                     },
                     "press": {
                         "title": "Drill press",
-                        "$ref": "#/$defs/resource_test.workshop.bench",
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": []
-                        }
+                        "$ref": "#/$defs/resource_test.workshop.bench"
                     },
                     "saw": {
                         "title": "Band saw",
-                        "$ref": "#/$defs/resource_test.workshop.bench",
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": []
-                        }
+                        "$ref": "#/$defs/resource_test.workshop.bench"
                     }
                 },
                 "additionalProperties": false
@@ -260,22 +198,14 @@
                             "boolean",
                             "null"
                         ],
-                        "default": false,
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": []
-                        }
+                        "default": false
                     },
                     "press": {
                         "title": "Drill press",
                         "type": [
                             "boolean",
                             "null"
-                        ],
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": []
-                        }
+                        ]
                     },
                     "saw": {
                         "title": "Band saw",
@@ -283,11 +213,7 @@
                             "boolean",
                             "null"
                         ],
-                        "default": false,
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": []
-                        }
+                        "default": false
                     }
                 },
                 "additionalProperties": false
@@ -300,8 +226,6 @@
                         "$ref": "#/$defs/resource_test.sku",
                         "title": "Lathe",
                         "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
                             "patternMessage": "A stock code is two capitals and digits, such as AB12."
                         }
                     },
@@ -309,8 +233,6 @@
                         "$ref": "#/$defs/resource_test.sku",
                         "title": "Drill press",
                         "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
                             "patternMessage": "A stock code is two capitals and digits, such as AB12."
                         }
                     },
@@ -318,8 +240,6 @@
                         "$ref": "#/$defs/resource_test.sku",
                         "title": "Band saw",
                         "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
                             "patternMessage": "A stock code is two capitals and digits, such as AB12."
                         }
                     }

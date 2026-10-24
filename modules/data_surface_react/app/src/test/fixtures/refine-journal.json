@@ -5,7 +5,7 @@
         "title": "Configure the journal",
         "description": "Configures the journal, whose settings always exist.",
         "x-surface": {
-            "contract": 3,
+            "contract": 4,
             "operation": {
                 "id": "configure",
                 "label": "Configure the journal",
@@ -28,9 +28,7 @@
                 "title": "Title",
                 "type": "string",
                 "x-surface": {
-                    "widget": "text",
-                    "locked": false,
-                    "dependsOn": []
+                    "widget": "text"
                 }
             },
             "visibility": {
@@ -48,25 +46,20 @@
                 ],
                 "default": "staff",
                 "x-surface": {
-                    "widget": "select",
-                    "locked": false,
-                    "dependsOn": []
+                    "widget": "select"
                 }
             },
             "owner": {
                 "x-surface": {
                     "widget": "text",
-                    "locked": false,
                     "dependsOn": [
                         "visibility"
-                    ],
-                    "declared": true
+                    ]
                 }
             },
             "shared": {
                 "x-surface": {
                     "widget": "checkbox",
-                    "locked": false,
                     "dependsOn": [
                         "visibility"
                     ],
@@ -76,11 +69,9 @@
             "created": {
                 "x-surface": {
                     "widget": "number",
-                    "locked": false,
                     "dependsOn": [
                         "published"
-                    ],
-                    "declared": true
+                    ]
                 }
             },
             "changed": true,
@@ -94,11 +85,9 @@
                 "default": 1,
                 "x-surface": {
                     "widget": "number",
-                    "locked": false,
                     "dependsOn": [
                         "created"
-                    ],
-                    "declared": true
+                    ]
                 }
             },
             "published": {
@@ -109,18 +98,14 @@
                 ],
                 "default": false,
                 "x-surface": {
-                    "widget": "checkbox",
-                    "locked": false,
-                    "dependsOn": []
+                    "widget": "checkbox"
                 }
             },
             "archive": {
                 "title": "Archive",
                 "$ref": "#/$defs/resource_test.archive",
                 "x-surface": {
-                    "widget": "fieldset",
-                    "locked": false,
-                    "dependsOn": []
+                    "widget": "fieldset"
                 }
             }
         },
@@ -233,9 +218,7 @@
                         ],
                         "minimum": 0,
                         "x-surface": {
-                            "widget": "number",
-                            "locked": false,
-                            "dependsOn": []
+                            "widget": "number"
                         }
                     },
                     "changed": {
@@ -247,12 +230,10 @@
                         "minimum": 0,
                         "x-surface": {
                             "widget": "number",
-                            "locked": false,
                             "dependsOn": [
                                 "created"
                             ],
-                            "refine": true,
-                            "declared": true
+                            "refine": true
                         }
                     }
                 },
@@ -298,7 +279,6 @@
                         "type": "string",
                         "x-surface": {
                             "widget": "text",
-                            "locked": false,
                             "dependsOn": [
                                 "audience"
                             ]
@@ -313,7 +293,6 @@
                         "default": false,
                         "x-surface": {
                             "widget": "checkbox",
-                            "locked": false,
                             "dependsOn": [
                                 "audience"
                             ]
@@ -340,9 +319,7 @@
                         "title": "Shelf",
                         "type": "string",
                         "x-surface": {
-                            "widget": "text",
-                            "locked": false,
-                            "dependsOn": []
+                            "widget": "text"
                         }
                     },
                     "circle": {
@@ -360,25 +337,20 @@
                         ],
                         "default": "staff",
                         "x-surface": {
-                            "widget": "select",
-                            "locked": false,
-                            "dependsOn": []
+                            "widget": "select"
                         }
                     },
                     "owner": {
                         "x-surface": {
                             "widget": "text",
-                            "locked": false,
                             "dependsOn": [
                                 "circle"
-                            ],
-                            "declared": true
+                            ]
                         }
                     },
                     "shared": {
                         "x-surface": {
                             "widget": "checkbox",
-                            "locked": false,
                             "dependsOn": [
                                 "circle"
                             ],
@@ -390,9 +362,7 @@
                         "$ref": "#/$defs/resource_test.timestamps",
                         "unevaluatedProperties": false,
                         "x-surface": {
-                            "widget": "fieldset",
-                            "locked": false,
-                            "dependsOn": []
+                            "widget": "fieldset"
                         }
                     }
                 },
@@ -462,7 +432,7 @@
             "title": "Configure the journal",
             "description": "Configures the journal, whose settings always exist.",
             "x-surface": {
-                "contract": 3,
+                "contract": 4,
                 "operation": {
                     "id": "configure",
                     "label": "Configure the journal",
@@ -480,11 +450,7 @@
                     "title": "Title",
                     "type": "string",
                     "x-surface": {
-                        "widget": "text",
-                        "locked": false,
-                        "dependsOn": [],
-                        "refined": false,
-                        "stale": false
+                        "widget": "text"
                     }
                 },
                 "visibility": {
@@ -503,10 +469,6 @@
                     "default": "staff",
                     "x-surface": {
                         "widget": "select",
-                        "locked": false,
-                        "dependsOn": [],
-                        "refined": false,
-                        "stale": false,
                         "emptyOption": {
                             "show": false,
                             "label": "- Select -"
@@ -518,23 +480,18 @@
                     "maxLength": 32,
                     "x-surface": {
                         "widget": "text",
-                        "locked": false,
                         "dependsOn": [
                             "visibility"
                         ],
-                        "refined": true,
-                        "stale": false
+                        "refined": true
                     }
                 },
                 "shared": {
                     "x-surface": {
                         "widget": "checkbox",
-                        "locked": false,
                         "dependsOn": [
                             "visibility"
-                        ],
-                        "refined": false,
-                        "stale": false
+                        ]
                     }
                 },
                 "created": {
@@ -542,12 +499,10 @@
                     "type": "integer",
                     "x-surface": {
                         "widget": "number",
-                        "locked": false,
                         "dependsOn": [
                             "published"
                         ],
-                        "refined": true,
-                        "stale": false
+                        "refined": true
                     }
                 },
                 "changed": {
@@ -556,12 +511,10 @@
                     "minimum": 1700000000,
                     "x-surface": {
                         "widget": "number",
-                        "locked": false,
                         "dependsOn": [
                             "created"
                         ],
-                        "refined": true,
-                        "stale": false
+                        "refined": true
                     }
                 },
                 "revision": {
@@ -574,12 +527,9 @@
                     "default": 1,
                     "x-surface": {
                         "widget": "number",
-                        "locked": false,
                         "dependsOn": [
                             "created"
-                        ],
-                        "refined": false,
-                        "stale": false
+                        ]
                     }
                 },
                 "published": {
@@ -590,11 +540,7 @@
                     ],
                     "default": false,
                     "x-surface": {
-                        "widget": "checkbox",
-                        "locked": false,
-                        "dependsOn": [],
-                        "refined": false,
-                        "stale": false
+                        "widget": "checkbox"
                     }
                 },
                 "archive": {
@@ -636,44 +582,31 @@
                     ],
                     "x-surface": {
                         "widget": "fieldset",
-                        "locked": false,
-                        "dependsOn": [],
                         "refined": true,
-                        "stale": false,
                         "within": {
                             "/allOf/1/properties/owner": {
                                 "widget": "text",
-                                "locked": false,
                                 "dependsOn": [
                                     "circle"
                                 ],
-                                "refined": true,
-                                "stale": false
+                                "refined": true
                             },
                             "/allOf/1/properties/shared": {
                                 "widget": "checkbox",
-                                "locked": false,
                                 "dependsOn": [
                                     "circle"
-                                ],
-                                "refined": false,
-                                "stale": false
+                                ]
                             },
                             "/allOf/1/properties/stamps": {
                                 "widget": "fieldset",
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": true,
-                                "stale": false
+                                "refined": true
                             },
                             "/allOf/1/properties/stamps/allOf/1/properties/changed": {
                                 "widget": "number",
-                                "locked": false,
                                 "dependsOn": [
                                     "created"
                                 ],
-                                "refined": true,
-                                "stale": false
+                                "refined": true
                             }
                         }
                     }
@@ -708,11 +641,7 @@
                             ],
                             "minimum": 0,
                             "x-surface": {
-                                "widget": "number",
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false
+                                "widget": "number"
                             }
                         },
                         "changed": {
@@ -724,14 +653,10 @@
                             "minimum": 0,
                             "x-surface": {
                                 "widget": "number",
-                                "locked": false,
                                 "dependsOn": [
                                     "created"
                                 ],
-                                "refined": false,
-                                "stale": false,
-                                "refine": true,
-                                "declared": true
+                                "refine": true
                             }
                         }
                     },
@@ -777,12 +702,9 @@
                             "type": "string",
                             "x-surface": {
                                 "widget": "text",
-                                "locked": false,
                                 "dependsOn": [
                                     "audience"
-                                ],
-                                "refined": false,
-                                "stale": false
+                                ]
                             }
                         },
                         "shared": {
@@ -794,12 +716,9 @@
                             "default": false,
                             "x-surface": {
                                 "widget": "checkbox",
-                                "locked": false,
                                 "dependsOn": [
                                     "audience"
-                                ],
-                                "refined": false,
-                                "stale": false
+                                ]
                             }
                         }
                     },
@@ -823,11 +742,7 @@
                             "title": "Shelf",
                             "type": "string",
                             "x-surface": {
-                                "widget": "text",
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false
+                                "widget": "text"
                             }
                         },
                         "circle": {
@@ -846,10 +761,6 @@
                             "default": "staff",
                             "x-surface": {
                                 "widget": "select",
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false,
                                 "emptyOption": {
                                     "show": false,
                                     "label": "- Select -"
@@ -859,24 +770,17 @@
                         "owner": {
                             "x-surface": {
                                 "widget": "text",
-                                "locked": false,
                                 "dependsOn": [
                                     "circle"
-                                ],
-                                "refined": false,
-                                "stale": false,
-                                "declared": true
+                                ]
                             }
                         },
                         "shared": {
                             "x-surface": {
                                 "widget": "checkbox",
-                                "locked": false,
                                 "dependsOn": [
                                     "circle"
                                 ],
-                                "refined": false,
-                                "stale": false,
                                 "enumerated": true
                             }
                         },
@@ -885,11 +789,7 @@
                             "$ref": "#/$defs/resource_test.timestamps",
                             "unevaluatedProperties": false,
                             "x-surface": {
-                                "widget": "fieldset",
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false
+                                "widget": "fieldset"
                             }
                         }
                     },
@@ -1013,7 +913,7 @@
                     "title": "Configure the journal",
                     "description": "Configures the journal, whose settings always exist.",
                     "x-surface": {
-                        "contract": 3,
+                        "contract": 4,
                         "operation": {
                             "id": "configure",
                             "label": "Configure the journal",
@@ -1036,11 +936,7 @@
                             "title": "Title",
                             "type": "string",
                             "x-surface": {
-                                "widget": "text",
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false
+                                "widget": "text"
                             }
                         },
                         "visibility": {
@@ -1059,10 +955,6 @@
                             "default": "staff",
                             "x-surface": {
                                 "widget": "select",
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false,
                                 "emptyOption": {
                                     "show": false,
                                     "label": "- Select -"
@@ -1072,12 +964,9 @@
                         "owner": {
                             "x-surface": {
                                 "widget": "text",
-                                "locked": false,
                                 "dependsOn": [
                                     "visibility"
-                                ],
-                                "refined": false,
-                                "stale": false
+                                ]
                             }
                         },
                         "shared": false,
@@ -1086,12 +975,10 @@
                             "type": "integer",
                             "x-surface": {
                                 "widget": "number",
-                                "locked": false,
                                 "dependsOn": [
                                     "published"
                                 ],
-                                "refined": true,
-                                "stale": false
+                                "refined": true
                             }
                         },
                         "changed": {
@@ -1100,12 +987,10 @@
                             "minimum": 1700000000,
                             "x-surface": {
                                 "widget": "number",
-                                "locked": false,
                                 "dependsOn": [
                                     "created"
                                 ],
-                                "refined": true,
-                                "stale": false
+                                "refined": true
                             }
                         },
                         "revision": {
@@ -1118,12 +1003,9 @@
                             "default": 1,
                             "x-surface": {
                                 "widget": "number",
-                                "locked": false,
                                 "dependsOn": [
                                     "created"
-                                ],
-                                "refined": false,
-                                "stale": false
+                                ]
                             }
                         },
                         "published": {
@@ -1134,11 +1016,7 @@
                             ],
                             "default": false,
                             "x-surface": {
-                                "widget": "checkbox",
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false
+                                "widget": "checkbox"
                             }
                         },
                         "archive": {
@@ -1180,44 +1058,31 @@
                             ],
                             "x-surface": {
                                 "widget": "fieldset",
-                                "locked": false,
-                                "dependsOn": [],
                                 "refined": true,
-                                "stale": false,
                                 "within": {
                                     "/allOf/1/properties/owner": {
                                         "widget": "text",
-                                        "locked": false,
                                         "dependsOn": [
                                             "circle"
                                         ],
-                                        "refined": true,
-                                        "stale": false
+                                        "refined": true
                                     },
                                     "/allOf/1/properties/shared": {
                                         "widget": "checkbox",
-                                        "locked": false,
                                         "dependsOn": [
                                             "circle"
-                                        ],
-                                        "refined": false,
-                                        "stale": false
+                                        ]
                                     },
                                     "/allOf/1/properties/stamps": {
                                         "widget": "fieldset",
-                                        "locked": false,
-                                        "dependsOn": [],
-                                        "refined": true,
-                                        "stale": false
+                                        "refined": true
                                     },
                                     "/allOf/1/properties/stamps/allOf/1/properties/changed": {
                                         "widget": "number",
-                                        "locked": false,
                                         "dependsOn": [
                                             "created"
                                         ],
-                                        "refined": true,
-                                        "stale": false
+                                        "refined": true
                                     }
                                 }
                             }
@@ -1252,11 +1117,7 @@
                                     ],
                                     "minimum": 0,
                                     "x-surface": {
-                                        "widget": "number",
-                                        "locked": false,
-                                        "dependsOn": [],
-                                        "refined": false,
-                                        "stale": false
+                                        "widget": "number"
                                     }
                                 },
                                 "changed": {
@@ -1268,14 +1129,10 @@
                                     "minimum": 0,
                                     "x-surface": {
                                         "widget": "number",
-                                        "locked": false,
                                         "dependsOn": [
                                             "created"
                                         ],
-                                        "refined": false,
-                                        "stale": false,
-                                        "refine": true,
-                                        "declared": true
+                                        "refine": true
                                     }
                                 }
                             },
@@ -1321,12 +1178,9 @@
                                     "type": "string",
                                     "x-surface": {
                                         "widget": "text",
-                                        "locked": false,
                                         "dependsOn": [
                                             "audience"
-                                        ],
-                                        "refined": false,
-                                        "stale": false
+                                        ]
                                     }
                                 },
                                 "shared": {
@@ -1338,12 +1192,9 @@
                                     "default": false,
                                     "x-surface": {
                                         "widget": "checkbox",
-                                        "locked": false,
                                         "dependsOn": [
                                             "audience"
-                                        ],
-                                        "refined": false,
-                                        "stale": false
+                                        ]
                                     }
                                 }
                             },
@@ -1367,11 +1218,7 @@
                                     "title": "Shelf",
                                     "type": "string",
                                     "x-surface": {
-                                        "widget": "text",
-                                        "locked": false,
-                                        "dependsOn": [],
-                                        "refined": false,
-                                        "stale": false
+                                        "widget": "text"
                                     }
                                 },
                                 "circle": {
@@ -1390,10 +1237,6 @@
                                     "default": "staff",
                                     "x-surface": {
                                         "widget": "select",
-                                        "locked": false,
-                                        "dependsOn": [],
-                                        "refined": false,
-                                        "stale": false,
                                         "emptyOption": {
                                             "show": false,
                                             "label": "- Select -"
@@ -1403,24 +1246,17 @@
                                 "owner": {
                                     "x-surface": {
                                         "widget": "text",
-                                        "locked": false,
                                         "dependsOn": [
                                             "circle"
-                                        ],
-                                        "refined": false,
-                                        "stale": false,
-                                        "declared": true
+                                        ]
                                     }
                                 },
                                 "shared": {
                                     "x-surface": {
                                         "widget": "checkbox",
-                                        "locked": false,
                                         "dependsOn": [
                                             "circle"
                                         ],
-                                        "refined": false,
-                                        "stale": false,
                                         "enumerated": true
                                     }
                                 },
@@ -1429,11 +1265,7 @@
                                     "$ref": "#/$defs/resource_test.timestamps",
                                     "unevaluatedProperties": false,
                                     "x-surface": {
-                                        "widget": "fieldset",
-                                        "locked": false,
-                                        "dependsOn": [],
-                                        "refined": false,
-                                        "stale": false
+                                        "widget": "fieldset"
                                     }
                                 }
                             },
@@ -1556,7 +1388,7 @@
                     "title": "Configure the journal",
                     "description": "Configures the journal, whose settings always exist.",
                     "x-surface": {
-                        "contract": 3,
+                        "contract": 4,
                         "operation": {
                             "id": "configure",
                             "label": "Configure the journal",
@@ -1574,11 +1406,7 @@
                             "title": "Title",
                             "type": "string",
                             "x-surface": {
-                                "widget": "text",
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false
+                                "widget": "text"
                             }
                         },
                         "visibility": {
@@ -1597,10 +1425,6 @@
                             "default": "staff",
                             "x-surface": {
                                 "widget": "select",
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false,
                                 "emptyOption": {
                                     "show": false,
                                     "label": "- Select -"
@@ -1612,23 +1436,18 @@
                             "maxLength": 32,
                             "x-surface": {
                                 "widget": "text",
-                                "locked": false,
                                 "dependsOn": [
                                     "visibility"
                                 ],
-                                "refined": true,
-                                "stale": false
+                                "refined": true
                             }
                         },
                         "shared": {
                             "x-surface": {
                                 "widget": "checkbox",
-                                "locked": false,
                                 "dependsOn": [
                                     "visibility"
-                                ],
-                                "refined": false,
-                                "stale": false
+                                ]
                             }
                         },
                         "created": {
@@ -1636,12 +1455,10 @@
                             "type": "integer",
                             "x-surface": {
                                 "widget": "number",
-                                "locked": false,
                                 "dependsOn": [
                                     "published"
                                 ],
-                                "refined": true,
-                                "stale": false
+                                "refined": true
                             }
                         },
                         "changed": {
@@ -1650,12 +1467,10 @@
                             "minimum": 1700000000,
                             "x-surface": {
                                 "widget": "number",
-                                "locked": false,
                                 "dependsOn": [
                                     "created"
                                 ],
-                                "refined": true,
-                                "stale": false
+                                "refined": true
                             }
                         },
                         "revision": {
@@ -1668,12 +1483,9 @@
                             "default": 1,
                             "x-surface": {
                                 "widget": "number",
-                                "locked": false,
                                 "dependsOn": [
                                     "created"
-                                ],
-                                "refined": false,
-                                "stale": false
+                                ]
                             }
                         },
                         "published": {
@@ -1684,11 +1496,7 @@
                             ],
                             "default": false,
                             "x-surface": {
-                                "widget": "checkbox",
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false
+                                "widget": "checkbox"
                             }
                         },
                         "archive": {
@@ -1730,44 +1538,31 @@
                             ],
                             "x-surface": {
                                 "widget": "fieldset",
-                                "locked": false,
-                                "dependsOn": [],
                                 "refined": true,
-                                "stale": false,
                                 "within": {
                                     "/allOf/1/properties/owner": {
                                         "widget": "text",
-                                        "locked": false,
                                         "dependsOn": [
                                             "circle"
                                         ],
-                                        "refined": true,
-                                        "stale": false
+                                        "refined": true
                                     },
                                     "/allOf/1/properties/shared": {
                                         "widget": "checkbox",
-                                        "locked": false,
                                         "dependsOn": [
                                             "circle"
-                                        ],
-                                        "refined": false,
-                                        "stale": false
+                                        ]
                                     },
                                     "/allOf/1/properties/stamps": {
                                         "widget": "fieldset",
-                                        "locked": false,
-                                        "dependsOn": [],
-                                        "refined": true,
-                                        "stale": false
+                                        "refined": true
                                     },
                                     "/allOf/1/properties/stamps/allOf/1/properties/changed": {
                                         "widget": "number",
-                                        "locked": false,
                                         "dependsOn": [
                                             "created"
                                         ],
-                                        "refined": true,
-                                        "stale": false
+                                        "refined": true
                                     }
                                 }
                             }
@@ -1802,11 +1597,7 @@
                                     ],
                                     "minimum": 0,
                                     "x-surface": {
-                                        "widget": "number",
-                                        "locked": false,
-                                        "dependsOn": [],
-                                        "refined": false,
-                                        "stale": false
+                                        "widget": "number"
                                     }
                                 },
                                 "changed": {
@@ -1818,14 +1609,10 @@
                                     "minimum": 0,
                                     "x-surface": {
                                         "widget": "number",
-                                        "locked": false,
                                         "dependsOn": [
                                             "created"
                                         ],
-                                        "refined": false,
-                                        "stale": false,
-                                        "refine": true,
-                                        "declared": true
+                                        "refine": true
                                     }
                                 }
                             },
@@ -1871,12 +1658,9 @@
                                     "type": "string",
                                     "x-surface": {
                                         "widget": "text",
-                                        "locked": false,
                                         "dependsOn": [
                                             "audience"
-                                        ],
-                                        "refined": false,
-                                        "stale": false
+                                        ]
                                     }
                                 },
                                 "shared": {
@@ -1888,12 +1672,9 @@
                                     "default": false,
                                     "x-surface": {
                                         "widget": "checkbox",
-                                        "locked": false,
                                         "dependsOn": [
                                             "audience"
-                                        ],
-                                        "refined": false,
-                                        "stale": false
+                                        ]
                                     }
                                 }
                             },
@@ -1917,11 +1698,7 @@
                                     "title": "Shelf",
                                     "type": "string",
                                     "x-surface": {
-                                        "widget": "text",
-                                        "locked": false,
-                                        "dependsOn": [],
-                                        "refined": false,
-                                        "stale": false
+                                        "widget": "text"
                                     }
                                 },
                                 "circle": {
@@ -1940,10 +1717,6 @@
                                     "default": "staff",
                                     "x-surface": {
                                         "widget": "select",
-                                        "locked": false,
-                                        "dependsOn": [],
-                                        "refined": false,
-                                        "stale": false,
                                         "emptyOption": {
                                             "show": false,
                                             "label": "- Select -"
@@ -1953,24 +1726,17 @@
                                 "owner": {
                                     "x-surface": {
                                         "widget": "text",
-                                        "locked": false,
                                         "dependsOn": [
                                             "circle"
-                                        ],
-                                        "refined": false,
-                                        "stale": false,
-                                        "declared": true
+                                        ]
                                     }
                                 },
                                 "shared": {
                                     "x-surface": {
                                         "widget": "checkbox",
-                                        "locked": false,
                                         "dependsOn": [
                                             "circle"
                                         ],
-                                        "refined": false,
-                                        "stale": false,
                                         "enumerated": true
                                     }
                                 },
@@ -1979,11 +1745,7 @@
                                     "$ref": "#/$defs/resource_test.timestamps",
                                     "unevaluatedProperties": false,
                                     "x-surface": {
-                                        "widget": "fieldset",
-                                        "locked": false,
-                                        "dependsOn": [],
-                                        "refined": false,
-                                        "stale": false
+                                        "widget": "fieldset"
                                     }
                                 }
                             },
@@ -2108,7 +1870,7 @@
                     "title": "Configure the journal",
                     "description": "Configures the journal, whose settings always exist.",
                     "x-surface": {
-                        "contract": 3,
+                        "contract": 4,
                         "operation": {
                             "id": "configure",
                             "label": "Configure the journal",
@@ -2126,11 +1888,7 @@
                             "title": "Title",
                             "type": "string",
                             "x-surface": {
-                                "widget": "text",
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false
+                                "widget": "text"
                             }
                         },
                         "visibility": {
@@ -2149,10 +1907,6 @@
                             "default": "staff",
                             "x-surface": {
                                 "widget": "select",
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false,
                                 "emptyOption": {
                                     "show": false,
                                     "label": "- Select -"
@@ -2164,23 +1918,18 @@
                             "maxLength": 32,
                             "x-surface": {
                                 "widget": "text",
-                                "locked": false,
                                 "dependsOn": [
                                     "visibility"
                                 ],
-                                "refined": true,
-                                "stale": false
+                                "refined": true
                             }
                         },
                         "shared": {
                             "x-surface": {
                                 "widget": "checkbox",
-                                "locked": false,
                                 "dependsOn": [
                                     "visibility"
-                                ],
-                                "refined": false,
-                                "stale": false
+                                ]
                             }
                         },
                         "created": {
@@ -2188,12 +1937,10 @@
                             "type": "integer",
                             "x-surface": {
                                 "widget": "number",
-                                "locked": false,
                                 "dependsOn": [
                                     "published"
                                 ],
-                                "refined": true,
-                                "stale": false
+                                "refined": true
                             }
                         },
                         "changed": {
@@ -2202,12 +1949,10 @@
                             "minimum": 1800000000,
                             "x-surface": {
                                 "widget": "number",
-                                "locked": false,
                                 "dependsOn": [
                                     "created"
                                 ],
-                                "refined": true,
-                                "stale": false
+                                "refined": true
                             }
                         },
                         "revision": {
@@ -2220,12 +1965,9 @@
                             "default": 1,
                             "x-surface": {
                                 "widget": "number",
-                                "locked": false,
                                 "dependsOn": [
                                     "created"
-                                ],
-                                "refined": false,
-                                "stale": false
+                                ]
                             }
                         },
                         "published": {
@@ -2236,11 +1978,7 @@
                             ],
                             "default": false,
                             "x-surface": {
-                                "widget": "checkbox",
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false
+                                "widget": "checkbox"
                             }
                         },
                         "archive": {
@@ -2282,44 +2020,31 @@
                             ],
                             "x-surface": {
                                 "widget": "fieldset",
-                                "locked": false,
-                                "dependsOn": [],
                                 "refined": true,
-                                "stale": false,
                                 "within": {
                                     "/allOf/1/properties/owner": {
                                         "widget": "text",
-                                        "locked": false,
                                         "dependsOn": [
                                             "circle"
                                         ],
-                                        "refined": true,
-                                        "stale": false
+                                        "refined": true
                                     },
                                     "/allOf/1/properties/shared": {
                                         "widget": "checkbox",
-                                        "locked": false,
                                         "dependsOn": [
                                             "circle"
-                                        ],
-                                        "refined": false,
-                                        "stale": false
+                                        ]
                                     },
                                     "/allOf/1/properties/stamps": {
                                         "widget": "fieldset",
-                                        "locked": false,
-                                        "dependsOn": [],
-                                        "refined": true,
-                                        "stale": false
+                                        "refined": true
                                     },
                                     "/allOf/1/properties/stamps/allOf/1/properties/changed": {
                                         "widget": "number",
-                                        "locked": false,
                                         "dependsOn": [
                                             "created"
                                         ],
-                                        "refined": true,
-                                        "stale": false
+                                        "refined": true
                                     }
                                 }
                             }
@@ -2354,11 +2079,7 @@
                                     ],
                                     "minimum": 0,
                                     "x-surface": {
-                                        "widget": "number",
-                                        "locked": false,
-                                        "dependsOn": [],
-                                        "refined": false,
-                                        "stale": false
+                                        "widget": "number"
                                     }
                                 },
                                 "changed": {
@@ -2370,14 +2091,10 @@
                                     "minimum": 0,
                                     "x-surface": {
                                         "widget": "number",
-                                        "locked": false,
                                         "dependsOn": [
                                             "created"
                                         ],
-                                        "refined": false,
-                                        "stale": false,
-                                        "refine": true,
-                                        "declared": true
+                                        "refine": true
                                     }
                                 }
                             },
@@ -2423,12 +2140,9 @@
                                     "type": "string",
                                     "x-surface": {
                                         "widget": "text",
-                                        "locked": false,
                                         "dependsOn": [
                                             "audience"
-                                        ],
-                                        "refined": false,
-                                        "stale": false
+                                        ]
                                     }
                                 },
                                 "shared": {
@@ -2440,12 +2154,9 @@
                                     "default": false,
                                     "x-surface": {
                                         "widget": "checkbox",
-                                        "locked": false,
                                         "dependsOn": [
                                             "audience"
-                                        ],
-                                        "refined": false,
-                                        "stale": false
+                                        ]
                                     }
                                 }
                             },
@@ -2469,11 +2180,7 @@
                                     "title": "Shelf",
                                     "type": "string",
                                     "x-surface": {
-                                        "widget": "text",
-                                        "locked": false,
-                                        "dependsOn": [],
-                                        "refined": false,
-                                        "stale": false
+                                        "widget": "text"
                                     }
                                 },
                                 "circle": {
@@ -2492,10 +2199,6 @@
                                     "default": "staff",
                                     "x-surface": {
                                         "widget": "select",
-                                        "locked": false,
-                                        "dependsOn": [],
-                                        "refined": false,
-                                        "stale": false,
                                         "emptyOption": {
                                             "show": false,
                                             "label": "- Select -"
@@ -2505,24 +2208,17 @@
                                 "owner": {
                                     "x-surface": {
                                         "widget": "text",
-                                        "locked": false,
                                         "dependsOn": [
                                             "circle"
-                                        ],
-                                        "refined": false,
-                                        "stale": false,
-                                        "declared": true
+                                        ]
                                     }
                                 },
                                 "shared": {
                                     "x-surface": {
                                         "widget": "checkbox",
-                                        "locked": false,
                                         "dependsOn": [
                                             "circle"
                                         ],
-                                        "refined": false,
-                                        "stale": false,
                                         "enumerated": true
                                     }
                                 },
@@ -2531,11 +2227,7 @@
                                     "$ref": "#/$defs/resource_test.timestamps",
                                     "unevaluatedProperties": false,
                                     "x-surface": {
-                                        "widget": "fieldset",
-                                        "locked": false,
-                                        "dependsOn": [],
-                                        "refined": false,
-                                        "stale": false
+                                        "widget": "fieldset"
                                     }
                                 }
                             },

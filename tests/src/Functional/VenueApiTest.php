@@ -94,7 +94,7 @@ class VenueApiTest extends BrowserTestBase {
       'total' => 3,
     ], $this->decoded($response));
     $this->assertStringEndsWith('/surface-api/event.venue/schema>; rel="describedby"', $response->getHeaderLine('Link'));
-    $this->assertSame('3', $response->getHeaderLine('Contract-Version'));
+    $this->assertSame('4', $response->getHeaderLine('Contract-Version'));
     $harbour = ['id' => 'harbour', 'label' => 'Harbour Centre', 'capacity' => 950, 'weight' => 2];
     $this->assertSame([$harbour], $this->decoded($this->send('GET', self::COLLECTION . '?offset=2'))['items']);
     $refused = $this->problem($this->send('GET', self::COLLECTION . '?limit=500'), 422);

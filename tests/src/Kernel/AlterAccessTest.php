@@ -381,7 +381,7 @@ class AlterAccessTest extends DataSurfaceKernelTestBase {
     $full = $this->full('curate');
     $this->assertTrue($full['readOnly']);
     $this->assertTrue($full['properties']['north']['readOnly']);
-    $this->assertSame('live', $full['properties']['north']['x-surface']['access']);
+    $this->assertTrue($full['properties']['north']['x-surface']['live']);
   }
 
   /**
@@ -392,8 +392,7 @@ class AlterAccessTest extends DataSurfaceKernelTestBase {
     $full = $this->full();
     foreach (['north', 'south'] as $wall) {
       $this->assertTrue($full['properties'][$wall]['readOnly'], $wall);
-      $this->assertTrue($full['properties'][$wall]['x-surface']['locked'], $wall);
-      $this->assertArrayNotHasKey('access', $full['properties'][$wall]['x-surface'], 'Static: stated, not marked.');
+      $this->assertArrayNotHasKey('live', $full['properties'][$wall]['x-surface'] ?? [], 'Static: stated, not marked.');
     }
 
     $this->actAs('plaque hider');
@@ -404,9 +403,9 @@ class AlterAccessTest extends DataSurfaceKernelTestBase {
     $full = $this->full();
     foreach (['caption', 'credit', 'north', 'south', 'finish', 'rooms'] as $key) {
       $this->assertArrayNotHasKey('readOnly', $full['properties'][$key], $key);
-      $this->assertSame('live', $full['properties'][$key]['x-surface']['access'], $key);
+      $this->assertTrue($full['properties'][$key]['x-surface']['live'], $key);
     }
-    $this->assertArrayNotHasKey('access', $full['properties']['name']['x-surface'] ?? []);
+    $this->assertArrayNotHasKey('live', $full['properties']['name']['x-surface'] ?? []);
 
     // What the full schema depends on: the account's permissions, and
     // nothing a runtime answer read.

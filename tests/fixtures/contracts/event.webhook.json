@@ -1,7 +1,7 @@
 {
     "resource": "event.webhook",
     "module": "data_surface_examples",
-    "contract": 3,
+    "contract": 4,
     "documents": [
         {
             "resource": "event.webhook",
@@ -12,7 +12,7 @@
                 "title": "Configure the sales webhook",
                 "description": "Sets the address the event's sales are posted to, and the key each post is signed with.",
                 "x-surface": {
-                    "contract": 3,
+                    "contract": 4,
                     "operation": {
                         "id": "configure",
                         "label": "Configure the sales webhook",
@@ -33,11 +33,7 @@
                         "title": "Endpoint",
                         "type": "string",
                         "format": "uri",
-                        "default": "https://hooks.example.com/sales",
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": []
-                        }
+                        "default": "https://hooks.example.com/sales"
                     },
                     "api_key": {
                         "title": "API key",
@@ -45,11 +41,9 @@
                         "type": "string",
                         "writeOnly": true,
                         "x-surface": {
-                            "locked": false,
                             "dependsOn": [
                                 "third_party_settings.data_surface_examples_keys.key_id"
-                            ],
-                            "declared": true
+                            ]
                         }
                     },
                     "third_party_settings": {
@@ -78,8 +72,6 @@
                                             }
                                         ],
                                         "x-surface": {
-                                            "locked": false,
-                                            "dependsOn": [],
                                             "checkedOnServer": [
                                                 {
                                                     "constraint": "ManagedKey",
@@ -91,16 +83,12 @@
                                 },
                                 "additionalProperties": false,
                                 "x-surface": {
-                                    "locked": false,
-                                    "dependsOn": [],
                                     "after": "api_key"
                                 }
                             }
                         },
                         "additionalProperties": false,
                         "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
                             "group": true
                         }
                     }

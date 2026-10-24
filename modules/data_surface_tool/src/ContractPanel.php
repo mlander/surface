@@ -42,7 +42,7 @@ use Drupal\tool\Tool\ToolManager;
  * the values as they stand: variants as an `if`/`then` per variant keyed
  * on its deciding sibling, each part defined once under `$defs` and
  * referred to where it is used, allowed values as titled `oneOf`, and
- * what each key depends on and whether it is locked under `x-surface`.
+ * under `x-surface` what each key depends on, a locked key `readOnly`.
  * The JSON is shown as emitted, references and all; the table is read
  * from the data surfaces themselves, so it says each key's effective facts
  * with nothing to resolve. Beside
@@ -145,7 +145,7 @@ final class ContractPanel implements DataSurfaceFormPanelInterface {
       '#open' => FALSE,
       '#title' => $this->t('The schema for these answers'),
       'note' => [
-        '#markup' => '<p>' . $this->t('What the resource states for the answers as they stand, as JSON Schema: each part a shape of its own defined once under <code>$defs</code> and referred to where it is used, each set of variants as one conditional per variant on the key that chooses between them, allowed values with their labels, and under <code>x-surface</code> what each key depends on and whether it is locked. A key another answer narrows is shown as narrowed, so this describes these answers and no others. It is the document data_surface_react serves at <code>/surface-api</code>, less the widget hints that renderer asks for.') . '</p>',
+        '#markup' => '<p>' . $this->t('What the resource states for the answers as they stand, as JSON Schema: each part a shape of its own defined once under <code>$defs</code> and referred to where it is used, each set of variants as one conditional per variant on the key that chooses between them, allowed values with their labels, under <code>x-surface</code> what each key depends on, and a locked key <code>readOnly</code>. A key another answer narrows is shown as narrowed, so this describes these answers and no others. It is the document data_surface_react serves at <code>/surface-api</code>, less the widget hints that renderer asks for.') . '</p>',
       ],
       'json' => $this->json($contract->document['schema']),
     ];

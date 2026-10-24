@@ -17,7 +17,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * request, and one with a runtime dependent asks the server, with a POST
  * to the full schema's path (`POST .../schema`, after the one GET of it
  * the page loads with). The contract panel's line says which. Every
- * document the page reads is in contract 3, which it refuses any other
+ * document the page reads is in contract 4, which it refuses any other
  * than.
  */
 #[Group('data_surface')]

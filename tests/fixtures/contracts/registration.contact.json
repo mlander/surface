@@ -1,7 +1,7 @@
 {
     "resource": "registration.contact",
     "module": "data_surface_examples",
-    "contract": 3,
+    "contract": 4,
     "documents": [
         {
             "resource": "registration.contact",
@@ -10,7 +10,7 @@
             "schema": {
                 "$schema": "https://json-schema.org/draft/2020-12/schema",
                 "x-surface": {
-                    "contract": 3,
+                    "contract": 4,
                     "version": 1
                 },
                 "type": "object",
@@ -18,22 +18,14 @@
                     "email": {
                         "title": "Email",
                         "type": "string",
-                        "format": "idn-email",
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": []
-                        }
+                        "format": "idn-email"
                     },
                     "phone": {
                         "title": "Phone",
                         "type": [
                             "string",
                             "null"
-                        ],
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": []
-                        }
+                        ]
                     }
                 },
                 "additionalProperties": false,

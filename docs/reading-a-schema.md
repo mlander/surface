@@ -87,7 +87,7 @@ has: `present`, `absent`, `equals`, `in`, the four bounds, `not`,
 | `ports` | `reads()`, each port's type, or its shape where the site has one |
 | `reads` | the wiring of a child's ports, where the wired key is a key of the object holding the child |
 | `by`, `variants` | variants, and the def each value chooses; `by` beside `deferred` with no union and no `variants`, a list the site decides past its budget ([decision](decisions.md#a-list-left-out-for-size-is-deferred-not-refined)), is an object like any other, the marker noted: no variant is in the document to read |
-| `list` | a collection |
+| `collection` | a collection (`list` in contract 3) |
 | `patternMessage` | the `Regex`'s message |
 | `widget` `radios`, `time`, `checkboxes`; `textarea` | the widget it asks for; a multiline string |
 | `group`, `after` | a map that only groups, a map placed after a key |
@@ -96,9 +96,9 @@ has: `present`, `absent`, `equals`, `in`, the four bounds, `not`,
 
 The rest says what is true of one moment (`refined`, `stale`,
 `emptyOption`, `chosen`, `doesNotApply`), of an account or an access
-answer (`locked` on a whole, `access`), or follows from what is read
-(`dependsOn`, `declared`, `enumerated`): read for nothing. `refine` and
-`live` say a rule only the server knows: not read, noted.
+answer (`readOnly` on a whole), or follows from what is read
+(`dependsOn`, `enumerated`): read for nothing. `refine` and `live` say a
+rule or an access answer only the server knows: not read, noted.
 
 ## What is kept
 
@@ -207,14 +207,14 @@ to, or differs otherwise:
 
 | Kind | Documents | Why |
 | --- | --- | --- |
-| A coded refiner | 20 | What it answers for each value is read back as a declared rule: the same conditional, `declared` in place of `enumerated`, its index under the frame's `rules`; what it could not list (`refine`) is not read at all. They differ in those markers alone, which the test holds. |
+| A coded refiner | 20 | What it answers for each value is read back as a declared rule: the same conditional, its index under the frame's `rules`, and no `enumerated` on the key; what it could not list (`refine`) is not read at all. They differ in those markers alone, which the test holds. |
 | A coded refiner, spelled otherwise | 4 | A rule ruling a key out guards the rules requiring it; a rule stated at a site moves into the child, in the child's order; a refiner answering a whole child is no narrowing; a refiner on a port read at a site leaves nothing to read. |
 | A rule on a port, a structure alone | 5 | Stated where a container wires the port; emitted alone, nothing states it, and only the key's markers say it. |
-| A rule that narrows nothing new | 1 | No conditional states it, only the key's markers. |
-| Access | 12 | A lock, a whole locked or `access: live` is the access class's, not the structure's. |
+| A rule that narrows nothing new | 1 | No conditional states it, so only the key's `dependsOn` says it, which nothing reads back. |
+| Access | 12 | A lock, a whole locked or a key a runtime access answer marks `live` is the access class's, not the structure's. |
 | An alter's mount | 4 | Its keys, its rules and what it attaches are the alter's: read back, the mount is a map or a child of the owner's, its rules a JsonSchema constraint on the frame. |
 | Keys from the site | 2 | An entry a provider locks, and the port each entry reads, are the provider's: read back, the rules on those ports are a JsonSchema constraint on the frame. |
-| A computed key | 2 | What computes it is a class no document names: read back, it is a key nobody types that holds what is stored, `readOnly` and locked, with no `x-surface.computed`. |
+| A computed key | 2 | What computes it is a class no document names: read back, it is a key nobody types that holds what is stored, `readOnly`, with no `x-surface.computed`. |
 
 Each of these still reads, builds, and holds values to what the document
 says; what it loses is a marker or the code that would compute it.

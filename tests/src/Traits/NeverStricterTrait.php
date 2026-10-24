@@ -202,9 +202,10 @@ trait NeverStricterTrait {
    * Answers whether one schema object carries a mark of inexactness.
    *
    * Each documents a widening: a `format` no validator asserts, a rule
-   * only the server runs (`refine`, `live`, a live access answer, a
-   * constraint `checkedOnServer`), or a list the site decides left out for
-   * its size (`deferred`), stated open and fetched per choice.
+   * only the server runs (`refine`, `live` for a runtime refiner or a
+   * runtime access answer, a constraint `checkedOnServer`), or a list the
+   * site decides left out for its size (`deferred`), stated open and
+   * fetched per choice.
    *
    * @param array $schema
    *   The object.
@@ -218,7 +219,6 @@ trait NeverStricterTrait {
       || !empty($extension['refine'])
       || !empty($extension['deferred'])
       || !empty($extension['live'])
-      || ($extension['access'] ?? NULL) === 'live'
       || !empty($extension['checkedOnServer']);
   }
 

@@ -5,7 +5,7 @@
         "title": "Configure ticket sales",
         "description": "Sets which ticket types are on sale, and for each how many tickets one order may hold and whether a waiting list opens when it sells out.",
         "x-surface": {
-            "contract": 3,
+            "contract": 4,
             "operation": {
                 "id": "configure",
                 "label": "Configure ticket sales",
@@ -45,16 +45,7 @@
                     }
                 ],
                 "x-surface": {
-                    "widget": "fieldset",
-                    "locked": false,
-                    "dependsOn": [],
-                    "within": {
-                        "/allOf/1/properties/speaker": {
-                            "widget": "checkbox",
-                            "locked": true,
-                            "dependsOn": []
-                        }
-                    }
+                    "widget": "fieldset"
                 }
             },
             "limits": {
@@ -90,7 +81,6 @@
                 ],
                 "x-surface": {
                     "widget": "fieldset",
-                    "locked": false,
                     "dependsOn": [
                         "on_sale.standard",
                         "on_sale.student",
@@ -98,28 +88,6 @@
                     ],
                     "reads": {
                         "selling": "on_sale"
-                    },
-                    "declared": true,
-                    "within": {
-                        "/allOf/1/properties/speaker": {
-                            "widget": "fieldset",
-                            "locked": true,
-                            "dependsOn": []
-                        },
-                        "/allOf/1/properties/speaker/allOf/1/properties/per_order": {
-                            "widget": "number",
-                            "locked": true,
-                            "dependsOn": [
-                                "selling"
-                            ]
-                        },
-                        "/allOf/1/properties/speaker/allOf/1/properties/waiting_list": {
-                            "widget": "checkbox",
-                            "locked": true,
-                            "dependsOn": [
-                                "selling"
-                            ]
-                        }
                     }
                 }
             }
@@ -350,9 +318,7 @@
                         ],
                         "default": false,
                         "x-surface": {
-                            "widget": "checkbox",
-                            "locked": false,
-                            "dependsOn": []
+                            "widget": "checkbox"
                         }
                     },
                     "student": {
@@ -363,9 +329,7 @@
                         ],
                         "default": false,
                         "x-surface": {
-                            "widget": "checkbox",
-                            "locked": false,
-                            "dependsOn": []
+                            "widget": "checkbox"
                         }
                     },
                     "speaker": {
@@ -375,9 +339,7 @@
                             "null"
                         ],
                         "x-surface": {
-                            "widget": "checkbox",
-                            "locked": false,
-                            "dependsOn": []
+                            "widget": "checkbox"
                         }
                     }
                 },
@@ -398,7 +360,6 @@
                         "default": 4,
                         "x-surface": {
                             "widget": "number",
-                            "locked": false,
                             "dependsOn": [
                                 "selling"
                             ]
@@ -413,7 +374,6 @@
                         "default": false,
                         "x-surface": {
                             "widget": "checkbox",
-                            "locked": false,
                             "dependsOn": [
                                 "selling"
                             ]
@@ -438,27 +398,21 @@
                         "title": "Standard",
                         "$ref": "#/$defs/event.ticket_limit",
                         "x-surface": {
-                            "widget": "fieldset",
-                            "locked": false,
-                            "dependsOn": []
+                            "widget": "fieldset"
                         }
                     },
                     "student": {
                         "title": "Student",
                         "$ref": "#/$defs/event.ticket_limit",
                         "x-surface": {
-                            "widget": "fieldset",
-                            "locked": false,
-                            "dependsOn": []
+                            "widget": "fieldset"
                         }
                     },
                     "speaker": {
                         "title": "Speaker",
                         "$ref": "#/$defs/event.ticket_limit",
                         "x-surface": {
-                            "widget": "fieldset",
-                            "locked": false,
-                            "dependsOn": []
+                            "widget": "fieldset"
                         }
                     }
                 },
@@ -476,7 +430,7 @@
             "title": "Configure ticket sales",
             "description": "Sets which ticket types are on sale, and for each how many tickets one order may hold and whether a waiting list opens when it sells out.",
             "x-surface": {
-                "contract": 3,
+                "contract": 4,
                 "operation": {
                     "id": "configure",
                     "label": "Configure ticket sales",
@@ -509,20 +463,7 @@
                         }
                     ],
                     "x-surface": {
-                        "widget": "fieldset",
-                        "locked": false,
-                        "dependsOn": [],
-                        "refined": false,
-                        "stale": false,
-                        "within": {
-                            "/allOf/1/properties/speaker": {
-                                "widget": "checkbox",
-                                "locked": true,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false
-                            }
-                        }
+                        "widget": "fieldset"
                     }
                 },
                 "limits": {
@@ -554,25 +495,15 @@
                     ],
                     "x-surface": {
                         "widget": "fieldset",
-                        "locked": false,
                         "dependsOn": [
                             "on_sale.standard",
                             "on_sale.student",
                             "on_sale.speaker"
                         ],
-                        "refined": false,
-                        "stale": false,
                         "reads": {
                             "selling": "on_sale"
                         },
                         "within": {
-                            "/allOf/1/properties/speaker": {
-                                "widget": "fieldset",
-                                "locked": true,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false
-                            },
                             "/allOf/1/properties/speaker/allOf/1": {
                                 "doesNotApply": {
                                     "per_order": [
@@ -607,11 +538,7 @@
                             ],
                             "default": false,
                             "x-surface": {
-                                "widget": "checkbox",
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false
+                                "widget": "checkbox"
                             }
                         },
                         "student": {
@@ -622,11 +549,7 @@
                             ],
                             "default": false,
                             "x-surface": {
-                                "widget": "checkbox",
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false
+                                "widget": "checkbox"
                             }
                         },
                         "speaker": {
@@ -636,11 +559,7 @@
                                 "null"
                             ],
                             "x-surface": {
-                                "widget": "checkbox",
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false
+                                "widget": "checkbox"
                             }
                         }
                     },
@@ -661,12 +580,9 @@
                             "default": 4,
                             "x-surface": {
                                 "widget": "number",
-                                "locked": false,
                                 "dependsOn": [
                                     "selling"
-                                ],
-                                "refined": false,
-                                "stale": false
+                                ]
                             }
                         },
                         "waiting_list": {
@@ -678,12 +594,9 @@
                             "default": false,
                             "x-surface": {
                                 "widget": "checkbox",
-                                "locked": false,
                                 "dependsOn": [
                                     "selling"
-                                ],
-                                "refined": false,
-                                "stale": false
+                                ]
                             }
                         }
                     },
@@ -705,33 +618,21 @@
                             "title": "Standard",
                             "$ref": "#/$defs/event.ticket_limit",
                             "x-surface": {
-                                "widget": "fieldset",
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false
+                                "widget": "fieldset"
                             }
                         },
                         "student": {
                             "title": "Student",
                             "$ref": "#/$defs/event.ticket_limit",
                             "x-surface": {
-                                "widget": "fieldset",
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false
+                                "widget": "fieldset"
                             }
                         },
                         "speaker": {
                             "title": "Speaker",
                             "$ref": "#/$defs/event.ticket_limit",
                             "x-surface": {
-                                "widget": "fieldset",
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false
+                                "widget": "fieldset"
                             }
                         }
                     },
@@ -781,7 +682,7 @@
                     "title": "Configure ticket sales",
                     "description": "Sets which ticket types are on sale, and for each how many tickets one order may hold and whether a waiting list opens when it sells out.",
                     "x-surface": {
-                        "contract": 3,
+                        "contract": 4,
                         "operation": {
                             "id": "configure",
                             "label": "Configure ticket sales",
@@ -814,20 +715,7 @@
                                 }
                             ],
                             "x-surface": {
-                                "widget": "fieldset",
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false,
-                                "within": {
-                                    "/allOf/1/properties/speaker": {
-                                        "widget": "checkbox",
-                                        "locked": true,
-                                        "dependsOn": [],
-                                        "refined": false,
-                                        "stale": false
-                                    }
-                                }
+                                "widget": "fieldset"
                             }
                         },
                         "limits": {
@@ -873,14 +761,11 @@
                             ],
                             "x-surface": {
                                 "widget": "fieldset",
-                                "locked": false,
                                 "dependsOn": [
                                     "on_sale.standard",
                                     "on_sale.student",
                                     "on_sale.speaker"
                                 ],
-                                "refined": false,
-                                "stale": false,
                                 "reads": {
                                     "selling": "on_sale"
                                 },
@@ -900,13 +785,6 @@
                                                 "required": false
                                             }
                                         }
-                                    },
-                                    "/allOf/1/properties/speaker": {
-                                        "widget": "fieldset",
-                                        "locked": true,
-                                        "dependsOn": [],
-                                        "refined": false,
-                                        "stale": false
                                     },
                                     "/allOf/1/properties/speaker/allOf/1": {
                                         "doesNotApply": {
@@ -942,11 +820,7 @@
                                     ],
                                     "default": false,
                                     "x-surface": {
-                                        "widget": "checkbox",
-                                        "locked": false,
-                                        "dependsOn": [],
-                                        "refined": false,
-                                        "stale": false
+                                        "widget": "checkbox"
                                     }
                                 },
                                 "student": {
@@ -957,11 +831,7 @@
                                     ],
                                     "default": false,
                                     "x-surface": {
-                                        "widget": "checkbox",
-                                        "locked": false,
-                                        "dependsOn": [],
-                                        "refined": false,
-                                        "stale": false
+                                        "widget": "checkbox"
                                     }
                                 },
                                 "speaker": {
@@ -971,11 +841,7 @@
                                         "null"
                                     ],
                                     "x-surface": {
-                                        "widget": "checkbox",
-                                        "locked": false,
-                                        "dependsOn": [],
-                                        "refined": false,
-                                        "stale": false
+                                        "widget": "checkbox"
                                     }
                                 }
                             },
@@ -996,12 +862,9 @@
                                     "default": 4,
                                     "x-surface": {
                                         "widget": "number",
-                                        "locked": false,
                                         "dependsOn": [
                                             "selling"
-                                        ],
-                                        "refined": false,
-                                        "stale": false
+                                        ]
                                     }
                                 },
                                 "waiting_list": {
@@ -1013,12 +876,9 @@
                                     "default": false,
                                     "x-surface": {
                                         "widget": "checkbox",
-                                        "locked": false,
                                         "dependsOn": [
                                             "selling"
-                                        ],
-                                        "refined": false,
-                                        "stale": false
+                                        ]
                                     }
                                 }
                             },
@@ -1040,33 +900,21 @@
                                     "title": "Standard",
                                     "$ref": "#/$defs/event.ticket_limit",
                                     "x-surface": {
-                                        "widget": "fieldset",
-                                        "locked": false,
-                                        "dependsOn": [],
-                                        "refined": false,
-                                        "stale": false
+                                        "widget": "fieldset"
                                     }
                                 },
                                 "student": {
                                     "title": "Student",
                                     "$ref": "#/$defs/event.ticket_limit",
                                     "x-surface": {
-                                        "widget": "fieldset",
-                                        "locked": false,
-                                        "dependsOn": [],
-                                        "refined": false,
-                                        "stale": false
+                                        "widget": "fieldset"
                                     }
                                 },
                                 "speaker": {
                                     "title": "Speaker",
                                     "$ref": "#/$defs/event.ticket_limit",
                                     "x-surface": {
-                                        "widget": "fieldset",
-                                        "locked": false,
-                                        "dependsOn": [],
-                                        "refined": false,
-                                        "stale": false
+                                        "widget": "fieldset"
                                     }
                                 }
                             },
@@ -1114,7 +962,7 @@
                     "title": "Configure ticket sales",
                     "description": "Sets which ticket types are on sale, and for each how many tickets one order may hold and whether a waiting list opens when it sells out.",
                     "x-surface": {
-                        "contract": 3,
+                        "contract": 4,
                         "operation": {
                             "id": "configure",
                             "label": "Configure ticket sales",
@@ -1147,20 +995,7 @@
                                 }
                             ],
                             "x-surface": {
-                                "widget": "fieldset",
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false,
-                                "within": {
-                                    "/allOf/1/properties/speaker": {
-                                        "widget": "checkbox",
-                                        "locked": true,
-                                        "dependsOn": [],
-                                        "refined": false,
-                                        "stale": false
-                                    }
-                                }
+                                "widget": "fieldset"
                             }
                         },
                         "limits": {
@@ -1192,25 +1027,15 @@
                             ],
                             "x-surface": {
                                 "widget": "fieldset",
-                                "locked": false,
                                 "dependsOn": [
                                     "on_sale.standard",
                                     "on_sale.student",
                                     "on_sale.speaker"
                                 ],
-                                "refined": false,
-                                "stale": false,
                                 "reads": {
                                     "selling": "on_sale"
                                 },
                                 "within": {
-                                    "/allOf/1/properties/speaker": {
-                                        "widget": "fieldset",
-                                        "locked": true,
-                                        "dependsOn": [],
-                                        "refined": false,
-                                        "stale": false
-                                    },
                                     "/allOf/1/properties/speaker/allOf/1": {
                                         "doesNotApply": {
                                             "per_order": [
@@ -1245,11 +1070,7 @@
                                     ],
                                     "default": false,
                                     "x-surface": {
-                                        "widget": "checkbox",
-                                        "locked": false,
-                                        "dependsOn": [],
-                                        "refined": false,
-                                        "stale": false
+                                        "widget": "checkbox"
                                     }
                                 },
                                 "student": {
@@ -1260,11 +1081,7 @@
                                     ],
                                     "default": false,
                                     "x-surface": {
-                                        "widget": "checkbox",
-                                        "locked": false,
-                                        "dependsOn": [],
-                                        "refined": false,
-                                        "stale": false
+                                        "widget": "checkbox"
                                     }
                                 },
                                 "speaker": {
@@ -1274,11 +1091,7 @@
                                         "null"
                                     ],
                                     "x-surface": {
-                                        "widget": "checkbox",
-                                        "locked": false,
-                                        "dependsOn": [],
-                                        "refined": false,
-                                        "stale": false
+                                        "widget": "checkbox"
                                     }
                                 }
                             },
@@ -1299,12 +1112,9 @@
                                     "default": 4,
                                     "x-surface": {
                                         "widget": "number",
-                                        "locked": false,
                                         "dependsOn": [
                                             "selling"
-                                        ],
-                                        "refined": false,
-                                        "stale": false
+                                        ]
                                     }
                                 },
                                 "waiting_list": {
@@ -1316,12 +1126,9 @@
                                     "default": false,
                                     "x-surface": {
                                         "widget": "checkbox",
-                                        "locked": false,
                                         "dependsOn": [
                                             "selling"
-                                        ],
-                                        "refined": false,
-                                        "stale": false
+                                        ]
                                     }
                                 }
                             },
@@ -1343,33 +1150,21 @@
                                     "title": "Standard",
                                     "$ref": "#/$defs/event.ticket_limit",
                                     "x-surface": {
-                                        "widget": "fieldset",
-                                        "locked": false,
-                                        "dependsOn": [],
-                                        "refined": false,
-                                        "stale": false
+                                        "widget": "fieldset"
                                     }
                                 },
                                 "student": {
                                     "title": "Student",
                                     "$ref": "#/$defs/event.ticket_limit",
                                     "x-surface": {
-                                        "widget": "fieldset",
-                                        "locked": false,
-                                        "dependsOn": [],
-                                        "refined": false,
-                                        "stale": false
+                                        "widget": "fieldset"
                                     }
                                 },
                                 "speaker": {
                                     "title": "Speaker",
                                     "$ref": "#/$defs/event.ticket_limit",
                                     "x-surface": {
-                                        "widget": "fieldset",
-                                        "locked": false,
-                                        "dependsOn": [],
-                                        "refined": false,
-                                        "stale": false
+                                        "widget": "fieldset"
                                     }
                                 }
                             },
@@ -1420,7 +1215,7 @@
                     "title": "Configure ticket sales",
                     "description": "Sets which ticket types are on sale, and for each how many tickets one order may hold and whether a waiting list opens when it sells out.",
                     "x-surface": {
-                        "contract": 3,
+                        "contract": 4,
                         "operation": {
                             "id": "configure",
                             "label": "Configure ticket sales",
@@ -1453,20 +1248,7 @@
                                 }
                             ],
                             "x-surface": {
-                                "widget": "fieldset",
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false,
-                                "within": {
-                                    "/allOf/1/properties/speaker": {
-                                        "widget": "checkbox",
-                                        "locked": true,
-                                        "dependsOn": [],
-                                        "refined": false,
-                                        "stale": false
-                                    }
-                                }
+                                "widget": "fieldset"
                             }
                         },
                         "limits": {
@@ -1498,25 +1280,15 @@
                             ],
                             "x-surface": {
                                 "widget": "fieldset",
-                                "locked": false,
                                 "dependsOn": [
                                     "on_sale.standard",
                                     "on_sale.student",
                                     "on_sale.speaker"
                                 ],
-                                "refined": false,
-                                "stale": false,
                                 "reads": {
                                     "selling": "on_sale"
                                 },
                                 "within": {
-                                    "/allOf/1/properties/speaker": {
-                                        "widget": "fieldset",
-                                        "locked": true,
-                                        "dependsOn": [],
-                                        "refined": false,
-                                        "stale": false
-                                    },
                                     "/allOf/1/properties/speaker/allOf/1": {
                                         "doesNotApply": {
                                             "per_order": [
@@ -1551,11 +1323,7 @@
                                     ],
                                     "default": false,
                                     "x-surface": {
-                                        "widget": "checkbox",
-                                        "locked": false,
-                                        "dependsOn": [],
-                                        "refined": false,
-                                        "stale": false
+                                        "widget": "checkbox"
                                     }
                                 },
                                 "student": {
@@ -1566,11 +1334,7 @@
                                     ],
                                     "default": false,
                                     "x-surface": {
-                                        "widget": "checkbox",
-                                        "locked": false,
-                                        "dependsOn": [],
-                                        "refined": false,
-                                        "stale": false
+                                        "widget": "checkbox"
                                     }
                                 },
                                 "speaker": {
@@ -1580,11 +1344,7 @@
                                         "null"
                                     ],
                                     "x-surface": {
-                                        "widget": "checkbox",
-                                        "locked": false,
-                                        "dependsOn": [],
-                                        "refined": false,
-                                        "stale": false
+                                        "widget": "checkbox"
                                     }
                                 }
                             },
@@ -1605,12 +1365,9 @@
                                     "default": 4,
                                     "x-surface": {
                                         "widget": "number",
-                                        "locked": false,
                                         "dependsOn": [
                                             "selling"
-                                        ],
-                                        "refined": false,
-                                        "stale": false
+                                        ]
                                     }
                                 },
                                 "waiting_list": {
@@ -1622,12 +1379,9 @@
                                     "default": false,
                                     "x-surface": {
                                         "widget": "checkbox",
-                                        "locked": false,
                                         "dependsOn": [
                                             "selling"
-                                        ],
-                                        "refined": false,
-                                        "stale": false
+                                        ]
                                     }
                                 }
                             },
@@ -1649,33 +1403,21 @@
                                     "title": "Standard",
                                     "$ref": "#/$defs/event.ticket_limit",
                                     "x-surface": {
-                                        "widget": "fieldset",
-                                        "locked": false,
-                                        "dependsOn": [],
-                                        "refined": false,
-                                        "stale": false
+                                        "widget": "fieldset"
                                     }
                                 },
                                 "student": {
                                     "title": "Student",
                                     "$ref": "#/$defs/event.ticket_limit",
                                     "x-surface": {
-                                        "widget": "fieldset",
-                                        "locked": false,
-                                        "dependsOn": [],
-                                        "refined": false,
-                                        "stale": false
+                                        "widget": "fieldset"
                                     }
                                 },
                                 "speaker": {
                                     "title": "Speaker",
                                     "$ref": "#/$defs/event.ticket_limit",
                                     "x-surface": {
-                                        "widget": "fieldset",
-                                        "locked": false,
-                                        "dependsOn": [],
-                                        "refined": false,
-                                        "stale": false
+                                        "widget": "fieldset"
                                     }
                                 }
                             },
@@ -1726,7 +1468,7 @@
                     "title": "Configure ticket sales",
                     "description": "Sets which ticket types are on sale, and for each how many tickets one order may hold and whether a waiting list opens when it sells out.",
                     "x-surface": {
-                        "contract": 3,
+                        "contract": 4,
                         "operation": {
                             "id": "configure",
                             "label": "Configure ticket sales",
@@ -1759,20 +1501,7 @@
                                 }
                             ],
                             "x-surface": {
-                                "widget": "fieldset",
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false,
-                                "within": {
-                                    "/allOf/1/properties/speaker": {
-                                        "widget": "checkbox",
-                                        "locked": true,
-                                        "dependsOn": [],
-                                        "refined": false,
-                                        "stale": false
-                                    }
-                                }
+                                "widget": "fieldset"
                             }
                         },
                         "limits": {
@@ -1818,14 +1547,11 @@
                             ],
                             "x-surface": {
                                 "widget": "fieldset",
-                                "locked": false,
                                 "dependsOn": [
                                     "on_sale.standard",
                                     "on_sale.student",
                                     "on_sale.speaker"
                                 ],
-                                "refined": false,
-                                "stale": false,
                                 "reads": {
                                     "selling": "on_sale"
                                 },
@@ -1845,13 +1571,6 @@
                                                 "required": false
                                             }
                                         }
-                                    },
-                                    "/allOf/1/properties/speaker": {
-                                        "widget": "fieldset",
-                                        "locked": true,
-                                        "dependsOn": [],
-                                        "refined": false,
-                                        "stale": false
                                     },
                                     "/allOf/1/properties/speaker/allOf/1": {
                                         "doesNotApply": {
@@ -1887,11 +1606,7 @@
                                     ],
                                     "default": false,
                                     "x-surface": {
-                                        "widget": "checkbox",
-                                        "locked": false,
-                                        "dependsOn": [],
-                                        "refined": false,
-                                        "stale": false
+                                        "widget": "checkbox"
                                     }
                                 },
                                 "student": {
@@ -1902,11 +1617,7 @@
                                     ],
                                     "default": false,
                                     "x-surface": {
-                                        "widget": "checkbox",
-                                        "locked": false,
-                                        "dependsOn": [],
-                                        "refined": false,
-                                        "stale": false
+                                        "widget": "checkbox"
                                     }
                                 },
                                 "speaker": {
@@ -1916,11 +1627,7 @@
                                         "null"
                                     ],
                                     "x-surface": {
-                                        "widget": "checkbox",
-                                        "locked": false,
-                                        "dependsOn": [],
-                                        "refined": false,
-                                        "stale": false
+                                        "widget": "checkbox"
                                     }
                                 }
                             },
@@ -1941,12 +1648,9 @@
                                     "default": 4,
                                     "x-surface": {
                                         "widget": "number",
-                                        "locked": false,
                                         "dependsOn": [
                                             "selling"
-                                        ],
-                                        "refined": false,
-                                        "stale": false
+                                        ]
                                     }
                                 },
                                 "waiting_list": {
@@ -1958,12 +1662,9 @@
                                     "default": false,
                                     "x-surface": {
                                         "widget": "checkbox",
-                                        "locked": false,
                                         "dependsOn": [
                                             "selling"
-                                        ],
-                                        "refined": false,
-                                        "stale": false
+                                        ]
                                     }
                                 }
                             },
@@ -1985,33 +1686,21 @@
                                     "title": "Standard",
                                     "$ref": "#/$defs/event.ticket_limit",
                                     "x-surface": {
-                                        "widget": "fieldset",
-                                        "locked": false,
-                                        "dependsOn": [],
-                                        "refined": false,
-                                        "stale": false
+                                        "widget": "fieldset"
                                     }
                                 },
                                 "student": {
                                     "title": "Student",
                                     "$ref": "#/$defs/event.ticket_limit",
                                     "x-surface": {
-                                        "widget": "fieldset",
-                                        "locked": false,
-                                        "dependsOn": [],
-                                        "refined": false,
-                                        "stale": false
+                                        "widget": "fieldset"
                                     }
                                 },
                                 "speaker": {
                                     "title": "Speaker",
                                     "$ref": "#/$defs/event.ticket_limit",
                                     "x-surface": {
-                                        "widget": "fieldset",
-                                        "locked": false,
-                                        "dependsOn": [],
-                                        "refined": false,
-                                        "stale": false
+                                        "widget": "fieldset"
                                     }
                                 }
                             },
@@ -2059,7 +1748,7 @@
                     "title": "Configure ticket sales",
                     "description": "Sets which ticket types are on sale, and for each how many tickets one order may hold and whether a waiting list opens when it sells out.",
                     "x-surface": {
-                        "contract": 3,
+                        "contract": 4,
                         "operation": {
                             "id": "configure",
                             "label": "Configure ticket sales",
@@ -2092,20 +1781,7 @@
                                 }
                             ],
                             "x-surface": {
-                                "widget": "fieldset",
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false,
-                                "within": {
-                                    "/allOf/1/properties/speaker": {
-                                        "widget": "checkbox",
-                                        "locked": true,
-                                        "dependsOn": [],
-                                        "refined": false,
-                                        "stale": false
-                                    }
-                                }
+                                "widget": "fieldset"
                             }
                         },
                         "limits": {
@@ -2137,25 +1813,15 @@
                             ],
                             "x-surface": {
                                 "widget": "fieldset",
-                                "locked": false,
                                 "dependsOn": [
                                     "on_sale.standard",
                                     "on_sale.student",
                                     "on_sale.speaker"
                                 ],
-                                "refined": false,
-                                "stale": false,
                                 "reads": {
                                     "selling": "on_sale"
                                 },
                                 "within": {
-                                    "/allOf/1/properties/speaker": {
-                                        "widget": "fieldset",
-                                        "locked": true,
-                                        "dependsOn": [],
-                                        "refined": false,
-                                        "stale": false
-                                    },
                                     "/allOf/1/properties/speaker/allOf/1": {
                                         "doesNotApply": {
                                             "per_order": [
@@ -2190,11 +1856,7 @@
                                     ],
                                     "default": false,
                                     "x-surface": {
-                                        "widget": "checkbox",
-                                        "locked": false,
-                                        "dependsOn": [],
-                                        "refined": false,
-                                        "stale": false
+                                        "widget": "checkbox"
                                     }
                                 },
                                 "student": {
@@ -2205,11 +1867,7 @@
                                     ],
                                     "default": false,
                                     "x-surface": {
-                                        "widget": "checkbox",
-                                        "locked": false,
-                                        "dependsOn": [],
-                                        "refined": false,
-                                        "stale": false
+                                        "widget": "checkbox"
                                     }
                                 },
                                 "speaker": {
@@ -2219,11 +1877,7 @@
                                         "null"
                                     ],
                                     "x-surface": {
-                                        "widget": "checkbox",
-                                        "locked": false,
-                                        "dependsOn": [],
-                                        "refined": false,
-                                        "stale": false
+                                        "widget": "checkbox"
                                     }
                                 }
                             },
@@ -2244,12 +1898,9 @@
                                     "default": 4,
                                     "x-surface": {
                                         "widget": "number",
-                                        "locked": false,
                                         "dependsOn": [
                                             "selling"
-                                        ],
-                                        "refined": false,
-                                        "stale": false
+                                        ]
                                     }
                                 },
                                 "waiting_list": {
@@ -2261,12 +1912,9 @@
                                     "default": false,
                                     "x-surface": {
                                         "widget": "checkbox",
-                                        "locked": false,
                                         "dependsOn": [
                                             "selling"
-                                        ],
-                                        "refined": false,
-                                        "stale": false
+                                        ]
                                     }
                                 }
                             },
@@ -2288,33 +1936,21 @@
                                     "title": "Standard",
                                     "$ref": "#/$defs/event.ticket_limit",
                                     "x-surface": {
-                                        "widget": "fieldset",
-                                        "locked": false,
-                                        "dependsOn": [],
-                                        "refined": false,
-                                        "stale": false
+                                        "widget": "fieldset"
                                     }
                                 },
                                 "student": {
                                     "title": "Student",
                                     "$ref": "#/$defs/event.ticket_limit",
                                     "x-surface": {
-                                        "widget": "fieldset",
-                                        "locked": false,
-                                        "dependsOn": [],
-                                        "refined": false,
-                                        "stale": false
+                                        "widget": "fieldset"
                                     }
                                 },
                                 "speaker": {
                                     "title": "Speaker",
                                     "$ref": "#/$defs/event.ticket_limit",
                                     "x-surface": {
-                                        "widget": "fieldset",
-                                        "locked": false,
-                                        "dependsOn": [],
-                                        "refined": false,
-                                        "stale": false
+                                        "widget": "fieldset"
                                     }
                                 }
                             },

@@ -353,7 +353,9 @@ class PortsTest extends DataSurfaceKernelTestBase {
     $this->assertSame(['layout' => 'layout', 'guests' => 'capacity'], $site['x-surface']['reads']);
     $this->assertSame(['capacity', 'layout'], $site['x-surface']['dependsOn'], 'At the site, the container\'s keys.');
     $this->assertTrue($site['x-surface']['enumerated']);
-    $this->assertTrue($site['x-surface']['declared']);
+    // Its rules' conditionals are the frame's to name (below); the site
+    // carries no marker.
+    $this->assertArrayNotHasKey('declared', $site['x-surface']);
     $expected = [
       'no aisle for a standing room, on the venue\'s allOf' => <<<'JSON'
         {"if": {"properties": {"layout": {"const": "standing"}}, "required": ["layout"]},

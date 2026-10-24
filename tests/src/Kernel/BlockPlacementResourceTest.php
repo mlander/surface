@@ -315,14 +315,13 @@ class BlockPlacementResourceTest extends DataSurfaceKernelTestBase {
     ], $schema[ContractEmitter::EXTENSION]['operation']);
     $this->assertSame(self::PLUGINS, array_column($schema['properties']['plugin']['oneOf'], 'const'));
     // The core block, read from its config schema.
-    $plain = [ContractEmitter::EXTENSION => ['locked' => FALSE, 'dependsOn' => []]];
     $this->assertSame([
       'title' => 'block.placement.settings.system_branding_block',
       'type' => 'object',
       'properties' => [
-        'use_site_logo' => ['title' => 'Use site logo', 'type' => 'boolean', 'default' => TRUE] + $plain,
-        'use_site_name' => ['title' => 'Use site name', 'type' => 'boolean', 'default' => TRUE] + $plain,
-        'use_site_slogan' => ['title' => 'Use site slogan', 'type' => 'boolean', 'default' => TRUE] + $plain,
+        'use_site_logo' => ['title' => 'Use site logo', 'type' => 'boolean', 'default' => TRUE],
+        'use_site_name' => ['title' => 'Use site name', 'type' => 'boolean', 'default' => TRUE],
+        'use_site_slogan' => ['title' => 'Use site slogan', 'type' => 'boolean', 'default' => TRUE],
       ],
       'additionalProperties' => FALSE,
     ], $schema['$defs']['block.placement.settings.system_branding_block']);

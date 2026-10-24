@@ -194,8 +194,9 @@ abstract class ResourceTestBase extends DataSurfaceKernelTestBase {
     $emitter = $this->container->get('data_surface.contract_emitter');
     $skipped = [];
     foreach ($this->asked($resource) as $id => [$context, $operation]) {
-      $schema = $emitter->emitFull($resources->buildStatic($definition->name(), $context), $definition->id, $operation?->id, $operation?->label, operation: $operation?->facts() ?? [])->document['schema'];
-      $read = $this->readBack($schema, $definition->id, $definition->module, $context->id, $operation?->id, $operation?->label, $operation?->facts() ?? []);
+      $declared = $resources->buildStatic($definition->name(), $context);
+      $schema = $emitter->emitFull($declared, $definition->id, $operation?->id, $operation?->label, operation: $operation?->facts() ?? [])->document['schema'];
+      $read = $this->readBack($schema, $definition->id, $definition->module, $context->id, $operation?->id, $operation?->label, $operation?->facts() ?? [], $declared);
       $this->assertNotSame('error', $read['verdict'], $id . ': it reads back and builds: ' . $read['error']);
       if ($read['verdict'] === 'same') {
         $this->addToAssertionCount(1);

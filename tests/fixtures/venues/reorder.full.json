@@ -7,7 +7,7 @@
         "title": "Reorder the venues",
         "description": "Gives each venue named its new weight, all in one write; a venue left out keeps its own, and an unknown or repeated venue is refused.",
         "x-surface": {
-            "contract": 3,
+            "contract": 4,
             "operation": {
                 "id": "reorder",
                 "label": "Reorder the venues",
@@ -30,9 +30,7 @@
                     "$ref": "#/$defs/event.venue.order"
                 },
                 "x-surface": {
-                    "locked": false,
-                    "dependsOn": [],
-                    "list": true
+                    "collection": true
                 }
             }
         },
@@ -48,22 +46,14 @@
                     "id": {
                         "title": "Venue",
                         "description": "The machine name of a venue the site has.",
-                        "type": "string",
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": []
-                        }
+                        "type": "string"
                     },
                     "weight": {
                         "title": "Weight",
                         "description": "Its place among the venues: lighter first.",
                         "type": "integer",
                         "minimum": -1000,
-                        "maximum": 1000,
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": []
-                        }
+                        "maximum": 1000
                     }
                 },
                 "additionalProperties": false,

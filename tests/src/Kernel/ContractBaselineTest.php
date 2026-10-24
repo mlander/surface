@@ -302,7 +302,7 @@ class ContractBaselineTest extends DataSurfaceKernelTestBase {
     $this->assertSame(1, $built->version());
     $full = $emitter->emitFull($built, 'registration.step1', 'configure', 'Configure', operation: ['id' => 'configure'])->document['schema'];
     $this->assertSame(['contract', 'operation', 'version'], array_keys($full['x-surface']));
-    $this->assertSame(['contract' => 3, 'version' => 1], $emitter->emit($built, [], 'registration.step1')->document['schema']['x-surface']);
+    $this->assertSame(['contract' => 4, 'version' => 1], $emitter->emit($built, [], 'registration.step1')->document['schema']['x-surface']);
 
     $later = new DataSurfaceBuilder();
     $later->setDefinition('depth', DataDefinition::create('integer'));
@@ -318,7 +318,7 @@ class ContractBaselineTest extends DataSurfaceKernelTestBase {
       $emitter->emitFull($surface, 'versioned')->document['schema'],
       $emitter->emit($surface, $surface->getDefaultValues(), 'versioned')->document['schema'],
     ] as $schema) {
-      $this->assertSame(['contract' => 3, 'version' => 3], $schema['x-surface']);
+      $this->assertSame(['contract' => 4, 'version' => 3], $schema['x-surface']);
       $this->assertSame(['version' => 2], $schema['$defs']['versioned.later']['x-surface']);
       $this->assertArrayNotHasKey('x-surface', $schema['$defs']['versioned.first'], 'A def at 1 says nothing.');
     }
@@ -337,7 +337,7 @@ class ContractBaselineTest extends DataSurfaceKernelTestBase {
     $current = $baselines->emit(self::PINNED);
     $old = [];
     foreach ($baselines->read($baselines->directory('data_surface')) as $id => $baseline) {
-      $this->assertSame(3, $baseline['contract'], $id . ' is pinned in contract 3.');
+      $this->assertSame(4, $baseline['contract'], $id . ' is pinned in contract 4.');
       // As contract 1 spelled it.
       $documents = [];
       foreach ($baseline['documents'] as $document) {
@@ -351,7 +351,7 @@ class ContractBaselineTest extends DataSurfaceKernelTestBase {
     $this->assertCount(1, $changes);
     [$change] = $changes;
     $said = [$change->surface, $change->path, $change->change, $change->status];
-    $this->assertSame(['*', '#', 'contract version 1 to 3', ContractChange::CONTRACT], $said);
+    $this->assertSame(['*', '#', 'contract version 1 to 4', ContractChange::CONTRACT], $said);
     $this->assertTrue($change->fails());
     $this->assertFalse($change->needsAllowance());
   }

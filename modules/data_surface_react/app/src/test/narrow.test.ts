@@ -174,7 +174,12 @@ describe('a rule declared as data', () => {
   const rule = (full.allOf ?? []).find((condition) => condition['x-surface']?.declared === true);
 
   it('is stated in the compliance full schema as written, and read by its own `if`', () => {
-    expect(full.properties?.capacity['x-surface']).toMatchObject({ enumerated: true, declared: true });
+    // The key says it is enumerated; its declared rule is the conditional
+    // the frame's `rules` lists, which restored() marks, and nothing on
+    // the key repeats it.
+    expect(full.properties?.capacity['x-surface']).toMatchObject({ enumerated: true });
+    expect(full.properties?.capacity['x-surface']).not.toHaveProperty('declared');
+    expect(recorded.schema['x-surface']?.rules).toHaveLength(1);
     expect(full.properties?.capacity['x-surface']?.refine).toBeUndefined();
     // The declared type beside the bound, which never narrows.
     expect(rule?.then).toEqual({ properties: { capacity: { type: ['integer', 'null'], description: 'Up to 100 without an event license.', maximum: 100 } } });
@@ -293,16 +298,17 @@ describe('structures mixed in', () => {
 
 describe('a key whose access only the server decides', () => {
   // The full schema is the account's: a key a live access answer may
-  // lock or leave out is there, marked `x-surface.access: "live"`, and
-  // the schema for these answers settles it. The journal's full schema with
-  // its archive and its owner so marked stands for one such account.
+  // lock or leave out is there, marked `x-surface.live` as a key a
+  // runtime refiner narrows is, and the schema for these answers settles
+  // it. The journal's full schema with its archive so marked, and then
+  // its owner too, stands for one such account. One marker, one treatment: what
+  // the server last settled stands, and a change the key depends on is
+  // asked, never narrowed here from the wider full schema.
   const recorded = journal as unknown as Recorded;
   const declared = inlineSchema(recorded.schema);
-  const live = (schema: Schema): Schema => ({ ...schema, 'x-surface': { ...(schema['x-surface'] as Extension), access: 'live' } });
-  const full: Schema = {
-    ...declared,
-    properties: { ...declared.properties, archive: live(declared.properties?.archive as Schema), owner: live(declared.properties?.owner as Schema) },
-  };
+  const live = (schema: Schema): Schema => ({ ...schema, 'x-surface': { ...(schema['x-surface'] as Extension), live: true } });
+  const full: Schema = { ...declared, properties: { ...declared.properties, archive: live(declared.properties?.archive as Schema) } };
+  const both: Schema = { ...full, properties: { ...full.properties, owner: live(declared.properties?.owner as Schema) } };
   const staff = served(recorded.contract);
 
   it('stays out where the server left it out', () => {
@@ -319,30 +325,29 @@ describe('a key whose access only the server decides', () => {
     expect(open.settled.values).not.toHaveProperty('archive');
   });
 
-  it('stays as the server locked it, whatever it depends on', () => {
-    const owner = { ...(staff.schema.properties?.owner as Schema), readOnly: true, const: 'ada' };
-    const previous = { ...staff, schema: { ...staff.schema, properties: { ...staff.schema.properties, owner } } };
+  it('stays as the server locked it, when nothing it depends on changes', () => {
+    const archive = { ...(staff.schema.properties?.archive as Schema), readOnly: true };
+    const previous = { ...staff, schema: { ...staff.schema, properties: { ...staff.schema.properties, archive } } };
     const open = narrow({ full, previous, stored: staff.values, values: { ...staff.values, visibility: 'public' }, stale: [], changed: 'visibility' });
     expect(open.local).toBe(true);
     if (!open.local) {
       return;
     }
-    // Unmarked, the owner would lose its staff maximum here; locked by the
-    // server, it is what the server said.
-    expect(open.settled.schema.properties?.owner).toEqual(owner);
+    expect(open.settled.schema.properties?.archive).toEqual(archive);
   });
 
-  it('is narrowed from the full schema where the server left it open', () => {
-    const open = narrow({ full, previous: staff, stored: staff.values, values: { ...staff.values, visibility: 'public' }, stale: [], changed: 'visibility' });
-    expect(open.local).toBe(true);
-    if (!open.local) {
-      return;
+  it('is asked of the server when a key it depends on changes, open or locked', () => {
+    // Unmarked, the owner would be narrowed here from the full schema and
+    // lose its staff maximum; marked live, only the server says.
+    const owner = { ...(staff.schema.properties?.owner as Schema), readOnly: true, const: 'ada' };
+    const locked = { ...staff, schema: { ...staff.schema, properties: { ...staff.schema.properties, owner } } };
+    for (const previous of [staff, locked]) {
+      expect(narrow({ full: both, previous, stored: staff.values, values: { ...staff.values, visibility: 'public' }, stale: [], changed: 'visibility' })).toEqual({ local: false, key: 'owner', marker: 'live' });
     }
-    expect(open.settled.schema.properties?.owner.maxLength).toBeUndefined();
   });
 
-  it('is asked of the server in a frame nothing has settled yet', () => {
-    expect(narrowingStatus({ local: false, key: 'loan', marker: 'access' })).toBe('Asked the server: loan has access only the server decides');
+  it('says why in the panel, as for a live rule', () => {
+    expect(narrowingStatus({ local: false, key: 'loan', marker: 'live' })).toBe('Asked the server: loan depends on a live rule');
   });
 });
 
@@ -446,13 +451,13 @@ describe('a key deferred for its size', () => {
   });
 
   it('is open where nothing is chosen, and the server\'s for a map of keys from the site', () => {
-    const extension = (more: Partial<Extension>): Extension => ({ widget: 'fieldset', locked: false, dependsOn: ['kind'], refined: false, stale: false, ...more });
+    const extension = (more: Partial<Extension>): Extension => ({ widget: 'fieldset', dependsOn: ['kind'], ...more });
     const full: Schema = {
       type: 'object',
       properties: {
-        kind: { title: 'Kind', type: ['string', 'null'], oneOf: [{ const: 'a', title: 'A' }], 'x-surface': extension({ widget: 'select', dependsOn: [] }) },
-        detail: { title: 'Detail', type: ['object', 'null'], 'x-surface': extension({ widget: 'variants', by: 'kind', deferred: true, fetch: '?choose=/detail={value}' }) },
-        benches: { title: 'Benches', type: ['object', 'null'], 'x-surface': extension({ deferred: true, fetch: '?choose=/benches={value}', entries: [{ id: 'b1', label: 'Bench 1' }] }) },
+        kind: { title: 'Kind', type: ['string', 'null'], oneOf: [{ const: 'a', title: 'A' }], 'x-surface': extension({ widget: 'select', dependsOn: undefined }) },
+        detail: { title: 'Detail', type: ['object', 'null'], 'x-surface': extension({ widget: 'variants', by: 'kind', deferred: { fetch: '?choose=/detail={value}' } }) },
+        benches: { title: 'Benches', type: ['object', 'null'], 'x-surface': extension({ deferred: { fetch: '?choose=/benches={value}', entries: [{ id: 'b1', label: 'Bench 1' }] } }) },
       },
     };
     const previous: Settled = { schema: full, values: { kind: null, detail: null, benches: {} }, stale: [] };

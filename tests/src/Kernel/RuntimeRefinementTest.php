@@ -192,9 +192,9 @@ class RuntimeRefinementTest extends DataSurfaceKernelTestBase {
     $after = $this->schema($surface);
     $this->assertSame(json_encode($before), json_encode($after));
 
-    $this->assertSame(['locked' => FALSE, 'dependsOn' => ['aisle'], 'enumerated' => TRUE, 'live' => TRUE], $after['properties']['shelf']['x-surface']);
-    $this->assertSame(['locked' => FALSE, 'dependsOn' => [], 'live' => TRUE], $after['properties']['tag']['x-surface']);
-    $this->assertSame(['locked' => FALSE, 'dependsOn' => []], $after['properties']['aisle']['x-surface']);
+    $this->assertSame(['dependsOn' => ['aisle'], 'enumerated' => TRUE, 'live' => TRUE], $after['properties']['shelf']['x-surface']);
+    $this->assertSame(['live' => TRUE], $after['properties']['tag']['x-surface']);
+    $this->assertArrayNotHasKey('x-surface', $after['properties']['aisle'], 'Nothing to say of the aisle.');
     $this->assertSame(['north_1', 'north_2', 'south_1', 'south_2'], self::offered($after['properties']['shelf']));
     $this->assertSame(['red', 'green', 'blue'], self::offered($after['properties']['tag']));
     $this->assertSame(['north' => ['north_1', 'north_2'], 'south' => ['south_1', 'south_2']], self::branches($after, 'shelf'));

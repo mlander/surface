@@ -221,7 +221,8 @@ The module uses these twenty-three words in exactly one sense each.
   cacheability and never declared: static varies by the account's
   permissions or roles alone and is stated in the full schema and the
   tool listing for that account; runtime is anything else, marked there
-  `x-surface.access: "live"` and settled once the thing is known
+  `x-surface.live`, as a runtime refiner's key is, and settled once the
+  thing is known
   ([Static and runtime access](docs/resources.md#static-and-runtime-access)).
 - **Context**: an `OperationContext`: where a resource or structure is
   being asked for. Its id (the operation id, or a host's own verb such

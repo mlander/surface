@@ -7,20 +7,12 @@
                 "text": {
                     "title": "Button text",
                     "type": "string",
-                    "maxLength": 40,
-                    "x-surface": {
-                        "locked": false,
-                        "dependsOn": []
-                    }
+                    "maxLength": 40
                 },
                 "url": {
                     "title": "Address",
                     "type": "string",
-                    "format": "uri",
-                    "x-surface": {
-                        "locked": false,
-                        "dependsOn": []
-                    }
+                    "format": "uri"
                 },
                 "style": {
                     "title": "Style",
@@ -35,20 +27,12 @@
                             "title": "Secondary"
                         }
                     ],
-                    "default": "primary",
-                    "x-surface": {
-                        "locked": false,
-                        "dependsOn": []
-                    }
+                    "default": "primary"
                 },
                 "new_window": {
                     "title": "Open in a new window",
                     "type": "boolean",
-                    "default": false,
-                    "x-surface": {
-                        "locked": false,
-                        "dependsOn": []
-                    }
+                    "default": false
                 },
                 "tags": {
                     "title": "Tags",
@@ -58,17 +42,9 @@
                         "null"
                     ],
                     "items": {
-                        "type": "string",
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": []
-                        }
+                        "type": "string"
                     },
-                    "maxItems": 3,
-                    "x-surface": {
-                        "locked": false,
-                        "dependsOn": []
-                    }
+                    "maxItems": 3
                 }
             },
             "additionalProperties": false,
@@ -95,11 +71,7 @@
                             "const": "data_surface_examples:call_to_action",
                             "title": "Call to action"
                         }
-                    ],
-                    "x-surface": {
-                        "locked": false,
-                        "dependsOn": []
-                    }
+                    ]
                 },
                 "props": {
                     "title": "Props",
@@ -112,7 +84,6 @@
                         }
                     ],
                     "x-surface": {
-                        "locked": false,
                         "dependsOn": [
                             "component"
                         ],
@@ -133,7 +104,6 @@
                         }
                     ],
                     "x-surface": {
-                        "locked": false,
                         "dependsOn": [
                             "component"
                         ],
@@ -212,11 +182,7 @@
                             "title": "Components"
                         }
                     ],
-                    "default": "text",
-                    "x-surface": {
-                        "locked": false,
-                        "dependsOn": []
-                    }
+                    "default": "text"
                 },
                 "text": {
                     "title": "Text",
@@ -225,22 +191,18 @@
                         "null"
                     ],
                     "x-surface": {
-                        "locked": false,
                         "dependsOn": [
                             "kind"
-                        ],
-                        "declared": true
+                        ]
                     }
                 },
                 "component": {
                     "title": "Component",
                     "$ref": "#/$defs/component.nested.data_surface_examples:call_to_action.1",
                     "x-surface": {
-                        "locked": false,
                         "dependsOn": [
                             "kind"
-                        ],
-                        "declared": true
+                        ]
                     }
                 },
                 "components": {
@@ -251,12 +213,10 @@
                         "$ref": "#/$defs/component.nested.data_surface_examples:call_to_action.1"
                     },
                     "x-surface": {
-                        "locked": false,
                         "dependsOn": [
                             "kind"
                         ],
-                        "list": true,
-                        "declared": true
+                        "collection": true
                     }
                 }
             },
@@ -335,11 +295,7 @@
                 "actions": {
                     "title": "Actions",
                     "description": "Up to two buttons under the title.",
-                    "$ref": "#/$defs/component.slot.data_surface_examples:hero.actions.1",
-                    "x-surface": {
-                        "locked": false,
-                        "dependsOn": []
-                    }
+                    "$ref": "#/$defs/component.slot.data_surface_examples:hero.actions.1"
                 }
             },
             "additionalProperties": false
@@ -365,12 +321,10 @@
             }
         ],
         "x-surface": {
-            "locked": false,
             "dependsOn": [
                 "component"
             ],
             "refined": true,
-            "stale": false,
             "by": "component",
             "variants": {
                 "data_surface_examples:call_to_action": "#/$defs/block.data_surface_component.slots.data_surface_examples:call_to_action",

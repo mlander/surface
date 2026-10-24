@@ -353,10 +353,10 @@ class ChildOperationTest extends DataSurfaceKernelTestBase {
     $this->assertFalse($edit->isLocked('spare_rack'));
 
     $schema = $this->contract($edit)->document['schema'];
-    $this->assertFalse($schema['properties']['rack']['x-surface']['locked']);
     $this->assertArrayNotHasKey('readOnly', $schema['properties']['rack']);
     $rack = SchemaResolver::inline($schema['properties']['rack'], $schema);
-    $this->assertFalse($rack['properties']['spices']['x-surface']['locked']);
+    $this->assertArrayNotHasKey('readOnly', $rack['properties']['spices']);
+    $this->assertArrayNotHasKey('const', $rack['properties']['spices']);
 
     $form = $this->form();
     $this->assertArrayNotHasKey('#disabled', $form['rack']);
@@ -387,11 +387,9 @@ class ChildOperationTest extends DataSurfaceKernelTestBase {
     $contract = $this->contract($edit);
     $schema = $contract->document['schema'];
     $this->assertTrue($schema['properties']['rack']['readOnly']);
-    $this->assertTrue($schema['properties']['rack']['x-surface']['locked']);
     $rack = SchemaResolver::inline($schema['properties']['rack'], $schema);
     foreach (['shelf' => 'low', 'spices' => 7, 'label' => 'Everyday'] as $key => $value) {
       $this->assertTrue($rack['properties'][$key]['readOnly'], $key);
-      $this->assertTrue($rack['properties'][$key]['x-surface']['locked'], $key);
       $this->assertSame($value, $rack['properties'][$key]['const'], $key);
     }
     $this->assertSame(7, $contract->document['values']['rack']['spices']);
@@ -402,7 +400,6 @@ class ChildOperationTest extends DataSurfaceKernelTestBase {
     $full = $this->contract($edit, TRUE);
     $schema = $full->document['schema'];
     $this->assertTrue($schema['properties']['rack']['readOnly']);
-    $this->assertTrue($schema['properties']['rack']['x-surface']['locked']);
     $rack = SchemaResolver::inline($schema['properties']['rack'], $schema);
     $this->assertTrue($rack['properties']['spices']['readOnly']);
     $this->assertArrayNotHasKey('const', $rack['properties']['spices']);
@@ -554,7 +551,7 @@ class ChildOperationTest extends DataSurfaceKernelTestBase {
       $contract = $this->contract($stock, $full, 'stock');
       $schema = $contract->document['schema'];
       $this->assertTrue($schema['properties']['rack']['readOnly']);
-      $this->assertTrue($schema['properties']['spare_rack']['x-surface']['locked']);
+      $this->assertTrue($schema['properties']['spare_rack']['readOnly']);
       $this->assertContains('user.permissions', $contract->getCacheContexts());
     }
     $form = $this->form('stock');

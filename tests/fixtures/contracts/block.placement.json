@@ -1,7 +1,7 @@
 {
     "resource": "block.placement",
     "module": "data_surface_block",
-    "contract": 3,
+    "contract": 4,
     "documents": [
         {
             "resource": "block.placement",
@@ -12,7 +12,7 @@
                 "title": "Place a block",
                 "description": "Places a block under a machine name the caller chooses, in a region of a theme, with the settings its plugin takes; a machine name already in use is refused.",
                 "x-surface": {
-                    "contract": 3,
+                    "contract": 4,
                     "operation": {
                         "id": "create",
                         "label": "Place a block",
@@ -32,8 +32,6 @@
                         "type": "string",
                         "maxLength": 255,
                         "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
                             "checkedOnServer": [
                                 {
                                     "constraint": "Regex",
@@ -49,8 +47,6 @@
                         "type": "string",
                         "maxLength": 166,
                         "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
                             "checkedOnServer": [
                                 {
                                     "constraint": "Regex",
@@ -67,11 +63,7 @@
                             "boolean",
                             "null"
                         ],
-                        "default": true,
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": []
-                        }
+                        "default": true
                     },
                     "plugin": {
                         "title": "Block",
@@ -122,11 +114,7 @@
                                 "const": "user_login_block",
                                 "title": "User login"
                             }
-                        ],
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": []
-                        }
+                        ]
                     },
                     "settings": {
                         "title": "Settings",
@@ -170,7 +158,6 @@
                             }
                         ],
                         "x-surface": {
-                            "locked": false,
                             "dependsOn": [
                                 "plugin"
                             ],
@@ -201,8 +188,6 @@
                             }
                         ],
                         "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
                             "checkedOnServer": [
                                 {
                                     "constraint": "ExtensionExists",
@@ -258,7 +243,6 @@
                             }
                         ],
                         "x-surface": {
-                            "locked": false,
                             "dependsOn": [
                                 "theme"
                             ],
@@ -277,21 +261,13 @@
                         "type": "integer",
                         "minimum": -2147483648,
                         "maximum": 2147483647,
-                        "default": 0,
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": []
-                        }
+                        "default": 0
                     },
                     "status": {
                         "title": "Enabled",
                         "description": "Whether the block is shown at all.",
                         "type": "boolean",
-                        "default": true,
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": []
-                        }
+                        "default": true
                     },
                     "visibility": {
                         "title": "Visibility",
@@ -304,9 +280,7 @@
                             "$ref": "#/$defs/block.placement.condition"
                         },
                         "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "list": true
+                            "collection": true
                         }
                     }
                 },
@@ -559,20 +533,12 @@
                             "text": {
                                 "title": "Button text",
                                 "type": "string",
-                                "maxLength": 40,
-                                "x-surface": {
-                                    "locked": false,
-                                    "dependsOn": []
-                                }
+                                "maxLength": 40
                             },
                             "url": {
                                 "title": "Address",
                                 "type": "string",
-                                "format": "uri",
-                                "x-surface": {
-                                    "locked": false,
-                                    "dependsOn": []
-                                }
+                                "format": "uri"
                             },
                             "style": {
                                 "title": "Style",
@@ -587,20 +553,12 @@
                                         "title": "Secondary"
                                     }
                                 ],
-                                "default": "primary",
-                                "x-surface": {
-                                    "locked": false,
-                                    "dependsOn": []
-                                }
+                                "default": "primary"
                             },
                             "new_window": {
                                 "title": "Open in a new window",
                                 "type": "boolean",
-                                "default": false,
-                                "x-surface": {
-                                    "locked": false,
-                                    "dependsOn": []
-                                }
+                                "default": false
                             },
                             "tags": {
                                 "title": "Tags",
@@ -610,17 +568,9 @@
                                     "null"
                                 ],
                                 "items": {
-                                    "type": "string",
-                                    "x-surface": {
-                                        "locked": false,
-                                        "dependsOn": []
-                                    }
+                                    "type": "string"
                                 },
-                                "maxItems": 3,
-                                "x-surface": {
-                                    "locked": false,
-                                    "dependsOn": []
-                                }
+                                "maxItems": 3
                             }
                         },
                         "additionalProperties": false,
@@ -636,11 +586,7 @@
                             "heading": {
                                 "title": "Heading",
                                 "type": "string",
-                                "maxLength": 80,
-                                "x-surface": {
-                                    "locked": false,
-                                    "dependsOn": []
-                                }
+                                "maxLength": 80
                             },
                             "tone": {
                                 "title": "Tone",
@@ -655,11 +601,7 @@
                                         "title": "Highlighted"
                                     }
                                 ],
-                                "default": "plain",
-                                "x-surface": {
-                                    "locked": false,
-                                    "dependsOn": []
-                                }
+                                "default": "plain"
                             },
                             "link": {
                                 "title": "Link",
@@ -674,29 +616,17 @@
                                             "string",
                                             "null"
                                         ],
-                                        "format": "uri",
-                                        "x-surface": {
-                                            "locked": false,
-                                            "dependsOn": []
-                                        }
+                                        "format": "uri"
                                     },
                                     "label": {
                                         "title": "Link text",
                                         "type": [
                                             "string",
                                             "null"
-                                        ],
-                                        "x-surface": {
-                                            "locked": false,
-                                            "dependsOn": []
-                                        }
+                                        ]
                                     }
                                 },
-                                "additionalProperties": false,
-                                "x-surface": {
-                                    "locked": false,
-                                    "dependsOn": []
-                                }
+                                "additionalProperties": false
                             }
                         },
                         "additionalProperties": false,
@@ -710,22 +640,14 @@
                         "properties": {
                             "title": {
                                 "title": "Title",
-                                "type": "string",
-                                "x-surface": {
-                                    "locked": false,
-                                    "dependsOn": []
-                                }
+                                "type": "string"
                             },
                             "subtitle": {
                                 "title": "Subtitle",
                                 "type": [
                                     "string",
                                     "null"
-                                ],
-                                "x-surface": {
-                                    "locked": false,
-                                    "dependsOn": []
-                                }
+                                ]
                             },
                             "align": {
                                 "title": "Alignment",
@@ -740,11 +662,7 @@
                                         "title": "Center"
                                     }
                                 ],
-                                "default": "center",
-                                "x-surface": {
-                                    "locked": false,
-                                    "dependsOn": []
-                                }
+                                "default": "center"
                             },
                             "overlay": {
                                 "title": "Overlay opacity",
@@ -752,20 +670,12 @@
                                 "type": "integer",
                                 "minimum": 0,
                                 "maximum": 100,
-                                "default": 40,
-                                "x-surface": {
-                                    "locked": false,
-                                    "dependsOn": []
-                                }
+                                "default": 40
                             },
                             "full_width": {
                                 "title": "Full width",
                                 "type": "boolean",
-                                "default": false,
-                                "x-surface": {
-                                    "locked": false,
-                                    "dependsOn": []
-                                }
+                                "default": false
                             }
                         },
                         "additionalProperties": false,
@@ -782,11 +692,7 @@
                                 "type": [
                                     "string",
                                     "null"
-                                ],
-                                "x-surface": {
-                                    "locked": false,
-                                    "dependsOn": []
-                                }
+                                ]
                             }
                         },
                         "additionalProperties": false
@@ -810,11 +716,7 @@
                                         "title": "Text"
                                     }
                                 ],
-                                "default": "text",
-                                "x-surface": {
-                                    "locked": false,
-                                    "dependsOn": []
-                                }
+                                "default": "text"
                             },
                             "text": {
                                 "title": "Text",
@@ -823,11 +725,9 @@
                                     "null"
                                 ],
                                 "x-surface": {
-                                    "locked": false,
                                     "dependsOn": [
                                         "kind"
-                                    ],
-                                    "declared": true
+                                    ]
                                 }
                             }
                         },
@@ -866,11 +766,7 @@
                             "body": {
                                 "title": "Text",
                                 "description": "A line under the heading.",
-                                "$ref": "#/$defs/component.slot.text",
-                                "x-surface": {
-                                    "locked": false,
-                                    "dependsOn": []
-                                }
+                                "$ref": "#/$defs/component.slot.text"
                             }
                         },
                         "additionalProperties": false
@@ -882,20 +778,12 @@
                             "text": {
                                 "title": "Button text",
                                 "type": "string",
-                                "maxLength": 40,
-                                "x-surface": {
-                                    "locked": false,
-                                    "dependsOn": []
-                                }
+                                "maxLength": 40
                             },
                             "url": {
                                 "title": "Address",
                                 "type": "string",
-                                "format": "uri",
-                                "x-surface": {
-                                    "locked": false,
-                                    "dependsOn": []
-                                }
+                                "format": "uri"
                             },
                             "style": {
                                 "title": "Style",
@@ -910,20 +798,12 @@
                                         "title": "Secondary"
                                     }
                                 ],
-                                "default": "primary",
-                                "x-surface": {
-                                    "locked": false,
-                                    "dependsOn": []
-                                }
+                                "default": "primary"
                             },
                             "new_window": {
                                 "title": "Open in a new window",
                                 "type": "boolean",
-                                "default": false,
-                                "x-surface": {
-                                    "locked": false,
-                                    "dependsOn": []
-                                }
+                                "default": false
                             },
                             "tags": {
                                 "title": "Tags",
@@ -933,17 +813,9 @@
                                     "null"
                                 ],
                                 "items": {
-                                    "type": "string",
-                                    "x-surface": {
-                                        "locked": false,
-                                        "dependsOn": []
-                                    }
+                                    "type": "string"
                                 },
-                                "maxItems": 3,
-                                "x-surface": {
-                                    "locked": false,
-                                    "dependsOn": []
-                                }
+                                "maxItems": 3
                             }
                         },
                         "additionalProperties": false,
@@ -970,11 +842,7 @@
                                         "const": "data_surface_examples:call_to_action",
                                         "title": "Call to action"
                                     }
-                                ],
-                                "x-surface": {
-                                    "locked": false,
-                                    "dependsOn": []
-                                }
+                                ]
                             },
                             "props": {
                                 "title": "Props",
@@ -987,7 +855,6 @@
                                     }
                                 ],
                                 "x-surface": {
-                                    "locked": false,
                                     "dependsOn": [
                                         "component"
                                     ],
@@ -1008,7 +875,6 @@
                                     }
                                 ],
                                 "x-surface": {
-                                    "locked": false,
                                     "dependsOn": [
                                         "component"
                                     ],
@@ -1087,11 +953,7 @@
                                         "title": "Components"
                                     }
                                 ],
-                                "default": "text",
-                                "x-surface": {
-                                    "locked": false,
-                                    "dependsOn": []
-                                }
+                                "default": "text"
                             },
                             "text": {
                                 "title": "Text",
@@ -1100,22 +962,18 @@
                                     "null"
                                 ],
                                 "x-surface": {
-                                    "locked": false,
                                     "dependsOn": [
                                         "kind"
-                                    ],
-                                    "declared": true
+                                    ]
                                 }
                             },
                             "component": {
                                 "title": "Component",
                                 "$ref": "#/$defs/component.nested.data_surface_examples:call_to_action.1",
                                 "x-surface": {
-                                    "locked": false,
                                     "dependsOn": [
                                         "kind"
-                                    ],
-                                    "declared": true
+                                    ]
                                 }
                             },
                             "components": {
@@ -1126,12 +984,10 @@
                                     "$ref": "#/$defs/component.nested.data_surface_examples:call_to_action.1"
                                 },
                                 "x-surface": {
-                                    "locked": false,
                                     "dependsOn": [
                                         "kind"
                                     ],
-                                    "list": true,
-                                    "declared": true
+                                    "collection": true
                                 }
                             }
                         },
@@ -1210,11 +1066,7 @@
                             "actions": {
                                 "title": "Actions",
                                 "description": "Up to two buttons under the title.",
-                                "$ref": "#/$defs/component.slot.data_surface_examples:hero.actions.1",
-                                "x-surface": {
-                                    "locked": false,
-                                    "dependsOn": []
-                                }
+                                "$ref": "#/$defs/component.slot.data_surface_examples:hero.actions.1"
                             }
                         },
                         "additionalProperties": false
@@ -1226,11 +1078,7 @@
                             "heading": {
                                 "title": "Heading",
                                 "type": "string",
-                                "maxLength": 80,
-                                "x-surface": {
-                                    "locked": false,
-                                    "dependsOn": []
-                                }
+                                "maxLength": 80
                             },
                             "tone": {
                                 "title": "Tone",
@@ -1245,11 +1093,7 @@
                                         "title": "Highlighted"
                                     }
                                 ],
-                                "default": "plain",
-                                "x-surface": {
-                                    "locked": false,
-                                    "dependsOn": []
-                                }
+                                "default": "plain"
                             },
                             "link": {
                                 "title": "Link",
@@ -1264,29 +1108,17 @@
                                             "string",
                                             "null"
                                         ],
-                                        "format": "uri",
-                                        "x-surface": {
-                                            "locked": false,
-                                            "dependsOn": []
-                                        }
+                                        "format": "uri"
                                     },
                                     "label": {
                                         "title": "Link text",
                                         "type": [
                                             "string",
                                             "null"
-                                        ],
-                                        "x-surface": {
-                                            "locked": false,
-                                            "dependsOn": []
-                                        }
+                                        ]
                                     }
                                 },
-                                "additionalProperties": false,
-                                "x-surface": {
-                                    "locked": false,
-                                    "dependsOn": []
-                                }
+                                "additionalProperties": false
                             }
                         },
                         "additionalProperties": false,
@@ -1300,22 +1132,14 @@
                         "properties": {
                             "title": {
                                 "title": "Title",
-                                "type": "string",
-                                "x-surface": {
-                                    "locked": false,
-                                    "dependsOn": []
-                                }
+                                "type": "string"
                             },
                             "subtitle": {
                                 "title": "Subtitle",
                                 "type": [
                                     "string",
                                     "null"
-                                ],
-                                "x-surface": {
-                                    "locked": false,
-                                    "dependsOn": []
-                                }
+                                ]
                             },
                             "align": {
                                 "title": "Alignment",
@@ -1330,11 +1154,7 @@
                                         "title": "Center"
                                     }
                                 ],
-                                "default": "center",
-                                "x-surface": {
-                                    "locked": false,
-                                    "dependsOn": []
-                                }
+                                "default": "center"
                             },
                             "overlay": {
                                 "title": "Overlay opacity",
@@ -1342,20 +1162,12 @@
                                 "type": "integer",
                                 "minimum": 0,
                                 "maximum": 100,
-                                "default": 40,
-                                "x-surface": {
-                                    "locked": false,
-                                    "dependsOn": []
-                                }
+                                "default": 40
                             },
                             "full_width": {
                                 "title": "Full width",
                                 "type": "boolean",
-                                "default": false,
-                                "x-surface": {
-                                    "locked": false,
-                                    "dependsOn": []
-                                }
+                                "default": false
                             }
                         },
                         "additionalProperties": false,
@@ -1370,11 +1182,7 @@
                             "body": {
                                 "title": "Text",
                                 "description": "A line under the heading.",
-                                "$ref": "#/$defs/component.slot.text",
-                                "x-surface": {
-                                    "locked": false,
-                                    "dependsOn": []
-                                }
+                                "$ref": "#/$defs/component.slot.text"
                             }
                         },
                         "additionalProperties": false
@@ -1397,11 +1205,7 @@
                                         "const": "data_surface_examples:call_to_action",
                                         "title": "Call to action"
                                     }
-                                ],
-                                "x-surface": {
-                                    "locked": false,
-                                    "dependsOn": []
-                                }
+                                ]
                             },
                             "props": {
                                 "title": "Props",
@@ -1414,7 +1218,6 @@
                                     }
                                 ],
                                 "x-surface": {
-                                    "locked": false,
                                     "dependsOn": [
                                         "component"
                                     ],
@@ -1435,7 +1238,6 @@
                                     }
                                 ],
                                 "x-surface": {
-                                    "locked": false,
                                     "dependsOn": [
                                         "component"
                                     ],
@@ -1514,11 +1316,7 @@
                                         "title": "Components"
                                     }
                                 ],
-                                "default": "text",
-                                "x-surface": {
-                                    "locked": false,
-                                    "dependsOn": []
-                                }
+                                "default": "text"
                             },
                             "text": {
                                 "title": "Text",
@@ -1527,22 +1325,18 @@
                                     "null"
                                 ],
                                 "x-surface": {
-                                    "locked": false,
                                     "dependsOn": [
                                         "kind"
-                                    ],
-                                    "declared": true
+                                    ]
                                 }
                             },
                             "component": {
                                 "title": "Component",
                                 "$ref": "#/$defs/component.nested.data_surface_examples:call_to_action.2",
                                 "x-surface": {
-                                    "locked": false,
                                     "dependsOn": [
                                         "kind"
-                                    ],
-                                    "declared": true
+                                    ]
                                 }
                             },
                             "components": {
@@ -1553,12 +1347,10 @@
                                     "$ref": "#/$defs/component.nested.data_surface_examples:call_to_action.2"
                                 },
                                 "x-surface": {
-                                    "locked": false,
                                     "dependsOn": [
                                         "kind"
                                     ],
-                                    "list": true,
-                                    "declared": true
+                                    "collection": true
                                 }
                             }
                         },
@@ -1637,11 +1429,7 @@
                             "actions": {
                                 "title": "Actions",
                                 "description": "Up to two buttons under the title.",
-                                "$ref": "#/$defs/component.slot.data_surface_examples:hero.actions.2",
-                                "x-surface": {
-                                    "locked": false,
-                                    "dependsOn": []
-                                }
+                                "$ref": "#/$defs/component.slot.data_surface_examples:hero.actions.2"
                             }
                         },
                         "additionalProperties": false
@@ -1662,11 +1450,7 @@
                                         "const": "data_surface_examples:hero",
                                         "title": "Hero"
                                     }
-                                ],
-                                "x-surface": {
-                                    "locked": false,
-                                    "dependsOn": []
-                                }
+                                ]
                             },
                             "props": {
                                 "title": "Props",
@@ -1682,7 +1466,6 @@
                                     }
                                 ],
                                 "x-surface": {
-                                    "locked": false,
                                     "dependsOn": [
                                         "component"
                                     ],
@@ -1707,7 +1490,6 @@
                                     }
                                 ],
                                 "x-surface": {
-                                    "locked": false,
                                     "dependsOn": [
                                         "component"
                                     ],
@@ -1827,11 +1609,7 @@
                                         "title": "Components"
                                     }
                                 ],
-                                "default": "text",
-                                "x-surface": {
-                                    "locked": false,
-                                    "dependsOn": []
-                                }
+                                "default": "text"
                             },
                             "text": {
                                 "title": "Text",
@@ -1840,22 +1618,18 @@
                                     "null"
                                 ],
                                 "x-surface": {
-                                    "locked": false,
                                     "dependsOn": [
                                         "kind"
-                                    ],
-                                    "declared": true
+                                    ]
                                 }
                             },
                             "component": {
                                 "title": "Component",
                                 "$ref": "#/$defs/component.nested.block.1",
                                 "x-surface": {
-                                    "locked": false,
                                     "dependsOn": [
                                         "kind"
-                                    ],
-                                    "declared": true
+                                    ]
                                 }
                             },
                             "components": {
@@ -1865,12 +1639,10 @@
                                     "$ref": "#/$defs/component.nested.block.1"
                                 },
                                 "x-surface": {
-                                    "locked": false,
                                     "dependsOn": [
                                         "kind"
                                     ],
-                                    "list": true,
-                                    "declared": true
+                                    "collection": true
                                 }
                             }
                         },
@@ -1949,11 +1721,7 @@
                             "content": {
                                 "title": "Content",
                                 "description": "The components the section holds.",
-                                "$ref": "#/$defs/component.slot.data_surface_examples:section.content.1",
-                                "x-surface": {
-                                    "locked": false,
-                                    "dependsOn": []
-                                }
+                                "$ref": "#/$defs/component.slot.data_surface_examples:section.content.1"
                             }
                         },
                         "additionalProperties": false
@@ -1988,11 +1756,7 @@
                                     {
                                         "const": null
                                     }
-                                ],
-                                "x-surface": {
-                                    "locked": false,
-                                    "dependsOn": []
-                                }
+                                ]
                             },
                             "props": {
                                 "title": "Props",
@@ -2014,7 +1778,6 @@
                                     }
                                 ],
                                 "x-surface": {
-                                    "locked": false,
                                     "dependsOn": [
                                         "component"
                                     ],
@@ -2047,7 +1810,6 @@
                                     }
                                 ],
                                 "x-surface": {
-                                    "locked": false,
                                     "dependsOn": [
                                         "component"
                                     ],
@@ -2238,20 +2000,12 @@
                             "primary": {
                                 "title": "Whether primary tabs are shown",
                                 "type": "boolean",
-                                "default": true,
-                                "x-surface": {
-                                    "locked": false,
-                                    "dependsOn": []
-                                }
+                                "default": true
                             },
                             "secondary": {
                                 "title": "Whether secondary tabs are shown",
                                 "type": "boolean",
-                                "default": true,
-                                "x-surface": {
-                                    "locked": false,
-                                    "dependsOn": []
-                                }
+                                "default": true
                             }
                         },
                         "additionalProperties": false
@@ -2269,29 +2023,17 @@
                             "use_site_logo": {
                                 "title": "Use site logo",
                                 "type": "boolean",
-                                "default": true,
-                                "x-surface": {
-                                    "locked": false,
-                                    "dependsOn": []
-                                }
+                                "default": true
                             },
                             "use_site_name": {
                                 "title": "Use site name",
                                 "type": "boolean",
-                                "default": true,
-                                "x-surface": {
-                                    "locked": false,
-                                    "dependsOn": []
-                                }
+                                "default": true
                             },
                             "use_site_slogan": {
                                 "title": "Use site slogan",
                                 "type": "boolean",
-                                "default": true,
-                                "x-surface": {
-                                    "locked": false,
-                                    "dependsOn": []
-                                }
+                                "default": true
                             }
                         },
                         "additionalProperties": false
@@ -2341,17 +2083,9 @@
                                 "type": "array",
                                 "items": {
                                     "title": "String",
-                                    "type": "string",
-                                    "x-surface": {
-                                        "locked": false,
-                                        "dependsOn": []
-                                    }
+                                    "type": "string"
                                 },
-                                "default": [],
-                                "x-surface": {
-                                    "locked": false,
-                                    "dependsOn": []
-                                }
+                                "default": []
                             },
                             "context_mapping": {
                                 "title": "Context assignments",
@@ -2370,18 +2104,10 @@
                                                 "title": "@node.node_route_context:node"
                                             }
                                         ],
-                                        "default": "@node.node_route_context:node",
-                                        "x-surface": {
-                                            "locked": false,
-                                            "dependsOn": []
-                                        }
+                                        "default": "@node.node_route_context:node"
                                     }
                                 },
-                                "additionalProperties": false,
-                                "x-surface": {
-                                    "locked": false,
-                                    "dependsOn": []
-                                }
+                                "additionalProperties": false
                             }
                         },
                         "additionalProperties": false
@@ -2393,11 +2119,7 @@
                             "pages": {
                                 "title": "String",
                                 "type": "string",
-                                "default": "",
-                                "x-surface": {
-                                    "locked": false,
-                                    "dependsOn": []
-                                }
+                                "default": ""
                             }
                         },
                         "additionalProperties": false
@@ -2425,17 +2147,9 @@
                                             "const": 404,
                                             "title": "404"
                                         }
-                                    ],
-                                    "x-surface": {
-                                        "locked": false,
-                                        "dependsOn": []
-                                    }
+                                    ]
                                 },
-                                "default": [],
-                                "x-surface": {
-                                    "locked": false,
-                                    "dependsOn": []
-                                }
+                                "default": []
                             }
                         },
                         "additionalProperties": false
@@ -2449,17 +2163,9 @@
                                 "type": "array",
                                 "items": {
                                     "title": "String",
-                                    "type": "string",
-                                    "x-surface": {
-                                        "locked": false,
-                                        "dependsOn": []
-                                    }
+                                    "type": "string"
                                 },
-                                "default": [],
-                                "x-surface": {
-                                    "locked": false,
-                                    "dependsOn": []
-                                }
+                                "default": []
                             },
                             "context_mapping": {
                                 "title": "Context assignments",
@@ -2478,18 +2184,10 @@
                                                 "title": "@user.current_user_context:current_user"
                                             }
                                         ],
-                                        "default": "@user.current_user_context:current_user",
-                                        "x-surface": {
-                                            "locked": false,
-                                            "dependsOn": []
-                                        }
+                                        "default": "@user.current_user_context:current_user"
                                     }
                                 },
-                                "additionalProperties": false,
-                                "x-surface": {
-                                    "locked": false,
-                                    "dependsOn": []
-                                }
+                                "additionalProperties": false
                             }
                         },
                         "additionalProperties": false
@@ -2519,11 +2217,7 @@
                                         "const": "user_role",
                                         "title": "User Role"
                                     }
-                                ],
-                                "x-surface": {
-                                    "locked": false,
-                                    "dependsOn": []
-                                }
+                                ]
                             },
                             "negate": {
                                 "title": "Negate",
@@ -2532,11 +2226,7 @@
                                     "boolean",
                                     "null"
                                 ],
-                                "default": false,
-                                "x-surface": {
-                                    "locked": false,
-                                    "dependsOn": []
-                                }
+                                "default": false
                             },
                             "settings": {
                                 "title": "Settings",
@@ -2559,7 +2249,6 @@
                                     }
                                 ],
                                 "x-surface": {
-                                    "locked": false,
                                     "dependsOn": [
                                         "id"
                                     ],

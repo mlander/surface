@@ -66,7 +66,7 @@ class OpenApiEndpointTest extends BrowserTestBase {
     $anonymous = $this->fetch('surface-api/openapi.json');
     $this->assertSame(200, $anonymous->getStatusCode());
     $this->assertStringStartsWith('application/json', $anonymous->getHeaderLine('Content-Type'));
-    $this->assertSame('3', $anonymous->getHeaderLine('Contract-Version'));
+    $this->assertSame('4', $anonymous->getHeaderLine('Contract-Version'));
     $document = Json::decode((string) $anonymous->getBody());
     $this->assertSame('3.1.0', $document['openapi']);
     $this->assertSame(['get', 'patch'], array_keys($document['paths']['/surface-api/first.newsletter']));
@@ -82,7 +82,7 @@ class OpenApiEndpointTest extends BrowserTestBase {
     $yaml = $this->fetch('surface-api/openapi.yaml');
     $this->assertSame(200, $yaml->getStatusCode());
     $this->assertStringStartsWith('application/yaml', $yaml->getHeaderLine('Content-Type'));
-    $this->assertSame('3', $yaml->getHeaderLine('Contract-Version'));
+    $this->assertSame('4', $yaml->getHeaderLine('Contract-Version'));
     $parsed = Yaml::decode((string) $yaml->getBody());
     $this->assertSame('3.1.0', $parsed['openapi']);
     $this->assertSame(array_keys($document['paths']), array_keys($parsed['paths']));

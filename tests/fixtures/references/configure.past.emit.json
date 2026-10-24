@@ -7,7 +7,7 @@
         "title": "Configure the sponsorship",
         "description": "Sets the sponsor's venue, contact and announcement, and what the sponsor is featured beside, linked to and credited on.",
         "x-surface": {
-            "contract": 3,
+            "contract": 4,
             "operation": {
                 "id": "configure",
                 "label": "Configure the sponsorship",
@@ -28,10 +28,6 @@
                 "default": "riverside",
                 "x-surface": {
                     "widget": "autocomplete",
-                    "locked": false,
-                    "dependsOn": [],
-                    "refined": false,
-                    "stale": false,
                     "reference": {
                         "entityType": "event_venue"
                     },
@@ -52,10 +48,6 @@
                 ],
                 "x-surface": {
                     "widget": "autocomplete",
-                    "locked": false,
-                    "dependsOn": [],
-                    "refined": false,
-                    "stale": false,
                     "reference": {
                         "entityType": "user"
                     },
@@ -76,10 +68,6 @@
                 ],
                 "x-surface": {
                     "widget": "autocomplete",
-                    "locked": false,
-                    "dependsOn": [],
-                    "refined": false,
-                    "stale": false,
                     "reference": {
                         "entityType": "node",
                         "bundles": [
@@ -110,10 +98,6 @@
                 ],
                 "x-surface": {
                     "widget": "fieldset",
-                    "locked": false,
-                    "dependsOn": [],
-                    "refined": false,
-                    "stale": false,
                     "within": {
                         "/allOf/1": {
                             "doesNotApply": {
@@ -141,10 +125,6 @@
                 ],
                 "x-surface": {
                     "widget": "fieldset",
-                    "locked": false,
-                    "dependsOn": [],
-                    "refined": false,
-                    "stale": false,
                     "within": {
                         "/allOf/1": {
                             "doesNotApply": {
@@ -172,10 +152,6 @@
                 ],
                 "x-surface": {
                     "widget": "fieldset",
-                    "locked": false,
-                    "dependsOn": [],
-                    "refined": false,
-                    "stale": false,
                     "within": {
                         "/allOf/1": {
                             "doesNotApply": {
@@ -218,10 +194,6 @@
                         ],
                         "x-surface": {
                             "widget": "select",
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false,
                             "emptyOption": {
                                 "show": true,
                                 "label": "- None -"
@@ -237,17 +209,13 @@
                         ],
                         "x-surface": {
                             "widget": "autocomplete",
-                            "locked": false,
                             "dependsOn": [
                                 "entity_type"
                             ],
-                            "refined": false,
-                            "stale": false,
                             "reference": {
                                 "by": "entity_type"
                             },
-                            "enumerated": true,
-                            "declared": true
+                            "enumerated": true
                         }
                     }
                 },
@@ -337,10 +305,6 @@
                         ],
                         "x-surface": {
                             "widget": "select",
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false,
                             "emptyOption": {
                                 "show": true,
                                 "label": "- None -"
@@ -356,17 +320,13 @@
                         ],
                         "x-surface": {
                             "widget": "autocomplete",
-                            "locked": false,
                             "dependsOn": [
                                 "entity_type"
                             ],
-                            "refined": false,
-                            "stale": false,
                             "reference": {
                                 "by": "entity_type"
                             },
-                            "enumerated": true,
-                            "declared": true
+                            "enumerated": true
                         }
                     }
                 },
@@ -456,10 +416,6 @@
                         ],
                         "x-surface": {
                             "widget": "select",
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false,
                             "emptyOption": {
                                 "show": true,
                                 "label": "- None -"
@@ -475,17 +431,13 @@
                         ],
                         "x-surface": {
                             "widget": "autocomplete",
-                            "locked": false,
                             "dependsOn": [
                                 "entity_type"
                             ],
-                            "refined": false,
-                            "stale": false,
                             "reference": {
                                 "by": "entity_type"
                             },
-                            "enumerated": true,
-                            "declared": true
+                            "enumerated": true
                         }
                     }
                 },

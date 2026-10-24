@@ -5,7 +5,7 @@
         "title": "Configure registration (step 3)",
         "description": "Sets the event registration: its title, whether it is open, the venue and room, the capacity, the pricing with its ticket, and the contact.",
         "x-surface": {
-            "contract": 3,
+            "contract": 4,
             "operation": {
                 "id": "configure",
                 "label": "Configure registration (step 3)",
@@ -23,9 +23,7 @@
                 "title": "Event title",
                 "type": "string",
                 "x-surface": {
-                    "widget": "text",
-                    "locked": false,
-                    "dependsOn": []
+                    "widget": "text"
                 }
             },
             "open": {
@@ -36,9 +34,7 @@
                 ],
                 "default": true,
                 "x-surface": {
-                    "widget": "checkbox",
-                    "locked": false,
-                    "dependsOn": []
+                    "widget": "checkbox"
                 }
             },
             "venue": {
@@ -59,9 +55,7 @@
                     }
                 ],
                 "x-surface": {
-                    "widget": "select",
-                    "locked": false,
-                    "dependsOn": []
+                    "widget": "select"
                 }
             },
             "room": {
@@ -95,7 +89,6 @@
                 ],
                 "x-surface": {
                     "widget": "select",
-                    "locked": false,
                     "dependsOn": [
                         "venue"
                     ],
@@ -112,7 +105,6 @@
                 "default": 50,
                 "x-surface": {
                     "widget": "number",
-                    "locked": false,
                     "dependsOn": [
                         "room"
                     ],
@@ -134,9 +126,7 @@
                 ],
                 "default": "free",
                 "x-surface": {
-                    "widget": "select",
-                    "locked": false,
-                    "dependsOn": []
+                    "widget": "select"
                 }
             },
             "ticket": {
@@ -154,7 +144,6 @@
                 ],
                 "x-surface": {
                     "widget": "variants",
-                    "locked": false,
                     "dependsOn": [
                         "pricing"
                     ],
@@ -169,9 +158,7 @@
                 "title": "Contact",
                 "$ref": "#/$defs/registration.contact",
                 "x-surface": {
-                    "widget": "fieldset",
-                    "locked": false,
-                    "dependsOn": []
+                    "widget": "fieldset"
                 }
             }
         },
@@ -465,9 +452,7 @@
                             "null"
                         ],
                         "x-surface": {
-                            "widget": "text",
-                            "locked": false,
-                            "dependsOn": []
+                            "widget": "text"
                         }
                     }
                 },
@@ -482,9 +467,7 @@
                         "type": "number",
                         "minimum": 0.01,
                         "x-surface": {
-                            "widget": "number",
-                            "locked": false,
-                            "dependsOn": []
+                            "widget": "number"
                         }
                     },
                     "currency": {
@@ -506,9 +489,7 @@
                         ],
                         "default": "EUR",
                         "x-surface": {
-                            "widget": "select",
-                            "locked": false,
-                            "dependsOn": []
+                            "widget": "select"
                         }
                     }
                 },
@@ -527,9 +508,7 @@
                         "type": "string",
                         "format": "idn-email",
                         "x-surface": {
-                            "widget": "email",
-                            "locked": false,
-                            "dependsOn": []
+                            "widget": "email"
                         }
                     },
                     "phone": {
@@ -539,9 +518,7 @@
                             "null"
                         ],
                         "x-surface": {
-                            "widget": "text",
-                            "locked": false,
-                            "dependsOn": []
+                            "widget": "text"
                         }
                     }
                 },
@@ -562,7 +539,7 @@
             "title": "Configure registration (step 3)",
             "description": "Sets the event registration: its title, whether it is open, the venue and room, the capacity, the pricing with its ticket, and the contact.",
             "x-surface": {
-                "contract": 3,
+                "contract": 4,
                 "operation": {
                     "id": "configure",
                     "label": "Configure registration (step 3)",
@@ -580,11 +557,7 @@
                     "title": "Event title",
                     "type": "string",
                     "x-surface": {
-                        "widget": "text",
-                        "locked": false,
-                        "dependsOn": [],
-                        "refined": false,
-                        "stale": false
+                        "widget": "text"
                     }
                 },
                 "open": {
@@ -595,11 +568,7 @@
                     ],
                     "default": true,
                     "x-surface": {
-                        "widget": "checkbox",
-                        "locked": false,
-                        "dependsOn": [],
-                        "refined": false,
-                        "stale": false
+                        "widget": "checkbox"
                     }
                 },
                 "venue": {
@@ -621,10 +590,6 @@
                     ],
                     "x-surface": {
                         "widget": "select",
-                        "locked": false,
-                        "dependsOn": [],
-                        "refined": false,
-                        "stale": false,
                         "emptyOption": {
                             "show": false,
                             "label": "- Select -"
@@ -646,12 +611,10 @@
                     ],
                     "x-surface": {
                         "widget": "select",
-                        "locked": false,
                         "dependsOn": [
                             "venue"
                         ],
                         "refined": true,
-                        "stale": false,
                         "emptyOption": {
                             "show": false,
                             "label": "- Select -"
@@ -670,12 +633,10 @@
                     "default": 50,
                     "x-surface": {
                         "widget": "number",
-                        "locked": false,
                         "dependsOn": [
                             "room"
                         ],
-                        "refined": true,
-                        "stale": false
+                        "refined": true
                     }
                 },
                 "pricing": {
@@ -694,10 +655,6 @@
                     "default": "free",
                     "x-surface": {
                         "widget": "select",
-                        "locked": false,
-                        "dependsOn": [],
-                        "refined": false,
-                        "stale": false,
                         "emptyOption": {
                             "show": false,
                             "label": "- Select -"
@@ -719,12 +676,10 @@
                     ],
                     "x-surface": {
                         "widget": "variants",
-                        "locked": false,
                         "dependsOn": [
                             "pricing"
                         ],
                         "refined": true,
-                        "stale": false,
                         "by": "pricing",
                         "variants": {
                             "free": "#/$defs/registration.step3.ticket.free",
@@ -737,11 +692,7 @@
                     "title": "Contact",
                     "$ref": "#/$defs/registration.contact",
                     "x-surface": {
-                        "widget": "fieldset",
-                        "locked": false,
-                        "dependsOn": [],
-                        "refined": false,
-                        "stale": false
+                        "widget": "fieldset"
                     }
                 }
             },
@@ -807,11 +758,7 @@
                                 "null"
                             ],
                             "x-surface": {
-                                "widget": "text",
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false
+                                "widget": "text"
                             }
                         }
                     },
@@ -826,11 +773,7 @@
                             "type": "number",
                             "minimum": 0.01,
                             "x-surface": {
-                                "widget": "number",
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false
+                                "widget": "number"
                             }
                         },
                         "currency": {
@@ -853,10 +796,6 @@
                             "default": "EUR",
                             "x-surface": {
                                 "widget": "select",
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false,
                                 "emptyOption": {
                                     "show": false,
                                     "label": "- Select -"
@@ -879,11 +818,7 @@
                             "type": "string",
                             "format": "idn-email",
                             "x-surface": {
-                                "widget": "email",
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false
+                                "widget": "email"
                             }
                         },
                         "phone": {
@@ -893,11 +828,7 @@
                                 "null"
                             ],
                             "x-surface": {
-                                "widget": "text",
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false
+                                "widget": "text"
                             }
                         }
                     },
@@ -947,7 +878,7 @@
                     "title": "Configure registration (step 3)",
                     "description": "Sets the event registration: its title, whether it is open, the venue and room, the capacity, the pricing with its ticket, and the contact.",
                     "x-surface": {
-                        "contract": 3,
+                        "contract": 4,
                         "operation": {
                             "id": "configure",
                             "label": "Configure registration (step 3)",
@@ -965,11 +896,7 @@
                             "title": "Event title",
                             "type": "string",
                             "x-surface": {
-                                "widget": "text",
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false
+                                "widget": "text"
                             }
                         },
                         "open": {
@@ -980,11 +907,7 @@
                             ],
                             "default": true,
                             "x-surface": {
-                                "widget": "checkbox",
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false
+                                "widget": "checkbox"
                             }
                         },
                         "venue": {
@@ -1006,10 +929,6 @@
                             ],
                             "x-surface": {
                                 "widget": "select",
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false,
                                 "emptyOption": {
                                     "show": false,
                                     "label": "- Select -"
@@ -1031,12 +950,10 @@
                             ],
                             "x-surface": {
                                 "widget": "select",
-                                "locked": false,
                                 "dependsOn": [
                                     "venue"
                                 ],
                                 "refined": true,
-                                "stale": false,
                                 "emptyOption": {
                                     "show": false,
                                     "label": "- Select -"
@@ -1055,12 +972,10 @@
                             "default": 50,
                             "x-surface": {
                                 "widget": "number",
-                                "locked": false,
                                 "dependsOn": [
                                     "room"
                                 ],
-                                "refined": true,
-                                "stale": false
+                                "refined": true
                             }
                         },
                         "pricing": {
@@ -1079,10 +994,6 @@
                             "default": "free",
                             "x-surface": {
                                 "widget": "select",
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false,
                                 "emptyOption": {
                                     "show": false,
                                     "label": "- Select -"
@@ -1104,12 +1015,10 @@
                             ],
                             "x-surface": {
                                 "widget": "variants",
-                                "locked": false,
                                 "dependsOn": [
                                     "pricing"
                                 ],
                                 "refined": true,
-                                "stale": false,
                                 "by": "pricing",
                                 "variants": {
                                     "free": "#/$defs/registration.step3.ticket.free",
@@ -1122,11 +1031,7 @@
                             "title": "Contact",
                             "$ref": "#/$defs/registration.contact",
                             "x-surface": {
-                                "widget": "fieldset",
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false
+                                "widget": "fieldset"
                             }
                         }
                     },
@@ -1192,11 +1097,7 @@
                                         "null"
                                     ],
                                     "x-surface": {
-                                        "widget": "text",
-                                        "locked": false,
-                                        "dependsOn": [],
-                                        "refined": false,
-                                        "stale": false
+                                        "widget": "text"
                                     }
                                 }
                             },
@@ -1211,11 +1112,7 @@
                                     "type": "number",
                                     "minimum": 0.01,
                                     "x-surface": {
-                                        "widget": "number",
-                                        "locked": false,
-                                        "dependsOn": [],
-                                        "refined": false,
-                                        "stale": false
+                                        "widget": "number"
                                     }
                                 },
                                 "currency": {
@@ -1238,10 +1135,6 @@
                                     "default": "EUR",
                                     "x-surface": {
                                         "widget": "select",
-                                        "locked": false,
-                                        "dependsOn": [],
-                                        "refined": false,
-                                        "stale": false,
                                         "emptyOption": {
                                             "show": false,
                                             "label": "- Select -"
@@ -1264,11 +1157,7 @@
                                     "type": "string",
                                     "format": "idn-email",
                                     "x-surface": {
-                                        "widget": "email",
-                                        "locked": false,
-                                        "dependsOn": [],
-                                        "refined": false,
-                                        "stale": false
+                                        "widget": "email"
                                     }
                                 },
                                 "phone": {
@@ -1278,11 +1167,7 @@
                                         "null"
                                     ],
                                     "x-surface": {
-                                        "widget": "text",
-                                        "locked": false,
-                                        "dependsOn": [],
-                                        "refined": false,
-                                        "stale": false
+                                        "widget": "text"
                                     }
                                 }
                             },
@@ -1344,7 +1229,7 @@
                     "title": "Configure registration (step 3)",
                     "description": "Sets the event registration: its title, whether it is open, the venue and room, the capacity, the pricing with its ticket, and the contact.",
                     "x-surface": {
-                        "contract": 3,
+                        "contract": 4,
                         "operation": {
                             "id": "configure",
                             "label": "Configure registration (step 3)",
@@ -1362,11 +1247,7 @@
                             "title": "Event title",
                             "type": "string",
                             "x-surface": {
-                                "widget": "text",
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false
+                                "widget": "text"
                             }
                         },
                         "open": {
@@ -1377,11 +1258,7 @@
                             ],
                             "default": true,
                             "x-surface": {
-                                "widget": "checkbox",
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false
+                                "widget": "checkbox"
                             }
                         },
                         "venue": {
@@ -1403,10 +1280,6 @@
                             ],
                             "x-surface": {
                                 "widget": "select",
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false,
                                 "emptyOption": {
                                     "show": false,
                                     "label": "- Select -"
@@ -1428,12 +1301,10 @@
                             ],
                             "x-surface": {
                                 "widget": "select",
-                                "locked": false,
                                 "dependsOn": [
                                     "venue"
                                 ],
                                 "refined": true,
-                                "stale": false,
                                 "emptyOption": {
                                     "show": false,
                                     "label": "- Select -"
@@ -1452,12 +1323,10 @@
                             "default": 50,
                             "x-surface": {
                                 "widget": "number",
-                                "locked": false,
                                 "dependsOn": [
                                     "room"
                                 ],
-                                "refined": true,
-                                "stale": false
+                                "refined": true
                             }
                         },
                         "pricing": {
@@ -1476,10 +1345,6 @@
                             "default": "free",
                             "x-surface": {
                                 "widget": "select",
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false,
                                 "emptyOption": {
                                     "show": false,
                                     "label": "- Select -"
@@ -1501,12 +1366,10 @@
                             ],
                             "x-surface": {
                                 "widget": "variants",
-                                "locked": false,
                                 "dependsOn": [
                                     "pricing"
                                 ],
                                 "refined": true,
-                                "stale": false,
                                 "by": "pricing",
                                 "variants": {
                                     "free": "#/$defs/registration.step3.ticket.free",
@@ -1519,11 +1382,7 @@
                             "title": "Contact",
                             "$ref": "#/$defs/registration.contact",
                             "x-surface": {
-                                "widget": "fieldset",
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false
+                                "widget": "fieldset"
                             }
                         }
                     },
@@ -1589,11 +1448,7 @@
                                         "null"
                                     ],
                                     "x-surface": {
-                                        "widget": "text",
-                                        "locked": false,
-                                        "dependsOn": [],
-                                        "refined": false,
-                                        "stale": false
+                                        "widget": "text"
                                     }
                                 }
                             },
@@ -1608,11 +1463,7 @@
                                     "type": "number",
                                     "minimum": 0.01,
                                     "x-surface": {
-                                        "widget": "number",
-                                        "locked": false,
-                                        "dependsOn": [],
-                                        "refined": false,
-                                        "stale": false
+                                        "widget": "number"
                                     }
                                 },
                                 "currency": {
@@ -1635,10 +1486,6 @@
                                     "default": "EUR",
                                     "x-surface": {
                                         "widget": "select",
-                                        "locked": false,
-                                        "dependsOn": [],
-                                        "refined": false,
-                                        "stale": false,
                                         "emptyOption": {
                                             "show": false,
                                             "label": "- Select -"
@@ -1661,11 +1508,7 @@
                                     "type": "string",
                                     "format": "idn-email",
                                     "x-surface": {
-                                        "widget": "email",
-                                        "locked": false,
-                                        "dependsOn": [],
-                                        "refined": false,
-                                        "stale": false
+                                        "widget": "email"
                                     }
                                 },
                                 "phone": {
@@ -1675,11 +1518,7 @@
                                         "null"
                                     ],
                                     "x-surface": {
-                                        "widget": "text",
-                                        "locked": false,
-                                        "dependsOn": [],
-                                        "refined": false,
-                                        "stale": false
+                                        "widget": "text"
                                     }
                                 }
                             },
@@ -1732,7 +1571,7 @@
                     "title": "Configure registration (step 3)",
                     "description": "Sets the event registration: its title, whether it is open, the venue and room, the capacity, the pricing with its ticket, and the contact.",
                     "x-surface": {
-                        "contract": 3,
+                        "contract": 4,
                         "operation": {
                             "id": "configure",
                             "label": "Configure registration (step 3)",
@@ -1750,11 +1589,7 @@
                             "title": "Event title",
                             "type": "string",
                             "x-surface": {
-                                "widget": "text",
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false
+                                "widget": "text"
                             }
                         },
                         "open": {
@@ -1765,11 +1600,7 @@
                             ],
                             "default": true,
                             "x-surface": {
-                                "widget": "checkbox",
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false
+                                "widget": "checkbox"
                             }
                         },
                         "venue": {
@@ -1791,10 +1622,6 @@
                             ],
                             "x-surface": {
                                 "widget": "select",
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false,
                                 "emptyOption": {
                                     "show": false,
                                     "label": "- Select -"
@@ -1816,12 +1643,10 @@
                             ],
                             "x-surface": {
                                 "widget": "select",
-                                "locked": false,
                                 "dependsOn": [
                                     "venue"
                                 ],
                                 "refined": true,
-                                "stale": false,
                                 "emptyOption": {
                                     "show": false,
                                     "label": "- Select -"
@@ -1840,12 +1665,10 @@
                             "default": 50,
                             "x-surface": {
                                 "widget": "number",
-                                "locked": false,
                                 "dependsOn": [
                                     "room"
                                 ],
-                                "refined": true,
-                                "stale": false
+                                "refined": true
                             }
                         },
                         "pricing": {
@@ -1864,10 +1687,6 @@
                             "default": "free",
                             "x-surface": {
                                 "widget": "select",
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false,
                                 "emptyOption": {
                                     "show": false,
                                     "label": "- Select -"
@@ -1889,12 +1708,10 @@
                             ],
                             "x-surface": {
                                 "widget": "variants",
-                                "locked": false,
                                 "dependsOn": [
                                     "pricing"
                                 ],
                                 "refined": true,
-                                "stale": false,
                                 "by": "pricing",
                                 "variants": {
                                     "free": "#/$defs/registration.step3.ticket.free",
@@ -1907,11 +1724,7 @@
                             "title": "Contact",
                             "$ref": "#/$defs/registration.contact",
                             "x-surface": {
-                                "widget": "fieldset",
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false
+                                "widget": "fieldset"
                             }
                         }
                     },
@@ -1977,11 +1790,7 @@
                                         "null"
                                     ],
                                     "x-surface": {
-                                        "widget": "text",
-                                        "locked": false,
-                                        "dependsOn": [],
-                                        "refined": false,
-                                        "stale": false
+                                        "widget": "text"
                                     }
                                 }
                             },
@@ -1996,11 +1805,7 @@
                                     "type": "number",
                                     "minimum": 0.01,
                                     "x-surface": {
-                                        "widget": "number",
-                                        "locked": false,
-                                        "dependsOn": [],
-                                        "refined": false,
-                                        "stale": false
+                                        "widget": "number"
                                     }
                                 },
                                 "currency": {
@@ -2023,10 +1828,6 @@
                                     "default": "EUR",
                                     "x-surface": {
                                         "widget": "select",
-                                        "locked": false,
-                                        "dependsOn": [],
-                                        "refined": false,
-                                        "stale": false,
                                         "emptyOption": {
                                             "show": false,
                                             "label": "- Select -"
@@ -2049,11 +1850,7 @@
                                     "type": "string",
                                     "format": "idn-email",
                                     "x-surface": {
-                                        "widget": "email",
-                                        "locked": false,
-                                        "dependsOn": [],
-                                        "refined": false,
-                                        "stale": false
+                                        "widget": "email"
                                     }
                                 },
                                 "phone": {
@@ -2063,11 +1860,7 @@
                                         "null"
                                     ],
                                     "x-surface": {
-                                        "widget": "text",
-                                        "locked": false,
-                                        "dependsOn": [],
-                                        "refined": false,
-                                        "stale": false
+                                        "widget": "text"
                                     }
                                 }
                             },
@@ -2121,7 +1914,7 @@
                     "title": "Configure registration (step 3)",
                     "description": "Sets the event registration: its title, whether it is open, the venue and room, the capacity, the pricing with its ticket, and the contact.",
                     "x-surface": {
-                        "contract": 3,
+                        "contract": 4,
                         "operation": {
                             "id": "configure",
                             "label": "Configure registration (step 3)",
@@ -2139,11 +1932,7 @@
                             "title": "Event title",
                             "type": "string",
                             "x-surface": {
-                                "widget": "text",
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false
+                                "widget": "text"
                             }
                         },
                         "open": {
@@ -2154,11 +1943,7 @@
                             ],
                             "default": true,
                             "x-surface": {
-                                "widget": "checkbox",
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false
+                                "widget": "checkbox"
                             }
                         },
                         "venue": {
@@ -2180,10 +1965,6 @@
                             ],
                             "x-surface": {
                                 "widget": "select",
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false,
                                 "emptyOption": {
                                     "show": false,
                                     "label": "- Select -"
@@ -2205,16 +1986,15 @@
                             ],
                             "x-surface": {
                                 "widget": "select",
-                                "locked": false,
                                 "dependsOn": [
                                     "venue"
                                 ],
                                 "refined": true,
-                                "stale": true,
                                 "emptyOption": {
                                     "show": true,
                                     "label": "- Select -"
-                                }
+                                },
+                                "stale": true
                             }
                         },
                         "capacity": {
@@ -2227,12 +2007,9 @@
                             "default": 50,
                             "x-surface": {
                                 "widget": "number",
-                                "locked": false,
                                 "dependsOn": [
                                     "room"
                                 ],
-                                "refined": false,
-                                "stale": false,
                                 "enumerated": true
                             }
                         },
@@ -2252,10 +2029,6 @@
                             "default": "free",
                             "x-surface": {
                                 "widget": "select",
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false,
                                 "emptyOption": {
                                     "show": false,
                                     "label": "- Select -"
@@ -2277,12 +2050,10 @@
                             ],
                             "x-surface": {
                                 "widget": "variants",
-                                "locked": false,
                                 "dependsOn": [
                                     "pricing"
                                 ],
                                 "refined": true,
-                                "stale": false,
                                 "by": "pricing",
                                 "variants": {
                                     "free": "#/$defs/registration.step3.ticket.free",
@@ -2295,11 +2066,7 @@
                             "title": "Contact",
                             "$ref": "#/$defs/registration.contact",
                             "x-surface": {
-                                "widget": "fieldset",
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false
+                                "widget": "fieldset"
                             }
                         }
                     },
@@ -2413,11 +2180,7 @@
                                         "null"
                                     ],
                                     "x-surface": {
-                                        "widget": "text",
-                                        "locked": false,
-                                        "dependsOn": [],
-                                        "refined": false,
-                                        "stale": false
+                                        "widget": "text"
                                     }
                                 }
                             },
@@ -2432,11 +2195,7 @@
                                     "type": "number",
                                     "minimum": 0.01,
                                     "x-surface": {
-                                        "widget": "number",
-                                        "locked": false,
-                                        "dependsOn": [],
-                                        "refined": false,
-                                        "stale": false
+                                        "widget": "number"
                                     }
                                 },
                                 "currency": {
@@ -2459,10 +2218,6 @@
                                     "default": "EUR",
                                     "x-surface": {
                                         "widget": "select",
-                                        "locked": false,
-                                        "dependsOn": [],
-                                        "refined": false,
-                                        "stale": false,
                                         "emptyOption": {
                                             "show": false,
                                             "label": "- Select -"
@@ -2485,11 +2240,7 @@
                                     "type": "string",
                                     "format": "idn-email",
                                     "x-surface": {
-                                        "widget": "email",
-                                        "locked": false,
-                                        "dependsOn": [],
-                                        "refined": false,
-                                        "stale": false
+                                        "widget": "email"
                                     }
                                 },
                                 "phone": {
@@ -2499,11 +2250,7 @@
                                         "null"
                                     ],
                                     "x-surface": {
-                                        "widget": "text",
-                                        "locked": false,
-                                        "dependsOn": [],
-                                        "refined": false,
-                                        "stale": false
+                                        "widget": "text"
                                     }
                                 }
                             },
@@ -2572,7 +2319,7 @@
                     "title": "Configure registration (step 3)",
                     "description": "Sets the event registration: its title, whether it is open, the venue and room, the capacity, the pricing with its ticket, and the contact.",
                     "x-surface": {
-                        "contract": 3,
+                        "contract": 4,
                         "operation": {
                             "id": "configure",
                             "label": "Configure registration (step 3)",
@@ -2590,11 +2337,7 @@
                             "title": "Event title",
                             "type": "string",
                             "x-surface": {
-                                "widget": "text",
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false
+                                "widget": "text"
                             }
                         },
                         "open": {
@@ -2605,11 +2348,7 @@
                             ],
                             "default": true,
                             "x-surface": {
-                                "widget": "checkbox",
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false
+                                "widget": "checkbox"
                             }
                         },
                         "venue": {
@@ -2631,10 +2370,6 @@
                             ],
                             "x-surface": {
                                 "widget": "select",
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false,
                                 "emptyOption": {
                                     "show": false,
                                     "label": "- Select -"
@@ -2656,16 +2391,15 @@
                             ],
                             "x-surface": {
                                 "widget": "select",
-                                "locked": false,
                                 "dependsOn": [
                                     "venue"
                                 ],
                                 "refined": true,
-                                "stale": true,
                                 "emptyOption": {
                                     "show": true,
                                     "label": "- Select -"
-                                }
+                                },
+                                "stale": true
                             }
                         },
                         "capacity": {
@@ -2678,12 +2412,9 @@
                             "default": 50,
                             "x-surface": {
                                 "widget": "number",
-                                "locked": false,
                                 "dependsOn": [
                                     "room"
                                 ],
-                                "refined": false,
-                                "stale": false,
                                 "enumerated": true
                             }
                         },
@@ -2703,10 +2434,6 @@
                             "default": "free",
                             "x-surface": {
                                 "widget": "select",
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false,
                                 "emptyOption": {
                                     "show": false,
                                     "label": "- Select -"
@@ -2728,12 +2455,10 @@
                             ],
                             "x-surface": {
                                 "widget": "variants",
-                                "locked": false,
                                 "dependsOn": [
                                     "pricing"
                                 ],
                                 "refined": true,
-                                "stale": false,
                                 "by": "pricing",
                                 "variants": {
                                     "free": "#/$defs/registration.step3.ticket.free",
@@ -2746,11 +2471,7 @@
                             "title": "Contact",
                             "$ref": "#/$defs/registration.contact",
                             "x-surface": {
-                                "widget": "fieldset",
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false
+                                "widget": "fieldset"
                             }
                         }
                     },
@@ -2864,11 +2585,7 @@
                                         "null"
                                     ],
                                     "x-surface": {
-                                        "widget": "text",
-                                        "locked": false,
-                                        "dependsOn": [],
-                                        "refined": false,
-                                        "stale": false
+                                        "widget": "text"
                                     }
                                 }
                             },
@@ -2883,11 +2600,7 @@
                                     "type": "number",
                                     "minimum": 0.01,
                                     "x-surface": {
-                                        "widget": "number",
-                                        "locked": false,
-                                        "dependsOn": [],
-                                        "refined": false,
-                                        "stale": false
+                                        "widget": "number"
                                     }
                                 },
                                 "currency": {
@@ -2910,10 +2623,6 @@
                                     "default": "EUR",
                                     "x-surface": {
                                         "widget": "select",
-                                        "locked": false,
-                                        "dependsOn": [],
-                                        "refined": false,
-                                        "stale": false,
                                         "emptyOption": {
                                             "show": false,
                                             "label": "- Select -"
@@ -2936,11 +2645,7 @@
                                     "type": "string",
                                     "format": "idn-email",
                                     "x-surface": {
-                                        "widget": "email",
-                                        "locked": false,
-                                        "dependsOn": [],
-                                        "refined": false,
-                                        "stale": false
+                                        "widget": "email"
                                     }
                                 },
                                 "phone": {
@@ -2950,11 +2655,7 @@
                                         "null"
                                     ],
                                     "x-surface": {
-                                        "widget": "text",
-                                        "locked": false,
-                                        "dependsOn": [],
-                                        "refined": false,
-                                        "stale": false
+                                        "widget": "text"
                                     }
                                 }
                             },
@@ -3017,7 +2718,7 @@
                     "title": "Configure registration (step 3)",
                     "description": "Sets the event registration: its title, whether it is open, the venue and room, the capacity, the pricing with its ticket, and the contact.",
                     "x-surface": {
-                        "contract": 3,
+                        "contract": 4,
                         "operation": {
                             "id": "configure",
                             "label": "Configure registration (step 3)",
@@ -3035,11 +2736,7 @@
                             "title": "Event title",
                             "type": "string",
                             "x-surface": {
-                                "widget": "text",
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false
+                                "widget": "text"
                             }
                         },
                         "open": {
@@ -3050,11 +2747,7 @@
                             ],
                             "default": true,
                             "x-surface": {
-                                "widget": "checkbox",
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false
+                                "widget": "checkbox"
                             }
                         },
                         "venue": {
@@ -3076,10 +2769,6 @@
                             ],
                             "x-surface": {
                                 "widget": "select",
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false,
                                 "emptyOption": {
                                     "show": false,
                                     "label": "- Select -"
@@ -3101,12 +2790,10 @@
                             ],
                             "x-surface": {
                                 "widget": "select",
-                                "locked": false,
                                 "dependsOn": [
                                     "venue"
                                 ],
                                 "refined": true,
-                                "stale": false,
                                 "emptyOption": {
                                     "show": false,
                                     "label": "- Select -"
@@ -3125,12 +2812,10 @@
                             "default": 50,
                             "x-surface": {
                                 "widget": "number",
-                                "locked": false,
                                 "dependsOn": [
                                     "room"
                                 ],
-                                "refined": true,
-                                "stale": false
+                                "refined": true
                             }
                         },
                         "pricing": {
@@ -3149,10 +2834,6 @@
                             "default": "free",
                             "x-surface": {
                                 "widget": "select",
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false,
                                 "emptyOption": {
                                     "show": false,
                                     "label": "- Select -"
@@ -3174,12 +2855,10 @@
                             ],
                             "x-surface": {
                                 "widget": "variants",
-                                "locked": false,
                                 "dependsOn": [
                                     "pricing"
                                 ],
                                 "refined": true,
-                                "stale": false,
                                 "by": "pricing",
                                 "variants": {
                                     "free": "#/$defs/registration.step3.ticket.free",
@@ -3192,11 +2871,7 @@
                             "title": "Contact",
                             "$ref": "#/$defs/registration.contact",
                             "x-surface": {
-                                "widget": "fieldset",
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false
+                                "widget": "fieldset"
                             }
                         }
                     },
@@ -3262,11 +2937,7 @@
                                         "null"
                                     ],
                                     "x-surface": {
-                                        "widget": "text",
-                                        "locked": false,
-                                        "dependsOn": [],
-                                        "refined": false,
-                                        "stale": false
+                                        "widget": "text"
                                     }
                                 }
                             },
@@ -3281,11 +2952,7 @@
                                     "type": "number",
                                     "minimum": 0.01,
                                     "x-surface": {
-                                        "widget": "number",
-                                        "locked": false,
-                                        "dependsOn": [],
-                                        "refined": false,
-                                        "stale": false
+                                        "widget": "number"
                                     }
                                 },
                                 "currency": {
@@ -3308,10 +2975,6 @@
                                     "default": "EUR",
                                     "x-surface": {
                                         "widget": "select",
-                                        "locked": false,
-                                        "dependsOn": [],
-                                        "refined": false,
-                                        "stale": false,
                                         "emptyOption": {
                                             "show": false,
                                             "label": "- Select -"
@@ -3334,11 +2997,7 @@
                                     "type": "string",
                                     "format": "idn-email",
                                     "x-surface": {
-                                        "widget": "email",
-                                        "locked": false,
-                                        "dependsOn": [],
-                                        "refined": false,
-                                        "stale": false
+                                        "widget": "email"
                                     }
                                 },
                                 "phone": {
@@ -3348,11 +3007,7 @@
                                         "null"
                                     ],
                                     "x-surface": {
-                                        "widget": "text",
-                                        "locked": false,
-                                        "dependsOn": [],
-                                        "refined": false,
-                                        "stale": false
+                                        "widget": "text"
                                     }
                                 }
                             },
@@ -3403,7 +3058,7 @@
                     "title": "Configure registration (step 3)",
                     "description": "Sets the event registration: its title, whether it is open, the venue and room, the capacity, the pricing with its ticket, and the contact.",
                     "x-surface": {
-                        "contract": 3,
+                        "contract": 4,
                         "operation": {
                             "id": "configure",
                             "label": "Configure registration (step 3)",
@@ -3421,11 +3076,7 @@
                             "title": "Event title",
                             "type": "string",
                             "x-surface": {
-                                "widget": "text",
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false
+                                "widget": "text"
                             }
                         },
                         "open": {
@@ -3436,11 +3087,7 @@
                             ],
                             "default": true,
                             "x-surface": {
-                                "widget": "checkbox",
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false
+                                "widget": "checkbox"
                             }
                         },
                         "venue": {
@@ -3462,10 +3109,6 @@
                             ],
                             "x-surface": {
                                 "widget": "select",
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false,
                                 "emptyOption": {
                                     "show": false,
                                     "label": "- Select -"
@@ -3487,12 +3130,10 @@
                             ],
                             "x-surface": {
                                 "widget": "select",
-                                "locked": false,
                                 "dependsOn": [
                                     "venue"
                                 ],
                                 "refined": true,
-                                "stale": false,
                                 "emptyOption": {
                                     "show": false,
                                     "label": "- Select -"
@@ -3511,12 +3152,10 @@
                             "default": 50,
                             "x-surface": {
                                 "widget": "number",
-                                "locked": false,
                                 "dependsOn": [
                                     "room"
                                 ],
-                                "refined": true,
-                                "stale": false
+                                "refined": true
                             }
                         },
                         "pricing": {
@@ -3535,10 +3174,6 @@
                             "default": "free",
                             "x-surface": {
                                 "widget": "select",
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false,
                                 "emptyOption": {
                                     "show": false,
                                     "label": "- Select -"
@@ -3560,12 +3195,10 @@
                             ],
                             "x-surface": {
                                 "widget": "variants",
-                                "locked": false,
                                 "dependsOn": [
                                     "pricing"
                                 ],
                                 "refined": true,
-                                "stale": false,
                                 "by": "pricing",
                                 "variants": {
                                     "free": "#/$defs/registration.step3.ticket.free",
@@ -3578,11 +3211,7 @@
                             "title": "Contact",
                             "$ref": "#/$defs/registration.contact",
                             "x-surface": {
-                                "widget": "fieldset",
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false
+                                "widget": "fieldset"
                             }
                         }
                     },
@@ -3648,11 +3277,7 @@
                                         "null"
                                     ],
                                     "x-surface": {
-                                        "widget": "text",
-                                        "locked": false,
-                                        "dependsOn": [],
-                                        "refined": false,
-                                        "stale": false
+                                        "widget": "text"
                                     }
                                 }
                             },
@@ -3667,11 +3292,7 @@
                                     "type": "number",
                                     "minimum": 0.01,
                                     "x-surface": {
-                                        "widget": "number",
-                                        "locked": false,
-                                        "dependsOn": [],
-                                        "refined": false,
-                                        "stale": false
+                                        "widget": "number"
                                     }
                                 },
                                 "currency": {
@@ -3694,10 +3315,6 @@
                                     "default": "EUR",
                                     "x-surface": {
                                         "widget": "select",
-                                        "locked": false,
-                                        "dependsOn": [],
-                                        "refined": false,
-                                        "stale": false,
                                         "emptyOption": {
                                             "show": false,
                                             "label": "- Select -"
@@ -3720,11 +3337,7 @@
                                     "type": "string",
                                     "format": "idn-email",
                                     "x-surface": {
-                                        "widget": "email",
-                                        "locked": false,
-                                        "dependsOn": [],
-                                        "refined": false,
-                                        "stale": false
+                                        "widget": "email"
                                     }
                                 },
                                 "phone": {
@@ -3734,11 +3347,7 @@
                                         "null"
                                     ],
                                     "x-surface": {
-                                        "widget": "text",
-                                        "locked": false,
-                                        "dependsOn": [],
-                                        "refined": false,
-                                        "stale": false
+                                        "widget": "text"
                                     }
                                 }
                             },

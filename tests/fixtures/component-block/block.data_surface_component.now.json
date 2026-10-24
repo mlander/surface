@@ -5,17 +5,9 @@
     "schema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "x-surface": {
-            "contract": 3,
+            "contract": 4,
             "version": 1,
             "within": {
-                "/allOf/5/then/properties/slots/allOf/1/properties/body/allOf/1/properties/text": {
-                    "locked": false,
-                    "dependsOn": [
-                        "kind"
-                    ],
-                    "refined": false,
-                    "stale": false
-                },
                 "/allOf/6/then/properties/slots/allOf/1/properties/actions/allOf/1": {
                     "doesNotApply": {
                         "component": [
@@ -26,14 +18,6 @@
                         ]
                     }
                 },
-                "/allOf/6/then/properties/slots/allOf/1/properties/actions/allOf/1/properties/text": {
-                    "locked": false,
-                    "dependsOn": [
-                        "kind"
-                    ],
-                    "refined": false,
-                    "stale": false
-                },
                 "/allOf/7/then/properties/slots/allOf/1/properties/content/allOf/1": {
                     "doesNotApply": {
                         "component": [
@@ -43,14 +27,6 @@
                             "kind"
                         ]
                     }
-                },
-                "/allOf/7/then/properties/slots/allOf/1/properties/content/allOf/1/properties/text": {
-                    "locked": false,
-                    "dependsOn": [
-                        "kind"
-                    ],
-                    "refined": false,
-                    "stale": false
                 }
             }
         },
@@ -84,10 +60,6 @@
                     }
                 ],
                 "x-surface": {
-                    "locked": false,
-                    "dependsOn": [],
-                    "refined": false,
-                    "stale": false,
                     "emptyOption": {
                         "show": true,
                         "label": "- None -"
@@ -114,12 +86,10 @@
                     }
                 ],
                 "x-surface": {
-                    "locked": false,
                     "dependsOn": [
                         "component"
                     ],
                     "refined": true,
-                    "stale": false,
                     "by": "component",
                     "variants": {
                         "data_surface_examples:call_to_action": "#/$defs/block.data_surface_component.props.data_surface_examples:call_to_action",
@@ -150,12 +120,10 @@
                     }
                 ],
                 "x-surface": {
-                    "locked": false,
                     "dependsOn": [
                         "component"
                     ],
                     "refined": true,
-                    "stale": false,
                     "by": "component",
                     "variants": {
                         "data_surface_examples:call_to_action": "#/$defs/block.data_surface_component.slots.data_surface_examples:call_to_action",
@@ -284,24 +252,7 @@
                     "properties": {
                         "slots": {
                             "title": "Slots",
-                            "allOf": [
-                                {
-                                    "$ref": "#/$defs/block.data_surface_component.slots.data_surface_examples:card"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "body": {
-                                            "allOf": [
-                                                {
-                                                    "$ref": "#/$defs/component.slot.text"
-                                                },
-                                                true
-                                            ]
-                                        }
-                                    }
-                                }
-                            ]
+                            "$ref": "#/$defs/block.data_surface_component.slots.data_surface_examples:card"
                         }
                     }
                 }
@@ -401,24 +352,12 @@
                     "text": {
                         "title": "Button text",
                         "type": "string",
-                        "maxLength": 40,
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
+                        "maxLength": 40
                     },
                     "url": {
                         "title": "Address",
                         "type": "string",
-                        "format": "uri",
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
+                        "format": "uri"
                     },
                     "style": {
                         "title": "Style",
@@ -435,10 +374,6 @@
                         ],
                         "default": "primary",
                         "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false,
                             "emptyOption": {
                                 "show": false,
                                 "label": "- Select -"
@@ -448,13 +383,7 @@
                     "new_window": {
                         "title": "Open in a new window",
                         "type": "boolean",
-                        "default": false,
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
+                        "default": false
                     },
                     "tags": {
                         "title": "Tags",
@@ -464,21 +393,9 @@
                             "null"
                         ],
                         "items": {
-                            "type": "string",
-                            "x-surface": {
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false
-                            }
+                            "type": "string"
                         },
-                        "maxItems": 3,
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
+                        "maxItems": 3
                     }
                 },
                 "additionalProperties": false,
@@ -494,13 +411,7 @@
                     "heading": {
                         "title": "Heading",
                         "type": "string",
-                        "maxLength": 80,
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
+                        "maxLength": 80
                     },
                     "tone": {
                         "title": "Tone",
@@ -517,10 +428,6 @@
                         ],
                         "default": "plain",
                         "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false,
                             "emptyOption": {
                                 "show": false,
                                 "label": "- Select -"
@@ -540,35 +447,17 @@
                                     "string",
                                     "null"
                                 ],
-                                "format": "uri",
-                                "x-surface": {
-                                    "locked": false,
-                                    "dependsOn": [],
-                                    "refined": false,
-                                    "stale": false
-                                }
+                                "format": "uri"
                             },
                             "label": {
                                 "title": "Link text",
                                 "type": [
                                     "string",
                                     "null"
-                                ],
-                                "x-surface": {
-                                    "locked": false,
-                                    "dependsOn": [],
-                                    "refined": false,
-                                    "stale": false
-                                }
+                                ]
                             }
                         },
-                        "additionalProperties": false,
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
+                        "additionalProperties": false
                     }
                 },
                 "additionalProperties": false,
@@ -582,26 +471,14 @@
                 "properties": {
                     "title": {
                         "title": "Title",
-                        "type": "string",
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
+                        "type": "string"
                     },
                     "subtitle": {
                         "title": "Subtitle",
                         "type": [
                             "string",
                             "null"
-                        ],
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
+                        ]
                     },
                     "align": {
                         "title": "Alignment",
@@ -618,10 +495,6 @@
                         ],
                         "default": "center",
                         "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false,
                             "emptyOption": {
                                 "show": false,
                                 "label": "- Select -"
@@ -634,24 +507,12 @@
                         "type": "integer",
                         "minimum": 0,
                         "maximum": 100,
-                        "default": 40,
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
+                        "default": 40
                     },
                     "full_width": {
                         "title": "Full width",
                         "type": "boolean",
-                        "default": false,
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
+                        "default": false
                     }
                 },
                 "additionalProperties": false,
@@ -668,13 +529,7 @@
                         "type": [
                             "string",
                             "null"
-                        ],
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
+                        ]
                     }
                 },
                 "additionalProperties": false
@@ -700,10 +555,6 @@
                         ],
                         "default": "text",
                         "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false,
                             "emptyOption": {
                                 "show": false,
                                 "label": "- Select -"
@@ -717,13 +568,9 @@
                             "null"
                         ],
                         "x-surface": {
-                            "locked": false,
                             "dependsOn": [
                                 "kind"
-                            ],
-                            "refined": false,
-                            "stale": false,
-                            "declared": true
+                            ]
                         }
                     }
                 },
@@ -762,13 +609,7 @@
                     "body": {
                         "title": "Text",
                         "description": "A line under the heading.",
-                        "$ref": "#/$defs/component.slot.text",
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
+                        "$ref": "#/$defs/component.slot.text"
                     }
                 },
                 "additionalProperties": false
@@ -780,24 +621,12 @@
                     "text": {
                         "title": "Button text",
                         "type": "string",
-                        "maxLength": 40,
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
+                        "maxLength": 40
                     },
                     "url": {
                         "title": "Address",
                         "type": "string",
-                        "format": "uri",
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
+                        "format": "uri"
                     },
                     "style": {
                         "title": "Style",
@@ -814,10 +643,6 @@
                         ],
                         "default": "primary",
                         "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false,
                             "emptyOption": {
                                 "show": false,
                                 "label": "- Select -"
@@ -827,13 +652,7 @@
                     "new_window": {
                         "title": "Open in a new window",
                         "type": "boolean",
-                        "default": false,
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
+                        "default": false
                     },
                     "tags": {
                         "title": "Tags",
@@ -843,21 +662,9 @@
                             "null"
                         ],
                         "items": {
-                            "type": "string",
-                            "x-surface": {
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false
-                            }
+                            "type": "string"
                         },
-                        "maxItems": 3,
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
+                        "maxItems": 3
                     }
                 },
                 "additionalProperties": false,
@@ -886,10 +693,6 @@
                             }
                         ],
                         "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false,
                             "emptyOption": {
                                 "show": true,
                                 "label": "- Select -"
@@ -907,17 +710,13 @@
                             }
                         ],
                         "x-surface": {
-                            "locked": false,
                             "dependsOn": [
                                 "component"
                             ],
-                            "refined": false,
-                            "stale": false,
                             "by": "component",
                             "variants": {
                                 "data_surface_examples:call_to_action": "#/$defs/component.props.data_surface_examples:call_to_action"
-                            },
-                            "chosen": null
+                            }
                         }
                     },
                     "slots": {
@@ -931,17 +730,13 @@
                             }
                         ],
                         "x-surface": {
-                            "locked": false,
                             "dependsOn": [
                                 "component"
                             ],
-                            "refined": false,
-                            "stale": false,
                             "by": "component",
                             "variants": {
                                 "data_surface_examples:call_to_action": "#/$defs/component.slots.data_surface_examples:call_to_action.2"
-                            },
-                            "chosen": null
+                            }
                         }
                     }
                 },
@@ -1015,10 +810,6 @@
                         ],
                         "default": "text",
                         "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false,
                             "emptyOption": {
                                 "show": false,
                                 "label": "- Select -"
@@ -1032,26 +823,18 @@
                             "null"
                         ],
                         "x-surface": {
-                            "locked": false,
                             "dependsOn": [
                                 "kind"
-                            ],
-                            "refined": false,
-                            "stale": false,
-                            "declared": true
+                            ]
                         }
                     },
                     "component": {
                         "title": "Component",
                         "$ref": "#/$defs/component.nested.data_surface_examples:call_to_action.1",
                         "x-surface": {
-                            "locked": false,
                             "dependsOn": [
                                 "kind"
-                            ],
-                            "refined": false,
-                            "stale": false,
-                            "declared": true
+                            ]
                         }
                     },
                     "components": {
@@ -1062,14 +845,10 @@
                             "$ref": "#/$defs/component.nested.data_surface_examples:call_to_action.1"
                         },
                         "x-surface": {
-                            "locked": false,
                             "dependsOn": [
                                 "kind"
                             ],
-                            "refined": false,
-                            "stale": false,
-                            "list": true,
-                            "declared": true
+                            "collection": true
                         }
                     }
                 },
@@ -1148,13 +927,7 @@
                     "actions": {
                         "title": "Actions",
                         "description": "Up to two buttons under the title.",
-                        "$ref": "#/$defs/component.slot.data_surface_examples:hero.actions.1",
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
+                        "$ref": "#/$defs/component.slot.data_surface_examples:hero.actions.1"
                     }
                 },
                 "additionalProperties": false
@@ -1166,13 +939,7 @@
                     "heading": {
                         "title": "Heading",
                         "type": "string",
-                        "maxLength": 80,
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
+                        "maxLength": 80
                     },
                     "tone": {
                         "title": "Tone",
@@ -1189,10 +956,6 @@
                         ],
                         "default": "plain",
                         "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false,
                             "emptyOption": {
                                 "show": false,
                                 "label": "- Select -"
@@ -1212,35 +975,17 @@
                                     "string",
                                     "null"
                                 ],
-                                "format": "uri",
-                                "x-surface": {
-                                    "locked": false,
-                                    "dependsOn": [],
-                                    "refined": false,
-                                    "stale": false
-                                }
+                                "format": "uri"
                             },
                             "label": {
                                 "title": "Link text",
                                 "type": [
                                     "string",
                                     "null"
-                                ],
-                                "x-surface": {
-                                    "locked": false,
-                                    "dependsOn": [],
-                                    "refined": false,
-                                    "stale": false
-                                }
+                                ]
                             }
                         },
-                        "additionalProperties": false,
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
+                        "additionalProperties": false
                     }
                 },
                 "additionalProperties": false,
@@ -1254,26 +999,14 @@
                 "properties": {
                     "title": {
                         "title": "Title",
-                        "type": "string",
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
+                        "type": "string"
                     },
                     "subtitle": {
                         "title": "Subtitle",
                         "type": [
                             "string",
                             "null"
-                        ],
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
+                        ]
                     },
                     "align": {
                         "title": "Alignment",
@@ -1290,10 +1023,6 @@
                         ],
                         "default": "center",
                         "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false,
                             "emptyOption": {
                                 "show": false,
                                 "label": "- Select -"
@@ -1306,24 +1035,12 @@
                         "type": "integer",
                         "minimum": 0,
                         "maximum": 100,
-                        "default": 40,
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
+                        "default": 40
                     },
                     "full_width": {
                         "title": "Full width",
                         "type": "boolean",
-                        "default": false,
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
+                        "default": false
                     }
                 },
                 "additionalProperties": false,
@@ -1338,13 +1055,7 @@
                     "body": {
                         "title": "Text",
                         "description": "A line under the heading.",
-                        "$ref": "#/$defs/component.slot.text",
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
+                        "$ref": "#/$defs/component.slot.text"
                     }
                 },
                 "additionalProperties": false
@@ -1369,10 +1080,6 @@
                             }
                         ],
                         "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false,
                             "emptyOption": {
                                 "show": true,
                                 "label": "- Select -"
@@ -1390,17 +1097,13 @@
                             }
                         ],
                         "x-surface": {
-                            "locked": false,
                             "dependsOn": [
                                 "component"
                             ],
-                            "refined": false,
-                            "stale": false,
                             "by": "component",
                             "variants": {
                                 "data_surface_examples:call_to_action": "#/$defs/component.props.data_surface_examples:call_to_action"
-                            },
-                            "chosen": null
+                            }
                         }
                     },
                     "slots": {
@@ -1414,17 +1117,13 @@
                             }
                         ],
                         "x-surface": {
-                            "locked": false,
                             "dependsOn": [
                                 "component"
                             ],
-                            "refined": false,
-                            "stale": false,
                             "by": "component",
                             "variants": {
                                 "data_surface_examples:call_to_action": "#/$defs/component.slots.data_surface_examples:call_to_action.3"
-                            },
-                            "chosen": null
+                            }
                         }
                     }
                 },
@@ -1498,10 +1197,6 @@
                         ],
                         "default": "text",
                         "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false,
                             "emptyOption": {
                                 "show": false,
                                 "label": "- Select -"
@@ -1515,26 +1210,18 @@
                             "null"
                         ],
                         "x-surface": {
-                            "locked": false,
                             "dependsOn": [
                                 "kind"
-                            ],
-                            "refined": false,
-                            "stale": false,
-                            "declared": true
+                            ]
                         }
                     },
                     "component": {
                         "title": "Component",
                         "$ref": "#/$defs/component.nested.data_surface_examples:call_to_action.2",
                         "x-surface": {
-                            "locked": false,
                             "dependsOn": [
                                 "kind"
-                            ],
-                            "refined": false,
-                            "stale": false,
-                            "declared": true
+                            ]
                         }
                     },
                     "components": {
@@ -1545,14 +1232,10 @@
                             "$ref": "#/$defs/component.nested.data_surface_examples:call_to_action.2"
                         },
                         "x-surface": {
-                            "locked": false,
                             "dependsOn": [
                                 "kind"
                             ],
-                            "refined": false,
-                            "stale": false,
-                            "list": true,
-                            "declared": true
+                            "collection": true
                         }
                     }
                 },
@@ -1631,13 +1314,7 @@
                     "actions": {
                         "title": "Actions",
                         "description": "Up to two buttons under the title.",
-                        "$ref": "#/$defs/component.slot.data_surface_examples:hero.actions.2",
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
+                        "$ref": "#/$defs/component.slot.data_surface_examples:hero.actions.2"
                     }
                 },
                 "additionalProperties": false
@@ -1660,10 +1337,6 @@
                             }
                         ],
                         "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false,
                             "emptyOption": {
                                 "show": true,
                                 "label": "- Select -"
@@ -1684,18 +1357,14 @@
                             }
                         ],
                         "x-surface": {
-                            "locked": false,
                             "dependsOn": [
                                 "component"
                             ],
-                            "refined": false,
-                            "stale": false,
                             "by": "component",
                             "variants": {
                                 "data_surface_examples:card": "#/$defs/component.props.data_surface_examples:card",
                                 "data_surface_examples:hero": "#/$defs/component.props.data_surface_examples:hero"
-                            },
-                            "chosen": null
+                            }
                         }
                     },
                     "slots": {
@@ -1712,18 +1381,14 @@
                             }
                         ],
                         "x-surface": {
-                            "locked": false,
                             "dependsOn": [
                                 "component"
                             ],
-                            "refined": false,
-                            "stale": false,
                             "by": "component",
                             "variants": {
                                 "data_surface_examples:card": "#/$defs/component.slots.data_surface_examples:card.2",
                                 "data_surface_examples:hero": "#/$defs/component.slots.data_surface_examples:hero.2"
-                            },
-                            "chosen": null
+                            }
                         }
                     }
                 },
@@ -1837,10 +1502,6 @@
                         ],
                         "default": "text",
                         "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false,
                             "emptyOption": {
                                 "show": false,
                                 "label": "- Select -"
@@ -1854,26 +1515,18 @@
                             "null"
                         ],
                         "x-surface": {
-                            "locked": false,
                             "dependsOn": [
                                 "kind"
-                            ],
-                            "refined": false,
-                            "stale": false,
-                            "declared": true
+                            ]
                         }
                     },
                     "component": {
                         "title": "Component",
                         "$ref": "#/$defs/component.nested.block.1",
                         "x-surface": {
-                            "locked": false,
                             "dependsOn": [
                                 "kind"
-                            ],
-                            "refined": false,
-                            "stale": false,
-                            "declared": true
+                            ]
                         }
                     },
                     "components": {
@@ -1883,14 +1536,10 @@
                             "$ref": "#/$defs/component.nested.block.1"
                         },
                         "x-surface": {
-                            "locked": false,
                             "dependsOn": [
                                 "kind"
                             ],
-                            "refined": false,
-                            "stale": false,
-                            "list": true,
-                            "declared": true
+                            "collection": true
                         }
                     }
                 },
@@ -1969,13 +1618,7 @@
                     "content": {
                         "title": "Content",
                         "description": "The components the section holds.",
-                        "$ref": "#/$defs/component.slot.data_surface_examples:section.content.1",
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
+                        "$ref": "#/$defs/component.slot.data_surface_examples:section.content.1"
                     }
                 },
                 "additionalProperties": false

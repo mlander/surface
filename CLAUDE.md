@@ -184,9 +184,10 @@ the record of the rework that brought the module to the pattern.
   it, and what an invoker does: `enumerated`, stated in full, narrow
   locally; `deferred`, a list the site decides left out for its size,
   fetch per choice (`GET .../schema?choose=<pointer>=<value>`, the
-  key's `fetch` template filled) and cache, or ask the narrowing;
+  key's `deferred.fetch` template filled) and cache, or ask the narrowing;
   `refine`, a static rule that cannot be written out, ask the narrowing
-  with values; `live`, a runtime rule, ask per request and never cache;
+  with values; `live`, a runtime rule or a runtime access answer, ask
+  per request and never cache;
   `checkedOnServer`, a constraint only the server checks
   (`docs/served-contract.md#what-a-key-marked-says-and-what-to-do`,
   `docs/decisions.md#a-list-left-out-for-size-is-deferred-not-refined`).
@@ -212,7 +213,8 @@ the record of the rework that brought the module to the pattern.
   `user.roles`, `user.roles:<role>`, no tag, permanent max-age) and is stated in the
   full schema and the tool listing for the account that asks; runtime
   (a tag, the `user` context, max-age 0, or no cacheability at all) is
-  marked there, `x-surface.access: "live"`, and settled by the schema
+  marked there, `x-surface.live` (`access: "live"` until contract 4), and
+  settled by the schema
   for these answers. `ResourcesInterface::buildStatic()` builds for the
   account alone; the operation's permission is the first static answer
   (`OperationDefinition::staticPermission()`); narrowing a key's values
@@ -427,7 +429,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 The full lane's phpunit line reads, as of this writing:
 
 ```
-phpunit: Tests: 1585, Assertions: 36678, Errors: 0, Failures: 0, Skipped: 3. Classes: 216 of 216, 8 at a time, browser classes 4.
+phpunit: Tests: 1585, Assertions: 36689, Errors: 0, Failures: 0, Skipped: 3. Classes: 216 of 216, 8 at a time, browser classes 4.
 ```
 
 the same counts a plain phpunit run of the tree gives. The skipped
@@ -528,7 +530,8 @@ it without, beside what the Tool API can advertise (which flattens
 variants, and is what `tool:info` prints). `modules/data_surface_react`
 serves it with the widget hints, through the main module's service, on
 an API where the path is the resource and the method the operation
-(contract 3, `ServedPaths`): `GET /surface-api/{resource}[/{id}]` the
+(contract 3's paths, `ServedPaths`, both documents in contract 4's
+keywords): `GET /surface-api/{resource}[/{id}]` the
 envelope, its `ETag` the stored values' fingerprint; `GET .../schema` the
 full schema itself; `POST .../schema` the envelope narrowed for values
 in progress (the AJAX rebuild's equivalent, emitted from the form

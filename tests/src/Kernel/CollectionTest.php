@@ -430,9 +430,9 @@ class CollectionTest extends DataSurfaceKernelTestBase {
     $this->assertSame(['$ref' => '#/$defs/resource_test.larder.rack'], $racks['items']);
     $this->assertSame(1, $racks['minItems']);
     $this->assertSame(4, $racks['maxItems']);
-    $this->assertTrue($racks['x-surface']['list']);
+    $this->assertTrue($racks['x-surface']['collection']);
     $this->assertSame(['size'], $racks['x-surface']['dependsOn']);
-    $this->assertFalse($racks['x-surface']['locked']);
+    $this->assertArrayNotHasKey('readOnly', $racks);
     $this->assertArrayHasKey('resource_test.larder.rack', $schema['$defs']);
     $this->assertSame('#/$defs/resource_test.pantry.shelf', $schema['properties']['shelves']['items']['$ref']);
     // The values carry every item, in order; the schema none of them.
@@ -446,7 +446,7 @@ class CollectionTest extends DataSurfaceKernelTestBase {
     $racks = $full['properties']['racks'];
     $this->assertSame(['$ref' => '#/$defs/resource_test.larder.rack'], $racks['items']);
     $this->assertSame(4, $racks['maxItems']);
-    $this->assertTrue($racks['x-surface']['list']);
+    $this->assertTrue($racks['x-surface']['collection']);
     $this->assertTrue($racks['x-surface']['enumerated']);
     $this->assertContains([
       'if' => ['properties' => ['size' => ['const' => 'small']], 'required' => ['size']],
@@ -483,7 +483,6 @@ class CollectionTest extends DataSurfaceKernelTestBase {
     foreach ([FALSE, TRUE] as $is_full) {
       $schema = $this->contract($locked, $is_full)['schema'];
       $this->assertTrue($schema['properties']['racks']['readOnly']);
-      $this->assertTrue($schema['properties']['racks']['x-surface']['locked']);
       // Every item differs from its def, the def being the rack as
       // declared: the items narrow it by composition.
       $this->assertSame(['$ref' => '#/$defs/resource_test.larder.rack'], $schema['properties']['racks']['items']['allOf'][0]);

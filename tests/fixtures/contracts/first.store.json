@@ -1,7 +1,7 @@
 {
     "resource": "first.store",
     "module": "data_surface_first",
-    "contract": 3,
+    "contract": 4,
     "documents": [
         {
             "resource": "first.store",
@@ -12,7 +12,7 @@
                 "title": "Configure the store location",
                 "description": "Sets the store location: its country, and a region of that country.",
                 "x-surface": {
-                    "contract": 3,
+                    "contract": 4,
                     "operation": {
                         "id": "configure",
                         "label": "Configure the store location",
@@ -39,11 +39,7 @@
                                 "title": "United States"
                             }
                         ],
-                        "default": "CA",
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": []
-                        }
+                        "default": "CA"
                     },
                     "region": {
                         "title": "Region",
@@ -76,7 +72,6 @@
                         ],
                         "default": "CA-ON",
                         "x-surface": {
-                            "locked": false,
                             "dependsOn": [
                                 "country"
                             ],

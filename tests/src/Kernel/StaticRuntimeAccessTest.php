@@ -294,23 +294,22 @@ class StaticRuntimeAccessTest extends DataSurfaceKernelTestBase {
     $this->actAs('inspector');
     $full = $this->full();
     $this->assertTrue($full['properties']['loan']['readOnly']);
-    $this->assertTrue($full['properties']['loan']['x-surface']['locked']);
     $this->assertTrue($full['properties']['source']['readOnly']);
-    $this->assertArrayNotHasKey('access', $full['properties']['loan']['x-surface'], 'Static: stated, not marked.');
+    $this->assertArrayNotHasKey('live', $full['properties']['loan']['x-surface'] ?? [], 'Static: stated, not marked.');
     // Inside the loan the insurance is runtime for everyone: locked with
     // the loan, the parent's static answer, and marked, its own.
     $insurance = $full['properties']['loan']['properties']['insurance'];
     $this->assertTrue($insurance['readOnly']);
-    $this->assertSame('live', $insurance['x-surface']['access']);
+    $this->assertTrue($insurance['x-surface']['live']);
 
     $this->actAs('keeper');
     $full = $this->full();
     foreach (['loan', 'source', 'acquired'] as $key) {
       $this->assertArrayNotHasKey('readOnly', $full['properties'][$key], $key);
-      $this->assertSame('live', $full['properties'][$key]['x-surface']['access'], $key);
+      $this->assertTrue($full['properties'][$key]['x-surface']['live'], $key);
     }
-    $this->assertArrayNotHasKey('access', $full['properties']['title']['x-surface']);
-    $this->assertSame('live', $full['properties']['loan']['properties']['insurance']['x-surface']['access']);
+    $this->assertArrayNotHasKey('live', $full['properties']['title']['x-surface'] ?? []);
+    $this->assertTrue($full['properties']['loan']['properties']['insurance']['x-surface']['live']);
 
     $this->actAs('archivist');
     $full = $this->full();
@@ -341,7 +340,7 @@ class StaticRuntimeAccessTest extends DataSurfaceKernelTestBase {
     $this->actAs('keeper');
     $these = $this->these();
     $this->assertArrayNotHasKey('readOnly', $these['properties']['loan']);
-    $this->assertArrayNotHasKey('access', $these['properties']['loan']['x-surface'], 'Settled: nothing is marked.');
+    $this->assertArrayNotHasKey('live', $these['properties']['loan']['x-surface'] ?? [], 'Settled: nothing is marked.');
     $this->assertTrue($this->validates($these, self::EXHIBIT));
 
     $this->seal();

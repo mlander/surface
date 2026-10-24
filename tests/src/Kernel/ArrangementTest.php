@@ -117,8 +117,8 @@ class ArrangementTest extends DataSurfaceKernelTestBase {
     $plain = $emitter->emit($studio, $values, 'resource_test.studio', 'configure')->document['schema'];
     $full = $emitter->emitFull($studio, 'resource_test.studio', 'configure')->document['schema'];
     foreach (['rate', 'name', 'notes'] as $key) {
-      $this->assertArrayNotHasKey('arrangement', $plain['properties'][$key]['x-surface'], $key);
-      $this->assertArrayNotHasKey('arrangement', $full['properties'][$key]['x-surface'], $key);
+      $this->assertArrayNotHasKey('arrangement', $plain['properties'][$key]['x-surface'] ?? [], $key);
+      $this->assertArrayNotHasKey('arrangement', $full['properties'][$key]['x-surface'] ?? [], $key);
     }
 
     $hinted = $emitter->emit($studio, $values, 'resource_test.studio', 'configure', widgets: TRUE)->document['schema'];

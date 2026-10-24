@@ -1,7 +1,7 @@
 {
     "resource": "block.placement.condition",
     "module": "data_surface_block",
-    "contract": 3,
+    "contract": 4,
     "documents": [
         {
             "resource": "block.placement.condition",
@@ -10,7 +10,7 @@
             "schema": {
                 "$schema": "https://json-schema.org/draft/2020-12/schema",
                 "x-surface": {
-                    "contract": 3,
+                    "contract": 4,
                     "version": 1
                 },
                 "type": "object",
@@ -36,11 +36,7 @@
                                 "const": "user_role",
                                 "title": "User Role"
                             }
-                        ],
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": []
-                        }
+                        ]
                     },
                     "negate": {
                         "title": "Negate",
@@ -49,11 +45,7 @@
                             "boolean",
                             "null"
                         ],
-                        "default": false,
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": []
-                        }
+                        "default": false
                     },
                     "settings": {
                         "title": "Settings",
@@ -76,7 +68,6 @@
                             }
                         ],
                         "x-surface": {
-                            "locked": false,
                             "dependsOn": [
                                 "id"
                             ],
@@ -190,17 +181,9 @@
                                 "type": "array",
                                 "items": {
                                     "title": "String",
-                                    "type": "string",
-                                    "x-surface": {
-                                        "locked": false,
-                                        "dependsOn": []
-                                    }
+                                    "type": "string"
                                 },
-                                "default": [],
-                                "x-surface": {
-                                    "locked": false,
-                                    "dependsOn": []
-                                }
+                                "default": []
                             },
                             "context_mapping": {
                                 "title": "Context assignments",
@@ -219,18 +202,10 @@
                                                 "title": "@node.node_route_context:node"
                                             }
                                         ],
-                                        "default": "@node.node_route_context:node",
-                                        "x-surface": {
-                                            "locked": false,
-                                            "dependsOn": []
-                                        }
+                                        "default": "@node.node_route_context:node"
                                     }
                                 },
-                                "additionalProperties": false,
-                                "x-surface": {
-                                    "locked": false,
-                                    "dependsOn": []
-                                }
+                                "additionalProperties": false
                             }
                         },
                         "additionalProperties": false
@@ -242,11 +217,7 @@
                             "pages": {
                                 "title": "String",
                                 "type": "string",
-                                "default": "",
-                                "x-surface": {
-                                    "locked": false,
-                                    "dependsOn": []
-                                }
+                                "default": ""
                             }
                         },
                         "additionalProperties": false
@@ -274,17 +245,9 @@
                                             "const": 404,
                                             "title": "404"
                                         }
-                                    ],
-                                    "x-surface": {
-                                        "locked": false,
-                                        "dependsOn": []
-                                    }
+                                    ]
                                 },
-                                "default": [],
-                                "x-surface": {
-                                    "locked": false,
-                                    "dependsOn": []
-                                }
+                                "default": []
                             }
                         },
                         "additionalProperties": false
@@ -298,17 +261,9 @@
                                 "type": "array",
                                 "items": {
                                     "title": "String",
-                                    "type": "string",
-                                    "x-surface": {
-                                        "locked": false,
-                                        "dependsOn": []
-                                    }
+                                    "type": "string"
                                 },
-                                "default": [],
-                                "x-surface": {
-                                    "locked": false,
-                                    "dependsOn": []
-                                }
+                                "default": []
                             },
                             "context_mapping": {
                                 "title": "Context assignments",
@@ -327,18 +282,10 @@
                                                 "title": "@user.current_user_context:current_user"
                                             }
                                         ],
-                                        "default": "@user.current_user_context:current_user",
-                                        "x-surface": {
-                                            "locked": false,
-                                            "dependsOn": []
-                                        }
+                                        "default": "@user.current_user_context:current_user"
                                     }
                                 },
-                                "additionalProperties": false,
-                                "x-surface": {
-                                    "locked": false,
-                                    "dependsOn": []
-                                }
+                                "additionalProperties": false
                             }
                         },
                         "additionalProperties": false

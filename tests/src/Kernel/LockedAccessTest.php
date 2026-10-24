@@ -174,7 +174,7 @@ class LockedAccessTest extends DataSurfaceKernelTestBase {
     ];
     foreach ($documents as $which => $schema) {
       $this->assertTrue($schema['readOnly'] ?? FALSE, $which);
-      $this->assertTrue($schema['x-surface']['locked'] ?? FALSE, $which);
+      $this->assertArrayNotHasKey('locked', $schema['x-surface'] ?? [], $which . ': `readOnly` says it.');
       foreach (['label', 'drawers', 'lock'] as $key) {
         $this->assertTrue($schema['properties'][$key]['readOnly'] ?? FALSE, "$which: $key");
       }

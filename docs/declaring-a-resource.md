@@ -544,7 +544,7 @@ both flags with JSON Schema's own keywords:
 | Flag | Keyword |
 | --- | --- |
 | `secret` | `writeOnly: true`, never in `required`, no default |
-| locked | `readOnly: true`, with `x-surface.locked` |
+| locked | `readOnly: true`, with `const` where it holds a value |
 
 The other doors say it in their own terms: a locked key carries "Fixed
 for this operation." in its form description and the Tool API's own

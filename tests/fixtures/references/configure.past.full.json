@@ -7,7 +7,7 @@
         "title": "Configure the sponsorship",
         "description": "Sets the sponsor's venue, contact and announcement, and what the sponsor is featured beside, linked to and credited on.",
         "x-surface": {
-            "contract": 3,
+            "contract": 4,
             "operation": {
                 "id": "configure",
                 "label": "Configure the sponsorship",
@@ -28,8 +28,6 @@
                 "default": "riverside",
                 "x-surface": {
                     "widget": "autocomplete",
-                    "locked": false,
-                    "dependsOn": [],
                     "reference": {
                         "entityType": "event_venue"
                     },
@@ -50,8 +48,6 @@
                 ],
                 "x-surface": {
                     "widget": "autocomplete",
-                    "locked": false,
-                    "dependsOn": [],
                     "reference": {
                         "entityType": "user"
                     },
@@ -72,8 +68,6 @@
                 ],
                 "x-surface": {
                     "widget": "autocomplete",
-                    "locked": false,
-                    "dependsOn": [],
                     "reference": {
                         "entityType": "node",
                         "bundles": [
@@ -93,9 +87,7 @@
                 "description": "Any content the sponsor is featured beside.",
                 "$ref": "#/$defs/event.sponsorship.thing",
                 "x-surface": {
-                    "widget": "fieldset",
-                    "locked": false,
-                    "dependsOn": []
+                    "widget": "fieldset"
                 }
             },
             "setting": {
@@ -103,9 +95,7 @@
                 "description": "A venue or a role the sponsorship is linked to.",
                 "$ref": "#/$defs/event.sponsorship.setting",
                 "x-surface": {
-                    "widget": "fieldset",
-                    "locked": false,
-                    "dependsOn": []
+                    "widget": "fieldset"
                 }
             },
             "credit": {
@@ -113,9 +103,7 @@
                 "description": "An article or a user the sponsor is credited on.",
                 "$ref": "#/$defs/event.sponsorship.credit",
                 "x-surface": {
-                    "widget": "fieldset",
-                    "locked": false,
-                    "dependsOn": []
+                    "widget": "fieldset"
                 }
             }
         },
@@ -148,9 +136,7 @@
                             }
                         ],
                         "x-surface": {
-                            "widget": "select",
-                            "locked": false,
-                            "dependsOn": []
+                            "widget": "select"
                         }
                     },
                     "id": {
@@ -162,15 +148,13 @@
                         ],
                         "x-surface": {
                             "widget": "autocomplete",
-                            "locked": false,
                             "dependsOn": [
                                 "entity_type"
                             ],
                             "reference": {
                                 "by": "entity_type"
                             },
-                            "enumerated": true,
-                            "declared": true
+                            "enumerated": true
                         }
                     }
                 },
@@ -259,9 +243,7 @@
                             }
                         ],
                         "x-surface": {
-                            "widget": "select",
-                            "locked": false,
-                            "dependsOn": []
+                            "widget": "select"
                         }
                     },
                     "id": {
@@ -273,15 +255,13 @@
                         ],
                         "x-surface": {
                             "widget": "autocomplete",
-                            "locked": false,
                             "dependsOn": [
                                 "entity_type"
                             ],
                             "reference": {
                                 "by": "entity_type"
                             },
-                            "enumerated": true,
-                            "declared": true
+                            "enumerated": true
                         }
                     }
                 },
@@ -370,9 +350,7 @@
                             }
                         ],
                         "x-surface": {
-                            "widget": "select",
-                            "locked": false,
-                            "dependsOn": []
+                            "widget": "select"
                         }
                     },
                     "id": {
@@ -384,15 +362,13 @@
                         ],
                         "x-surface": {
                             "widget": "autocomplete",
-                            "locked": false,
                             "dependsOn": [
                                 "entity_type"
                             ],
                             "reference": {
                                 "by": "entity_type"
                             },
-                            "enumerated": true,
-                            "declared": true
+                            "enumerated": true
                         }
                     }
                 },

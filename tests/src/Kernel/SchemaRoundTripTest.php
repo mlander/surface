@@ -137,7 +137,7 @@ class SchemaRoundTripTest extends DataSurfaceKernelTestBase {
   /**
    * Emits the full schema of every declaration of the modules read back.
    *
-   * @return array<string, array{document: array, id: string, module: string, context: string, operation: string|null, label: \Stringable|string|null, facts: array}>
+   * @return array<string, array{document: array, declared: \Drupal\data_surface\DataSurfaceInterface, id: string, module: string, context: string, operation: string|null, label: \Stringable|string|null, facts: array}>
    *   Each document, by `<id>:<context>`, with what it was emitted for.
    */
   protected function documents(): array {
@@ -155,9 +155,11 @@ class SchemaRoundTripTest extends DataSurfaceKernelTestBase {
         $asked = $operations === [] ? [NULL] : array_filter($operations, static fn ($operation): bool => $operation->needsNothing());
         foreach ($asked as $operation) {
           $context = $operation === NULL ? new OperationContext(ContractBaselines::ALONE) : $resources->operation($name, $operation->id);
-          $document = $emitter->emitFull($resources->buildStatic($name, $context), $definition->id, $operation?->id, $operation?->label, operation: $operation?->facts() ?? [])->document;
+          $declared = $resources->buildStatic($name, $context);
+          $document = $emitter->emitFull($declared, $definition->id, $operation?->id, $operation?->label, operation: $operation?->facts() ?? [])->document;
           $documents[$definition->id . ':' . $context->id] = [
             'document' => $document,
+            'declared' => $declared,
             'id' => $definition->id,
             'module' => $definition->module,
             'context' => $context->id,
@@ -188,7 +190,7 @@ class SchemaRoundTripTest extends DataSurfaceKernelTestBase {
     $kinds = [];
     foreach ($this->documents() as $label => $emitted) {
       $original = $emitted['document']['schema'];
-      $read = $this->readBack($original, $emitted['id'], $emitted['module'], $emitted['context'], $emitted['operation'], $emitted['label'], $emitted['facts']);
+      $read = $this->readBack($original, $emitted['id'], $emitted['module'], $emitted['context'], $emitted['operation'], $emitted['label'], $emitted['facts'], $emitted['declared']);
       if ($read['verdict'] === 'live') {
         $runtime[] = $label;
         continue;

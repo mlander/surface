@@ -77,7 +77,7 @@ a custom method, a path item of its own: `/surface-api/event.program:check`,
 The document is built for no account and as the anonymous account, the
 way the Tool API bridge builds its tool definitions: every key as
 declared, each one an access answer could lock or leave out marked
-`x-surface.access: "live"`. It is the same for every account, open to
+`x-surface.live`. It is the same for every account, open to
 every account, and cached until discovery, a build it was made from,
 the site's name, the modules or the anonymous role change. The
 per-request read and `/schema` answer for the account that asks.

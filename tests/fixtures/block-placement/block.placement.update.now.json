@@ -7,7 +7,7 @@
         "title": "Edit a placed block",
         "description": "Changes a placed block, named by its machine name: its label, region, weight, status, plugin settings and visibility. Its theme stays as it is.",
         "x-surface": {
-            "contract": 3,
+            "contract": 4,
             "operation": {
                 "id": "update",
                 "label": "Edit a placed block",
@@ -20,12 +20,10 @@
             "version": 1,
             "within": {
                 "/allOf/0/then/properties/settings/allOf/1/properties/props": {
-                    "locked": false,
                     "dependsOn": [
                         "component"
                     ],
                     "refined": true,
-                    "stale": false,
                     "by": "component",
                     "variants": {
                         "data_surface_examples:call_to_action": "#/$defs/block.data_surface_component.props.data_surface_examples:call_to_action",
@@ -36,12 +34,10 @@
                     "chosen": "data_surface_examples:card"
                 },
                 "/allOf/0/then/properties/settings/allOf/1/properties/slots": {
-                    "locked": false,
                     "dependsOn": [
                         "component"
                     ],
                     "refined": true,
-                    "stale": false,
                     "by": "component",
                     "variants": {
                         "data_surface_examples:call_to_action": "#/$defs/block.data_surface_component.slots.data_surface_examples:call_to_action",
@@ -51,15 +47,7 @@
                     },
                     "chosen": "data_surface_examples:card"
                 },
-                "/allOf/0/then/properties/settings/allOf/1/allOf/0/then/properties/slots/allOf/1/properties/body/allOf/1/properties/text": {
-                    "locked": false,
-                    "dependsOn": [
-                        "kind"
-                    ],
-                    "refined": false,
-                    "stale": false
-                },
-                "/allOf/0/then/properties/settings/allOf/1/allOf/1/then/properties/slots/allOf/1/properties/actions/allOf/1": {
+                "/allOf/0/then/properties/settings/allOf/1/allOf/0/then/properties/slots/allOf/1/properties/actions/allOf/1": {
                     "doesNotApply": {
                         "component": [
                             "kind"
@@ -69,15 +57,7 @@
                         ]
                     }
                 },
-                "/allOf/0/then/properties/settings/allOf/1/allOf/1/then/properties/slots/allOf/1/properties/actions/allOf/1/properties/text": {
-                    "locked": false,
-                    "dependsOn": [
-                        "kind"
-                    ],
-                    "refined": false,
-                    "stale": false
-                },
-                "/allOf/0/then/properties/settings/allOf/1/allOf/2/then/properties/slots/allOf/1/properties/content/allOf/1": {
+                "/allOf/0/then/properties/settings/allOf/1/allOf/1/then/properties/slots/allOf/1/properties/content/allOf/1": {
                     "doesNotApply": {
                         "component": [
                             "kind"
@@ -86,14 +66,6 @@
                             "kind"
                         ]
                     }
-                },
-                "/allOf/0/then/properties/settings/allOf/1/allOf/2/then/properties/slots/allOf/1/properties/content/allOf/1/properties/text": {
-                    "locked": false,
-                    "dependsOn": [
-                        "kind"
-                    ],
-                    "refined": false,
-                    "stale": false
                 }
             }
         },
@@ -105,10 +77,6 @@
                 "type": "string",
                 "maxLength": 255,
                 "x-surface": {
-                    "locked": false,
-                    "dependsOn": [],
-                    "refined": false,
-                    "stale": false,
                     "checkedOnServer": [
                         {
                             "constraint": "Regex",
@@ -127,10 +95,6 @@
                 "readOnly": true,
                 "const": "spotlight",
                 "x-surface": {
-                    "locked": true,
-                    "dependsOn": [],
-                    "refined": false,
-                    "stale": false,
                     "checkedOnServer": [
                         {
                             "constraint": "Regex",
@@ -147,13 +111,7 @@
                     "boolean",
                     "null"
                 ],
-                "default": true,
-                "x-surface": {
-                    "locked": false,
-                    "dependsOn": [],
-                    "refined": false,
-                    "stale": false
-                }
+                "default": true
             },
             "plugin": {
                 "title": "Block",
@@ -226,10 +184,6 @@
                     }
                 ],
                 "x-surface": {
-                    "locked": false,
-                    "dependsOn": [],
-                    "refined": false,
-                    "stale": false,
                     "emptyOption": {
                         "show": false,
                         "label": "- Select -"
@@ -293,12 +247,10 @@
                     }
                 ],
                 "x-surface": {
-                    "locked": false,
                     "dependsOn": [
                         "plugin"
                     ],
                     "refined": true,
-                    "stale": false,
                     "by": "plugin",
                     "variants": {
                         "data_surface_component": "#/$defs/block.data_surface_component",
@@ -332,10 +284,6 @@
                     }
                 ],
                 "x-surface": {
-                    "locked": false,
-                    "dependsOn": [],
-                    "refined": false,
-                    "stale": false,
                     "emptyOption": {
                         "show": false,
                         "label": "- Select -"
@@ -395,12 +343,10 @@
                     }
                 ],
                 "x-surface": {
-                    "locked": false,
                     "dependsOn": [
                         "theme"
                     ],
                     "refined": true,
-                    "stale": false,
                     "emptyOption": {
                         "show": false,
                         "label": "- Select -"
@@ -423,25 +369,13 @@
                 "type": "integer",
                 "minimum": -2147483648,
                 "maximum": 2147483647,
-                "default": 0,
-                "x-surface": {
-                    "locked": false,
-                    "dependsOn": [],
-                    "refined": false,
-                    "stale": false
-                }
+                "default": 0
             },
             "status": {
                 "title": "Enabled",
                 "description": "Whether the block is shown at all.",
                 "type": "boolean",
-                "default": true,
-                "x-surface": {
-                    "locked": false,
-                    "dependsOn": [],
-                    "refined": false,
-                    "stale": false
-                }
+                "default": true
             },
             "visibility": {
                 "title": "Visibility",
@@ -454,11 +388,7 @@
                     "$ref": "#/$defs/block.placement.condition"
                 },
                 "x-surface": {
-                    "locked": false,
-                    "dependsOn": [],
-                    "refined": false,
-                    "stale": false,
-                    "list": true
+                    "collection": true
                 }
             }
         },
@@ -493,45 +423,6 @@
                                 },
                                 {
                                     "allOf": [
-                                        {
-                                            "if": {
-                                                "type": "object",
-                                                "properties": {
-                                                    "component": {
-                                                        "const": "data_surface_examples:card"
-                                                    }
-                                                },
-                                                "required": [
-                                                    "component"
-                                                ]
-                                            },
-                                            "then": {
-                                                "type": "object",
-                                                "properties": {
-                                                    "slots": {
-                                                        "title": "Slots",
-                                                        "allOf": [
-                                                            {
-                                                                "$ref": "#/$defs/block.data_surface_component.slots.data_surface_examples:card"
-                                                            },
-                                                            {
-                                                                "type": "object",
-                                                                "properties": {
-                                                                    "body": {
-                                                                        "allOf": [
-                                                                            {
-                                                                                "$ref": "#/$defs/component.slot.text"
-                                                                            },
-                                                                            true
-                                                                        ]
-                                                                    }
-                                                                }
-                                                            }
-                                                        ]
-                                                    }
-                                                }
-                                            }
-                                        },
                                         {
                                             "if": {
                                                 "type": "object",
@@ -953,24 +844,12 @@
                     "text": {
                         "title": "Button text",
                         "type": "string",
-                        "maxLength": 40,
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
+                        "maxLength": 40
                     },
                     "url": {
                         "title": "Address",
                         "type": "string",
-                        "format": "uri",
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
+                        "format": "uri"
                     },
                     "style": {
                         "title": "Style",
@@ -987,10 +866,6 @@
                         ],
                         "default": "primary",
                         "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false,
                             "emptyOption": {
                                 "show": false,
                                 "label": "- Select -"
@@ -1000,13 +875,7 @@
                     "new_window": {
                         "title": "Open in a new window",
                         "type": "boolean",
-                        "default": false,
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
+                        "default": false
                     },
                     "tags": {
                         "title": "Tags",
@@ -1016,21 +885,9 @@
                             "null"
                         ],
                         "items": {
-                            "type": "string",
-                            "x-surface": {
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false
-                            }
+                            "type": "string"
                         },
-                        "maxItems": 3,
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
+                        "maxItems": 3
                     }
                 },
                 "additionalProperties": false,
@@ -1046,13 +903,7 @@
                     "heading": {
                         "title": "Heading",
                         "type": "string",
-                        "maxLength": 80,
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
+                        "maxLength": 80
                     },
                     "tone": {
                         "title": "Tone",
@@ -1069,10 +920,6 @@
                         ],
                         "default": "plain",
                         "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false,
                             "emptyOption": {
                                 "show": false,
                                 "label": "- Select -"
@@ -1092,35 +939,17 @@
                                     "string",
                                     "null"
                                 ],
-                                "format": "uri",
-                                "x-surface": {
-                                    "locked": false,
-                                    "dependsOn": [],
-                                    "refined": false,
-                                    "stale": false
-                                }
+                                "format": "uri"
                             },
                             "label": {
                                 "title": "Link text",
                                 "type": [
                                     "string",
                                     "null"
-                                ],
-                                "x-surface": {
-                                    "locked": false,
-                                    "dependsOn": [],
-                                    "refined": false,
-                                    "stale": false
-                                }
+                                ]
                             }
                         },
-                        "additionalProperties": false,
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
+                        "additionalProperties": false
                     }
                 },
                 "additionalProperties": false,
@@ -1134,26 +963,14 @@
                 "properties": {
                     "title": {
                         "title": "Title",
-                        "type": "string",
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
+                        "type": "string"
                     },
                     "subtitle": {
                         "title": "Subtitle",
                         "type": [
                             "string",
                             "null"
-                        ],
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
+                        ]
                     },
                     "align": {
                         "title": "Alignment",
@@ -1170,10 +987,6 @@
                         ],
                         "default": "center",
                         "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false,
                             "emptyOption": {
                                 "show": false,
                                 "label": "- Select -"
@@ -1186,24 +999,12 @@
                         "type": "integer",
                         "minimum": 0,
                         "maximum": 100,
-                        "default": 40,
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
+                        "default": 40
                     },
                     "full_width": {
                         "title": "Full width",
                         "type": "boolean",
-                        "default": false,
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
+                        "default": false
                     }
                 },
                 "additionalProperties": false,
@@ -1220,13 +1021,7 @@
                         "type": [
                             "string",
                             "null"
-                        ],
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
+                        ]
                     }
                 },
                 "additionalProperties": false
@@ -1252,10 +1047,6 @@
                         ],
                         "default": "text",
                         "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false,
                             "emptyOption": {
                                 "show": false,
                                 "label": "- Select -"
@@ -1269,13 +1060,9 @@
                             "null"
                         ],
                         "x-surface": {
-                            "locked": false,
                             "dependsOn": [
                                 "kind"
-                            ],
-                            "refined": false,
-                            "stale": false,
-                            "declared": true
+                            ]
                         }
                     }
                 },
@@ -1314,13 +1101,7 @@
                     "body": {
                         "title": "Text",
                         "description": "A line under the heading.",
-                        "$ref": "#/$defs/component.slot.text",
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
+                        "$ref": "#/$defs/component.slot.text"
                     }
                 },
                 "additionalProperties": false
@@ -1332,24 +1113,12 @@
                     "text": {
                         "title": "Button text",
                         "type": "string",
-                        "maxLength": 40,
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
+                        "maxLength": 40
                     },
                     "url": {
                         "title": "Address",
                         "type": "string",
-                        "format": "uri",
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
+                        "format": "uri"
                     },
                     "style": {
                         "title": "Style",
@@ -1366,10 +1135,6 @@
                         ],
                         "default": "primary",
                         "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false,
                             "emptyOption": {
                                 "show": false,
                                 "label": "- Select -"
@@ -1379,13 +1144,7 @@
                     "new_window": {
                         "title": "Open in a new window",
                         "type": "boolean",
-                        "default": false,
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
+                        "default": false
                     },
                     "tags": {
                         "title": "Tags",
@@ -1395,21 +1154,9 @@
                             "null"
                         ],
                         "items": {
-                            "type": "string",
-                            "x-surface": {
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false
-                            }
+                            "type": "string"
                         },
-                        "maxItems": 3,
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
+                        "maxItems": 3
                     }
                 },
                 "additionalProperties": false,
@@ -1438,10 +1185,6 @@
                             }
                         ],
                         "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false,
                             "emptyOption": {
                                 "show": true,
                                 "label": "- Select -"
@@ -1459,17 +1202,13 @@
                             }
                         ],
                         "x-surface": {
-                            "locked": false,
                             "dependsOn": [
                                 "component"
                             ],
-                            "refined": false,
-                            "stale": false,
                             "by": "component",
                             "variants": {
                                 "data_surface_examples:call_to_action": "#/$defs/component.props.data_surface_examples:call_to_action"
-                            },
-                            "chosen": null
+                            }
                         }
                     },
                     "slots": {
@@ -1483,17 +1222,13 @@
                             }
                         ],
                         "x-surface": {
-                            "locked": false,
                             "dependsOn": [
                                 "component"
                             ],
-                            "refined": false,
-                            "stale": false,
                             "by": "component",
                             "variants": {
                                 "data_surface_examples:call_to_action": "#/$defs/component.slots.data_surface_examples:call_to_action.2"
-                            },
-                            "chosen": null
+                            }
                         }
                     }
                 },
@@ -1567,10 +1302,6 @@
                         ],
                         "default": "text",
                         "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false,
                             "emptyOption": {
                                 "show": false,
                                 "label": "- Select -"
@@ -1584,26 +1315,18 @@
                             "null"
                         ],
                         "x-surface": {
-                            "locked": false,
                             "dependsOn": [
                                 "kind"
-                            ],
-                            "refined": false,
-                            "stale": false,
-                            "declared": true
+                            ]
                         }
                     },
                     "component": {
                         "title": "Component",
                         "$ref": "#/$defs/component.nested.data_surface_examples:call_to_action.1",
                         "x-surface": {
-                            "locked": false,
                             "dependsOn": [
                                 "kind"
-                            ],
-                            "refined": false,
-                            "stale": false,
-                            "declared": true
+                            ]
                         }
                     },
                     "components": {
@@ -1614,14 +1337,10 @@
                             "$ref": "#/$defs/component.nested.data_surface_examples:call_to_action.1"
                         },
                         "x-surface": {
-                            "locked": false,
                             "dependsOn": [
                                 "kind"
                             ],
-                            "refined": false,
-                            "stale": false,
-                            "list": true,
-                            "declared": true
+                            "collection": true
                         }
                     }
                 },
@@ -1700,13 +1419,7 @@
                     "actions": {
                         "title": "Actions",
                         "description": "Up to two buttons under the title.",
-                        "$ref": "#/$defs/component.slot.data_surface_examples:hero.actions.1",
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
+                        "$ref": "#/$defs/component.slot.data_surface_examples:hero.actions.1"
                     }
                 },
                 "additionalProperties": false
@@ -1718,13 +1431,7 @@
                     "heading": {
                         "title": "Heading",
                         "type": "string",
-                        "maxLength": 80,
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
+                        "maxLength": 80
                     },
                     "tone": {
                         "title": "Tone",
@@ -1741,10 +1448,6 @@
                         ],
                         "default": "plain",
                         "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false,
                             "emptyOption": {
                                 "show": false,
                                 "label": "- Select -"
@@ -1764,35 +1467,17 @@
                                     "string",
                                     "null"
                                 ],
-                                "format": "uri",
-                                "x-surface": {
-                                    "locked": false,
-                                    "dependsOn": [],
-                                    "refined": false,
-                                    "stale": false
-                                }
+                                "format": "uri"
                             },
                             "label": {
                                 "title": "Link text",
                                 "type": [
                                     "string",
                                     "null"
-                                ],
-                                "x-surface": {
-                                    "locked": false,
-                                    "dependsOn": [],
-                                    "refined": false,
-                                    "stale": false
-                                }
+                                ]
                             }
                         },
-                        "additionalProperties": false,
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
+                        "additionalProperties": false
                     }
                 },
                 "additionalProperties": false,
@@ -1806,26 +1491,14 @@
                 "properties": {
                     "title": {
                         "title": "Title",
-                        "type": "string",
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
+                        "type": "string"
                     },
                     "subtitle": {
                         "title": "Subtitle",
                         "type": [
                             "string",
                             "null"
-                        ],
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
+                        ]
                     },
                     "align": {
                         "title": "Alignment",
@@ -1842,10 +1515,6 @@
                         ],
                         "default": "center",
                         "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false,
                             "emptyOption": {
                                 "show": false,
                                 "label": "- Select -"
@@ -1858,24 +1527,12 @@
                         "type": "integer",
                         "minimum": 0,
                         "maximum": 100,
-                        "default": 40,
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
+                        "default": 40
                     },
                     "full_width": {
                         "title": "Full width",
                         "type": "boolean",
-                        "default": false,
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
+                        "default": false
                     }
                 },
                 "additionalProperties": false,
@@ -1890,13 +1547,7 @@
                     "body": {
                         "title": "Text",
                         "description": "A line under the heading.",
-                        "$ref": "#/$defs/component.slot.text",
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
+                        "$ref": "#/$defs/component.slot.text"
                     }
                 },
                 "additionalProperties": false
@@ -1921,10 +1572,6 @@
                             }
                         ],
                         "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false,
                             "emptyOption": {
                                 "show": true,
                                 "label": "- Select -"
@@ -1942,17 +1589,13 @@
                             }
                         ],
                         "x-surface": {
-                            "locked": false,
                             "dependsOn": [
                                 "component"
                             ],
-                            "refined": false,
-                            "stale": false,
                             "by": "component",
                             "variants": {
                                 "data_surface_examples:call_to_action": "#/$defs/component.props.data_surface_examples:call_to_action"
-                            },
-                            "chosen": null
+                            }
                         }
                     },
                     "slots": {
@@ -1966,17 +1609,13 @@
                             }
                         ],
                         "x-surface": {
-                            "locked": false,
                             "dependsOn": [
                                 "component"
                             ],
-                            "refined": false,
-                            "stale": false,
                             "by": "component",
                             "variants": {
                                 "data_surface_examples:call_to_action": "#/$defs/component.slots.data_surface_examples:call_to_action.3"
-                            },
-                            "chosen": null
+                            }
                         }
                     }
                 },
@@ -2050,10 +1689,6 @@
                         ],
                         "default": "text",
                         "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false,
                             "emptyOption": {
                                 "show": false,
                                 "label": "- Select -"
@@ -2067,26 +1702,18 @@
                             "null"
                         ],
                         "x-surface": {
-                            "locked": false,
                             "dependsOn": [
                                 "kind"
-                            ],
-                            "refined": false,
-                            "stale": false,
-                            "declared": true
+                            ]
                         }
                     },
                     "component": {
                         "title": "Component",
                         "$ref": "#/$defs/component.nested.data_surface_examples:call_to_action.2",
                         "x-surface": {
-                            "locked": false,
                             "dependsOn": [
                                 "kind"
-                            ],
-                            "refined": false,
-                            "stale": false,
-                            "declared": true
+                            ]
                         }
                     },
                     "components": {
@@ -2097,14 +1724,10 @@
                             "$ref": "#/$defs/component.nested.data_surface_examples:call_to_action.2"
                         },
                         "x-surface": {
-                            "locked": false,
                             "dependsOn": [
                                 "kind"
                             ],
-                            "refined": false,
-                            "stale": false,
-                            "list": true,
-                            "declared": true
+                            "collection": true
                         }
                     }
                 },
@@ -2183,13 +1806,7 @@
                     "actions": {
                         "title": "Actions",
                         "description": "Up to two buttons under the title.",
-                        "$ref": "#/$defs/component.slot.data_surface_examples:hero.actions.2",
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
+                        "$ref": "#/$defs/component.slot.data_surface_examples:hero.actions.2"
                     }
                 },
                 "additionalProperties": false
@@ -2212,10 +1829,6 @@
                             }
                         ],
                         "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false,
                             "emptyOption": {
                                 "show": true,
                                 "label": "- Select -"
@@ -2236,18 +1849,14 @@
                             }
                         ],
                         "x-surface": {
-                            "locked": false,
                             "dependsOn": [
                                 "component"
                             ],
-                            "refined": false,
-                            "stale": false,
                             "by": "component",
                             "variants": {
                                 "data_surface_examples:card": "#/$defs/component.props.data_surface_examples:card",
                                 "data_surface_examples:hero": "#/$defs/component.props.data_surface_examples:hero"
-                            },
-                            "chosen": null
+                            }
                         }
                     },
                     "slots": {
@@ -2264,18 +1873,14 @@
                             }
                         ],
                         "x-surface": {
-                            "locked": false,
                             "dependsOn": [
                                 "component"
                             ],
-                            "refined": false,
-                            "stale": false,
                             "by": "component",
                             "variants": {
                                 "data_surface_examples:card": "#/$defs/component.slots.data_surface_examples:card.2",
                                 "data_surface_examples:hero": "#/$defs/component.slots.data_surface_examples:hero.2"
-                            },
-                            "chosen": null
+                            }
                         }
                     }
                 },
@@ -2389,10 +1994,6 @@
                         ],
                         "default": "text",
                         "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false,
                             "emptyOption": {
                                 "show": false,
                                 "label": "- Select -"
@@ -2406,26 +2007,18 @@
                             "null"
                         ],
                         "x-surface": {
-                            "locked": false,
                             "dependsOn": [
                                 "kind"
-                            ],
-                            "refined": false,
-                            "stale": false,
-                            "declared": true
+                            ]
                         }
                     },
                     "component": {
                         "title": "Component",
                         "$ref": "#/$defs/component.nested.block.1",
                         "x-surface": {
-                            "locked": false,
                             "dependsOn": [
                                 "kind"
-                            ],
-                            "refined": false,
-                            "stale": false,
-                            "declared": true
+                            ]
                         }
                     },
                     "components": {
@@ -2435,14 +2028,10 @@
                             "$ref": "#/$defs/component.nested.block.1"
                         },
                         "x-surface": {
-                            "locked": false,
                             "dependsOn": [
                                 "kind"
                             ],
-                            "refined": false,
-                            "stale": false,
-                            "list": true,
-                            "declared": true
+                            "collection": true
                         }
                     }
                 },
@@ -2521,13 +2110,7 @@
                     "content": {
                         "title": "Content",
                         "description": "The components the section holds.",
-                        "$ref": "#/$defs/component.slot.data_surface_examples:section.content.1",
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
+                        "$ref": "#/$defs/component.slot.data_surface_examples:section.content.1"
                     }
                 },
                 "additionalProperties": false
@@ -2564,10 +2147,6 @@
                             }
                         ],
                         "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false,
                             "emptyOption": {
                                 "show": true,
                                 "label": "- None -"
@@ -2594,20 +2173,16 @@
                             }
                         ],
                         "x-surface": {
-                            "locked": false,
                             "dependsOn": [
                                 "component"
                             ],
-                            "refined": false,
-                            "stale": false,
                             "by": "component",
                             "variants": {
                                 "data_surface_examples:call_to_action": "#/$defs/block.data_surface_component.props.data_surface_examples:call_to_action",
                                 "data_surface_examples:card": "#/$defs/block.data_surface_component.props.data_surface_examples:card",
                                 "data_surface_examples:hero": "#/$defs/block.data_surface_component.props.data_surface_examples:hero",
                                 "data_surface_examples:section": "#/$defs/block.data_surface_component.props.data_surface_examples:section"
-                            },
-                            "chosen": null
+                            }
                         }
                     },
                     "slots": {
@@ -2630,20 +2205,16 @@
                             }
                         ],
                         "x-surface": {
-                            "locked": false,
                             "dependsOn": [
                                 "component"
                             ],
-                            "refined": false,
-                            "stale": false,
                             "by": "component",
                             "variants": {
                                 "data_surface_examples:call_to_action": "#/$defs/block.data_surface_component.slots.data_surface_examples:call_to_action",
                                 "data_surface_examples:card": "#/$defs/block.data_surface_component.slots.data_surface_examples:card",
                                 "data_surface_examples:hero": "#/$defs/block.data_surface_component.slots.data_surface_examples:hero",
                                 "data_surface_examples:section": "#/$defs/block.data_surface_component.slots.data_surface_examples:section"
-                            },
-                            "chosen": null
+                            }
                         }
                     }
                 },
@@ -2824,24 +2395,12 @@
                     "primary": {
                         "title": "Whether primary tabs are shown",
                         "type": "boolean",
-                        "default": true,
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
+                        "default": true
                     },
                     "secondary": {
                         "title": "Whether secondary tabs are shown",
                         "type": "boolean",
-                        "default": true,
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
+                        "default": true
                     }
                 },
                 "additionalProperties": false
@@ -2859,35 +2418,17 @@
                     "use_site_logo": {
                         "title": "Use site logo",
                         "type": "boolean",
-                        "default": true,
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
+                        "default": true
                     },
                     "use_site_name": {
                         "title": "Use site name",
                         "type": "boolean",
-                        "default": true,
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
+                        "default": true
                     },
                     "use_site_slogan": {
                         "title": "Use site slogan",
                         "type": "boolean",
-                        "default": true,
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
+                        "default": true
                     }
                 },
                 "additionalProperties": false
@@ -2917,50 +2458,26 @@
                     "level": {
                         "title": "Starting level",
                         "type": "integer",
-                        "default": 1,
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
+                        "default": 1
                     },
                     "depth": {
                         "title": "Maximum number of levels",
                         "type": [
                             "integer",
                             "null"
-                        ],
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
+                        ]
                     },
                     "expand_all_items": {
                         "title": "Expand all items",
                         "type": "boolean",
-                        "default": false,
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
+                        "default": false
                     },
                     "ignore_active_trail": {
                         "title": "Ignore active trail",
                         "type": [
                             "boolean",
                             "null"
-                        ],
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
+                        ]
                     }
                 },
                 "additionalProperties": false
@@ -2972,50 +2489,26 @@
                     "level": {
                         "title": "Starting level",
                         "type": "integer",
-                        "default": 1,
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
+                        "default": 1
                     },
                     "depth": {
                         "title": "Maximum number of levels",
                         "type": [
                             "integer",
                             "null"
-                        ],
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
+                        ]
                     },
                     "expand_all_items": {
                         "title": "Expand all items",
                         "type": "boolean",
-                        "default": false,
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
+                        "default": false
                     },
                     "ignore_active_trail": {
                         "title": "Ignore active trail",
                         "type": [
                             "boolean",
                             "null"
-                        ],
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
+                        ]
                     }
                 },
                 "additionalProperties": false
@@ -3027,50 +2520,26 @@
                     "level": {
                         "title": "Starting level",
                         "type": "integer",
-                        "default": 1,
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
+                        "default": 1
                     },
                     "depth": {
                         "title": "Maximum number of levels",
                         "type": [
                             "integer",
                             "null"
-                        ],
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
+                        ]
                     },
                     "expand_all_items": {
                         "title": "Expand all items",
                         "type": "boolean",
-                        "default": false,
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
+                        "default": false
                     },
                     "ignore_active_trail": {
                         "title": "Ignore active trail",
                         "type": [
                             "boolean",
                             "null"
-                        ],
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
+                        ]
                     }
                 },
                 "additionalProperties": false
@@ -3082,50 +2551,26 @@
                     "level": {
                         "title": "Starting level",
                         "type": "integer",
-                        "default": 1,
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
+                        "default": 1
                     },
                     "depth": {
                         "title": "Maximum number of levels",
                         "type": [
                             "integer",
                             "null"
-                        ],
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
+                        ]
                     },
                     "expand_all_items": {
                         "title": "Expand all items",
                         "type": "boolean",
-                        "default": false,
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
+                        "default": false
                     },
                     "ignore_active_trail": {
                         "title": "Ignore active trail",
                         "type": [
                             "boolean",
                             "null"
-                        ],
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
+                        ]
                     }
                 },
                 "additionalProperties": false
@@ -3137,50 +2582,26 @@
                     "level": {
                         "title": "Starting level",
                         "type": "integer",
-                        "default": 1,
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
+                        "default": 1
                     },
                     "depth": {
                         "title": "Maximum number of levels",
                         "type": [
                             "integer",
                             "null"
-                        ],
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
+                        ]
                     },
                     "expand_all_items": {
                         "title": "Expand all items",
                         "type": "boolean",
-                        "default": false,
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
+                        "default": false
                     },
                     "ignore_active_trail": {
                         "title": "Ignore active trail",
                         "type": [
                             "boolean",
                             "null"
-                        ],
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
+                        ]
                     }
                 },
                 "additionalProperties": false
@@ -3212,13 +2633,7 @@
                         "type": [
                             "string",
                             "null"
-                        ],
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
+                        ]
                     }
                 },
                 "additionalProperties": false
@@ -3248,23 +2663,13 @@
                                 }
                             ],
                             "x-surface": {
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false,
                                 "emptyOption": {
                                     "show": true,
                                     "label": "- None -"
                                 }
                             }
                         },
-                        "default": [],
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
+                        "default": []
                     }
                 },
                 "additionalProperties": false
@@ -3278,21 +2683,9 @@
                         "type": "array",
                         "items": {
                             "title": "String",
-                            "type": "string",
-                            "x-surface": {
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false
-                            }
+                            "type": "string"
                         },
-                        "default": [],
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
+                        "default": []
                     },
                     "context_mapping": {
                         "title": "Context assignments",
@@ -3313,10 +2706,6 @@
                                 ],
                                 "default": "@user.current_user_context:current_user",
                                 "x-surface": {
-                                    "locked": false,
-                                    "dependsOn": [],
-                                    "refined": false,
-                                    "stale": false,
                                     "emptyOption": {
                                         "show": false,
                                         "label": "- Select -"
@@ -3324,13 +2713,7 @@
                                 }
                             }
                         },
-                        "additionalProperties": false,
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
+                        "additionalProperties": false
                     }
                 },
                 "additionalProperties": false
@@ -3358,10 +2741,6 @@
                             }
                         ],
                         "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false,
                             "emptyOption": {
                                 "show": true,
                                 "label": "- Select -"
@@ -3375,13 +2754,7 @@
                             "boolean",
                             "null"
                         ],
-                        "default": false,
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
-                        }
+                        "default": false
                     },
                     "settings": {
                         "title": "Settings",
@@ -3401,19 +2774,15 @@
                             }
                         ],
                         "x-surface": {
-                            "locked": false,
                             "dependsOn": [
                                 "id"
                             ],
-                            "refined": false,
-                            "stale": false,
                             "by": "id",
                             "variants": {
                                 "request_path": "#/$defs/block.placement.condition.settings.request_path",
                                 "response_status": "#/$defs/block.placement.condition.settings.response_status",
                                 "user_role": "#/$defs/block.placement.condition.settings.user_role"
-                            },
-                            "chosen": null
+                            }
                         }
                     }
                 },

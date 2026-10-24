@@ -37,7 +37,7 @@ function allows(schema: Schema): Phrase[] {
   else if (schema.maximum !== undefined) {
     phrases.push(`at most ${schema.maximum}`);
   }
-  if (schema['x-surface']?.list) {
+  if (schema['x-surface']?.collection) {
     const atLeast = schema.minItems;
     const atMost = schema.maxItems;
     phrases.push(atLeast !== undefined && atMost !== undefined
@@ -89,14 +89,14 @@ function rows(schema: Schema, values: Values, prefix = ''): Row[] {
     const widget = extension?.widget;
     found.push({
       path,
-      type: widget === 'variants' ? 'variants' : widget === 'fieldset' ? 'part' : extension?.list ? 'collection' : (jsonType(property) ?? 'any'),
+      type: widget === 'variants' ? 'variants' : widget === 'fieldset' ? 'part' : extension?.collection ? 'collection' : (jsonType(property) ?? 'any'),
       label: property.title ?? name,
       required: (schema.required ?? []).includes(name),
       allows: widget === 'variants'
         ? [`a part chosen by ${extension?.by}: ${Object.keys(extension?.variants ?? {}).join(', ')}`]
         : widget === 'fieldset' ? ['its own keys'] : allows(property),
       dependsOn: extension?.dependsOn ?? [],
-      now: extension?.locked
+      now: property.readOnly && extension?.computed === undefined
         ? 'locked'
         : extension?.stale
           ? 'stale: shown empty, the stored value kept'
@@ -106,7 +106,7 @@ function rows(schema: Schema, values: Values, prefix = ''): Row[] {
               ? (extension.refined ? 'narrowed, and checked by a live rule' : 'as declared, checked by a live rule')
               : extension?.refined ? 'narrowed' : 'as declared',
     });
-    if (extension?.list && property.items !== undefined) {
+    if (extension?.collection && property.items !== undefined) {
       // A collection's item keys, once, under `*`: each item is the child.
       found.push(...rows(property.items, {}, `${path}.*.`));
       continue;

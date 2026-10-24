@@ -58,11 +58,11 @@ interface Call {
   init?: RequestInit;
 }
 
-/** An answer of the API: JSON, of contract 3. */
+/** An answer of the API: JSON, of contract 4. */
 function json(body: unknown, init: { status?: number; headers?: Record<string, string> } = {}): Response {
   return new Response(JSON.stringify(body), {
     status: init.status ?? 200,
-    headers: { 'Content-Type': 'application/json', 'Contract-Version': '3', ...init.headers },
+    headers: { 'Content-Type': 'application/json', 'Contract-Version': '4', ...init.headers },
   });
 }
 
@@ -73,7 +73,7 @@ function problem(status: number, members: Record<string, unknown> = {}): Respons
   return new Response(JSON.stringify({ type: 'about:blank', title: REASONS[status], status, ...members }), {
     status,
     statusText: REASONS[status],
-    headers: { 'Content-Type': 'application/problem+json', 'Contract-Version': '3' },
+    headers: { 'Content-Type': 'application/problem+json', 'Contract-Version': '4' },
   });
 }
 
@@ -144,7 +144,7 @@ function narrowingLine(): string | null {
 
 /**
  * A mocked server: each route, `METHOD /path`, answers a document (200,
- * contract 3) or a Response of its own.
+ * contract 4) or a Response of its own.
  */
 function server(routes: Record<string, (call: Call) => unknown>) {
   const calls: Call[] = [];
@@ -222,7 +222,7 @@ describe('the React form of example 2', () => {
       const room = contract.schema.properties!.room;
       return {
         ...contract,
-        schema: { ...contract.schema, properties: { ...contract.schema.properties, room: { ...room, 'x-surface': { ...room['x-surface']!, stale: false } } } },
+        schema: { ...contract.schema, properties: { ...contract.schema.properties, room: { ...room, 'x-surface': { ...room['x-surface']!, stale: undefined } } } },
         values: { ...contract.values, room: sent.room },
         stale: [],
         notes: [],
@@ -421,7 +421,7 @@ describe('a resource its access locks whole', () => {
     const properties = Object.fromEntries(
       Object.entries(contract.schema.properties ?? {}).map(([name, property]) => [
         name,
-        { ...property, readOnly: true, 'x-surface': { ...property['x-surface'], locked: true } },
+        { ...property, readOnly: true },
       ]),
     );
     const locked = { ...contract, schema: { ...contract.schema, readOnly: true, properties } } as Contract;
@@ -722,7 +722,7 @@ describe('narrowing here, from the full schema', () => {
   });
 });
 
-describe('the contract 3 wire', () => {
+describe('the contract 4 wire', () => {
   const check: Settings = {
     ...settings,
     resource: 'event.program',
@@ -866,14 +866,14 @@ describe('the contract 3 wire', () => {
   });
 });
 
-describe('contract 3 only', () => {
+describe('contract 4 only', () => {
   /** example 2's contract as a server of contract 1 wrote it: no version stated. */
   const contractOne = (): Contract => {
     const contract = JSON.parse(JSON.stringify(example2)) as Contract;
     delete contract.schema['x-surface']?.contract;
     return contract;
   };
-  const refusalOf = (version: string) => `This page reads contract 3; the server sent contract ${version}.`;
+  const refusalOf = (version: string) => `This page reads contract 4; the server sent contract ${version}.`;
 
   it('refuses a contract of contract 1, which states no version, as the form\'s error', async () => {
     const { fetcher } = server({ [step2.read]: () => contractOne() });
@@ -894,20 +894,20 @@ describe('contract 3 only', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(`The form could not be loaded: ${refusalOf('1')}`);
   });
 
-  it('refuses an answer whose Contract-Version header says 2, whatever its document says', async () => {
+  it('refuses an answer whose Contract-Version header says 3, whatever its document says', async () => {
     const answer = (version: string | null) => vi.fn(async () =>
       new Response(JSON.stringify(example2), { status: 200, headers: version === null ? {} : { 'Content-Type': 'application/json', 'Contract-Version': version } }));
-    await expect(createApi(settings, answer('2')).contract()).rejects.toThrow(refusalOf('2'));
-    await expect(createApi(settings, answer('3')).contract()).resolves.toMatchObject({ document: { resource: 'registration.step2', operation: 'configure' } });
+    await expect(createApi(settings, answer('3')).contract()).rejects.toThrow(refusalOf('3'));
+    await expect(createApi(settings, answer('4')).contract()).resolves.toMatchObject({ document: { resource: 'registration.step2', operation: 'configure' } });
     // No header is no refusal by itself: the document is read.
     await expect(createApi(settings, answer(null)).contract()).resolves.toMatchObject({ document: { resource: 'registration.step2' } });
   });
 
-  it('refuses a problem whose Contract-Version header says 2', async () => {
+  it('refuses a problem whose Contract-Version header says 3', async () => {
     const { fetcher } = server({
-      [step2.write]: () => new Response(JSON.stringify({ status: 410, errors: [] }), { status: 410, headers: { 'Content-Type': 'application/problem+json', 'Contract-Version': '2' } }),
+      [step2.write]: () => new Response(JSON.stringify({ status: 410, errors: [] }), { status: 410, headers: { 'Content-Type': 'application/problem+json', 'Contract-Version': '3' } }),
     });
-    await expect(createApi(settings, fetcher).submit({}, [], null)).rejects.toThrow(new ContractRefused('2'));
+    await expect(createApi(settings, fetcher).submit({}, [], null)).rejects.toThrow(new ContractRefused('3'));
   });
 
   it('shows a narrowing of contract 1 refused, and keeps the form as it was', async () => {
@@ -921,12 +921,12 @@ describe('contract 3 only', () => {
     expect(screen.getByLabelText(/Room/)).toHaveDisplayValue('Main hall');
   });
 
-  it('refuses a write whose contract is of contract 1, and takes a write of contract 3', async () => {
+  it('refuses a write whose contract is of contract 1, and takes a write of contract 4', async () => {
     const written = (contract: Contract) => ({ ...nothing, committed: true, changed: true, changes: ['/title'], contract });
     const one = server({ [step2.write]: () => written(contractOne()) });
     await expect(createApi(settings, one.fetcher).submit({}, [], null)).rejects.toThrow(refusalOf('1'));
-    const three = server({ [step2.write]: () => written(example2 as unknown as Contract) });
-    await expect(createApi(settings, three.fetcher).submit({}, [], null)).resolves.toMatchObject({ document: { committed: true, changes: ['title'] } });
+    const four = server({ [step2.write]: () => written(example2 as unknown as Contract) });
+    await expect(createApi(settings, four.fetcher).submit({}, [], null)).resolves.toMatchObject({ document: { committed: true, changes: ['title'] } });
   });
 });
 

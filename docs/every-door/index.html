@@ -302,7 +302,7 @@ table.cmp td:last-child { color: var(--owner); font-weight: 600; }
       <h2>Who may change what</h2>
       <p>The fees of example 10 name an access class. The kind of its answer is read from the answer's cacheability, never declared: an answer that varies by <code>user.permissions</code> alone is static, and one that reads a stored value is runtime.</p>
       <p>A static answer is stated ahead, for the account that asks. Without "set event fees", the fees are locked: <code>readOnly</code> in the full schema and in the tool listing. With the workflow module on, an account without "see event fees" gets no fees at all.</p>
-      <p>For any other account the stored program decides: once it is published, the fees are fixed. The full schema marks them <code>access: "live"</code>, and the schema for these answers, the form and the pipeline settle it per request.</p>
+      <p>For any other account the stored program decides: once it is published, the fees are fixed. The full schema marks them <code>live</code>, and the schema for these answers, the form and the pipeline settle it per request.</p>
       <pre class="code" data-code="access"></pre>
       <p class="drawn">Drawn from example <a href="https://github.com/mlander/data_surface/blob/next/modules/data_surface_examples/README.md#example-10-who-may-change-what" target="_blank" rel="noopener">10</a>: <a href="https://github.com/mlander/data_surface/blob/next/modules/data_surface_examples/src/Structure/FeesStructure.php" target="_blank" rel="noopener"><code>FeesStructure.php</code></a>, <a href="https://github.com/mlander/data_surface/blob/next/modules/data_surface_examples/src/Access/FeesAccess.php" target="_blank" rel="noopener"><code>FeesAccess.php</code></a>, <a href="https://github.com/mlander/data_surface/blob/next/modules/data_surface_examples_workflow/src/Alter/FeesWorkflowAlter.php" target="_blank" rel="noopener"><code>FeesWorkflowAlter.php</code></a>. Explained in <a href="https://github.com/mlander/data_surface/blob/next/docs/resources.md#static-and-runtime-access" target="_blank" rel="noopener">Static and runtime access</a>.</p>
     </section>
@@ -318,8 +318,8 @@ table.cmp td:last-child { color: var(--owner); font-weight: 600; }
 
     <section class="chapter" id="ch-contract" hidden>
       <h2>The contract</h2>
-      <p>Ask the resource and it answers in JSON Schema, contract 3, as two documents. The schema as it stands is built for the values so far. The full schema reads no value, so it is the same whatever is stored or typed; access in it is the asking account's.</p>
-      <p>Labeled choices are <code>oneOf</code>. A key's variants are an <code>anyOf</code> of their defs, each chosen by a conditional. A declared rule is an <code>if</code> / <code>then</code> listed under <code>x-surface.rules</code>. Where a rule cannot be stated, the key says <code>refine</code> (ask again with values) or <code>live</code> (settled at runtime).</p>
+      <p>Ask the resource and it answers in JSON Schema, contract 4, as two documents. The schema as it stands is built for the values so far. The full schema reads no value, so it is the same whatever is stored or typed; access in it is the asking account's.</p>
+      <p>Labeled choices are <code>oneOf</code>. A key's variants are an <code>anyOf</code> of their defs, each chosen by a conditional. A declared rule is an <code>if</code> / <code>then</code> listed under <code>x-surface.rules</code>. Where a rule cannot be stated, the key says <code>refine</code> (ask again with values) or <code>live</code> (settled at runtime, by a runtime rule or an access answer that waits for the stored program).</p>
       <pre class="code" data-code="contract"></pre>
       <p class="drawn">Drawn from examples <a href="https://github.com/mlander/data_surface/blob/next/modules/data_surface_examples/README.md#example-3-made-of-parts" target="_blank" rel="noopener">3</a> and <a href="https://github.com/mlander/data_surface/blob/next/modules/data_surface_examples/README.md#example-4-others-get-a-say" target="_blank" rel="noopener">4</a>: <a href="https://github.com/mlander/data_surface/blob/next/modules/data_surface_examples/src/Resource/RegistrationStep3Resource.php" target="_blank" rel="noopener"><code>RegistrationStep3Resource.php</code></a>, <a href="https://github.com/mlander/data_surface/blob/next/modules/data_surface_examples_compliance/src/Alter/RegistrationComplianceAlter.php" target="_blank" rel="noopener"><code>RegistrationComplianceAlter.php</code></a>. Explained in <a href="https://github.com/mlander/data_surface/blob/next/docs/served-contract.md#two-documents" target="_blank" rel="noopener">Two documents</a>.</p>
     </section>
@@ -470,7 +470,7 @@ final class RegistrationComplianceAlter implements AltersInputsInterface {
 
 }`,
     contract: `{
-  "x-surface": { "contract": 3,
+  "x-surface": { "contract": 4,
     "operation": { "id": "configure", "kind": "update", ... },
     "version": 1, "rules": [9] },
   "properties": {
@@ -478,7 +478,7 @@ final class RegistrationComplianceAlter implements AltersInputsInterface {
       "minimum": 1, "default": 50,
       "x-surface": { "dependsOn": ["room",
         "third_party_settings.data_surface_examples_compliance.license"],
-        "enumerated": true, "declared": true } },
+        "enumerated": true } },
     "ticket": { "title": "Ticket", "anyOf": [
       { "$ref": "#/$defs/registration.step3.ticket.free" },
       { "$ref": "#/$defs/registration.step3.ticket.paid" },
@@ -491,7 +491,7 @@ final class RegistrationComplianceAlter implements AltersInputsInterface {
         "$ref": "#/$defs/registration.step3.ticket.paid" } } } } ]
 }`,
     rules: `// registration.step3, the full schema
-"x-surface": { "contract": 3, ..., "rules": [9] },
+"x-surface": { "contract": 4, ..., "rules": [9] },
 "allOf": [ ...,
   { "if": { "properties": { "third_party_settings": {
       "type": ["object", "null"],
@@ -510,7 +510,7 @@ final class RegistrationComplianceAlter implements AltersInputsInterface {
     reuse: `// event.press
 "contact": { "title": "Press contact", "$ref": "#/$defs/event.person",
   "x-surface": { "dependsOn": ["public"],
-    "reads": { "listed": "public" }, "declared": true } },
+    "reads": { "listed": "public" } } },
 "allOf": [ { "$ref": "#/$defs/event.review" },
   { "if": { "properties": { "public": { "const": true } },
             "required": ["public"] },
@@ -520,7 +520,7 @@ final class RegistrationComplianceAlter implements AltersInputsInterface {
 // event.desk
 "lead": { "title": "Desk lead", "$ref": "#/$defs/event.person",
   "x-surface": { "dependsOn": ["in_program"],
-    "reads": { "listed": "in_program" }, "declared": true } },
+    "reads": { "listed": "in_program" } } },
 "allOf": [
   { "if": { "properties": { "in_program": { "const": true } },
             "required": ["in_program"] },
@@ -559,7 +559,7 @@ public function access(OperationContext $context, AccountInterface $account): Ac
 }`,
     ops: `// event.program, the check operation, both documents
 "x-surface": {
-  "contract": 3,
+  "contract": 4,
   "operation": {
     "id": "check",
     "label": "Check a program",

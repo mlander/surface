@@ -95,17 +95,18 @@ class ServedContractEndpointsTest extends BrowserTestBase {
     $this->drupalLogin($this->drupalCreateUser(['administer site configuration']));
     $response = $this->send('GET', self::STEP2 . '/schema');
     $first = (string) $response->getBody();
-    // The full schema itself, served as one, written in contract 3, said
+    // The full schema itself, served as one, written in contract 4, said
     // in the header and the document, which says where it is served.
-    // Decision: see docs/decisions.md#contract-3-the-operation-is-the-method.
+    // Decision: see
+    // docs/decisions.md#contract-4-fewer-keywords-nothing-new-on-the-wire.
     $full = $this->decoded($response, 200, 'application/schema+json');
     $this->assertSame(['$schema', '$id', 'title'], array_slice(array_keys($full), 0, 3));
-    $this->assertSame(3, $full['x-surface']['contract']);
+    $this->assertSame(4, $full['x-surface']['contract']);
     $this->assertSame('configure', $full['x-surface']['operation']['id']);
     $this->assertStringEndsWith('/surface-api/registration.step2/schema', $full['$id']);
     $room = $full['properties']['room'];
     $this->assertCount(6, $this->offered($room));
-    $this->assertSame(['widget' => 'select', 'locked' => FALSE, 'dependsOn' => ['venue'], 'enumerated' => TRUE], $room['x-surface']);
+    $this->assertSame(['widget' => 'select', 'dependsOn' => ['venue'], 'enumerated' => TRUE], $room['x-surface']);
     // Every listable dependency as a conditional: three venues, six rooms.
     $this->assertCount(9, $full['allOf']);
     // Cacheable: it reads nothing stored, so it is not max-age 0 as the
@@ -167,7 +168,7 @@ class ServedContractEndpointsTest extends BrowserTestBase {
     $this->assertSame('registration.step2', $envelope['resource']);
     $this->assertSame('configure', $envelope['operation']);
     $this->assertSame('https://json-schema.org/draft/2020-12/schema', $envelope['schema']['$schema']);
-    $this->assertSame(3, $envelope['schema']['x-surface']['contract']);
+    $this->assertSame(4, $envelope['schema']['x-surface']['contract']);
     $this->assertStringEndsWith('/surface-api/registration.step2', $envelope['schema']['$id']);
     $this->assertSame(['venue'], $envelope['schema']['properties']['room']['x-surface']['dependsOn']);
     $this->assertSame('riverside', $envelope['values']['venue']);

@@ -5,7 +5,7 @@
         "title": "Configure registration (step 2)",
         "description": "Sets the event title, whether registration is open, the venue, a room at that venue and a capacity the room can hold.",
         "x-surface": {
-            "contract": 3,
+            "contract": 4,
             "operation": {
                 "id": "configure",
                 "label": "Configure registration (step 2)",
@@ -23,9 +23,7 @@
                 "title": "Event title",
                 "type": "string",
                 "x-surface": {
-                    "widget": "text",
-                    "locked": false,
-                    "dependsOn": []
+                    "widget": "text"
                 }
             },
             "open": {
@@ -36,9 +34,7 @@
                 ],
                 "default": true,
                 "x-surface": {
-                    "widget": "checkbox",
-                    "locked": false,
-                    "dependsOn": []
+                    "widget": "checkbox"
                 }
             },
             "venue": {
@@ -59,9 +55,7 @@
                     }
                 ],
                 "x-surface": {
-                    "widget": "select",
-                    "locked": false,
-                    "dependsOn": []
+                    "widget": "select"
                 }
             },
             "room": {
@@ -95,7 +89,6 @@
                 ],
                 "x-surface": {
                     "widget": "select",
-                    "locked": false,
                     "dependsOn": [
                         "venue"
                     ],
@@ -112,7 +105,6 @@
                 "default": 50,
                 "x-surface": {
                     "widget": "number",
-                    "locked": false,
                     "dependsOn": [
                         "room"
                     ],
@@ -367,7 +359,7 @@
             "title": "Configure registration (step 2)",
             "description": "Sets the event title, whether registration is open, the venue, a room at that venue and a capacity the room can hold.",
             "x-surface": {
-                "contract": 3,
+                "contract": 4,
                 "operation": {
                     "id": "configure",
                     "label": "Configure registration (step 2)",
@@ -385,11 +377,7 @@
                     "title": "Event title",
                     "type": "string",
                     "x-surface": {
-                        "widget": "text",
-                        "locked": false,
-                        "dependsOn": [],
-                        "refined": false,
-                        "stale": false
+                        "widget": "text"
                     }
                 },
                 "open": {
@@ -400,11 +388,7 @@
                     ],
                     "default": true,
                     "x-surface": {
-                        "widget": "checkbox",
-                        "locked": false,
-                        "dependsOn": [],
-                        "refined": false,
-                        "stale": false
+                        "widget": "checkbox"
                     }
                 },
                 "venue": {
@@ -426,10 +410,6 @@
                     ],
                     "x-surface": {
                         "widget": "select",
-                        "locked": false,
-                        "dependsOn": [],
-                        "refined": false,
-                        "stale": false,
                         "emptyOption": {
                             "show": false,
                             "label": "- Select -"
@@ -451,12 +431,10 @@
                     ],
                     "x-surface": {
                         "widget": "select",
-                        "locked": false,
                         "dependsOn": [
                             "venue"
                         ],
                         "refined": true,
-                        "stale": false,
                         "emptyOption": {
                             "show": false,
                             "label": "- Select -"
@@ -475,12 +453,10 @@
                     "default": 50,
                     "x-surface": {
                         "widget": "number",
-                        "locked": false,
                         "dependsOn": [
                             "room"
                         ],
-                        "refined": true,
-                        "stale": false
+                        "refined": true
                     }
                 }
             },
@@ -522,7 +498,7 @@
                     "title": "Configure registration (step 2)",
                     "description": "Sets the event title, whether registration is open, the venue, a room at that venue and a capacity the room can hold.",
                     "x-surface": {
-                        "contract": 3,
+                        "contract": 4,
                         "operation": {
                             "id": "configure",
                             "label": "Configure registration (step 2)",
@@ -540,11 +516,7 @@
                             "title": "Event title",
                             "type": "string",
                             "x-surface": {
-                                "widget": "text",
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false
+                                "widget": "text"
                             }
                         },
                         "open": {
@@ -555,11 +527,7 @@
                             ],
                             "default": true,
                             "x-surface": {
-                                "widget": "checkbox",
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false
+                                "widget": "checkbox"
                             }
                         },
                         "venue": {
@@ -581,10 +549,6 @@
                             ],
                             "x-surface": {
                                 "widget": "select",
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false,
                                 "emptyOption": {
                                     "show": false,
                                     "label": "- Select -"
@@ -606,16 +570,15 @@
                             ],
                             "x-surface": {
                                 "widget": "select",
-                                "locked": false,
                                 "dependsOn": [
                                     "venue"
                                 ],
                                 "refined": true,
-                                "stale": true,
                                 "emptyOption": {
                                     "show": true,
                                     "label": "- Select -"
-                                }
+                                },
+                                "stale": true
                             }
                         },
                         "capacity": {
@@ -628,12 +591,9 @@
                             "default": 50,
                             "x-surface": {
                                 "widget": "number",
-                                "locked": false,
                                 "dependsOn": [
                                     "room"
                                 ],
-                                "refined": false,
-                                "stale": false,
                                 "enumerated": true
                             }
                         }
@@ -738,7 +698,7 @@
                     "title": "Configure registration (step 2)",
                     "description": "Sets the event title, whether registration is open, the venue, a room at that venue and a capacity the room can hold.",
                     "x-surface": {
-                        "contract": 3,
+                        "contract": 4,
                         "operation": {
                             "id": "configure",
                             "label": "Configure registration (step 2)",
@@ -756,11 +716,7 @@
                             "title": "Event title",
                             "type": "string",
                             "x-surface": {
-                                "widget": "text",
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false
+                                "widget": "text"
                             }
                         },
                         "open": {
@@ -771,11 +727,7 @@
                             ],
                             "default": true,
                             "x-surface": {
-                                "widget": "checkbox",
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false
+                                "widget": "checkbox"
                             }
                         },
                         "venue": {
@@ -797,10 +749,6 @@
                             ],
                             "x-surface": {
                                 "widget": "select",
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false,
                                 "emptyOption": {
                                     "show": false,
                                     "label": "- Select -"
@@ -822,12 +770,10 @@
                             ],
                             "x-surface": {
                                 "widget": "select",
-                                "locked": false,
                                 "dependsOn": [
                                     "venue"
                                 ],
                                 "refined": true,
-                                "stale": false,
                                 "emptyOption": {
                                     "show": false,
                                     "label": "- Select -"
@@ -846,12 +792,10 @@
                             "default": 50,
                             "x-surface": {
                                 "widget": "number",
-                                "locked": false,
                                 "dependsOn": [
                                     "room"
                                 ],
-                                "refined": true,
-                                "stale": false
+                                "refined": true
                             }
                         }
                     },
@@ -894,7 +838,7 @@
                     "title": "Configure registration (step 2)",
                     "description": "Sets the event title, whether registration is open, the venue, a room at that venue and a capacity the room can hold.",
                     "x-surface": {
-                        "contract": 3,
+                        "contract": 4,
                         "operation": {
                             "id": "configure",
                             "label": "Configure registration (step 2)",
@@ -912,11 +856,7 @@
                             "title": "Event title",
                             "type": "string",
                             "x-surface": {
-                                "widget": "text",
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false
+                                "widget": "text"
                             }
                         },
                         "open": {
@@ -927,11 +867,7 @@
                             ],
                             "default": true,
                             "x-surface": {
-                                "widget": "checkbox",
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false
+                                "widget": "checkbox"
                             }
                         },
                         "venue": {
@@ -953,10 +889,6 @@
                             ],
                             "x-surface": {
                                 "widget": "select",
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false,
                                 "emptyOption": {
                                     "show": false,
                                     "label": "- Select -"
@@ -978,16 +910,15 @@
                             ],
                             "x-surface": {
                                 "widget": "select",
-                                "locked": false,
                                 "dependsOn": [
                                     "venue"
                                 ],
                                 "refined": true,
-                                "stale": true,
                                 "emptyOption": {
                                     "show": true,
                                     "label": "- Select -"
-                                }
+                                },
+                                "stale": true
                             }
                         },
                         "capacity": {
@@ -1000,12 +931,9 @@
                             "default": 50,
                             "x-surface": {
                                 "widget": "number",
-                                "locked": false,
                                 "dependsOn": [
                                     "room"
                                 ],
-                                "refined": false,
-                                "stale": false,
                                 "enumerated": true
                             }
                         }
@@ -1112,7 +1040,7 @@
                     "title": "Configure registration (step 2)",
                     "description": "Sets the event title, whether registration is open, the venue, a room at that venue and a capacity the room can hold.",
                     "x-surface": {
-                        "contract": 3,
+                        "contract": 4,
                         "operation": {
                             "id": "configure",
                             "label": "Configure registration (step 2)",
@@ -1130,11 +1058,7 @@
                             "title": "Event title",
                             "type": "string",
                             "x-surface": {
-                                "widget": "text",
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false
+                                "widget": "text"
                             }
                         },
                         "open": {
@@ -1145,11 +1069,7 @@
                             ],
                             "default": true,
                             "x-surface": {
-                                "widget": "checkbox",
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false
+                                "widget": "checkbox"
                             }
                         },
                         "venue": {
@@ -1171,10 +1091,6 @@
                             ],
                             "x-surface": {
                                 "widget": "select",
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false,
                                 "emptyOption": {
                                     "show": false,
                                     "label": "- Select -"
@@ -1196,12 +1112,10 @@
                             ],
                             "x-surface": {
                                 "widget": "select",
-                                "locked": false,
                                 "dependsOn": [
                                     "venue"
                                 ],
                                 "refined": true,
-                                "stale": false,
                                 "emptyOption": {
                                     "show": false,
                                     "label": "- Select -"
@@ -1220,12 +1134,10 @@
                             "default": 50,
                             "x-surface": {
                                 "widget": "number",
-                                "locked": false,
                                 "dependsOn": [
                                     "room"
                                 ],
-                                "refined": true,
-                                "stale": false
+                                "refined": true
                             }
                         }
                     },
@@ -1272,7 +1184,7 @@
                     "title": "Configure registration (step 2)",
                     "description": "Sets the event title, whether registration is open, the venue, a room at that venue and a capacity the room can hold.",
                     "x-surface": {
-                        "contract": 3,
+                        "contract": 4,
                         "operation": {
                             "id": "configure",
                             "label": "Configure registration (step 2)",
@@ -1290,11 +1202,7 @@
                             "title": "Event title",
                             "type": "string",
                             "x-surface": {
-                                "widget": "text",
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false
+                                "widget": "text"
                             }
                         },
                         "open": {
@@ -1305,11 +1213,7 @@
                             ],
                             "default": true,
                             "x-surface": {
-                                "widget": "checkbox",
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false
+                                "widget": "checkbox"
                             }
                         },
                         "venue": {
@@ -1331,10 +1235,6 @@
                             ],
                             "x-surface": {
                                 "widget": "select",
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false,
                                 "emptyOption": {
                                     "show": false,
                                     "label": "- Select -"
@@ -1356,12 +1256,10 @@
                             ],
                             "x-surface": {
                                 "widget": "select",
-                                "locked": false,
                                 "dependsOn": [
                                     "venue"
                                 ],
                                 "refined": true,
-                                "stale": false,
                                 "emptyOption": {
                                     "show": false,
                                     "label": "- Select -"
@@ -1380,12 +1278,10 @@
                             "default": 50,
                             "x-surface": {
                                 "widget": "number",
-                                "locked": false,
                                 "dependsOn": [
                                     "room"
                                 ],
-                                "refined": true,
-                                "stale": false
+                                "refined": true
                             }
                         }
                     },
@@ -1436,7 +1332,7 @@
                     "title": "Configure registration (step 2)",
                     "description": "Sets the event title, whether registration is open, the venue, a room at that venue and a capacity the room can hold.",
                     "x-surface": {
-                        "contract": 3,
+                        "contract": 4,
                         "operation": {
                             "id": "configure",
                             "label": "Configure registration (step 2)",
@@ -1454,11 +1350,7 @@
                             "title": "Event title",
                             "type": "string",
                             "x-surface": {
-                                "widget": "text",
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false
+                                "widget": "text"
                             }
                         },
                         "open": {
@@ -1469,11 +1361,7 @@
                             ],
                             "default": true,
                             "x-surface": {
-                                "widget": "checkbox",
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false
+                                "widget": "checkbox"
                             }
                         },
                         "venue": {
@@ -1495,10 +1383,6 @@
                             ],
                             "x-surface": {
                                 "widget": "select",
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false,
                                 "emptyOption": {
                                     "show": false,
                                     "label": "- Select -"
@@ -1520,16 +1404,15 @@
                             ],
                             "x-surface": {
                                 "widget": "select",
-                                "locked": false,
                                 "dependsOn": [
                                     "venue"
                                 ],
                                 "refined": true,
-                                "stale": true,
                                 "emptyOption": {
                                     "show": true,
                                     "label": "- Select -"
-                                }
+                                },
+                                "stale": true
                             }
                         },
                         "capacity": {
@@ -1542,12 +1425,9 @@
                             "default": 50,
                             "x-surface": {
                                 "widget": "number",
-                                "locked": false,
                                 "dependsOn": [
                                     "room"
                                 ],
-                                "refined": false,
-                                "stale": false,
                                 "enumerated": true
                             }
                         }
@@ -1652,7 +1532,7 @@
                     "title": "Configure registration (step 2)",
                     "description": "Sets the event title, whether registration is open, the venue, a room at that venue and a capacity the room can hold.",
                     "x-surface": {
-                        "contract": 3,
+                        "contract": 4,
                         "operation": {
                             "id": "configure",
                             "label": "Configure registration (step 2)",
@@ -1670,11 +1550,7 @@
                             "title": "Event title",
                             "type": "string",
                             "x-surface": {
-                                "widget": "text",
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false
+                                "widget": "text"
                             }
                         },
                         "open": {
@@ -1685,11 +1561,7 @@
                             ],
                             "default": true,
                             "x-surface": {
-                                "widget": "checkbox",
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false
+                                "widget": "checkbox"
                             }
                         },
                         "venue": {
@@ -1711,10 +1583,6 @@
                             ],
                             "x-surface": {
                                 "widget": "select",
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false,
                                 "emptyOption": {
                                     "show": false,
                                     "label": "- Select -"
@@ -1736,12 +1604,10 @@
                             ],
                             "x-surface": {
                                 "widget": "select",
-                                "locked": false,
                                 "dependsOn": [
                                     "venue"
                                 ],
                                 "refined": true,
-                                "stale": false,
                                 "emptyOption": {
                                     "show": false,
                                     "label": "- Select -"
@@ -1760,12 +1626,10 @@
                             "default": 50,
                             "x-surface": {
                                 "widget": "number",
-                                "locked": false,
                                 "dependsOn": [
                                     "room"
                                 ],
-                                "refined": true,
-                                "stale": false
+                                "refined": true
                             }
                         }
                     },

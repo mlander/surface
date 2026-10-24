@@ -395,7 +395,7 @@ class ExamplesStepsTest extends DataSurfaceKernelTestBase {
     $this->assertCount(2, $contract['properties']['room']['oneOf']);
     $this->assertCount(6, $full['properties']['room']['oneOf']);
     $this->assertArrayNotHasKey('maximum', $full['properties']['capacity'], 'With no room, no upper bound.');
-    $this->assertSame(['locked', 'dependsOn', 'enumerated'], array_keys($full['properties']['room']['x-surface']));
+    $this->assertSame(['dependsOn', 'enumerated'], array_keys($full['properties']['room']['x-surface']));
     $narrows = [];
     foreach ($full['allOf'] as $branch) {
       $on = implode(',', array_keys($branch['if']['properties']));

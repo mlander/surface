@@ -65,7 +65,7 @@ class ExamplesExtensionTest extends DataSurfaceKernelTestBase {
         "title": "Configure the mailer",
         "description": "Sets who the event's mail is sent from, the mail service it is sent through, and the credential that service is called with: a key pasted here, or a key the site manages.",
         "x-surface": {
-            "contract": 3,
+            "contract": 4,
             "operation": {
                 "id": "configure",
                 "label": "Configure the mailer",
@@ -83,21 +83,13 @@ class ExamplesExtensionTest extends DataSurfaceKernelTestBase {
                 "title": "Sender",
                 "type": "string",
                 "format": "idn-email",
-                "default": "tickets@example.com",
-                "x-surface": {
-                    "locked": false,
-                    "dependsOn": []
-                }
+                "default": "tickets@example.com"
             },
             "endpoint": {
                 "title": "Mail service",
                 "type": "string",
                 "format": "uri",
-                "default": "https://mail.example.com/v1/send",
-                "x-surface": {
-                    "locked": false,
-                    "dependsOn": []
-                }
+                "default": "https://mail.example.com/v1/send"
             },
             "source": {
                 "title": "Credential source",
@@ -105,8 +97,6 @@ class ExamplesExtensionTest extends DataSurfaceKernelTestBase {
                 "const": "pasted",
                 "default": "pasted",
                 "x-surface": {
-                    "locked": false,
-                    "dependsOn": [],
                     "fixed": "Pasted here"
                 }
             },
@@ -121,7 +111,6 @@ class ExamplesExtensionTest extends DataSurfaceKernelTestBase {
                     }
                 ],
                 "x-surface": {
-                    "locked": false,
                     "dependsOn": [
                         "source"
                     ],
@@ -169,11 +158,7 @@ class ExamplesExtensionTest extends DataSurfaceKernelTestBase {
                         "title": "API key",
                         "description": "The key the mail service issued, pasted here.",
                         "type": "string",
-                        "writeOnly": true,
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": []
-                        }
+                        "writeOnly": true
                     }
                 },
                 "additionalProperties": false
@@ -191,7 +176,7 @@ class ExamplesExtensionTest extends DataSurfaceKernelTestBase {
         "title": "Configure the mailer",
         "description": "Sets who the event's mail is sent from, the mail service it is sent through, and the credential that service is called with: a key pasted here, or a key the site manages.",
         "x-surface": {
-            "contract": 3,
+            "contract": 4,
             "operation": {
                 "id": "configure",
                 "label": "Configure the mailer",
@@ -209,21 +194,13 @@ class ExamplesExtensionTest extends DataSurfaceKernelTestBase {
                 "title": "Sender",
                 "type": "string",
                 "format": "idn-email",
-                "default": "tickets@example.com",
-                "x-surface": {
-                    "locked": false,
-                    "dependsOn": []
-                }
+                "default": "tickets@example.com"
             },
             "endpoint": {
                 "title": "Mail service",
                 "type": "string",
                 "format": "uri",
-                "default": "https://mail.example.com/v1/send",
-                "x-surface": {
-                    "locked": false,
-                    "dependsOn": []
-                }
+                "default": "https://mail.example.com/v1/send"
             },
             "source": {
                 "title": "Credential source",
@@ -238,11 +215,7 @@ class ExamplesExtensionTest extends DataSurfaceKernelTestBase {
                         "title": "A managed key"
                     }
                 ],
-                "default": "pasted",
-                "x-surface": {
-                    "locked": false,
-                    "dependsOn": []
-                }
+                "default": "pasted"
             },
             "credential": {
                 "title": "Credential",
@@ -258,7 +231,6 @@ class ExamplesExtensionTest extends DataSurfaceKernelTestBase {
                     }
                 ],
                 "x-surface": {
-                    "locked": false,
                     "dependsOn": [
                         "source"
                     ],
@@ -327,11 +299,7 @@ class ExamplesExtensionTest extends DataSurfaceKernelTestBase {
                         "title": "API key",
                         "description": "The key the mail service issued, pasted here.",
                         "type": "string",
-                        "writeOnly": true,
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": []
-                        }
+                        "writeOnly": true
                     }
                 },
                 "additionalProperties": false
@@ -355,8 +323,6 @@ class ExamplesExtensionTest extends DataSurfaceKernelTestBase {
                             }
                         ],
                         "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
                             "checkedOnServer": [
                                 {
                                     "constraint": "ManagedKey",
@@ -384,7 +350,7 @@ class ExamplesExtensionTest extends DataSurfaceKernelTestBase {
         "title": "Configure the sales webhook",
         "description": "Sets the address the event's sales are posted to, and the key each post is signed with.",
         "x-surface": {
-            "contract": 3,
+            "contract": 4,
             "operation": {
                 "id": "configure",
                 "label": "Configure the sales webhook",
@@ -402,21 +368,13 @@ class ExamplesExtensionTest extends DataSurfaceKernelTestBase {
                 "title": "Endpoint",
                 "type": "string",
                 "format": "uri",
-                "default": "https://hooks.example.com/sales",
-                "x-surface": {
-                    "locked": false,
-                    "dependsOn": []
-                }
+                "default": "https://hooks.example.com/sales"
             },
             "api_key": {
                 "title": "API key",
                 "description": "The key each post is signed with, pasted here.",
                 "type": "string",
-                "writeOnly": true,
-                "x-surface": {
-                    "locked": false,
-                    "dependsOn": []
-                }
+                "writeOnly": true
             }
         },
         "additionalProperties": false,
@@ -435,7 +393,7 @@ class ExamplesExtensionTest extends DataSurfaceKernelTestBase {
         "title": "Configure the sales webhook",
         "description": "Sets the address the event's sales are posted to, and the key each post is signed with.",
         "x-surface": {
-            "contract": 3,
+            "contract": 4,
             "operation": {
                 "id": "configure",
                 "label": "Configure the sales webhook",
@@ -456,11 +414,7 @@ class ExamplesExtensionTest extends DataSurfaceKernelTestBase {
                 "title": "Endpoint",
                 "type": "string",
                 "format": "uri",
-                "default": "https://hooks.example.com/sales",
-                "x-surface": {
-                    "locked": false,
-                    "dependsOn": []
-                }
+                "default": "https://hooks.example.com/sales"
             },
             "api_key": {
                 "title": "API key",
@@ -468,11 +422,9 @@ class ExamplesExtensionTest extends DataSurfaceKernelTestBase {
                 "type": "string",
                 "writeOnly": true,
                 "x-surface": {
-                    "locked": false,
                     "dependsOn": [
                         "third_party_settings.data_surface_examples_keys.key_id"
-                    ],
-                    "declared": true
+                    ]
                 }
             },
             "third_party_settings": {
@@ -509,8 +461,6 @@ class ExamplesExtensionTest extends DataSurfaceKernelTestBase {
                                     }
                                 ],
                                 "x-surface": {
-                                    "locked": false,
-                                    "dependsOn": [],
                                     "checkedOnServer": [
                                         {
                                             "constraint": "ManagedKey",
@@ -522,16 +472,12 @@ class ExamplesExtensionTest extends DataSurfaceKernelTestBase {
                         },
                         "additionalProperties": false,
                         "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
                             "after": "api_key"
                         }
                     }
                 },
                 "additionalProperties": false,
                 "x-surface": {
-                    "locked": false,
-                    "dependsOn": [],
                     "group": true
                 }
             }

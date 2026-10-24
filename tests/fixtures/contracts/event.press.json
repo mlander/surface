@@ -1,7 +1,7 @@
 {
     "resource": "event.press",
     "module": "data_surface_examples",
-    "contract": 3,
+    "contract": 4,
     "documents": [
         {
             "resource": "event.press",
@@ -12,7 +12,7 @@
                 "title": "Configure the press page",
                 "description": "Sets the press page: whether it is shown, the press contact, and who last reviewed it and when.",
                 "x-surface": {
-                    "contract": 3,
+                    "contract": 4,
                     "operation": {
                         "id": "configure",
                         "label": "Configure the press page",
@@ -35,24 +35,18 @@
                             "boolean",
                             "null"
                         ],
-                        "default": true,
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": []
-                        }
+                        "default": true
                     },
                     "contact": {
                         "title": "Press contact",
                         "$ref": "#/$defs/event.person",
                         "x-surface": {
-                            "locked": false,
                             "dependsOn": [
                                 "public"
                             ],
                             "reads": {
                                 "listed": "public"
-                            },
-                            "declared": true
+                            }
                         }
                     },
                     "reviewed_on": true,
@@ -99,11 +93,7 @@
                         "properties": {
                             "name": {
                                 "title": "Name",
-                                "type": "string",
-                                "x-surface": {
-                                    "locked": false,
-                                    "dependsOn": []
-                                }
+                                "type": "string"
                             },
                             "email": {
                                 "title": "Email",
@@ -113,7 +103,6 @@
                                 ],
                                 "format": "idn-email",
                                 "x-surface": {
-                                    "locked": false,
                                     "dependsOn": [
                                         "listed"
                                     ]
@@ -123,8 +112,6 @@
                                 "$ref": "#/$defs/event.phone",
                                 "title": "Phone",
                                 "x-surface": {
-                                    "locked": false,
-                                    "dependsOn": [],
                                     "patternMessage": "Write the number in digits, such as +1 555 0100."
                                 }
                             }
@@ -155,8 +142,6 @@
                                 ],
                                 "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
                                 "x-surface": {
-                                    "locked": false,
-                                    "dependsOn": [],
                                     "patternMessage": "Write the date as YYYY-MM-DD, such as 2026-10-19."
                                 }
                             },
@@ -167,11 +152,9 @@
                                     "null"
                                 ],
                                 "x-surface": {
-                                    "locked": false,
                                     "dependsOn": [
                                         "reviewed_on"
-                                    ],
-                                    "declared": true
+                                    ]
                                 }
                             }
                         },

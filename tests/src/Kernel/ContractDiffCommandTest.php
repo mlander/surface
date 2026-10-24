@@ -120,7 +120,7 @@ class ContractDiffCommandTest extends DataSurfaceKernelTestBase {
     $this->copyCommitted();
     [$status, $display] = $this->diff(['--module' => self::PINNED, '--dir' => $this->directory]);
     $this->assertSame(0, $status, $display);
-    $this->assertStringContainsString('29 resources and structures in contract 3, emitted for user 1', $display);
+    $this->assertStringContainsString('29 resources and structures in contract 4, emitted for user 1', $display);
     $this->assertStringContainsString('0 failing', $display);
   }
 
@@ -161,7 +161,7 @@ class ContractDiffCommandTest extends DataSurfaceKernelTestBase {
    * Tests baselines of contract 1 fail once, and --write re-pins them.
    *
    * The wire moved, so nothing is compared keyword by keyword: the run
-   * says "contract version 1 to 3" once and fails, and writing needs no
+   * says "contract version 1 to 4" once and fails, and writing needs no
    * reason, since no resource broke its promise.
    */
   public function testAnotherContractVersionFailsOnceUntilWritten(): void {
@@ -184,12 +184,12 @@ class ContractDiffCommandTest extends DataSurfaceKernelTestBase {
     ]);
     $this->assertSame(1, $status);
     $report = json_decode($display, TRUE, 512, JSON_THROW_ON_ERROR);
-    $this->assertSame(3, $report['contract']);
-    $this->assertSame(['*: contract version 1 to 3 (contract)'], array_map(static fn (array $change): string => sprintf('%s: %s (%s)', $change['resource'], $change['change'], $change['status']), $report['changes']));
+    $this->assertSame(4, $report['contract']);
+    $this->assertSame(['*: contract version 1 to 4 (contract)'], array_map(static fn (array $change): string => sprintf('%s: %s (%s)', $change['resource'], $change['change'], $change['status']), $report['changes']));
 
     [$status, $display] = $this->diff(['--module' => self::PINNED, '--baselines' => $this->directory, '--write' => TRUE]);
     $this->assertSame(0, $status, 'Re-pinning asks no reason: ' . $display);
-    $this->assertSame(3, json_decode((string) file_get_contents($this->directory . '/registration.step3.json'), TRUE)['contract']);
+    $this->assertSame(4, json_decode((string) file_get_contents($this->directory . '/registration.step3.json'), TRUE)['contract']);
     [$status] = $this->diff(['--module' => self::PINNED, '--baselines' => $this->directory]);
     $this->assertSame(0, $status);
   }

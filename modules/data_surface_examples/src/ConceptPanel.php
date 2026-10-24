@@ -662,7 +662,7 @@ final class ConceptPanel {
       ],
       'add_command' => $this->pre(self::ADD_TYPE . "\n" . self::REMOVE_TYPE),
       'per_type' => $this->details($this->t("One type's limits, as the full schema states them"), $this->t("The student type's two rules, each a conditional on the resource's frame: the structure says what it reads, <code>selling</code>, and the resource says which key that is for each type."), $this->json(array_values(array_filter($full['allOf'] ?? [], static fn (array $condition): bool => isset($condition['if']['properties']['on_sale']['properties']['student']))))),
-      'lock' => $this->details($this->t('The locked type, in both documents'), $this->t('In the full schema (<code>full</code>) and the schema for these answers (<code>now</code>): <code>readOnly</code>, and locked under <code>x-surface</code>.'), $this->json($lock)),
+      'lock' => $this->details($this->t('The locked type, in both documents'), $this->t('In the full schema (<code>full</code>) and the schema for these answers (<code>now</code>): <code>readOnly</code>, the standard keyword, with its <code>const</code> in the schema for these answers.'), $this->json($lock)),
     ];
   }
 

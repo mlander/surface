@@ -10,7 +10,7 @@ import { LookupContext, type Lookup } from '../widgets/Shell';
 // Each widget from a schema fragment the way the emitter writes one.
 
 function x(widget: Extension['widget'], more: Partial<Extension> = {}): Extension {
-  return { widget, locked: false, dependsOn: [], refined: false, stale: false, ...more };
+  return { widget, ...more };
 }
 
 /** Renders an object schema's properties over values, editable. */
@@ -367,7 +367,7 @@ describe('locked', () => {
   it('renders a locked key disabled, saying why', () => {
     render(
       <Form
-        schema={object({ type: { title: 'Machine name', description: 'Unique.', type: 'string', readOnly: true, const: 'article', 'x-surface': x('text', { locked: true }) } }, ['type'])}
+        schema={object({ type: { title: 'Machine name', description: 'Unique.', type: 'string', readOnly: true, const: 'article', 'x-surface': x('text') } }, ['type'])}
         initial={{ type: 'article' }}
       />,
     );
@@ -379,13 +379,13 @@ describe('locked', () => {
 
   it('renders a child its access locked as a fieldset of disabled keys, holding what is stored', () => {
     // As the emitter writes a locked child: the fieldset and every key in
-    // it readOnly and locked, each holding its stored value.
+    // it readOnly, each holding its stored value.
     const locked = (title: string, value: unknown, widget: Extension['widget']): Schema => ({
       title,
       type: widget === 'number' ? 'integer' : 'string',
       readOnly: true,
       const: value,
-      'x-surface': x(widget, { locked: true }),
+      'x-surface': x(widget),
     });
     render(
       <Form
@@ -395,7 +395,7 @@ describe('locked', () => {
             type: 'object',
             readOnly: true,
             properties: { spices: locked('Spices', 7, 'number'), label: locked('Label', 'Everyday', 'text') },
-            'x-surface': x('fieldset', { locked: true }),
+            'x-surface': x('fieldset'),
           },
         })}
         initial={{ rack: { spices: 7, label: 'Everyday' } }}
@@ -543,8 +543,9 @@ describe('fieldset, variants and list', () => {
   });
 
   it('locks the chosen variant\'s fieldset with the key with variants, which says it', () => {
-    // A variant's conditional carries no `x-surface`: the lock is the key's.
-    const locked: Schema = { ...ticketVariants, 'x-surface': { ...(ticketVariants['x-surface'] as Extension), locked: true } };
+    // A variant's conditional carries no `x-surface`: the lock is the
+    // key's `readOnly`.
+    const locked: Schema = { ...ticketVariants, readOnly: true };
     render(<Form schema={object({ pricing, ticket: locked }, [], branches)} initial={{ pricing: 'free', ticket: { note: 'Donations welcome' } }} />);
     expect(screen.getByLabelText('Note')).toBeDisabled();
     expect(screen.getByRole('group', { name: 'Ticket' })).toHaveTextContent('Fixed for this operation.');
@@ -589,7 +590,7 @@ describe('a collection', () => {
     items: rack,
     minItems: 1,
     maxItems: 3,
-    'x-surface': x('list', { list: true, ...extension }),
+    'x-surface': x('list', { collection: true, ...extension }),
     ...more,
   });
 
@@ -640,7 +641,7 @@ describe('a collection', () => {
         },
         additionalProperties: false,
       },
-      'x-surface': x('list', { list: true }),
+      'x-surface': x('list', { collection: true }),
     };
     render(<Form schema={object({ aisles })} initial={{ aisles: [{ label: 'North', racks: [{ label: 'Everyday' }] }, { label: 'South', racks: [] }] }} onValues={(values) => (seen = values)} />);
     const south = screen.getByRole('group', { name: 'Aisles 2' });
@@ -651,7 +652,7 @@ describe('a collection', () => {
   });
 
   it('locks every item and both controls with a locked list', () => {
-    render(<Form schema={object({ racks: racks({ readOnly: true }, { locked: true }) })} initial={{ racks: [{ label: 'Everyday' }] }} />);
+    render(<Form schema={object({ racks: racks({ readOnly: true }) })} initial={{ racks: [{ label: 'Everyday' }] }} />);
     expect(within(screen.getByRole('group', { name: 'Spice racks 1' })).getByLabelText('Label')).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Add another' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Remove 1' })).toBeDisabled();
@@ -670,7 +671,7 @@ describe('the contract panel', () => {
             minItems: 1,
             maxItems: 4,
             items: object({ label: { title: 'Label', type: 'string', 'x-surface': x('text') } }),
-            'x-surface': x('list', { list: true }),
+            'x-surface': x('list', { collection: true }),
           },
         })}
         values={{}}

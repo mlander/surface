@@ -5,7 +5,7 @@
         "title": "Configure the bulletin",
         "description": "Configures the bulletin, whose settings always exist.",
         "x-surface": {
-            "contract": 3,
+            "contract": 4,
             "operation": {
                 "id": "configure",
                 "label": "Configure the bulletin",
@@ -34,9 +34,7 @@
                 ],
                 "default": "weekly",
                 "x-surface": {
-                    "widget": "select",
-                    "locked": false,
-                    "dependsOn": []
+                    "widget": "select"
                 }
             },
             "send_day": {
@@ -59,7 +57,6 @@
                 "default": "monday",
                 "x-surface": {
                     "widget": "select",
-                    "locked": false,
                     "dependsOn": [
                         "frequency"
                     ],
@@ -118,7 +115,7 @@
             "title": "Configure the bulletin",
             "description": "Configures the bulletin, whose settings always exist.",
             "x-surface": {
-                "contract": 3,
+                "contract": 4,
                 "operation": {
                     "id": "configure",
                     "label": "Configure the bulletin",
@@ -148,10 +145,6 @@
                     "default": "weekly",
                     "x-surface": {
                         "widget": "select",
-                        "locked": false,
-                        "dependsOn": [],
-                        "refined": false,
-                        "stale": false,
                         "emptyOption": {
                             "show": false,
                             "label": "- Select -"
@@ -178,12 +171,9 @@
                     "default": "monday",
                     "x-surface": {
                         "widget": "select",
-                        "locked": false,
                         "dependsOn": [
                             "frequency"
                         ],
-                        "refined": false,
-                        "stale": false,
                         "emptyOption": {
                             "show": false,
                             "label": "- Select -"
@@ -229,7 +219,7 @@
                     "title": "Configure the bulletin",
                     "description": "Configures the bulletin, whose settings always exist.",
                     "x-surface": {
-                        "contract": 3,
+                        "contract": 4,
                         "operation": {
                             "id": "configure",
                             "label": "Configure the bulletin",
@@ -264,10 +254,6 @@
                             "default": "weekly",
                             "x-surface": {
                                 "widget": "select",
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false,
                                 "emptyOption": {
                                     "show": false,
                                     "label": "- Select -"
@@ -311,7 +297,7 @@
                     "title": "Configure the bulletin",
                     "description": "Configures the bulletin, whose settings always exist.",
                     "x-surface": {
-                        "contract": 3,
+                        "contract": 4,
                         "operation": {
                             "id": "configure",
                             "label": "Configure the bulletin",
@@ -341,10 +327,6 @@
                             "default": "weekly",
                             "x-surface": {
                                 "widget": "select",
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false,
                                 "emptyOption": {
                                     "show": false,
                                     "label": "- Select -"
@@ -371,12 +353,9 @@
                             "default": "monday",
                             "x-surface": {
                                 "widget": "select",
-                                "locked": false,
                                 "dependsOn": [
                                     "frequency"
                                 ],
-                                "refined": false,
-                                "stale": false,
                                 "emptyOption": {
                                     "show": false,
                                     "label": "- Select -"
@@ -427,7 +406,7 @@
                     "title": "Configure the bulletin",
                     "description": "Configures the bulletin, whose settings always exist.",
                     "x-surface": {
-                        "contract": 3,
+                        "contract": 4,
                         "operation": {
                             "id": "configure",
                             "label": "Configure the bulletin",
@@ -462,10 +441,6 @@
                             "default": "weekly",
                             "x-surface": {
                                 "widget": "select",
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false,
                                 "emptyOption": {
                                     "show": false,
                                     "label": "- Select -"
@@ -509,7 +484,7 @@
                     "title": "Configure the bulletin",
                     "description": "Configures the bulletin, whose settings always exist.",
                     "x-surface": {
-                        "contract": 3,
+                        "contract": 4,
                         "operation": {
                             "id": "configure",
                             "label": "Configure the bulletin",
@@ -539,10 +514,6 @@
                             "default": "weekly",
                             "x-surface": {
                                 "widget": "select",
-                                "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false,
                                 "emptyOption": {
                                     "show": false,
                                     "label": "- Select -"
@@ -569,12 +540,9 @@
                             "default": "monday",
                             "x-surface": {
                                 "widget": "select",
-                                "locked": false,
                                 "dependsOn": [
                                     "frequency"
                                 ],
-                                "refined": false,
-                                "stale": false,
                                 "emptyOption": {
                                     "show": false,
                                     "label": "- Select -"

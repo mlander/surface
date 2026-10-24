@@ -2389,7 +2389,7 @@ more is past it, as the development site this page was written on is,
 with 312: the full schema and the tool listing then list each component
 by id and label, and state the props and slots open, marked `deferred`,
 with no def and no conditional per component and a `fetch` template
-beside each; the full schema fetched with a component chosen,
+in each `deferred`; the full schema fetched with a component chosen,
 `GET /surface-api/event.spotlight/schema?choose=/props={component}`,
 states that component's defs exactly, and so does the schema for these
 answers. The React page fetches it once per component chosen, and the
@@ -2401,8 +2401,8 @@ The props in the full schema, past the limit:
 
 ```json
 "props": {"title": "Props", "type": ["object", "null"],
-          "x-surface": {"locked": false, "dependsOn": ["component"], "by": "component", "deferred": true,
-                        "fetch": "https://example.com/surface-api/event.spotlight/schema?choose=/props={value}"}}
+          "x-surface": {"dependsOn": ["component"], "by": "component",
+                        "deferred": {"fetch": "https://example.com/surface-api/event.spotlight/schema?choose=/props={value}"}}}
 ```
 
 The form still swaps the props over AJAX, and the React page fetches
@@ -3013,8 +3013,6 @@ draws as the label), and the credential is the pasted source's def:
         "const": "pasted",
         "default": "pasted",
         "x-surface": {
-            "locked": false,
-            "dependsOn": [],
             "fixed": "Pasted here"
         }
     },
@@ -3029,7 +3027,6 @@ draws as the label), and the credential is the pasted source's def:
             }
         ],
         "x-surface": {
-            "locked": false,
             "dependsOn": [
                 "source"
             ],
@@ -3060,11 +3057,7 @@ With the module on, the source offers both, and the credential is
                 "title": "A managed key"
             }
         ],
-        "default": "pasted",
-        "x-surface": {
-            "locked": false,
-            "dependsOn": []
-        }
+        "default": "pasted"
     },
     "credential": {
         "title": "Credential",
@@ -3080,7 +3073,6 @@ With the module on, the source offers both, and the credential is
             }
         ],
         "x-surface": {
-            "locked": false,
             "dependsOn": [
                 "source"
             ],

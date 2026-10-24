@@ -117,7 +117,7 @@ class ServedPathsTest extends BrowserTestBase {
     $this->assertNotSame('', $item->getHeaderLine('ETag'));
     $full = $this->decoded($this->send('GET', 'surface-api/node.type/article/schema'), 200, 'application/schema+json');
     $this->assertStringEndsWith('/surface-api/node.type/article/schema', $full['$id']);
-    $this->assertTrue($full['properties']['type']['x-surface']['locked']);
+    $this->assertTrue($full['properties']['type']['readOnly']);
     $narrowed = $this->decoded($this->send('POST', 'surface-api/node.type/article/schema', ['name' => 'Story']));
     $this->assertSame('Story', $narrowed['values']['name']);
     $dry = $this->decoded($this->send('PATCH', 'surface-api/node.type/article?dryRun=true', ['name' => 'Story'], ['If-Match' => $item->getHeaderLine('ETag')]));

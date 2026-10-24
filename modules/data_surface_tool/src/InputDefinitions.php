@@ -729,7 +729,7 @@ final class InputDefinitions {
     }
     $note = match (TRUE) {
       $fetch === TRUE && $narrowing !== NULL => $this->t("Too many to list: choose @by, then fetch @fetch{@by} once per @by, or call @tool with your values, to get this key's schema.", $arguments),
-      $fetch === FALSE && $narrowing !== NULL => $this->t("Too many to list: fetch @fetch{id} once per entry (GET @path lists the ids under x-surface.entries), or call @tool with your values, to get this key's schema.", $arguments),
+      $fetch === FALSE && $narrowing !== NULL => $this->t("Too many to list: fetch @fetch{id} once per entry (GET @path lists the ids under x-surface.deferred.entries), or call @tool with your values, to get this key's schema.", $arguments),
       $entry->variants !== NULL && $narrowing !== NULL => $this->t("Too many to list: choose @by, then call @tool with your values to get this key's schema.", $arguments),
       $entry->variants !== NULL => $this->t('Too many to list: its keys depend on @by.', $arguments),
       $narrowing !== NULL => $this->t("Too many to list: call @tool with your values to get this key's schema.", $arguments),
@@ -1307,7 +1307,7 @@ final class InputDefinitions {
    * built for the account alone keeps open. The Tool API's normalizer
    * writes JSON Schema from these typed definitions and carries a
    * description, and no extension keyword, so the description says it:
-   * the served contract's `x-surface.access: "live"`, in words. Not said
+   * the served contract's `x-surface.live`, in words. Not said
    * on a key whose only mark is a runtime answer at the top that the
    * tool's description already says once for every key
    * (OperationInputs::description()): a note on each key would bury what

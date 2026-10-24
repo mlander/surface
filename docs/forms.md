@@ -403,7 +403,7 @@ loses focus. Each idiom, and what differs:
 | `disabled` | Locked: the operation knows the value (an identity key), or an access answer locks the key or its child. | A locked key posts nothing that counts: extraction keeps what is stored, whatever arrives, where `#states` disabled only the browser's element. It depends on what is stored or who asks, never on another element's live value. |
 | `enabled` | Not locked. | As for `disabled`. |
 | `checked`, `unchecked` | A refiner or a rule that narrows the key to one value, or the stored value, drawn as it is. | Nothing is ticked for the person: a value is what is stored or sent, and the pipeline refuses one the rule does not allow, rather than the browser ticking a box nobody touched. |
-| `access` (by `#access`) | Access: an access answer omits the key (or locks it), asked of the account and, at runtime, of the thing ([Access](resources.md#access)). | Decided on the server for the account, before anything is drawn; the full schema says which answers wait for the thing, `x-surface.access: "live"`. |
+| `access` (by `#access`) | Access: an access answer omits the key (or locks it), asked of the account and, at runtime, of the thing ([Access](resources.md#access)). | Decided on the server for the account, before anything is drawn; the full schema says which answers wait for the thing, `x-surface.live`. |
 
 Two habits do not carry over. A rule is not a matter of drawing, so a
 rule `#states` would only have shown is checked here: a value a hidden

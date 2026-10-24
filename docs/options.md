@@ -324,7 +324,7 @@ and labels ([decision](decisions.md#a-budget-for-what-the-site-decides)).
 Where a reference key past its limit is looked up by label, such a key
 is fetched per choice: choose the deciding key, then fetch the full
 schema with that choice stated, `GET .../schema?choose=/props=<value>`,
-the key's `x-surface.fetch` filled, once per value, and keep it until
+the key's `x-surface.deferred.fetch` filled, once per value, and keep it until
 the site's list changes
 ([the fetch per choice](served-contract.md#the-fetch-per-choice)). Or
 ask with values, `POST .../schema` over HTTP or the narrowing tool,

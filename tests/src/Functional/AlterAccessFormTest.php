@@ -92,12 +92,12 @@ class AlterAccessFormTest extends BrowserTestBase {
     $this->assertSame(['The short gallery', 'Storm at sea'], [$stored['name'], $stored['north']['artwork']]);
     $full = $this->fullSchema();
     $this->assertTrue($full['properties']['north']['readOnly']);
-    $this->assertArrayNotHasKey('access', $full['properties']['north']['x-surface']);
+    $this->assertArrayNotHasKey('live', $full['properties']['north']['x-surface'] ?? []);
 
     $this->drupalLogin($this->drupalCreateUser(['keep a gallery']));
     $full = $this->fullSchema();
     $this->assertArrayNotHasKey('readOnly', $full['properties']['north']);
-    $this->assertSame('live', $full['properties']['north']['x-surface']['access']);
+    $this->assertTrue($full['properties']['north']['x-surface']['live']);
     $this->drupalGet('surface-test/gallery');
     foreach (self::WALLS as $name) {
       $assert->fieldEnabled($name);

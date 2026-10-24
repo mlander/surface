@@ -451,9 +451,8 @@ class OpenApiDocumentTest extends DataSurfaceKernelTestBase {
     $this->config('data_surface.settings')->set('site_list_limit', 2)->save();
     $document = $this->decoded();
     $settings = $document['components']['schemas']['block.placement.create']['properties']['settings'];
-    $this->assertTrue($settings['x-surface']['deferred']);
+    $this->assertSame(['fetch' => '?choose=/settings={value}'], $settings['x-surface']['deferred']);
     $this->assertArrayNotHasKey('refine', $settings['x-surface']);
-    $this->assertSame('?choose=/settings={value}', $settings['x-surface']['fetch']);
     $this->assertSame('plugin', $settings['x-surface']['by']);
     $this->assertArrayNotHasKey('anyOf', $settings);
     $schema = $document['paths']['/surface-api/block.placement/schema'];

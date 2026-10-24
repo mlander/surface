@@ -1,7 +1,7 @@
 {
     "resource": "event.sponsorship",
     "module": "data_surface_examples_references",
-    "contract": 3,
+    "contract": 4,
     "documents": [
         {
             "resource": "event.sponsorship",
@@ -12,7 +12,7 @@
                 "title": "Configure the sponsorship",
                 "description": "Sets the sponsor's venue, contact and announcement, and what the sponsor is featured beside, linked to and credited on.",
                 "x-surface": {
-                    "contract": 3,
+                    "contract": 4,
                     "operation": {
                         "id": "configure",
                         "label": "Configure the sponsorship",
@@ -46,8 +46,6 @@
                         ],
                         "default": "riverside",
                         "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
                             "reference": {
                                 "entityType": "event_venue"
                             },
@@ -84,8 +82,6 @@
                             }
                         ],
                         "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
                             "reference": {
                                 "entityType": "user"
                             },
@@ -110,8 +106,6 @@
                             }
                         ],
                         "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
                             "reference": {
                                 "entityType": "node",
                                 "bundles": [
@@ -129,29 +123,17 @@
                     "thing": {
                         "title": "Featured beside",
                         "description": "Any content the sponsor is featured beside.",
-                        "$ref": "#/$defs/event.sponsorship.thing",
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": []
-                        }
+                        "$ref": "#/$defs/event.sponsorship.thing"
                     },
                     "setting": {
                         "title": "Linked to",
                         "description": "A venue or a role the sponsorship is linked to.",
-                        "$ref": "#/$defs/event.sponsorship.setting",
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": []
-                        }
+                        "$ref": "#/$defs/event.sponsorship.setting"
                     },
                     "credit": {
                         "title": "Credited on",
                         "description": "An article or a user the sponsor is credited on.",
-                        "$ref": "#/$defs/event.sponsorship.credit",
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": []
-                        }
+                        "$ref": "#/$defs/event.sponsorship.credit"
                     }
                 },
                 "additionalProperties": false,
@@ -177,11 +159,7 @@
                                     {
                                         "const": null
                                     }
-                                ],
-                                "x-surface": {
-                                    "locked": false,
-                                    "dependsOn": []
-                                }
+                                ]
                             },
                             "id": {
                                 "title": "ID",
@@ -191,15 +169,13 @@
                                     "null"
                                 ],
                                 "x-surface": {
-                                    "locked": false,
                                     "dependsOn": [
                                         "entity_type"
                                     ],
                                     "reference": {
                                         "by": "entity_type"
                                     },
-                                    "enumerated": true,
-                                    "declared": true
+                                    "enumerated": true
                                 }
                             }
                         },
@@ -321,11 +297,7 @@
                                     {
                                         "const": null
                                     }
-                                ],
-                                "x-surface": {
-                                    "locked": false,
-                                    "dependsOn": []
-                                }
+                                ]
                             },
                             "id": {
                                 "title": "ID",
@@ -335,15 +307,13 @@
                                     "null"
                                 ],
                                 "x-surface": {
-                                    "locked": false,
                                     "dependsOn": [
                                         "entity_type"
                                     ],
                                     "reference": {
                                         "by": "entity_type"
                                     },
-                                    "enumerated": true,
-                                    "declared": true
+                                    "enumerated": true
                                 }
                             }
                         },
@@ -492,11 +462,7 @@
                                     {
                                         "const": null
                                     }
-                                ],
-                                "x-surface": {
-                                    "locked": false,
-                                    "dependsOn": []
-                                }
+                                ]
                             },
                             "id": {
                                 "title": "ID",
@@ -506,15 +472,13 @@
                                     "null"
                                 ],
                                 "x-surface": {
-                                    "locked": false,
                                     "dependsOn": [
                                         "entity_type"
                                     ],
                                     "reference": {
                                         "by": "entity_type"
                                     },
-                                    "enumerated": true,
-                                    "declared": true
+                                    "enumerated": true
                                 }
                             }
                         },

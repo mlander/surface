@@ -424,7 +424,7 @@ class ShapesTest extends DataSurfaceKernelTestBase {
       'title' => 'Stock code',
       'type' => 'string',
       'minLength' => 4,
-      'x-surface' => ['locked' => FALSE, 'dependsOn' => [], 'patternMessage' => self::PATTERN['message']],
+      'x-surface' => ['patternMessage' => self::PATTERN['message']],
     ], $full['properties']['sku']);
     $this->assertSame([
       '$ref' => '#/$defs/resource_test.sku',
@@ -432,7 +432,7 @@ class ShapesTest extends DataSurfaceKernelTestBase {
       'description' => 'Printed on the back of the shelf.',
       'maxLength' => 6,
       'default' => 'ZZ9',
-      'x-surface' => ['locked' => FALSE, 'dependsOn' => [], 'patternMessage' => self::PATTERN['message']],
+      'x-surface' => ['patternMessage' => self::PATTERN['message']],
     ], $full['properties']['spare']);
     $this->assertSame(['code' => ['type' => 'string', 'required' => TRUE, 'shape' => 'resource_test.sku']], $full['$defs']['resource_test.shelf_tag']['x-surface']['ports']);
 
@@ -444,10 +444,6 @@ class ShapesTest extends DataSurfaceKernelTestBase {
       'type' => 'string',
       'minLength' => 4,
       'x-surface' => [
-        'locked' => FALSE,
-        'dependsOn' => [],
-        'refined' => FALSE,
-        'stale' => FALSE,
         'patternMessage' => self::PATTERN['message'],
       ],
     ], $these['properties']['sku']);

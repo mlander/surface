@@ -58,18 +58,43 @@ JSON Schema cannot say them. This one can.
   definition has no conditional, so the tool's schema stays as loose as
   the unrefined data surface.
 
-## Contract 3
+## Contract 4
 
 A contract version is the version of the wire format both documents are
 written in, distinct from a resource's `version`: it counts the changes
 to how every document is spelled, and a client refuses one it does not
 know ([Evolving a resource](evolution.md#the-contracts-own-version)).
 Both documents state it first under the top `x-surface`, `"contract":
-3`, and every answer of the API in its `Contract-Version` header.
+4`, and every answer of the API in its `Contract-Version` header.
 Contract 1 is what the module served until 2026-10-20, contract 2 until
-2026-10-22; this page describes contract 3, which changed the HTTP door
-and kept both documents as contract 2 writes them, but for the number
-([decision](decisions.md#contract-3-the-operation-is-the-method)):
+2026-10-22, contract 3 until 2026-10-24; this page describes contract
+4, which cut the `x-surface` keywords that said nothing or said it twice
+and kept contract 3's paths, so no path answers 410 for it
+([decision](decisions.md#contract-4-fewer-keywords-nothing-new-on-the-wire)):
+
+| In contract 3 | In contract 4 | Why |
+| --- | --- | --- |
+| `declared: true` on a key a declared rule narrows | Nothing on the key; the frame's `rules` lists the rule's conditionals, and its `then` names the key | The two always traveled together |
+| `deferred: true`, `fetch` and `entries` beside it | `deferred: {fetch, entries}`, `entries` only on a map of keys from the site; `by` stays beside it | One state, one keyword; `by` is the variants' |
+| `locked` on every key, `false` on all but a few | No `locked`: `readOnly: true`, with `const` where the key holds a value; `computed` says why a computed key is read only | `readOnly` is the standard keyword, and `false` said nothing |
+| `dependsOn: []`, `refined: false`, `stale: false`, `chosen: null`, `variants: {}` on every key that had them | Each written only where it says something; an `x-surface` with nothing to say is not written | Absent says the same as empty |
+| `list: true` on a collection | `collection: true` | The concept's own word; `list` is also a widget hint |
+| `access: "live"` on a key under a runtime access answer | `live: true`, as on a key a runtime refiner narrows | A client does the same for both: ask per request, never cache |
+
+**What a client of contract 3 does.** A keyword it does not know is
+ignored: keywords are added within a contract, and a client must skip
+what it does not read. A keyword removed or moved is the reason for a
+new contract, so a client of contract 3 refuses a contract 4 document
+by its number rather than misreading a key with no `locked` as open.
+The contract diff reports a contract 3 baseline once, "contract version
+3 to 4", and re-pins it.
+
+## Contract 3
+
+Contract 3, from 2026-10-22 to 2026-10-24, changed the HTTP door and
+kept both documents as contract 2 writes them, but for the number
+([decision](decisions.md#contract-3-the-operation-is-the-method)). Its
+paths are contract 4's:
 
 | In contract 2 | In contract 3 | Why |
 | --- | --- | --- |
@@ -106,7 +131,7 @@ once ([decision](decisions.md#contract-2)):
 | A key with variants `{"type": ["object", "null"]}`, its `x-surface.variants` a list of values | `anyOf` of a reference to each variant's def, and `{"type": "null"}` where it may be cleared, and no `type` beside it; `variants` a map from each value to its def | A type generator writes `Free \| Paid \| null` |
 | `x-surface` below an applicator: `variant` and the widget on a variant's `then`, `declared: true` on a rule's conditional, a key's `x-surface` in a site's narrowing | None below an applicator: the owning object's `x-surface.rules` and `x-surface.within` | A tool merging `allOf` fell back to the unmerged schema (B21) |
 | `maximum`, `properties` or `required` with no `type` in a narrowing, a `then` or an `if` | The declared type beside them; a narrowing's `required` only what it adds | ajv's strict mode refused them (B22) |
-| `dynamic`, `runtime`, `access: "runtime"` | `refine`, `live`, `access: "live"` | Say what a client does; two facts, two words |
+| `dynamic`, `runtime`, `access: "runtime"` | `refine`, `live`, `access: "live"` (one `live` since contract 4) | Say what a client does; two facts, two words |
 | `checkedOnServer` a list of plugin ids | A list of `{constraint, message}` | An id tells a reader nothing |
 | `readOnly` in `x-surface.operation` | No `readOnly`: `kind: "read"` says it | JSON Schema's `readOnly` at the top means locked whole |
 | `format: "email"` | `format: "idn-email"` | Drupal admits a non-ASCII local part (B23) |
@@ -137,20 +162,20 @@ The emitter writes two documents from one data surface, by one code path.
   [the same rules and cap](#exact-where-it-can-be), and a key whose
   dependency cannot be listed keeps its declared schema with
   `x-surface.refine: true`; a list the site decides, past its limit, is
-  open with `x-surface.deferred: true` and a `fetch` template
+  open with `x-surface.deferred`, an object holding a `fetch` template
   ([below](#a-list-the-site-decides)). A runtime refiner is never run for it: the
   key keeps the width its static refiners give it and carries
   `x-surface.live: true`. Access in it is the account's: it is
   emitted from the resource built for the account alone
   (`ResourcesInterface::buildStatic()`), so a key a static access answer
-  locked is `readOnly` and `x-surface.locked`, one it left out is not
-  there, and one a runtime answer may still lock or leave out is there,
-  as the static answers leave it, marked `x-surface.access: "live"`;
-  the schema for these answers settles it
+  locked is `readOnly`, one it left out is not there, and one a runtime
+  answer may still lock or leave out is there, as the static answers
+  leave it, marked `x-surface.live`, as a runtime refiner's key is; the
+  schema for these answers settles it
   ([decision](decisions.md#access-is-static-or-runtime-read-from-its-cacheability)).
   Its `x-surface` carries only what holds for
-  any values (`contract`, `version`, `locked`, `access`, `computed`, `dependsOn`,
-  `enumerated`, `declared`, `refine`, `deferred`, `fetch`, `entries`, `live`, `rules`, `within`,
+  any values (`contract`, `version`, `computed`, `dependsOn`,
+  `enumerated`, `refine`, `deferred`, `live`, `rules`, `within`,
   the `by` and `variants` of a key with variants, `group`, `after`,
   `patternMessage`,
   `checkedOnServer`); there is no `refined`, `stale`, `emptyOption` or
@@ -233,13 +258,15 @@ A key a refiner narrows carries at most one of `enumerated` and
 refiner narrows it too ([refinement](refinement.md#static-and-runtime-refiners)).
 In contract 1, `refine` was `dynamic` and `live` was `runtime`. A list
 the site decides past its limit carries a fourth, `deferred`, which no
-refiner writes ([below](#a-list-the-site-decides)).
+refiner writes ([below](#a-list-the-site-decides)). A key under a
+runtime access answer carries `live` too: in contract 3 it was
+`access: "live"`.
 
 | Marker | Means | In the full schema | In the schema for these answers |
 | --- | --- | --- | --- |
 | `enumerated` | Captured exactly. The key's static refiners watch only keys that offer a list, within the cap, so what they answer for every combination is written as conditionals on the parent. | On every such key, always: no value is read. | Only while a sibling its static refiners watch holds nothing; once all do, the key is refined for them and carries neither this nor `refine`. |
 | `refine` | Static by declaration, but not captured here: a watched key cannot be listed (free text, a number, a key an alter mounted) or the combinations exceed `ENUMERATION_CAP`. The key keeps its declared schema; a client can ask, with values, at `POST .../schema`, and an agent at the narrowing tool ([asking again at the tool door](#asking-again-at-the-tool-door)). *Changed 2026-10-24:* a list the site decides past its limit is `deferred`, not `refine`. | On every such key. | As for `enumerated`. |
-| `live` | Declared impossible to capture: a runtime refiner narrows the key with a rule no schema can state (a lookup, uniqueness, the account, the time). Never run ahead of time and never in a conditional. | On the key, which keeps the width its static refiners give it: wider than the pipeline, by design. | On the key, always; the key is refined by the runtime refiner for these values, so this document is valid for those values, at that moment, and no others. |
+| `live` | Declared impossible to capture: a runtime refiner narrows the key with a rule no schema can state (a lookup, uniqueness, the account, the time), or an access answer that waits for the subject was set aside, so the key may be locked or left out once the subject is known. Never run ahead of time and never in a conditional. | On the key, which keeps the width its static refiners and static access give it: wider than the pipeline, by design. | On a key a runtime refiner narrows, always; the key is refined by it for these values, so this document is valid for those values, at that moment, and no others. A runtime access answer is applied here and marks nothing. |
 
 A key with a static and a runtime refiner, example 4's room, is
 `enumerated` (per venue) and `live` (closed rooms). A key with only a
@@ -254,18 +281,18 @@ trusted for a key, and what to do about the rest
 | Marker | What it says | What to do |
 | --- | --- | --- |
 | `enumerated` | Stated in full: every answer of the key's static refiners is a conditional on its frame. | Narrow locally: evaluate the conditionals for the values. |
-| `deferred` | Static, and left out for its size: a list the site decides with more entries than `site_list_limit`, open here, with `x-surface.fetch` naming the full schema with one entry stated. | Fetch per choice, `GET .../schema?choose=<pointer>=<value>`, and cache the answer until the site's list changes (its `ETag`, its cache tags); or ask the narrowing with values; or send the values and be refused by name. |
+| `deferred` | Static, and left out for its size: a list the site decides with more entries than `site_list_limit`, open here, its `fetch` naming the full schema with one entry stated. | Fetch per choice, `GET .../schema?choose=<pointer>=<value>`, and cache the answer until the site's list changes (its `ETag`, its cache tags); or ask the narrowing with values; or send the values and be refused by name. |
 | `refine` | Static, but not writable: a coded refiner over a value with no list (a number, free text), or more combinations than `ENUMERATION_CAP`. | Ask the narrowing with values, `POST .../schema` or the `:schema` tool, when a key it depends on changes. |
-| `live` | Runtime: a rule no schema states (a lookup, uniqueness, the account, the time). | Ask the narrowing per request; never cache its answer. |
+| `live` | Runtime: a rule no schema states (a lookup, uniqueness, the account, the time), or an access answer only the subject settles. | Ask the narrowing per request; never cache its answer. |
 | `checkedOnServer` | A constraint only the server checks, named with what it checks. | Send, or rehearse with `?dryRun=true`, and read the refusal. |
 
 Example 2's full schema, abbreviated:
 
 ```json
 "room": {"title": "Room", "type": "string", "oneOf": [...all six rooms...],
-         "x-surface": {"locked": false, "dependsOn": ["venue"], "enumerated": true}},
+         "x-surface": {"dependsOn": ["venue"], "enumerated": true}},
 "capacity": {"title": "Capacity", "type": ["integer", "null"], "minimum": 1, "default": 50,
-             "x-surface": {"locked": false, "dependsOn": ["room"], "enumerated": true}},
+             "x-surface": {"dependsOn": ["room"], "enumerated": true}},
 ...
 "allOf": [
   {"if": {"properties": {"venue": {"const": "riverside"}}, "required": ["venue"]},
@@ -297,6 +324,12 @@ The fingerprint of the stored values is the read's `ETag`
 A write's `created` uses the same two keys. Contract 1 spelled them `surface` and
 `situation`, the product's retired words; the `x-surface` keyword keeps
 the product's name ([Contract 2](#contract-2), [Contract 3](#contract-3)).
+
+Every keyword below is written only where it says something: a list
+that names nothing, a flag that is `false`, a value that is `null` is
+left out, and so is an `x-surface` with nothing left to say. A client
+reads an absent keyword as its empty value, and skips a keyword it does
+not know ([Contract 4](#contract-4)).
 
 ### The schema
 
@@ -390,11 +423,11 @@ under `$defs`, and referred to ([reusable subschemas](#reusable-subschemas)).
 | a deciding key whose variants offer one value | `const` of that value, no `oneOf`, the value's label under `x-surface.fixed`; a list the key declares itself, or a stored value no longer offered, is stated as any list ([decision](decisions.md#an-extension-is-a-variant-the-site-adds-or-an-alter)) |
 | a structure mixed in, `mixIn()` | a reference to its def in the frame's `allOf`, beside the frame's own `properties` (each member in its place: `true`, what differs, or `false`), the frame closed with `unevaluatedProperties: false` ([below](#a-mixed-in-structure-is-composed)) |
 | a list | `type: array`, `items`, never null: an empty item is dropped before anything reads the list ([decision](decisions.md#an-item-is-never-null)) |
-| a collection | `type: array`, `items` a reference to the child's def, narrowed by composition only where every item differs from it (a key the child's operation locked, a locked list), `minItems` and `maxItems` from its Count as the parent's refiners left it, and `x-surface.list: true` ([below](#collections)) |
+| a collection | `type: array`, `items` a reference to the child's def, narrowed by composition only where every item differs from it (a key the child's operation locked, a locked list), `minItems` and `maxItems` from its Count as the parent's refiners left it, and `x-surface.collection: true` ([below](#collections)) |
 | a locked key | `readOnly: true` and `const` of the value the operation knows |
 | a computed key, `compute()` | `readOnly: true` and `x-surface.computed`, no `const` (what it holds follows its sources), never in `required`; in `values` what it holds ([Declaring a resource](declaring-a-resource.md#computed-keys)) |
 | a child its access locked | `readOnly: true` on the part, and on every key inside it with `const` of what is stored (none in the full schema); an omitted child is not there at all ([Three answers](resources.md#three-answers)) |
-| a key under a runtime access answer, in the full schema | there and writable, as the static answers leave it, with `x-surface.access: "live"`: it may be locked or left out once the subject is known; the schema for these answers says which, and marks nothing ([Static and runtime access](resources.md#static-and-runtime-access)) |
+| a key under a runtime access answer, in the full schema | there and writable, as the static answers leave it, with `x-surface.live`: it may be locked or left out once the subject is known; the schema for these answers says which, and marks nothing ([Static and runtime access](resources.md#static-and-runtime-access)) |
 | a secret | `writeOnly: true`, its declared type, never in `required` (left out or `null`, the stored secret stands), no default, `null` in `values` ([decision](decisions.md#a-secret-is-optional-never-nullable)) |
 | a key a refiner answers [does not apply](refinement.md#when-a-key-does-not-apply) for these values | no property, not in `required`, not in `values`; the frame's own `x-surface.doesNotApply` names it with what it depends on. In the full schema, `false` under each conditional that rules it out, and `required` under each where it applies and is required ([decision](decisions.md#a-key-that-does-not-apply)) |
 | any other constraint | named in `x-surface.checkedOnServer` with what it checks: the schema is not the whole story, ask with `?dryRun=true`; not one whose resolver says its list is the whole of it (`exact: TRUE`), which is the `oneOf` ([Options](options.md#writing-a-resolver)) |
@@ -403,17 +436,15 @@ under `$defs`, and referred to ([reusable subschemas](#reusable-subschemas)).
 
 | Keyword | Holds |
 | --- | --- |
-| `contract` | At the top always, first: the version of the wire format the document is written in, `3` ([Contract 3](#contract-3)), which the `Contract-Version` header of every answer of the API says too. A client refuses a version it does not know ([Evolving a resource](evolution.md#the-contracts-own-version)). |
+| `contract` | At the top always, first: the version of the wire format the document is written in, `4` ([Contract 4](#contract-4)), which the `Contract-Version` header of every answer of the API says too. A client refuses a version it does not know ([Evolving a resource](evolution.md#the-contracts-own-version)). |
 | `widget` | Only when the caller asks for widget hints (`data_surface_react` does). The Form API-equivalent hint, the stock widget's choice ([the widget mapping](#the-widget-mapping)): `select`, `radios`, `checkboxes`, `checkbox`, `number`, `text`, `textarea`, `email`, `time`, `fieldset`, `variants` (a key with variants; `slot` in contract 1), `list` (a list of free values, and a collection), `fixed` (a deciding key whose variants offer one value, drawn as its label), `autocomplete` (a key that refers to an entity and lists no candidates, past the limit, and a bare reference's id, which is a select once its entity type's conditional lists them); `null` when no widget would claim the key. |
-| `locked` | Identity the operation knows, or a key of a child or a variant whose access answered locked: shown, never changed. At the top, beside `readOnly: true`, when the resource's own access locked it whole: every key is `readOnly`, a submit is refused, and a renderer offers none ([decision](decisions.md#locked-at-the-top)). |
-| `access` | Only `"live"` (`"runtime"` in contract 1), and only in [the full schema](#two-documents): an access answer that waits for the subject (it read a stored value, State, the `user` context) was set aside for this account, so the key is as the account's static answers leave it and may be locked or left out once the subject is known. The answer may be the owner's access class's or an alter's, each read by itself, so a key the account's static answers lock is `readOnly` and marked too. On every key of the document when the answer set aside is the resource's own at the top, which may lock it whole. A client keeps what the schema for these answers says for it rather than narrowing it from the full schema. On a key with variants: a variant offered may be withheld. |
-| `dependsOn` | The sibling keys this key's refiners watch, in its own frame; a key an alter mounted, which only that alter may watch, by its dotted path in that frame (`third_party_settings.<module>.<key>`); a port the frame reads, by the port's name. A client refines when one of them changes. |
-| `refined` | Whether the key is narrowed right now, compared with what the resource or structure advertises in this operation. |
-| `stale` | The stored value is no longer offered; the key is shown on its empty option, standing for it. |
+| `dependsOn` | Only where it names one: the sibling keys this key's refiners watch, in its own frame; a key an alter mounted, which only that alter may watch, by its dotted path in that frame (`third_party_settings.<module>.<key>`); a port the frame reads, by the port's name. A client refines when one of them changes. |
+| `refined` | Only when `true`, in the schema for these answers: the key is narrowed right now, compared with what the resource or structure advertises in this operation. |
+| `stale` | Only when `true`, in the schema for these answers: the stored value is no longer offered; the key is shown on its empty option, standing for it. |
 | `emptyOption` | On a single select or radios: `{show, label}`, by [the empty option rule](decisions.md#the-empty-option-rule): always for a select that may be cleared (`- None -`), for one that holds a value (required, or [always held by its storage](decisions.md#a-key-its-storage-always-holds)) only while no valid choice is selected (`- Select -`); a select `stale` on a stored value says it keeps it, `- Keep riverside_main (no longer offered) -`, and an orphan of the edit says `- Select -` or `- None -`, since a save refuses it. On radios: `show` is whether a `- None -` radio is drawn, only where the key may be cleared; one that holds a value shows nothing checked while no valid choice is. |
 | `multiple` | With the widget hints, on a list of allowed values drawn as a select: a multiple select. A list drawn as checkboxes says `checkboxes` and no `multiple`. |
 | `arrangement` | With the widget hints, on a key that declares one ([Arranging the keys](forms.md#arranging-the-keys)): how it is drawn, never what it accepts. Only what was declared: `group` (`{id, label, as: "fieldset" \| "details", collapsed, weight}`, `collapsed` only when `true` and `weight` only when declared: the keys of one object naming one `id` are drawn in one group, where the first of them is), `weight` (among the object's keys, or the group's; lighter first, declaration order between equals), `placeholder`, `prefix`, `suffix` and `help` (said after the description, and no part of what the key means), all plain text: `{"group": {"id": "pricing", "label": "Pricing", "as": "details", "collapsed": true}, "placeholder": "For example, 40", "prefix": "$"}`. Additive in contract 2: a client that does not read it draws the keys in order. |
-| `by`, `variants`, `chosen` | On a key with variants: the deciding key; a map from each value that chooses a variant to its def's pointer, `{"free": "#/$defs/registration.step3.ticket.free", "paid": "#/$defs/registration.step3.ticket.paid"}` (a list of the values in contract 1); and the value chosen now. |
+| `by`, `variants`, `chosen` | On a key with variants: the deciding key; a map from each value that chooses a variant to its def's pointer, `{"free": "#/$defs/registration.step3.ticket.free", "paid": "#/$defs/registration.step3.ticket.paid"}` (a list of the values in contract 1), absent where no variant is declared; and the value chosen now, absent while none is. |
 | `fixed` | On a deciding key whose variants offer one value, beside its `const`: the label that value is offered as, which a renderer draws in place of a select of one. Additive in contract 3. |
 | `reference` | On a key that refers to an entity, in both documents, listed or not: what it refers to, `{"entityType": "node", "bundles": ["article"]}` (`bundles` only where the key names any), or for the id of a key of any entity type `{"by": "entity_type"}`, its entity type the sibling's value. The value is the id. A client finds an id at the resource's lookup ([below](#a-lookup)). Additive in contract 3 ([decision](decisions.md#a-reference-is-an-id-with-a-list-the-site-decides-listed-or-looked-up)). |
 | `computed` | On a computed key, in both documents, beside `readOnly: true`: the keys it is computed from and when, `{"from": ["label"], "when": "create"}`, `create` for once, while storage holds nothing for it, `change` for again on every write that changes one of them. Nobody types it: a client shows it, narrows with `POST .../schema` when a key in `from` changes, which answers the value it would compute, and leaves it out of a write; a value sent equal to what it holds is noted, code `computed`, and any other refused. Additive in contract 3 ([decision](decisions.md#a-computed-key-is-a-pure-function-of-its-sources)). |
@@ -423,19 +454,24 @@ under `$defs`, and referred to ([reusable subschemas](#reusable-subschemas)).
 | `patternMessage` | On a key with a `pattern`: the Regex's own message, which is how a person is told what the pattern allows. The pattern is for machines; a renderer explains the key by this, never by the pattern. |
 | `enumerated` | Only when `true`: the key's static refiners have nothing to refine against yet, and what they answer for every value they could be handed is stated as conditionals on the parent ([below](#exact-where-it-can-be)). Captured exactly: the schema is exact for this key with no round trip, less what `live` adds. |
 | `refine` | Only when `true` (`dynamic` in contract 1): the key's static refiners have nothing to refine against yet, and what they would answer cannot be listed (a watched key with no list of values, or too many combinations). Static by declaration, not captured here: the schema is the unrefined, looser one, wider than the pipeline and never narrower ([decision](decisions.md#two-documents-never-stricter-than-the-runtime)); refine when a `dependsOn` key changes. In [the full schema](#two-documents) every key that cannot be listed carries it. |
-| `deferred` | Only when `true`, on a key whose list the site decides and has more entries than the site list limit, in [the full schema](#two-documents) and in the schema for these answers while nothing is chosen: the key is an open object, variants with `by` beside it and no def per variant, or a map of keys from the site with `entries` beside it ([a list the site decides](#a-list-the-site-decides)). Static and stated, left out for its size: fetch the entry chosen at `fetch`. `refine` until 2026-10-24; additive in contract 3 ([decision](decisions.md#a-list-left-out-for-size-is-deferred-not-refined)). |
-| `fetch` | Only beside `deferred`: an RFC 6570 template, the full schema's URL with `choose=<pointer>={value}` for the key and a `choose` for each variant on the way to it, `{value}` the deciding key's value or an entry's id; its query alone in a document no route serves, read against the full schema's URL ([a list the site decides](#a-list-the-site-decides)). |
-| `entries` | Only beside `deferred`, on a map of keys from the site past the site list limit, in [the full schema](#two-documents): each key the map holds, `{"id": "bench_7", "label": "Bench 7"}`, in order. Its keys are stated by the schema for these answers, and one at a time by `fetch`. Additive in contract 3 ([decision](decisions.md#a-budget-for-what-the-site-decides)). |
-| `list` | Only when `true`, on a collection: an array whose every item is a child, its `items` a reference to the child's def. A renderer draws each item as that def's fieldset, adds and removes items within `minItems` and `maxItems`, and reads `dependsOn` inside each item under its delta (`shelves.1.unit`). |
-| `declared` | Only when `true`, on a key, in [the full schema](#two-documents) and in a def: rules declared as data narrow the key ([refinement](refinement.md#declaring-a-rule)), each stated as written, one conditional on the parent, after the key's enumerated ones, its index in the parent's `rules`. Exact: a client evaluates each `if` and tightens the key by its `then` (the lower maximum, the values both lists offer). The schema for these answers evaluates the rules for its values and writes none. |
-| `rules` | On an object owning an `allOf` (the top frame, a def), in [the full schema](#two-documents) and in a def: the indexes in that `allOf` of the conditionals that state a declared rule, `"rules": [9]`. A client evaluates a rule whatever the keys it reads hold, and an enumerated conditional only once every key it watches holds a value, so it tells them apart by this list. Contract 1 wrote `x-surface: {"declared": true}` on the conditional itself. |
-| `within` | On an object owning an applicator (a site, a frame, a def): what a schema below the applicator says under `x-surface`, as a map from its JSON pointer, relative to the object, to that `x-surface`. On the field instance's `storage` site, whose narrowing locks the field type: `{"/allOf/1/properties/field_type": {"locked": true, "dependsOn": []}}`. Nothing below an applicator carries `x-surface` ([Contract 2](#contract-2)); `SchemaResolver::restored()` and the app's `inlineSchema()` put each entry back where it points. |
+| `deferred` | On a key whose list the site decides and has more entries than the site list limit, in [the full schema](#two-documents) and in the schema for these answers while nothing is chosen: the key is an open object, variants with `by` beside it and no def per variant, or a map of keys from the site ([a list the site decides](#a-list-the-site-decides)). Static and stated, left out for its size. An object: `fetch`, an RFC 6570 template, the full schema's URL with `choose=<pointer>={value}` for the key and a `choose` for each variant on the way to it, `{value}` the deciding key's value or an entry's id, its query alone in a document no route serves, read against the full schema's URL; and, on a map of keys from the site only, `entries`, each key the map holds, `{"id": "bench_7", "label": "Bench 7"}`, in order, whose keys the schema for these answers states, and `fetch` one at a time. `refine` until 2026-10-24; `deferred: true` with `fetch` and `entries` beside it in contract 3 ([decision](decisions.md#a-list-left-out-for-size-is-deferred-not-refined)). |
+| `collection` | Only when `true`, on a collection: an array whose every item is a child, its `items` a reference to the child's def. A renderer draws each item as that def's fieldset, adds and removes items within `minItems` and `maxItems`, and reads `dependsOn` inside each item under its delta (`shelves.1.unit`). `list` in contract 3. |
+| `rules` | On an object owning an `allOf` (the top frame, a def), in [the full schema](#two-documents) and in a def: the indexes in that `allOf` of the conditionals that state a declared rule ([refinement](refinement.md#declaring-a-rule)), `"rules": [9]`, each stated as written, after the key's enumerated ones; the key a rule narrows is the one its `then` names, and carries no marker of its own (`declared: true` in contract 3). Exact: a client evaluates each `if` and tightens the key by its `then` (the lower maximum, the values both lists offer), whatever the keys it reads hold, and an enumerated conditional only once every key it watches holds a value, so it tells them apart by this list. The schema for these answers evaluates the rules for its values and writes none. Contract 1 wrote `x-surface: {"declared": true}` on the conditional itself. |
+| `within` | On an object owning an applicator (a site, a frame, a def): what a schema below the applicator says under `x-surface`, as a map from its JSON pointer, relative to the object, to that `x-surface`. On the compliance mount, in the schema for these answers, whose narrowing refines the stewards: `{"/allOf/1/properties/stewards": {"dependsOn": ["capacity"], "refined": true}}`. Nothing below an applicator carries `x-surface` ([Contract 2](#contract-2)); `SchemaResolver::restored()` and the app's `inlineSchema()` put each entry back where it points. |
 | `ports` | On an object, a def's or the top's, when the structure reads ports: each port's typed data `type`, whether it is `required`, and the `shape` it reads, when it reads one. A port is no property: its value is a key of the container, which the site names ([below](#a-port-is-stated-at-its-site)). |
 | `reads` | On a site, the property where a child that reads ports is used: each port, mapped to the key of the parent's frame it reads. On a map of keys from the site whose entries read ports, each port mapped to the sibling map whose entry of the same id it reads. |
-| `live` | Only when `true` (`runtime` in contract 1): a runtime refiner narrows the key too, by a rule no schema can state ([markers](#markers)). Never in a conditional. In the full schema it is on the key, which keeps the width its static refiners give it; the schema for these answers is refined by it for its values. Written beside `enumerated` or `refine` when the key has static refiners as well. |
+| `live` | Only when `true` (`runtime` in contract 1): the key is settled per request, by the server alone ([markers](#markers)). Either a runtime refiner narrows it, by a rule no schema can state, or, in [the full schema](#two-documents) only, an access answer that waits for the subject (it read a stored value, State, the `user` context) was set aside for this account, so the key is as the account's static answers leave it and may be locked or left out once the subject is known (`access: "live"` in contract 3). Never in a conditional. In the full schema the key keeps the width its static refiners and static access give it; the schema for these answers is refined by the runtime refiner for its values and applies the access answer, marking nothing for it. The access answer may be the owner's access class's or an alter's, each read by itself, so a key the account's static answers lock is `readOnly` and marked too; on every key of the document when the answer set aside is the resource's own at the top, which may lock it whole; on a key with variants, a variant offered may be withheld. Written beside `enumerated` or `refine` when the key has static refiners as well. A client asks the narrowing whenever the key is reached and never caches its answer. |
 | `operation` | At the top only, after `contract`: how the operation behaves, `{id, label, description?, kind, creates, destructive, idempotent}` ([above](#the-schema)). Contract 1 also carried `readOnly`, which `kind: "read"` says. |
 | `version` | At the top always, after `operation`; on a def only above 1, absent reading as 1: which version of its stored values the resource or structure describes, counting the breaking changes made to them. A compatible change never moves it; a client compares it before trusting a cached document ([Evolving a resource](evolution.md#the-version)). |
 | `doesNotApply` | On an object, the top or a child's frame, never on a property: the keys of it a refiner answered [do not apply](refinement.md#when-a-key-does-not-apply) to these values, each with the keys it depends on, `{"send_day": ["frequency"]}`. They are no properties of it; a client refines when one of those changes. |
+
+Removed in contract 4 ([Contract 4](#contract-4)): `locked` (a locked
+key is `readOnly: true`, with `const` where it holds a value, and a
+resource locked whole is `readOnly: true` at the top, where a submit is
+refused and a renderer offers none,
+[decision](decisions.md#locked-at-the-top)), `declared` (the frame's
+`rules`), `access` (`live`), `fetch` and `entries` (inside `deferred`)
+and `list` (`collection`).
 
 A document is read as well as written. `Contract\SchemaReader` reads a
 JSON Schema into a structure by this page's table run backwards, and the
@@ -495,8 +531,9 @@ key declared with it refers to.
 3. **The site carries the instance.** Where the child is used, the
    property is `{"$ref": "#/$defs/<id>", ...}` with what is particular
    to that use beside it: the title and description the parent gives the
-   key, and the `x-surface` the parent reads for it (`locked`,
-   `dependsOn` as the parent sees it, `refined`, the widget hint, and
+   key, `readOnly` where it is locked, and the `x-surface` the parent
+   reads for it (`dependsOn` as the parent sees it, `refined`, the
+   widget hint, and
    `reads`, which of the parent's keys
    each port reads, with whatever depends on one stated on the parent's
    `allOf`: [a port is stated at its site](#a-port-is-stated-at-its-site)). JSON Schema 2020-12 applies keywords
@@ -531,7 +568,7 @@ reader that wants a key's effective schema inline resolves them once:
 React app. Both first put each marker back where the emitter wrote it
 (`SchemaResolver::restored()`): each `within` entry as the `x-surface`
 of the schema it points at, and `x-surface.declared` on each
-conditional that `rules` lists. Then they replace a reference by its def where it stood, lay a
+conditional that `rules` lists, a mark of the inline reading alone. Then they replace a reference by its def where it stood, lay a
 composition's narrowing over it taking the narrowing's value for every
 keyword it states (`properties` one by one, `required` as a union, the
 conditionals concatenated), and leave a reference back into a def being
@@ -549,8 +586,7 @@ its def, so every reference is bare:
              "anyOf": [{"$ref": "#/$defs/registration.step3.ticket.free"}, {"$ref": "#/$defs/registration.step3.ticket.paid"}, {"type": "null"}],
              "x-surface": {"dependsOn": ["pricing"], "by": "pricing",
                            "variants": {"free": "#/$defs/registration.step3.ticket.free", "paid": "#/$defs/registration.step3.ticket.paid"}, ...}},
-  "contact": {"title": "Contact", "$ref": "#/$defs/registration.contact",
-              "x-surface": {"locked": false, "dependsOn": []}}
+  "contact": {"title": "Contact", "$ref": "#/$defs/registration.contact"}
 },
 "allOf": [
   ...the room per venue...
@@ -565,8 +601,8 @@ its def, so every reference is bare:
                                      "additionalProperties": false, "required": ["price", "currency"]},
   "registration.contact": {"title": "registration.contact", "type": "object",
     "properties": {
-      "email": {"title": "Email", "type": "string", "format": "idn-email", "x-surface": {"locked": false, "dependsOn": []}},
-      "phone": {"title": "Phone", "type": ["string", "null"], "x-surface": {"locked": false, "dependsOn": []}}},
+      "email": {"title": "Email", "type": "string", "format": "idn-email"},
+      "phone": {"title": "Phone", "type": ["string", "null"]}},
     "additionalProperties": false, "required": ["email"]}
 }
 ```
@@ -583,16 +619,17 @@ open:
   "allOf": [
     {"$ref": "#/$defs/field.storage"},
     {"type": "object", "properties": {"field_type": {"default": "string_long", "readOnly": true, "const": "string_long"}}}
-  ],
-  "x-surface": {"locked": false, "dependsOn": [],
-                "within": {"/allOf/1/properties/field_type": {"locked": true, "dependsOn": []}}}
+  ]
 }
 ```
 
 The narrowing states `"type": "object"` beside its `properties`, the
-def's own type, which narrows nothing, and what it says of the field
-type under `x-surface` is said on the site, in `within`, by the pointer
-from the site to the field type's narrowing.
+def's own type, which narrows nothing. The field type is locked by
+`readOnly` and `const`; its `x-surface` says nothing the def does not,
+so the site carries none. Where a narrowed key's `x-surface` does
+differ, it is said on the site, in `within`, by the pointer from the
+site to the key's narrowing (contract 3 also wrote `{"locked": true}`
+there).
 
 In the schema for these answers a site also narrows where the child's
 own values refined it: a shelf whose unit is `cm` refers to the shelf's
@@ -604,9 +641,9 @@ def, which states the ceiling for each unit, and narrows its height to
 A collection is the parent's key, so its property says what the parent
 says about it: its title and description, `type: array`, `minItems` and
 `maxItems` from its Count, `readOnly` when locked, and under
-`x-surface` the usual instance facts (`locked`, `dependsOn`, `refined`,
+`x-surface` the usual instance facts (`dependsOn`, `refined`,
 `enumerated` or `refine` when the parent's refiner of it watches a
-sibling) and `list: true`. Its `items` refer to the child's def, the
+sibling) and `collection: true`. Its `items` refer to the child's def, the
 same def an attached child of that class refers to; both documents
 describe the items from the child's locked keys alone, so the schema
 says nothing one item's answers decide, and the reference is bare
@@ -622,7 +659,7 @@ size, how many racks fit.
   "type": ["array", "null"],
   "items": {"$ref": "#/$defs/resource_test.larder.rack"},
   "minItems": 1, "maxItems": 4,
-  "x-surface": {"widget": "list", "locked": false, "dependsOn": ["size"], "list": true, "enumerated": true}
+  "x-surface": {"widget": "list", "dependsOn": ["size"], "collection": true, "enumerated": true}
 },
 ...
 "allOf": [
@@ -707,7 +744,7 @@ list, as any key's refiners are over their siblings', and the site is
 `enumerated`, or `refine` where the key offers no list or the refiner
 also reads a key of the child's; a declared rule reading a port is
 stated as written, its condition read at the wired key, its index in
-the parent's `rules`, and the site is `declared`. The schema for these
+the parent's `rules`, and the site carries no marker for it. The schema for these
 answers binds each port to the value
 its key holds, so the site narrows the def by composition, as any site
 does. The test module's venue attaches the seating structure at
@@ -716,7 +753,7 @@ to the capacity; its full schema, abbreviated:
 
 ```json
 "seating": {"title": "Seating", "$ref": "#/$defs/resource_test.seating",
-  "x-surface": {"dependsOn": ["capacity", "layout"], "reads": {"layout": "layout", "guests": "capacity"}, "enumerated": true, "declared": true}},
+  "x-surface": {"dependsOn": ["capacity", "layout"], "reads": {"layout": "layout", "guests": "capacity"}, "enumerated": true}},
 ...
 "allOf": [
   {"if": {"properties": {"layout": {"const": "standing"}}, "required": ["layout"]},
@@ -781,9 +818,9 @@ schema, abbreviated:
 ```json
 "properties": {
   "title": {...}, "visibility": {...},
-  "owner": {"x-surface": {"locked": false, "dependsOn": ["visibility"], "declared": true}},
-  "shared": {"x-surface": {"locked": false, "dependsOn": ["visibility"], "enumerated": true}},
-  "created": {"x-surface": {"locked": false, "dependsOn": ["published"], "declared": true}},
+  "owner": {"x-surface": {"dependsOn": ["visibility"]}},
+  "shared": {"x-surface": {"dependsOn": ["visibility"], "enumerated": true}},
+  "created": {"x-surface": {"dependsOn": ["published"]}},
   "changed": true,
   "revision": {...}, "published": {...}, "archive": {"title": "Archive", "$ref": "#/$defs/resource_test.archive", ...}
 },
@@ -801,7 +838,7 @@ schema, abbreviated:
 "x-surface": {..., "rules": [...the owner rule's index, and each declared one's...]},
 "$defs": {
   "resource_test.timestamps": {"title": "resource_test.timestamps", "type": "object",
-    "properties": {"created": {...}, "changed": {..., "x-surface": {"dependsOn": ["created"], "refine": true, "declared": true}}},
+    "properties": {"created": {...}, "changed": {..., "x-surface": {"dependsOn": ["created"], "refine": true}}},
     "allOf": [{"if": {"properties": {"created": {"not": {"type": "null"}}}, "required": ["created"]},
                "then": {"properties": {"changed": {"description": "Required once the created time is set.", "type": "integer"}}, "required": ["changed"]}}],
     "x-surface": {"rules": [0]}},
@@ -838,8 +875,8 @@ schema, abbreviated:
   the stored value as `const` in the schema for these answers and none in
   the full schema; one it omitted is not there, and neither is the def
   when every member is gone. A member whose structure's answer waits for
-  the subject is marked `x-surface.access: "live"` in the full schema,
-  beside the def.
+  the subject is marked `x-surface.live` in the full schema, beside the
+  def.
 
 ### A shape is one def
 
@@ -858,7 +895,7 @@ compliance structure, in its def:
 "license": {
   "$ref": "#/$defs/event.license",
   "title": "Event license",
-  "x-surface": {"widget": "text", "locked": false, "dependsOn": [],
+  "x-surface": {"widget": "text",
                 "patternMessage": "A license number is four digits, such as 2048."}
 }
 ```
@@ -985,9 +1022,9 @@ the key is `deferred`: static, and left out for its size
   its def and its one conditional and no other; with nothing chosen, it
   is open as in the full schema.
 - **A map of keys from the site** is an open object, `deferred`, its
-  keys named under `entries` by id and label. The schema for these
+  keys named under `deferred.entries` by id and label. The schema for these
   answers states every key.
-- **Each states how to fetch one entry.** `x-surface.fetch` is an RFC
+- **Each states how to fetch one entry.** `x-surface.deferred.fetch` is an RFC
   6570 template, the full schema's URL with a `choose` for the key, its
   value the expression `{value}`, and a `choose` for each variant on the
   way to it. A client fills `{value}` with the deciding key's value, or
@@ -1001,8 +1038,8 @@ Example 12's props on a site with 312 components, in the full schema:
 
 ```json
 "props": {"title": "Props", "type": ["object", "null"],
-          "x-surface": {"locked": false, "dependsOn": ["component"], "by": "component", "deferred": true,
-                        "fetch": "https://example.com/surface-api/event.spotlight/schema?choose=/props={value}"}}
+          "x-surface": {"dependsOn": ["component"], "by": "component",
+                        "deferred": {"fetch": "https://example.com/surface-api/event.spotlight/schema?choose=/props={value}"}}}
 ```
 
 A placed block's settings are variants per block plugin, and the
@@ -1032,9 +1069,9 @@ Example 2, nothing chosen, abbreviated:
 
 ```json
 "room": {"title": "Room", "type": "string", "oneOf": [...every room...],
-         "x-surface": {"dependsOn": ["venue"], "refined": false, "enumerated": true, ...}},
+         "x-surface": {"dependsOn": ["venue"], "enumerated": true, ...}},
 "capacity": {"title": "Capacity", "type": ["integer", "null"], "minimum": 1,
-             "x-surface": {"dependsOn": ["room"], "refined": false, "enumerated": true, ...}},
+             "x-surface": {"dependsOn": ["room"], "enumerated": true, ...}},
 ...
 "allOf": [
   {"if": {"properties": {"venue": {"const": "riverside"}}, "required": ["venue"]},
@@ -1068,10 +1105,10 @@ Riverside Hall and its main hall, as `/surface-api` serves it:
       "open": {"title": "Registration open", "type": ["boolean", "null"], "default": true, ...},
       "venue": {"title": "Venue", "type": "string",
                 "oneOf": [{"const": "riverside", "title": "Riverside Hall"}, {"const": "library", "title": "Old Library"}, {"const": "harbour", "title": "Harbour Centre"}],
-                "x-surface": {"widget": "select", "dependsOn": [], "emptyOption": {"show": false, "label": "- Select -"}, ...}},
+                "x-surface": {"widget": "select", "emptyOption": {"show": false, "label": "- Select -"}, ...}},
       "room": {"title": "Room", "type": "string",
                "oneOf": [{"const": "riverside_main", "title": "Main hall"}, {"const": "riverside_east", "title": "East room"}],
-               "x-surface": {"widget": "select", "dependsOn": ["venue"], "refined": true, "stale": false, ...}},
+               "x-surface": {"widget": "select", "dependsOn": ["venue"], "refined": true, ...}},
       "capacity": {"title": "Capacity", "description": "Up to 400 for the Main hall.", "type": ["integer", "null"],
                    "minimum": 1, "maximum": 400, "default": 50,
                    "x-surface": {"widget": "number", "dependsOn": ["room"], "refined": true, ...}}
@@ -1114,9 +1151,9 @@ the hint's words: `radios`, `checkboxes`, `select`, `time`.
 | `integer`, `float` | `number`, `#min`/`#max` from Range, `#step` 1 or any | `number` | `NumberField` |
 | `boolean` | `checkbox`, never `#required` | `checkbox` | `CheckboxField` |
 | a list of single values with no allowed values | a `fieldset` of rows, each the item's element, "Remove" beside each and "Add another" under them, over AJAX | `list` | `ListField` (add and remove rows) |
-| a collection | a `details` of item `details`, "Add another" and "Remove" over AJAX | `list`, `list: true` | `ListField`, each item the child's `FieldsetField`, at least `minItems`, at most `maxItems` |
-| a locked key | `#disabled`, "Fixed for this operation." | `locked: true` | disabled, the same note |
-| a locked child | its fieldset `#disabled`, every element inside with it | `locked: true` on the fieldset and on every key inside | a fieldset of disabled keys |
+| a collection | a `details` of item `details`, "Add another" and "Remove" over AJAX | `list`, `collection: true` | `ListField`, each item the child's `FieldsetField`, at least `minItems`, at most `maxItems` |
+| a locked key | `#disabled`, "Fixed for this operation." | `readOnly: true` | disabled, the same note |
+| a locked child | its fieldset `#disabled`, every element inside with it | `readOnly: true` on the fieldset and on every key inside | a fieldset of disabled keys |
 
 ## The API
 
@@ -1293,7 +1330,7 @@ stored or typed, and it is the one document that may be cached
 request whose `If-None-Match` names it is answered 304 with no body. A
 client holding one of another contract version fetches it again. It is the account's: built for the account
 alone, its static access answers stated and its runtime ones marked
-`x-surface.access: "live"`. An account the operation's permission does
+`x-surface.live`. An account the operation's permission does
 not admit is refused (403).
 
 **`POST .../schema`**, the body a values document, partial or whole,
@@ -1345,7 +1382,7 @@ document moved, and refuses it, as the form's Save does.
 
 ### The fetch per choice
 
-A key `deferred` for its size names, under `x-surface.fetch`, the full
+A key `deferred` for its size names, under `x-surface.deferred.fetch`, the full
 schema with one of its entries stated
 ([decision](decisions.md#a-list-left-out-for-size-is-deferred-not-refined)).
 `GET .../schema?choose=<pointer>=<value>` answers it: the full schema,
@@ -1392,7 +1429,7 @@ ETag: "0726633d342c2ec5df9f4a31e50e8746d3c2d6da4fac829e5a602937692ed27b"
 {"$id":"https://example.com/surface-api/event.spotlight/schema?choose=/props=data_surface_examples:card",
  "properties":{"props":{"title":"Props","type":["object","null"],
    "x-surface":{"by":"component","variants":{"data_surface_examples:card":"#/$defs/event.spotlight.props.data_surface_examples:card"},
-                "deferred":true,"fetch":"https://example.com/surface-api/event.spotlight/schema?choose=/props={value}",...}},...},
+                "deferred":{"fetch":"https://example.com/surface-api/event.spotlight/schema?choose=/props={value}"},...}},...},
  "allOf":[{"if":{"properties":{"component":{"const":"data_surface_examples:card"}},"required":["component"]},
            "then":{"properties":{"props":{"title":"Props","$ref":"#/$defs/event.spotlight.props.data_surface_examples:card"}}}}],
  "$defs":{"event.spotlight.props.data_surface_examples:card":{...}}, ...}
@@ -1745,7 +1782,7 @@ is open.
   answer's example is the full schema built for no account.
 - **For no account.** Built as the tool definitions are, every key as
   declared and each one an access answer could lock or leave out marked
-  `x-surface.access: "live"`, so it is the same for everyone and
+  `x-surface.live`, so it is the same for everyone and
   cacheable; an operation that addresses one thing is built knowing no
   subject, as its tool's listing is. The read and `/schema` answer for
   the account that asks; the read's `x-surface-schema` names the

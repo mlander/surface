@@ -44,7 +44,7 @@ export const COMPUTED_NOTES = {
 export const SECRET_NOTE = 'Leave blank to keep the current value.';
 
 export function isLocked(props: FieldProps): boolean {
-  return Boolean(props.disabled || props.schema['x-surface']?.locked || props.schema.readOnly);
+  return Boolean(props.disabled || props.schema.readOnly);
 }
 
 /** The required marker: drawn, and not read twice by a screen reader. */
@@ -63,7 +63,7 @@ export function RequiredMarker(): JSX.Element {
  */
 function notesOf(props: FieldProps): string[] {
   const computed = props.schema['x-surface']?.computed;
-  const fixed = computed !== undefined && !props.disabled && !props.schema['x-surface']?.locked ? COMPUTED_NOTES[computed.when] : isLocked(props) ? LOCKED_NOTE : undefined;
+  const fixed = computed !== undefined && !props.disabled ? COMPUTED_NOTES[computed.when] : isLocked(props) ? LOCKED_NOTE : undefined;
   return [props.schema.description, props.schema['x-surface']?.arrangement?.help, fixed, props.schema.writeOnly ? SECRET_NOTE : undefined]
     .filter((note): note is string => typeof note === 'string' && note !== '');
 }

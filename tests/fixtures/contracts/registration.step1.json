@@ -1,7 +1,7 @@
 {
     "resource": "registration.step1",
     "module": "data_surface_examples",
-    "contract": 3,
+    "contract": 4,
     "documents": [
         {
             "resource": "registration.step1",
@@ -12,7 +12,7 @@
                 "title": "Configure registration (step 1)",
                 "description": "Sets the event title, its capacity and whether registration is open.",
                 "x-surface": {
-                    "contract": 3,
+                    "contract": 4,
                     "operation": {
                         "id": "configure",
                         "label": "Configure registration (step 1)",
@@ -28,11 +28,7 @@
                 "properties": {
                     "title": {
                         "title": "Event title",
-                        "type": "string",
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": []
-                        }
+                        "type": "string"
                     },
                     "capacity": {
                         "title": "Capacity",
@@ -42,11 +38,7 @@
                         ],
                         "minimum": 1,
                         "maximum": 1000,
-                        "default": 50,
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": []
-                        }
+                        "default": 50
                     },
                     "open": {
                         "title": "Registration open",
@@ -54,11 +46,7 @@
                             "boolean",
                             "null"
                         ],
-                        "default": true,
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": []
-                        }
+                        "default": true
                     }
                 },
                 "additionalProperties": false,

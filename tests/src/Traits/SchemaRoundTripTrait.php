@@ -7,6 +7,7 @@ namespace Drupal\Tests\data_surface\Traits;
 use Drupal\data_surface\Contract\ContractEmitter;
 use Drupal\data_surface\Contract\SchemaReader;
 use Drupal\data_surface\Contract\SchemaResolver;
+use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface\ResourceBuild\AlterDefinition;
 use Drupal\data_surface\ResourceBuild\ResourceDefinition;
@@ -36,15 +37,15 @@ trait SchemaRoundTripTrait {
    */
   protected static function roundTripKinds(): array {
     return [
-      'coded' => 'A coded refiner: what it answers for each value it could be handed is read back as a declared rule, the same conditional with `declared` in place of `enumerated` and its index under the frame\'s `rules`; what it could not list (`refine`) is not read at all. The documents differ in those markers alone.',
+      'coded' => 'A coded refiner: what it answers for each value it could be handed is read back as a declared rule, the same conditional with its index under the frame\'s `rules` and no `enumerated` on the key; what it could not list (`refine`) is not read at all. The documents differ in those markers alone.',
       'coded otherwise' => 'A coded refiner whose answers, read back as declared rules, are spelled otherwise: a rule ruling a key out guards the rules requiring it, a rule stated at a site moves into the child and is stated in the child\'s order, a refiner answering a whole child is no narrowing, and a refiner on a port read at a site leaves nothing to read.',
       'port' => 'A rule on a port, of a structure emitted alone: it is stated where a container wires the port, and alone there is none, so only the key\'s markers say it.',
-      'rule' => 'A declared rule that narrows nothing the key does not already say: no conditional states it, only the key\'s markers.',
-      'access' => 'An access answer (a lock, a whole locked, a key marked `access: live`) is the access class\'s, not the structure\'s.',
+      'rule' => 'A declared rule that narrows nothing the key does not already say: no conditional states it, so only the key\'s `dependsOn` says it, and nothing is read back from that.',
+      'access' => 'An access answer (a lock, a whole locked, a key a runtime answer marks `live`) is the access class\'s, not the structure\'s.',
       'alter' => 'An alter\'s mount: its keys, the rules reading them and the structures it attaches there are the alter\'s; read back, the mount is a map or a child of the owner\'s, its rules a JsonSchema constraint on the frame.',
       'site' => 'Keys from the site: the entries are a provider\'s, so an entry it locks, and the ports each entry reads, are not the document\'s to say; read back, the rules on those ports are a JsonSchema constraint on the frame.',
       'server' => 'A constraint no keyword states (a composite, or one of a module that is not on), which only the server checks: the document names it under `checkedOnServer`, and a name is no constraint the reader can declare.',
-      'computed' => 'A computed key: what computes it is a class, which no document names, so read back it is a key nobody types that holds what is stored, `readOnly` and `x-surface.locked`, with no `x-surface.computed`.',
+      'computed' => 'A computed key: what computes it is a class, which no document names, so read back it is a key nobody types that holds what is stored, `readOnly`, with no `x-surface.computed`.',
       'live' => 'A runtime refiner: its rule is a lookup no document states, so the full schema marks the key `live` and nothing can read the rule back.',
       'site list' => 'A list the site decides, past the site list limit: the full schema states the key open and `deferred`, with no def per variant or entry, so read back it is an open map, which the provider\'s list is not.',
     ];
@@ -67,19 +68,35 @@ trait SchemaRoundTripTrait {
    *   The operation's label.
    * @param array $facts
    *   The operation's facts.
+   * @param \Drupal\data_surface\DataSurfaceInterface|null $declared
+   *   The declaration as the document was emitted from it, to tell a key
+   *   `live` for a runtime refiner from one `live` for a runtime access
+   *   answer; NULL builds it for the account alone in a context of that
+   *   id.
    *
    * @return array{verdict: string, again: array|null, error: string|null}
    *   `same`, `differs`, `live` (a runtime refiner's, not read back) or
    *   `error`; the schema read back; and what was raised, for `error`.
    */
-  protected function readBack(array $schema, string $id, string $module, string $context, ?string $operation, \Stringable|string|null $label, array $facts): array {
+  protected function readBack(array $schema, string $id, string $module, string $context, ?string $operation, \Stringable|string|null $label, array $facts, ?DataSurfaceInterface $declared = NULL): array {
+    $resources = \Drupal::service('data_surface.resources');
+    assert($resources instanceof ResourcesInterface);
     if (str_contains((string) json_encode($schema), '"live":true')) {
-      return ['verdict' => 'live', 'again' => NULL, 'error' => NULL];
+      // `live` marks a runtime refiner and a runtime access answer alike;
+      // only the first is a rule no document states. A key marked for its
+      // access is read back, and differs as an access answer.
+      try {
+        $declared ??= $resources->buildStatic(\Drupal::service('data_surface.resource_registry')->getDefinition($id)->name(), new OperationContext($context));
+      }
+      catch (\Throwable) {
+        $declared = NULL;
+      }
+      if ($declared === NULL || static::refinedAtRuntime($declared)) {
+        return ['verdict' => 'live', 'again' => NULL, 'error' => NULL];
+      }
     }
     $reader = \Drupal::service('data_surface.schema_reader');
     assert($reader instanceof SchemaReader);
-    $resources = \Drupal::service('data_surface.resources');
-    assert($resources instanceof ResourcesInterface);
     $emitter = \Drupal::service('data_surface.contract_emitter');
     assert($emitter instanceof ContractEmitter);
     try {
@@ -106,12 +123,14 @@ trait SchemaRoundTripTrait {
    * Read from what the document marks, what reading it back added, and
    * what the declaration is, in an order where the first that holds is
    * the reason: a computed key; a constraint only the server checks; an
-   * access answer (the `access` mark, or a key read only where the
-   * declaration or a structure it holds answers access); an alter that
-   * refines, or whose rules read back as a constraint on the frame; keys
-   * from the site a provider locks (a key read only, no access answering
-   * it); a coded refiner (`coded` when the documents differ in its
-   * markers alone); a port; a declared rule.
+   * access answer (a `live` mark, which readBack() reads back only where
+   * no runtime refiner set it, or a key read only where the declaration
+   * or a structure it holds answers access); an alter that refines, or
+   * whose rules read back as a constraint on the frame; keys from the
+   * site a provider locks (a key read only, no access answering it); a
+   * coded refiner (`coded` when the documents differ in its markers
+   * alone); a port; a declared rule no conditional states (the documents
+   * differ in `dependsOn` alone).
    *
    * @param array $original
    *   The full schema as emitted.
@@ -141,12 +160,12 @@ trait SchemaRoundTripTrait {
       static::pastTheLimit($original) => 'site list',
       isset($marks['computed']) => 'computed',
       isset($marks['checkedOnServer']) => 'server',
-      isset($marks['access']) || (isset($marks['@readOnly']) && $answering) => 'access',
+      isset($marks['live']) || (isset($marks['@readOnly']) && $answering) => 'access',
       $definition->alters !== [] && (isset($added['checkedOnServer']) || $refining !== []) => 'alter',
       isset($marks['@readOnly']) => 'site',
       isset($marks['enumerated']) || isset($marks['refine']) => $again !== NULL && static::encoded(static::withoutMarkers($original)) === static::encoded(static::withoutMarkers($again)) ? 'coded' : 'coded otherwise',
       isset($marks['ports']) => 'port',
-      isset($marks['declared']) => 'rule',
+      $again !== NULL && static::encoded(static::withoutMarkers($original, ['dependsOn'])) === static::encoded(static::withoutMarkers($again, ['dependsOn'])) => 'rule',
       default => NULL,
     };
   }
@@ -168,7 +187,7 @@ trait SchemaRoundTripTrait {
       return FALSE;
     }
     $extension = $schema[ContractEmitter::EXTENSION] ?? NULL;
-    if (is_array($extension) && ($extension['deferred'] ?? FALSE) === TRUE && (isset($extension['entries']) || (isset($extension['by']) && !isset($schema['anyOf'])))) {
+    if (is_array($extension) && is_array($extension['deferred'] ?? NULL) && (isset($extension['deferred']['entries']) || (isset($extension['by']) && !isset($schema['anyOf'])))) {
       return TRUE;
     }
     foreach ($schema as $value) {
@@ -211,18 +230,20 @@ trait SchemaRoundTripTrait {
    *
    * @param mixed $schema
    *   A schema, or anything inside one.
+   * @param string[] $markers
+   *   The markers to strip, by default those of a coded refiner.
    *
    * @return mixed
-   *   The same, without `enumerated`, `declared`, `refine` and `rules`
-   *   under any `x-surface`.
+   *   The same, without those markers (by default `enumerated`,
+   *   `declared`, `refine` and `rules`) under any `x-surface`.
    */
-  protected static function withoutMarkers(mixed $schema): mixed {
+  protected static function withoutMarkers(mixed $schema, array $markers = ['enumerated', 'declared', 'refine', 'rules']): mixed {
     if (!is_array($schema)) {
       return $schema;
     }
     foreach ($schema as $keyword => $value) {
       if ($keyword === ContractEmitter::EXTENSION && is_array($value)) {
-        unset($value['enumerated'], $value['declared'], $value['refine'], $value['rules']);
+        $value = array_diff_key($value, array_flip($markers));
         if ($value === []) {
           unset($schema[$keyword]);
           continue;
@@ -230,9 +251,40 @@ trait SchemaRoundTripTrait {
         $schema[$keyword] = $value;
         continue;
       }
-      $schema[$keyword] = static::withoutMarkers($value);
+      $schema[$keyword] = static::withoutMarkers($value, $markers);
     }
     return $schema;
+  }
+
+  /**
+   * Answers whether a runtime refiner narrows any key of a declaration.
+   *
+   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   *   The declaration, built.
+   * @param array<int, true> $seen
+   *   The data surfaces walked already.
+   *
+   * @return bool
+   *   TRUE where one does, at any depth: a child, a variant, a
+   *   collection's item, a structure an alter mounted.
+   */
+  protected static function refinedAtRuntime(DataSurfaceInterface $surface, array &$seen = []): bool {
+    if (isset($seen[spl_object_id($surface)])) {
+      return FALSE;
+    }
+    $seen[spl_object_id($surface)] = TRUE;
+    foreach ($surface->getDefinitions()->entries() as $entry) {
+      $children = [
+        ...($entry->attachment === NULL ? [] : [$entry->attachment->child]),
+        ...array_map(static fn ($variant): DataSurfaceInterface => $variant->child, $entry->variants->variants ?? []),
+        ...($entry->list === NULL ? [] : [$entry->list->child()]),
+        ...array_map(static fn ($mounted): DataSurfaceInterface => $mounted->child, $entry->mounted),
+      ];
+      if ($entry->isRefinedAtRuntime() || array_filter($children, static fn (DataSurfaceInterface $child): bool => static::refinedAtRuntime($child, $seen)) !== []) {
+        return TRUE;
+      }
+    }
+    return FALSE;
   }
 
   /**

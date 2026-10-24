@@ -70,7 +70,7 @@ trait ServedApiTrait {
   protected function decoded(ResponseInterface $response, int $status = 200, string $type = 'application/json'): array {
     $this->assertSame($status, $response->getStatusCode(), (string) $response->getBody());
     $this->assertStringStartsWith($type, $response->getHeaderLine('Content-Type'));
-    $this->assertSame('3', $response->getHeaderLine('Contract-Version'));
+    $this->assertSame('4', $response->getHeaderLine('Contract-Version'));
     return json_decode((string) $response->getBody(), TRUE);
   }
 

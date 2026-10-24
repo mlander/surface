@@ -57,7 +57,7 @@ use Drupal\data_surface\ResourceBuild\ResourceRegistry;
  *   attached, reading the keys its ports are wired to, the child's rule on
  *   those ports;
  * - our own `x-surface` keywords, read back where they say something a
- *   key holds: `ports`, `reads`, `by` and `variants`, `list`,
+ *   key holds: `ports`, `reads`, `by` and `variants`, `collection`,
  *   `patternMessage`, the widget a key asks for, and `checkedOnServer`
  *   entries of a JsonSchema constraint.
  *
@@ -1041,7 +1041,7 @@ final class SchemaReader {
     if (is_int($extension['version'] ?? NULL) && $extension['version'] > 1) {
       $this->note(static::below($at, 'version'), 'Not read: a version counts the changes made to stored values, which are the declaring class\'s.');
     }
-    foreach (['doesNotApply', 'locked', 'access'] as $moment) {
+    foreach (['doesNotApply'] as $moment) {
       if (isset($extension[$moment])) {
         $this->note(static::below($at, $moment), 'Not read: it says what is true of these values or this account, not of the structure.');
       }
@@ -1221,7 +1221,7 @@ final class SchemaReader {
         ];
       }
     }
-    if ($variants === [] && $union === NULL && ($extension['deferred'] ?? FALSE) === TRUE) {
+    if ($variants === [] && $union === NULL && is_array($extension['deferred'] ?? NULL)) {
       // Variants a site lists past its budget, deferred: no variant is in
       // the document to read, so the key is an object like any other.
       // Decision: see
@@ -1725,16 +1725,14 @@ final class SchemaReader {
    *   Where it stands.
    */
   protected function droppedExtension(array $extension, string $pointer): void {
-    foreach (['refine', 'live'] as $marker) {
-      if (($extension[$marker] ?? FALSE) === TRUE) {
-        $this->note(static::below($pointer, $marker), 'Not read: a rule only the server knows, which the key is as wide as without.');
-      }
+    if (($extension['refine'] ?? FALSE) === TRUE) {
+      $this->note(static::below($pointer, 'refine'), 'Not read: a rule only the server knows, which the key is as wide as without.');
     }
-    if (($extension['deferred'] ?? FALSE) === TRUE) {
+    if (($extension['live'] ?? FALSE) === TRUE) {
+      $this->note(static::below($pointer, 'live'), 'Not read: settled per request, by a rule or an access answer only the server knows, which the key is as wide as without.');
+    }
+    if (is_array($extension['deferred'] ?? NULL)) {
       $this->note(static::below($pointer, 'deferred'), 'Not read: a list the site decides, left out of this document for its size, so the key is read open.');
-    }
-    if (($extension['access'] ?? NULL) === 'live') {
-      $this->note(static::below($pointer, 'access'), 'Not read: an access answer is the access class\'s, not the structure\'s.');
     }
   }
 

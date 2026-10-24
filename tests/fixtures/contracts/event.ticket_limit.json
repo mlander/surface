@@ -1,7 +1,7 @@
 {
     "resource": "event.ticket_limit",
     "module": "data_surface_examples",
-    "contract": 3,
+    "contract": 4,
     "documents": [
         {
             "resource": "event.ticket_limit",
@@ -10,7 +10,7 @@
             "schema": {
                 "$schema": "https://json-schema.org/draft/2020-12/schema",
                 "x-surface": {
-                    "contract": 3,
+                    "contract": 4,
                     "version": 1,
                     "ports": {
                         "selling": {
@@ -31,7 +31,6 @@
                         "maximum": 10,
                         "default": 4,
                         "x-surface": {
-                            "locked": false,
                             "dependsOn": [
                                 "selling"
                             ]
@@ -45,7 +44,6 @@
                         ],
                         "default": false,
                         "x-surface": {
-                            "locked": false,
                             "dependsOn": [
                                 "selling"
                             ]

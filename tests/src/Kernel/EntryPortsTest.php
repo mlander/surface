@@ -160,7 +160,10 @@ class EntryPortsTest extends DataSurfaceKernelTestBase {
     $this->assertSame([0, 1, 2, 3, 4, 5], $full['x-surface']['rules']);
     $this->assertSame(['on_sale.standard', 'on_sale.student', 'on_sale.speaker'], $full['properties']['limits']['x-surface']['dependsOn']);
     $this->assertSame(['selling' => 'on_sale'], $full['properties']['limits']['x-surface']['reads']);
-    $this->assertTrue($full['properties']['limits']['x-surface']['declared']);
+    // Each rule the frame names states the limits; the key carries no
+    // marker.
+    $this->assertSame(array_fill(0, 6, ['limits']), array_map(static fn (int $index): array => array_keys($full['allOf'][$index]['then']['properties']), $full['x-surface']['rules']));
+    $this->assertArrayNotHasKey('declared', $full['properties']['limits']['x-surface']);
     // The structure's def names no container: it lists its port, and
     // requires nothing a rule may rule out. The map lists none.
     $def = $full['$defs']['event.ticket_limit'];

@@ -248,7 +248,8 @@ class ServedSubmitEndpointTest extends BrowserTestBase {
     $this->assertSame('Recipe', $edit['values']['name']);
     $this->assertSame('recipe', $edit['values']['type']);
     $this->assertSame('Recipe name', $edit['values']['title_label']);
-    $this->assertTrue($edit['schema']['properties']['type']['x-surface']['locked']);
+    $this->assertTrue($edit['schema']['properties']['type']['readOnly']);
+    $this->assertSame('recipe', $edit['schema']['properties']['type']['const']);
     $this->assertStringEndsWith('/surface-api/node.type/recipe', $edit['schema']['$id']);
 
     // Editing it creates nothing, so it says nowhere.

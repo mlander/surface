@@ -456,7 +456,7 @@ surface, both contracts and the form.
 | Answer | At the top (an operation asked on its own) | At a child, however invoked |
 | --- | --- | --- |
 | open | allowed, as today | as today |
-| locked | allowed, built locked whole: every element disabled and no Save, `readOnly` at the top and on every key in both contracts, a submit refused by name at every door, the read tool answering ([Locked at the top](decisions.md#locked-at-the-top)) | the parent's key locked: fieldset drawn disabled, every key `readOnly` and `x-surface.locked` in both contracts and locked in the tool's `values`, posted values ignored ([Value semantics](semantics.md#locked-and-omitted-children)) |
+| locked | allowed, built locked whole: every element disabled and no Save, `readOnly` at the top and on every key in both contracts, a submit refused by name at every door, the read tool answering ([Locked at the top](decisions.md#locked-at-the-top)) | the parent's key locked: fieldset drawn disabled, every key `readOnly` in both contracts and locked in the tool's `values`, posted values ignored ([Value semantics](semantics.md#locked-and-omitted-children)) |
 | omitted | denied (route 403, tool access denied) | the key left out of the built data surface, both contracts, the form, the tool's `values` and the read tool's output; a posted value is an unknown key; a write keeps what is stored under it |
 
 Access composes: the parent's operation access gates the whole data
@@ -515,7 +515,7 @@ What each kind does, by door:
 | --- | --- | --- |
 | The build (`build()`), the form, the pipeline, the schema for these answers | applied | applied |
 | The build for the account alone (`buildStatic()`) | applied | asked, set aside: the key kept as the static answers leave it, and marked |
-| The full schema | locked: `readOnly`, `x-surface.locked`; omitted: not there | there and writable, `x-surface.access: "live"` |
+| The full schema | locked: `readOnly`, with `const` where held; omitted: not there | there and writable, `x-surface.live` |
 | The tool listing | locked: a locked property; omitted: not there | there, its description saying a call may find it locked or left out; when the answer is the resource's own, at the top, the tool's description says it once for every key instead |
 
 So the full schema and the tool listing, which clients cache, are the
@@ -2051,7 +2051,7 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
 - **Past the site list limit.** A map of more keys than
   `data_surface.settings:site_list_limit` (20 as shipped) is stated open
   in the full schema and the tool listing, marked `deferred`, its keys
-  named under `x-surface.entries` by id and label; the full schema
+  named under `x-surface.deferred.entries` by id and label; the full schema
   fetched with an entry chosen, `GET .../schema?choose=/limits=<id>`,
   states that key, the schema for these answers states every key, and
   the narrowing tool answers it to an agent

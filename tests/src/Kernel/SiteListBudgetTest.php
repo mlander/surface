@@ -38,9 +38,10 @@ use Symfony\Component\HttpKernel\HttpKernelInterface;
  * A list the site decides, variants from the site or keys from the site,
  * is spelled out in the full schema and the tool listing while it has at
  * most `data_surface.settings:site_list_limit` entries (20). Past it the
- * full schema states the key open and `deferred`, with a `fetch` template,
- * the deciding key keeps its options, and the keys from the site are named
- * under `x-surface.entries`; `GET .../schema?choose=<pointer>=<value>`
+ * full schema states the key open and `deferred`, an object holding a
+ * `fetch` template, the deciding key keeps its options, and the keys from
+ * the site are named under `x-surface.deferred.entries`;
+ * `GET .../schema?choose=<pointer>=<value>`
  * answers the full schema with that choice stated as the full schema under
  * the limit states it; the schema for these answers states the chosen
  * variant exactly; each key counts at its own level; the write tool's
@@ -204,11 +205,9 @@ class SiteListBudgetTest extends DataSurfaceKernelTestBase {
       'title' => 'Panels',
       'type' => ['object', 'null'],
       'x-surface' => [
-        'locked' => FALSE,
         'dependsOn' => ['layout'],
         'by' => 'layout',
-        'deferred' => TRUE,
-        'fetch' => '?choose=/panels={value}',
+        'deferred' => ['fetch' => '?choose=/panels={value}'],
       ],
     ], $panels);
     $this->assertArrayNotHasKey('$defs', $full);
@@ -234,7 +233,6 @@ class SiteListBudgetTest extends DataSurfaceKernelTestBase {
     $this->assertCount(20, $panels['anyOf'], 'A def per layout, and null.');
     $this->assertCount(19, (array) $panels['x-surface']['variants']);
     $this->assertArrayNotHasKey('deferred', $panels['x-surface']);
-    $this->assertArrayNotHasKey('fetch', $panels['x-surface']);
     $this->assertCount(19, $full['allOf']);
     $this->assertFalse($this->validates($full, ['layout' => 'strip', 'panels' => ['columns' => 3]]));
 
@@ -242,7 +240,7 @@ class SiteListBudgetTest extends DataSurfaceKernelTestBase {
     $this->layouts(20);
     $this->assertArrayHasKey('anyOf', $this->full(PosterResource::class, 'resource_test.poster')['properties']['panels']);
     $this->config(SiteListBudget::SETTINGS)->set(SiteListBudget::LIMIT, 10)->save();
-    $this->assertTrue($this->full(PosterResource::class, 'resource_test.poster')['properties']['panels']['x-surface']['deferred']);
+    $this->assertArrayHasKey('fetch', $this->full(PosterResource::class, 'resource_test.poster')['properties']['panels']['x-surface']['deferred']);
   }
 
   /**
@@ -267,7 +265,7 @@ class SiteListBudgetTest extends DataSurfaceKernelTestBase {
 
     // Nothing chosen: open and `deferred`, as in the full schema.
     $none = $this->these(PosterResource::class, 'resource_test.poster', ['layout' => '']);
-    $this->assertTrue($none['schema']['properties']['panels']['x-surface']['deferred']);
+    $this->assertArrayHasKey('fetch', $none['schema']['properties']['panels']['x-surface']['deferred']);
     $this->assertArrayNotHasKey('refine', $none['schema']['properties']['panels']['x-surface']);
     $this->assertArrayNotHasKey('anyOf', $none['schema']['properties']['panels']);
 
@@ -289,11 +287,11 @@ class SiteListBudgetTest extends DataSurfaceKernelTestBase {
       $map = $full['properties'][$key];
       $this->assertSame(['object', 'null'], $map['type'], $key);
       $this->assertArrayNotHasKey('$ref', $map, $key);
-      $this->assertTrue($map['x-surface']['deferred'], $key);
+      $this->assertArrayHasKey('fetch', $map['x-surface']['deferred'], $key);
       $this->assertArrayNotHasKey('refine', $map['x-surface'], $key);
-      $this->assertSame('?choose=/' . $key . '={value}', $map['x-surface']['fetch'], $key);
-      $this->assertCount(25, $map['x-surface']['entries'], $key);
-      $this->assertSame(['id' => 'bench_7', 'label' => 'Bench 7'], $map['x-surface']['entries'][6], $key);
+      $this->assertSame('?choose=/' . $key . '={value}', $map['x-surface']['deferred']['fetch'], $key);
+      $this->assertCount(25, $map['x-surface']['deferred']['entries'], $key);
+      $this->assertSame(['id' => 'bench_7', 'label' => 'Bench 7'], $map['x-surface']['deferred']['entries'][6], $key);
       $this->assertArrayNotHasKey('resource_test.workshop.' . $key, $full['$defs'] ?? []);
     }
     // The schema for these answers states every one.
@@ -305,7 +303,7 @@ class SiteListBudgetTest extends DataSurfaceKernelTestBase {
     $full = $this->full(WorkshopResource::class, 'resource_test.workshop');
     $this->assertSame('#/$defs/resource_test.workshop.lights', $full['properties']['lights']['$ref']);
     $this->assertCount(19, $full['$defs']['resource_test.workshop.lights']['properties']);
-    $this->assertArrayNotHasKey('deferred', $full['properties']['lights']['x-surface']);
+    $this->assertArrayNotHasKey('deferred', $full['properties']['lights']['x-surface'] ?? []);
   }
 
   /**
@@ -321,8 +319,8 @@ class SiteListBudgetTest extends DataSurfaceKernelTestBase {
     $full = $this->full(PosterResource::class, 'resource_test.poster');
     $this->assertCount(5, $full['properties']['panels']['anyOf']);
     $detail = $full['$defs']['resource_test.poster.panels.nested']['properties']['detail'];
-    $this->assertTrue($detail['x-surface']['deferred']);
-    $this->assertSame('?choose=/panels=nested&choose=/panels/detail={value}', $detail['x-surface']['fetch']);
+    $this->assertArrayHasKey('fetch', $detail['x-surface']['deferred']);
+    $this->assertSame('?choose=/panels=nested&choose=/panels/detail={value}', $detail['x-surface']['deferred']['fetch']);
     $this->assertSame('kind', $detail['x-surface']['by']);
     $this->assertArrayNotHasKey('anyOf', $detail);
     $this->assertCount(25, array_filter($full['$defs']['resource_test.poster.panels.nested']['properties']['kind']['oneOf'], static fn (array $choice): bool => isset($choice['const'])));
@@ -432,7 +430,7 @@ class SiteListBudgetTest extends DataSurfaceKernelTestBase {
     $this->assertTrue($manager->hasDefinition('data_surface:resource_test.workshop:configure:schema'));
     $lights = $manager->getDefinition('data_surface:resource_test.workshop:configure')->getInputDefinition(OperationInputs::VALUES)->getPropertyDefinitions()['lights'];
     $this->assertSame([], $lights->getPropertyDefinitions());
-    $this->assertStringContainsString("Too many to list: fetch GET /surface-api/resource_test.workshop/schema?choose=/lights={id} once per entry (GET /surface-api/resource_test.workshop/schema lists the ids under x-surface.entries), or call data_surface:resource_test.workshop:configure:schema with your values, to get this key's schema.", (string) $lights->getDescription());
+    $this->assertStringContainsString("Too many to list: fetch GET /surface-api/resource_test.workshop/schema?choose=/lights={id} once per entry (GET /surface-api/resource_test.workshop/schema lists the ids under x-surface.deferred.entries), or call data_surface:resource_test.workshop:configure:schema with your values, to get this key's schema.", (string) $lights->getDescription());
   }
 
   /**
@@ -486,8 +484,8 @@ class SiteListBudgetTest extends DataSurfaceKernelTestBase {
     $panels = $chosen['properties']['panels'];
     $this->assertSame(['object', 'null'], $panels['type']);
     $this->assertArrayNotHasKey('anyOf', $panels);
-    $this->assertTrue($panels['x-surface']['deferred']);
-    $this->assertSame('http://localhost/surface-api/resource_test.poster/schema?choose=/panels={value}', $panels['x-surface']['fetch']);
+    $this->assertArrayHasKey('fetch', $panels['x-surface']['deferred']);
+    $this->assertSame('http://localhost/surface-api/resource_test.poster/schema?choose=/panels={value}', $panels['x-surface']['deferred']['fetch']);
     $this->assertSame(['extra_5' => '#/$defs/resource_test.poster.panels.extra_5'], $panels['x-surface']['variants']);
     $this->assertSame(['resource_test.poster.panels.extra_5'], array_keys($chosen['$defs']));
     $this->assertCount(1, $chosen['allOf']);
@@ -565,8 +563,8 @@ class SiteListBudgetTest extends DataSurfaceKernelTestBase {
       $nested = $chosen['$defs']['resource_test.poster.panels.nested'] ?? NULL;
       $this->assertIsArray($nested, $query . ': ' . json_encode($chosen));
       $detail = $nested['properties']['detail'];
-      $this->assertTrue($detail['x-surface']['deferred'], $query);
-      $this->assertSame('http://localhost/surface-api/resource_test.poster/schema?choose=/panels=nested&choose=/panels/detail={value}', $detail['x-surface']['fetch'], $query);
+      $this->assertArrayHasKey('fetch', $detail['x-surface']['deferred'], $query);
+      $this->assertSame('http://localhost/surface-api/resource_test.poster/schema?choose=/panels=nested&choose=/panels/detail={value}', $detail['x-surface']['deferred']['fetch'], $query);
       $this->assertSame(['kind_7'], array_keys($detail['x-surface']['variants']), $query);
       $kinds = array_values(array_filter($nested['allOf'] ?? [], static fn (array $condition): bool => isset($condition['if']['properties']['kind'])));
       $this->assertCount(1, $kinds, $query);
@@ -622,8 +620,8 @@ class SiteListBudgetTest extends DataSurfaceKernelTestBase {
     $lights = $chosen['properties']['lights'];
     $this->assertSame(['bench_7'], array_keys($lights['properties']));
     $this->assertSame($listed['$defs']['resource_test.workshop.lights']['properties']['bench_7'], $lights['properties']['bench_7']);
-    $this->assertTrue($lights['x-surface']['deferred']);
-    $this->assertCount(25, $lights['x-surface']['entries']);
+    $this->assertArrayHasKey('fetch', $lights['x-surface']['deferred']);
+    $this->assertCount(25, $lights['x-surface']['deferred']['entries']);
     $this->assertArrayNotHasKey('additionalProperties', $lights);
     $benches = $chosen['properties']['benches'];
     $this->assertSame(['bench_3'], array_keys($benches['properties']));
@@ -656,6 +654,11 @@ class SiteListBudgetTest extends DataSurfaceKernelTestBase {
           if (isset($value['within']) && is_array($value['within'])) {
             $hints = array_flip(['widget', 'multiple', 'arrangement']);
             $value['within'] = array_map(static fn (array $within): array => array_diff_key($within, $hints), $value['within']);
+          }
+          // An `x-surface` that held only hints is not written.
+          if ($value === []) {
+            unset($node[$key]);
+            continue;
           }
           $node[$key] = $value;
         }

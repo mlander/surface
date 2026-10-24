@@ -38,8 +38,9 @@ namespace Drupal\data_surface\Contract;
  * The inline reading is the emitter's own, before the placement rules of
  * the contract's version moved its markers (ContractEmitter::settled()):
  * restored() puts each `x-surface.within` entry back where it stands and
- * marks each conditional `x-surface.rules` lists `x-surface.declared`,
- * since composition moves conditionals and their indexes with them, and
+ * marks each conditional `x-surface.rules` lists `x-surface.declared`, a
+ * mark of the inline reading alone, which no document carries, since
+ * composition moves conditionals and their indexes with them, and
  * a key's union of its variants is left to the conditionals, which state
  * each one exactly.
  *
@@ -353,9 +354,10 @@ final class SchemaResolver {
    * owning object lists its declared rules' conditionals by index in
    * `x-surface.rules`, and says what is said below it in
    * `x-surface.within`, by JSON pointer from itself. This reads both back
-   * into place, `x-surface.declared` on each rule's conditional and each
-   * entry of `within` as the `x-surface` of the schema it points at, and
-   * drops the two lists. Applied twice, it changes nothing more.
+   * into place, `x-surface.declared` on each rule's conditional (the
+   * inline reading's own mark, written in no document) and each entry of
+   * `within` as the `x-surface` of the schema it points at, and drops the
+   * two lists. Applied twice, it changes nothing more.
    *
    * Decision: see docs/decisions.md#contract-2.
    *

@@ -130,9 +130,12 @@ class ComputedKeysTest extends DataSurfaceKernelTestBase {
       $this->assertSame(['from' => ['first'], 'when' => 'create'], $schema['properties']['code']['x-surface']['computed'], $kind);
       $this->assertSame(['from' => ['first', 'last'], 'when' => 'change'], $schema['properties']['handle']['x-surface']['computed'], $kind);
       $this->assertSame(12, $schema['properties']['handle']['maxLength'], $kind . ': its own constraints are stated.');
-      $this->assertFalse($schema['properties']['handle']['x-surface']['locked'], $kind);
+      // Read only as a computed key, not locked: `computed` says why, and
+      // there is no `const`.
+      $this->assertTrue($schema['properties']['handle']['readOnly'], $kind);
+      $this->assertArrayNotHasKey('const', $schema['properties']['handle'], $kind);
       $this->assertArrayNotHasKey('readOnly', $schema['properties']['first'], $kind);
-      $this->assertArrayNotHasKey('computed', $schema['properties']['first']['x-surface'], $kind);
+      $this->assertArrayNotHasKey('computed', $schema['properties']['first']['x-surface'] ?? [], $kind);
     }
   }
 

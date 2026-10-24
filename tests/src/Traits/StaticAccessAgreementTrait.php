@@ -16,17 +16,17 @@ use Drupal\data_surface\ResourceBuild\ResourcesInterface;
  * The full schema is emitted from a data surface built for the account
  * alone (ResourcesInterface::buildStatic()): each static access answer is
  * applied there, a key it locked `readOnly`, a key it left out absent, and
- * each runtime answer is set aside, its key marked `x-surface.access:
- * "live"`. That is only true if a static answer is what its
- * cacheability says, decided by the account alone. So, for each sampled
- * account, this emits the full schema once and then, for each situation
- * (a stored value changed, a State flag set: what a runtime answer reads),
- * builds the resource with every answer applied (build()) and asserts that
- * every key the full schema states without the runtime mark is exactly as
- * the build has it: there when it is there, locked when it is locked,
- * inside every child too. A key marked runtime may be anything. An answer
- * whose cacheability left out what it read answers differently in some
- * situation and fails here.
+ * each runtime answer is set aside, its key marked `x-surface.live`, as
+ * a key a runtime refiner narrows is. That is only true if a static
+ * answer is what its cacheability says, decided by the account alone.
+ * So, for each sampled account, this emits the full schema once and then,
+ * for each situation (a stored value changed, a State flag set: what a
+ * runtime answer reads), builds the resource with every answer applied
+ * (build()) and asserts that every key the full schema states without the
+ * runtime mark is exactly as the build has it: there when it is there,
+ * locked when it is locked, inside every child too. A key marked runtime
+ * may be anything. An answer whose cacheability left out what it read
+ * answers differently in some situation and fails here.
  *
  * The full schema itself is first held to the build it was emitted from,
  * keyword for keyword where access is concerned: `readOnly` exactly where
@@ -104,7 +104,7 @@ trait StaticAccessAgreementTrait {
       // Decision: see
       // docs/decisions.md#a-computed-key-is-a-pure-function-of-its-sources.
       $this->assertSame($locked || Computed::of($entry->definition) !== NULL, ($property['readOnly'] ?? FALSE) === TRUE, sprintf('%s: "%s" is read only exactly where it is locked or computed.', $label, $name));
-      $this->assertSame($entry->runtimeAccess, ($property['x-surface']['access'] ?? NULL) === 'live', sprintf('%s: "%s" is marked live exactly where its answer was set aside.', $label, $name));
+      $this->assertSame($entry->runtimeAccess || $entry->isRefinedAtRuntime(), ($property['x-surface']['live'] ?? FALSE) === TRUE, sprintf('%s: "%s" is marked live exactly where its answer was set aside or a runtime refiner narrows it.', $label, $name));
       $compared++;
       if ($entry->attachment !== NULL) {
         $compared += $this->assertSchemaStatesAccess($entry->attachment->child, $property, sprintf('%s.%s', $label, $name), $locked);

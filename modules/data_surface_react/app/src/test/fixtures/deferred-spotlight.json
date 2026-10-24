@@ -9,7 +9,7 @@
       "title": "Configure the spotlight",
       "description": "Sets the component the event home page spotlights, chosen from the components the site has, and the props it is drawn with.",
       "x-surface": {
-        "contract": 3,
+        "contract": 4,
         "operation": {
           "id": "configure",
           "label": "Configure the spotlight",
@@ -19,18 +19,7 @@
           "destructive": false,
           "idempotent": true
         },
-        "version": 1,
-        "within": {
-          "/allOf/1/then/properties/slots/allOf/1/properties/body/allOf/1/properties/text": {
-            "widget": "textarea",
-            "locked": false,
-            "dependsOn": [
-              "kind"
-            ],
-            "refined": false,
-            "stale": false
-          }
-        }
+        "version": 1
       },
       "type": "object",
       "properties": {
@@ -58,10 +47,6 @@
           "default": "data_surface_examples:card",
           "x-surface": {
             "widget": "select",
-            "locked": false,
-            "dependsOn": [],
-            "refined": false,
-            "stale": false,
             "emptyOption": {
               "show": false,
               "label": "- Select -"
@@ -80,12 +65,10 @@
           ],
           "x-surface": {
             "widget": "variants",
-            "locked": false,
             "dependsOn": [
               "component"
             ],
             "refined": true,
-            "stale": false,
             "by": "component",
             "variants": {
               "data_surface_examples:card": "#/$defs/event.spotlight.props.data_surface_examples:card"
@@ -105,12 +88,10 @@
           ],
           "x-surface": {
             "widget": "variants",
-            "locked": false,
             "dependsOn": [
               "component"
             ],
             "refined": true,
-            "stale": false,
             "by": "component",
             "variants": {
               "data_surface_examples:card": "#/$defs/event.spotlight.slots.data_surface_examples:card"
@@ -159,24 +140,7 @@
             "properties": {
               "slots": {
                 "title": "Slots",
-                "allOf": [
-                  {
-                    "$ref": "#/$defs/event.spotlight.slots.data_surface_examples:card"
-                  },
-                  {
-                    "type": "object",
-                    "properties": {
-                      "body": {
-                        "allOf": [
-                          {
-                            "$ref": "#/$defs/component.slot.text"
-                          },
-                          true
-                        ]
-                      }
-                    }
-                  }
-                ]
+                "$ref": "#/$defs/event.spotlight.slots.data_surface_examples:card"
               }
             }
           }
@@ -192,11 +156,7 @@
               "type": "string",
               "maxLength": 80,
               "x-surface": {
-                "widget": "text",
-                "locked": false,
-                "dependsOn": [],
-                "refined": false,
-                "stale": false
+                "widget": "text"
               }
             },
             "tone": {
@@ -215,10 +175,6 @@
               "default": "plain",
               "x-surface": {
                 "widget": "select",
-                "locked": false,
-                "dependsOn": [],
-                "refined": false,
-                "stale": false,
                 "emptyOption": {
                   "show": false,
                   "label": "- Select -"
@@ -240,11 +196,7 @@
                   ],
                   "format": "uri",
                   "x-surface": {
-                    "widget": "text",
-                    "locked": false,
-                    "dependsOn": [],
-                    "refined": false,
-                    "stale": false
+                    "widget": "text"
                   }
                 },
                 "label": {
@@ -254,21 +206,13 @@
                     "null"
                   ],
                   "x-surface": {
-                    "widget": "text",
-                    "locked": false,
-                    "dependsOn": [],
-                    "refined": false,
-                    "stale": false
+                    "widget": "text"
                   }
                 }
               },
               "additionalProperties": false,
               "x-surface": {
-                "widget": "fieldset",
-                "locked": false,
-                "dependsOn": [],
-                "refined": false,
-                "stale": false
+                "widget": "fieldset"
               }
             }
           },
@@ -293,10 +237,6 @@
               "default": "text",
               "x-surface": {
                 "widget": "select",
-                "locked": false,
-                "dependsOn": [],
-                "refined": false,
-                "stale": false,
                 "emptyOption": {
                   "show": false,
                   "label": "- Select -"
@@ -311,13 +251,9 @@
               ],
               "x-surface": {
                 "widget": "textarea",
-                "locked": false,
                 "dependsOn": [
                   "kind"
-                ],
-                "refined": false,
-                "stale": false,
-                "declared": true
+                ]
               }
             }
           },
@@ -358,11 +294,7 @@
               "description": "A line under the heading.",
               "$ref": "#/$defs/component.slot.text",
               "x-surface": {
-                "widget": "fieldset",
-                "locked": false,
-                "dependsOn": [],
-                "refined": false,
-                "stale": false
+                "widget": "fieldset"
               }
             }
           },
@@ -396,7 +328,7 @@
     "title": "Configure the spotlight",
     "description": "Sets the component the event home page spotlights, chosen from the components the site has, and the props it is drawn with.",
     "x-surface": {
-      "contract": 3,
+      "contract": 4,
       "operation": {
         "id": "configure",
         "label": "Configure the spotlight",
@@ -433,9 +365,7 @@
         ],
         "default": "data_surface_examples:card",
         "x-surface": {
-          "widget": "select",
-          "locked": false,
-          "dependsOn": []
+          "widget": "select"
         }
       },
       "props": {
@@ -446,13 +376,13 @@
         ],
         "x-surface": {
           "widget": "variants",
-          "locked": false,
           "dependsOn": [
             "component"
           ],
           "by": "component",
-          "deferred": true,
-          "fetch": "/surface-api/event.spotlight/schema?choose=/props={value}"
+          "deferred": {
+            "fetch": "/surface-api/event.spotlight/schema?choose=/props={value}"
+          }
         }
       },
       "slots": {
@@ -463,13 +393,13 @@
         ],
         "x-surface": {
           "widget": "variants",
-          "locked": false,
           "dependsOn": [
             "component"
           ],
           "by": "component",
-          "deferred": true,
-          "fetch": "/surface-api/event.spotlight/schema?choose=/slots={value}"
+          "deferred": {
+            "fetch": "/surface-api/event.spotlight/schema?choose=/slots={value}"
+          }
         }
       }
     },
@@ -485,7 +415,7 @@
       "title": "Configure the spotlight",
       "description": "Sets the component the event home page spotlights, chosen from the components the site has, and the props it is drawn with.",
       "x-surface": {
-        "contract": 3,
+        "contract": 4,
         "operation": {
           "id": "configure",
           "label": "Configure the spotlight",
@@ -522,9 +452,7 @@
           ],
           "default": "data_surface_examples:card",
           "x-surface": {
-            "widget": "select",
-            "locked": false,
-            "dependsOn": []
+            "widget": "select"
           }
         },
         "props": {
@@ -535,7 +463,6 @@
           ],
           "x-surface": {
             "widget": "variants",
-            "locked": false,
             "dependsOn": [
               "component"
             ],
@@ -543,8 +470,9 @@
             "variants": {
               "data_surface_examples:hero": "#/$defs/event.spotlight.props.data_surface_examples:hero"
             },
-            "deferred": true,
-            "fetch": "/surface-api/event.spotlight/schema?choose=/props={value}"
+            "deferred": {
+              "fetch": "/surface-api/event.spotlight/schema?choose=/props={value}"
+            }
           }
         },
         "slots": {
@@ -555,13 +483,13 @@
           ],
           "x-surface": {
             "widget": "variants",
-            "locked": false,
             "dependsOn": [
               "component"
             ],
             "by": "component",
-            "deferred": true,
-            "fetch": "/surface-api/event.spotlight/schema?choose=/slots={value}"
+            "deferred": {
+              "fetch": "/surface-api/event.spotlight/schema?choose=/slots={value}"
+            }
           }
         }
       },
@@ -600,9 +528,7 @@
               "title": "Title",
               "type": "string",
               "x-surface": {
-                "widget": "text",
-                "locked": false,
-                "dependsOn": []
+                "widget": "text"
               }
             },
             "subtitle": {
@@ -612,9 +538,7 @@
                 "null"
               ],
               "x-surface": {
-                "widget": "text",
-                "locked": false,
-                "dependsOn": []
+                "widget": "text"
               }
             },
             "align": {
@@ -632,9 +556,7 @@
               ],
               "default": "center",
               "x-surface": {
-                "widget": "select",
-                "locked": false,
-                "dependsOn": []
+                "widget": "select"
               }
             },
             "overlay": {
@@ -645,9 +567,7 @@
               "maximum": 100,
               "default": 40,
               "x-surface": {
-                "widget": "number",
-                "locked": false,
-                "dependsOn": []
+                "widget": "number"
               }
             },
             "full_width": {
@@ -655,9 +575,7 @@
               "type": "boolean",
               "default": false,
               "x-surface": {
-                "widget": "checkbox",
-                "locked": false,
-                "dependsOn": []
+                "widget": "checkbox"
               }
             }
           },
@@ -674,7 +592,7 @@
       "title": "Configure the spotlight",
       "description": "Sets the component the event home page spotlights, chosen from the components the site has, and the props it is drawn with.",
       "x-surface": {
-        "contract": 3,
+        "contract": 4,
         "operation": {
           "id": "configure",
           "label": "Configure the spotlight",
@@ -711,9 +629,7 @@
           ],
           "default": "data_surface_examples:card",
           "x-surface": {
-            "widget": "select",
-            "locked": false,
-            "dependsOn": []
+            "widget": "select"
           }
         },
         "props": {
@@ -724,7 +640,6 @@
           ],
           "x-surface": {
             "widget": "variants",
-            "locked": false,
             "dependsOn": [
               "component"
             ],
@@ -732,8 +647,9 @@
             "variants": {
               "data_surface_examples:hero": "#/$defs/event.spotlight.props.data_surface_examples:hero"
             },
-            "deferred": true,
-            "fetch": "/surface-api/event.spotlight/schema?choose=/props={value}"
+            "deferred": {
+              "fetch": "/surface-api/event.spotlight/schema?choose=/props={value}"
+            }
           }
         },
         "slots": {
@@ -744,7 +660,6 @@
           ],
           "x-surface": {
             "widget": "variants",
-            "locked": false,
             "dependsOn": [
               "component"
             ],
@@ -752,8 +667,9 @@
             "variants": {
               "data_surface_examples:hero": "#/$defs/event.spotlight.slots.data_surface_examples:hero"
             },
-            "deferred": true,
-            "fetch": "/surface-api/event.spotlight/schema?choose=/slots={value}"
+            "deferred": {
+              "fetch": "/surface-api/event.spotlight/schema?choose=/slots={value}"
+            }
           }
         }
       },
@@ -812,9 +728,7 @@
               "title": "Title",
               "type": "string",
               "x-surface": {
-                "widget": "text",
-                "locked": false,
-                "dependsOn": []
+                "widget": "text"
               }
             },
             "subtitle": {
@@ -824,9 +738,7 @@
                 "null"
               ],
               "x-surface": {
-                "widget": "text",
-                "locked": false,
-                "dependsOn": []
+                "widget": "text"
               }
             },
             "align": {
@@ -844,9 +756,7 @@
               ],
               "default": "center",
               "x-surface": {
-                "widget": "select",
-                "locked": false,
-                "dependsOn": []
+                "widget": "select"
               }
             },
             "overlay": {
@@ -857,9 +767,7 @@
               "maximum": 100,
               "default": 40,
               "x-surface": {
-                "widget": "number",
-                "locked": false,
-                "dependsOn": []
+                "widget": "number"
               }
             },
             "full_width": {
@@ -867,9 +775,7 @@
               "type": "boolean",
               "default": false,
               "x-surface": {
-                "widget": "checkbox",
-                "locked": false,
-                "dependsOn": []
+                "widget": "checkbox"
               }
             }
           },
@@ -887,9 +793,7 @@
               "type": "string",
               "maxLength": 40,
               "x-surface": {
-                "widget": "text",
-                "locked": false,
-                "dependsOn": []
+                "widget": "text"
               }
             },
             "url": {
@@ -897,9 +801,7 @@
               "type": "string",
               "format": "uri",
               "x-surface": {
-                "widget": "text",
-                "locked": false,
-                "dependsOn": []
+                "widget": "text"
               }
             },
             "style": {
@@ -917,9 +819,7 @@
               ],
               "default": "primary",
               "x-surface": {
-                "widget": "select",
-                "locked": false,
-                "dependsOn": []
+                "widget": "select"
               }
             },
             "new_window": {
@@ -927,9 +827,7 @@
               "type": "boolean",
               "default": false,
               "x-surface": {
-                "widget": "checkbox",
-                "locked": false,
-                "dependsOn": []
+                "widget": "checkbox"
               }
             },
             "tags": {
@@ -942,16 +840,12 @@
               "items": {
                 "type": "string",
                 "x-surface": {
-                  "widget": "text",
-                  "locked": false,
-                  "dependsOn": []
+                  "widget": "text"
                 }
               },
               "maxItems": 3,
               "x-surface": {
-                "widget": "list",
-                "locked": false,
-                "dependsOn": []
+                "widget": "list"
               }
             }
           },
@@ -981,9 +875,7 @@
                 }
               ],
               "x-surface": {
-                "widget": "select",
-                "locked": false,
-                "dependsOn": []
+                "widget": "select"
               }
             },
             "props": {
@@ -998,7 +890,6 @@
               ],
               "x-surface": {
                 "widget": "variants",
-                "locked": false,
                 "dependsOn": [
                   "component"
                 ],
@@ -1020,7 +911,6 @@
               ],
               "x-surface": {
                 "widget": "variants",
-                "locked": false,
                 "dependsOn": [
                   "component"
                 ],
@@ -1101,9 +991,7 @@
               ],
               "default": "text",
               "x-surface": {
-                "widget": "select",
-                "locked": false,
-                "dependsOn": []
+                "widget": "select"
               }
             },
             "text": {
@@ -1114,11 +1002,9 @@
               ],
               "x-surface": {
                 "widget": "textarea",
-                "locked": false,
                 "dependsOn": [
                   "kind"
-                ],
-                "declared": true
+                ]
               }
             },
             "component": {
@@ -1126,11 +1012,9 @@
               "$ref": "#/$defs/component.nested.data_surface_examples:call_to_action.1",
               "x-surface": {
                 "widget": "fieldset",
-                "locked": false,
                 "dependsOn": [
                   "kind"
-                ],
-                "declared": true
+                ]
               }
             },
             "components": {
@@ -1142,12 +1026,10 @@
               },
               "x-surface": {
                 "widget": "list",
-                "locked": false,
                 "dependsOn": [
                   "kind"
                 ],
-                "list": true,
-                "declared": true
+                "collection": true
               }
             }
           },
@@ -1228,9 +1110,7 @@
               "description": "Up to two buttons under the title.",
               "$ref": "#/$defs/component.slot.data_surface_examples:hero.actions.1",
               "x-surface": {
-                "widget": "fieldset",
-                "locked": false,
-                "dependsOn": []
+                "widget": "fieldset"
               }
             }
           },
@@ -1244,7 +1124,7 @@
       "title": "Configure the spotlight",
       "description": "Sets the component the event home page spotlights, chosen from the components the site has, and the props it is drawn with.",
       "x-surface": {
-        "contract": 3,
+        "contract": 4,
         "operation": {
           "id": "configure",
           "label": "Configure the spotlight",
@@ -1281,9 +1161,7 @@
           ],
           "default": "data_surface_examples:card",
           "x-surface": {
-            "widget": "select",
-            "locked": false,
-            "dependsOn": []
+            "widget": "select"
           }
         },
         "props": {
@@ -1294,7 +1172,6 @@
           ],
           "x-surface": {
             "widget": "variants",
-            "locked": false,
             "dependsOn": [
               "component"
             ],
@@ -1302,8 +1179,9 @@
             "variants": {
               "data_surface_examples:card": "#/$defs/event.spotlight.props.data_surface_examples:card"
             },
-            "deferred": true,
-            "fetch": "/surface-api/event.spotlight/schema?choose=/props={value}"
+            "deferred": {
+              "fetch": "/surface-api/event.spotlight/schema?choose=/props={value}"
+            }
           }
         },
         "slots": {
@@ -1314,13 +1192,13 @@
           ],
           "x-surface": {
             "widget": "variants",
-            "locked": false,
             "dependsOn": [
               "component"
             ],
             "by": "component",
-            "deferred": true,
-            "fetch": "/surface-api/event.spotlight/schema?choose=/slots={value}"
+            "deferred": {
+              "fetch": "/surface-api/event.spotlight/schema?choose=/slots={value}"
+            }
           }
         }
       },
@@ -1360,9 +1238,7 @@
               "type": "string",
               "maxLength": 80,
               "x-surface": {
-                "widget": "text",
-                "locked": false,
-                "dependsOn": []
+                "widget": "text"
               }
             },
             "tone": {
@@ -1380,9 +1256,7 @@
               ],
               "default": "plain",
               "x-surface": {
-                "widget": "select",
-                "locked": false,
-                "dependsOn": []
+                "widget": "select"
               }
             },
             "link": {
@@ -1400,9 +1274,7 @@
                   ],
                   "format": "uri",
                   "x-surface": {
-                    "widget": "text",
-                    "locked": false,
-                    "dependsOn": []
+                    "widget": "text"
                   }
                 },
                 "label": {
@@ -1412,17 +1284,13 @@
                     "null"
                   ],
                   "x-surface": {
-                    "widget": "text",
-                    "locked": false,
-                    "dependsOn": []
+                    "widget": "text"
                   }
                 }
               },
               "additionalProperties": false,
               "x-surface": {
-                "widget": "fieldset",
-                "locked": false,
-                "dependsOn": []
+                "widget": "fieldset"
               }
             }
           },
@@ -1439,7 +1307,7 @@
       "title": "Configure the spotlight",
       "description": "Sets the component the event home page spotlights, chosen from the components the site has, and the props it is drawn with.",
       "x-surface": {
-        "contract": 3,
+        "contract": 4,
         "operation": {
           "id": "configure",
           "label": "Configure the spotlight",
@@ -1476,9 +1344,7 @@
           ],
           "default": "data_surface_examples:card",
           "x-surface": {
-            "widget": "select",
-            "locked": false,
-            "dependsOn": []
+            "widget": "select"
           }
         },
         "props": {
@@ -1489,7 +1355,6 @@
           ],
           "x-surface": {
             "widget": "variants",
-            "locked": false,
             "dependsOn": [
               "component"
             ],
@@ -1497,8 +1362,9 @@
             "variants": {
               "data_surface_examples:card": "#/$defs/event.spotlight.props.data_surface_examples:card"
             },
-            "deferred": true,
-            "fetch": "/surface-api/event.spotlight/schema?choose=/props={value}"
+            "deferred": {
+              "fetch": "/surface-api/event.spotlight/schema?choose=/props={value}"
+            }
           }
         },
         "slots": {
@@ -1509,7 +1375,6 @@
           ],
           "x-surface": {
             "widget": "variants",
-            "locked": false,
             "dependsOn": [
               "component"
             ],
@@ -1517,8 +1382,9 @@
             "variants": {
               "data_surface_examples:card": "#/$defs/event.spotlight.slots.data_surface_examples:card"
             },
-            "deferred": true,
-            "fetch": "/surface-api/event.spotlight/schema?choose=/slots={value}"
+            "deferred": {
+              "fetch": "/surface-api/event.spotlight/schema?choose=/slots={value}"
+            }
           }
         }
       },
@@ -1578,9 +1444,7 @@
               "type": "string",
               "maxLength": 80,
               "x-surface": {
-                "widget": "text",
-                "locked": false,
-                "dependsOn": []
+                "widget": "text"
               }
             },
             "tone": {
@@ -1598,9 +1462,7 @@
               ],
               "default": "plain",
               "x-surface": {
-                "widget": "select",
-                "locked": false,
-                "dependsOn": []
+                "widget": "select"
               }
             },
             "link": {
@@ -1618,9 +1480,7 @@
                   ],
                   "format": "uri",
                   "x-surface": {
-                    "widget": "text",
-                    "locked": false,
-                    "dependsOn": []
+                    "widget": "text"
                   }
                 },
                 "label": {
@@ -1630,17 +1490,13 @@
                     "null"
                   ],
                   "x-surface": {
-                    "widget": "text",
-                    "locked": false,
-                    "dependsOn": []
+                    "widget": "text"
                   }
                 }
               },
               "additionalProperties": false,
               "x-surface": {
-                "widget": "fieldset",
-                "locked": false,
-                "dependsOn": []
+                "widget": "fieldset"
               }
             }
           },
@@ -1664,9 +1520,7 @@
               ],
               "default": "text",
               "x-surface": {
-                "widget": "select",
-                "locked": false,
-                "dependsOn": []
+                "widget": "select"
               }
             },
             "text": {
@@ -1677,11 +1531,9 @@
               ],
               "x-surface": {
                 "widget": "textarea",
-                "locked": false,
                 "dependsOn": [
                   "kind"
-                ],
-                "declared": true
+                ]
               }
             }
           },
@@ -1722,9 +1574,7 @@
               "description": "A line under the heading.",
               "$ref": "#/$defs/component.slot.text",
               "x-surface": {
-                "widget": "fieldset",
-                "locked": false,
-                "dependsOn": []
+                "widget": "fieldset"
               }
             }
           },
@@ -1744,7 +1594,7 @@
         "title": "Configure the spotlight",
         "description": "Sets the component the event home page spotlights, chosen from the components the site has, and the props it is drawn with.",
         "x-surface": {
-          "contract": 3,
+          "contract": 4,
           "operation": {
             "id": "configure",
             "label": "Configure the spotlight",
@@ -1765,15 +1615,6 @@
                   "kind"
                 ]
               }
-            },
-            "/allOf/1/then/properties/slots/allOf/1/properties/actions/allOf/1/properties/text": {
-              "widget": "textarea",
-              "locked": false,
-              "dependsOn": [
-                "kind"
-              ],
-              "refined": false,
-              "stale": false
             }
           }
         },
@@ -1803,10 +1644,6 @@
             "default": "data_surface_examples:card",
             "x-surface": {
               "widget": "select",
-              "locked": false,
-              "dependsOn": [],
-              "refined": false,
-              "stale": false,
               "emptyOption": {
                 "show": false,
                 "label": "- Select -"
@@ -1825,12 +1662,10 @@
             ],
             "x-surface": {
               "widget": "variants",
-              "locked": false,
               "dependsOn": [
                 "component"
               ],
               "refined": true,
-              "stale": false,
               "by": "component",
               "variants": {
                 "data_surface_examples:hero": "#/$defs/event.spotlight.props.data_surface_examples:hero"
@@ -1850,12 +1685,10 @@
             ],
             "x-surface": {
               "widget": "variants",
-              "locked": false,
               "dependsOn": [
                 "component"
               ],
               "refined": true,
-              "stale": false,
               "by": "component",
               "variants": {
                 "data_surface_examples:hero": "#/$defs/event.spotlight.slots.data_surface_examples:hero"
@@ -1942,11 +1775,7 @@
                 "title": "Title",
                 "type": "string",
                 "x-surface": {
-                  "widget": "text",
-                  "locked": false,
-                  "dependsOn": [],
-                  "refined": false,
-                  "stale": false
+                  "widget": "text"
                 }
               },
               "subtitle": {
@@ -1956,11 +1785,7 @@
                   "null"
                 ],
                 "x-surface": {
-                  "widget": "text",
-                  "locked": false,
-                  "dependsOn": [],
-                  "refined": false,
-                  "stale": false
+                  "widget": "text"
                 }
               },
               "align": {
@@ -1979,10 +1804,6 @@
                 "default": "center",
                 "x-surface": {
                   "widget": "select",
-                  "locked": false,
-                  "dependsOn": [],
-                  "refined": false,
-                  "stale": false,
                   "emptyOption": {
                     "show": false,
                     "label": "- Select -"
@@ -1997,11 +1818,7 @@
                 "maximum": 100,
                 "default": 40,
                 "x-surface": {
-                  "widget": "number",
-                  "locked": false,
-                  "dependsOn": [],
-                  "refined": false,
-                  "stale": false
+                  "widget": "number"
                 }
               },
               "full_width": {
@@ -2009,11 +1826,7 @@
                 "type": "boolean",
                 "default": false,
                 "x-surface": {
-                  "widget": "checkbox",
-                  "locked": false,
-                  "dependsOn": [],
-                  "refined": false,
-                  "stale": false
+                  "widget": "checkbox"
                 }
               }
             },
@@ -2031,11 +1844,7 @@
                 "type": "string",
                 "maxLength": 40,
                 "x-surface": {
-                  "widget": "text",
-                  "locked": false,
-                  "dependsOn": [],
-                  "refined": false,
-                  "stale": false
+                  "widget": "text"
                 }
               },
               "url": {
@@ -2043,11 +1852,7 @@
                 "type": "string",
                 "format": "uri",
                 "x-surface": {
-                  "widget": "text",
-                  "locked": false,
-                  "dependsOn": [],
-                  "refined": false,
-                  "stale": false
+                  "widget": "text"
                 }
               },
               "style": {
@@ -2066,10 +1871,6 @@
                 "default": "primary",
                 "x-surface": {
                   "widget": "select",
-                  "locked": false,
-                  "dependsOn": [],
-                  "refined": false,
-                  "stale": false,
                   "emptyOption": {
                     "show": false,
                     "label": "- Select -"
@@ -2081,11 +1882,7 @@
                 "type": "boolean",
                 "default": false,
                 "x-surface": {
-                  "widget": "checkbox",
-                  "locked": false,
-                  "dependsOn": [],
-                  "refined": false,
-                  "stale": false
+                  "widget": "checkbox"
                 }
               },
               "tags": {
@@ -2098,20 +1895,12 @@
                 "items": {
                   "type": "string",
                   "x-surface": {
-                    "widget": "text",
-                    "locked": false,
-                    "dependsOn": [],
-                    "refined": false,
-                    "stale": false
+                    "widget": "text"
                   }
                 },
                 "maxItems": 3,
                 "x-surface": {
-                  "widget": "list",
-                  "locked": false,
-                  "dependsOn": [],
-                  "refined": false,
-                  "stale": false
+                  "widget": "list"
                 }
               }
             },
@@ -2142,10 +1931,6 @@
                 ],
                 "x-surface": {
                   "widget": "select",
-                  "locked": false,
-                  "dependsOn": [],
-                  "refined": false,
-                  "stale": false,
                   "emptyOption": {
                     "show": true,
                     "label": "- Select -"
@@ -2164,17 +1949,13 @@
                 ],
                 "x-surface": {
                   "widget": "variants",
-                  "locked": false,
                   "dependsOn": [
                     "component"
                   ],
-                  "refined": false,
-                  "stale": false,
                   "by": "component",
                   "variants": {
                     "data_surface_examples:call_to_action": "#/$defs/component.props.data_surface_examples:call_to_action"
-                  },
-                  "chosen": null
+                  }
                 }
               },
               "slots": {
@@ -2189,17 +1970,13 @@
                 ],
                 "x-surface": {
                   "widget": "variants",
-                  "locked": false,
                   "dependsOn": [
                     "component"
                   ],
-                  "refined": false,
-                  "stale": false,
                   "by": "component",
                   "variants": {
                     "data_surface_examples:call_to_action": "#/$defs/component.slots.data_surface_examples:call_to_action.2"
-                  },
-                  "chosen": null
+                  }
                 }
               }
             },
@@ -2274,10 +2051,6 @@
                 "default": "text",
                 "x-surface": {
                   "widget": "select",
-                  "locked": false,
-                  "dependsOn": [],
-                  "refined": false,
-                  "stale": false,
                   "emptyOption": {
                     "show": false,
                     "label": "- Select -"
@@ -2292,13 +2065,9 @@
                 ],
                 "x-surface": {
                   "widget": "textarea",
-                  "locked": false,
                   "dependsOn": [
                     "kind"
-                  ],
-                  "refined": false,
-                  "stale": false,
-                  "declared": true
+                  ]
                 }
               },
               "component": {
@@ -2306,13 +2075,9 @@
                 "$ref": "#/$defs/component.nested.data_surface_examples:call_to_action.1",
                 "x-surface": {
                   "widget": "fieldset",
-                  "locked": false,
                   "dependsOn": [
                     "kind"
-                  ],
-                  "refined": false,
-                  "stale": false,
-                  "declared": true
+                  ]
                 }
               },
               "components": {
@@ -2324,14 +2089,10 @@
                 },
                 "x-surface": {
                   "widget": "list",
-                  "locked": false,
                   "dependsOn": [
                     "kind"
                   ],
-                  "refined": false,
-                  "stale": false,
-                  "list": true,
-                  "declared": true
+                  "collection": true
                 }
               }
             },
@@ -2412,11 +2173,7 @@
                 "description": "Up to two buttons under the title.",
                 "$ref": "#/$defs/component.slot.data_surface_examples:hero.actions.1",
                 "x-surface": {
-                  "widget": "fieldset",
-                  "locked": false,
-                  "dependsOn": [],
-                  "refined": false,
-                  "stale": false
+                  "widget": "fieldset"
                 }
               }
             },

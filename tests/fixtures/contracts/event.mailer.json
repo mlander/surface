@@ -1,7 +1,7 @@
 {
     "resource": "event.mailer",
     "module": "data_surface_examples",
-    "contract": 3,
+    "contract": 4,
     "documents": [
         {
             "resource": "event.mailer",
@@ -12,7 +12,7 @@
                 "title": "Configure the mailer",
                 "description": "Sets who the event's mail is sent from, the mail service it is sent through, and the credential that service is called with: a key pasted here, or a key the site manages.",
                 "x-surface": {
-                    "contract": 3,
+                    "contract": 4,
                     "operation": {
                         "id": "configure",
                         "label": "Configure the mailer",
@@ -30,21 +30,13 @@
                         "title": "Sender",
                         "type": "string",
                         "format": "idn-email",
-                        "default": "tickets@example.com",
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": []
-                        }
+                        "default": "tickets@example.com"
                     },
                     "endpoint": {
                         "title": "Mail service",
                         "type": "string",
                         "format": "uri",
-                        "default": "https://mail.example.com/v1/send",
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": []
-                        }
+                        "default": "https://mail.example.com/v1/send"
                     },
                     "source": {
                         "title": "Credential source",
@@ -59,11 +51,7 @@
                                 "title": "A managed key"
                             }
                         ],
-                        "default": "pasted",
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": []
-                        }
+                        "default": "pasted"
                     },
                     "credential": {
                         "title": "Credential",
@@ -79,7 +67,6 @@
                             }
                         ],
                         "x-surface": {
-                            "locked": false,
                             "dependsOn": [
                                 "source"
                             ],
@@ -148,11 +135,7 @@
                                 "title": "API key",
                                 "description": "The key the mail service issued, pasted here.",
                                 "type": "string",
-                                "writeOnly": true,
-                                "x-surface": {
-                                    "locked": false,
-                                    "dependsOn": []
-                                }
+                                "writeOnly": true
                             }
                         },
                         "additionalProperties": false
@@ -171,8 +154,6 @@
                                     }
                                 ],
                                 "x-surface": {
-                                    "locked": false,
-                                    "dependsOn": [],
                                     "checkedOnServer": [
                                         {
                                             "constraint": "ManagedKey",

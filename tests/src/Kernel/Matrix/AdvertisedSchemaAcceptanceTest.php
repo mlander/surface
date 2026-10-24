@@ -670,7 +670,7 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
     Cache::invalidateTags([PosterLayouts::TAG]);
     $poster = $this->build('resource_test.poster');
     $full = $this->decoded($this->container->get('data_surface.contract_emitter')->emitFull($poster, 'resource_test.poster')->document);
-    $this->assertTrue($full['schema']['properties']['panels']['x-surface']['deferred']);
+    $this->assertSame(['fetch' => '?choose=/panels={value}'], $full['schema']['properties']['panels']['x-surface']['deferred']);
     $this->assertTable('resource_test.poster', $poster, $this->stored('resource_test.poster'), [
       'as stored' => [[], TRUE],
       'the strip with a caption' => [['layout' => 'strip', 'panels' => ['caption' => 'Spring']], TRUE],
@@ -1003,7 +1003,7 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
    * stored, so its document is accepted by both. An omitted one posted is
    * an unknown key, refused by both where the omission is static; where
    * it is runtime the full schema has the key, marked
-   * `x-surface.access: "live"`, and accepts it: wider, never narrower.
+   * `x-surface.live`, and accepts it: wider, never narrower.
    *
    * @see docs/decisions.md#access-is-static-or-runtime-read-from-its-cacheability
    */
@@ -1663,7 +1663,7 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
       ['pattern' => '^[a-zA-Z][-_a-zA-Z0-9]+$'],
       ['not' => ['pattern' => '^(name|pass|website)$']],
     ], $property['allOf']);
-    $this->assertArrayNotHasKey('checkedOnServer', $property['x-surface']);
+    $this->assertArrayNotHasKey('checkedOnServer', $property['x-surface'] ?? []);
     foreach (['as written' => $as_written, 'carried' => $carried] as $which => $surface) {
       // Left to the server, a refused name is accepted by both schemas.
       $wide = $which === 'as written';

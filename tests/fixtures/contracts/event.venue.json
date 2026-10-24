@@ -1,7 +1,7 @@
 {
     "resource": "event.venue",
     "module": "data_surface_examples",
-    "contract": 3,
+    "contract": 4,
     "documents": [
         {
             "resource": "event.venue",
@@ -12,7 +12,7 @@
                 "title": "Add a venue",
                 "description": "Adds a venue under a machine name the caller chooses, with its capacity, address and rooms; a machine name already in use is refused.",
                 "x-surface": {
-                    "contract": 3,
+                    "contract": 4,
                     "operation": {
                         "id": "create",
                         "label": "Add a venue",
@@ -29,11 +29,7 @@
                     "label": {
                         "title": "Name",
                         "type": "string",
-                        "maxLength": 128,
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": []
-                        }
+                        "maxLength": 128
                     },
                     "id": {
                         "title": "Machine name",
@@ -42,8 +38,6 @@
                         "pattern": "^[a-z0-9_]+$",
                         "maxLength": 32,
                         "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
                             "patternMessage": "The machine name may hold only lowercase letters, numbers and underscores."
                         }
                     },
@@ -58,8 +52,6 @@
                         "maxLength": 128,
                         "readOnly": true,
                         "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
                             "computed": {
                                 "from": [
                                     "label"
@@ -74,11 +66,7 @@
                         "description": "How many people the venue holds.",
                         "type": "integer",
                         "minimum": 1,
-                        "maximum": 100000,
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": []
-                        }
+                        "maximum": 100000
                     },
                     "address": {
                         "title": "Address",
@@ -86,11 +74,7 @@
                             "string",
                             "null"
                         ],
-                        "maxLength": 255,
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": []
-                        }
+                        "maxLength": 255
                     },
                     "rooms": {
                         "title": "Rooms",
@@ -104,9 +88,7 @@
                             "$ref": "#/$defs/event.venue.room"
                         },
                         "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "list": true
+                            "collection": true
                         }
                     },
                     "weight": {
@@ -115,21 +97,13 @@
                         "type": "integer",
                         "minimum": -1000,
                         "maximum": 1000,
-                        "default": 0,
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": []
-                        }
+                        "default": 0
                     },
                     "status": {
                         "title": "Enabled",
                         "description": "Whether events may be held there; a disabled venue is listed only for an account that administers the venues.",
                         "type": "boolean",
-                        "default": true,
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": []
-                        }
+                        "default": true
                     }
                 },
                 "additionalProperties": false,
@@ -149,29 +123,19 @@
                                 "pattern": "^[a-z0-9_]+$",
                                 "maxLength": 64,
                                 "x-surface": {
-                                    "locked": false,
-                                    "dependsOn": [],
                                     "patternMessage": "A room id holds only lowercase letters, numbers and underscores."
                                 }
                             },
                             "label": {
                                 "title": "Room name",
                                 "type": "string",
-                                "maxLength": 128,
-                                "x-surface": {
-                                    "locked": false,
-                                    "dependsOn": []
-                                }
+                                "maxLength": 128
                             },
                             "seats": {
                                 "title": "Seats",
                                 "type": "integer",
                                 "minimum": 1,
-                                "maximum": 10000,
-                                "x-surface": {
-                                    "locked": false,
-                                    "dependsOn": []
-                                }
+                                "maximum": 10000
                             }
                         },
                         "additionalProperties": false,
@@ -193,7 +157,7 @@
                 "title": "List the venues",
                 "description": "Answers a page of the venues, lighter first, each one the account may read, and how many the filter matched.",
                 "x-surface": {
-                    "contract": 3,
+                    "contract": 4,
                     "operation": {
                         "id": "list",
                         "label": "List the venues",
@@ -216,11 +180,7 @@
                         ],
                         "minimum": 0,
                         "maximum": 10000,
-                        "default": 0,
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": []
-                        }
+                        "default": 0
                     },
                     "limit": {
                         "title": "Limit",
@@ -231,11 +191,7 @@
                         ],
                         "minimum": 1,
                         "maximum": 50,
-                        "default": 20,
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": []
-                        }
+                        "default": 20
                     },
                     "status": {
                         "title": "Enabled",
@@ -243,11 +199,7 @@
                         "type": [
                             "boolean",
                             "null"
-                        ],
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": []
-                        }
+                        ]
                     }
                 },
                 "additionalProperties": false
@@ -311,7 +263,7 @@
                 "title": "Reorder the venues",
                 "description": "Gives each venue named its new weight, all in one write; a venue left out keeps its own, and an unknown or repeated venue is refused.",
                 "x-surface": {
-                    "contract": 3,
+                    "contract": 4,
                     "operation": {
                         "id": "reorder",
                         "label": "Reorder the venues",
@@ -334,9 +286,7 @@
                             "$ref": "#/$defs/event.venue.order"
                         },
                         "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "list": true
+                            "collection": true
                         }
                     }
                 },
@@ -352,22 +302,14 @@
                             "id": {
                                 "title": "Venue",
                                 "description": "The machine name of a venue the site has.",
-                                "type": "string",
-                                "x-surface": {
-                                    "locked": false,
-                                    "dependsOn": []
-                                }
+                                "type": "string"
                             },
                             "weight": {
                                 "title": "Weight",
                                 "description": "Its place among the venues: lighter first.",
                                 "type": "integer",
                                 "minimum": -1000,
-                                "maximum": 1000,
-                                "x-surface": {
-                                    "locked": false,
-                                    "dependsOn": []
-                                }
+                                "maximum": 1000
                             }
                         },
                         "additionalProperties": false,

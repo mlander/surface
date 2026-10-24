@@ -650,7 +650,7 @@ may answer that its keys are shown and fixed, or not there at all.
   posted for it. It is still validated, like any locked key. The form
   draws its fieldset disabled, every element inside with it, showing
   what is stored; the contract marks the fieldset and every key inside
-  it `readOnly` and `x-surface.locked`, each holding its stored value
+  it `readOnly`, each holding its stored value
   as `const` (the full schema, which reads no stored value, holds none);
   the tool's `values` input marks the map and every property in it
   locked.
@@ -679,7 +679,7 @@ runtime one (the subject or site state does) alike, and a locked key
 keeps what is stored however it was posted. The kind decides only what
 is said ahead of time: the full schema and the tool listing state a
 static answer for the account that asks and mark a runtime one, its key
-there and writable with `x-surface.access: "live"`, so a document
+there and writable with `x-surface.live`, so a document
 valid against the full schema may still post a key the runtime answer
 then locks (kept) or omits (refused as an unknown key)
 ([Static and runtime access](resources.md#static-and-runtime-access)).

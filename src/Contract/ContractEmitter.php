@@ -160,12 +160,13 @@ final class ContractEmitter {
    * spelled. Stated as `x-surface.contract` at the top of both documents
    * and answered as the `Contract-Version` header by the routes serving
    * them. Contract 1 is what the module served until 2026-10-20, contract
-   * 2 until 2026-10-22; contract 3 changed the HTTP door (the operation is
-   * the method) and spells every path on the wire as a JSON Pointer, and
-   * left both documents as contract 2 wrote them.
-   * Decision: see docs/decisions.md#contract-3-the-operation-is-the-method.
+   * 2 until 2026-10-22, contract 3 (the operation is the method, every
+   * path a JSON Pointer) until 2026-10-24; contract 4 cut the `x-surface`
+   * keywords that said nothing or said it twice, and moved no path.
+   * Decision: see
+   * docs/decisions.md#contract-4-fewer-keywords-nothing-new-on-the-wire.
    */
-  public const CONTRACT = 3;
+  public const CONTRACT = 4;
 
   /**
    * The keywords whose subschemas carry no `x-surface` in contract 2.
@@ -441,22 +442,22 @@ final class ContractEmitter {
    *   static refiners give it, wider than the pipeline for some values;
    * - access is the account's: emitted from a data surface built for the
    *   account alone (ResourcesInterface::buildStatic()), a key a static
-   *   answer locked is `readOnly` and `x-surface.locked`, one it left out
-   *   is not there, and one a runtime answer may still lock or leave out
-   *   is there, as the static answers leave it, marked
-   *   `x-surface.access: "live"`; the schema for these answers settles
-   *   it;
+   *   answer locked is `readOnly`, one it left out is not there, and one a
+   *   runtime answer may still lock or leave out is there, as the static
+   *   answers leave it, marked `live`, as a key a runtime refiner narrows
+   *   is; the schema for these answers settles it;
    * - a list the site decides past the site list limit is `deferred`:
-   *   open, with a `fetch` template naming the choice that states one of
-   *   its entries; with choices, each one chosen is stated in full at its
-   *   key, as under the limit, and every other entry is still left out;
-   * - `x-surface` carries only what holds for any values: `locked`,
-   *   `access`, `dependsOn`, `enumerated`, `deferred`, `refine`, `live`,
-   *   the variants' `by` and `variants`, `group`, `after`, `patternMessage`,
-   *   `checkedOnServer`, and the widget hints when asked for. What is
-   *   only true of a moment (`refined`, `stale`, `emptyOption`, the
-   *   variants' `chosen`) is not written, and there is no `values` and no
-   *   `stale` beside the schema.
+   *   open, its `deferred` object holding a `fetch` template naming the
+   *   choice that states one of its entries; with choices, each one chosen
+   *   is stated in full at its key, as under the limit, and every other
+   *   entry is still left out;
+   * - `x-surface` carries only what holds for any values: `dependsOn`,
+   *   `enumerated`, `deferred`, `refine`, `live`, the variants' `by` and
+   *   `variants`, `group`, `after`, `patternMessage`, `checkedOnServer`,
+   *   and the widget hints when asked for, each only where it says
+   *   something. What is only true of a moment (`refined`, `stale`,
+   *   `emptyOption`, the variants' `chosen`) is not written, and there is
+   *   no `values` and no `stale` beside the schema.
    *
    * Decision: see
    * docs/decisions.md#two-documents-never-stricter-than-the-runtime.
@@ -937,8 +938,8 @@ final class ContractEmitter {
   /**
    * Says at the top that the whole is locked, when an access answer said so.
    *
-   * Every key is already `readOnly` and `x-surface.locked`; the top says
-   * it too, so a client reading the document offers no submit.
+   * Every key is already `readOnly`; the top says it too, so a client
+   * reading the document offers no submit.
    *
    * Decision: see docs/decisions.md#locked-at-the-top.
    *
@@ -948,13 +949,12 @@ final class ContractEmitter {
    *   The top frame.
    *
    * @return array
-   *   The top frame, `readOnly` and `x-surface.locked` when locked whole.
+   *   The top frame, `readOnly` when locked whole.
    */
   protected function lockedWhole(DataSurfaceInterface $surface, array $schema): array {
     if ($surface->lockedWhole() === NULL) {
       return $schema;
     }
-    $schema[self::EXTENSION]['locked'] = TRUE;
     return ['readOnly' => TRUE] + $schema;
   }
 
@@ -1065,7 +1065,7 @@ final class ContractEmitter {
    *   a bare reference to its own def.
    * @param bool $frozen
    *   Whether the frame is a child its access locked, or is inside one:
-   *   every key is then described locked (`readOnly`, `x-surface.locked`)
+   *   every key is then described locked (`readOnly`, `const` where held)
    *   and holds what it was given, which is what is stored.
    * @param bool $blank
    *   Whether the frame stands for every item of a collection rather than
@@ -1188,10 +1188,11 @@ final class ContractEmitter {
         foreach ($entry->attachment->child->getDefinitions()->entries() as $id => $each) {
           $entries[] = ['id' => (string) $id, 'label' => (string) $each->definition->getLabel()];
         }
-        $properties[$name][self::EXTENSION] = $this->extension('fieldset', $locked, $depends, FALSE) + [
-          'deferred' => TRUE,
-          'fetch' => $this->fetch($pointer),
-          'entries' => $entries,
+        $properties[$name][self::EXTENSION] = $this->extension('fieldset', $depends, FALSE) + [
+          'deferred' => [
+            'fetch' => $this->fetch($pointer),
+            'entries' => $entries,
+          ],
         ];
         $shown[$name] = new \stdClass();
         if ($ahead_of_time) {
@@ -1228,7 +1229,7 @@ final class ContractEmitter {
         if ($locked) {
           $properties[$name]['readOnly'] = TRUE;
         }
-        $properties[$name][self::EXTENSION] = $this->extension('fieldset', $locked, $depends, $this->anyRefined($instance));
+        $properties[$name][self::EXTENSION] = $this->extension('fieldset', $depends, $this->anyRefined($instance));
         if ($ahead_of_time) {
           // A parent's refiner of an attached key says only whether it
           // applies.
@@ -1284,7 +1285,7 @@ final class ContractEmitter {
           // whatever its widget, and shown as nothing. The caller sends
           // the path back and an empty answer there stands for the stored
           // value again, as for any stale key.
-          if (!$properties[$name][self::EXTENSION]['stale']) {
+          if (empty($properties[$name][self::EXTENSION]['stale'])) {
             $properties[$name][self::EXTENSION]['stale'] = TRUE;
             $stale[] = $prefix . $name;
           }
@@ -1317,10 +1318,11 @@ final class ContractEmitter {
         // An access answer only the subject decides was set aside for the
         // account alone: the key is as the static answers leave it, and
         // may be locked or left out once the subject is known, which the
-        // schema for these answers settles.
+        // schema for these answers settles: `live`, as a key a runtime
+        // refiner narrows, since a client does the same for both.
         // Decision: see
         // docs/decisions.md#access-is-static-or-runtime-read-from-its-cacheability.
-        $properties[$name][self::EXTENSION]['access'] = 'live';
+        $properties[$name][self::EXTENSION]['live'] = TRUE;
       }
       if ($at_site) {
         // Not stated here, so wherever its coded refiners may rule it
@@ -1346,19 +1348,15 @@ final class ContractEmitter {
         // coded refiners answer, as the pipeline runs them. One reading a
         // port is the site's to state.
         // Decision: see docs/decisions.md#a-rule-declared-as-data.
-        [$properties[$name], $stating, $requires, $stated] = $this->rules($entry, $current->definition, $properties[$name], $stating, $requires, $prefix . $name, $cacheability, array_keys($ports));
-        if ($stated) {
-          $properties[$name][self::EXTENSION]['declared'] = TRUE;
-        }
+        // The frame's `x-surface.rules` lists each conditional that states
+        // one; the key itself carries no marker.
+        [$properties[$name], $stating, $requires] = $this->rules($entry, $current->definition, $properties[$name], $stating, $requires, $prefix . $name, $cacheability, array_keys($ports));
       }
       if ($entry->mounted !== [] && !$declaring) {
         // The structures alters attached at their mounts: each module's
         // property a site of the structure's def, and what the structure
         // answers for keys its ports read stated here, on this frame.
         [$properties[$name], $branches] = $this->mounts($declared, $static, $entry, $current, $properties[$name], $values, $prefix, $owner, $cacheability, $subschemas, $standing, $locked, $blank, $kinds, $runtime);
-        if (array_filter($branches, static fn (array $branch): bool => ($branch[self::EXTENSION]['declared'] ?? FALSE) === TRUE) !== []) {
-          $properties[$name][self::EXTENSION]['declared'] = TRUE;
-        }
         array_push($stating, ...$branches);
       }
       array_push($conditions, ...$stating);
@@ -1595,7 +1593,7 @@ final class ContractEmitter {
    *
    * @return array{0: array, 1: array<string, true>}
    *   The conditionals, and the markers the site carries: `enumerated`
-   *   or `refine`, and `declared`.
+   *   or `refine`.
    */
   protected function site(DataSurfaceInterface $declared, DataSurfaceInterface $static, Entry $entry, Attachment $attachment, string $below, array $values, string $path, CacheableMetadata $cacheability, int $kinds, bool $runtime, ?array $inline = NULL): array {
     $map = $attachment->child->getDefinitions();
@@ -1675,7 +1673,6 @@ final class ContractEmitter {
       $pseudo = new Entry($entry->name, $definition, refiners: [DataSurfaceInterface::OWNER => $links]);
       [, $stated] = $this->rules($pseudo, $definition, $base, [], FALSE, $path, $cacheability);
       array_push($branches, ...$stated);
-      $markers['declared'] = TRUE;
     }
     return [$branches, $markers];
   }
@@ -1986,10 +1983,9 @@ final class ContractEmitter {
    *   site that wires it states it, and a key it may rule out is not
    *   required here.
    *
-   * @return array{0: array, 1: array, 2: bool, 3: bool}
-   *   The property, the key's conditionals, the coded ones first,
-   *   whether the frame still requires the key, and whether any rule was
-   *   stated here.
+   * @return array{0: array, 1: array, 2: bool}
+   *   The property, the key's conditionals, the coded ones first, and
+   *   whether the frame still requires the key.
    */
   protected function rules(Entry $entry, DataDefinitionInterface $definition, array $property, array $branches, bool $requires, string $path, CacheableMetadata $cacheability, array $ports = []): array {
     $name = $entry->name;
@@ -1997,7 +1993,6 @@ final class ContractEmitter {
     $base = $applicability ? [] : $this->stated($entry, $definition, $path, $cacheability);
     $declared = [];
     $ruling = [];
-    $stated = FALSE;
     foreach ($entry->refiners as $chain) {
       foreach ($chain as $link) {
         if (!$link instanceof DeclaredRefiner) {
@@ -2018,7 +2013,6 @@ final class ContractEmitter {
             }
             continue;
           }
-          $stated = TRUE;
           $paths = [];
           foreach ($condition->keys() as $key) {
             $paths[$key] = $link->pathOf($key);
@@ -2092,7 +2086,7 @@ final class ContractEmitter {
         ];
       }
     }
-    return [$property, $branches, $requires, $stated];
+    return [$property, $branches, $requires];
   }
 
   /**
@@ -2208,7 +2202,7 @@ final class ContractEmitter {
    * The list is the parent's key, so its own property says what the
    * parent says about it: its title and description, `minItems` and
    * `maxItems` from its Count as the parent's refiners left it, whether
-   * it is locked, and `x-surface.list`. Its `items` refer to the child's
+   * it is locked, and `x-surface.collection`. Its `items` refer to the child's
    * def, as an attached child's property does, narrowed by composition
    * only where every item differs from the def (a key the child's
    * operation locked, a list locked whole): described from the child's
@@ -2287,7 +2281,7 @@ final class ContractEmitter {
     if ($locked) {
       $schema['readOnly'] = TRUE;
     }
-    $schema[self::EXTENSION] = $this->extension('list', $locked, $depends, $this->signature($entry->definition) !== $this->signature($definition)) + ['list' => TRUE] + $extras;
+    $schema[self::EXTENSION] = $this->extension('list', $depends, $this->signature($entry->definition) !== $this->signature($definition)) + ['collection' => TRUE] + $extras;
 
     $shown = NULL;
     $held = $values[$entry->name] ?? $declared->getDefault($entry->name);
@@ -2765,11 +2759,13 @@ final class ContractEmitter {
     if ($frozen) {
       $property['readOnly'] = TRUE;
     }
-    $property[self::EXTENSION] = $this->extension('variants', $frozen, $depends, $chosen !== NULL) + [
+    $property[self::EXTENSION] = $this->extension('variants', $depends, $chosen !== NULL) + [
       'by' => $variants->by,
       'variants' => [],
-      'chosen' => $chosen,
     ];
+    if ($chosen !== NULL) {
+      $property[self::EXTENSION]['chosen'] = $chosen;
+    }
     // Variants nothing has chosen keep what the key holds: it has no
     // element, so it says nothing about it.
     $shown = $held;
@@ -2788,8 +2784,7 @@ final class ContractEmitter {
       // docs/decisions.md#a-list-left-out-for-size-is-deferred-not-refined.
       if ($full || $declaring || $blank || $chosen === NULL) {
         $pointer = $this->site['pointer'] . '/' . Choices::escape($entry->name);
-        $property[self::EXTENSION]['deferred'] = TRUE;
-        $property[self::EXTENSION]['fetch'] = $this->fetch($pointer);
+        $property[self::EXTENSION]['deferred'] = ['fetch' => $this->fetch($pointer)];
         $picked = $this->choices?->variants($variants, $pointer) ?? [];
         if ($picked === []) {
           unset($property[self::EXTENSION]['variants']);
@@ -2860,8 +2855,14 @@ final class ContractEmitter {
       unset($property[self::EXTENSION], $property['type']);
       $property += ['anyOf' => $union, self::EXTENSION => $extension];
     }
-    // A map whose keys are numeric strings is still a map.
-    $property[self::EXTENSION]['variants'] = (object) $property[self::EXTENSION]['variants'];
+    if ($property[self::EXTENSION]['variants'] === []) {
+      // No variant to name: absent says the same as empty.
+      unset($property[self::EXTENSION]['variants']);
+    }
+    else {
+      // A map whose keys are numeric strings is still a map.
+      $property[self::EXTENSION]['variants'] = (object) $property[self::EXTENSION]['variants'];
+    }
     return [$property, $shown, $branches];
   }
 
@@ -3399,9 +3400,9 @@ final class ContractEmitter {
       // Decision: see docs/decisions.md#a-widget-is-chosen-from-the-definition.
       $checkboxes = $set !== NULL && CheckboxesWidget::drawsList($definition, $set);
       $extension = match (TRUE) {
-        $checkboxes => $this->extension('checkboxes', $locked, $depends, $refined),
-        $listed => $this->extension('select', $locked, $depends, $refined) + ['multiple' => TRUE],
-        default => $this->extension('list', $locked, $depends, $refined),
+        $checkboxes => $this->extension('checkboxes', $depends, $refined),
+        $listed => $this->extension('select', $depends, $refined) + ['multiple' => TRUE],
+        default => $this->extension('list', $depends, $refined),
       };
       $shown = is_array($value) ? array_values($value) : $value;
     }
@@ -3430,7 +3431,7 @@ final class ContractEmitter {
       if ($required !== []) {
         $schema['required'] = $required;
       }
-      $extension = $this->extension('fieldset', $locked, $depends, $refined || $this->anyRefined($schema));
+      $extension = $this->extension('fieldset', $depends, $refined || $this->anyRefined($schema));
       if (DefinitionMetadata::isGrouping($definition)) {
         // Only groups the fieldsets inside it, as on the form: no title
         // and no description to draw, and `group` says to draw none.
@@ -3466,7 +3467,7 @@ final class ContractEmitter {
         AutocompleteWidget::draws($definition), $definition->getSetting(EntityReferenceStructure::TARGETS) !== NULL => 'autocomplete',
         default => $this->widget($definition),
       };
-      $extension = $this->extension($widget, $locked, $depends, $refined);
+      $extension = $this->extension($widget, $depends, $refined);
       $reference = static::referenceMarker($definition);
       if ($reference !== NULL) {
         $extension['reference'] = $reference;
@@ -3698,12 +3699,17 @@ final class ContractEmitter {
   }
 
   /**
-   * Builds the `x-surface` keyword's always-present part.
+   * Builds a key's `x-surface` keyword, each part only where it says something.
+   *
+   * A locked key says it with `readOnly`, and a key with nothing to say
+   * of a part leaves it out: no `dependsOn: []`, no `refined: false`, and
+   * `stale` only where it is stale (frame(), property()).
+   *
+   * Decision: see
+   * docs/decisions.md#contract-4-fewer-keywords-nothing-new-on-the-wire.
    *
    * @param string|null $widget
    *   The widget hint, or NULL when no widget would claim the key.
-   * @param bool $locked
-   *   Whether the key is locked.
    * @param string[] $depends
    *   The sibling keys its refiners watch; a mounted one by its dotted
    *   path in the frame.
@@ -3713,14 +3719,15 @@ final class ContractEmitter {
    * @return array
    *   The keyword.
    */
-  protected function extension(?string $widget, bool $locked, array $depends, bool $refined): array {
-    return [
-      'widget' => $widget,
-      'locked' => $locked,
-      'dependsOn' => array_values($depends),
-      'refined' => $refined,
-      'stale' => FALSE,
-    ];
+  protected function extension(?string $widget, array $depends, bool $refined): array {
+    $extension = ['widget' => $widget];
+    if ($depends !== []) {
+      $extension['dependsOn'] = array_values($depends);
+    }
+    if ($refined) {
+      $extension['refined'] = TRUE;
+    }
+    return $extension;
   }
 
   /**
@@ -4266,7 +4273,8 @@ final class ContractEmitter {
    *
    * @return array
    *   The schema, its `x-surface` keywords without `refined`, `stale`,
-   *   `emptyOption` and the variants' `chosen`.
+   *   `emptyOption` and the variants' `chosen`, and with no `x-surface`
+   *   where nothing else was said.
    */
   protected function withoutPresent(array $schema): array {
     foreach ($schema as $key => $value) {
@@ -4275,6 +4283,10 @@ final class ContractEmitter {
       }
       if ($key === self::EXTENSION) {
         unset($value['refined'], $value['stale'], $value['emptyOption'], $value['chosen']);
+        if ($value === []) {
+          unset($schema[$key]);
+          continue;
+        }
         $schema[$key] = $value;
       }
       else {
@@ -4323,7 +4335,8 @@ final class ContractEmitter {
    *
    * @return array
    *   The schema, its `x-surface` keywords without `widget`, `multiple`
-   *   and `arrangement`.
+   *   and `arrangement`, and with no `x-surface` where nothing else was
+   *   said.
    */
   protected function withoutWidgets(array $schema): array {
     foreach ($schema as $key => $value) {
@@ -4332,6 +4345,10 @@ final class ContractEmitter {
       }
       if ($key === self::EXTENSION) {
         unset($value['widget'], $value['multiple'], $value['arrangement']);
+        if ($value === []) {
+          unset($schema[$key]);
+          continue;
+        }
         $schema[$key] = $value;
       }
       else {

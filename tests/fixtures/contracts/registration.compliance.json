@@ -1,7 +1,7 @@
 {
     "resource": "registration.compliance",
     "module": "data_surface_examples_compliance",
-    "contract": 3,
+    "contract": 4,
     "documents": [
         {
             "resource": "registration.compliance",
@@ -10,7 +10,7 @@
             "schema": {
                 "$schema": "https://json-schema.org/draft/2020-12/schema",
                 "x-surface": {
-                    "contract": 3,
+                    "contract": 4,
                     "version": 1,
                     "ports": {
                         "capacity": {
@@ -25,8 +25,6 @@
                         "$ref": "#/$defs/event.license",
                         "title": "Event license",
                         "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
                             "patternMessage": "A license number is four digits, such as 2048."
                         }
                     },
@@ -35,7 +33,6 @@
                         "type": "integer",
                         "default": 1,
                         "x-surface": {
-                            "locked": false,
                             "dependsOn": [
                                 "capacity"
                             ]
