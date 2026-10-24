@@ -263,7 +263,14 @@ a parameter (`ResourceCatalog::standalone()`). Beside each such
 operation that changes a thing that exists it derives a read tool,
 `data_surface:<id>:<operation>:read`, taking the parameters and
 answering with the stored values less secrets
-(`ResourceCatalog::reads()`, `ResourceOperationReadTool`). Both declare
+(`ResourceCatalog::reads()`, `ResourceOperationReadTool`). Where an
+operation's listing has a key whose list the site decides (variants or
+keys from the site) past `data_surface.settings:site_list_limit`, which
+the full schema and the listing state open and `refine`, it derives a
+narrowing tool too, `data_surface:<id>:<operation>:schema`, answering
+what `POST .../schema` answers for the values sent
+(`OperationInputs::narrows()`, `ResourceOperationSchemaTool`,
+`docs/decisions.md#a-budget-for-what-the-site-decides`). Both declare
 the operation's permission to the Tool API, unless it has a `%key`
 (`ResourceOperationToolDeriver::declaredPermission()`). A tool's title
 is the operation's label (with its resource added where labels are
@@ -395,7 +402,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 The full lane's phpunit line reads, as of this writing:
 
 ```
-phpunit: Tests: 1568, Assertions: 37161, Errors: 0, Failures: 0, Skipped: 3. Classes: 212 of 212, 8 at a time, browser classes 4.
+phpunit: Tests: 1580, Assertions: 37408, Errors: 0, Failures: 0, Skipped: 3. Classes: 214 of 214, 8 at a time, browser classes 4.
 ```
 
 the same counts a plain phpunit run of the tree gives. The skipped

@@ -272,6 +272,7 @@ final class CatalogDocument {
       $key['contributor'] === NULL ? NULL : 'added by ' . $key['contributor'],
       $key['child'] === NULL ? NULL : 'child ' . $key['child'],
       $key['variants'] === NULL ? NULL : 'variants by ' . $key['variants']['by'] . ': ' . implode(', ', array_map(static fn (int|string $value, ?string $id): string => $value . ' ' . ($id ?? 'read'), array_keys($key['variants']['values']), $key['variants']['values'])),
+      ($key['variants']['listed'] ?? TRUE) ? NULL : sprintf('%d variants, more than the site list limit: their keys are not listed here', count($key['variants']['values'])),
       $key['items'] === NULL ? NULL : 'items ' . $key['items'],
     ]));
   }

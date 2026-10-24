@@ -2379,6 +2379,38 @@ def read back is the card again, byte for byte, as every document of
 these examples a runtime refiner does not narrow reads back to itself
 ([the round trip](../../docs/reading-a-schema.md#the-round-trip)).
 
+That holds while the site has at most 20 components, the site list
+limit, `data_surface.settings:site_list_limit`. This module's four are
+under it, and so is every site its tests run on, so this page and its
+tests show every component spelled out. A site whose themes provide
+more is past it, as the development site this page was written on is,
+with 312: the full schema and the tool listing then list each component
+by id and label, and state the props and slots open, marked `refine`,
+with no def and no conditional per component; the schema for these
+answers, built with a component chosen, states that component's defs
+exactly. The full schema went from 3 MB and 2,465 defs to 18 KB there,
+and the tool's definition from 1.6 MB to 12 KB
+([decision](../../docs/decisions.md#a-budget-for-what-the-site-decides)).
+The props in the full schema, past the limit:
+
+```json
+"props": {"title": "Props", "type": ["object", "null"],
+          "x-surface": {"locked": false, "dependsOn": ["component"], "by": "component", "refine": true}}
+```
+
+The form still swaps the props over AJAX, and the React page asks
+`POST /surface-api/event.spotlight/schema` when the component changes.
+An agent reads in the write tool's listing which tool answers them, and
+makes two calls, that one and then the write:
+
+```bash
+drush tool:run data_surface:event.spotlight:configure:schema --uid=1 --input='{"values":{"component":"data_surface_examples:call_to_action"}}'
+drush tool:run data_surface:event.spotlight:configure --uid=1 --input='{"values":{"component":"data_surface_examples:call_to_action","props":{"text":"Buy a ticket","url":"https://example.com/tickets"}}}' --input=dry_run=true
+```
+
+The narrowing tool is there only past the limit; the page's panel says
+which state the site is in, and why.
+
 The config object holds the component's id, its props and its slots.
 Its config schema is written from the resource, and the props and the
 slots are `type: ignore` there: which components a site has is the
@@ -2698,7 +2730,15 @@ The page shows the block's three lines beside example 12's, the block
 structure's full schema cut to the four components this module ships
 (the same variants as example 12's, under the block's id), the hero's
 actions slot as the full schema narrows it, the four tools a placed
-block has, a link to place one, and what it cost.
+block has, a link to place one, and what it cost. Past the site list
+limit the block's props and slots are open and `refine`, as example
+12's are, the hero's actions slot is read from the schema for these
+answers with the hero chosen, and the placement's create and update
+have a narrowing tool each, `data_surface:block.placement:create:schema`
+and `data_surface:block.placement:update:schema`, which the table lists
+too: a site with more than 20 block plugins is past the limit for the
+plugin's settings as well. The test sites have 11 to 16 block plugins
+and four components, under it.
 
 A plugin's structure is held by its host and is no tool. A placed block
 is a config entity, `block.block.<id>`, with a machine name and storage

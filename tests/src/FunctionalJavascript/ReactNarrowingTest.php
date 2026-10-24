@@ -126,6 +126,29 @@ class ReactNarrowingTest extends ExamplesWebDriverTestBase {
   }
 
   /**
+   * Tests example 12 past the site list limit: the component asks.
+   *
+   * With the limit at two, the four components are more than it: the full
+   * schema states the props and slots open, `refine`, so choosing the hero
+   * asks the server, which answers the hero's props, drawn from the schema
+   * for these answers.
+   *
+   * @see docs/decisions.md#a-budget-for-what-the-site-decides
+   */
+  public function testTwelveAsksPastTheSiteListLimit(): void {
+    $this->config('data_surface.settings')->set('site_list_limit', 2)->save();
+    $assert = $this->assertSession();
+    $page = $this->getSession()->getPage();
+    $this->drupalGet('surface-react/event.spotlight/configure');
+    $this->assertNotNull($assert->waitForElement('css', '#dsr-props-heading'), 'The card stored, drawn from the envelope.');
+    $page->selectFieldOption('dsr-component', 'Hero');
+    $this->assertNotNull($assert->waitForElement('css', '#dsr-props-overlay'));
+    $assert->elementNotExists('css', '#dsr-props-heading');
+    $this->assertStringStartsWith('Asked the server', $this->narrowing());
+    $this->assertSame(1, $this->askedTheServer());
+  }
+
+  /**
    * Tests example 3 with compliance: the room asks, the pricing does not.
    */
   public function testExampleThreeAsksForTheRuntimeRoom(): void {

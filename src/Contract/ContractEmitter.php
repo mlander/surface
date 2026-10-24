@@ -296,11 +296,15 @@ final class ContractEmitter {
    * @param \Drupal\Core\Validation\ConstraintManager|null $constraints
    *   The constraint plugin manager, for what a constraint only the server
    *   checks says it checks (its label); without it, its id.
+   * @param \Drupal\data_surface\Contract\SiteListBudget|null $budget
+   *   How many entries of a list the site decides are spelled out; without
+   *   it, every one.
    */
   public function __construct(
     protected readonly DataSurfaceOptions $options,
     TranslationInterface $string_translation,
     protected readonly ?ConstraintManager $constraints = NULL,
+    protected readonly ?SiteListBudget $budget = NULL,
   ) {
     $this->stringTranslation = $string_translation;
   }
@@ -1114,6 +1118,28 @@ final class ContractEmitter {
           // A parent's refiner of the list watches a sibling that holds
           // nothing yet: its Count for every value that sibling offers.
           $enumerated = $this->enumerate($declared, $static, $entry, $values, $properties[$name], $prefix . $name, $cacheability, $kinds);
+        }
+      }
+      elseif ($entry->attachment !== NULL && ($full || $declaring) && $this->budget?->over($entry, $cacheability)) {
+        // Keys from the site, more than the site's list budget: an open
+        // map, `refine`, its entries named by id and label alone. The
+        // schema for these answers states every one.
+        // Decision: see docs/decisions.md#a-budget-for-what-the-site-decides.
+        $properties[$name] = $this->describe($current->definition) + ['type' => $this->nullable('object', $current->definition)];
+        if ($locked) {
+          $properties[$name]['readOnly'] = TRUE;
+        }
+        $entries = [];
+        foreach ($entry->attachment->child->getDefinitions()->entries() as $id => $each) {
+          $entries[] = ['id' => (string) $id, 'label' => (string) $each->definition->getLabel()];
+        }
+        $properties[$name][self::EXTENSION] = $this->extension('fieldset', $locked, $depends, FALSE) + [
+          'refine' => TRUE,
+          'entries' => $entries,
+        ];
+        $shown[$name] = new \stdClass();
+        if ($ahead_of_time) {
+          $enumerated = $this->enumerate($declared, $static, $entry, $values, $properties[$name], $prefix . $name, $cacheability, $kinds, TRUE);
         }
       }
       elseif ($entry->attachment !== NULL) {
@@ -2576,12 +2602,26 @@ final class ContractEmitter {
       'variants' => [],
       'chosen' => $chosen,
     ];
-    $union = [];
     // Variants nothing has chosen keep what the key holds: it has no
     // element, so it says nothing about it.
     $shown = $held;
+    $listed = $variants->variants;
+    if ($this->budget?->variantsOver($variants, $cacheability)) {
+      // More than the site's list budget: no def and no conditional per
+      // variant. With nothing chosen (and in the full schema, which chooses
+      // nothing) the key is an open object, `refine`, its deciding key
+      // named; with a value chosen, the chosen variant alone.
+      // Decision: see docs/decisions.md#a-budget-for-what-the-site-decides.
+      if ($full || $declaring || $blank || $chosen === NULL) {
+        $property[self::EXTENSION]['refine'] = TRUE;
+        unset($property[self::EXTENSION]['variants']);
+        return [$property, $shown, []];
+      }
+      $listed = [$chosen => $variants->variant($chosen)];
+    }
+    $union = [];
     $branches = [];
-    foreach ($variants->variants as $id => $variant) {
+    foreach ($listed as $id => $variant) {
       $id = (string) $id;
       $child = $variant->child;
       $fallback = $owner . '.' . $entry->name . '.' . $id;

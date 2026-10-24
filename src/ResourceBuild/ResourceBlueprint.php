@@ -546,6 +546,7 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
   public function attachReadVariants(string $key, string $by, array $variants): MapDataDefinition {
     $shell = $this->attachVariants($key, $by);
     $this->readVariants[$key] = $variants;
+    DefinitionMetadata::setReadVariants($shell);
     return $shell;
   }
 

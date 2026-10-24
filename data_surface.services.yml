@@ -74,7 +74,13 @@ services:
   # widget hints only when a renderer asks for them.
   data_surface.contract_emitter:
     class: Drupal\data_surface\Contract\ContractEmitter
-    arguments: ['@data_surface.options', '@string_translation', '@validation.constraint']
+    arguments: ['@data_surface.options', '@string_translation', '@validation.constraint', '@data_surface.site_list_budget']
+  # How many entries of a list the site decides (variants from the site,
+  # keys from the site) the documents and the tool listing spell out.
+  data_surface.site_list_budget:
+    class: Drupal\data_surface\Contract\SiteListBudget
+    arguments: ['@config.factory']
+  Drupal\data_surface\Contract\SiteListBudget: '@data_surface.site_list_budget'
   # The emitter run backwards: a JSON Schema document read into the keys,
   # children and rules of a structure, what it cannot say kept as a
   # JsonSchema constraint. A blueprint's fromSchema() reads with it; a
@@ -123,6 +129,7 @@ services:
       - '@account_switcher'
       - !tagged_iterator data_surface.catalog_doors
       - '%app.root%'
+      - '@data_surface.site_list_budget'
   # The form routes a module declares for an operation.
   data_surface.form_route_doors:
     class: Drupal\data_surface\ResourceBuild\FormRouteDoors

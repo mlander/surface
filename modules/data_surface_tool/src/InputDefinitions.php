@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Drupal\data_surface_tool;
 
 use Drupal\Core\Cache\Cache;
+use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\StringTranslation\TranslationInterface;
@@ -12,6 +13,7 @@ use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
+use Drupal\data_surface\Contract\SiteListBudget;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\Pipeline\Outbound;
 use Drupal\data_surface\DefinitionMetadata;
@@ -121,11 +123,15 @@ final class InputDefinitions {
    * @param \Drupal\data_surface\Reference\References|null $references
    *   What reference keys are: the limit up to which one lists its
    *   candidates.
+   * @param \Drupal\data_surface\Contract\SiteListBudget|null $budget
+   *   How many entries of a list the site decides a listing spells out;
+   *   without it, every one.
    */
   public function __construct(
     protected readonly DataSurfaceOptions $options,
     TranslationInterface $string_translation,
     protected readonly ?References $references = NULL,
+    protected readonly ?SiteListBudget $budget = NULL,
   ) {
     $this->stringTranslation = $string_translation;
   }
@@ -173,11 +179,15 @@ final class InputDefinitions {
    *   TRUE when the tool's description says that every key may be found
    *   locked or left out, so a key whose only mark is the one at the top
    *   does not say it again.
+   * @param string|null $narrowing
+   *   The id of the tool that answers the schema for some values, which a
+   *   key whose list the site decides names past the budget; NULL when
+   *   there is none.
    *
    * @return \Drupal\tool\TypedData\MapInputDefinition
    *   The map input definition.
    */
-  public function fromSurface(DataSurfaceInterface $surface, TranslatableMarkup|string $label, TranslatableMarkup|string $description, bool $required = FALSE, mixed $default_value = NULL, bool $runtimeAccessSaidOnce = FALSE): MapInputDefinition {
+  public function fromSurface(DataSurfaceInterface $surface, TranslatableMarkup|string $label, TranslatableMarkup|string $description, bool $required = FALSE, mixed $default_value = NULL, bool $runtimeAccessSaidOnce = FALSE, ?string $narrowing = NULL): MapInputDefinition {
     // Said once by the tool's description, a mark every key carries from
     // the top is not said on each key again; a key's own mark still is.
     // Decision: see
@@ -186,7 +196,7 @@ final class InputDefinitions {
     $properties = [];
     $definitions = $surface->getDefinitions();
     foreach ($definitions->entries() as $name => $entry) {
-      $property = $this->fromEntry($entry);
+      $property = $this->fromEntry($entry, $narrowing);
       // A key a refiner may rule out is required only where it applies,
       // which a listing cannot say: optional here, and the pipeline asks
       // for it where it applies.
@@ -547,13 +557,18 @@ final class InputDefinitions {
    *
    * @param \Drupal\data_surface\Entry $entry
    *   The key.
+   * @param string|null $narrowing
+   *   The narrowing tool's id, or NULL (fromSurface()).
    *
    * @return \Drupal\tool\TypedData\InputDefinitionInterface
    *   The input definition.
    */
-  protected function fromEntry(Entry $entry): InputDefinitionInterface {
+  protected function fromEntry(Entry $entry, ?string $narrowing = NULL): InputDefinitionInterface {
+    if ($this->over($entry)) {
+      return $this->tooMany($entry, $entry->definition, $narrowing);
+    }
     if ($entry->variants !== NULL && DefinitionMetadata::variantsBy($entry->definition) !== NULL) {
-      return $this->fromVariants($entry->variants, $entry->definition);
+      return $this->fromVariants($entry->variants, $entry->definition, $narrowing);
     }
     $item = $entry->definition instanceof ListDataDefinitionInterface ? $entry->definition->getItemDefinition() : NULL;
     if ($entry->list !== NULL && $item instanceof ComplexDataDefinitionInterface) {
@@ -562,7 +577,7 @@ final class InputDefinitions {
       // own entries say.
       $list = $this->fromDefinition($entry->definition);
       if ($list instanceof ListInputDefinition) {
-        $list->setItemDefinition($this->fromChild($entry->list->child(), $item));
+        $list->setItemDefinition($this->fromChild($entry->list->child(), $item, $narrowing));
       }
       return $list;
     }
@@ -570,7 +585,64 @@ final class InputDefinitions {
     if ($child === NULL || !$entry->definition instanceof ComplexDataDefinitionInterface) {
       return $this->fromDefinition($entry->definition);
     }
-    return $this->fromChild($child, $entry->definition);
+    return $this->fromChild($child, $entry->definition, $narrowing);
+  }
+
+  /**
+   * Answers whether a key's list is the site's and over the budget.
+   *
+   * What it read is the listing's: the setting's tag joins the list tags,
+   * so the listing is derived again when the limit changes.
+   *
+   * @param \Drupal\data_surface\Entry $entry
+   *   The key.
+   *
+   * @return bool
+   *   TRUE when the listing states it open.
+   */
+  protected function over(Entry $entry): bool {
+    if ($this->budget === NULL) {
+      return FALSE;
+    }
+    $read = new CacheableMetadata();
+    $over = $this->budget->over($entry, $read);
+    $this->listTags = Cache::mergeTags($this->listTags, $read->getCacheTags());
+    return $over;
+  }
+
+  /**
+   * Converts a key whose list the site decides, past the budget.
+   *
+   * An open map, which takes any keys: the listing would otherwise carry
+   * one map per variant or per entry. Its description says how to learn
+   * the keys: choose the deciding key, and ask the narrowing tool.
+   *
+   * Decision: see docs/decisions.md#a-budget-for-what-the-site-decides.
+   *
+   * @param \Drupal\data_surface\Entry $entry
+   *   The key.
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   Its definition, as the map or variants advertise it.
+   * @param string|null $narrowing
+   *   The narrowing tool's id, or NULL.
+   *
+   * @return \Drupal\tool\TypedData\MapInputDefinition
+   *   The open map.
+   */
+  protected function tooMany(Entry $entry, DataDefinitionInterface $definition, ?string $narrowing): MapInputDefinition {
+    $arguments = ['@by' => (string) $entry->variants?->by, '@tool' => (string) $narrowing];
+    $note = match (TRUE) {
+      $entry->variants !== NULL && $narrowing !== NULL => $this->t("Too many to list: choose @by, then call @tool with your values to get this key's schema.", $arguments),
+      $entry->variants !== NULL => $this->t('Too many to list: its keys depend on @by.', $arguments),
+      $narrowing !== NULL => $this->t("Too many to list: call @tool with your values to get this key's schema.", $arguments),
+      default => $this->t('Too many to list: one key per thing the site has.'),
+    };
+    return new MapInputDefinition(
+      label: $this->label($definition),
+      description: $this->appended($this->description($definition), $note),
+      required: $definition->isRequired(),
+      property_definitions: [],
+    );
   }
 
   /**
@@ -584,19 +656,22 @@ final class InputDefinitions {
    *   The child.
    * @param \Drupal\Core\TypedData\ComplexDataDefinitionInterface $definition
    *   The map it is advertised as at the key.
+   * @param string|null $narrowing
+   *   The narrowing tool's id, or NULL (fromSurface()).
    *
    * @return \Drupal\tool\TypedData\InputDefinitionInterface
    *   The map input.
    */
-  protected function fromChild(DataSurfaceInterface $child, ComplexDataDefinitionInterface $definition): InputDefinitionInterface {
+  protected function fromChild(DataSurfaceInterface $child, ComplexDataDefinitionInterface $definition, ?string $narrowing = NULL): InputDefinitionInterface {
     $map = $this->fromDefinition($definition);
     if ($map instanceof MapInputDefinition) {
       $properties = $definition->getPropertyDefinitions();
       foreach ($child->getDefinitions()->entries() as $name => $child_entry) {
         $property = $properties[$name] ?? $child_entry->definition;
         $converted = match (TRUE) {
-          $child_entry->variants !== NULL && isset($properties[$name]) && DefinitionMetadata::variantsBy($properties[$name]) !== NULL => $this->fromVariants($child_entry->variants, $properties[$name]),
-          $child_entry->list !== NULL => $this->fromEntry($child_entry->withDefinition($property)),
+          $this->over($child_entry) => $this->tooMany($child_entry, $property, $narrowing),
+          $child_entry->variants !== NULL && isset($properties[$name]) && DefinitionMetadata::variantsBy($properties[$name]) !== NULL => $this->fromVariants($child_entry->variants, $properties[$name], $narrowing),
+          $child_entry->list !== NULL => $this->fromEntry($child_entry->withDefinition($property), $narrowing),
           default => $this->fromDefinition($property),
         };
         // As at the top: a key the child's refiners may rule out, by the
@@ -647,19 +722,24 @@ final class InputDefinitions {
    *   The variant table.
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $placeholder
    *   The variants' placeholder.
+   * @param string|null $narrowing
+   *   The narrowing tool's id, which a key inside a variant whose list the
+   *   site decides names past the budget; NULL when there is none.
    *
    * @return \Drupal\tool\TypedData\MapInputDefinition
    *   The union map.
    */
-  public function fromVariants(Variants $variants, DataDefinitionInterface $placeholder): MapInputDefinition {
+  public function fromVariants(Variants $variants, DataDefinitionInterface $placeholder, ?string $narrowing = NULL): MapInputDefinition {
     $owners = [];
     $first = [];
+    $entries = [];
     $table = [];
     foreach ($variants->variants as $id => $variant) {
       $keys = [];
-      foreach ($variant->child->getDefinitions() as $name => $definition) {
+      foreach ($variant->child->getDefinitions()->entries() as $name => $entry) {
         $owners[$name][] = (string) $id;
-        $first[$name] ??= $definition;
+        $first[$name] ??= $entry->definition;
+        $entries[$name] ??= $entry;
         $keys[] = $name;
       }
       $table[] = $this->t('@value: @keys', [
@@ -669,6 +749,13 @@ final class InputDefinitions {
     }
     $properties = [];
     foreach ($first as $name => $definition) {
+      if ($this->over($entries[$name])) {
+        // A key inside the variant whose list the site decides, past the
+        // budget, at its own level.
+        $properties[$name] = $this->tooMany($entries[$name], $definition, $narrowing);
+        $properties[$name]->setRequired(FALSE);
+        continue;
+      }
       // A copy, said the way the union means it: optional, with no
       // default, and the variants it belongs to named. Only its own
       // flags change, so a shallow clone leaves the variant untouched.

@@ -28,6 +28,7 @@ where the module that opens it is installed:
 | `http` | The method and path that run it under contract 3: `PATCH /surface-api/first.store`, a listing's `GET` on the collection. | `data_surface_react` |
 | `tool` | The derived tool, `data_surface:<id>:<operation>`. | `data_surface_tool` |
 | `read tool` | The read tool beside it, for an operation that changes a thing that exists. | `data_surface_tool` |
+| `schema tool` | The narrowing tool beside it, `data_surface:<id>:<operation>:schema`, where its listing states a key open because the site's list for it is past the budget ([decision](decisions.md#a-budget-for-what-the-site-decides)). | `data_surface_tool` |
 | `openapi` | The OpenAPI operation that runs it: `<id>:<operation>:write`, a listing's `:list`. | `data_surface_openapi` |
 | `react` | The React page its form mounts on, `/surface-react/<id>/<operation>`. | `data_surface_react` |
 
@@ -85,6 +86,14 @@ that added it, and the child, variants or items at it. Beside the keys,
 the operations with every door, and who answers access: the operation's
 permission alone, or the access class and the alters that answer, and
 whether the answer at the top is static or runtime.
+
+Variants the site lists past `data_surface.settings:site_list_limit`
+are listed by value, `listed: false` in the JSON and a note in the
+table, and their keys are not walked: a structure walked once per place
+it is used grows with the product of the lists, which exhausted 3 GB
+for a placed block on a site with 312 components
+([decision](decisions.md#a-budget-for-what-the-site-decides)). Each
+variant's structure is still listed under "Read from a schema".
 
 ## What did not build
 

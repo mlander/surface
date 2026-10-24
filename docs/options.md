@@ -311,6 +311,25 @@ a key lists, what the lookup finds and what a write accepts are one
 answer. `References::withLimit()` holds another limit for one call,
 saving nothing, which example 16's page uses to show a key past it.
 
+## A list the site decides, past its budget
+
+A reference key's limit has a sibling for variants and keys the site
+lists: `data_surface.settings:site_list_limit`, 20 as shipped. A key
+whose variants come from the site (`attachVariants(from:)`, a component
+per single-directory component) or whose keys do (`addEach()`,
+`attachEach()`) is spelled out in the full schema and the tool listing
+while the site lists at most that many; past it, both state the key
+open and mark it `refine`, and the deciding key keeps its list of ids
+and labels ([decision](decisions.md#a-budget-for-what-the-site-decides)).
+Where a reference key past its limit is looked up by label, such a key
+is asked for with values: choose the deciding key, then ask for the
+schema of those values, `POST .../schema` over HTTP or the narrowing
+tool, `data_surface:<resource>:<operation>:schema`, which answers the
+chosen variant's keys exactly
+([asking again at the tool door](served-contract.md#asking-again-at-the-tool-door)).
+`SiteListBudget::withLimit()` holds another limit for one call, saving
+nothing, as `References::withLimit()` does.
+
 ## Writing a resolver
 
 ```php

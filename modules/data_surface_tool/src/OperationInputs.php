@@ -12,6 +12,7 @@ use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\StringTranslation\TranslationInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\data_surface\Computed;
+use Drupal\data_surface\Contract\SiteListBudget;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\Pipeline\Outbound;
 use Drupal\data_surface\Resource\OperationContext;
@@ -101,6 +102,11 @@ final class OperationInputs {
   public const VALUES = 'values';
 
   /**
+   * The output carrying the schema for the values sent.
+   */
+  public const SCHEMA = 'schema';
+
+  /**
    * The input asking for a dry run.
    */
   public const DRY_RUN = 'dry_run';
@@ -188,6 +194,9 @@ final class OperationInputs {
    * @param \Drupal\Core\Extension\ModuleHandlerInterface|null $moduleHandler
    *   The module handler, which says whether the site serves the API a
    *   reference key's lookup is on.
+   * @param \Drupal\data_surface\Contract\SiteListBudget|null $budget
+   *   How many entries of a list the site decides a listing spells out,
+   *   which says whether an operation has a narrowing tool.
    */
   public function __construct(
     protected readonly ResourcesInterface $resources,
@@ -195,6 +204,7 @@ final class OperationInputs {
     protected readonly InputDefinitions $inputDefinitions,
     TranslationInterface $string_translation,
     protected readonly ?ModuleHandlerInterface $moduleHandler = NULL,
+    protected readonly ?SiteListBudget $budget = NULL,
   ) {
     $this->stringTranslation = $string_translation;
   }
@@ -525,6 +535,47 @@ final class OperationInputs {
   }
 
   /**
+   * Answers whether an operation has a narrowing tool.
+   *
+   * It has one when its declared listing has a key whose list the site
+   * decides past the budget (SiteListBudget::anyOver()), at any depth: a
+   * key the listing states open, whose keys only the schema for some
+   * values says. A resource with none adds no tool.
+   *
+   * Decision: see docs/decisions.md#a-budget-for-what-the-site-decides.
+   *
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $resource
+   *   The resource.
+   * @param \Drupal\data_surface\ResourceBuild\OperationDefinition $operation
+   *   The operation.
+   *
+   * @return bool
+   *   TRUE when `<resource>:<operation>:schema` is derived.
+   */
+  public function narrows(ResourceDefinition $resource, OperationDefinition $operation): bool {
+    if ($this->budget === NULL || $operation->kind() === OperationDefinition::DELETE) {
+      return FALSE;
+    }
+    $context = $operation->needsNothing() ? $this->resources->operation($resource->name(), $operation->id) : new OperationContext($operation->id);
+    return $this->budget->anyOver($this->listed($resource, $context, TRUE));
+  }
+
+  /**
+   * Names an operation's narrowing tool.
+   *
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $resource
+   *   The resource.
+   * @param \Drupal\data_surface\ResourceBuild\OperationDefinition $operation
+   *   The operation.
+   *
+   * @return string
+   *   `data_surface:<resource id>:<operation id>:schema`, the plugin id.
+   */
+  public static function narrowingTool(ResourceDefinition $resource, OperationDefinition $operation): string {
+    return self::TOOL . ':' . $resource->id . ':' . $operation->id . ':' . self::SCHEMA;
+  }
+
+  /**
    * Answers whether an operation changes a thing that exists.
    *
    * Whether it does not create, as its attribute says, the same reading
@@ -680,6 +731,7 @@ final class OperationInputs {
       $this->t('@resource values', ['@resource' => $resource->id]),
       $this->t('The values, as the @resource resource describes them: every key it takes that the operation does not already know, including those other modules add, with its label, its meaning and the values it allows.', ['@resource' => $resource->id]),
       runtimeAccessSaidOnce: $operation !== NULL && $this->runtimeAccessWhole($resource, $operation),
+      narrowing: $operation === NULL ? NULL : static::narrowingTool($resource, $operation),
     );
     $this->inputDefinitions->withLookups($map, $built, $operation === NULL ? NULL : $this->lookup($resource, $operation));
     $this->listedTags = Cache::mergeTags($this->listedTags, $this->inputDefinitions->takeListTags());
@@ -945,6 +997,73 @@ final class OperationInputs {
       '@needs' => $this->needs($operation),
     ]);
     return $this->runtimeAccessWhole($resource, $operation) ? $this->withRuntimeAccessWhole($description) : $description;
+  }
+
+  /**
+   * Gets the inputs of the narrowing tool: its parameters, and `values`.
+   *
+   * `values` is open and optional: whatever the caller has so far, read
+   * as a narrowing reads it, a key the resource does not declare left out.
+   *
+   * Decision: see docs/decisions.md#a-budget-for-what-the-site-decides.
+   *
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $resource
+   *   The resource.
+   * @param \Drupal\data_surface\ResourceBuild\OperationDefinition $operation
+   *   The operation.
+   *
+   * @return array<string, \Drupal\tool\TypedData\InputDefinitionInterface>
+   *   One input per parameter, exactly as the write tool declares it, then
+   *   `values`.
+   */
+  public function schemaInputs(ResourceDefinition $resource, OperationDefinition $operation): array {
+    return $this->parameters($resource, $operation) + [
+      self::VALUES => new MapInputDefinition(
+        label: $this->t('What you have so far'),
+        description: $this->t('As the write tool takes them: a key that chooses (a component, a plugin) decides which keys the answer states beside it. Any key may be left out; {} asks for the schema as the operation opens.'),
+        required: FALSE,
+        property_definitions: [],
+      ),
+    ];
+  }
+
+  /**
+   * Gets what the narrowing tool answers: the schema, and the values.
+   *
+   * @return array<string, \Drupal\tool\TypedData\OutputDefinitionInterface>
+   *   `schema` and `values`, each an open map.
+   */
+  public function schemaOutputs(): array {
+    return [
+      self::SCHEMA => new MapOutputDefinition(
+        label: $this->t('Schema for these values'),
+        description: $this->t('JSON Schema 2020-12 for the values sent: each key a choice decides stated for the choice made, its keys and what each allows, as POST /surface-api/{resource}/schema answers it, with no widget hints.'),
+        property_definitions: [],
+      ),
+      self::VALUES => new MapOutputDefinition(
+        label: $this->t('Values so far'),
+        description: $this->t('What the schema describes: what was sent, over what is stored and the defaults, with every computed key computed; an answer a new choice no longer allows is dropped. A secret is null.'),
+        property_definitions: [],
+      ),
+    ];
+  }
+
+  /**
+   * Gets the narrowing tool's description.
+   *
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $resource
+   *   The resource.
+   * @param \Drupal\data_surface\ResourceBuild\OperationDefinition $operation
+   *   The operation.
+   *
+   * @return \Drupal\Core\StringTranslation\TranslatableMarkup
+   *   The description.
+   */
+  public function schemaDescription(ResourceDefinition $resource, OperationDefinition $operation): TranslatableMarkup {
+    return $this->t('Answers the schema of @label for the values you have so far, and writes nothing. @needs Some keys of @label take their list from the site and have too many to list, so the write tool lists them open: choose the key that decides them, send your values here, and read the keys the choice offers under schema. Send the values again when a choice changes.', [
+      '@label' => self::operationLabel($operation),
+      '@needs' => $this->needs($operation),
+    ]);
   }
 
   /**

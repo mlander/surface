@@ -1,3 +1,7 @@
 # Up to this many targets, a reference key lists them as its options;
 # above it, the key takes an id, looked up with the resource's :lookup.
 reference_enum_limit: 50
+# Up to this many entries, a list the site decides (variants from the
+# site, keys from the site) is spelled out in the full schema and the tool
+# listing; above it, the key is stated open and marked refine.
+site_list_limit: 20

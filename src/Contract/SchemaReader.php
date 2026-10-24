@@ -1220,6 +1220,12 @@ final class SchemaReader {
         ];
       }
     }
+    if ($variants === [] && $union === NULL && ($extension['refine'] ?? FALSE) === TRUE) {
+      // Variants a site lists past its budget, stated open: no variant is
+      // in the document to read, so the key is an object like any other.
+      // Decision: see docs/decisions.md#a-budget-for-what-the-site-decides.
+      return NULL;
+    }
     return ['by' => $by, 'variants' => $variants, 'consumed' => $consumed];
   }
 

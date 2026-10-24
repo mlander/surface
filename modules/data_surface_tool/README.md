@@ -334,6 +334,45 @@ drush tool:run data_surface:node.type:update:read --uid=1 --input=type=page
 prints outputs one level deep. The nested schema is what the Tool API's
 serializer emits, and what an MCP client sees as `outputSchema`.
 
+## The narrowing tool
+
+A key whose list the site decides (a component per single-directory
+component, a key per thing a provider lists) is spelled out in the
+listing while the site lists at most `data_surface.settings:site_list_limit`
+entries, 20 as shipped. Past it, the write tool lists the key as an
+open map, the deciding key keeps its enum, and the key's description
+names a third tool beside the write and read tools:
+
+> Too many to list: choose component, then call
+> data_surface:event.spotlight:configure:schema with your values to get
+> this key's schema.
+
+| Narrowing tool | Inputs | Outputs |
+| --- | --- | --- |
+| `data_surface:<resource>:<operation>:schema` | the operation's parameters; `values`, optional and open | `schema`, `values` |
+
+- **Which operations.** One whose listing has such a key, at any depth
+  (`OperationInputs::narrows()`); a resource whose lists are all spelled
+  out adds no tool. A delete has none.
+- **What it answers.** What `POST /surface-api/{resource}/schema`
+  answers for the same values and account, with no widget hints: the
+  schema for these answers, which states the chosen variant's keys
+  exactly, and the values settled so far, computed keys and defaults
+  included. It writes nothing.
+- **How it behaves.** The Read kind, never destructive, so the MCP
+  bridge annotates it read only and idempotent. Its access is the write
+  tool's.
+
+The two calls an agent makes, the narrowing and then the write:
+
+```bash
+drush tool:run data_surface:event.spotlight:configure:schema --uid=1 --input='{"values":{"component":"data_surface_examples:call_to_action"}}'
+drush tool:run data_surface:event.spotlight:configure --uid=1 --input='{"values":{"component":"data_surface_examples:call_to_action","props":{"text":"Buy a ticket","url":"https://example.com/tickets"}}}' --input=dry_run=true
+```
+
+([Asking again at the tool door](../../docs/served-contract.md#asking-again-at-the-tool-door),
+[decision](../../docs/decisions.md#a-budget-for-what-the-site-decides).)
+
 ## The contract panel
 
 `ContractPanel`, the service `data_surface_tool.contract_panel`,

@@ -11,7 +11,7 @@ use Drupal\data_surface\ResourceBuild\ResourceDefinition;
 use Drupal\data_surface\ResourceBuild\SiteCatalog;
 
 /**
- * The tool and the read tool derived for an operation.
+ * The tool, the read tool and the narrowing tool derived for an operation.
  *
  * Read off the Tool API's own definitions, which the deriver wrote for no
  * account, so the catalog lists the tools that exist, not the ones the
@@ -37,6 +37,7 @@ final class ToolDoors implements CatalogDoorsInterface {
     return array_filter([
       SiteCatalog::TOOL => $this->tools->hasDefinition($id) ? $id : NULL,
       SiteCatalog::READ_TOOL => $this->tools->hasDefinition($id . ':read') ? $id . ':read' : NULL,
+      SiteCatalog::SCHEMA_TOOL => $this->tools->hasDefinition($id . ':schema') ? $id . ':schema' : NULL,
     ]);
   }
 

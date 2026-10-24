@@ -109,6 +109,16 @@ final class DefinitionMetadata {
   protected const VARIANTS_FROM_KEY = 'data_surface_variants_from';
 
   /**
+   * The offset marking variants a schema read into a structure states.
+   *
+   * Written by the build step on the key of variants a structure read from
+   * a schema document holds (a component in a slot, its props chosen by
+   * its id): the list is the document's, so the site's when a provider
+   * wrote it, and the budget for what the site decides counts it.
+   */
+  protected const READ_VARIANTS_KEY = 'data_surface_read_variants';
+
+  /**
    * The offset marking a deciding key whose variants offer one value.
    *
    * Written by the build step on a deciding key that declares no list of
@@ -685,6 +695,38 @@ final class DefinitionMetadata {
     }
     $from = $definition->offsetGet(static::VARIANTS_FROM_KEY);
     return is_string($from) ? $from : NULL;
+  }
+
+  /**
+   * Says that a key's variants were read from a schema document.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The map the variants are attached at.
+   *
+   * @see docs/decisions.md#a-budget-for-what-the-site-decides
+   */
+  public static function setReadVariants(DataDefinitionInterface $definition): void {
+    static::arrayAccess($definition)->offsetSet(static::READ_VARIANTS_KEY, TRUE);
+  }
+
+  /**
+   * Answers whether a key's variants are a list the site decides.
+   *
+   * Listed by a provider of variants from the site, or read from a schema
+   * document, which a provider wrote where it nests (a component in a
+   * slot).
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The map the variants are attached at.
+   *
+   * @return bool
+   *   TRUE when the site's list decides which variants there are.
+   *
+   * @see docs/decisions.md#a-budget-for-what-the-site-decides
+   */
+  public static function variantsListedBySite(DataDefinitionInterface $definition): bool {
+    return static::variantsFrom($definition) !== NULL
+      || ($definition instanceof \ArrayAccess && $definition->offsetExists(static::READ_VARIANTS_KEY));
   }
 
   /**

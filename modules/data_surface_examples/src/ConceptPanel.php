@@ -18,6 +18,7 @@ use Drupal\Core\Theme\ComponentPluginManager;
 use Drupal\data_surface\Contract\ContractEmitter;
 use Drupal\data_surface\Contract\SchemaReader;
 use Drupal\data_surface\Contract\SchemaResolver;
+use Drupal\data_surface\Contract\SiteListBudget;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface\Pipeline\ResultDocument;
@@ -232,6 +233,9 @@ final class ConceptPanel {
    *   What reference keys are, for example 16's limit, held lower.
    * @param \Drupal\data_surface_tool\OperationInputs $operationInputs
    *   What a tool takes, for example 16's listing past the limit.
+   * @param \Drupal\data_surface\Contract\SiteListBudget|null $budget
+   *   How many entries of a list the site decides are spelled out, which
+   *   says whether examples 12 and 13 list their components.
    */
   public function __construct(
     protected readonly ContractEmitter $emitter,
@@ -247,6 +251,7 @@ final class ConceptPanel {
     protected readonly SchemaReader $reader,
     protected readonly References $references,
     protected readonly OperationInputs $operationInputs,
+    protected readonly ?SiteListBudget $budget = NULL,
   ) {
     $this->stringTranslation = $string_translation;
   }
@@ -313,7 +318,9 @@ final class ConceptPanel {
       'event.sales' => $this->t("The ticket types are the site's, not the code's: one checkbox and one set of limits per type, listed by a provider that reads the site's configuration and says so in its cacheability. Add a type and reload: the form, both documents and the tool have its keys at the next request, with no cache rebuild. Each type's limits read whether that type is on sale, through a port the resource wires per type, <code>reads: ['selling' => 'on_sale']</code>: untick a type and its limits go, tick it and they return as stored. The full schema states the rule once per type, an <code>if</code> on <code>on_sale.&lt;type&gt;</code> and a <code>then</code> reaching into <code>limits.&lt;type&gt;</code>, and a tool that sends a limit for a type off sale is refused. The speaker type is locked there, so it is drawn fixed, <code>readOnly</code> in both documents, and a value a tool sends for it is not taken, which the answer says."),
       'event.program' => $this->t('Access says whether keys may be changed, seen, or neither, and its kind is read from its cacheability, never declared. The access class of the fees locks them for an account without "set event fees", which the account alone decides, so the full schema states the lock for that account. For any other account the program decides: once it is published, the fees are fixed, which only what is stored can say, so the full schema marks the fees <code>access: live</code> and the schema for these answers settles it. Each operation also states how a call behaves: configuring changes what exists and may be repeated, and checking, at /surface-examples/10/check, changes nothing, so its tool is a read and has no read tool beside it.'),
       'event.doors' => $this->t('Every stock widget, each chosen by what its key declares: a time input for a string that asks for one, checkboxes for a short list of choices, radios for one choice that asks for them, a text area for a multiline string, and rows with "Add another" for a list of free values. The config schema is fully validatable, so the storage knows which keys may hold nothing. A key a call leaves out keeps what is stored, null clears it, and a value replaces it; the badges, which the storage always holds, refuse null and name their default. The four dry runs below show each.'),
-      'event.spotlight' => $this->t("A JSON Schema the site already has is read into a structure, keyword by keyword: each single-directory component says what props it takes, and that schema is a variant at <code>props</code>, chosen by the component. The class names no component and no prop: a provider lists the components, with their schemas, and the reader turns each schema into keys with their types, labels, defaults, lists of values, bounds and required keys, and a nested object into a map. Choose another component and the props below it are that component's, over AJAX, and in React with no request. Both documents state the components as variants, <code>anyOf</code> of each component's def and one conditional per component, and the full schema of a component read back from them is the same document again. What the reader cannot say is kept, as a JsonSchema constraint the server checks, and noted. A tool that sends one component's props for another is refused, naming the component they belong to. Beside the props, the component's slots are a second key the same component chooses, read from its metadata: each slot holds text, one component or a list of them, narrowed to what the slot expects, three deep at most."),
+      'event.spotlight' => $this->componentsListed()['listed']
+        ? $this->t("A JSON Schema the site already has is read into a structure, keyword by keyword: each single-directory component says what props it takes, and that schema is a variant at <code>props</code>, chosen by the component. The class names no component and no prop: a provider lists the components, with their schemas, and the reader turns each schema into keys with their types, labels, defaults, lists of values, bounds and required keys, and a nested object into a map. Choose another component and the props below it are that component's, over AJAX, and in React with no request. The site has @count components, at most @limit, the site list limit (<code>data_surface.settings:site_list_limit</code>), so both documents state the components as variants, <code>anyOf</code> of each component's def and one conditional per component, and the full schema of a component read back from them is the same document again. What the reader cannot say is kept, as a JsonSchema constraint the server checks, and noted. A tool that sends one component's props for another is refused, naming the component they belong to. Beside the props, the component's slots are a second key the same component chooses, read from its metadata: each slot holds text, one component or a list of them, narrowed to what the slot expects, three deep at most.", $this->componentsListed())
+        : $this->t("A JSON Schema the site already has is read into a structure, keyword by keyword: each single-directory component says what props it takes, and that schema is a variant at <code>props</code>, chosen by the component. The class names no component and no prop: a provider lists the components, with their schemas, and the reader turns each schema into keys with their types, labels, defaults, lists of values, bounds and required keys, and a nested object into a map. Choose another component and the props below it are that component's, over AJAX, and in React by asking <code>POST /surface-api/event.spotlight/schema</code>. The site has @count components, more than @limit, the site list limit (<code>data_surface.settings:site_list_limit</code>), so the full schema lists each component by id and label, and states the props and slots keys open, marked <code>refine</code>, with no def and no conditional per component; the schema for these answers, built with a component chosen, states that component's defs exactly. The tool listing does the same, and names the tool an agent asks with its values, <code>data_surface:event.spotlight:configure:schema</code>. What the reader cannot say is kept, as a JsonSchema constraint the server checks, and noted. A tool that sends one component's props for another is refused, naming the component they belong to. Beside the props, the component's slots are a second key the same component chooses, read from its metadata: each slot holds text, one component or a list of them, narrowed to what the slot expects, three deep at most.", $this->componentsListed()),
       'event.venue' => $this->t("A module that declares its own config entity type puts a resource over it from the start: the venue entity, with no form classes, no list builder and no links, and the resource <code>event.venue</code> naming it through a ConfigEntityStorage. Its config schema, <code>data_surface_examples.event_venue.*</code>, is written from the resource by <code>drush data_surface:config-schema --write</code>, as a config object's is. Add, edit and remove are about one venue. Listing and reordering are about the venues together, so they name none: each takes the keys of a structure of its own, a page and a filter, or a list of ids and weights, which <code>values:</code> on its <code>#[Operation]</code> names. The listing is read only and declares outputs, the page and the total, each venue in it one the account may read; on HTTP it is what <code>GET</code> on the collection answers. The reorder is an update over the collection, written in one commit, served as a custom method, <code>PATCH /surface-api/event.venue:reorder</code>. The slug is a computed key, <code>\$inputs->derive('slug', ..., from: ['label'], using: Slugify::class)</code>: <code>Slugify</code> computes it from the name when a venue is added, and keeps it after, so a rename leaves its links working. Nobody types it: both documents state it <code>readOnly</code> with <code>x-surface.computed</code>, the write tool's values leave it out, the read answers it, a slug sent equal to the one it holds is noted and not taken, and any other is refused naming the name. Example 2 chooses its venue and room from these venues: add one here and example 2 offers it at the next request."),
       'event.mailer', 'event.webhook' => $this->t("Two resources call a service with a credential: a key pasted here, a secret, or a key the site manages, once a module that manages keys is on. @module stands in for the Key module. The mailer, at /surface-examples/14, is the owner's way: it declares both sources, each a structure of its own, and a provider lists them, the pasted one always and the managed one while the module is on. With one source to choose, the source is drawn as that source and stated as <code>const</code>. A pasted key stored is kept when the managed key is chosen, and taken up again when the pasted source is chosen back. The webhook, at /surface-examples/14/webhook, is the alter's way: it declares a pasted key and knows nothing of managed keys, and the module's alter mounts a managed key beside it and rules the pasted key out once one is chosen. Install the module and reload: the second source and the managed key are there at the next request, with no cache rebuild.", ['@module' => self::KEYS]),
       'event.sponsorship' => $this->t("A key that refers to an entity is declared by the data type string of what it refers to, and holds the entity's id: <code>entity:event_venue</code> a venue, <code>entity:user</code> a user, <code>entity:node:article</code> an article. Which entities it may name is core's selection handler's answer for the account asking, with the bundle and the access it checks, so a draft article is not one for an account that may not see it. While the site has at most @limit of them, <code>data_surface.settings:reference_enum_limit</code>, the key lists them: a select on the form, a <code>oneOf</code> with their labels in both documents, an enum in the tool listing. Past it, the key is an id: core's entity autocomplete on the form, <code>x-surface.widget: autocomplete</code> in the documents, and the resource's lookup, <code>GET /surface-api/event.sponsorship:lookup</code>, which finds candidates by label for the same account. The bare <code>entity</code> is any entity: an entity type, then an id of it, narrowed to that type by the same constraint; its entity types are filtered by what kind of entity type they are, by bundle, and by what the account may reference.", ['@limit' => $this->references->limit()]),
@@ -804,6 +811,11 @@ final class ConceptPanel {
     $component = is_string($values['component'] ?? NULL) && $this->components->hasDefinition($values['component']) ? $values['component'] : (string) $declared->getDefault('component');
     $props = ComponentProps::props($this->components->getDefinition($component)['props'] ?? []);
     $full = $this->full($served);
+    $state = $this->componentsListed();
+    // Past the site list limit, the full schema holds no def per component:
+    // the chosen one's are the schema for these answers'.
+    // Decision: see docs/decisions.md#a-budget-for-what-the-site-decides.
+    $these = $state['listed'] ? $full : $this->emitter->emit($declared, $values, 'event.spotlight', $served->operation->id, $served->operation->label)->document['schema'];
     $def = 'event.spotlight.props.' . $component;
     $component_key = $full['properties']['component'] ?? [];
     $props_key = $full['properties']['props'] ?? [];
@@ -811,29 +823,29 @@ final class ConceptPanel {
     // Cut to the components this module ships and the one chosen.
     $shown = static fn (string $id): bool => str_starts_with($id, self::COMPONENTS) || $id === $component;
     $component_key['oneOf'] = array_values(array_filter($component_key['oneOf'] ?? [], static fn (array $choice): bool => $shown((string) ($choice['const'] ?? ''))));
-    $props_key['anyOf'] = array_values(array_filter($props_key['anyOf'] ?? [], static fn (array $member): bool => !isset($member['$ref']) || $shown(substr((string) $member['$ref'], strlen(ContractEmitter::DEFS . 'event.spotlight.props.')))));
-    $props_key[ContractEmitter::EXTENSION]['variants'] = array_filter((array) ($props_key[ContractEmitter::EXTENSION]['variants'] ?? []), static fn (string $id): bool => $shown($id), ARRAY_FILTER_USE_KEY);
+    $props_key = self::cut($props_key, ContractEmitter::DEFS . 'event.spotlight.props.', $shown);
     $slots_key = self::cut($full['properties']['slots'] ?? [], ContractEmitter::DEFS . 'event.spotlight.slots.', $shown);
-    $conditional = array_values(array_filter($full['allOf'] ?? [], static fn (array $branch): bool => ($branch['if']['properties']['component']['const'] ?? NULL) === $component));
-    $slots_def = $full['$defs']['event.spotlight.slots.' . $component] ?? [];
+    $conditional = array_values(array_filter($these['allOf'] ?? [], static fn (array $branch): bool => ($branch['if']['properties']['component']['const'] ?? NULL) === $component));
+    $slots_def = $these['$defs']['event.spotlight.slots.' . $component] ?? [];
     $slot_defs = [];
     foreach ((array) ($slots_def['properties'] ?? []) as $slot) {
       $name = substr((string) ($slot['$ref'] ?? ''), strlen(ContractEmitter::DEFS));
-      if ($name !== '' && isset($full['$defs'][$name])) {
-        $slot_defs[$name] = $full['$defs'][$name];
+      if ($name !== '' && isset($these['$defs'][$name])) {
+        $slot_defs[$name] = $these['$defs'][$name];
       }
     }
     $notes = $this->reader->notes($props);
-    $counted = ['@count' => $count, '@component' => $component];
+    $counted = ['@count' => $count, '@component' => $component, '@limit' => $state['@limit']];
+    $where = $state['listed'] ? $this->t('the full schema') : $this->t('the schema for these answers');
     return [
       'read' => $this->details(
         $this->t('@component: its props, and the structure they became', ['@component' => $component]),
-        $this->t('The props schema the component declares (<code>schema</code>), and its def in the full schema (<code>structure</code>), which the reader wrote it into: a key per prop, with its type, label, default, list of values and bounds, and the required props required.'),
-        $this->json(['schema' => $props, 'structure' => $full['$defs'][$def] ?? NULL]),
+        $this->t('The props schema the component declares (<code>schema</code>), and its def in @where (<code>structure</code>), which the reader wrote it into: a key per prop, with its type, label, default, list of values and bounds, and the required props required.', ['@where' => $where]),
+        $this->json(['schema' => $props, 'structure' => $these['$defs'][$def] ?? NULL]),
       ),
       'slots' => $this->details(
         $this->t('@component: its slots, and the structure they became', ['@component' => $component]),
-        $this->t("The slots the component's metadata declares (<code>metadata</code>), and their def in the full schema (<code>structure</code>): a key per slot, each a def holding a <code>kind</code> and what each kind holds (<code>slot</code>), text, one component or a list of them, narrowed to what the slot expects. A slot that expects no component holds text alone."),
+        $this->t("The slots the component's metadata declares (<code>metadata</code>), and their def in @where (<code>structure</code>): a key per slot, each a def holding a <code>kind</code> and what each kind holds (<code>slot</code>), text, one component or a list of them, narrowed to what the slot expects. A slot that expects no component holds text alone.", ['@where' => $where]),
         $this->json([
           'metadata' => $this->components->getDefinition($component)['slots'] ?? [],
           'structure' => $slots_def,
@@ -847,7 +859,9 @@ final class ConceptPanel {
       ),
       'contract' => $this->details(
         $this->t('The variants, as the full schema states them'),
-        $this->t("The component key offers the @count components the site has, cut here to the four this module ships and the one chosen, and the props and slots keys are each the union of their defs; the two conditionals below choose @component's defs, one of @count each, one per component and key.", $counted),
+        $state['listed']
+          ? $this->t("The component key offers the @count components the site has, at most @limit, the site list limit, so the full schema spells each out: cut here to the four this module ships and the one chosen, the props and slots keys are each the union of their defs, and the two conditionals below choose @component's defs, one of @count each, one per component and key.", $counted)
+          : $this->t("The component key offers the @count components the site has, more than @limit, the site list limit: the full schema lists each by id and label, cut here to the four this module ships and the one chosen, and states the props and slots keys open, marked <code>refine</code>, with no def and no conditional per component. The two conditionals below are the schema for these answers', built with @component chosen, which states its defs exactly; a client asks <code>POST /surface-api/event.spotlight/schema</code> for another component's, and an agent <code>data_surface:event.spotlight:configure:schema</code>.", $counted),
         $this->json([
           'component' => $component_key,
           'props' => $props_key,
@@ -872,15 +886,20 @@ final class ConceptPanel {
    */
   public function componentBlock(): array {
     $structure = $this->registry->getDefinition(ComponentBlockStructure::class);
-    $full = $this->emitter->emitFull($this->resources->buildStatic($structure->name(), new OperationContext('configure')), $structure->id)->document['schema'];
+    $built = $this->resources->buildStatic($structure->name(), new OperationContext('configure'));
+    $full = $this->emitter->emitFull($built, $structure->id)->document['schema'];
+    $state = $this->componentsListed();
+    // Past the site list limit, the hero's defs are the schema for these
+    // answers', the hero chosen.
+    // Decision: see docs/decisions.md#a-budget-for-what-the-site-decides.
+    $these = $state['listed'] ? $full : $this->emitter->emit($built, ['component' => self::COMPONENTS . 'hero'] + $built->getDefaultValues(), $structure->id)->document['schema'];
     $prefix = ContractEmitter::DEFS . $structure->id . '.props.';
     $shown = static fn (string $id): bool => str_starts_with($id, self::COMPONENTS);
     $component_key = $full['properties']['component'] ?? [];
     $count = count($component_key['oneOf'] ?? []);
     $component_key['oneOf'] = array_values(array_filter($component_key['oneOf'] ?? [], static fn (array $choice): bool => $shown((string) ($choice['const'] ?? ''))));
     $props_key = $full['properties']['props'] ?? [];
-    $props_key['anyOf'] = array_values(array_filter($props_key['anyOf'] ?? [], static fn (array $member): bool => !isset($member['$ref']) || $shown(substr((string) $member['$ref'], strlen($prefix)))));
-    $props_key[ContractEmitter::EXTENSION]['variants'] = array_filter((array) ($props_key[ContractEmitter::EXTENSION]['variants'] ?? []), static fn (string $id): bool => $shown($id), ARRAY_FILTER_USE_KEY);
+    $props_key = self::cut($props_key, $prefix, $shown);
     $slots_key = self::cut($full['properties']['slots'] ?? [], ContractEmitter::DEFS . $structure->id . '.slots.', $shown);
     $conditionals = array_values(array_filter($full['allOf'] ?? [], static fn (array $branch): bool => $shown((string) ($branch['if']['properties']['component']['const'] ?? ''))));
     $actions = [];
@@ -889,10 +908,10 @@ final class ConceptPanel {
       'component.nested.' . self::COMPONENTS . 'call_to_action.1',
     ];
     foreach ($defs as $def) {
-      $actions[$def] = $full['$defs'][$def] ?? NULL;
+      $actions[$def] = $these['$defs'][$def] ?? NULL;
     }
     $tools = [];
-    foreach (['create', 'update', 'update:read', 'delete'] as $suffix) {
+    foreach (['create', 'create:schema', 'update', 'update:read', 'update:schema', 'delete'] as $suffix) {
       $tool_id = 'data_surface:block.placement:' . $suffix;
       $tool = $this->toolManager->hasDefinition($tool_id) ? $this->toolManager->getDefinition($tool_id) : NULL;
       if ($tool instanceof ToolDefinition) {
@@ -904,6 +923,10 @@ final class ConceptPanel {
         ];
       }
     }
+    $arguments = ['@count' => $count, '@limit' => $state['@limit']];
+    $settings_note = $state['listed']
+      ? $this->t("The component key offers the @count components the site has, at most @limit, the site list limit, cut here to the four the examples ship, and the props and slots keys are each the union of their defs, one conditional per component and key: what example 12 states, under the block structure's id.", $arguments)
+      : $this->t("The component key offers the @count components the site has, more than @limit, the site list limit, cut here to the four the examples ship, and the props and slots keys are open, marked <code>refine</code>, with no def and no conditional per component: what example 12 states, under the block structure's id. The placement tools name the tool that answers a component's keys, as example 12's do.", $arguments);
     return [
       'two_lines' => [
         '#type' => 'table',
@@ -922,7 +945,7 @@ final class ConceptPanel {
       ],
       'contract' => $this->details(
         $this->t("The block's settings, as the full schema states them"),
-        $this->t("The component key offers the @count components the site has, cut here to the four the examples ship, and the props and slots keys are each the union of their defs, one conditional per component and key: what example 12 states, under the block structure's id.", ['@count' => $count]),
+        $settings_note,
         $this->json([
           'component' => $component_key,
           'props' => $props_key,
@@ -1011,12 +1034,31 @@ final class ConceptPanel {
    *   Whether a component is shown.
    *
    * @return array
-   *   The key, its `anyOf` and its variants cut to those shown.
+   *   The key, its `anyOf` and its variants cut to those shown; an open
+   *   key, past the site list limit, as it is.
    */
   protected static function cut(array $key, string $prefix, callable $shown): array {
-    $key['anyOf'] = array_values(array_filter($key['anyOf'] ?? [], static fn (array $member): bool => !isset($member['$ref']) || $shown(substr((string) $member['$ref'], strlen($prefix)))));
+    // Past the site list limit, a key with variants is open: nothing to cut.
+    if (!isset($key['anyOf'])) {
+      return $key;
+    }
+    $key['anyOf'] = array_values(array_filter($key['anyOf'], static fn (array $member): bool => !isset($member['$ref']) || $shown(substr((string) $member['$ref'], strlen($prefix)))));
     $key[ContractEmitter::EXTENSION]['variants'] = array_filter((array) ($key[ContractEmitter::EXTENSION]['variants'] ?? []), static fn (string $id): bool => $shown($id), ARRAY_FILTER_USE_KEY);
     return $key;
+  }
+
+  /**
+   * Examples 12 and 13: whether the site's components are spelled out.
+   *
+   * @return array{listed: bool, '@count': int, '@limit': int}
+   *   Whether the documents and the tool listing spell every component out,
+   *   which they do while the site has at most the site list limit of them;
+   *   how many it has; and the limit.
+   */
+  protected function componentsListed(): array {
+    $count = count($this->components->getDefinitions());
+    $limit = $this->budget?->limit() ?? PHP_INT_MAX;
+    return ['listed' => $count <= $limit, '@count' => $count, '@limit' => $limit];
   }
 
   /**

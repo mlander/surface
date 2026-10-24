@@ -434,6 +434,29 @@ class OpenApiDocumentTest extends DataSurfaceKernelTestBase {
   }
 
   /**
+   * Tests a list past the site list limit is asked at the schema path.
+   *
+   * With the limit at two, a placed block's settings, a variant per block
+   * plugin, are stated open and `refine` in its component, the full
+   * schema; a client asks `POST .../schema` with the plugin chosen, which
+   * the document already describes. The narrowing tool beside the write
+   * tool is the tool door's, not a path: no path names `:schema`.
+   *
+   * @see docs/decisions.md#a-budget-for-what-the-site-decides
+   */
+  public function testListPastTheLimitIsAskedAtTheSchemaPath(): void {
+    $this->config('data_surface.settings')->set('site_list_limit', 2)->save();
+    $document = $this->decoded();
+    $settings = $document['components']['schemas']['block.placement.create']['properties']['settings'];
+    $this->assertTrue($settings['x-surface']['refine']);
+    $this->assertSame('plugin', $settings['x-surface']['by']);
+    $this->assertArrayNotHasKey('anyOf', $settings);
+    $this->assertArrayHasKey('post', $document['paths']['/surface-api/block.placement/schema']);
+    $this->assertSame([], array_filter(array_keys($document['paths']), static fn (string $path): bool => str_contains($path, ':schema')));
+    $this->assertContains('config:data_surface.settings', $this->description()->cacheability->getCacheTags());
+  }
+
+  /**
    * Tests a listing is GET on the collection, and a reorder a PATCH.
    *
    * Example 15's venues: GET on the collection is the listing, its values

@@ -8,6 +8,7 @@ use Drupal\Core\Session\AccountSwitcherInterface;
 use Drupal\Core\Session\AnonymousUserSession;
 use Drupal\data_surface\Computed;
 use Drupal\data_surface\Contract\ContractBaselines;
+use Drupal\data_surface\Contract\SiteListBudget;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Resource\OperationContext;
@@ -51,6 +52,11 @@ final class SiteCatalog {
   public const READ_TOOL = 'read tool';
 
   /**
+   * The narrowing tool derived beside it, where its listing states a key open.
+   */
+  public const SCHEMA_TOOL = 'schema tool';
+
+  /**
    * The OpenAPI operation that runs it.
    */
   public const OPENAPI = 'openapi';
@@ -63,7 +69,15 @@ final class SiteCatalog {
   /**
    * Every door, in the order the catalog lists them.
    */
-  public const DOORS = [self::FORM, self::HTTP, self::TOOL, self::READ_TOOL, self::OPENAPI, self::REACT];
+  public const DOORS = [
+    self::FORM,
+    self::HTTP,
+    self::TOOL,
+    self::READ_TOOL,
+    self::SCHEMA_TOOL,
+    self::OPENAPI,
+    self::REACT,
+  ];
 
   /**
    * A refusal discovery raised, before any one resource could be read.
@@ -106,6 +120,9 @@ final class SiteCatalog {
    *   What names the doors, one per module that opens some.
    * @param string $root
    *   The Drupal root, which a refusal's file is named from.
+   * @param \Drupal\data_surface\Contract\SiteListBudget|null $budget
+   *   How many variants of a list the site decides have their keys listed;
+   *   without it, every one.
    */
   public function __construct(
     protected readonly ResourceCatalog $catalog,
@@ -115,6 +132,7 @@ final class SiteCatalog {
     protected readonly AccountSwitcherInterface $switcher,
     protected readonly iterable $doors,
     protected readonly string $root,
+    protected readonly ?SiteListBudget $budget = NULL,
   ) {}
 
   /**
@@ -496,6 +514,11 @@ final class SiteCatalog {
       $path = $prefix . $name;
       $definition = $entry->definition;
       $computed = Computed::of($definition);
+      // Variants the site lists past the budget are listed by value, and
+      // their keys not walked: one structure a variant, at every depth, is
+      // the product of the lists, which no page or command can hold.
+      // Decision: see docs/decisions.md#a-budget-for-what-the-site-decides.
+      $open = $entry->variants !== NULL && ($this->budget?->variantsOver($entry->variants) ?? FALSE);
       $type = match (TRUE) {
         $entry->attachment !== NULL => 'child',
         $entry->variants !== NULL => 'variants',
@@ -530,13 +553,14 @@ final class SiteCatalog {
         'variants' => $entry->variants === NULL ? NULL : [
           'by' => $entry->variants->by,
           'values' => array_map(static fn ($variant): ?string => $variant->id ?? $variant->source, $entry->variants->variants),
+          'listed' => !$open,
         ],
         'items' => $entry->list === NULL ? NULL : ($entry->list->item->id ?? $entry->list->item->source),
       ];
       if ($entry->attachment !== NULL) {
         array_push($keys, ...$this->keys($entry->attachment->child, $entry->attachment->source, $path . '.', $within));
       }
-      foreach ($entry->variants->variants ?? [] as $value => $variant) {
+      foreach ($open ? [] : $entry->variants->variants ?? [] as $value => $variant) {
         array_push($keys, ...$this->keys($variant->child, $variant->source, $path . '.', $entry->variants->by . ' = ' . $value));
       }
       if ($entry->list !== NULL) {

@@ -1,12 +1,12 @@
 services:
   data_surface_tool.input_definitions:
     class: Drupal\data_surface_tool\InputDefinitions
-    arguments: ['@data_surface.options', '@string_translation', '@data_surface.references']
+    arguments: ['@data_surface.options', '@string_translation', '@data_surface.references', '@data_surface.site_list_budget']
   # What a tool generated for one operation of one resource takes and
   # answers with; the deriver writes it statically, the tool refines it.
   data_surface_tool.operation_inputs:
     class: Drupal\data_surface_tool\OperationInputs
-    arguments: ['@data_surface.resources', '@data_surface.operation_arguments', '@data_surface_tool.input_definitions', '@string_translation', '@module_handler']
+    arguments: ['@data_surface.resources', '@data_surface.operation_arguments', '@data_surface_tool.input_definitions', '@string_translation', '@module_handler', '@data_surface.site_list_budget']
   # Adds the field instance resource's settings variants from config
   # schema, for every field type no #[Variant] declares.
   data_surface_tool.field_settings_schema_variants:

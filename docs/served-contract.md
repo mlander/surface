@@ -148,7 +148,7 @@ The emitter writes two documents from one data surface, by one code path.
   ([decision](decisions.md#access-is-static-or-runtime-read-from-its-cacheability)).
   Its `x-surface` carries only what holds for
   any values (`contract`, `version`, `locked`, `access`, `computed`, `dependsOn`,
-  `enumerated`, `declared`, `refine`, `live`, `rules`, `within`,
+  `enumerated`, `declared`, `refine`, `entries`, `live`, `rules`, `within`,
   the `by` and `variants` of a key with variants, `group`, `after`,
   `patternMessage`,
   `checkedOnServer`); there is no `refined`, `stale`, `emptyOption` or
@@ -234,7 +234,7 @@ In contract 1, `refine` was `dynamic` and `live` was `runtime`.
 | Marker | Means | In the full schema | In the schema for these answers |
 | --- | --- | --- | --- |
 | `enumerated` | Captured exactly. The key's static refiners watch only keys that offer a list, within the cap, so what they answer for every combination is written as conditionals on the parent. | On every such key, always: no value is read. | Only while a sibling its static refiners watch holds nothing; once all do, the key is refined for them and carries neither this nor `refine`. |
-| `refine` | Static by declaration, but not captured here: a watched key cannot be listed (free text, a number, a key an alter mounted) or the combinations exceed `ENUMERATION_CAP`. The key keeps its declared schema; a client can ask, with values, at `POST .../schema`. | On every such key. | As for `enumerated`. |
+| `refine` | Static by declaration, but not captured here: a watched key cannot be listed (free text, a number, a key an alter mounted) or the combinations exceed `ENUMERATION_CAP`; or a list the site decides has more entries than `data_surface.settings:site_list_limit` ([below](#a-list-the-site-decides)). The key keeps its declared schema, or is open; a client can ask, with values, at `POST .../schema`, and an agent at the narrowing tool ([asking again at the tool door](#asking-again-at-the-tool-door)). | On every such key. | As for `enumerated`. |
 | `live` | Declared impossible to capture: a runtime refiner narrows the key with a rule no schema can state (a lookup, uniqueness, the account, the time). Never run ahead of time and never in a conditional. | On the key, which keeps the width its static refiners give it: wider than the pipeline, by design. | On the key, always; the key is refined by the runtime refiner for these values, so this document is valid for those values, at that moment, and no others. |
 
 A key with a static and a runtime refiner, example 4's room, is
@@ -404,7 +404,8 @@ under `$defs`, and referred to ([reusable subschemas](#reusable-subschemas)).
 | `checkedOnServer` | Constraints no keyword states, each `{constraint, message}`: the constraint's plugin id, and what it checks, the constraint's own `message` where it was given one (a Regex's), else its plugin's label, else the id: `[{"constraint": "DataSurfaceUniqueNodeType", "message": "Unique content type machine name"}]`. A list of plugin ids in contract 1. A `JsonSchema` entry, what a structure read from a schema kept of it, carries the schema beside its message, `{"constraint": "JsonSchema", "message": "Checked on the server against the schema it was read from: uniqueItems.", "schema": {"uniqueItems": true}}`; on an object (the top, a def) it is what that schema says of the object as a whole ([Reading a schema](reading-a-schema.md#what-is-kept)). |
 | `patternMessage` | On a key with a `pattern`: the Regex's own message, which is how a person is told what the pattern allows. The pattern is for machines; a renderer explains the key by this, never by the pattern. |
 | `enumerated` | Only when `true`: the key's static refiners have nothing to refine against yet, and what they answer for every value they could be handed is stated as conditionals on the parent ([below](#exact-where-it-can-be)). Captured exactly: the schema is exact for this key with no round trip, less what `live` adds. |
-| `refine` | Only when `true` (`dynamic` in contract 1): the key's static refiners have nothing to refine against yet, and what they would answer cannot be listed (a watched key with no list of values, or too many combinations). Static by declaration, not captured here: the schema is the unrefined, looser one, wider than the pipeline and never narrower ([decision](decisions.md#two-documents-never-stricter-than-the-runtime)); refine when a `dependsOn` key changes. In [the full schema](#two-documents) every key that cannot be listed carries it. |
+| `refine` | Only when `true` (`dynamic` in contract 1): the key's static refiners have nothing to refine against yet, and what they would answer cannot be listed (a watched key with no list of values, or too many combinations). Static by declaration, not captured here: the schema is the unrefined, looser one, wider than the pipeline and never narrower ([decision](decisions.md#two-documents-never-stricter-than-the-runtime)); refine when a `dependsOn` key changes. In [the full schema](#two-documents) every key that cannot be listed carries it. On a key whose list the site decides and has more entries than the site list limit, the key is an open object: variants with `by` beside it and no def per variant, or a map of keys from the site with `entries` beside it ([a list the site decides](#a-list-the-site-decides)). |
+| `entries` | Only beside `refine`, on a map of keys from the site past the site list limit, in [the full schema](#two-documents): each key the map holds, `{"id": "bench_7", "label": "Bench 7"}`, in order. Its keys are stated by the schema for these answers. Additive in contract 3 ([decision](decisions.md#a-budget-for-what-the-site-decides)). |
 | `list` | Only when `true`, on a collection: an array whose every item is a child, its `items` a reference to the child's def. A renderer draws each item as that def's fieldset, adds and removes items within `minItems` and `maxItems`, and reads `dependsOn` inside each item under its delta (`shelves.1.unit`). |
 | `declared` | Only when `true`, on a key, in [the full schema](#two-documents) and in a def: rules declared as data narrow the key ([refinement](refinement.md#declaring-a-rule)), each stated as written, one conditional on the parent, after the key's enumerated ones, its index in the parent's `rules`. Exact: a client evaluates each `if` and tightens the key by its `then` (the lower maximum, the values both lists offer). The schema for these answers evaluates the rules for its values and writes none. |
 | `rules` | On an object owning an `allOf` (the top frame, a def), in [the full schema](#two-documents) and in a def: the indexes in that `allOf` of the conditionals that state a declared rule, `"rules": [9]`. A client evaluates a rule whatever the keys it reads hold, and an enumerated conditional only once every key it watches holds a value, so it tells them apart by this list. Contract 1 wrote `x-surface: {"declared": true}` on the conditional itself. |
@@ -945,6 +946,35 @@ no round trip to `POST .../schema`.
   data surface a conditional was read from is merged into the contract's
   cacheability (the demo block's static contract depends on
   `entity_bundles`).
+
+### A list the site decides
+
+Variants from the site and keys from the site take their list from the
+site, not the code: a component per single-directory component a theme
+provides, a key per bench a configuration lists. Each is spelled out in
+the full schema while it has at most `data_surface.settings:site_list_limit`
+entries (20 as shipped), and the tool listing spells it out the same
+way ([decision](decisions.md#a-budget-for-what-the-site-decides)). Past it:
+
+- **A key with variants** is an open object, `refine`, its deciding key
+  under `by`, with no def and no conditional per variant; the deciding
+  key keeps its `oneOf` of every value and label. The schema for these
+  answers, with a value chosen, states that variant exactly, its def and
+  its one conditional and no other; with nothing chosen, it is open as
+  in the full schema.
+- **A map of keys from the site** is an open object, `refine`, its keys
+  named under `entries` by id and label. The schema for these answers
+  states every key.
+- **Each key counts at its own level.** A component in a slot is
+  variants of its own, read from the schema its provider wrote, and
+  counts the components the slot offers.
+
+Example 12's props on a site with 312 components, in the full schema:
+
+```json
+"props": {"title": "Props", "type": ["object", "null"],
+          "x-surface": {"locked": false, "dependsOn": ["component"], "by": "component", "refine": true}}
+```
 
 In the shipped resources and structures, described for no values:
 example 2's and example 3's room (per venue, 3 conditionals) and
@@ -1667,6 +1697,43 @@ stated exactly, its license rule declared, but the stewards that follow
 it, through the compliance structure's port, are `refine`, reading a
 number. The pricing is still narrowed
 here: the ticket's variants are stated whole.
+
+## Asking again at the tool door
+
+A key `refine` because its list is past the site list limit is listed
+open by the write tool too, and its description says how to learn its
+keys: "Too many to list: choose component, then call
+data_surface:event.spotlight:configure:schema with your values to get
+this key's schema." The narrowing tool is the tool door's
+`POST .../schema`, derived beside the write tool only where the
+operation's listing has such a key
+([decision](decisions.md#a-budget-for-what-the-site-decides)):
+
+| | |
+| --- | --- |
+| Id | `data_surface:<resource>:<operation>:schema` |
+| Kind | Read: read only and idempotent, never destructive |
+| Inputs | The operation's parameters, as the write tool declares them, and `values`, optional and open: what the caller has so far |
+| Outputs | `schema`, the schema for these answers with no widget hints, and `values`, the values settled so far, computed keys and defaults included |
+| Access | The write tool's, for the same parameters; the answer is built for the account that calls it |
+
+The answer is what `POST .../schema` answers for the same values and
+account: the values sent, narrowed to the resource's keys, laid over
+what the operation opens with, an orphaned answer dropped, and the
+schema emitted for that. So an agent makes two calls, the narrowing
+then the write:
+
+```bash
+drush tool:run data_surface:event.spotlight:configure:schema --uid=1 --input='{"values":{"component":"data_surface_examples:call_to_action"}}'
+drush tool:run data_surface:event.spotlight:configure --uid=1 --input='{"values":{"component":"data_surface_examples:call_to_action","props":{"text":"Buy a ticket","url":"https://example.com/tickets"}}}' --input=dry_run=true
+```
+
+The first answers the call to action's props under
+`schema.$defs["event.spotlight.props.data_surface_examples:call_to_action"]`
+(its text, address, style, window and tags, the text and the address
+required) and the values it would start from; the second sends them.
+A choice changed asks again. The tool is no HTTP path, so the OpenAPI
+document has none for it: the HTTP narrowing is already there.
 
 ## What a write needs
 

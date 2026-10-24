@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\data_surface\Kernel\Matrix;
 
+use Drupal\Core\Cache\Cache;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\data_surface\Contract\SchemaResolver;
@@ -17,10 +18,12 @@ use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface_resource_test\Access\ExhibitAccess;
 use Drupal\data_surface_resource_test\Alter\PlaqueAlter;
 use Drupal\data_surface_resource_test\Alter\WallAlter;
+use Drupal\data_surface_resource_test\Keys\WorkshopBenches;
 use Drupal\data_surface_resource_test\Resource\Cellar\CellarResource;
 use Drupal\data_surface_resource_test\Resource\Exhibit\ExhibitResource;
 use Drupal\data_surface_resource_test\Resource\Gallery\GalleryResource;
 use Drupal\data_surface_resource_test\Storage\CellarStorage;
+use Drupal\data_surface_resource_test\Variants\PosterLayouts;
 use Drupal\data_surface_resource_test\Structure\Notice\NoticeStructure;
 use Drupal\Tests\data_surface\Kernel\DataSurfaceKernelTestBase;
 use Drupal\Tests\data_surface\Traits\NeverStricterTrait;
@@ -47,8 +50,9 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * by a plugin and a region by a theme on a placed block, and on example
  * 14 a source with one value and then two, a secret in a variant, and an
  * alter's key ruling the owner's out, on example 15 a venue added, a
- * listing's query and a reorder's list, and on example 16 references
- * listed, past the limit and of any type),
+ * listing's query and a reorder's list, on example 16 references
+ * listed, past the limit and of any type, and variants and keys from the
+ * site past the site list limit),
  * a table of documents the pipeline accepts and documents it refuses.
  * Each row is asserted three times: against the pipeline (accept(), then
  * validate() over what is stored), against the full
@@ -631,6 +635,72 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
       'closed, the lights as stored' => [['closed' => TRUE], TRUE],
       'a stock code for the saw' => [['codes' => ['saw' => 'BS3']], TRUE],
       'a stock code in lowercase' => [['codes' => ['saw' => 'bs3']], FALSE],
+    ]);
+  }
+
+  /**
+   * Lists the site decides, past the site list limit: open, and `refine`.
+   *
+   * Twenty-five poster layouts and twenty-five benches. The full schema
+   * states the panels and each map of benches open and marks them
+   * `refine`, so it accepts what only a chosen variant or a listed entry
+   * refuses, which the marker documents; the schema for these answers is
+   * built for the chosen layout and every bench, so it is exact. The
+   * grid's columns sent for the strip are refused by the pipeline by name
+   * and accepted by both documents: the full schema is open there, and the
+   * schema for these answers is built for what is stored, the grid.
+   *
+   * @see docs/decisions.md#a-budget-for-what-the-site-decides
+   */
+  public function testListsPastTheSiteListLimit(): void {
+    $this->installConfig(['data_surface_resource_test']);
+    $this->setUpCurrentUser([], ['administer site configuration']);
+    $layouts = [];
+    for ($n = 1; $n <= 22; $n++) {
+      $layouts['extra_' . $n] = [
+        'label' => 'Extra ' . $n,
+        'schema' => [
+          'type' => 'object',
+          'properties' => ['caption' => ['type' => 'string', 'title' => 'Caption', 'maxLength' => 20]],
+          'additionalProperties' => FALSE,
+        ],
+      ];
+    }
+    $this->container->get('state')->set(PosterLayouts::STATE, $layouts);
+    Cache::invalidateTags([PosterLayouts::TAG]);
+    $poster = $this->build('resource_test.poster');
+    $full = $this->decoded($this->container->get('data_surface.contract_emitter')->emitFull($poster, 'resource_test.poster')->document);
+    $this->assertTrue($full['schema']['properties']['panels']['x-surface']['refine']);
+    $this->assertTable('resource_test.poster', $poster, $this->stored('resource_test.poster'), [
+      'as stored' => [[], TRUE],
+      'the strip with a caption' => [['layout' => 'strip', 'panels' => ['caption' => 'Spring']], TRUE],
+      'a layout the site added' => [['layout' => 'extra_7', 'panels' => ['caption' => 'Summer']], TRUE],
+      'five columns on the grid' => [['panels' => ['columns' => 5]], FALSE, NULL],
+      'a caption too long on a layout the site added' => [
+        ['layout' => 'extra_7', 'panels' => ['caption' => str_repeat('a', 21)]],
+        FALSE,
+        NULL,
+      ],
+      'the grid\'s columns sent for the strip' => [
+        ['layout' => 'strip', 'panels' => ['columns' => 3]],
+        FALSE,
+        TRUE,
+        TRUE,
+      ],
+      'a layout the site does not list' => [['layout' => 'mural'], FALSE],
+    ]);
+
+    $benches = (array) $this->config(WorkshopBenches::CONFIG)->get('benches');
+    for ($n = 1; $n <= 22; $n++) {
+      $benches['bench_' . $n] = ['label' => 'Bench ' . $n];
+    }
+    $this->config(WorkshopBenches::CONFIG)->set('benches', $benches)->save();
+    $this->assertTable('resource_test.workshop', $this->build('resource_test.workshop'), $this->stored('resource_test.workshop'), [
+      'as stored' => [[], TRUE],
+      'a light switched on' => [['lights' => ['bench_3' => TRUE]], TRUE],
+      'a bench the site added put to use' => [['benches' => ['bench_9' => ['enabled' => TRUE, 'hours' => 6]]], TRUE],
+      'hours on a bench out of use' => [['benches' => ['bench_9' => ['enabled' => FALSE, 'hours' => 3]]], FALSE, NULL],
+      'a light the site does not list' => [['lights' => ['drill' => TRUE]], FALSE, TRUE],
     ]);
   }
 

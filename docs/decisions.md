@@ -802,7 +802,9 @@ A `#[RefinesInput]` method is static unless its attribute says
 `runtime: TRUE`. A static refiner promises to be a pure function of the
 siblings it watches, so the served contract runs it ahead of time and
 states its answers as conditionals (`enumerated`), or says they cannot
-be listed (`refine`: ask `POST .../schema` with values, `/refine` until contract 3). A runtime refiner
+be listed (`refine`: ask `POST .../schema` with values, `/refine` until contract 3), as a list the
+site decides says past its budget
+([A budget for what the site decides](#a-budget-for-what-the-site-decides)). A runtime refiner
 promises the schema nothing: the emitter never runs it, in either
 document; the key keeps the width its static refiners give it in the
 full schema and carries `live: true` (the markers were `dynamic` and
@@ -3394,7 +3396,10 @@ or a scalar for every identity key, named one thing whole), because
 whether it creates was on its context, which cannot be built before the
 subject is named; `creates` on `#[Operation]`, checked against the
 context the way its id is, replaced the reading, closing the point this
-entry left open. (`ResourceCatalog::reads()`)
+entry left open. The narrowing tool, `:schema`, is a read beside the
+write tool for another reason, a key the listing states open
+([A budget for what the site decides](#a-budget-for-what-the-site-decides)).
+(`ResourceCatalog::reads()`)
 
 ### A read promises shape, not membership
 
@@ -3990,7 +3995,9 @@ why:
   registered only when a build reads it, so the catalog lists them
   after building everything, by the name each is built by. A theme of
   components gives thousands, so the table and the markdown count them
-  where they are read; the JSON lists every one.
+  where they are read; the JSON lists every one. A key's variants past
+  the site list limit are listed by value and their keys not walked
+  ([A budget for what the site decides](#a-budget-for-what-the-site-decides)).
 - **The repository's catalog is the command's markdown.**
   `docs/catalog.md` is `--format=markdown` for a test site with this
   repository's modules installed, written by `ResourceCatalogTest`
@@ -4475,7 +4482,11 @@ how strictly to apply them to a display builder. Each choice, and why:
   hundred components whose slots expect nothing, a structure per place
   it is used grows with the product of the components at each depth; a
   structure per def grows with their sum: 2,465 defs and a build of
-  about two seconds on the development site.
+  about two seconds on the development site. The documents and the tool
+  listing state none of them there: 312 components are past the site
+  list limit, so the props and slots are `refine` and the chosen
+  component's defs are the schema for these answers'
+  ([A budget for what the site decides](#a-budget-for-what-the-site-decides)).
 - **Rendering.** `ComponentBlock::build()` turns each stored slot into
   `#slots`: text as `#plain_text`, a component as `#type => 'component'`
   with its props held and its own `#slots`, a list as a render array of
@@ -4812,6 +4823,8 @@ Decided 2026-10-23, with example 16, the sponsorship
   afford; the limit counts what a person scans and what a tool listing
   should carry, which a site decides. Field references
   (`ReferenceableOptions`) read the same limit, where they read the cap.
+  Its sibling, `site_list_limit`, counts the variants and the keys a
+  site lists ([A budget for what the site decides](#a-budget-for-what-the-site-decides)).
   The list's cacheability carries the settings' tag; an answer past the
   limit carries nothing and is the wider one, so a cached document is
   never stricter than the site.
@@ -5038,7 +5051,113 @@ its domain is not a list, so there is nothing to enumerate, and
 inventing one (sampling numbers, guessing at a license) would state a
 rule the refiners never made. Such a key keeps `dependsOn`, and a client
 asks the server (`POST .../schema`) when a watched key changes, as before.
+A list the site decides is counted otherwise, by its entries, against a
+setting ([A budget for what the site decides](#a-budget-for-what-the-site-decides)).
 (`ContractEmitter::enumerate()`)
+
+### A budget for what the site decides
+
+Decided 2026-10-24, with examples 12 and 13 on the development site,
+whose themes provide 312 components. A list the site decides is spelled
+out in the full schema and the tool listing while it has at most
+`data_surface.settings:site_list_limit` entries, 20 as shipped: one
+setting beside `reference_enum_limit`, with the same schema and a
+post-update of its own. Two kinds of key take their list from the site:
+variants from the site (`attachVariants(from:)`, and the variants inside
+a structure read from a schema, a component in a slot) and keys from the
+site (`addEach()`, `attachEach()`). Each key is counted at its own
+level: a component in a slot counts the components the slot offers.
+
+- **Past the limit, open and `refine`.** In the full schema a key with
+  variants is an open object marked `x-surface.refine: true`, with
+  `x-surface.by` naming its deciding key and no def and no conditional
+  per variant. A map of keys from the site is an open object marked
+  `refine`, its entries under `x-surface.entries` by id and label alone.
+  The tool listing states both as an open map, and its description
+  names the narrowing tool: "Too many to list: choose component, then
+  call data_surface:event.spotlight:configure:schema with your values to
+  get this key's schema." The schema for these answers, built with the
+  deciding key's value known, states the chosen variant exactly: its def
+  and its one conditional, and no other variant's, since the narrowing
+  is what a client asks for one variant; with every variant in it, the
+  spotlight's narrowing answered 3.5 MB. With nothing chosen it is open,
+  as in the full schema. It states every key from the site, which has no
+  deciding key.
+- **Why a count and not a smaller depth cap.** The size is the number of
+  variants at each level, not the depth: three deep, 312 components were
+  2,465 defs, and one level deep they would still be 312 defs and 624
+  conditionals. A lower `ComponentSlots::DEPTH` would cut what a slot may
+  hold on every site, the one with four components included, where
+  everything fits. A count keeps the depth, spells out what a reader can
+  scan, and moves only the listing of every variant to a request, so a
+  site with few components keeps its exact documents.
+- **Why `refine` and not `live`.** The rule is static: the provider's
+  list is cacheable and the same for every account, and which variant a
+  value chooses is a pure function of the value. Nothing about it is
+  unknown ahead of time; it is too long to write. `refine` already says
+  "static, not captured here: ask `POST .../schema` with values", and a
+  client that handles it, the React page among them, needs nothing new.
+  `live` says a rule no schema can state, which would tell a client the
+  answer may change between two requests with the same values.
+- **Why the chooser's options are always listed.** The deciding key's
+  `oneOf` is one id and one label per variant: 312 of them are 18 KB. A
+  client cannot ask for a variant's keys without a value to send, and an
+  agent cannot choose a value it was not shown.
+- **Why a setting.** As the reference limit: the count is what a person
+  scans and a tool listing should carry, which the site decides. Whether
+  a key is spelled out is the setting's, so a document with a list the
+  site decides carries the settings' cache tag, and the tool listing is
+  derived again when the setting changes.
+- **The narrowing tool.** Where an operation's declared listing has such
+  a key, at any depth (`SiteListBudget::anyOver()`), `data_surface_tool`
+  derives `data_surface:<resource>:<operation>:schema` beside the write
+  tool: the Read kind, so read only and idempotent, its inputs the
+  operation's parameters and an optional open `values`, its outputs
+  `schema` and `values`, what `POST .../schema` answers for the same
+  values and account, with no widget hints. A resource whose lists are
+  all spelled out adds no tool. Its definition is cached for every
+  account, as every tool's is; its answer is built for the account that
+  calls it. Why a tool and not a sentence naming the HTTP path, as the
+  lookup's does: an agent over MCP may have no HTTP client, and the
+  narrowing needs the operation's parameters and access, which a tool
+  call carries.
+- **The catalog.** `drush surface:catalog --resource=<id>` and its page
+  list the values of variants past the limit and do not walk their keys:
+  one walk per place a structure is used grows with the product of the
+  lists, which exhausted 3 GB for the placed block here. Each variant's
+  structure is still listed among those read from a schema.
+- **Read back.** The reader reads an open `refine` key with a deciding
+  key and no variant as an object like any other, since no variant is in
+  the document (`SchemaReader::variantsAt()`); a full schema past the
+  limit does not read back to itself, and `ResourceTestBase` reports it
+  by its kind, `site list`.
+
+On the development site, 312 components, measured 2026-10-24 in one
+process each:
+
+| What | Before | After |
+| --- | --- | --- |
+| Example 12's full schema | 3,063,070 bytes, 2,465 defs | 17,818 bytes, no def |
+| Its schema for these answers, the card chosen | 3,541,592 bytes, 2,465 defs | 21,426 bytes, 3 defs |
+| Its tool definition, inputs and outputs | 1,635,361 bytes | 12,409 bytes |
+| The placed block's full schema, create | 3,201,610 bytes, 2,506 defs | 19,400 bytes, 6 defs |
+| Its tool definition, create | 27,225 bytes | 10,298 bytes |
+| `drush surface:catalog --resource=block.placement` | memory exhausted at 3 GB | 232 MB peak, 3.9 s |
+| `/admin/config/development/surfaces/block.placement` | memory exhausted at 3 GB | 232 MB peak |
+| `/admin/config/development/surfaces` | 242 MB peak | 230 MB peak |
+
+The build is unchanged: it still reads every component's structure,
+since the form and the pipeline hold the chosen one to its keys.
+
+*Open:* a key `refine` for another reason (a watched number, too many
+combinations) has no narrowing tool; variants a class declares or a
+deriver derives are not counted (a field type's settings, a list the
+site's modules decide too); the build of a resource still reads every
+variant. (`Contract\SiteListBudget`, `ContractEmitter::variants()`,
+`InputDefinitions::tooMany()`, `OperationInputs::narrows()`,
+`ResourceOperationSchemaTool`, `SiteCatalog::keys()`,
+`SiteListBudgetTest`, `CatalogMemoryTest`,
+`AdvertisedSchemaAcceptanceTest::testListsPastTheSiteListLimit()`)
 
 ### A served contract is never stored
 

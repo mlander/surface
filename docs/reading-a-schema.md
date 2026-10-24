@@ -97,7 +97,7 @@ has: `present`, `absent`, `equals`, `in`, the four bounds, `not`,
 | --- | --- |
 | `ports` | `reads()`, each port's type, or its shape where the site has one |
 | `reads` | the wiring of a child's ports, where the wired key is a key of the object holding the child |
-| `by`, `variants` | variants, and the def each value chooses |
+| `by`, `variants` | variants, and the def each value chooses; `by` beside `refine` with no union and no `variants`, a list the site decides past its budget ([decision](decisions.md#a-budget-for-what-the-site-decides)), is an object like any other: no variant is in the document to read |
 | `list` | a collection |
 | `patternMessage` | the `Regex`'s message |
 | `widget` `radios`, `time`, `checkboxes`; `textarea` | the widget it asks for; a multiline string |

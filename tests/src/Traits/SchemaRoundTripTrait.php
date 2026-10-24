@@ -46,6 +46,7 @@ trait SchemaRoundTripTrait {
       'server' => 'A constraint no keyword states (a composite, or one of a module that is not on), which only the server checks: the document names it under `checkedOnServer`, and a name is no constraint the reader can declare.',
       'computed' => 'A computed key: what computes it is a class, which no document names, so read back it is a key nobody types that holds what is stored, `readOnly` and `x-surface.locked`, with no `x-surface.computed`.',
       'live' => 'A runtime refiner: its rule is a lookup no document states, so the full schema marks the key `live` and nothing can read the rule back.',
+      'site list' => 'A list the site decides, past the site list limit: the full schema states the key open and `refine`, with no def per variant or entry, so read back it is an open map, which the provider\'s list is not.',
     ];
   }
 
@@ -137,6 +138,7 @@ trait SchemaRoundTripTrait {
     }
     $refining = array_filter($definition->alters, static fn (AlterDefinition $alter): bool => $alter->refiners !== []);
     return match (TRUE) {
+      static::pastTheLimit($original) => 'site list',
       isset($marks['computed']) => 'computed',
       isset($marks['checkedOnServer']) => 'server',
       isset($marks['access']) || (isset($marks['@readOnly']) && $answering) => 'access',
@@ -147,6 +149,34 @@ trait SchemaRoundTripTrait {
       isset($marks['declared']) => 'rule',
       default => NULL,
     };
+  }
+
+  /**
+   * Answers whether a schema states a list the site decides open.
+   *
+   * @param mixed $schema
+   *   A schema, or anything inside one.
+   *
+   * @return bool
+   *   TRUE where a key is `refine` and open: variants with their deciding
+   *   key and no union, or keys from the site with their entries.
+   *
+   * @see docs/decisions.md#a-budget-for-what-the-site-decides
+   */
+  protected static function pastTheLimit(mixed $schema): bool {
+    if (!is_array($schema)) {
+      return FALSE;
+    }
+    $extension = $schema[ContractEmitter::EXTENSION] ?? NULL;
+    if (is_array($extension) && ($extension['refine'] ?? FALSE) === TRUE && (isset($extension['entries']) || (isset($extension['by']) && !isset($schema['anyOf'])))) {
+      return TRUE;
+    }
+    foreach ($schema as $value) {
+      if (static::pastTheLimit($value)) {
+        return TRUE;
+      }
+    }
+    return FALSE;
   }
 
   /**
