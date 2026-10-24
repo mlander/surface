@@ -3360,6 +3360,7 @@ update and delete a venue at every door, and its routes are the forms.
   config_export: [
     'id',
     'label',
+    'slug',
     'capacity',
     'address',
     'rooms',
@@ -3382,6 +3383,11 @@ final class EventVenue extends ConfigEntityBase {
    * The name people read.
    */
   protected ?string $label = NULL;
+
+  /**
+   * The name in a link, computed from the name when the venue is added.
+   */
+  protected ?string $slug = NULL;
 
   /**
    * How many people the venue holds.
@@ -3413,6 +3419,16 @@ final class EventVenue extends ConfigEntityBase {
    */
   public function rooms(): array {
     return $this->rooms ?? [];
+  }
+
+  /**
+   * Gets the slug.
+   *
+   * @return string|null
+   *   The name in a link, or NULL for a venue saved before it had one.
+   */
+  public function slug(): ?string {
+    return $this->slug;
   }
 
   /**
@@ -3516,6 +3532,13 @@ final class VenueResource implements ResourceInterface {
         'message' => t('The machine name may hold only lowercase letters, numbers and underscores.'),
       ])
       ->addConstraint('Length', ['max' => 32]);
+    $inputs->derive('slug', 'string', t('Slug'), from: ['label'], using: Slugify::class)
+      ->setDescription(t('The name in a link: lowercase letters, numbers and dashes, set when the venue is added.'))
+      ->addConstraint('Regex', [
+        'pattern' => '/^[a-z0-9]+(-[a-z0-9]+)*$/D',
+        'message' => t('The slug may hold only lowercase letters, numbers and single dashes between them.'),
+      ])
+      ->addConstraint('Length', ['max' => 128]);
     $inputs->add('capacity', 'integer', t('Capacity'))
       ->setDescription(t('How many people the venue holds.'))
       ->setRequired(TRUE)
@@ -3530,6 +3553,35 @@ final class VenueResource implements ResourceInterface {
       ->addConstraint('Range', ['min' => -1000, 'max' => 1000]);
     $inputs->add('status', 'boolean', t('Enabled'), default: TRUE)
       ->setDescription(t('Whether events may be held there; a disabled venue is listed only for an account that administers the venues.'));
+  }
+
+}
+```
+
+The slug is a computed key, `derive()`: a key of the venue, stored and
+read like any other, whose value nobody types. `Slugify` computes it
+from the name, once, when the venue is added (`when:` is
+`Derive::ON_CREATE` unless it says `Derive::ON_CHANGE`), so renaming a
+venue leaves its links working. The pipeline computes it after it
+accepts the rest and judges it by its own pattern; the storage refuses
+a slug another venue holds, and the refusal names the name, the key a
+caller can change. Both documents state it `readOnly` with
+`x-surface.computed: {"from": ["label"], "when": "create"}`, the write
+tool's `values` leaves it out, the read answers it, and the form draws
+it fixed. A slug sent equal to the one the venue holds is noted and not
+taken; any other is refused.
+
+<!-- code: src/Slugify.php -->
+
+```php
+final class Slugify implements DeriverInterface {
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function derive(array $from): mixed {
+    $slug = trim((string) preg_replace('/[^a-z0-9]+/', '-', mb_strtolower((string) ($from['label'] ?? ''))), '-');
+    return $slug === '' ? NULL : $slug;
   }
 
 }
@@ -3647,7 +3699,7 @@ final class VenueStorage extends ConfigEntityStorage {
   /**
    * {@inheritdoc}
    */
-  public const PROPERTIES = ['id', 'label', 'capacity', 'address', 'rooms', 'weight', 'status'];
+  public const PROPERTIES = ['id', 'label', 'slug', 'capacity', 'address', 'rooms', 'weight', 'status'];
 
   /**
    * {@inheritdoc}
@@ -3709,8 +3761,8 @@ final class VenueStorage extends ConfigEntityStorage {
   /**
    * {@inheritdoc}
    *
-   * A listing's answer, a reorder's rehearsal, or a venue's, its rooms
-   * held to ids no other venue has.
+   * A listing's answer, a reorder's rehearsal, or a venue's, its slug
+   * and its rooms held to what no other venue has.
    */
   public function prepare(OperationContext $context, array $values): array {
     return match ($context->id) {
@@ -3821,7 +3873,7 @@ final class VenueStorage extends ConfigEntityStorage {
   }
 
   /**
-   * Rehearses one venue, its rooms held to ids no other venue has.
+   * Rehearses one venue, its slug and rooms held to what no other venue has.
    *
    * @param \Drupal\data_surface\Resource\OperationContext $context
    *   The create or the update.
@@ -3832,8 +3884,8 @@ final class VenueStorage extends ConfigEntityStorage {
    *   The venue's exported array.
    *
    * @throws \Drupal\data_surface\Pipeline\StorageViolationsException
-   *   When a room id is held twice, here or by another venue, or as
-   *   ConfigEntityStorage refuses.
+   *   When another venue holds the slug, a room id is held twice, here or
+   *   by another venue, or as ConfigEntityStorage refuses.
    */
   protected function venue(OperationContext $context, array $values): array {
     $own = $context->known['id'] ?? $values['id'] ?? NULL;
@@ -3846,6 +3898,18 @@ final class VenueStorage extends ConfigEntityStorage {
       }
     }
     $refused = [];
+    $slug = $values['slug'] ?? NULL;
+    foreach ($this->venues() as $id => $venue) {
+      if ($id !== $own && is_string($slug) && $venue->slug() === $slug) {
+        // A rule no schema can state, said by the storage that knows the
+        // other venues; the pipeline names the key the slug is computed
+        // from after it.
+        $refused[] = new Violation('slug', '', $this->t('The slug @slug is held already, by @venue: a slug is held once across the venues.', [
+          '@slug' => $slug,
+          '@venue' => $id,
+        ]), Violation::TAKEN);
+      }
+    }
     $seen = [];
     foreach (array_values(is_array($values['rooms'] ?? NULL) ? $values['rooms'] : []) as $delta => $room) {
       $id = is_array($room) && is_string($room['id'] ?? NULL) ? $room['id'] : NULL;
@@ -3960,6 +4024,15 @@ data_surface_examples.event_venue.*:
       constraints:
         Length:
           max: 128
+    slug:
+      type: string
+      label: 'Slug'
+      nullable: true
+      constraints:
+        Regex:
+          pattern: '/^[a-z0-9]+(-[a-z0-9]+)*$/D'
+        Length:
+          max: 128
     capacity:
       type: integer
       label: 'Capacity'
@@ -4051,11 +4124,14 @@ The React pages are `/surface-react/event.venue/create` and
 
 Made in order on the venues the module ships, as the page draws them:
 the listing, two to a page; Town Hall added as a dry run, then for
-real, so the next calls find it; its capacity changed; a reorder
-rehearsed, Town Hall first and Riverside Hall last; a reorder that
-names a venue the site does not have and one twice, refused by the
-storage at each place; Town Hall's removal rehearsed, then made, so the
-three venues shipped are what is left. The calls never touch a venue
+real, so the next calls find it; Town Hall read back, its slug computed
+from its name; its capacity changed; a rename rehearsed, the slug kept
+as it was set; a venue sent with a slug of its own, refused naming the
+key the slug is computed from; a reorder rehearsed, Town Hall first and
+Riverside Hall last; a reorder that names a venue the site does not
+have and one twice, refused by the storage at each place; Town Hall's
+removal rehearsed, then made, so the three venues shipped are what is
+left. The calls never touch a venue
 the site has: where one is named `town_hall` already, the page makes
 each call as a dry run, says so, and writes nothing.
 
@@ -4078,7 +4154,7 @@ drush tool:run data_surface:event.venue:create --uid=1 --input='{"values":{"labe
 ```
 2. A fourth venue, Town Hall, added: rehearsed
 Success: Dry run of Add a venue: the values were accepted and prepared, and nothing was written.
-  values: {"label":"Town Hall","id":"town_hall","capacity":300,"address":"1 Market Square","rooms":[{"id":"town_hall_council","label":"Council chamber","seats":120},{"id":"town_hall_foyer","label":"Foyer","seats":80}],"weight":3,"status":true}
+  values: {"label":"Town Hall","id":"town_hall","slug":"town-hall","capacity":300,"address":"1 Market Square","rooms":[{"id":"town_hall_council","label":"Council chamber","seats":120},{"id":"town_hall_foyer","label":"Foyer","seats":80}],"weight":3,"status":true}
 ```
 
 ```bash
@@ -4091,12 +4167,42 @@ Success: Add a venue: the values were accepted and written.
 ```
 
 ```bash
+drush tool:run data_surface:event.venue:update:read --uid=1 --input='{"id":"town_hall"}'
+```
+
+```
+4. Town Hall read back: its slug, computed from its name
+Success: Edit a venue: the stored values were read, and nothing was written.
+  values: {"label":"Town Hall","slug":"town-hall","capacity":300,"address":"1 Market Square","rooms":[{"id":"town_hall_council","label":"Council chamber","seats":120},{"id":"town_hall_foyer","label":"Foyer","seats":80}],"weight":3,"status":true}
+```
+
+```bash
 drush tool:run data_surface:event.venue:update --uid=1 --input='{"id":"town_hall","values":{"capacity":350}}'
 ```
 
 ```
-4. Town Hall's capacity changed: written
+5. Town Hall's capacity changed: written
 Success: Edit a venue: the values were accepted and written.
+```
+
+```bash
+drush tool:run data_surface:event.venue:update --uid=1 --input='{"id":"town_hall","values":{"label":"Town Hall and Annex"}}' --input=dry_run=true
+```
+
+```
+6. Town Hall renamed, rehearsed: the slug stays as it was set
+Success: Dry run of Edit a venue: the values were accepted and prepared, and nothing was written.
+  values: {"label":"Town Hall and Annex","id":"town_hall","slug":"town-hall","capacity":350,"address":"1 Market Square","rooms":[{"id":"town_hall_council","label":"Council chamber","seats":120},{"id":"town_hall_foyer","label":"Foyer","seats":80}],"weight":3,"status":true}
+```
+
+```bash
+drush tool:run data_surface:event.venue:create --uid=1 --input='{"values":{"label":"Concert Hall","id":"concert_hall","capacity":500,"slug":"concerts"}}' --input=dry_run=true
+```
+
+```
+7. A venue sent a slug of its own: refused, naming the key it is computed from
+Failed: The values were refused:
+/slug: Slug is computed from label and takes no value of its own; leave it out.
 ```
 
 ```bash
@@ -4104,7 +4210,7 @@ drush tool:run data_surface:event.venue:reorder --uid=1 --input='{"values":{"ven
 ```
 
 ```
-5. Town Hall moved first and Riverside Hall last, in one write: rehearsed
+8. Town Hall moved first and Riverside Hall last, in one write: rehearsed
 Success: Dry run of Reorder the venues: the values were accepted and prepared, and nothing was written.
   values: {"venues":[{"id":"town_hall","weight":-1},{"id":"riverside","weight":4}]}
 ```
@@ -4114,7 +4220,7 @@ drush tool:run data_surface:event.venue:reorder --uid=1 --input='{"values":{"ven
 ```
 
 ```
-6. A reorder naming a venue the site does not have, and one twice: refused
+9. A reorder naming a venue the site does not have, and one twice: refused
 Failed: The values were refused:
 /venues/0/id: No venue is named concert_hall.
 /venues/2/id: The library venue is named already, at position 1: a reorder names each venue once.
@@ -4125,9 +4231,9 @@ drush tool:run data_surface:event.venue:delete --uid=1 --input='{"id":"town_hall
 ```
 
 ```
-7. Town Hall removed: rehearsed
+10. Town Hall removed: rehearsed
 Success: Dry run of Remove a venue: the removal was rehearsed, and nothing was removed. The values it holds are answered.
-  values: {"id":"town_hall","label":"Town Hall","capacity":350,"address":"1 Market Square","rooms":[{"id":"town_hall_council","label":"Council chamber","seats":120},{"id":"town_hall_foyer","label":"Foyer","seats":80}],"weight":3,"status":true}
+  values: {"id":"town_hall","label":"Town Hall","slug":"town-hall","capacity":350,"address":"1 Market Square","rooms":[{"id":"town_hall_council","label":"Council chamber","seats":120},{"id":"town_hall_foyer","label":"Foyer","seats":80}],"weight":3,"status":true}
 ```
 
 ```bash
@@ -4135,7 +4241,7 @@ drush tool:run data_surface:event.venue:delete --uid=1 --input='{"id":"town_hall
 ```
 
 ```
-8. Town Hall removed: written, so the three venues shipped are what is left
+11. Town Hall removed: written, so the three venues shipped are what is left
 Success: Remove a venue: removed. The values it held are answered.
 ```
 
@@ -4148,18 +4254,19 @@ of code, counted without blank lines or comments:
 
 | File | What it is | Lines |
 | --- | --- | --- |
-| [`modules/data_surface_examples/src/Entity/EventVenue.php`](src/Entity/EventVenue.php) | the entity type: its declaration, its keys and the properties it exports, and no form, list builder or link | 42 |
-| [`modules/data_surface_examples/src/Resource/VenueResource.php`](src/Resource/VenueResource.php) | the resource: a venue by its machine name, added, edited and removed, and the venues listed and reordered | 74 |
+| [`modules/data_surface_examples/src/Entity/EventVenue.php`](src/Entity/EventVenue.php) | the entity type: its declaration, its keys and the properties it exports, and no form, list builder or link | 47 |
+| [`modules/data_surface_examples/src/Resource/VenueResource.php`](src/Resource/VenueResource.php) | the resource: a venue by its machine name, added, edited and removed, and the venues listed and reordered; its slug a computed key | 81 |
+| [`modules/data_surface_examples/src/Slugify.php`](src/Slugify.php) | the slug's deriver: a pure function of the name, run when a venue is added | 6 |
 | [`modules/data_surface_examples/src/Structure/VenueRoomStructure.php`](src/Structure/VenueRoomStructure.php) | a room: an item of the venue's rooms | 18 |
 | [`modules/data_surface_examples/src/Structure/VenueListingStructure.php`](src/Structure/VenueListingStructure.php) | what the listing takes, a page and a filter, and what it answers, the page and the total | 27 |
 | [`modules/data_surface_examples/src/Structure/VenueReorderStructure.php`](src/Structure/VenueReorderStructure.php) | what the reorder takes: a list of venues and their weights | 9 |
 | [`modules/data_surface_examples/src/Structure/VenueOrderStructure.php`](src/Structure/VenueOrderStructure.php) | an item of that list: a venue and its new weight | 12 |
-| [`modules/data_surface_examples/src/Storage/VenueStorage.php`](src/Storage/VenueStorage.php) | the storage: a ConfigEntityStorage, which reads the listing and writes the reorder in one commit | 143 |
+| [`modules/data_surface_examples/src/Storage/VenueStorage.php`](src/Storage/VenueStorage.php) | the storage: a ConfigEntityStorage, which reads the listing, writes the reorder in one commit, and holds a slug to one venue | 152 |
 | [`modules/data_surface_examples/src/Access/VenueAccess.php`](src/Access/VenueAccess.php) | the access class: a disabled venue is only for an account that administers the venues | 17 |
-| [`modules/data_surface_examples/config/schema/data_surface_examples.schema.yml`](config/schema/data_surface_examples.schema.yml), entry `data_surface_examples.event_venue.*` | the entity type's config schema, generated from the resource | 75 |
-| [`modules/data_surface_examples/config/install/data_surface_examples.event_venue.riverside.yml`](config/install/data_surface_examples.event_venue.riverside.yml) | Riverside Hall, shipped | 17 |
-| [`modules/data_surface_examples/config/install/data_surface_examples.event_venue.library.yml`](config/install/data_surface_examples.event_venue.library.yml) | the Old Library, shipped | 17 |
-| [`modules/data_surface_examples/config/install/data_surface_examples.event_venue.harbour.yml`](config/install/data_surface_examples.event_venue.harbour.yml) | the Harbour Centre, shipped | 17 |
+| [`modules/data_surface_examples/config/schema/data_surface_examples.schema.yml`](config/schema/data_surface_examples.schema.yml), entry `data_surface_examples.event_venue.*` | the entity type's config schema, generated from the resource | 84 |
+| [`modules/data_surface_examples/config/install/data_surface_examples.event_venue.riverside.yml`](config/install/data_surface_examples.event_venue.riverside.yml) | Riverside Hall, shipped | 18 |
+| [`modules/data_surface_examples/config/install/data_surface_examples.event_venue.library.yml`](config/install/data_surface_examples.event_venue.library.yml) | the Old Library, shipped | 18 |
+| [`modules/data_surface_examples/config/install/data_surface_examples.event_venue.harbour.yml`](config/install/data_surface_examples.event_venue.harbour.yml) | the Harbour Centre, shipped | 18 |
 | [`modules/data_surface_examples/data_surface_examples.routing.yml`](data_surface_examples.routing.yml), entry `data_surface_examples.step15_create` | the add form: the generic operation form | 10 |
 | [`modules/data_surface_examples/data_surface_examples.routing.yml`](data_surface_examples.routing.yml), entry `data_surface_examples.step15_update` | the edit form, its {id} the venue | 14 |
 | [`modules/data_surface_examples/data_surface_examples.routing.yml`](data_surface_examples.routing.yml), entry `data_surface_examples.step15_delete` | the remove form: a confirmation, since a delete takes no values | 14 |
@@ -4373,8 +4480,8 @@ Drush commands are checked against `ExampleCalls`.
 | `Kernel\ExamplesConceptsTest` | Examples 7 to 12 and 14: each form builds and saves; example 7's rules in the full schema as declared, the send day gone for a monthly bulletin and kept in storage; example 8's one def at two sites with each wiring, the mixed-in keys flat, the shape at two keys, the volunteers' collection; example 9's keys from the configuration, a type added without a cache rebuild, the locked type in both documents and on the form; example 10's fees for two accounts, locked once published, and both operations' facts and tools; example 11's widgets, the always held badges and the notes that clear; example 12's four components read as four variants at the props and again at the slots, the card's props as keys with their constraints, its text a slot, both documents stating them, the form swapped to the hero and saved with its slot, a hero too dark refused; the panel above each, and none above examples 1 to 3; each class stays screen sized; example 13's page with its modules off, saying how to enable both, then with the block alone on, its parts and no call, then with the placement resource on too, the Spotlight and Tonight blocks placed through the create operation, the three lines side by side, the block's contract cut to the four components, the hero's actions narrowed, the four placement tools and the five calls' answers, nothing written.; example 14's panel with its module off, then on: how to enable it, the one source and then two in the contract excerpt, the webhook's rule, the gap, the lock not shipped, and the calls each state allows. |
 | `Kernel\ExamplesWorkflowTest` | Example 10 with the workflow module: the fees left out of the full schema, the tool listing and the read tool for an account without "see event fees" and kept for one with it; the program locked whole once the workflow state is published, settled at call time and left unmarked in the full schema; checking still answers; the panel's paragraph, with the module and without it. |
 | `Kernel\ExamplesConceptsToolTest` | Examples 7 to 16: every call `ConceptCalls` writes down, its answer, nothing left written, the two blocks and the venues included, and this page quoting each command and answer. |
-| `Kernel\VenueResourceTest` | Example 15: the entity type installs with its three venues and holds to its generated schema; the resource builds for each operation; both documents of create, update, list and reorder; the listing's outputs schema; the tools, the listing paged and filtered and an account that only views left without the disabled venue; the reorder written in one commit, and refused for an unknown venue and one named twice; example 2 offering a venue added, with no cache rebuild. |
-| `Functional\VenueApiTest` | Example 15 over HTTP and through its forms: `GET` on the collection answering the listing, a refused query, `POST` 201 with `Location`, the venue's `PATCH` and `DELETE`, the reorder's `PATCH` and its 405 for `POST`; the create and update forms saving, the delete form's confirmation removing; the page and its calls. |
+| `Kernel\VenueResourceTest` | Example 15: the entity type installs with its three venues and holds to its generated schema; the resource builds for each operation; both documents of create, update, list and reorder; the listing's outputs schema; the tools, the listing paged and filtered and an account that only views left without the disabled venue; the reorder written in one commit, and refused for an unknown venue and one named twice; the slug computed from the name on create and kept on a rename, left out of the write and in the read, a slug sent equal noted and another refused, one another venue holds refused naming the name, and the post-update writing a missing one; example 2 offering a venue added, with no cache rebuild. |
+| `Functional\VenueApiTest` | Example 15 over HTTP and through its forms: `GET` on the collection answering the listing, a refused query, `POST` 201 with `Location`, the slug written and read, `POST .../schema` answering the slug it would compute, a `PATCH` sending another slug refused, the venue's `PATCH` and `DELETE`, the reorder's `PATCH` and its 405 for `POST`; the create and update forms saving, the slug drawn fixed; the delete form's confirmation removing; the page and its calls. |
 | `Kernel\ReferenceKeysTest` | Example 16: the three spellings and what each builds; both documents of the sponsorship pinned whole under the limit and past it, under `tests/fixtures/references/`; the candidates the account's, cached by what they read; the refusals, in one message; the lookup and what it leaves out; the tool listing's enum and the sentence naming the lookup; the OpenAPI document's lookup; the page's panel. |
 | `Functional\ReferenceKeysFormTest` | Example 16 without JavaScript: a select up to the limit, core's entity autocomplete past it, the id saved either way and refused in the constraint's words; the lookup answering, refusing an account without the permission and leaving the draft out for one that may not see it; the React page told where the lookup is, and the full schema stating a bare key's id per entity type. |
 | `Functional\ExamplesConceptsRoutesTest` | Every route of examples 7 to 12 and 14 answers an administrator and refuses anonymous; the landing page lists them; each page shows its panel and its Files panel and saves through its form; example 10's check writes nothing. Example 13 refuses anonymous, says to enable its two modules, then, with them on, shows its parts and the calls' answers, and draws the Spotlight card and the Tonight section below on its page alone; its Files panel, the modules on or off. |

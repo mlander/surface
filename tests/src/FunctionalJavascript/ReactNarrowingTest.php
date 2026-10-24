@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\data_surface\FunctionalJavascript;
 
+use Drupal\data_surface_examples\Resource\VenueResource;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
@@ -172,6 +173,35 @@ class ReactNarrowingTest extends ExamplesWebDriverTestBase {
     $this->assertSame(0, $this->askedTheServer(), 'Nothing here needed the server before the write.');
     // The write was the default update's: a PATCH of the resource.
     $this->assertSame(2, $this->fetched('/registration.step3'), 'The read, and the write.');
+  }
+
+  /**
+   * Tests example 15: the slug follows the name as it is typed.
+   *
+   * The slug is computed from the name, so the page watches the name and
+   * asks the server to narrow, which answers the slug a write of these
+   * values would store; the field is read only, saying it is computed.
+   * A venue's own page shows the slug stored.
+   *
+   * Decision: see
+   * docs/decisions.md#a-computed-key-is-a-pure-function-of-its-sources.
+   */
+  public function testTheVenueSlugFollowsTheName(): void {
+    $this->drupalLogin($this->drupalCreateUser([VenueResource::ADMINISTER, VenueResource::VIEW]));
+    $assert = $this->assertSession();
+    $page = $this->getSession()->getPage();
+    $this->drupalGet('surface-react/event.venue/create');
+    $this->assertNotNull($assert->waitForElement('css', '#dsr-slug'));
+    $slug = $page->findField('dsr-slug');
+    $this->assertTrue($slug->hasAttribute('disabled'), 'Shown, never typed.');
+    $assert->elementTextContains('css', '#dsr-slug--description', 'Computed from other keys when this is created, and kept as it is after.');
+    $page->fillField('dsr-label', 'Town Hall');
+    $this->assertTrue($this->getSession()->wait(10000, "document.getElementById('dsr-slug').value === 'town-hall'"), 'The narrowing answers the slug it computes.');
+    $this->assertGreaterThanOrEqual(1, $this->askedTheServer());
+
+    $this->drupalGet('surface-react/event.venue/update', ['query' => ['id' => 'riverside']]);
+    $this->assertNotNull($assert->waitForElement('css', '#dsr-slug'));
+    $this->assertTrue($this->getSession()->wait(10000, "document.getElementById('dsr-slug').value === 'riverside-hall'"), 'A venue\'s page shows the slug stored.');
   }
 
 }

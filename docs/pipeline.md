@@ -146,6 +146,16 @@ was sent nothing or what it holds, and stays, for `validate()` to refuse,
 when it was sent anything else; `submit()` hands storage what it holds
 there (`kept()`), so it survives until it applies again.
 
+A computed key is accepted last, once every other key of its level is:
+its value is computed from what its sources were accepted as, while
+storage holds nothing for it or when it says `Derive::ON_CHANGE` and a
+source moved, else it holds what is stored. A value sent for it equal to
+that is noted and not taken; any other stays, for `validate()` to
+refuse, code `computed`, naming the keys it is computed from. Either
+refusal of it, `validate()`'s or the storage's in `prepare()`, gains a
+sentence naming those keys, and is left out while one of them is
+refused itself ([Computed keys](declaring-a-resource.md#computed-keys)).
+
 A collection's item is accepted over the child's defaults, the list
 being sent whole, but a secret the item leaves out keeps what is stored
 at its position when the list is as long as the one stored; with items

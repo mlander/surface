@@ -1,5 +1,5 @@
 import type { Extension, Schema } from '../contract';
-import { assertContract, assertSchema, CONTRACT, ContractRefused, defName, inlineSchema, isPart, resolveSchema, resolveVariants, restored, watchedPaths } from '../contract';
+import { assertContract, assertSchema, CONTRACT, ContractRefused, defName, inlineSchema, isPart, resolveSchema, resolveVariants, restored, watchedPaths, withoutComputed, narrow, narrowingStatus } from '../contract';
 import example3 from './fixtures/example3.json';
 import license from './fixtures/refine-example3-license.json';
 import journal from './fixtures/refine-journal.json';
@@ -182,6 +182,38 @@ describe('a collection', () => {
   it('watches what refines inside each item, under its delta', () => {
     const watched = watchedPaths(inlineSchema(root), { shelves: [{ unit: 'cm' }, { unit: 'in' }] });
     expect([...watched].sort()).toEqual(['shelves.0.unit', 'shelves.1.unit']);
+  });
+});
+
+describe('a computed key', () => {
+  // Example 15's venue, abbreviated: the slug is computed from the name.
+  const venue: Schema = {
+    type: 'object',
+    properties: {
+      label: { title: 'Name', type: 'string', 'x-surface': { widget: 'text', locked: false, dependsOn: [], refined: false, stale: false } },
+      slug: {
+        title: 'Slug',
+        type: ['string', 'null'],
+        readOnly: true,
+        'x-surface': { widget: 'text', locked: false, dependsOn: [], refined: false, stale: false, computed: { from: ['label'], when: 'create' } },
+      },
+    },
+    additionalProperties: false,
+    required: ['label'],
+  };
+
+  it('watches what it is computed from, which the server narrows', () => {
+    expect([...watchedPaths(venue, {})]).toEqual(['label']);
+  });
+
+  it('sends a change of what it is computed from to the server', () => {
+    const narrowed = narrow({ full: venue, previous: { schema: venue, values: {}, stale: [] }, stored: {}, values: { label: 'Town Hall' }, stale: [], changed: 'label' });
+    expect(narrowed).toEqual({ local: false, key: 'slug', marker: 'computed' });
+    expect(narrowingStatus(narrowed)).toBe('Asked the server: slug is computed on the server');
+  });
+
+  it('is never sent', () => {
+    expect(withoutComputed(venue, { label: 'Town Hall', slug: 'town' })).toEqual({ label: 'Town Hall' });
   });
 });
 

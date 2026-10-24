@@ -45,6 +45,28 @@
                     "patternMessage": "The machine name may hold only lowercase letters, numbers and underscores."
                 }
             },
+            "slug": {
+                "title": "Slug",
+                "description": "The name in a link: lowercase letters, numbers and dashes, set when the venue is added.",
+                "type": [
+                    "string",
+                    "null"
+                ],
+                "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+                "maxLength": 128,
+                "readOnly": true,
+                "x-surface": {
+                    "locked": false,
+                    "dependsOn": [],
+                    "computed": {
+                        "from": [
+                            "label"
+                        ],
+                        "when": "create"
+                    },
+                    "patternMessage": "The slug may hold only lowercase letters, numbers and single dashes between them."
+                }
+            },
             "capacity": {
                 "title": "Capacity",
                 "description": "How many people the venue holds.",

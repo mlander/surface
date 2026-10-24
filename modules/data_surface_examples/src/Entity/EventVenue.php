@@ -37,6 +37,7 @@ use Drupal\Core\StringTranslation\TranslatableMarkup;
   config_export: [
     'id',
     'label',
+    'slug',
     'capacity',
     'address',
     'rooms',
@@ -59,6 +60,11 @@ final class EventVenue extends ConfigEntityBase {
    * The name people read.
    */
   protected ?string $label = NULL;
+
+  /**
+   * The name in a link, computed from the name when the venue is added.
+   */
+  protected ?string $slug = NULL;
 
   /**
    * How many people the venue holds.
@@ -90,6 +96,16 @@ final class EventVenue extends ConfigEntityBase {
    */
   public function rooms(): array {
     return $this->rooms ?? [];
+  }
+
+  /**
+   * Gets the slug.
+   *
+   * @return string|null
+   *   The name in a link, or NULL for a venue saved before it had one.
+   */
+  public function slug(): ?string {
+    return $this->slug;
   }
 
   /**

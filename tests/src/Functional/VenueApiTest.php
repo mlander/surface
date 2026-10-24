@@ -112,11 +112,32 @@ class VenueApiTest extends BrowserTestBase {
     $this->assertSame([...ResultDocument::KEYS, 'outputs', 'contract', 'created'], array_keys($added));
     $this->assertStringEndsWith('/surface-api/event.venue/town_hall', $response->getHeaderLine('Location'));
     $this->assertSame(['resource' => 'event.venue', 'operation' => 'update', 'parameters' => ['id' => 'town_hall']], $added['created']);
+    $this->assertSame('town-hall', $added['values']['slug'], 'Computed from the name, and written.');
     $read = $this->send('GET', self::COLLECTION . '/town_hall');
     $this->assertSame('update', $this->decoded($read)['operation']);
+    $this->assertSame('town-hall', $this->decoded($read)['values']['slug'], 'The read answers it.');
     $tag = $read->getHeaderLine('ETag');
     $this->assertNotSame('', $tag);
     $this->assertSame(4, $this->decoded($this->send('GET', self::COLLECTION))['total']);
+
+    // The slug: the narrowing answers what a write would store; a write
+    // sending another is refused naming the name.
+    // Decision: see
+    // docs/decisions.md#a-computed-key-is-a-pure-function-of-its-sources.
+    $narrowed = $this->decoded($this->send('POST', self::COLLECTION . ':create/schema', ['label' => 'Concert Hall']));
+    $this->assertSame('concert-hall', $narrowed['values']['slug']);
+    $this->assertTrue($narrowed['schema']['properties']['slug']['readOnly']);
+    $this->assertSame(['from' => ['label'], 'when' => 'create'], $narrowed['schema']['properties']['slug']['x-surface']['computed']);
+    $kept = $this->decoded($this->send('POST', self::COLLECTION . '/town_hall/schema', ['label' => 'Town Hall and Annex']));
+    $this->assertSame('town-hall', $kept['values']['slug'], 'Computed on create: an edit of the name keeps it.');
+    $slug = $this->problem($this->send('PATCH', self::COLLECTION . '/town_hall', ['slug' => 'annex']), 422);
+    $this->assertSame([
+      [
+        'path' => '/slug',
+        'code' => 'computed',
+        'message' => 'Slug is computed from Name and takes no value of its own; leave it out.',
+      ],
+    ], $slug['errors']);
 
     // Changed, held to the ETag it was read with.
     $changed = $this->decoded($this->send('PATCH', self::COLLECTION . '/town_hall', ['capacity' => 350], ['If-Match' => $tag]));
@@ -167,6 +188,9 @@ class VenueApiTest extends BrowserTestBase {
 
     $this->drupalGet('surface-examples/15/add');
     $assert->statusCodeEquals(200);
+    // Shown fixed, with what it is computed from; nothing is posted for it.
+    $assert->fieldNotExists('surface[slug]');
+    $assert->pageTextContains('Computed from Name when this is created, and kept as it is after.');
     $this->submitForm([
       'surface[label]' => 'Town Hall',
       'surface[id]' => 'town_hall',
@@ -175,6 +199,7 @@ class VenueApiTest extends BrowserTestBase {
     ], 'Save');
     $assert->pageTextContains('The venue Town Hall has been added.');
     $assert->addressEquals('surface-examples/15');
+    $this->assertSame('town-hall', $this->container->get('entity_type.manager')->getStorage('event_venue')->loadUnchanged('town_hall')->get('slug'), 'The add form wrote the slug it computed.');
     // The page's calls find a venue of their name, so they write nothing.
     $assert->pageTextContains('This site has a venue named town_hall, so each call below is made now as a dry run, and nothing is written');
     $storage = $this->container->get('entity_type.manager')->getStorage('event_venue');
@@ -188,6 +213,7 @@ class VenueApiTest extends BrowserTestBase {
     $this->drupalGet('surface-examples/15/venue/town_hall');
     $assert->statusCodeEquals(200);
     $assert->fieldDisabled('surface[id]');
+    $assert->elementTextContains('css', '#edit-surface-slug', 'town-hall');
     $this->submitForm(['surface[capacity]' => '350'], 'Save');
     $assert->pageTextContains('The venue Town Hall has been saved.');
     $this->assertSame(350, $storage->loadUnchanged('town_hall')->get('capacity'));

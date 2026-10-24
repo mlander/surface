@@ -12,6 +12,7 @@ use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface\Resource\ResourceInterface;
 use Drupal\data_surface_examples\Access\VenueAccess;
 use Drupal\data_surface_examples\Entity\EventVenue;
+use Drupal\data_surface_examples\Slugify;
 use Drupal\data_surface_examples\Storage\VenueStorage;
 use Drupal\data_surface_examples\Structure\VenueListingStructure;
 use Drupal\data_surface_examples\Structure\VenueReorderStructure;
@@ -105,6 +106,13 @@ final class VenueResource implements ResourceInterface {
         'message' => t('The machine name may hold only lowercase letters, numbers and underscores.'),
       ])
       ->addConstraint('Length', ['max' => 32]);
+    $inputs->derive('slug', 'string', t('Slug'), from: ['label'], using: Slugify::class)
+      ->setDescription(t('The name in a link: lowercase letters, numbers and dashes, set when the venue is added.'))
+      ->addConstraint('Regex', [
+        'pattern' => '/^[a-z0-9]+(-[a-z0-9]+)*$/D',
+        'message' => t('The slug may hold only lowercase letters, numbers and single dashes between them.'),
+      ])
+      ->addConstraint('Length', ['max' => 128]);
     $inputs->add('capacity', 'integer', t('Capacity'))
       ->setDescription(t('How many people the venue holds.'))
       ->setRequired(TRUE)

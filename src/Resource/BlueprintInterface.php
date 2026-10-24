@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Drupal\data_surface\Resource;
 
 use Drupal\Core\Cache\CacheableDependencyInterface;
+use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
 
 /**
@@ -230,6 +231,56 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
    * @see docs/resources.md#ports
    */
   public function reads(string $port, string $type, bool $required = FALSE): static;
+
+  /**
+   * A computed key: a value of the resource no caller types.
+   *
+   * Declared as add() declares a key, of a type or a shape, labeled, and
+   * returned for the owner to constrain and describe; its value is what
+   * $using computes from the values of the keys $from names. The pipeline
+   * computes it after accepting the rest, then validates it by its own
+   * constraints and rules, and storage writes it as any key; the read
+   * answers it. It is never asked of a caller: both documents state it
+   * `readOnly` with `x-surface.computed`, never `required`, the write
+   * tool's `values` leaves it out, and a form draws it fixed. A value sent
+   * for it equal to the one it holds is noted and not taken; any other is
+   * refused, code `computed`, naming the keys it is computed from.
+   *
+   * @code
+   * $inputs->derive('slug', 'string', t('Slug'), from: ['label'], using: Slugify::class)
+   *   ->addConstraint('Regex', ['pattern' => '/^[a-z0-9]+(-[a-z0-9]+)*$/D']);
+   * @endcode
+   *
+   * @param string $key
+   *   The key.
+   * @param string $type
+   *   A typed data type of one value, or a shape's class.
+   * @param string|\Stringable $label
+   *   The label.
+   * @param string[] $from
+   *   The keys it is computed from: keys this blueprint declared before
+   *   it, at least one.
+   * @param string $using
+   *   The class that computes it, a pure function of $from: one that
+   *   implements DeriverInterface.
+   * @param string $when
+   *   Derive::ON_CREATE, the default, to compute it once, while storage
+   *   holds nothing for it; Derive::ON_CHANGE to compute it again on every
+   *   write that changes a key in $from. A write that changes none keeps
+   *   what is stored, either way.
+   *
+   * @return \Drupal\Core\TypedData\DataDefinition
+   *   The key's definition.
+   *
+   * @throws \LogicException
+   *   For outputs, a structure (a computed key is a resource's own, in
+   *   this cut), a structure mixed in, a key of a map or list type, a
+   *   source that is not declared before it, a class that implements no
+   *   DeriverInterface, or a `when` that is neither.
+   *
+   * @see docs/declaring-a-resource.md#computed-keys
+   */
+  public function derive(string $key, string $type, string|\Stringable $label, array $from, string $using, string $when = Derive::ON_CREATE): DataDefinition;
 
   /**
    * Says what the declared keys depend on, while the build is reused.

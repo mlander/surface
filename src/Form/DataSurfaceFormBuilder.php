@@ -25,13 +25,16 @@ use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
+use Drupal\data_surface\Computed;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Refinement\DoesNotApply;
 use Drupal\data_surface\Resource\ArrangementGroup;
+use Drupal\data_surface\Resource\Derive;
 use Drupal\data_surface\Options\DataSurfaceOptions;
 use Drupal\data_surface\Pipeline\DataSurfacePipelineInterface;
 use Drupal\data_surface\Plugin\DataSurfaceWidget\OptionsWidget;
+use Drupal\data_surface\Pipeline\Sentences;
 use Drupal\data_surface\Pipeline\ValueState;
 use Drupal\data_surface\Pipeline\ViolationSet;
 use Drupal\data_surface\Entry;
@@ -105,6 +108,11 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
    * Render key marking a collection's element: its dotted path.
    */
   protected const LIST_KEY = '#data_surface_list';
+
+  /**
+   * Marks the item a computed key is drawn as.
+   */
+  protected const COMPUTED_KEY = '#data_surface_computed';
 
   /**
    * The key of a collection's "Add another" button inside its element.
@@ -235,6 +243,14 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
         // Decision: see docs/decisions.md#a-key-that-does-not-apply.
         $ruled_out = ['#markup' => '', self::PLACEHOLDER_KEY => TRUE, self::RULED_OUT_KEY => TRUE];
         $container[$name] = DataSurfaceWidgetBase::arranged($ruled_out, $declared);
+        continue;
+      }
+      $computed = Computed::of($definition);
+      if ($computed !== NULL && !$definitions->isLocked($name)) {
+        // Shown and fixed: nobody types it, and nothing is posted for it.
+        // Decision: see
+        // docs/decisions.md#a-computed-key-is-a-pure-function-of-its-sources.
+        $container[$name] = DataSurfaceWidgetBase::arranged(static::computedItem($definition, $computed, $surface, $shown[$name] ?? NULL), $declared);
         continue;
       }
       $list = $definitions->entry($name)?->list;
@@ -371,6 +387,36 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
     // state-dependent shape would be cached as though it were static.
     CacheableMetadata::createFromObject($surface)->applyTo($container);
     return $container;
+  }
+
+  /**
+   * Draws a computed key: its value, fixed, and what it is computed from.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The key.
+   * @param \Drupal\data_surface\Computed $computed
+   *   What it is computed from.
+   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   *   The data surface it belongs to, which labels its sources.
+   * @param mixed $value
+   *   What it holds for the values shown.
+   *
+   * @return array
+   *   An item, which posts nothing.
+   */
+  protected static function computedItem(DataDefinitionInterface $definition, Computed $computed, DataSurfaceInterface $surface, mixed $value): array {
+    $sources = implode(', ', array_map(static fn (string $source): string => (string) ($surface->getDefinition($source)?->getLabel() ?? $source), $computed->from));
+    $note = $computed->when === Derive::ON_CHANGE
+      ? t('Computed from @sources, again whenever they change.', ['@sources' => $sources])
+      : t('Computed from @sources when this is created, and kept as it is after.', ['@sources' => $sources]);
+    $description = $definition->getDescription();
+    return [
+      '#type' => 'item',
+      '#title' => $definition->getLabel(),
+      '#plain_text' => is_scalar($value) ? (string) $value : '',
+      '#description' => $description !== NULL && (string) $description !== '' ? new Sentences($description, $note) : $note,
+      self::COMPUTED_KEY => TRUE,
+    ];
   }
 
   /**
@@ -645,6 +691,10 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
     foreach (array_keys($orphaned) as $dotted) {
       NestedArray::setValue($values, explode('.', (string) $dotted), NULL, TRUE);
     }
+    // A computed key shows what a write of these values would store.
+    // Decision: see
+    // docs/decisions.md#a-computed-key-is-a-pure-function-of-its-sources.
+    $values = Computed::apply($surface, $values, $stored);
     if ($orphaned !== []) {
       $values[self::STANDING_KEY] = $orphaned;
     }
@@ -1869,6 +1919,10 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
     $definitions = $surface->getDefinitions();
     $variantKeys = [];
     foreach ($definitions->entries() as $name => $entry) {
+      if (!$entry->locked && Computed::of($entry->definition) !== NULL) {
+        // Drawn as an item, which posts nothing: accept() computes it.
+        continue;
+      }
       if ($entry->variants !== NULL) {
         $variantKeys[] = $name;
         continue;

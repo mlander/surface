@@ -15,6 +15,7 @@ use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
+use Drupal\data_surface\Computed;
 use Drupal\data_surface\DataSurfaceAccess;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\DefinitionMetadata;
@@ -199,7 +200,15 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
     }
     $values = array_fill_keys($definitions->names(), NULL);
     $deferred = [];
+    $computed = [];
     foreach ($definitions->entries() as $name => $entry) {
+      if (!$entry->locked && Computed::of($entry->definition) !== NULL) {
+        // Computed from the accepted values of the keys it names, so last.
+        // Decision: see
+        // docs/decisions.md#a-computed-key-is-a-pure-function-of-its-sources.
+        $computed[] = $entry;
+        continue;
+      }
       if ($entry->variants !== NULL || ($entry->attachment !== NULL && $entry->attachment->reads !== [])) {
         $deferred[] = $entry;
         continue;
@@ -208,6 +217,9 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
     }
     foreach ($deferred as $entry) {
       $values[$entry->name] = $this->acceptKey($surface, $entry, $input, $current, $prefix, $values);
+    }
+    foreach ($computed as $entry) {
+      $values[$entry->name] = $this->acceptComputed($surface, $entry, $input, $current, $prefix, $values);
     }
     return $this->withoutWhatDoesNotApply($surface, $values, $input, $current);
   }
@@ -616,6 +628,197 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
   }
 
   /**
+   * Accepts a computed key: the value it holds, whatever was sent.
+   *
+   * Computed from the accepted values of the keys it names while storage
+   * holds nothing for it, and on every write that changes one of them
+   * when it says so; else what is stored. A value sent for it is read as
+   * though it were open: the value it holds is noted and not taken, as a
+   * locked key's is; any other stays, for validate() to refuse with the
+   * code `computed`, naming the keys it is computed from, as a value sent
+   * for a key that does not apply stays.
+   *
+   * Decision: see
+   * docs/decisions.md#a-computed-key-is-a-pure-function-of-its-sources.
+   *
+   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   *   The data surface the key belongs to.
+   * @param \Drupal\data_surface\Entry $entry
+   *   The computed key.
+   * @param array $input
+   *   The raw input for the key's level.
+   * @param array $current
+   *   What the key's level already holds.
+   * @param string $prefix
+   *   The dotted path of the key's level.
+   * @param array $values
+   *   The values accepted at this level, every other key's.
+   *
+   * @return mixed
+   *   The value it holds, or another value sent for it.
+   */
+  protected function acceptComputed(DataSurfaceInterface $surface, Entry $entry, array $input, array $current, string $prefix, array $values): mixed {
+    $name = $entry->name;
+    $path = static::joinPath($prefix, $name);
+    $computed = Computed::of($entry->definition);
+    assert($computed !== NULL);
+    $value = $computed->value($name, $values, $current);
+    $held = $this->acceptValue($entry->definition, $value, $value, $path);
+    if (!array_key_exists($name, $input)) {
+      return $held;
+    }
+    $sent = $this->acceptValue($entry->definition, $input[$name], $held, $path);
+    if (!static::sameValue($sent, $held)) {
+      return $sent;
+    }
+    [$key, $below] = array_pad(explode('.', $path, 2), 2, '');
+    $this->notTaken[$path] = new Violation($key, $below, $this->computedFrom($entry->definition->getLabel() ?? $name, $this->sources($surface, $computed, $prefix), 'note'), Violation::COMPUTED);
+    return $held;
+  }
+
+  /**
+   * Refuses a value a computed key holds other than the one computed.
+   *
+   * What the key holds for these values is computed again, as accept()
+   * computed it: a pure function of what its sources hold, or what is
+   * stored where it is not computed again.
+   *
+   * Decision: see
+   * docs/decisions.md#a-computed-key-is-a-pure-function-of-its-sources.
+   *
+   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   *   The data surface the key belongs to.
+   * @param \Drupal\data_surface\Entry $entry
+   *   The computed key.
+   * @param \Drupal\data_surface\Computed $computed
+   *   What it is computed from.
+   * @param array $values
+   *   The accepted values of its level.
+   * @param array $current
+   *   What its level holds in storage.
+   *
+   * @return \Drupal\data_surface\Pipeline\Violation|null
+   *   The refusal, or NULL when it holds the value computed.
+   */
+  protected function notComputed(DataSurfaceInterface $surface, Entry $entry, Computed $computed, array $values, array $current): ?Violation {
+    $name = $entry->name;
+    $held = $computed->value($name, $values, $current);
+    try {
+      $held = $this->acceptValue($entry->definition, $held, $held, $name);
+    }
+    catch (\InvalidArgumentException) {
+      // Compared as computed.
+    }
+    if (static::sameValue($values[$name] ?? NULL, $held)) {
+      return NULL;
+    }
+    return new Violation($name, '', $this->computedFrom($entry->definition->getLabel() ?? $name, $this->sources($surface, $computed, $this->frame[0]), 'refusal'), Violation::COMPUTED);
+  }
+
+  /**
+   * Names the keys a computed key is computed from, for a sentence.
+   *
+   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   *   The data surface the key belongs to.
+   * @param \Drupal\data_surface\Computed $computed
+   *   What it is computed from.
+   * @param string $prefix
+   *   The dotted path of its level, with a trailing dot or empty.
+   *
+   * @return \Drupal\data_surface\Pipeline\Named[]
+   *   Each key, by its label for a person and its path for a machine.
+   */
+  protected function sources(DataSurfaceInterface $surface, Computed $computed, string $prefix): array {
+    $prefix = $prefix === '' || str_ends_with($prefix, '.') ? $prefix : $prefix . '.';
+    return array_map(static fn (string $source): Named => Named::key($surface->getDefinition($source)?->getLabel() ?? $source, $prefix . $source), $computed->from);
+  }
+
+  /**
+   * Says that a key is computed, in one whole sentence per count of keys.
+   *
+   * Three sentences, each one source string per count of the keys it is
+   * computed from: the note ("Slug is computed from Name; the value sent
+   * was not taken."), the refusal of another value ("Slug is computed
+   * from Name and takes no value of its own; leave it out."), and the
+   * sentence set after a refusal of the value it holds ("This is
+   * computed from Name.").
+   *
+   * Decision: see docs/decisions.md#a-refusal-names-what-it-depends-on.
+   *
+   * @param string|\Stringable $label
+   *   The computed key's label.
+   * @param \Drupal\data_surface\Pipeline\Named[] $sources
+   *   The keys it is computed from, at least one.
+   * @param string $kind
+   *   Which sentence: `note`, `refusal` or `after`.
+   *
+   * @return \Drupal\Core\StringTranslation\TranslatableMarkup
+   *   The sentence.
+   */
+  protected function computedFrom(string|\Stringable $label, array $sources, string $kind): TranslatableMarkup {
+    $context = ['context' => self::REFUSAL_CONTEXT];
+    $count = count($sources);
+    $arguments = ['@label' => $label] + match ($count) {
+      1 => ['@source' => $sources[0]],
+      2 => ['@first' => $sources[0], '@second' => $sources[1]],
+      default => ['@sources' => implode(', ', array_map('strval', $sources))],
+    };
+    return match ([$kind, min($count, 3)]) {
+      ['note', 1] => $this->t('@label is computed from @source; the value sent was not taken.', $arguments, $context),
+      ['note', 2] => $this->t('@label is computed from @first and @second; the value sent was not taken.', $arguments, $context),
+      ['note', 3] => $this->formatPlural($count, '@label is computed from @sources; the value sent was not taken.', '@label is computed from these @count keys, @sources; the value sent was not taken.', $arguments, $context),
+      ['refusal', 1] => $this->t('@label is computed from @source and takes no value of its own; leave it out.', $arguments, $context),
+      ['refusal', 2] => $this->t('@label is computed from @first and @second and takes no value of its own; leave it out.', $arguments, $context),
+      ['refusal', 3] => $this->formatPlural($count, '@label is computed from @sources and takes no value of its own; leave it out.', '@label is computed from these @count keys, @sources, and takes no value of its own; leave it out.', $arguments, $context),
+      ['after', 1] => $this->t('This is computed from @source.', $arguments, $context),
+      ['after', 2] => $this->t('This is computed from @first and @second.', $arguments, $context),
+      default => $this->formatPlural($count, 'This is computed from @sources.', 'This is computed from these @count keys: @sources.', $arguments, $context),
+    };
+  }
+
+  /**
+   * Names the sources in each refusal of a computed key nobody sent.
+   *
+   * A refusal of the value a computed key holds (its pattern, a storage's
+   * rule) is about a value the caller did not send: a sentence after it
+   * names the keys it is computed from, the ones the caller can change.
+   * While one of those is refused itself, the computed key's refusals are
+   * left out: they follow from it, and fixing it fixes them.
+   *
+   * Decision: see
+   * docs/decisions.md#a-computed-key-is-a-pure-function-of-its-sources.
+   *
+   * @param \Drupal\data_surface\Pipeline\Violation[] $violations
+   *   The violations of one level, filed under its keys.
+   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   *   The data surface describing the level.
+   *
+   * @return \Drupal\data_surface\Pipeline\Violation[]
+   *   The same, each of a computed key naming its sources.
+   */
+  protected function namingSources(array $violations, DataSurfaceInterface $surface): array {
+    $refused = [];
+    foreach ($violations as $violation) {
+      $refused[$violation->key] = TRUE;
+    }
+    $named = [];
+    foreach ($violations as $violation) {
+      $definition = $violation->key === '' ? NULL : $surface->getDefinition($violation->key);
+      $computed = Computed::of($definition);
+      if ($computed === NULL || $violation->code === Violation::COMPUTED) {
+        $named[] = $violation;
+        continue;
+      }
+      if (array_intersect_key($refused, array_flip($computed->from)) !== []) {
+        continue;
+      }
+      $after = $this->computedFrom($definition->getLabel() ?? $violation->key, $this->sources($surface, $computed, $this->frame[0]), 'after');
+      $named[] = $violation->saying(new Sentences($violation->message, $after));
+    }
+    return $named;
+  }
+
+  /**
    * Answers whether what was sent for a locked key is what it keeps.
    *
    * The value sent is read as though the key were open, and so is what
@@ -996,6 +1199,14 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
       $name = (string) $name;
       $definition = $entry->definition;
       $value = $values[$name] ?? NULL;
+      $computed = $entry->locked ? NULL : Computed::of($definition);
+      $refusal = $computed === NULL ? NULL : $this->notComputed($surface, $entry, $computed, $values, $current);
+      if ($refusal !== NULL) {
+        // Decision: see
+        // docs/decisions.md#a-computed-key-is-a-pure-function-of-its-sources.
+        $errors[] = $refusal;
+        continue;
+      }
       if (DoesNotApply::marks($definition)) {
         // Nothing about a key that does not apply is required or held to
         // a rule; a value sent for it other than what it holds is refused.
@@ -1125,7 +1336,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
         ? new Violation('', '', $this->t('These values cannot be checked here: the schema they were read from refers to @reference, which is outside it.', ['@reference' => $said]), Violation::UNRESOLVED)
         : new Violation('', '', $this->t('These values do not hold to the schema they were read from: @error', ['@error' => $said]), Violation::NOT_VALID);
     }
-    return $errors;
+    return $this->namingSources($errors, $surface);
   }
 
   /**
@@ -2163,7 +2374,8 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
       $prepared = $this->prepare($surface, $write, $storage);
     }
     catch (StorageViolationsException $e) {
-      return new DataSurfaceResult($values, $e->getViolations(), access: $access, notes: $notes);
+      $this->frame = ['', []];
+      return new DataSurfaceResult($values, new ViolationSet($this->namingSources(iterator_to_array($e->getViolations(), FALSE), $surface)), access: $access, notes: $notes);
     }
     // The set travels on rather than being replaced by an empty one: it
     // blocks nothing, so the run is valid and committed, and the stale

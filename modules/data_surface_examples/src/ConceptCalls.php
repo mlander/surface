@@ -251,12 +251,29 @@ final class ConceptCalls {
         'values' => self::TOWN_HALL,
         'dry_run' => FALSE,
       ],
+      'read' => [
+        'label' => 'Town Hall read back: its slug, computed from its name',
+        'operation' => 'update:read',
+        'parameters' => ['id' => 'town_hall'],
+        'dry_run' => FALSE,
+      ],
       'update' => [
         'label' => "Town Hall's capacity changed: written",
         'operation' => 'update',
         'parameters' => ['id' => 'town_hall'],
         'values' => ['capacity' => 350],
         'dry_run' => FALSE,
+      ],
+      'rename' => [
+        'label' => 'Town Hall renamed, rehearsed: the slug stays as it was set',
+        'operation' => 'update',
+        'parameters' => ['id' => 'town_hall'],
+        'values' => ['label' => 'Town Hall and Annex'],
+      ],
+      'slug_sent' => [
+        'label' => 'A venue sent a slug of its own: refused, naming the key it is computed from',
+        'operation' => 'create',
+        'values' => ['label' => 'Concert Hall', 'id' => 'concert_hall', 'capacity' => 500, 'slug' => 'concerts'],
       ],
       'reorder' => [
         'label' => 'Town Hall moved first and Riverside Hall last, in one write: rehearsed',

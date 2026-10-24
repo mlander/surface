@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createApi, pageOf, SEND_FINGERPRINT, type Fetcher, type Settings } from './api';
 import type { Contract, Narrowed, Schema, Settled, Values, Violation } from './contract';
-import { ContractRefused, inlineSchema, narrow, narrowingStatus, watchedPaths, setAt } from './contract';
+import { ContractRefused, inlineSchema, narrow, narrowingStatus, watchedPaths, setAt, withoutComputed } from './contract';
 import { ContractPanel } from './ContractPanel';
 import { Properties } from './widgets/Field';
 import { LookupContext } from './widgets/Shell';
@@ -251,7 +251,8 @@ export function SurfaceForm({
     setSubmitting(true);
     try {
       const send = settings.sendFingerprint ?? SEND_FINGERPRINT;
-      const { document: result, etag } = await api.submit(current.current, stale.current, send ? fingerprint.current : null);
+      const sent = settled.current === null ? current.current : withoutComputed(settled.current.schema, current.current);
+      const { document: result, etag } = await api.submit(sent, stale.current, send ? fingerprint.current : null);
       setFailure(null);
       setErrors(byPath(result.violations));
       // An operation that only reads answers its run accepted, and writes

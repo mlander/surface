@@ -6,6 +6,7 @@ namespace Drupal\Tests\data_surface\Unit;
 
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\data_surface\Resource\Attribute\RefinesInput;
+use Drupal\data_surface\Resource\DeriverInterface;
 use Drupal\Tests\data_surface\PHPStan\StaticRefinerRule;
 use PHPStan\Rules\Rule;
 use PHPStan\Testing\RuleTestCase;
@@ -41,6 +42,15 @@ final class StaticRefinerRuleTest extends RuleTestCase {
       [sprintf($message, 'readsState', 'state'), 20],
       [sprintf($message, 'asksForService', 'service'), 28],
     ]);
+  }
+
+  /**
+   * Tests a deriver that calls \Drupal:: is flagged, and nothing else of it.
+   */
+  public function testFlagsDeriverReachingForTheContainer(): void {
+    interface_exists(DeriverInterface::class);
+    $message = 'The deriver Drupal\Tests\data_surface\Fixtures\DeriverFixture::derive() calls \Drupal::time(), which reads a service or site state. A computed key is a pure function of the keys it is computed from: a value that needs a service, the clock or the request is a storage\'s to add in its prepare().';
+    $this->analyse([dirname(__DIR__, 2) . '/fixtures/phpstan/DeriverFixture.php'], [[$message, 18]]);
   }
 
 }

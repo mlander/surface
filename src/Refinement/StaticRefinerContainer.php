@@ -82,11 +82,15 @@ final class StaticRefinerContainer implements ContainerInterface {
    * @param string[]|null $refused
    *   NULL to refuse everything but ALLOWED, as for a refiner; or the
    *   services refused, everything else passing, as for an access answer.
+   * @param bool $deriver
+   *   TRUE when what runs is a computed key's deriver, refused as a
+   *   refiner is, in its own words.
    */
   public function __construct(
     protected readonly ContainerInterface $container,
     protected readonly string $refiner,
     protected readonly ?array $refused = NULL,
+    protected readonly bool $deriver = FALSE,
   ) {
   }
 
@@ -109,6 +113,31 @@ final class StaticRefinerContainer implements ContainerInterface {
    */
   public static function guard(string $refiner, callable $call): mixed {
     return static::run(fn (ContainerInterface $container): self => new self($container, $refiner), $call);
+  }
+
+  /**
+   * Calls a computed key's deriver with the global container guarded.
+   *
+   * A deriver is a pure function of the keys it is computed from, as a
+   * static refiner is of the keys it watches, so it is held the same way:
+   * everything but ALLOWED is refused.
+   *
+   * Decision: see
+   * docs/decisions.md#a-computed-key-is-a-pure-function-of-its-sources.
+   *
+   * @param string $deriver
+   *   The deriver, Class::derive(), for the message.
+   * @param callable $call
+   *   The call to it.
+   *
+   * @return mixed
+   *   What it answered.
+   *
+   * @throws \LogicException
+   *   When it asks the container for anything but ALLOWED.
+   */
+  public static function guardDeriver(string $deriver, callable $call): mixed {
+    return static::run(fn (ContainerInterface $container): self => new self($container, $deriver, NULL, TRUE), $call);
   }
 
   /**
@@ -198,6 +227,13 @@ final class StaticRefinerContainer implements ContainerInterface {
     if ($this->refused !== NULL) {
       return new \LogicException(sprintf(
         'The access class %s answered static, its cacheability naming nothing but the account\'s permissions or roles, and asked for %s, which reads site state beside the account. An answer that reads it says so in its cacheability (the thing\'s cache tag, or max-age 0 for State), which makes it runtime.',
+        $this->refiner,
+        $what,
+      ));
+    }
+    if ($this->deriver) {
+      return new \LogicException(sprintf(
+        'The deriver %s asked for %s. A computed key is a pure function of the keys it is computed from: a value that needs a service, the clock or the request is a storage\'s to add in its prepare().',
         $this->refiner,
         $what,
       ));

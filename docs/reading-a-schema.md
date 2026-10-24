@@ -211,7 +211,7 @@ The full schema the emitter writes for a resource or structure, read
 back, builds a structure whose own full schema is that document again,
 byte for byte. `SchemaRoundTripTest` holds it for every resource and
 structure of the examples, the first resource and the test fixtures,
-each in every operation that needs no subject: 34 documents read back
+each in every operation that needs no subject: 43 documents read back
 to themselves. A declaration a runtime refiner narrows is left out (3):
 its rule is a lookup no document states. What does not round-trip is
 listed there, each with its kind, and the test fails when one starts
@@ -226,6 +226,7 @@ to, or differs otherwise:
 | Access | 12 | A lock, a whole locked or `access: live` is the access class's, not the structure's. |
 | An alter's mount | 4 | Its keys, its rules and what it attaches are the alter's: read back, the mount is a map or a child of the owner's, its rules a JsonSchema constraint on the frame. |
 | Keys from the site | 2 | An entry a provider locks, and the port each entry reads, are the provider's: read back, the rules on those ports are a JsonSchema constraint on the frame. |
+| A computed key | 2 | What computes it is a class no document names: read back, it is a key nobody types that holds what is stored, `readOnly` and locked, with no `x-surface.computed`. |
 
 Each of these still reads, builds, and holds values to what the document
 says; what it loses is a marker or the code that would compute it.

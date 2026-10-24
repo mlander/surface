@@ -909,6 +909,12 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
       'a machine name with a capital' => [['id' => 'Town'] + $town, FALSE],
       'a room with no seats' => [$town + ['rooms' => [['id' => 'council', 'label' => 'Council chamber']]], FALSE],
       'a room id with a space' => [$town + ['rooms' => [['id' => 'council room'] + $council]], FALSE],
+      // A computed key: left out it is computed (a venue, above), sent as
+      // computed it is noted, and any other is refused, which neither
+      // document can say, since what it holds follows the name.
+      'the slug it computes, sent' => [$town + ['slug' => 'town-hall'], TRUE],
+      'another slug, sent' => [$town + ['slug' => 'city-hall'], FALSE, TRUE, TRUE],
+      'a slug its pattern refuses, sent' => [$town + ['slug' => 'Town Hall'], FALSE],
     ]);
     $this->assertTable('event.venue', $this->build('event.venue', 'list'), [], [
       'nothing: every venue, from the first' => [[], TRUE],
@@ -929,6 +935,28 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
       'a weight too light' => [['venues' => [['id' => 'harbour', 'weight' => -5000]]], FALSE],
       'a venue with no weight' => [['venues' => [['id' => 'harbour']]], FALSE],
     ]);
+  }
+
+  /**
+   * A computed key, once and on every change, over what is stored.
+   *
+   * Left out, each holds what a write would store; sent as it holds it is
+   * noted and accepted; sent otherwise it is refused by the pipeline,
+   * which both documents leave wide, since no keyword states what it
+   * follows. The handle's own length refuses a long name, and so do both
+   * documents, which state its maximum.
+   */
+  public function testComputedKeys(): void {
+    $stored = ['first' => 'Ada', 'last' => 'Byron', 'code' => 'ADA', 'handle' => 'ada.byron', 'color' => 'blue'];
+    $ann = ['first' => 'Ann', 'last' => 'Byron'];
+    foreach (['nothing stored' => [], 'stored' => $stored] as $label => $held) {
+      $this->assertTable('resource_test.badge', $this->build('resource_test.badge'), $held, [
+        $label . ': left out' => [$ann, TRUE],
+        $label . ': the handle as computed, sent' => [$ann + ['handle' => 'ann.byron'], TRUE],
+        $label . ': another handle, sent' => [$ann + ['handle' => 'ann'], FALSE, TRUE, TRUE],
+        $label . ': a name too long for the handle' => [['first' => 'Ann', 'last' => 'Montgomery'], FALSE],
+      ]);
+    }
   }
 
   /**

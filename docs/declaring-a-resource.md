@@ -564,6 +564,55 @@ It is worth being plain about the edges:
 - **It is not retroactive.** Values written before the key was declared
   secret are plaintext in storage until the next save of that thing.
 
+## Computed keys
+
+A key whose value follows other keys, and that nobody types, is declared
+with `derive()`: typed and labeled as `add()` declares a key, and
+computed by a class from the keys `from:` names. Example 15's venue
+computes its slug from its name:
+
+```php
+$inputs->derive('slug', 'string', t('Slug'), from: ['label'], using: Slugify::class)
+  ->addConstraint('Regex', ['pattern' => '/^[a-z0-9]+(-[a-z0-9]+)*$/D']);
+```
+
+Each class's `use` line: [Namespaces](concepts.md#namespaces).
+
+The class implements `DeriverInterface`, whose one method is static,
+`derive(array $from): mixed`: handed the value of each key `from:`
+names, it answers the value. It is a pure function of those values, held
+to it as a static refiner is: with assertions on it runs with the
+container guarded (`StaticRefinerContainer::guardDeriver()`), and the
+module's PHPStan rule flags a `\Drupal::` call in it. A value that needs
+a service, the clock or the request, such as a changed time, is no
+computed key: a storage's `prepare()` adds it.
+
+- **When.** `when: Derive::ON_CREATE`, the default, computes it while
+  storage holds nothing for it, which is when the thing is created, and
+  keeps it after: renaming a venue leaves its slug, and every link to
+  it, as it was. `when: Derive::ON_CHANGE` computes it again on every
+  write that changes a key in `from`. A write that changes none of them
+  keeps what is stored either way.
+- **Judged like any key.** The pipeline computes it once the other keys
+  are accepted, then validates it by its own constraints and rules, and
+  storage writes it. A refusal of it names the keys it is computed from,
+  the ones a caller can change: "The slug riverside-hall is held
+  already, by riverside: a slug is held once across the venues. This is
+  computed from Name."
+- **Never typed.** Both documents state it `readOnly` with
+  `x-surface.computed: {"from": ["label"], "when": "create"}` and never
+  in `required`; the write tool's `values` leaves it out and the read
+  answers it; the form draws it fixed; `POST .../schema` answers the
+  value it would compute for the values in progress. A value sent for it
+  equal to the one it holds is noted, code `computed`, and not taken, so
+  a client that writes back the document it read is not refused; any
+  other is refused with the same code
+  ([decision](decisions.md#a-computed-key-is-a-pure-function-of-its-sources)).
+
+A computed key is a resource's own key, at its top: `derive()` is on the
+owner's blueprint only, and refused in a structure, a structure mixed in
+and outputs.
+
 ## Required
 
 `required` on a core `DataDefinition` is falsy unless you set it:

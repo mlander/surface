@@ -118,6 +118,13 @@ export interface Extension {
   patternMessage?: string;
   /** On a key that refers to an entity: what it refers to. Its value is the id. */
   reference?: Reference;
+  /**
+   * On a computed key, beside `readOnly`: the keys it is computed from, and
+   * whether once, when the thing is created, or again whenever one of them
+   * changes. Nobody types it: the page shows what the server's narrowing
+   * answers for it and never sends it.
+   */
+  computed?: { from: string[]; when: 'create' | 'change' };
   /** On an object that only groups each module's fieldset: draw nothing around them. */
   group?: boolean;
   /** On a module's fieldset inside a group: draw it right after this sibling of the group instead. */
@@ -1100,6 +1107,12 @@ export function watchedPaths(schema: Schema, values: Values, prefix = ''): Set<s
     for (const dependency of property['x-surface']?.dependsOn ?? []) {
       watched.add(prefix + dependency);
     }
+    // What a computed key is computed from: no dependent the full schema
+    // states, so a change of one is narrowed by the server, which answers
+    // the value it computes.
+    for (const source of property['x-surface']?.computed?.from ?? []) {
+      watched.add(prefix + source);
+    }
     const nested = values[name];
     if (property['x-surface']?.list && property.items !== undefined && Array.isArray(nested)) {
       // Each item of a collection is a frame of its own, under its delta.
@@ -1117,6 +1130,23 @@ export function watchedPaths(schema: Schema, values: Values, prefix = ''): Set<s
     }
   }
   return watched;
+}
+
+/**
+ * The values to send: every key but a computed one, which nobody types.
+ *
+ * The server computes it from the keys it is computed from as they are
+ * sent, so a value the page holds for it, from a narrowing asked before the
+ * last change, is never sent and refused.
+ */
+export function withoutComputed(schema: Schema, values: Values): Values {
+  const sent: Values = { ...values };
+  for (const [name, property] of Object.entries(schema.properties ?? {})) {
+    if (property['x-surface']?.computed !== undefined) {
+      delete sent[name];
+    }
+  }
+  return sent;
 }
 
 export function isObject(value: unknown): value is Values {
@@ -1163,7 +1193,7 @@ export function fieldId(path: string): string {
 // (ContractEmitter::property()), keyword for keyword.
 
 /** Why a change was asked of the server rather than narrowed here. */
-export type Marker = 'live' | 'refine' | 'access' | 'stored' | 'unsettled' | 'pending';
+export type Marker = 'live' | 'refine' | 'access' | 'stored' | 'computed' | 'unsettled' | 'pending';
 
 /** A change the page cannot narrow by itself, and the key that says why. */
 export class Unsettled extends Error {
@@ -1214,6 +1244,7 @@ export function narrowingStatus(narrowed: Narrowed): string {
     refine: 'depends on a rule to refine with values',
     access: 'has access only the server decides',
     stored: 'stands for a stored value only the server holds',
+    computed: 'is computed on the server',
     unsettled: 'could not be narrowed here',
     pending: 'changed while an earlier change was being asked',
   };
@@ -1234,6 +1265,13 @@ export function narrowingStatus(narrowed: Narrowed): string {
  * resolver cannot settle is asked rather than guessed.
  */
 export function narrow(request: Narrowing): Narrowed {
+  // A key computed from the one changed: what it holds is the server's to
+  // compute, which its narrowing answers.
+  for (const [name, property] of Object.entries(request.full.properties ?? {})) {
+    if (property['x-surface']?.computed?.from.includes(request.changed)) {
+      return { local: false, key: name, marker: 'computed' };
+    }
+  }
   try {
     const found = dependents(request.full, request.values, request.changed);
     if (found.names.length === 0) {

@@ -3,6 +3,7 @@ status: true
 dependencies: {  }
 id: harbour
 label: 'Harbour Centre'
+slug: harbour-centre
 capacity: 950
 address: 'Pier 3, Harbour Road'
 rooms:

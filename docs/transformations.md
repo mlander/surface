@@ -6,7 +6,7 @@ was saved; and where a value nobody types comes from. This page answers
 each in one place, says where the mechanism lives, and quotes the
 shipped code that does it. Every quote of shipped code is pinned by
 `QuotedCodeDocsTest`, so it fails when the code changes and the page
-does not; the two snippets of code that does not exist yet say so. The concepts are documented elsewhere and linked from each
+does not; the one snippet of code that does not exist yet says so. The concepts are documented elsewhere and linked from each
 section; nothing here is a concept of its own.
 
 ## Representation: asked one way, stored another, sent a third
@@ -421,25 +421,64 @@ in no read.
 
 Each class's `use` line: [Namespaces](concepts.md#namespaces).
 
-### The gap: a declared computed key
+### A computed key: a value of the resource that follows others
 
-What the module cannot say today is a key whose value is computed from
-other keys and that callers read: a slug from a title, a changed
-timestamp. Such a key is never accepted, appears in the read, and is
-stated in the contract as read-only with its source. An output does not
-fit, since an output is not stored and a read does not answer it; a
-`prepare()` that writes it does not fit, since no contract states it.
+A key whose value is computed from other keys, and that callers read, is
+declared with `derive()` ([Declaring a resource](declaring-a-resource.md#computed-keys)).
+Example 15's venue computes its slug from its name:
 
-The proposed spelling:
+<!-- excerpt: modules/data_surface_examples/src/Resource/VenueResource.php -->
 
 ```php
-$inputs->derive('slug', 'string', from: ['title'], Slug::class);
+$inputs->derive('slug', 'string', t('Slug'), from: ['label'], using: Slugify::class)
+  ->setDescription(t('The name in a link: lowercase letters, numbers and dashes, set when the venue is added.'))
+  ->addConstraint('Regex', [
+    'pattern' => '/^[a-z0-9]+(-[a-z0-9]+)*$/D',
+    'message' => t('The slug may hold only lowercase letters, numbers and single dashes between them.'),
+  ])
+  ->addConstraint('Length', ['max' => 128]);
 ```
 
-The value is computed at the prepare stage from the accepted values it
-names, under the same static guard a static refiner runs under, so it
-is a pure function of `from`. Both documents state it `readOnly` with
-`x-surface.computed` naming its source, and a value sent for it is
-refused. Designed, not built; see ROADMAP item 21, which lists what the
-design still has to settle: cacheability, the read tool, the contract
-mark, and what happens on an edit when the source changes.
+The class is a pure function of the keys `from:` names:
+
+<!-- excerpt: modules/data_surface_examples/src/Slugify.php -->
+
+```php
+public static function derive(array $from): mixed {
+  $slug = trim((string) preg_replace('/[^a-z0-9]+/', '-', mb_strtolower((string) ($from['label'] ?? ''))), '-');
+  return $slug === '' ? NULL : $slug;
+}
+```
+
+It differs from the two above in what it is: an output is not stored
+and no read answers it, and what `prepare()` adds is in no contract. A
+computed key is stored, loaded and answered by the read like any key,
+and both documents state it. Three choices settle it
+([decision](decisions.md#a-computed-key-is-a-pure-function-of-its-sources)):
+
+- **Pure derivations only.** The deriver runs under the guard a static
+  refiner runs under, and the PHPStan rule flags `\Drupal::` in it, so
+  the narrowing (`POST .../schema`) can run it ahead of a write and
+  answer the value it would compute for the values in progress. A
+  changed time reads the clock: it stays a storage's to add in
+  `prepare()`.
+- **When it runs.** Once the other keys are accepted, from their
+  accepted values: while storage holds nothing for it, which is when the
+  thing is created, and again on every write that changes a key in
+  `from` only when it says `when: Derive::ON_CHANGE`. A write that
+  changes no source keeps what is stored. The value is then judged by
+  its own constraints and rules, as any key's is, and a refusal of it
+  names the keys it is computed from, the ones a caller can change.
+- **A value sent for it.** Equal to the one it holds, it is noted, code
+  `computed`, and not taken, as a locked key's is, so a client that
+  writes back the document it read is not refused; any other is
+  refused, code `computed`: "Slug is computed from Name and takes no
+  value of its own; leave it out."
+
+Both documents state it `readOnly` with `x-surface.computed: {"from":
+["label"], "when": "create"}` and no `const`, since what it holds follows
+its sources; it is never in `required`. The write tool's `values` leaves
+it out, and the read tool answers it, so the two shapes differ by
+exactly the computed keys.
+
+Each class's `use` line: [Namespaces](concepts.md#namespaces).

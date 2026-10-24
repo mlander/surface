@@ -147,7 +147,7 @@ The emitter writes two documents from one data surface, by one code path.
   the schema for these answers settles it
   ([decision](decisions.md#access-is-static-or-runtime-read-from-its-cacheability)).
   Its `x-surface` carries only what holds for
-  any values (`contract`, `version`, `locked`, `access`, `dependsOn`,
+  any values (`contract`, `version`, `locked`, `access`, `computed`, `dependsOn`,
   `enumerated`, `declared`, `refine`, `live`, `rules`, `within`,
   the `by` and `variants` of a key with variants, `group`, `after`,
   `patternMessage`,
@@ -374,6 +374,7 @@ under `$defs`, and referred to ([reusable subschemas](#reusable-subschemas)).
 | a list | `type: array`, `items`, never null: an empty item is dropped before anything reads the list ([decision](decisions.md#an-item-is-never-null)) |
 | a collection | `type: array`, `items` a reference to the child's def, narrowed by composition only where every item differs from it (a key the child's operation locked, a locked list), `minItems` and `maxItems` from its Count as the parent's refiners left it, and `x-surface.list: true` ([below](#collections)) |
 | a locked key | `readOnly: true` and `const` of the value the operation knows |
+| a computed key, `derive()` | `readOnly: true` and `x-surface.computed`, no `const` (what it holds follows its sources), never in `required`; in `values` what it holds ([Declaring a resource](declaring-a-resource.md#computed-keys)) |
 | a child its access locked | `readOnly: true` on the part, and on every key inside it with `const` of what is stored (none in the full schema); an omitted child is not there at all ([Three answers](resources.md#three-answers)) |
 | a key under a runtime access answer, in the full schema | there and writable, as the static answers leave it, with `x-surface.access: "live"`: it may be locked or left out once the subject is known; the schema for these answers says which, and marks nothing ([Static and runtime access](resources.md#static-and-runtime-access)) |
 | a secret | `writeOnly: true`, its declared type, never in `required` (left out or `null`, the stored secret stands), no default, `null` in `values` ([decision](decisions.md#a-secret-is-optional-never-nullable)) |
@@ -397,6 +398,7 @@ under `$defs`, and referred to ([reusable subschemas](#reusable-subschemas)).
 | `by`, `variants`, `chosen` | On a key with variants: the deciding key; a map from each value that chooses a variant to its def's pointer, `{"free": "#/$defs/registration.step3.ticket.free", "paid": "#/$defs/registration.step3.ticket.paid"}` (a list of the values in contract 1); and the value chosen now. |
 | `fixed` | On a deciding key whose variants offer one value, beside its `const`: the label that value is offered as, which a renderer draws in place of a select of one. Additive in contract 3. |
 | `reference` | On a key that refers to an entity, in both documents, listed or not: what it refers to, `{"entityType": "node", "bundles": ["article"]}` (`bundles` only where the key names any), or for the id of a key of any entity type `{"by": "entity_type"}`, its entity type the sibling's value. The value is the id. A client finds an id at the resource's lookup ([below](#a-lookup)). Additive in contract 3 ([decision](decisions.md#a-reference-is-an-id-with-a-list-the-site-decides-listed-or-looked-up)). |
+| `computed` | On a computed key, in both documents, beside `readOnly: true`: the keys it is computed from and when, `{"from": ["label"], "when": "create"}`, `create` for once, while storage holds nothing for it, `change` for again on every write that changes one of them. Nobody types it: a client shows it, narrows with `POST .../schema` when a key in `from` changes, which answers the value it would compute, and leaves it out of a write; a value sent equal to what it holds is noted, code `computed`, and any other refused. Additive in contract 3 ([decision](decisions.md#a-computed-key-is-a-pure-function-of-its-sources)). |
 | `group` | Only when `true`, on `third_party_settings`: the object only groups one object per contributing module, each that module's fieldset, so it has no `title` or `description` and a renderer draws nothing around them, as the form does. |
 | `after` | On a module's object inside a `group`, when its alter placed it (`describe(..., after:)`): draw this fieldset after the named property of the object that contains its group. Only where it is drawn: its properties stay in the group, where its values are sent, and the schema's order and nesting do not move. |
 | `checkedOnServer` | Constraints no keyword states, each `{constraint, message}`: the constraint's plugin id, and what it checks, the constraint's own `message` where it was given one (a Regex's), else its plugin's label, else the id: `[{"constraint": "DataSurfaceUniqueNodeType", "message": "Unique content type machine name"}]`. A list of plugin ids in contract 1. A `JsonSchema` entry, what a structure read from a schema kept of it, carries the schema beside its message, `{"constraint": "JsonSchema", "message": "Checked on the server against the schema it was read from: uniqueItems.", "schema": {"uniqueItems": true}}`; on an object (the top, a def) it is what that schema says of the object as a whole ([Reading a schema](reading-a-schema.md#what-is-kept)). |
@@ -1245,6 +1247,13 @@ read's, the document it stands in for:
    ["/room"]`, `discarded: ["/room", "/capacity"]`; putting the venue
    back, with `X-Surface-Stale: /room` sent, shows the reading room
    chosen again.
+4. A computed key holds the value a write of these values would store:
+   computed from what its sources hold, while storage holds nothing for
+   it or when it says `when: "change"` and a source moved, else what is
+   stored. Typing "Town Hall" as a new venue's name answers its slug,
+   `town-hall`, in `values`, so a client shows the slug as the name is
+   typed and never sends it
+   ([decision](decisions.md#a-computed-key-is-a-pure-function-of-its-sources)).
 
 The document is emitted from the form's own overlay,
 `refinementOverlay()`, settled to [the same fixed point](forms.md#the-in-form-half-discarding-orphaned-input)

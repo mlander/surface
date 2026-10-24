@@ -136,6 +136,14 @@ final class DefinitionMetadata {
   protected const ARRANGEMENT_KEY = 'data_surface_arrangement';
 
   /**
+   * The definition array key holding what a computed key is computed from.
+   *
+   * Holds a Computed: the keys, the deriver and when. Set by
+   * BlueprintInterface::derive() alone.
+   */
+  protected const COMPUTED_KEY = 'data_surface_computed';
+
+  /**
    * Declares the value a definition starts from.
    *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
@@ -581,6 +589,37 @@ final class DefinitionMetadata {
     return $definition instanceof \ArrayAccess
       && $definition->offsetExists(static::ALWAYS_HELD_KEY)
       && (bool) $definition->offsetGet(static::ALWAYS_HELD_KEY);
+  }
+
+  /**
+   * Says a key is computed from others, and how.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The key's definition.
+   * @param \Drupal\data_surface\Computed $computed
+   *   What it is computed from, by what, and when.
+   *
+   * @see docs/decisions.md#a-computed-key-is-a-pure-function-of-its-sources
+   */
+  public static function setComputed(DataDefinitionInterface $definition, Computed $computed): void {
+    static::arrayAccess($definition)->offsetSet(static::COMPUTED_KEY, $computed);
+  }
+
+  /**
+   * Reads what a key is computed from.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The key's definition.
+   *
+   * @return \Drupal\data_surface\Computed|null
+   *   What it is computed from, or NULL for a key a caller types.
+   */
+  public static function computedOf(DataDefinitionInterface $definition): ?Computed {
+    if (!$definition instanceof \ArrayAccess || !$definition->offsetExists(static::COMPUTED_KEY)) {
+      return NULL;
+    }
+    $computed = $definition->offsetGet(static::COMPUTED_KEY);
+    return $computed instanceof Computed ? $computed : NULL;
   }
 
   /**

@@ -11,6 +11,8 @@ use Drupal\Component\Plugin\Exception\PluginNotFoundException;
 use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
+use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
+use Drupal\data_surface\Computed;
 use Drupal\data_surface\DataSurfaceBuilderInterface;
 use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Port;
@@ -18,6 +20,8 @@ use Drupal\data_surface\Reference\EntityReferenceStructure;
 use Drupal\data_surface\Resource\Arrangement;
 use Drupal\data_surface\Resource\BlueprintInterface;
 use Drupal\data_surface\Resource\DefinesInputsInterface;
+use Drupal\data_surface\Resource\Derive;
+use Drupal\data_surface\Resource\DeriverInterface;
 use Drupal\data_surface\Resource\DefinesOutputsInterface;
 use Drupal\data_surface\Resource\KeysFromSiteInterface;
 use Drupal\data_surface\Resource\ResourceCallable;
@@ -778,6 +782,45 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
     if (isset($this->ports[$key])) {
       throw new \LogicException(sprintf('"%s" is read as a port by this blueprint, so it cannot also be a key: a port is the container\'s key, read under a name of the structure\'s own.', $key));
     }
+  }
+
+  /**
+   * {@inheritdoc}
+   *
+   * Decision: see
+   * docs/decisions.md#a-computed-key-is-a-pure-function-of-its-sources.
+   */
+  public function derive(string $key, string $type, string|\Stringable $label, array $from, string $using, string $when = Derive::ON_CREATE): DataDefinition {
+    $refuse = fn (string $why): \LogicException => new \LogicException(sprintf('derive("%s") on %s %s', $key, $this->name($this->owner), $why));
+    if ($this->outputs) {
+      throw $refuse('declares a computed output: an output is emitted, never stored, so it has nothing to compute; a computed key is an input the caller does not type.');
+    }
+    if ($this->into !== NULL) {
+      throw $refuse(sprintf('is inside %s, mixed in: a computed key is a resource\'s own key, for now.', $this->name($this->root()->owner)));
+    }
+    if ($this->owner !== NULL && $this->registry?->hasDefinition($this->owner) && !$this->registry->getDefinition($this->owner)->isResource()) {
+      throw $refuse('is in a structure: a computed key is a resource\'s own key, at its top, for now. Declare it on the resource that holds the structure.');
+    }
+    if (!is_subclass_of($using, DeriverInterface::class)) {
+      throw $refuse(sprintf('names %s, which implements no %s: a deriver is a class with a static derive().', $using, DeriverInterface::class));
+    }
+    if (!in_array($when, Derive::ALL, TRUE)) {
+      throw $refuse(sprintf('says when: "%s"; it is Derive::ON_CREATE or Derive::ON_CHANGE.', $when));
+    }
+    if ($from === [] || !array_is_list($from)) {
+      throw $refuse('names no key it is computed from: from: lists one or more keys.');
+    }
+    foreach ($from as $source) {
+      if ($source === $key || !in_array($source, $this->keys, TRUE)) {
+        throw $refuse(sprintf('is computed from "%s", which is no key declared before it in this blueprint.', $source));
+      }
+    }
+    $definition = $this->add($key, $type, $label);
+    if ($definition instanceof ComplexDataDefinitionInterface) {
+      throw $refuse('is a map: a computed key holds one value.');
+    }
+    DefinitionMetadata::setComputed($definition, new Computed($from, $using, $when));
+    return $definition;
   }
 
   /**

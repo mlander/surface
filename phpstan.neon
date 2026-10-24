@@ -34,9 +34,12 @@ parameters:
     - phpstan-bootstrap.php
   ignoreErrors:
     # The broken fixtures exist to be refused when they run; a static
-    # refiner that reaches for the container is one of them.
+    # refiner, or a deriver, that reaches for the container is one of them.
     -
       identifier: dataSurface.staticRefiner
+      path: tests/modules/*/src/*/Broken/*
+    -
+      identifier: dataSurface.deriver
       path: tests/modules/*/src/*/Broken/*
     - identifier: missingType.iterableValue
     - identifier: missingType.generics

@@ -3,6 +3,7 @@ status: true
 dependencies: {  }
 id: riverside
 label: 'Riverside Hall'
+slug: riverside-hall
 capacity: 520
 address: '1 River Walk'
 rooms:

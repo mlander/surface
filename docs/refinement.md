@@ -373,6 +373,11 @@ fills from storage, say. What they make is the honest spelling the easy
 one: a refiner that needs anything but its arguments is a runtime
 refiner, said on the method.
 
+A computed key's deriver is held to the same promise by the first two
+layers: its `derive()` is static, it runs with the container guarded
+(`StaticRefinerContainer::guardDeriver()`), and the PHPStan rule flags
+`\Drupal::` in it ([Computed keys](declaring-a-resource.md#computed-keys)).
+
 Access has the same split, read from an answer's cacheability rather
 than declared, and the same three layers: the build for the account
 alone applies only static answers, the guard above asks a static answer

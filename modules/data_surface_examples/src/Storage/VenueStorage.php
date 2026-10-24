@@ -21,8 +21,9 @@ use Drupal\data_surface_examples\Resource\VenueResource;
  * Example 15: a venue lives on its config entity, and so do all of them.
  *
  * Add, edit and remove are ConfigEntityStorage's, by the venue's machine
- * name, with one rule of its own: a room id is held once across the
- * venues, since example 2 offers a room by it. The two operations over
+ * name, with two rules of its own: a slug is held once across the venues,
+ * since a link names a venue by it, and so is a room id, since example 2
+ * offers a room by it. The two operations over
  * the venues together are read and written here:
  *
  * - **list** loads nothing, since a query has nothing stored, and its
@@ -49,7 +50,7 @@ final class VenueStorage extends ConfigEntityStorage {
   /**
    * {@inheritdoc}
    */
-  public const PROPERTIES = ['id', 'label', 'capacity', 'address', 'rooms', 'weight', 'status'];
+  public const PROPERTIES = ['id', 'label', 'slug', 'capacity', 'address', 'rooms', 'weight', 'status'];
 
   /**
    * {@inheritdoc}
@@ -111,8 +112,8 @@ final class VenueStorage extends ConfigEntityStorage {
   /**
    * {@inheritdoc}
    *
-   * A listing's answer, a reorder's rehearsal, or a venue's, its rooms
-   * held to ids no other venue has.
+   * A listing's answer, a reorder's rehearsal, or a venue's, its slug
+   * and its rooms held to what no other venue has.
    */
   public function prepare(OperationContext $context, array $values): array {
     return match ($context->id) {
@@ -223,7 +224,7 @@ final class VenueStorage extends ConfigEntityStorage {
   }
 
   /**
-   * Rehearses one venue, its rooms held to ids no other venue has.
+   * Rehearses one venue, its slug and rooms held to what no other venue has.
    *
    * @param \Drupal\data_surface\Resource\OperationContext $context
    *   The create or the update.
@@ -234,8 +235,8 @@ final class VenueStorage extends ConfigEntityStorage {
    *   The venue's exported array.
    *
    * @throws \Drupal\data_surface\Pipeline\StorageViolationsException
-   *   When a room id is held twice, here or by another venue, or as
-   *   ConfigEntityStorage refuses.
+   *   When another venue holds the slug, a room id is held twice, here or
+   *   by another venue, or as ConfigEntityStorage refuses.
    */
   protected function venue(OperationContext $context, array $values): array {
     $own = $context->known['id'] ?? $values['id'] ?? NULL;
@@ -248,6 +249,18 @@ final class VenueStorage extends ConfigEntityStorage {
       }
     }
     $refused = [];
+    $slug = $values['slug'] ?? NULL;
+    foreach ($this->venues() as $id => $venue) {
+      if ($id !== $own && is_string($slug) && $venue->slug() === $slug) {
+        // A rule no schema can state, said by the storage that knows the
+        // other venues; the pipeline names the key the slug is computed
+        // from after it.
+        $refused[] = new Violation('slug', '', $this->t('The slug @slug is held already, by @venue: a slug is held once across the venues.', [
+          '@slug' => $slug,
+          '@venue' => $id,
+        ]), Violation::TAKEN);
+      }
+    }
     $seen = [];
     foreach (array_values(is_array($values['rooms'] ?? NULL) ? $values['rooms'] : []) as $delta => $room) {
       $id = is_array($room) && is_string($room['id'] ?? NULL) ? $room['id'] : NULL;

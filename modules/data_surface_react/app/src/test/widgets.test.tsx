@@ -348,6 +348,21 @@ describe('checkboxes, radios and a time', () => {
   });
 });
 
+describe('computed', () => {
+  it('renders a computed key disabled, holding what the server computed, saying so', () => {
+    render(
+      <Form
+        schema={object({ slug: { title: 'Slug', description: 'The name in a link.', type: ['string', 'null'], readOnly: true, 'x-surface': x('text', { computed: { from: ['label'], when: 'create' } }) } }, [])}
+        initial={{ slug: 'town-hall' }}
+      />,
+    );
+    const input = screen.getByLabelText(/Slug/);
+    expect(input).toBeDisabled();
+    expect(input).toHaveValue('town-hall');
+    expect(input).toHaveAccessibleDescription('The name in a link. Computed from other keys when this is created, and kept as it is after.');
+  });
+});
+
 describe('locked', () => {
   it('renders a locked key disabled, saying why', () => {
     render(

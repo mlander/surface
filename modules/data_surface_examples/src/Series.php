@@ -354,7 +354,7 @@ final class Series {
       ],
       15 => [
         'title' => t('a config entity of your own'),
-        'concept' => t('a config entity type with a resource over it, its listing a read with outputs and its reorder an update over the collection'),
+        'concept' => t('a config entity type with a resource over it, its listing a read with outputs, its reorder an update over the collection, and its slug a key computed from the name'),
         'docs' => 'docs/storage.md#a-config-entity',
         'decision' => 'a-listing-is-a-read-only-operation-with-outputs-a-reorder-is-an-update-over-the-collection',
         'routes' => [
@@ -365,12 +365,13 @@ final class Series {
         ],
         'files' => [
           self::MODULE . 'src/Entity/EventVenue.php' => t('the entity type: its declaration, its keys and the properties it exports, and no form, list builder or link'),
-          self::MODULE . 'src/Resource/VenueResource.php' => t('the resource: a venue by its machine name, added, edited and removed, and the venues listed and reordered'),
+          self::MODULE . 'src/Resource/VenueResource.php' => t('the resource: a venue by its machine name, added, edited and removed, and the venues listed and reordered; its slug a computed key'),
+          self::MODULE . 'src/Slugify.php' => t("the slug's deriver: a pure function of the name, run when a venue is added"),
           self::MODULE . 'src/Structure/VenueRoomStructure.php' => t("a room: an item of the venue's rooms"),
           self::MODULE . 'src/Structure/VenueListingStructure.php' => t('what the listing takes, a page and a filter, and what it answers, the page and the total'),
           self::MODULE . 'src/Structure/VenueReorderStructure.php' => t('what the reorder takes: a list of venues and their weights'),
           self::MODULE . 'src/Structure/VenueOrderStructure.php' => t('an item of that list: a venue and its new weight'),
-          self::MODULE . 'src/Storage/VenueStorage.php' => t('the storage: a ConfigEntityStorage, which reads the listing and writes the reorder in one commit'),
+          self::MODULE . 'src/Storage/VenueStorage.php' => t('the storage: a ConfigEntityStorage, which reads the listing, writes the reorder in one commit, and holds a slug to one venue'),
           self::MODULE . 'src/Access/VenueAccess.php' => t('the access class: a disabled venue is only for an account that administers the venues'),
           self::SCHEMA . 'data_surface_examples.event_venue.*' => t("the entity type's config schema, generated from the resource"),
           self::INSTALL . 'data_surface_examples.event_venue.riverside.yml' => t('Riverside Hall, shipped'),

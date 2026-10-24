@@ -155,6 +155,18 @@ the record of the rework that brought the module to the pattern.
   .../{x}:lookup` over HTTP; `x-surface.reference` marks it in both
   documents (example 16, `docs/options.md#a-key-that-refers-to-an-entity`,
   `docs/decisions.md#a-reference-is-an-id-with-a-list-the-site-decides-listed-or-looked-up`).
+- **Computed key**: a key of a resource whose value nobody types,
+  `$inputs->derive('slug', 'string', t('Slug'), from: ['label'], using:
+  Slugify::class, when: Derive::ON_CREATE)`; the class implements
+  `DeriverInterface`, a static `derive(array $from)` run under the static
+  guard. Computed in `accept()` from the accepted sources while storage
+  holds nothing for it (and on every write that changes a source with
+  `Derive::ON_CHANGE`), judged by its own constraints, a refusal naming
+  its sources; stored and read as any key; `readOnly` with
+  `x-surface.computed` in both documents, left out of the write tool's
+  `values`; a value sent equal to it noted, any other refused, code
+  `computed` (example 15's slug,
+  `docs/decisions.md#a-computed-key-is-a-pure-function-of-its-sources`).
 - **Contract**: the JSON Schema a built resource or structure emits.
 - **Version**: `#[Resource(version:)]` or `#[Structure(version:)]`, from
   1, counting the breaking changes made to its stored values; stamped
@@ -371,7 +383,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 The full lane's phpunit line reads, as of this writing:
 
 ```
-phpunit: Tests: 1494, Assertions: 30974, Errors: 0, Failures: 0, Skipped: 0. Classes: 200 of 200, 8 at a time, browser classes 4.
+phpunit: Tests: 1509, Assertions: 31297, Errors: 0, Failures: 0, Skipped: 0. Classes: 201 of 201, 8 at a time, browser classes 4.
 ```
 
 the same counts a plain phpunit run of the tree gives. `run-tests.sh`

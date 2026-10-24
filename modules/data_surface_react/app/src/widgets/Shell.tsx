@@ -34,6 +34,12 @@ export const LookupContext = createContext<Lookup | null>(null);
 /** The note a locked element carries, as the form builder appends it. */
 export const LOCKED_NOTE = 'Fixed for this operation.';
 
+/** The note a computed key carries, by when it is computed, in place of the locked one. */
+export const COMPUTED_NOTES = {
+  create: 'Computed from other keys when this is created, and kept as it is after.',
+  change: 'Computed from other keys, again whenever they change.',
+} as const;
+
 /** The note a secret carries, as the string widget appends it. */
 export const SECRET_NOTE = 'Leave blank to keep the current value.';
 
@@ -52,11 +58,13 @@ export function RequiredMarker(): JSX.Element {
 
 /**
  * What is said under an element: its description, the help its
- * arrangement gives, and the locked or secret note, as the form builder
- * appends them.
+ * arrangement gives, and the locked, computed or secret note, as the form
+ * builder appends them.
  */
 function notesOf(props: FieldProps): string[] {
-  return [props.schema.description, props.schema['x-surface']?.arrangement?.help, isLocked(props) ? LOCKED_NOTE : undefined, props.schema.writeOnly ? SECRET_NOTE : undefined]
+  const computed = props.schema['x-surface']?.computed;
+  const fixed = computed !== undefined && !props.disabled && !props.schema['x-surface']?.locked ? COMPUTED_NOTES[computed.when] : isLocked(props) ? LOCKED_NOTE : undefined;
+  return [props.schema.description, props.schema['x-surface']?.arrangement?.help, fixed, props.schema.writeOnly ? SECRET_NOTE : undefined]
     .filter((note): note is string => typeof note === 'string' && note !== '');
 }
 

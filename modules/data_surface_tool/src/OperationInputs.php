@@ -11,6 +11,7 @@ use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\StringTranslation\TranslationInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
+use Drupal\data_surface\Computed;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\Pipeline\Outbound;
 use Drupal\data_surface\Resource\OperationContext;
@@ -417,12 +418,12 @@ final class OperationInputs {
     if ($operation->needsNothing()) {
       $context = $this->resources->operation($resource->name(), $operation->id);
       $built = $this->listed($resource, $context, $declared);
-      $map = $this->map($resource, $built, $this->knownIdentity($resource, $context), $operation);
+      $map = $this->map($resource, $built, $this->knownIdentity($resource, $context), $operation, !$input);
     }
     else {
       // Decision: see docs/decisions.md#identity-before-the-parameters.
       $built = $neutral ?? $this->listed($resource, new OperationContext($operation->id), $declared);
-      $map = $this->map($resource, $built, $this->suppliedIdentity($resource, $operation), $operation);
+      $map = $this->map($resource, $built, $this->suppliedIdentity($resource, $operation), $operation, !$input);
     }
     if ($input) {
       // Decision: see docs/decisions.md#a-refusal-names-what-it-depends-on.
@@ -663,11 +664,16 @@ final class OperationInputs {
    * @param \Drupal\data_surface\ResourceBuild\OperationDefinition|null $operation
    *   The operation, whose tool's description may say once what every
    *   key would; NULL when it is not known.
+   * @param bool $computed
+   *   TRUE to keep the computed keys, which the read answers; the write
+   *   takes none, so its `values` leaves them out.
+   *   Decision: see
+   *   docs/decisions.md#a-computed-key-is-a-pure-function-of-its-sources.
    *
    * @return \Drupal\tool\TypedData\MapInputDefinition
    *   The map, required when any of its properties is.
    */
-  protected function map(ResourceDefinition $resource, DataSurfaceInterface $built, array $known, ?OperationDefinition $operation = NULL): MapInputDefinition {
+  protected function map(ResourceDefinition $resource, DataSurfaceInterface $built, array $known, ?OperationDefinition $operation = NULL, bool $computed = FALSE): MapInputDefinition {
     $this->listedTags = Cache::mergeTags($this->listedTags, $built->getCacheTags());
     $map = $this->inputDefinitions->fromSurface(
       $built,
@@ -678,6 +684,9 @@ final class OperationInputs {
     $this->inputDefinitions->withLookups($map, $built, $operation === NULL ? NULL : $this->lookup($resource, $operation));
     $this->listedTags = Cache::mergeTags($this->listedTags, $this->inputDefinitions->takeListTags());
     $properties = array_diff_key($map->getPropertyDefinitions(), array_flip($known));
+    if (!$computed) {
+      $properties = array_filter($properties, static fn (string $name): bool => Computed::of($built->getDefinition($name)) === NULL || $built->getDefinitions()->isLocked($name), ARRAY_FILTER_USE_KEY);
+    }
     $map->setPropertyDefinitions($properties);
     $map->setRequired(array_filter($properties, static fn (DataDefinitionInterface $property): bool => $property->isRequired()) !== []);
     return $map;

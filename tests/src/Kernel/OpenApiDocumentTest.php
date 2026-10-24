@@ -484,6 +484,44 @@ class OpenApiDocumentTest extends DataSurfaceKernelTestBase {
   }
 
   /**
+   * Tests a computed key: readOnly in the component, sent by no example.
+   *
+   * Example 15's slug is in the create's component and the update's patch,
+   * `readOnly` with `x-surface.computed`, which an OpenAPI client reads as
+   * a property it does not send; the patch keeps it, since a value sent
+   * equal to the one held is noted, not refused. No request example holds
+   * it.
+   *
+   * @see docs/decisions.md#a-computed-key-is-a-pure-function-of-its-sources
+   */
+  public function testComputedKeyIsReadOnlyAndSentByNoExample(): void {
+    $this->enableModules(['field', 'serialization', 'tool', 'data_surface_tool', 'data_surface_examples']);
+    $this->installConfig(['data_surface_examples']);
+    $this->container->get('router.builder')->rebuild();
+    $document = $this->decoded();
+    foreach (['event.venue.create', 'event.venue.update', 'event.venue.update' . SchemaComponents::PATCH] as $component) {
+      $slug = $document['components']['schemas'][$component]['properties']['slug'];
+      $this->assertTrue($slug['readOnly'], $component);
+      $this->assertSame(['from' => ['label'], 'when' => 'create'], $slug['x-surface']['computed'], $component);
+      $this->assertNotContains('slug', $document['components']['schemas'][$component]['required'] ?? [], $component);
+    }
+    $bodies = [
+      $document['paths']['/surface-api/event.venue']['post']['requestBody'],
+      $document['paths']['/surface-api/event.venue/{id}']['patch']['requestBody'],
+    ];
+    $examples = 0;
+    foreach ($bodies as $body) {
+      foreach ($body['content'] as $content) {
+        foreach ($content['examples'] ?? [] as $example) {
+          $examples++;
+          $this->assertArrayNotHasKey('slug', $example['value']);
+        }
+      }
+    }
+    $this->assertGreaterThan(0, $examples, 'The patch body has an example, and it sends no slug.');
+  }
+
+  /**
    * Tests every answer shows the operation's components, not only metadata.
    *
    * The envelope's and the narrowing's `values` are the values component

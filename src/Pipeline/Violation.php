@@ -75,6 +75,14 @@ final class Violation {
   public const LOCKED = 'locked';
 
   /**
+   * A value sent for a computed key: refused when other than it holds.
+   *
+   * As a violation, a value other than the one the key holds; as a note,
+   * the one it holds, not taken.
+   */
+  public const COMPUTED = 'computed';
+
+  /**
    * Null sent for a key its storage always holds.
    */
   public const CANNOT_CLEAR = 'cannot_clear';

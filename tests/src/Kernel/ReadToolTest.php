@@ -234,8 +234,15 @@ class ReadToolTest extends DataSurfaceKernelTestBase {
         'data_surface:event.webhook:configure:read' => ['api_key'],
         default => [],
       };
+      // A computed key is in the read and not in the write: nobody types it.
+      $computed = match ($id) {
+        'data_surface:event.venue:update:read' => ['slug'],
+        default => [],
+      };
       $expected = array_values(array_diff(self::properties($written), $secrets));
-      $this->assertSame($expected, self::properties($values), $id);
+      $this->assertSame($expected, array_values(array_diff(self::properties($values), $computed)), $id);
+      $this->assertSame($computed, array_values(array_intersect(self::properties($values), $computed)), $id);
+      $this->assertSame([], array_values(array_intersect(self::properties($written), $computed)), $id);
       foreach ($values->getPropertyDefinitions() as $name => $property) {
         $this->assertFalse($property->isRequired(), $id . ' ' . $name);
         $promises = array_intersect_key($property->getConstraints(), array_flip(self::PROMISES));

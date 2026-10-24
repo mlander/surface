@@ -1925,6 +1925,91 @@ is that answer
 A dry run of any other operation still answers none.
 (`StorageAdapter::outputs()`)
 
+### A computed key is a pure function of its sources
+
+Decided 2026-10-23, with example 15's slug: a key of the resource whose
+value nobody types, computed from other keys and read by callers. The
+spelling is `$inputs->derive('slug', 'string', t('Slug'), from:
+['label'], using: Slugify::class, when: Derive::ON_CREATE)` on the
+owner's blueprint, returning the definition as `add()` does; the class
+implements `DeriverInterface`, whose `derive(array $from): mixed` is
+static. The pipeline computes it in `accept()`, once every other key of
+its level is accepted, from their accepted values; `validate()` judges
+it by its own constraints and rules, `prepare()` and storage write it as
+any key, and the read answers it. Three choices settle it:
+
+- **Pure derivations only.** A deriver is handed the values of `from`
+  and nothing else. With assertions on it runs with the container
+  guarded (`StaticRefinerContainer::guardDeriver()`, which refuses every
+  service), and the module's PHPStan rule flags `\Drupal::` in it. Why:
+  a pure deriver can run anywhere the values are, so `POST .../schema`
+  and a form's rebuild answer the value a write of the values in
+  progress would store, and the value stored is the value shown. A
+  runtime deriver could not be run ahead, and would need a mark of its
+  own in both documents for a value the client cannot predict. A changed
+  time reads the clock: it stays a storage's to add in `prepare()`, as
+  the language code `ConfigObjectStorage` adds is.
+- **When it runs, `when:`.** `Derive::ON_CREATE`, the default, computes
+  it while storage holds nothing for it, which is how a thing being
+  created starts, and keeps what is stored after: a slug a link points
+  at must not move when the name does. `Derive::ON_CHANGE` computes it
+  again on every write in which a key in `from` holds other than what is
+  stored. A write that changes no source keeps what is stored either
+  way. Why a declaration and not one rule: the two cases are both
+  common and say opposite things about an edit, and only the author
+  knows which the key is. Why "storage holds nothing" and not the
+  operation's `creates`: a thing stored before the key existed gets its
+  value at its next write, and a post-update can write the same value
+  for what is stored (`data_surface_examples_post_update_venue_slugs()`).
+- **A value sent for it.** Equal to the one it holds for these values
+  (computed, or stored where it is not computed again), it is noted,
+  code `computed`, "Slug is computed from Name; the value sent was not
+  taken.", as a locked key's is; any other is kept in the accepted
+  document for `validate()` to refuse, code `computed`, "Slug is
+  computed from Name and takes no value of its own; leave it out.", as
+  a value sent for a key that does not apply is. Why not refuse every
+  value: a client that writes back the document it read sends the
+  slug it was given, and refusing that breaks the plainest client. Why
+  not ignore every value: a different value is a caller who believes it
+  set the slug, and a note it may not read leaves it believing so.
+
+A refusal of the value it holds, which nobody sent (its pattern, the
+venue storage's rule that a slug is held once), names the keys it is
+computed from, the ones a caller can change, in a sentence of its own
+after the refusal: "The slug riverside-hall is held already, by
+riverside: a slug is held once across the venues. This is computed from
+Name." While a key in `from` is refused itself, the computed key's
+refusals are left out: they follow from it.
+
+On the wire: both documents state it `readOnly: true` with
+`x-surface.computed: {from, when}`, no `const` (what it holds follows
+its sources), never in `required`; `readOnly` alone means locked, so the
+marker is what tells a client to show it, narrow when a source changes,
+and never send it. The write tool's `values` leaves it out and the read
+tool's output keeps it, so the two shapes differ by the computed keys;
+the read's definition is still the write's, built with them
+(`OperationInputs::map()`). The form draws it as an item, which posts
+nothing; the React page draws it disabled and leaves it out of a write
+(`withoutComputed()`). The generated config schema describes it as any
+key, since storage holds it. Read back from a document, it is a key
+nobody types that holds what is stored: the deriver is a class no
+document names.
+
+*Open:* a deriver that may read the clock or a service, declared
+runtime, never run ahead and marked in both documents; a computed key in
+a structure, or one an alter declares under its own mount from the
+owner's keys it may read (refused for now: what a structure's level is
+computed from would need the structure's own read and listing, and an
+alter's from the owner's keys crosses the wall the alter reads only at
+its mount); computing again on demand, an operation that recomputes a
+stored value its sources no longer give; the React page computing a
+deriver locally, which needs the deriver in a language the page runs.
+(`Computed`, `DeriverInterface`, `Derive`, `ResourceBlueprint::derive()`,
+`DataSurfacePipeline::acceptComputed()`, `DataSurfacePipeline::notComputed()`,
+`DataSurfacePipeline::namingSources()`, `StaticRefinerContainer::guardDeriver()`,
+`DataSurfaceFormBuilder::refinementOverlay()`, `Slugify`, `ComputedKeysTest`,
+`VenueResourceTest`)
+
 ## Access
 
 ### Access has three answers

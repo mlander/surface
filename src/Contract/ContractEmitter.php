@@ -16,6 +16,7 @@ use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\Core\Validation\ConstraintManager;
 use Drupal\data_surface\DataSurface;
+use Drupal\data_surface\Computed;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\DefinitionMap;
 use Drupal\data_surface\DefinitionMetadata;
@@ -3296,6 +3297,15 @@ final class ContractEmitter {
         $schema['const'] = $value;
       }
     }
+    $computed = Computed::of($definition);
+    if ($computed !== NULL && !$locked) {
+      // Shown, never offered: a value nobody types, with no `const`, since
+      // what it holds follows the keys it is computed from.
+      // Decision: see
+      // docs/decisions.md#a-computed-key-is-a-pure-function-of-its-sources.
+      $schema['readOnly'] = TRUE;
+      $extension['computed'] = $computed->marker();
+    }
     if (isset($schema[self::EXTENSION . '-checked'])) {
       $extension['checkedOnServer'] = $schema[self::EXTENSION . '-checked'];
       unset($schema[self::EXTENSION . '-checked']);
@@ -3572,7 +3582,8 @@ final class ContractEmitter {
    *   Whether the schema requires it.
    */
   protected static function required(DataDefinitionInterface $definition): bool {
-    return $definition->isRequired() && !DefinitionMetadata::isSecret($definition);
+    // Nor is a computed key asked of a caller.
+    return $definition->isRequired() && !DefinitionMetadata::isSecret($definition) && Computed::of($definition) === NULL;
   }
 
   /**

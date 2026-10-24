@@ -606,6 +606,7 @@ key" is that key's pointer.
 | `conflict` | empty | What storage holds changed since the caller read it: the API's `If-Match` no longer names it, a 412. |
 | `taken` | the key | A create names a thing that exists already: its machine name is in use (`ConfigEntityStorage`), or a list holds a thing twice that may be held once (a placed block's condition). |
 | `locked` | the key | In `notes`: a value sent for a locked key, not taken. |
+| `computed` | the key | A value sent for a computed key other than the one it holds; in `notes`, the one it holds, sent and not taken ([Computed keys](declaring-a-resource.md#computed-keys)). |
 | `stale` | the key | In `stale`: a stored value kept that the key no longer offers, with `stored`. |
 | `not_in_range`, `too_high`, `too_low` | the key | Range: a number outside its bounds. |
 | `too_long`, `too_short` | the key | Length: a string outside its bounds. |
@@ -684,7 +685,7 @@ then locks (kept) or omits (refused as an unknown key)
 
 | Stage | Decides |
 | --- | --- |
-| `accept()` | Whether a key was configured, what type its value takes (the coercion table), whether its type is acceptable at all, and how input merges over what is stored. Keeps what a key left out, a list or a secret holds; clears an optional key sent nothing. Leaves out a key that does not apply to what it accepted, unless it was sent another value. Refuses undeclared keys and type mismatches. Asks only the options service, for the values a near miss snaps onto. |
+| `accept()` | Whether a key was configured, what type its value takes (the coercion table), whether its type is acceptable at all, and how input merges over what is stored. Keeps what a key left out, a list or a secret holds; clears an optional key sent nothing. Leaves out a key that does not apply to what it accepted, unless it was sent another value. Computes each computed key from what it accepted, last. Refuses undeclared keys and type mismatches. Asks only the options service, for the values a near miss snaps onto. |
 | `validate()` | Whether a required key was answered, and whether the answers satisfy the constraints of the data surface **refined against those same answers**. Given the stored values, it also tells a stale reference from a refusal, and refuses a value sent for a key that does not apply. |
 | `refine()` | Which definitions narrow, given which dependencies are configured. A dependency holding `FALSE` or `[]` is an answer and does narrow. |
 | `prepare()` / `commit()` | Nothing about values; the storage layout and the write. |

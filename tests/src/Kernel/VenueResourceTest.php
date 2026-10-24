@@ -139,7 +139,7 @@ class VenueResourceTest extends DataSurfaceKernelTestBase {
     $this->assertSame([], $type->getLinkTemplates(), 'No links: the resource\'s routes are the forms.');
     $this->assertFalse($type->hasListBuilderClass());
     $this->assertSame([], $type->getHandlerClasses()['form'] ?? []);
-    $this->assertSame(['id', 'label', 'capacity', 'address', 'rooms', 'weight'], $type->get('config_export'));
+    $this->assertSame(['id', 'label', 'slug', 'capacity', 'address', 'rooms', 'weight'], $type->get('config_export'));
     $this->assertSame(['riverside', 'library', 'harbour'], $this->order());
 
     // The schema is the generated one, and each shipped venue holds to it.
@@ -147,7 +147,9 @@ class VenueResourceTest extends DataSurfaceKernelTestBase {
     $this->assertSame('data_surface_examples.event_venue.*', $described['config']);
     $this->assertNull($described['install'], 'The things shipped are no resource\'s to describe: no install file.');
     $this->assertSame('config_entity', $described['entries'][0]['schema']['type']);
-    $this->assertSame(['id', 'label', 'capacity', 'address', 'rooms', 'weight', 'status'], array_keys($described['entries'][0]['schema']['mapping']));
+    $this->assertSame(['id', 'label', 'slug', 'capacity', 'address', 'rooms', 'weight', 'status'], array_keys($described['entries'][0]['schema']['mapping']));
+    $this->assertTrue($described['entries'][0]['schema']['mapping']['slug']['nullable'], 'The computed slug is in the schema, as any key.');
+    $this->assertSame(['Regex' => ['pattern' => '/^[a-z0-9]+(-[a-z0-9]+)*$/D'], 'Length' => ['max' => 128]], $described['entries'][0]['schema']['mapping']['slug']['constraints']);
     $this->assertTrue($described['entries'][0]['schema']['mapping']['address']['nullable']);
     $this->assertArrayNotHasKey('nullable', $described['entries'][0]['schema']['mapping']['weight'], 'Always held.');
     $typed = $this->container->get('config.typed');
@@ -164,8 +166,8 @@ class VenueResourceTest extends DataSurfaceKernelTestBase {
     $resources = $this->container->get('data_surface.resources');
     $keys = static fn (string $operation, array $arguments = []): array => $resources->build(VenueResource::class, $resources->operation(VenueResource::class, $operation, $arguments))->getDefinitions()->names();
     $outputs = static fn (string $operation): array => $resources->build(VenueResource::class, $resources->operation(VenueResource::class, $operation))->getOutputDefinitions()->names();
-    $this->assertSame(['label', 'id', 'capacity', 'address', 'rooms', 'weight', 'status'], $keys('create'));
-    $this->assertSame(['label', 'id', 'capacity', 'address', 'rooms', 'weight', 'status'], $keys('update', ['id' => 'riverside']));
+    $this->assertSame(['label', 'id', 'slug', 'capacity', 'address', 'rooms', 'weight', 'status'], $keys('create'));
+    $this->assertSame(['label', 'id', 'slug', 'capacity', 'address', 'rooms', 'weight', 'status'], $keys('update', ['id' => 'riverside']));
     $this->assertSame(['offset', 'limit', 'status'], $keys('list'));
     $this->assertSame(['venues'], $keys('reorder'));
     $this->assertSame([], $outputs('create'));
@@ -376,6 +378,70 @@ class VenueResourceTest extends DataSurfaceKernelTestBase {
     $removed = $this->call('delete', ['id' => 'town_hall']);
     $this->assertTrue($removed['success'], $removed['message']);
     $this->assertNull(EventVenue::load('town_hall'));
+  }
+
+  /**
+   * Tests the slug: computed from the name when a venue is added, and kept.
+   *
+   * The write tool takes no slug and the read answers it; a create stores
+   * the slug computed from the name, an edit of the name keeps it; one
+   * sent equal to the one it holds is noted, any other refused naming the
+   * name; one another venue holds is refused by the storage, naming the
+   * name; and the shipped venues hold theirs, which the post-update wrote
+   * where a venue had none.
+   */
+  public function testTheSlugIsComputedFromTheName(): void {
+    $tools = $this->container->get('plugin.manager.tool');
+    $serializer = $this->container->get('tool.definition_serializer');
+    $listed = static fn (string $id): array => $serializer->normalizeInputSchema($tools->createInstance(self::TOOL . $id))['properties'][OperationInputs::VALUES]['properties'] ?? [];
+    $this->assertArrayNotHasKey('slug', $listed('create'), 'Nobody types it: the write leaves it out.');
+    $this->assertArrayNotHasKey('slug', $listed('update'));
+    $this->assertArrayHasKey('slug', $serializer->normalizeOutputSchema($tools->createInstance(self::TOOL . 'update:read'))['properties'][OperationInputs::VALUES]['properties'], 'The read answers it.');
+
+    $added = $this->call('create', ['values' => self::TOWN_HALL]);
+    $this->assertTrue($added['success'], $added['message']);
+    $this->assertSame('town-hall', EventVenue::load('town_hall')->slug());
+    $read = $this->call('update:read', ['id' => 'town_hall']);
+    $this->assertSame('town-hall', $read[OperationInputs::VALUES]['slug']);
+
+    $renamed = $this->call('update', ['id' => 'town_hall', 'values' => ['label' => 'Town Hall and Annex']]);
+    $this->assertTrue($renamed['success'], $renamed['message']);
+    $this->assertSame('Town Hall and Annex', EventVenue::load('town_hall')->label());
+    $this->assertSame('town-hall', EventVenue::load('town_hall')->slug(), 'Computed on create: a rename keeps it.');
+
+    $equal = $this->call('update', ['id' => 'town_hall', 'values' => ['slug' => 'town-hall', 'capacity' => 320]]);
+    $this->assertTrue($equal['success'], $equal['message']);
+    $this->assertStringContainsString('/slug: Slug is computed from label; the value sent was not taken.', $equal['message'], 'The one it holds: noted, not taken.');
+    $this->assertSame(320, EventVenue::load('town_hall')->get('capacity'));
+    $other = $this->call('update', ['id' => 'town_hall', 'values' => ['slug' => 'annex']]);
+    $this->assertSame([
+      [
+        'path' => '/slug',
+        'code' => 'computed',
+        'message' => 'Slug is computed from label and takes no value of its own; leave it out.',
+      ],
+    ], $other['violations']);
+    $this->assertSame('town-hall', EventVenue::load('town_hall')->slug());
+
+    $twin = $this->call('create', [
+      'values' => ['label' => 'Riverside  Hall!', 'id' => 'riverside_two', 'capacity' => 10, 'rooms' => []],
+    ]);
+    $this->assertSame([
+      [
+        'path' => '/slug',
+        'code' => 'taken',
+        'message' => 'The slug riverside-hall is held already, by riverside: a slug is held once across the venues. This is computed from label.',
+      ],
+    ], $twin['violations'], 'A refusal of a value nobody sent names the key the caller can change.');
+    $this->assertNull(EventVenue::load('riverside_two'));
+
+    $shipped = ['riverside', 'library', 'harbour'];
+    $slugs = array_map(static fn (string $id): ?string => EventVenue::load($id)->slug(), $shipped);
+    $this->assertSame(['riverside-hall', 'old-library', 'harbour-centre'], $slugs, 'Each venue shipped holds its slug.');
+    EventVenue::load('library')->set('slug', NULL)->save();
+    require_once dirname(__DIR__, 3) . '/modules/data_surface_examples/data_surface_examples.post_update.php';
+    data_surface_examples_post_update_venue_slugs();
+    $this->assertSame('old-library', EventVenue::load('library')->slug(), 'A venue saved without one is given what an add would have stored.');
   }
 
   /**

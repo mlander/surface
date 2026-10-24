@@ -66,6 +66,7 @@ class SchemaRoundTripTest extends DataSurfaceKernelTestBase {
     'alter' => 'An alter\'s mount: its keys, the rules reading them and the structures it attaches there are the alter\'s; read back, the mount is a map or a child of the owner\'s, its rules a JsonSchema constraint on the frame.',
     'site' => 'Keys from the site: the entries are a provider\'s, so an entry it locks, and the ports each entry reads, are not the document\'s to say; read back, the rules on those ports are a JsonSchema constraint on the frame.',
     'server' => 'A constraint of a module that is not on, which only the server could check: the document names it under `checkedOnServer`, and a name is no constraint the reader can declare.',
+    'computed' => 'A computed key: what computes it is a class, which no document names, so read back it is a key nobody types that holds what is stored, `readOnly` and `x-surface.locked`, with no `x-surface.computed`.',
   ];
 
   /**
@@ -79,11 +80,13 @@ class SchemaRoundTripTest extends DataSurfaceKernelTestBase {
     'event.program:configure' => 'access',
     'event.sales:configure' => 'site',
     'event.ticket_limit:configure' => 'port',
+    'event.venue:create' => 'computed',
     'first.store:configure' => 'coded',
     'registration.step2:configure' => 'coded',
     'registration.step3:configure' => 'coded',
     'resource_test.annex:configure' => 'access',
     'resource_test.archive:configure' => 'coded',
+    'resource_test.badge:configure' => 'computed',
     'resource_test.booth:configure' => 'coded',
     'resource_test.bulletin:configure' => 'coded otherwise',
     'resource_test.cellar:create' => 'coded',

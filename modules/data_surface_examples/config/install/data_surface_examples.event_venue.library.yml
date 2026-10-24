@@ -3,6 +3,7 @@ status: true
 dependencies: {  }
 id: library
 label: 'Old Library'
+slug: old-library
 capacity: 90
 address: '12 Church Lane'
 rooms:
