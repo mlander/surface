@@ -293,31 +293,96 @@ alter's glue reads the structure at its own mount, never narrowing it). `docs/re
 
 ## Running the suite
 
-The suite runs from `web/` inside the ddev container, which is the only
-place that can reach the test database. The browser tests
-(`tests/src/FunctionalJavascript`) drive Chrome through the ddev add-on
-`ddev/ddev-selenium-standalone-chrome` (`ddev add-on get
+`scripts/check.sh` runs the suite and the three gates below, in two
+lanes; `scripts/check.sh --help` lists them and their variables. Both
+print the wall time of each gate and end with a PASS line only when no
+test errored or failed and every gate passed.
+
+- **The fast lane**, `scripts/check.sh --fast` (or
+  `DATA_SURFACE_CHECK_FAST=1`): unit and kernel tests through phpunit,
+  one process per class, `DATA_SURFACE_CHECK_CONCURRENCY` at once (one
+  process for all of them takes 15 minutes, since every kernel test
+  installs its modules). Each class has its own result cache in the
+  container's `/tmp/data_surface-phpunit-cache` and runs with
+  `--order-by=defects`, so what failed last runs first; classes with a
+  defect last time start first, then the slowest. A class's output is
+  printed only when it has a problem. Then phpcs, phpstan and cspell on
+  the files changed since HEAD, untracked ones included. phpstan takes the whole module when no
+  PHP file changed or a `.neon` or `phpstan-*.php` file did. **Iterate
+  on the fast lane.** It runs no functional or browser test, so it is
+  never the last run.
+- **The full lane**, `scripts/check.sh`: every class through core's
+  `run-tests.sh`, each in its own phpunit process with its own database
+  prefix and site directory. Unit, kernel and functional classes run
+  `DATA_SURFACE_CHECK_CONCURRENCY` at a time (default 8), then the
+  browser classes `DATA_SURFACE_CHECK_BROWSER_CONCURRENCY` at a time
+  (default 4); then phpcs, phpstan and cspell over the whole module.
+  **Run the full lane once before handing work back**; its PASS line is
+  the one that counts. `run-tests.sh` builds each class's phpunit command
+  itself, so the full lane has no `--order-by=defects` and no result
+  cache; it orders classes slowest first.
+
+On this machine (Docker VM of 14 CPUs and 8 GB), as of 2026-10-23: the
+full lane takes 5m07s at the defaults (phpunit 4m40s) and 23m03s with
+both set to 1 (phpunit 22m36s; a plain phpunit run takes 21m11s); the
+fast lane takes 2m31s, 3m30s while its caches are empty. For the first
+run, eight classes at once took 3m12s, six 3m54s, ten 3m35s (ddev's
+php-fpm serves eight requests at once). The add-on's Chrome takes 12
+sessions, but six browser tests at once crash its tabs ("tab crashed")
+for want of memory, so the browser classes run apart, four at once (five
+was no faster).
+
+Everything runs inside the ddev container, the only place that can
+reach the test database; `check.sh` works from either side of it. The
+browser tests (`tests/src/FunctionalJavascript`) drive Chrome through
+the ddev add-on `ddev/ddev-selenium-standalone-chrome` (`ddev add-on get
 ddev/ddev-selenium-standalone-chrome`, then `ddev restart`): a
 `selenium-chrome` service with a webdriver on port 4444, and, in the web
 container's environment (`.ddev/config.selenium-standalone-chrome.yaml`),
 `MINK_DRIVER_ARGS_WEBDRIVER` pointing at it and `SIMPLETEST_BASE_URL=http://web`,
-the site under a name both containers reach. The command takes those from
-the environment:
+the site under a name both containers reach. `http://localhost` still
+serves kernel and functional tests, but the browser would look for the
+site in its own container; leave the base URL to the environment. One
+class, or the plain phpunit run, from the site root:
 
 ```
 ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
-  ../vendor/bin/phpunit -c core modules/custom/data_surface'
+  ../vendor/bin/phpunit -c core modules/custom/data_surface/tests/src/Kernel/SomeTest.php'
 ```
 
-`http://localhost` still serves kernel and functional tests, but the
-browser would look for the site in its own container; leave the base URL
-to the environment.
+The full lane's phpunit line reads, as of this writing:
 
-The baseline as of this writing: **1426 tests, 25991 assertions, 0 errors,
-0 failures**. The test and assertion counts drift upward as work lands
-and are not the thing to check. **No test may error and no test may
-fail**, the browser tests included; any error or failure is a real
-regression.
+```
+phpunit: Tests: 1450, Assertions: 29328, Errors: 0, Failures: 0, Skipped: 0. Classes: 195 of 195, 8 at a time, browser classes 4.
+```
+
+the same counts a plain phpunit run of the tree gives. `run-tests.sh`
+prints one line per class counting passed tests only, so `check.sh`
+reads the counts from the JUnit log each class's phpunit writes, and
+checks them against the classes `run-tests.sh` listed. A failure or an
+error is printed with its message; a class with no log (it did not run,
+or its process died) fails the gate by name, as does `run-tests.sh`
+exiting 2 or more with every log clean (an error outside any test). Its
+exit 1 with every log clean is a PHPUnit warning or a risky test, which
+the gate has never failed on; the classes are named. Deprecations never
+fail the gate, in either lane: plain phpunit counts them (42 as of this
+writing) and passes, and the full lane passes `--suppress-deprecations`,
+without which `run-tests.sh` adds `--fail-on-deprecation` to every class.
+The fast lane's line sums phpunit's own lines, one per class:
+`Tests: 1352, Assertions: 25920, Deprecations: 95. Classes: 150, 8 at a
+time.`; its deprecation count is per process, so it is higher than one
+run's.
+
+The test and assertion counts drift upward as work lands and are not the
+thing to check. **No test may error and no test may fail**, the browser
+tests included; any error or failure is a real regression.
+
+**Which kind of test.** A test that only submits a form and reads config
+back is a kernel test; a functional test is for routing, access and
+rendering; a browser test is for an AJAX swap. A functional test costs a
+site install and a browser test a Chrome session, which is most of the
+full lane's time. Existing functional tests convert as units touch them
+(ROADMAP.md, Maintenance).
 
 The suite needs two packages a site may not have: the Tool Belt module
 (`drupal/tool_belt`, under `require-dev` in `composer.json`), which the
@@ -341,9 +406,6 @@ the project-level `web/core/phpunit.xml` and its bootstrap at the site
 root (`phpunit-bootstrap.php`) made possible; delete those two files and
 the old `node_make_sticky_action` install failure comes back, hiding
 these tests again.
-
-`scripts/check.sh` runs the suite and all three gates below in order,
-enforces that rule, and stops at the first failure.
 
 ## The three gates
 

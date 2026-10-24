@@ -1306,6 +1306,21 @@ renames sit in A because they are cheapest before new code exists.
     - Until then, an owner that needs a managed key's value integrates
       the key module itself, as the mailer does.
 
+## Maintenance
+
+- **Functional tests convert to kernel tests as units touch them**, by
+  the rule in `CLAUDE.md` (Running the suite): a test that only submits
+  a form and reads config back is a kernel test. None is converted
+  ahead of the work that touches it. A grep of the 30 functional
+  classes (2026-10-23) finds none that never asserts on rendered markup
+  or routing; 7 are candidates because what they read from the page is
+  form state a kernel test reads from the built form. Two read only
+  element state and the save message (`MixinFormTest`,
+  `FieldUiAddressSettingsTest`); five also read one form fact from
+  markup, an `.error` class, `aria-invalid`, `aria-label`, `maxlength`
+  or `disabled` (`ExamplesStep2ClassicTest`, `RemoveButtonNamesTest`,
+  `NestedCollectionFormTest`, `ShapeFormTest`, `KeysFromSiteFormTest`).
+
 ## Rejected, on the record
 
 So they are not re-proposed: imperative input-mutation hooks before
