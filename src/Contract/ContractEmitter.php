@@ -287,6 +287,29 @@ final class ContractEmitter {
   protected array $refineCounts = ['refined' => 0, 'reused' => 0];
 
   /**
+   * The choices the full schema being written states in full, if any.
+   */
+  protected ?Choices $choices = NULL;
+
+  /**
+   * The URL of the full schema, which a deferred key's `fetch` adds to.
+   *
+   * NULL while a document no route serves is written: `fetch` is then
+   * only its query, read against the full schema's URL.
+   */
+  protected ?string $fetchBase = NULL;
+
+  /**
+   * Where the frame being described is.
+   *
+   * Its pointer, and the choices on the way to it, each a pointer and a
+   * value.
+   *
+   * @var array{pointer: string, steps: list<array{0: string, 1: string}>}
+   */
+  protected array $site = ['pointer' => '', 'steps' => []];
+
+  /**
    * Constructs a ContractEmitter.
    *
    * @param \Drupal\data_surface\Options\DataSurfaceOptions $options
@@ -346,15 +369,22 @@ final class ContractEmitter {
    *   local references resolve wherever it is embedded; NULL for a
    *   document no route serves (the contract panel, a baseline), which
    *   has none.
+   * @param string|null $schema_url
+   *   The URL the operation's full schema is served at, which a deferred
+   *   key's `fetch` template is written against; NULL writes the template
+   *   as its query alone.
    *
    * @return \Drupal\data_surface\Contract\ServedContract
    *   The contract, and what it depends on.
    */
-  public function emit(DataSurfaceInterface $surface, array $values, string $resource_id, ?string $operation_id = NULL, string|\Stringable|null $label = NULL, bool $widgets = FALSE, array $operation = [], ?string $id = NULL): ServedContract {
+  public function emit(DataSurfaceInterface $surface, array $values, string $resource_id, ?string $operation_id = NULL, string|\Stringable|null $label = NULL, bool $widgets = FALSE, array $operation = [], ?string $id = NULL, ?string $schema_url = NULL): ServedContract {
     // Refined surfaces are remembered for this one document.
     // Decision: see docs/decisions.md#what-is-paid-once-and-what-per-request.
-    $was = $this->refined;
+    $was = [$this->refined, $this->choices, $this->fetchBase, $this->site];
     $this->refined = new \WeakMap();
+    $this->choices = NULL;
+    $this->fetchBase = $schema_url;
+    $this->site = ['pointer' => '', 'steps' => []];
     try {
       $cacheability = new CacheableMetadata();
       $stale = [];
@@ -384,7 +414,7 @@ final class ContractEmitter {
       return new ServedContract($document, $cacheability);
     }
     finally {
-      $this->refined = $was;
+      [$this->refined, $this->choices, $this->fetchBase, $this->site] = $was;
     }
   }
 
@@ -416,9 +446,13 @@ final class ContractEmitter {
    *   is there, as the static answers leave it, marked
    *   `x-surface.access: "live"`; the schema for these answers settles
    *   it;
+   * - a list the site decides past the site list limit is `deferred`:
+   *   open, with a `fetch` template naming the choice that states one of
+   *   its entries; with choices, each one chosen is stated in full at its
+   *   key, as under the limit, and every other entry is still left out;
    * - `x-surface` carries only what holds for any values: `locked`,
-   *   `access`, `dependsOn`, `enumerated`, `refine`, `live`, the variants'
-   *   `by` and `variants`, `group`, `after`, `patternMessage`,
+   *   `access`, `dependsOn`, `enumerated`, `deferred`, `refine`, `live`,
+   *   the variants' `by` and `variants`, `group`, `after`, `patternMessage`,
    *   `checkedOnServer`, and the widget hints when asked for. What is
    *   only true of a moment (`refined`, `stale`, `emptyOption`, the
    *   variants' `chosen`) is not written, and there is no `values` and no
@@ -444,6 +478,12 @@ final class ContractEmitter {
    *   How the operation behaves, as for emit().
    * @param string|null $id
    *   The URI the document is served at, as for emit().
+   * @param \Drupal\data_surface\Contract\Choices|null $choices
+   *   The choices to state in full (`?choose=`), resolved against the same
+   *   data surface; NULL or none for the plain full schema.
+   * @param string|null $schema_url
+   *   The URL of the plain full schema, which a deferred key's `fetch`
+   *   template is written against; NULL for `$id`.
    *
    * @return \Drupal\data_surface\Contract\ServedContract
    *   The document (`resource`, `operation`, `label`, `schema` and, when
@@ -451,11 +491,14 @@ final class ContractEmitter {
    *   on: the data surface and every option list read, never a stored
    *   value.
    */
-  public function emitFull(DataSurfaceInterface $surface, string $resource_id, ?string $operation_id = NULL, string|\Stringable|null $label = NULL, bool $widgets = FALSE, array $operation = [], ?string $id = NULL): ServedContract {
+  public function emitFull(DataSurfaceInterface $surface, string $resource_id, ?string $operation_id = NULL, string|\Stringable|null $label = NULL, bool $widgets = FALSE, array $operation = [], ?string $id = NULL, ?Choices $choices = NULL, ?string $schema_url = NULL): ServedContract {
     // Refined surfaces are remembered for this one document.
     // Decision: see docs/decisions.md#what-is-paid-once-and-what-per-request.
-    $was = $this->refined;
+    $was = [$this->refined, $this->choices, $this->fetchBase, $this->site];
     $this->refined = new \WeakMap();
+    $this->choices = $choices === NULL || $choices->isEmpty() ? NULL : $choices;
+    $this->fetchBase = $schema_url ?? $id;
+    $this->site = ['pointer' => '', 'steps' => []];
     try {
       $cacheability = new CacheableMetadata();
       $ignored = [];
@@ -480,7 +523,7 @@ final class ContractEmitter {
       return new ServedContract($document, $cacheability);
     }
     finally {
-      $this->refined = $was;
+      [$this->refined, $this->choices, $this->fetchBase, $this->site] = $was;
     }
   }
 
@@ -1122,19 +1165,32 @@ final class ContractEmitter {
       }
       elseif ($entry->attachment !== NULL && ($full || $declaring) && $this->budget?->over($entry, $cacheability)) {
         // Keys from the site, more than the site's list budget: an open
-        // map, `refine`, its entries named by id and label alone. The
-        // schema for these answers states every one.
-        // Decision: see docs/decisions.md#a-budget-for-what-the-site-decides.
+        // map, `deferred`, its entries named by id and label alone, and
+        // how to fetch one entry's structure. The schema for these answers
+        // states every one; a full schema with a choice here, the entry
+        // chosen.
+        // Decision: see
+        // docs/decisions.md#a-list-left-out-for-size-is-deferred-not-refined.
         $properties[$name] = $this->describe($current->definition) + ['type' => $this->nullable('object', $current->definition)];
         if ($locked) {
           $properties[$name]['readOnly'] = TRUE;
+        }
+        $pointer = $this->site['pointer'] . '/' . Choices::escape($name);
+        $picked = $this->choices?->entries($entry->attachment->child, $pointer) ?? [];
+        if ($picked !== []) {
+          [$stated, $requiring] = $this->entriesChosen($name, $entry->attachment, $owner . '.' . $name, $picked, $cacheability, $subschemas);
+          $properties[$name]['properties'] = $stated;
+          if ($requiring !== []) {
+            $properties[$name]['required'] = $requiring;
+          }
         }
         $entries = [];
         foreach ($entry->attachment->child->getDefinitions()->entries() as $id => $each) {
           $entries[] = ['id' => (string) $id, 'label' => (string) $each->definition->getLabel()];
         }
         $properties[$name][self::EXTENSION] = $this->extension('fieldset', $locked, $depends, FALSE) + [
-          'refine' => TRUE,
+          'deferred' => TRUE,
+          'fetch' => $this->fetch($pointer),
           'entries' => $entries,
         ];
         $shown[$name] = new \stdClass();
@@ -1145,22 +1201,28 @@ final class ContractEmitter {
       elseif ($entry->attachment !== NULL) {
         $attachment = $entry->attachment;
         $fallback = $owner . '.' . $name;
-        $key = $this->define($attachment, $fallback, $cacheability, $subschemas);
-        if ($declaring) {
-          $instance = $subschemas->get($key) ?? [];
-          $reference = $this->reference($key, NULL, $subschemas);
-          $shown[$name] = new \stdClass();
+        $around = $this->enter($name);
+        try {
+          $key = $this->define($attachment, $fallback, $cacheability, $subschemas);
+          if ($declaring) {
+            $instance = $subschemas->get($key) ?? [];
+            $reference = $this->reference($key, NULL, $subschemas);
+            $shown[$name] = new \stdClass();
+          }
+          else {
+            // Bound as the refinement of this frame bound it: a value its
+            // own key refuses is no value for a port either.
+            $child = ($current->attachment ?? $attachment)->bound($values);
+            $held = $values[$name] ?? NULL;
+            $inside = $full || $blank ? $this->known($child) : array_replace($child->getDefaultValues(), is_array($held) ? $held : []);
+            // A child its access locked is described locked through and
+            // through: every key inside it fixed to what it holds.
+            [$instance, $shown[$name]] = $this->instance($child, $key, $inside, $prefix . $name . '.', $attachment->id ?? $fallback, $cacheability, $stale, $subschemas, $standing, $locked, $blank);
+            $reference = $this->reference($key, $instance, $subschemas);
+          }
         }
-        else {
-          // Bound as the refinement of this frame bound it: a value its
-          // own key refuses is no value for a port either.
-          $child = ($current->attachment ?? $attachment)->bound($values);
-          $held = $values[$name] ?? NULL;
-          $inside = $full || $blank ? $this->known($child) : array_replace($child->getDefaultValues(), is_array($held) ? $held : []);
-          // A child its access locked is described locked through and
-          // through: every key inside it fixed to what it holds.
-          [$instance, $shown[$name]] = $this->instance($child, $key, $inside, $prefix . $name . '.', $attachment->id ?? $fallback, $cacheability, $stale, $subschemas, $standing, $locked, $blank);
-          $reference = $this->reference($key, $instance, $subschemas);
+        finally {
+          $this->site = $around;
         }
         $properties[$name] = $this->describe($current->definition) + $reference;
         if ($locked) {
@@ -1802,12 +1864,18 @@ final class ContractEmitter {
         [$stated, $markers] = $this->site($declared, $static, $entry, $attachment, $module, $values, $path, $cacheability, $kinds, $runtime, $property);
         array_push($branches, ...$stated);
       }
-      $key = $this->define($attachment, $owner . '.' . $entry->name . '.' . $module, $cacheability, $subschemas);
-      $child = $attachment->bound($values);
-      $held = NestedArray::getValue($values, [$entry->name, $module]);
-      $inside = $subschemas->full || $blank ? $this->known($child) : array_replace($child->getDefaultValues(), is_array($held) ? $held : []);
-      $ignored = [];
-      [$instance] = $this->instance($child, $key, $inside, $path . '.' . $module . '.', $attachment->id ?? $key, $cacheability, $ignored, $subschemas, $standing, $locked, $blank);
+      $around = $this->enter($entry->name, $module);
+      try {
+        $key = $this->define($attachment, $owner . '.' . $entry->name . '.' . $module, $cacheability, $subschemas);
+        $child = $attachment->bound($values);
+        $held = NestedArray::getValue($values, [$entry->name, $module]);
+        $inside = $subschemas->full || $blank ? $this->known($child) : array_replace($child->getDefaultValues(), is_array($held) ? $held : []);
+        $ignored = [];
+        [$instance] = $this->instance($child, $key, $inside, $path . '.' . $module . '.', $attachment->id ?? $key, $cacheability, $ignored, $subschemas, $standing, $locked, $blank);
+      }
+      finally {
+        $this->site = $around;
+      }
       $map = $current->definition instanceof ComplexDataDefinitionInterface ? $current->definition->getPropertyDefinition($module) : NULL;
       $site = ($map === NULL ? [] : $this->describe($map)) + $this->reference($key, $instance, $subschemas);
       if (isset($inline['readOnly'])) {
@@ -2193,14 +2261,22 @@ final class ContractEmitter {
   protected function collection(DataSurfaceInterface $declared, Collection $list, Entry $current, Entry $entry, array $values, string $path, string $owner, CacheableMetadata $cacheability, array &$stale, Subschemas $subschemas, array $standing, bool $declaring, bool $locked, array $depends): array {
     $child = $list->child();
     $fallback = $owner . '.' . $entry->name;
-    $key = $this->define($list->item, $fallback, $cacheability, $subschemas);
-    if ($declaring) {
-      $items = $this->reference($key, NULL, $subschemas);
+    // Every item is one structure: a key inside one is named by the
+    // first item's index.
+    $around = $this->enter($entry->name, '0');
+    try {
+      $key = $this->define($list->item, $fallback, $cacheability, $subschemas);
+      if ($declaring) {
+        $items = $this->reference($key, NULL, $subschemas);
+      }
+      else {
+        $ignored = [];
+        [$instance] = $this->instance($child, $key, $this->known($child), $path . '.*.', $list->item->id ?? $fallback, $cacheability, $ignored, $subschemas, [], $locked, TRUE);
+        $items = $this->reference($key, $instance, $subschemas);
+      }
     }
-    else {
-      $ignored = [];
-      [$instance] = $this->instance($child, $key, $this->known($child), $path . '.*.', $list->item->id ?? $fallback, $cacheability, $ignored, $subschemas, [], $locked, TRUE);
-      $items = $this->reference($key, $instance, $subschemas);
+    finally {
+      $this->site = $around;
     }
     $definition = $current->definition;
     [$schema, $extras] = $this->listKeywords($definition);
@@ -2516,6 +2592,98 @@ final class ContractEmitter {
   }
 
   /**
+   * Moves where the frame being described is, one key down.
+   *
+   * @param string $name
+   *   The key the next frame is at.
+   * @param string|null $below
+   *   A segment past the key: a collection's item, a mount's module.
+   * @param string|null $chosen
+   *   The variant the next frame is, reached by choosing it at the key.
+   *
+   * @return array{pointer: string, steps: list<array{0: string, 1: string}>}
+   *   Where the frame was, to put back once the next one is described.
+   */
+  protected function enter(string $name, ?string $below = NULL, ?string $chosen = NULL): array {
+    $was = $this->site;
+    $pointer = $was['pointer'] . '/' . Choices::escape($name);
+    $steps = $was['steps'];
+    if ($chosen !== NULL) {
+      $steps[] = [$pointer, $chosen];
+    }
+    $this->site = [
+      'pointer' => $below === NULL ? $pointer : $pointer . '/' . Choices::escape($below),
+      'steps' => $steps,
+    ];
+    return $was;
+  }
+
+  /**
+   * Writes how to fetch the full schema with one entry of a key stated.
+   *
+   * An RFC 6570 template: the full schema's URL with `choose` added for
+   * every variant on the way to the key and one for the key itself, its
+   * value the expression `{value}`, which a client fills with the
+   * deciding key's value or the entry's id.
+   *
+   * Decision: see
+   * docs/decisions.md#a-list-left-out-for-size-is-deferred-not-refined.
+   *
+   * @param string $pointer
+   *   The key's JSON Pointer.
+   *
+   * @return string
+   *   The template.
+   */
+  protected function fetch(string $pointer): string {
+    $choices = [];
+    foreach ($this->site['steps'] as [$at, $value]) {
+      $choices[$at][] = $value;
+    }
+    $query = Choices::query($choices);
+    $query .= ($query === '' ? '' : '&') . Choices::PARAMETER . '=' . Choices::encode($pointer) . '=' . Choices::VALUE;
+    $base = $this->fetchBase ?? '';
+    return $base . (str_contains($base, '?') ? '&' : '?') . $query;
+  }
+
+  /**
+   * States the entries chosen of a map of keys from the site.
+   *
+   * Each as the map's def states it under the limit, read from the map's
+   * own frame for no values; the rest are left out.
+   *
+   * @param string $name
+   *   The map's key.
+   * @param \Drupal\data_surface\Attachment $attachment
+   *   The map, attached at its key.
+   * @param string $fallback
+   *   The id to describe it under when it has none of its own.
+   * @param list<string> $picked
+   *   The ids chosen.
+   * @param \Drupal\Core\Cache\CacheableMetadata $cacheability
+   *   Collects what the description depends on.
+   * @param \Drupal\data_surface\Contract\Subschemas $subschemas
+   *   The document's defs, which an entry's structure is filed in.
+   *
+   * @return array{0: array<string, mixed>, 1: list<string>}
+   *   The entries' properties, in the map's order, and those required.
+   */
+  protected function entriesChosen(string $name, Attachment $attachment, string $fallback, array $picked, CacheableMetadata $cacheability, Subschemas $subschemas): array {
+    $around = $this->enter($name);
+    try {
+      $ignored = [];
+      [$map] = $this->frame($attachment->child, [], '', $attachment->id ?? $fallback, $cacheability, $ignored, $subschemas, [], TRUE);
+    }
+    finally {
+      $this->site = $around;
+    }
+    $chosen = array_flip($picked);
+    $properties = array_intersect_key(is_array($map['properties'] ?? NULL) ? $map['properties'] : [], $chosen);
+    $required = array_values(array_filter(is_array($map['required'] ?? NULL) ? $map['required'] : [], static fn (mixed $id): bool => isset($chosen[(string) $id])));
+    return [$properties, $required];
+  }
+
+  /**
    * Gives the document its `$defs`, when it has any.
    *
    * @param \Drupal\data_surface\Contract\Subschemas $subschemas
@@ -2606,18 +2774,33 @@ final class ContractEmitter {
     // element, so it says nothing about it.
     $shown = $held;
     $listed = $variants->variants;
+    $deferred = FALSE;
     if ($this->budget?->variantsOver($variants, $cacheability)) {
       // More than the site's list budget: no def and no conditional per
       // variant. With nothing chosen (and in the full schema, which chooses
-      // nothing) the key is an open object, `refine`, its deciding key
-      // named; with a value chosen, the chosen variant alone.
-      // Decision: see docs/decisions.md#a-budget-for-what-the-site-decides.
+      // nothing) the key is an open object, `deferred`, its deciding key
+      // named and how to fetch one variant written beside it; a full
+      // schema fetched with a choice here states the variants chosen, each
+      // its def and its conditional, and leaves the key open for the rest.
+      // With a value chosen, the schema for these answers states the
+      // chosen variant alone.
+      // Decision: see
+      // docs/decisions.md#a-list-left-out-for-size-is-deferred-not-refined.
       if ($full || $declaring || $blank || $chosen === NULL) {
-        $property[self::EXTENSION]['refine'] = TRUE;
-        unset($property[self::EXTENSION]['variants']);
-        return [$property, $shown, []];
+        $pointer = $this->site['pointer'] . '/' . Choices::escape($entry->name);
+        $property[self::EXTENSION]['deferred'] = TRUE;
+        $property[self::EXTENSION]['fetch'] = $this->fetch($pointer);
+        $picked = $this->choices?->variants($variants, $pointer) ?? [];
+        if ($picked === []) {
+          unset($property[self::EXTENSION]['variants']);
+          return [$property, $shown, []];
+        }
+        $deferred = TRUE;
+        $listed = array_intersect_key($variants->variants, array_flip($picked));
       }
-      $listed = [$chosen => $variants->variant($chosen)];
+      else {
+        $listed = [$chosen => $variants->variant($chosen)];
+      }
     }
     $union = [];
     $branches = [];
@@ -2625,22 +2808,29 @@ final class ContractEmitter {
       $id = (string) $id;
       $child = $variant->child;
       $fallback = $owner . '.' . $entry->name . '.' . $id;
-      $key = $this->define($variant, $fallback, $cacheability, $subschemas);
       $is_chosen = !$full && !$declaring && !$blank && $id === $chosen;
-      if ($declaring) {
-        $instance = $subschemas->get($key) ?? [];
-        $reference = $this->reference($key, NULL, $subschemas);
-      }
-      else {
-        $own = $is_chosen ? ($variants->held($id, $held) ?? []) : [];
-        $variant_stale = [];
-        $inside = $full || $blank ? $this->known($child) : array_replace($child->getDefaultValues(), $own);
-        [$instance, $variant_values] = $this->instance($child, $key, $inside, $path . '.', $variant->id ?? $fallback, $cacheability, $variant_stale, $subschemas, $is_chosen ? $standing : [], $frozen, $blank);
-        if ($is_chosen) {
-          $shown = $variant_values;
-          array_push($stale, ...$variant_stale);
+      // Below a variant, a key is reached through the choice of it.
+      $around = $this->enter($entry->name, NULL, $id);
+      try {
+        $key = $this->define($variant, $fallback, $cacheability, $subschemas);
+        if ($declaring) {
+          $instance = $subschemas->get($key) ?? [];
+          $reference = $this->reference($key, NULL, $subschemas);
         }
-        $reference = $this->reference($key, $instance, $subschemas);
+        else {
+          $own = $is_chosen ? ($variants->held($id, $held) ?? []) : [];
+          $variant_stale = [];
+          $inside = $full || $blank ? $this->known($child) : array_replace($child->getDefaultValues(), $own);
+          [$instance, $variant_values] = $this->instance($child, $key, $inside, $path . '.', $variant->id ?? $fallback, $cacheability, $variant_stale, $subschemas, $is_chosen ? $standing : [], $frozen, $blank);
+          if ($is_chosen) {
+            $shown = $variant_values;
+            array_push($stale, ...$variant_stale);
+          }
+          $reference = $this->reference($key, $instance, $subschemas);
+        }
+      }
+      finally {
+        $this->site = $around;
       }
       $schema = $shell + $reference;
       // Which def each value chooses, said on the key: nothing below the
@@ -2657,7 +2847,9 @@ final class ContractEmitter {
         ],
       ];
     }
-    if ($union !== []) {
+    // A deferred key keeps its type: the union of the variants chosen
+    // would refuse every other, which the pipeline accepts.
+    if ($union !== [] && !$deferred) {
       if (in_array('null', (array) $property['type'], TRUE)) {
         $union[] = ['type' => 'null'];
       }

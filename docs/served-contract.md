@@ -136,7 +136,9 @@ The emitter writes two documents from one data surface, by one code path.
   listed is written as conditionals on the parent, always, under
   [the same rules and cap](#exact-where-it-can-be), and a key whose
   dependency cannot be listed keeps its declared schema with
-  `x-surface.refine: true`. A runtime refiner is never run for it: the
+  `x-surface.refine: true`; a list the site decides, past its limit, is
+  open with `x-surface.deferred: true` and a `fetch` template
+  ([below](#a-list-the-site-decides)). A runtime refiner is never run for it: the
   key keeps the width its static refiners give it and carries
   `x-surface.live: true`. Access in it is the account's: it is
   emitted from the resource built for the account alone
@@ -148,7 +150,7 @@ The emitter writes two documents from one data surface, by one code path.
   ([decision](decisions.md#access-is-static-or-runtime-read-from-its-cacheability)).
   Its `x-surface` carries only what holds for
   any values (`contract`, `version`, `locked`, `access`, `computed`, `dependsOn`,
-  `enumerated`, `declared`, `refine`, `entries`, `live`, `rules`, `within`,
+  `enumerated`, `declared`, `refine`, `deferred`, `fetch`, `entries`, `live`, `rules`, `within`,
   the `by` and `variants` of a key with variants, `group`, `after`,
   `patternMessage`,
   `checkedOnServer`); there is no `refined`, `stale`, `emptyOption` or
@@ -229,17 +231,33 @@ way where it is `refine` or `live`, by a standard validator
 A key a refiner narrows carries at most one of `enumerated` and
 `refine`, for its static refiners, and `live` besides when a runtime
 refiner narrows it too ([refinement](refinement.md#static-and-runtime-refiners)).
-In contract 1, `refine` was `dynamic` and `live` was `runtime`.
+In contract 1, `refine` was `dynamic` and `live` was `runtime`. A list
+the site decides past its limit carries a fourth, `deferred`, which no
+refiner writes ([below](#a-list-the-site-decides)).
 
 | Marker | Means | In the full schema | In the schema for these answers |
 | --- | --- | --- | --- |
 | `enumerated` | Captured exactly. The key's static refiners watch only keys that offer a list, within the cap, so what they answer for every combination is written as conditionals on the parent. | On every such key, always: no value is read. | Only while a sibling its static refiners watch holds nothing; once all do, the key is refined for them and carries neither this nor `refine`. |
-| `refine` | Static by declaration, but not captured here: a watched key cannot be listed (free text, a number, a key an alter mounted) or the combinations exceed `ENUMERATION_CAP`; or a list the site decides has more entries than `data_surface.settings:site_list_limit` ([below](#a-list-the-site-decides)). The key keeps its declared schema, or is open; a client can ask, with values, at `POST .../schema`, and an agent at the narrowing tool ([asking again at the tool door](#asking-again-at-the-tool-door)). | On every such key. | As for `enumerated`. |
+| `refine` | Static by declaration, but not captured here: a watched key cannot be listed (free text, a number, a key an alter mounted) or the combinations exceed `ENUMERATION_CAP`. The key keeps its declared schema; a client can ask, with values, at `POST .../schema`, and an agent at the narrowing tool ([asking again at the tool door](#asking-again-at-the-tool-door)). *Changed 2026-10-24:* a list the site decides past its limit is `deferred`, not `refine`. | On every such key. | As for `enumerated`. |
 | `live` | Declared impossible to capture: a runtime refiner narrows the key with a rule no schema can state (a lookup, uniqueness, the account, the time). Never run ahead of time and never in a conditional. | On the key, which keeps the width its static refiners give it: wider than the pipeline, by design. | On the key, always; the key is refined by the runtime refiner for these values, so this document is valid for those values, at that moment, and no others. |
 
 A key with a static and a runtime refiner, example 4's room, is
 `enumerated` (per venue) and `live` (closed rooms). A key with only a
 runtime refiner carries `live` alone.
+
+#### What a key marked says, and what to do
+
+An invoker reads the marker to know how far the schema it holds can be
+trusted for a key, and what to do about the rest
+([decision](decisions.md#a-list-left-out-for-size-is-deferred-not-refined)).
+
+| Marker | What it says | What to do |
+| --- | --- | --- |
+| `enumerated` | Stated in full: every answer of the key's static refiners is a conditional on its frame. | Narrow locally: evaluate the conditionals for the values. |
+| `deferred` | Static, and left out for its size: a list the site decides with more entries than `site_list_limit`, open here, with `x-surface.fetch` naming the full schema with one entry stated. | Fetch per choice, `GET .../schema?choose=<pointer>=<value>`, and cache the answer until the site's list changes (its `ETag`, its cache tags); or ask the narrowing with values; or send the values and be refused by name. |
+| `refine` | Static, but not writable: a coded refiner over a value with no list (a number, free text), or more combinations than `ENUMERATION_CAP`. | Ask the narrowing with values, `POST .../schema` or the `:schema` tool, when a key it depends on changes. |
+| `live` | Runtime: a rule no schema states (a lookup, uniqueness, the account, the time). | Ask the narrowing per request; never cache its answer. |
+| `checkedOnServer` | A constraint only the server checks, named with what it checks. | Send, or rehearse with `?dryRun=true`, and read the refusal. |
 
 Example 2's full schema, abbreviated:
 
@@ -404,8 +422,10 @@ under `$defs`, and referred to ([reusable subschemas](#reusable-subschemas)).
 | `checkedOnServer` | Constraints no keyword states, each `{constraint, message}`: the constraint's plugin id, and what it checks, the constraint's own `message` where it was given one (a Regex's), else its plugin's label, else the id: `[{"constraint": "DataSurfaceUniqueNodeType", "message": "Unique content type machine name"}]`. A list of plugin ids in contract 1. A `JsonSchema` entry, what a structure read from a schema kept of it, carries the schema beside its message, `{"constraint": "JsonSchema", "message": "Checked on the server against the schema it was read from: uniqueItems.", "schema": {"uniqueItems": true}}`; on an object (the top, a def) it is what that schema says of the object as a whole ([Reading a schema](reading-a-schema.md#what-is-kept)). |
 | `patternMessage` | On a key with a `pattern`: the Regex's own message, which is how a person is told what the pattern allows. The pattern is for machines; a renderer explains the key by this, never by the pattern. |
 | `enumerated` | Only when `true`: the key's static refiners have nothing to refine against yet, and what they answer for every value they could be handed is stated as conditionals on the parent ([below](#exact-where-it-can-be)). Captured exactly: the schema is exact for this key with no round trip, less what `live` adds. |
-| `refine` | Only when `true` (`dynamic` in contract 1): the key's static refiners have nothing to refine against yet, and what they would answer cannot be listed (a watched key with no list of values, or too many combinations). Static by declaration, not captured here: the schema is the unrefined, looser one, wider than the pipeline and never narrower ([decision](decisions.md#two-documents-never-stricter-than-the-runtime)); refine when a `dependsOn` key changes. In [the full schema](#two-documents) every key that cannot be listed carries it. On a key whose list the site decides and has more entries than the site list limit, the key is an open object: variants with `by` beside it and no def per variant, or a map of keys from the site with `entries` beside it ([a list the site decides](#a-list-the-site-decides)). |
-| `entries` | Only beside `refine`, on a map of keys from the site past the site list limit, in [the full schema](#two-documents): each key the map holds, `{"id": "bench_7", "label": "Bench 7"}`, in order. Its keys are stated by the schema for these answers. Additive in contract 3 ([decision](decisions.md#a-budget-for-what-the-site-decides)). |
+| `refine` | Only when `true` (`dynamic` in contract 1): the key's static refiners have nothing to refine against yet, and what they would answer cannot be listed (a watched key with no list of values, or too many combinations). Static by declaration, not captured here: the schema is the unrefined, looser one, wider than the pipeline and never narrower ([decision](decisions.md#two-documents-never-stricter-than-the-runtime)); refine when a `dependsOn` key changes. In [the full schema](#two-documents) every key that cannot be listed carries it. |
+| `deferred` | Only when `true`, on a key whose list the site decides and has more entries than the site list limit, in [the full schema](#two-documents) and in the schema for these answers while nothing is chosen: the key is an open object, variants with `by` beside it and no def per variant, or a map of keys from the site with `entries` beside it ([a list the site decides](#a-list-the-site-decides)). Static and stated, left out for its size: fetch the entry chosen at `fetch`. `refine` until 2026-10-24; additive in contract 3 ([decision](decisions.md#a-list-left-out-for-size-is-deferred-not-refined)). |
+| `fetch` | Only beside `deferred`: an RFC 6570 template, the full schema's URL with `choose=<pointer>={value}` for the key and a `choose` for each variant on the way to it, `{value}` the deciding key's value or an entry's id; its query alone in a document no route serves, read against the full schema's URL ([a list the site decides](#a-list-the-site-decides)). |
+| `entries` | Only beside `deferred`, on a map of keys from the site past the site list limit, in [the full schema](#two-documents): each key the map holds, `{"id": "bench_7", "label": "Bench 7"}`, in order. Its keys are stated by the schema for these answers, and one at a time by `fetch`. Additive in contract 3 ([decision](decisions.md#a-budget-for-what-the-site-decides)). |
 | `list` | Only when `true`, on a collection: an array whose every item is a child, its `items` a reference to the child's def. A renderer draws each item as that def's fieldset, adds and removes items within `minItems` and `maxItems`, and reads `dependsOn` inside each item under its delta (`shelves.1.unit`). |
 | `declared` | Only when `true`, on a key, in [the full schema](#two-documents) and in a def: rules declared as data narrow the key ([refinement](refinement.md#declaring-a-rule)), each stated as written, one conditional on the parent, after the key's enumerated ones, its index in the parent's `rules`. Exact: a client evaluates each `if` and tightens the key by its `then` (the lower maximum, the values both lists offer). The schema for these answers evaluates the rules for its values and writes none. |
 | `rules` | On an object owning an `allOf` (the top frame, a def), in [the full schema](#two-documents) and in a def: the indexes in that `allOf` of the conditionals that state a declared rule, `"rules": [9]`. A client evaluates a rule whatever the keys it reads hold, and an enumerated conditional only once every key it watches holds a value, so it tells them apart by this list. Contract 1 wrote `x-surface: {"declared": true}` on the conditional itself. |
@@ -954,17 +974,25 @@ site, not the code: a component per single-directory component a theme
 provides, a key per bench a configuration lists. Each is spelled out in
 the full schema while it has at most `data_surface.settings:site_list_limit`
 entries (20 as shipped), and the tool listing spells it out the same
-way ([decision](decisions.md#a-budget-for-what-the-site-decides)). Past it:
+way ([decision](decisions.md#a-budget-for-what-the-site-decides)). Past it
+the key is `deferred`: static, and left out for its size
+([decision](decisions.md#a-list-left-out-for-size-is-deferred-not-refined)).
 
-- **A key with variants** is an open object, `refine`, its deciding key
-  under `by`, with no def and no conditional per variant; the deciding
-  key keeps its `oneOf` of every value and label. The schema for these
-  answers, with a value chosen, states that variant exactly, its def and
-  its one conditional and no other; with nothing chosen, it is open as
-  in the full schema.
-- **A map of keys from the site** is an open object, `refine`, its keys
-  named under `entries` by id and label. The schema for these answers
-  states every key.
+- **A key with variants** is an open object, `deferred`, its deciding
+  key under `by`, with no def and no conditional per variant; the
+  deciding key keeps its `oneOf` of every value and label. The schema
+  for these answers, with a value chosen, states that variant exactly,
+  its def and its one conditional and no other; with nothing chosen, it
+  is open as in the full schema.
+- **A map of keys from the site** is an open object, `deferred`, its
+  keys named under `entries` by id and label. The schema for these
+  answers states every key.
+- **Each states how to fetch one entry.** `x-surface.fetch` is an RFC
+  6570 template, the full schema's URL with a `choose` for the key, its
+  value the expression `{value}`, and a `choose` for each variant on the
+  way to it. A client fills `{value}` with the deciding key's value, or
+  an entry's id, and fetches the full schema with that entry stated
+  ([the fetch per choice](#the-fetch-per-choice)).
 - **Each key counts at its own level.** A component in a slot is
   variants of its own, read from the schema its provider wrote, and
   counts the components the slot offers.
@@ -973,8 +1001,17 @@ Example 12's props on a site with 312 components, in the full schema:
 
 ```json
 "props": {"title": "Props", "type": ["object", "null"],
-          "x-surface": {"locked": false, "dependsOn": ["component"], "by": "component", "refine": true}}
+          "x-surface": {"locked": false, "dependsOn": ["component"], "by": "component", "deferred": true,
+                        "fetch": "https://example.com/surface-api/event.spotlight/schema?choose=/props={value}"}}
 ```
+
+A placed block's settings are variants per block plugin, and the
+component block's props are variants per component inside one of them,
+so the props' template names the plugin chosen on the way:
+`.../block.placement/schema?choose=/settings=data_surface_component&choose=/settings/props={value}`.
+In a document no route serves (a baseline, the contract panel, the
+narrowing tool's answer) the template is its query alone,
+`?choose=/props={value}`, read against the full schema's URL.
 
 In the shipped resources and structures, described for no values:
 example 2's and example 3's room (per venue, 3 conditionals) and
@@ -1097,6 +1134,7 @@ route, `data_surface_react.api`, answers every path below;
 | `PATCH /surface-api/{resource}/{id}` | One thing's default update. |
 | `DELETE /surface-api/{resource}/{id}` | One thing's default delete: removes it, with no body. |
 | `GET .../schema` | The full schema of the operation `GET` serves at that path, `application/schema+json`. |
+| `GET .../schema?choose=<pointer>=<value>` | The same, with each choice of a key `deferred` for its size stated in full ([the fetch per choice](#the-fetch-per-choice)). |
 | `POST .../schema` | The envelope narrowed for the values the body sends: the schema, given these values. A query. |
 | `GET .../{x}:{operation}` | A custom method's envelope: any operation that is not a default. |
 | `PATCH .../{x}:{operation}` | A run of that operation when it is an update: example 15's reorder, `PATCH /surface-api/event.venue:reorder`. |
@@ -1251,8 +1289,9 @@ document, its `$id` this path, with no envelope around it (contract 2
 answered `{resource, operation, label, schema, outputs}`; the outputs
 are the envelope's). It reads no value, so it is the same whatever is
 stored or typed, and it is the one document that may be cached
-([below](#cacheability)); a client holding one of another contract
-version fetches it again. It is the account's: built for the account
+([below](#cacheability)): its `ETag` is a hash of its bytes, and a
+request whose `If-None-Match` names it is answered 304 with no body. A
+client holding one of another contract version fetches it again. It is the account's: built for the account
 alone, its static access answers stated and its runtime ones marked
 `x-surface.access: "live"`. An account the operation's permission does
 not admit is refused (403).
@@ -1303,6 +1342,70 @@ back in `X-Surface-Stale` with the next narrowing or write; empty there
 stands for the stored value again, so a narrowing answers the same
 orphan, and a write judges the stored room under the venue the same
 document moved, and refuses it, as the form's Save does.
+
+### The fetch per choice
+
+A key `deferred` for its size names, under `x-surface.fetch`, the full
+schema with one of its entries stated
+([decision](decisions.md#a-list-left-out-for-size-is-deferred-not-refined)).
+`GET .../schema?choose=<pointer>=<value>` answers it: the full schema,
+built for the account as the plain one is, with each choice stated in
+full at its key, as the full schema states it under the limit, and the
+rest as the plain full schema says it.
+
+- **A variant**, `choose=/props=data_surface_examples:card`: its def in
+  `$defs` and its one conditional on the frame, nothing for the other
+  variants. The key stays open and `deferred`, its `variants` naming the
+  defs stated, so the answer accepts another component's props as the
+  plain one does, and the pipeline judges them.
+- **An entry of a map of keys from the site**, `choose=/limits=student`:
+  the map, still open and `deferred`, with that entry's key under its
+  `properties`, as the map's def states it under the limit.
+- **A key inside a variant** is named with the choice of each key with
+  variants on the way, in any order:
+  `choose=/settings=data_surface_component&choose=/settings/props=data_surface_examples:card`.
+  A choice at a key whose variants are spelled out only says which
+  variant to pass through. Inside a collection, any item's index names
+  the key in every item, which are one structure.
+- **Several choices** are stated together, any number, one `choose`
+  each; PHP's own query parsing keeps the last of several, so the
+  server reads the query string as it arrived.
+- **What it depends on**: what the plain full schema depends on, the
+  provider that listed the variants (its tags) and
+  `config:data_surface.settings` among it, and `url.query_args`; its
+  `$id` is the path with the choices, and its `ETag` a hash of its
+  bytes, so a client may hold the answer until a component changes.
+- **A choice that names nothing** is a 404 problem naming the pointer:
+  no key there, a key whose list is not the site's, a key with variants
+  on the way that no choice names, or a value the list does not hold;
+  the list's values are named under `values` when there are no more of
+  them than the site list limit. A `choose` that is not a pointer, `=`,
+  then a value, is a 400.
+
+```
+GET /surface-api/event.spotlight/schema?choose=/props=data_surface_examples:card
+
+200 Content-Type: application/schema+json
+Contract-Version: 3
+ETag: "0726633d342c2ec5df9f4a31e50e8746d3c2d6da4fac829e5a602937692ed27b"
+
+{"$id":"https://example.com/surface-api/event.spotlight/schema?choose=/props=data_surface_examples:card",
+ "properties":{"props":{"title":"Props","type":["object","null"],
+   "x-surface":{"by":"component","variants":{"data_surface_examples:card":"#/$defs/event.spotlight.props.data_surface_examples:card"},
+                "deferred":true,"fetch":"https://example.com/surface-api/event.spotlight/schema?choose=/props={value}",...}},...},
+ "allOf":[{"if":{"properties":{"component":{"const":"data_surface_examples:card"}},"required":["component"]},
+           "then":{"properties":{"props":{"title":"Props","$ref":"#/$defs/event.spotlight.props.data_surface_examples:card"}}}}],
+ "$defs":{"event.spotlight.props.data_surface_examples:card":{...}}, ...}
+
+GET /surface-api/event.spotlight/schema?choose=/props=nope:none
+
+404 Content-Type: application/problem+json
+
+{"type":"about:blank","title":"Not Found","status":404,"detail":"The key of event.spotlight at /props has no nope:none to choose; it has 312, which the full schema lists.","pointer":"/props"}
+```
+
+The narrowing, `POST .../schema` and the narrowing tool, answers as
+before, for an invoker that prefers to ask with its values.
 
 ### The write
 
@@ -1558,7 +1661,12 @@ answered `Cache-Control: no-store, private`, which also keeps its `ETag`
 full schema carries the same metadata, and
 `languages:language_interface` for its labels, but is not max-age 0: no
 stored value is in it, so what it says it depends on is all it depends
-on. Its access is the account's: it varies by what the static answers
+on. With `?choose=`, the same: the query string is one of its cache
+contexts, and the provider's tags are among what it depends on, so it
+holds until the site's list changes. Both carry an `ETag` of their
+bytes, set after core's response subscriber, which would otherwise drop
+a controller's tag from a response it may not cache for a session, and
+`If-None-Match` is answered 304 (`SchemaTagSubscriber`). Its access is the account's: it varies by what the static answers
 read (`user.permissions`, `user.roles`) and by the cache contexts of
 the runtime answers it set aside, which chose their kind, and never by
 their tags or max-age, since it states none of their answers. An option list varies by what it read: a reference's targets by
@@ -1586,7 +1694,10 @@ is open.
   [the API](#the-api) answers them: `/surface-api/first.newsletter` with
   `get` and `patch`, `/surface-api/node.type` with `get` and `post` and
   `/surface-api/node.type/{type}` with `get` and `patch`, each with a
-  `/schema` path item, `get` and `post`; a custom method is a path item
+  `/schema` path item, `get` and `post`, its `get` taking `choose`, a
+  query parameter repeated once per choice (`style: form`, `explode`),
+  answering 304 to `If-None-Match` and the `ETag` of its bytes
+  ([the fetch per choice](#the-fetch-per-choice)); a custom method is a path item
   of its own, `/surface-api/event.program:check`, `get` and `post`. A
   default delete is `delete` on the thing's path item,
   `/surface-api/block.placement/{id}` with `get`, `patch` and `delete`,
@@ -1679,6 +1790,16 @@ itself. The rule, as `data_surface_react` applies it:
   no longer offered shown as nothing) and of a key holding nothing (its
   default) is the emitter's. A number above a lowered maximum is kept,
   as the server keeps it, and the pipeline refuses it on submit.
+- **Fetch when a dependent is `deferred`.** A key left out for its size
+  is stated by the full schema fetched with the value chosen: the client
+  fills the key's `fetch` with its deciding key's value, joins the
+  choices of every deferred key the change reaches into one URL (the
+  props, then the slots the props' answer still leaves out), keeps each
+  answer for the page's life, and narrows from it, then from it for the
+  changes after. With nothing chosen the key is open, as the server
+  answers it; a map of keys from the site, which has no deciding key,
+  and a fetch that fails, are asked as `refine` is
+  ([decision](decisions.md#a-list-left-out-for-size-is-deferred-not-refined)).
 - **Ask when a dependent is `refine` or `live`.** Its rule is not in
   the full schema, so the client posts the values to `.../schema`. It also
   asks for anything it cannot settle: a stale value it was handed as
@@ -1696,18 +1817,26 @@ the closed rooms), and so does the license and the room: the capacity is
 stated exactly, its license rule declared, but the stewards that follow
 it, through the compliance structure's port, are `refine`, reading a
 number. The pricing is still narrowed
-here: the ticket's variants are stated whole.
+here: the ticket's variants are stated whole. Example 12 past the site
+list limit fetches: choosing the hero fetches
+`.../schema?choose=/props=data_surface_examples%3Ahero`, then with
+`&choose=/slots=data_surface_examples%3Ahero` joined, and asks no
+narrowing; choosing it again fetches nothing.
 
 ## Asking again at the tool door
 
-A key `refine` because its list is past the site list limit is listed
-open by the write tool too, and its description says how to learn its
-keys: "Too many to list: choose component, then call
-data_surface:event.spotlight:configure:schema with your values to get
-this key's schema." The narrowing tool is the tool door's
+A key `deferred` because its list is past the site list limit is listed
+open by the write tool too, and its description names both ways to
+learn its keys: "Too many to list: choose component, then fetch GET
+/surface-api/event.spotlight/schema?choose=/props={component} once per
+component, or call data_surface:event.spotlight:configure:schema with
+your values, to get this key's schema." The fetch is named where the
+site serves the API (data_surface_react on), and answers
+[the fetch per choice](#the-fetch-per-choice), which an agent with an
+HTTP client keeps per component; the narrowing tool is the tool door's
 `POST .../schema`, derived beside the write tool only where the
 operation's listing has such a key
-([decision](decisions.md#a-budget-for-what-the-site-decides)):
+([decision](decisions.md#a-list-left-out-for-size-is-deferred-not-refined)):
 
 | | |
 | --- | --- |

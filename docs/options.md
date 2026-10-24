@@ -319,14 +319,19 @@ whose variants come from the site (`attachVariants(from:)`, a component
 per single-directory component) or whose keys do (`addEach()`,
 `attachEach()`) is spelled out in the full schema and the tool listing
 while the site lists at most that many; past it, both state the key
-open and mark it `refine`, and the deciding key keeps its list of ids
+open and mark it `deferred`, and the deciding key keeps its list of ids
 and labels ([decision](decisions.md#a-budget-for-what-the-site-decides)).
 Where a reference key past its limit is looked up by label, such a key
-is asked for with values: choose the deciding key, then ask for the
-schema of those values, `POST .../schema` over HTTP or the narrowing
-tool, `data_surface:<resource>:<operation>:schema`, which answers the
-chosen variant's keys exactly
-([asking again at the tool door](served-contract.md#asking-again-at-the-tool-door)).
+is fetched per choice: choose the deciding key, then fetch the full
+schema with that choice stated, `GET .../schema?choose=/props=<value>`,
+the key's `x-surface.fetch` filled, once per value, and keep it until
+the site's list changes
+([the fetch per choice](served-contract.md#the-fetch-per-choice)). Or
+ask with values, `POST .../schema` over HTTP or the narrowing tool,
+`data_surface:<resource>:<operation>:schema`; both answer the chosen
+variant's keys exactly
+([asking again at the tool door](served-contract.md#asking-again-at-the-tool-door),
+[decision](decisions.md#a-list-left-out-for-size-is-deferred-not-refined)).
 `SiteListBudget::withLimit()` holds another limit for one call, saving
 nothing, as `References::withLimit()` does.
 

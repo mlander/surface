@@ -9,8 +9,12 @@ use Drupal\Core\DependencyInjection\ContainerInjectionInterface;
 use Drupal\Core\GeneratedUrl;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslationInterface;
+use Drupal\data_surface\Contract\Choices;
 use Drupal\data_surface\Contract\ContractEmitter;
 use Drupal\data_surface\Contract\ServedContract;
+use Drupal\data_surface\Contract\SiteListBudget;
+use Drupal\data_surface\Contract\UnknownChoiceException;
+use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\Form\DataSurfaceFormBuilderInterface;
 use Drupal\data_surface\Reference\References;
 use Drupal\data_surface\Pipeline\DataSurfacePipelineInterface;
@@ -42,7 +46,8 @@ use Symfony\Component\HttpFoundation\Response;
  *   what is stored and a `Link` to the full schema.
  * - `GET .../schema`: the full schema itself, `application/schema+json`,
  *   which reads nothing stored and so may be cached; a client narrows
- *   from it where its conditionals state the answer.
+ *   from it where its conditionals state the answer. With `?choose=`, the
+ *   same document with each choice of a `deferred` key stated in full.
  * - `POST .../schema`, the body a values document: the envelope narrowed
  *   for those values, the AJAX rebuild's equivalent. The values are
  *   overlaid on the stored ones, a stale path sent empty stands for the
@@ -112,6 +117,9 @@ final class ResourceApiController implements ContainerInjectionInterface {
    *   The string translation service.
    * @param \Drupal\data_surface\Reference\References $references
    *   What reference keys are, and the lookup.
+   * @param \Drupal\data_surface\Contract\SiteListBudget|null $budget
+   *   The site list limit: a refused choice lists the values of a list no
+   *   longer than it.
    */
   public function __construct(
     protected readonly ServedOperations $servedOperations,
@@ -121,6 +129,7 @@ final class ResourceApiController implements ContainerInjectionInterface {
     protected readonly DataSurfacePipelineInterface $pipeline,
     TranslationInterface $stringTranslation,
     protected readonly References $references,
+    protected readonly ?SiteListBudget $budget = NULL,
   ) {
     $this->stringTranslation = $stringTranslation;
   }
@@ -137,6 +146,7 @@ final class ResourceApiController implements ContainerInjectionInterface {
       $container->get('data_surface.pipeline'),
       $container->get('string_translation'),
       $container->get('data_surface.references'),
+      $container->get('data_surface.site_list_budget'),
     );
   }
 
@@ -170,7 +180,7 @@ final class ResourceApiController implements ContainerInjectionInterface {
   public function handle(Request $request, string $resource, string $s1 = '', string $s2 = '', string $s3 = '', string $s4 = '', string $s5 = ''): Response {
     $target = $this->servedPaths->target($request, $resource, [$s1, $s2, $s3, $s4, $s5]);
     return match ($target->action) {
-      ServedTarget::SCHEMA => $this->schema($target),
+      ServedTarget::SCHEMA => $this->schema($target, $request),
       ServedTarget::NARROW => $this->narrow($request, $target),
       ServedTarget::WRITE => $this->write($request, $target),
       ServedTarget::LIST => $this->listing($request, $target),
@@ -305,22 +315,42 @@ final class ResourceApiController implements ContainerInjectionInterface {
    * the query string the parameters not in the path arrive in and the
    * language its labels are in, never what storage holds.
    *
+   * `?choose=<pointer>=<value>`, once or more, answers the same document
+   * with each choice of a key `deferred` for its size stated in full: the
+   * variant chosen, its def and its conditional, or the entry of a map of
+   * keys from the site; a nested key is named with the choice of each key
+   * with variants on the way. Its `$id` is the path with the choices, and
+   * it depends on what the plain one depends on, the provider that listed
+   * the variants and the site list limit among it.
+   *
    * Decision: see docs/decisions.md#the-page-resolves-what-the-schema-states.
+   * Decision: see
+   * docs/decisions.md#a-list-left-out-for-size-is-deferred-not-refined.
    *
    * @param \Drupal\data_surface_react\ServedTarget $target
    *   What the path named.
+   * @param \Symfony\Component\HttpFoundation\Request|null $request
+   *   The request, whose query string may carry choices.
    *
    * @return \Drupal\Core\Cache\CacheableJsonResponse
    *   The JSON Schema document, its `$id` this path.
+   *
+   * @throws \Drupal\data_surface_react\ProblemException
+   *   400 for a choice that is no pointer and value, 404 for one that names
+   *   no key whose list the site decides, or no value of its list.
    */
-  public function schema(ServedTarget $target): CacheableJsonResponse {
+  public function schema(ServedTarget $target, ?Request $request = NULL): CacheableJsonResponse {
     $served = $this->served($target);
     // Built for the account alone: the full schema varies by the
     // account's static access answers and by nothing a runtime one read.
     // Decision: see
     // docs/decisions.md#access-is-static-or-runtime-read-from-its-cacheability.
     $id = $this->location($served, TRUE);
-    $full = $this->emitter->emitFull($this->servedOperations->declared($served), $served->definition->id, $served->operation->id, $served->operation->label, widgets: TRUE, operation: $served->operation->facts(), id: $id->getGeneratedUrl());
+    $declared = $this->servedOperations->declared($served);
+    $choices = $this->choices($request, $served, $declared);
+    $url = $id->getGeneratedUrl();
+    $chosen = $choices->isEmpty() ? $url : $url . (str_contains($url, '?') ? '&' : '?') . Choices::query($choices->all());
+    $full = $this->emitter->emitFull($declared, $served->definition->id, $served->operation->id, $served->operation->label, widgets: TRUE, operation: $served->operation->facts(), id: $chosen, choices: $choices, schema_url: $url);
     $response = new CacheableJsonResponse($full->document['schema']);
     $response->setEncodingOptions(JsonResponse::DEFAULT_ENCODING_OPTIONS | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
     $response->headers->set('Content-Type', self::SCHEMA_TYPE);
@@ -330,6 +360,53 @@ final class ResourceApiController implements ContainerInjectionInterface {
     $response->addCacheableDependency($this->servedOperations->access($served));
     $response->getCacheableMetadata()->addCacheContexts(['url.query_args', 'languages:language_interface']);
     return $response;
+  }
+
+  /**
+   * Reads the choices a request for the full schema names.
+   *
+   * @param \Symfony\Component\HttpFoundation\Request|null $request
+   *   The request: each `choose` of its query string, as it arrived.
+   * @param \Drupal\data_surface_react\ServedOperation $served
+   *   The operation.
+   * @param \Drupal\data_surface\DataSurfaceInterface $declared
+   *   The data surface the full schema is emitted from.
+   *
+   * @return \Drupal\data_surface\Contract\Choices
+   *   The choices, resolved; none when the query string names none.
+   *
+   * @throws \Drupal\data_surface_react\ProblemException
+   *   400 for a choice that is no pointer and value; 404 naming the
+   *   pointer for one Choices::resolve() refuses, with the list's values
+   *   when there are no more of them than the site list limit.
+   */
+  protected function choices(?Request $request, ServedOperation $served, DataSurfaceInterface $declared): Choices {
+    try {
+      return Choices::resolve($declared, Choices::fromQuery((string) $request?->server->get('QUERY_STRING', '')));
+    }
+    catch (UnknownChoiceException $e) {
+      $arguments = [
+        '@resource' => $served->definition->id,
+        '@pointer' => $e->pointer,
+        '@value' => (string) $e->value,
+        '@by' => (string) $e->by,
+        '@count' => count($e->values),
+      ];
+      $few = $e->values !== [] && count($e->values) <= ($this->budget?->limit() ?? SiteListBudget::DEFAULT_LIMIT);
+      $detail = match ($e->reason) {
+        UnknownChoiceException::NO_KEY => $this->t('No key of @resource at @pointer: a choice names a key whose list the site decides, by its JSON Pointer in the values.', $arguments),
+        UnknownChoiceException::NO_LIST => $this->t('The key of @resource at @pointer takes no list from the site, so there is nothing to choose of it.', $arguments),
+        UnknownChoiceException::NOT_CHOSEN => $this->t('The key of @resource at @pointer holds variants @by chooses: name one with choose=@pointer=<value> to reach a key inside it.', $arguments),
+        default => $few
+          ? $this->t('The key of @resource at @pointer has no @value to choose; it has: @values.', $arguments + ['@values' => implode(', ', $e->values)])
+          : $this->t('The key of @resource at @pointer has no @value to choose; it has @count, which the full schema lists.', $arguments),
+      };
+      throw new ProblemException(404, (string) $detail, ['pointer' => $e->pointer] + ($few ? ['values' => $e->values] : []));
+    }
+    catch (\InvalidArgumentException $e) {
+      $detail = (string) $this->t('Each choose is a JSON Pointer, "=", then a value: choose=/props=card.');
+      throw new ProblemException(400, $detail);
+    }
   }
 
   /**
@@ -529,8 +606,11 @@ final class ResourceApiController implements ContainerInjectionInterface {
    */
   protected function emit(ServedOperation $served, array $values): ServedContract {
     $id = $this->location($served);
-    $contract = $this->emitter->emit($served->surface, $values, $served->definition->id, $served->operation->id, $served->operation->label, widgets: TRUE, operation: $served->operation->facts(), id: $id->getGeneratedUrl());
+    // A deferred key's `fetch` is written against the full schema's URL.
+    $schema = $this->location($served, TRUE);
+    $contract = $this->emitter->emit($served->surface, $values, $served->definition->id, $served->operation->id, $served->operation->label, widgets: TRUE, operation: $served->operation->facts(), id: $id->getGeneratedUrl(), schema_url: $schema->getGeneratedUrl());
     $contract->cacheability->addCacheableDependency($id);
+    $contract->cacheability->addCacheableDependency($schema);
     return $contract;
   }
 

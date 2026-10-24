@@ -12,6 +12,7 @@ use Drupal\Core\Session\AnonymousUserSession;
 use Drupal\Core\Session\SessionConfigurationInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslationInterface;
+use Drupal\data_surface\Contract\Choices;
 use Drupal\data_surface\Contract\ContractEmitter;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\Pipeline\DataSurfacePipelineInterface;
@@ -371,11 +372,28 @@ final class OpenApiDocument {
       'get' => $common + [
         'operationId' => $id . ':schema',
         'summary' => (string) $this->t('@label: the full schema', ['@label' => $label]),
-        'description' => $this->joined($description, (string) $this->t('The full schema for any values, for the account that asks: its static access applied, a runtime answer marked. Built for no account, it is the component x-surface-schema names. Cacheable.')),
+        'description' => $this->joined($description, (string) $this->t('The full schema for any values, for the account that asks: its static access applied, a runtime answer marked. Built for no account, it is the component x-surface-schema names. Cacheable: its ETag is a hash of its bytes, and If-None-Match answers 304 while it holds.')),
+        'parameters' => [
+          [
+            'name' => Choices::PARAMETER,
+            'in' => 'query',
+            'required' => FALSE,
+            'description' => (string) $this->t("A choice of a key marked deferred, its list too long to write out: the key's JSON Pointer, =, then a value of its deciding key or an entry's id, choose=/props=card. The answer is the full schema with that variant or entry stated in full, the rest as without it. Once per choice; a key inside a variant is named with the variant's choice beside it, choose=/settings=data_surface_component&choose=/settings/props=card. The key's x-surface.fetch is this URL as an RFC 6570 template. A choice of no such key or value is a 404 naming the pointer."),
+            'style' => 'form',
+            'explode' => TRUE,
+            'schema' => ['type' => 'array', 'items' => ['type' => 'string', 'pattern' => '^/?[^=]+=.+$']],
+          ],
+        ],
         'responses' => [
           '200' => [
             'description' => (string) $this->t('The full schema.'),
-            'headers' => [ResourceApiController::VERSION_HEADER => ['$ref' => '#/components/headers/ContractVersion']],
+            'headers' => [
+              ResourceApiController::VERSION_HEADER => ['$ref' => '#/components/headers/ContractVersion'],
+              'ETag' => [
+                'description' => (string) $this->t('A hash of the bytes: sent back in If-None-Match, answered 304 while the schema is the same.'),
+                'schema' => ['type' => 'string'],
+              ],
+            ],
             'content' => [
               ResourceApiController::SCHEMA_TYPE => [
                 'schema' => ['$ref' => SchemaComponents::POINTER . 'FullSchema'],
@@ -388,7 +406,10 @@ final class OpenApiDocument {
               ],
             ],
           ],
-        ] + $denied,
+          '304' => [
+            'description' => (string) $this->t('Not modified: the schema If-None-Match names still holds.'),
+          ],
+        ] + $problems(['400' => (string) $this->t('A choice that is not a pointer, =, then a value.')]) + $denied,
         'x-surface-schema' => $declared,
       ],
       'post' => ['x-surface-kind' => OperationDefinition::READ] + $common + [

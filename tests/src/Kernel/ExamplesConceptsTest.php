@@ -691,10 +691,11 @@ class ExamplesConceptsTest extends DataSurfaceKernelTestBase {
     $this->assertStringContainsString('Below it, the Tonight block, data_surface_examples_section, placed the same way', (string) $page['section']['#markup']);
 
     // Past the site list limit, two here for the four components, both
-    // pages say so: the props and slots open and `refine`, the chosen
-    // component's defs read from the schema for these answers, and the
-    // narrowing tools beside the placement's.
-    // Decision: see docs/decisions.md#a-budget-for-what-the-site-decides.
+    // pages say so: the props and slots open and `deferred`, the chosen
+    // component's defs read from the full schema fetched with it chosen,
+    // and the narrowing tools beside the placement's.
+    // Decision: see
+    // docs/decisions.md#a-list-left-out-for-size-is-deferred-not-refined.
     // Installed, so saving the limit invalidates what was read under it,
     // as on a site.
     $this->installConfig(['data_surface']);
@@ -702,22 +703,24 @@ class ExamplesConceptsTest extends DataSurfaceKernelTestBase {
     $page = $this->thirteen();
     $contract = json_decode(htmlspecialchars_decode((string) $page['parts']['contract']['content']['#value']), TRUE);
     $this->assertSame(self::COMPONENTS, array_column($contract['component']['oneOf'], 'const'), 'The chooser keeps its options.');
-    $this->assertTrue($contract['props'][ContractEmitter::EXTENSION]['refine']);
+    $this->assertTrue($contract['props'][ContractEmitter::EXTENSION]['deferred']);
     $this->assertArrayNotHasKey('anyOf', $contract['props']);
     $this->assertSame([], $contract['allOf']);
     $this->assertStringContainsString('more than 2, the site list limit', (string) $page['parts']['contract']['note']['#markup']);
     $actions = json_decode(htmlspecialchars_decode((string) $page['parts']['actions']['content']['#value']), TRUE);
-    $this->assertSame(['data_surface_examples:call_to_action'], array_column($actions['component.nested.data_surface_examples:call_to_action.1']['properties']['component']['oneOf'], 'const'), 'Read from the schema for these answers, the hero chosen.');
+    $this->assertSame(['data_surface_examples:call_to_action'], array_column($actions['component.nested.data_surface_examples:call_to_action.1']['properties']['component']['oneOf'], 'const'), 'Read from the full schema fetched with the hero chosen.');
     $this->assertContains('data_surface:block.placement:create:schema', array_column($page['parts']['tools']['#rows'], 0));
     $this->assertContains('data_surface:block.placement:update:schema', array_column($page['parts']['tools']['#rows'], 0));
 
     $panel = $this->formAt('data_surface_examples.step12')[DataSurfaceOperationForm::PANEL_KEY][ExamplePanels::CONCEPT];
     $this->assertStringContainsString('The site has 4 components, more than 2, the site list limit', (string) $panel['what']['#markup']);
     $this->assertStringContainsString('data_surface:event.spotlight:configure:schema', (string) $panel['what']['#markup']);
+    $this->assertStringContainsString('GET /surface-api/event.spotlight/schema?choose=/props={component}', (string) $panel['what']['#markup']);
     $read = json_decode(htmlspecialchars_decode((string) $panel['read']['content']['#value']), TRUE);
-    $this->assertSame('event.spotlight.props.data_surface_examples:card', $read['structure']['title'], 'The chosen component\'s def, from the schema for these answers.');
+    $this->assertSame('event.spotlight.props.data_surface_examples:card', $read['structure']['title'], 'The chosen component\'s def, from the full schema fetched with it chosen.');
     $contract = json_decode(htmlspecialchars_decode((string) $panel['contract']['content']['#value']), TRUE);
-    $this->assertTrue($contract['props'][ContractEmitter::EXTENSION]['refine']);
+    $this->assertTrue($contract['props'][ContractEmitter::EXTENSION]['deferred']);
+    $this->assertSame('?choose=/props={value}', $contract['props'][ContractEmitter::EXTENSION]['fetch'], 'Its query alone: the panel shows a document no route serves.');
     $this->assertSame('data_surface_examples:card', $contract['allOf'][0]['if']['properties']['component']['const']);
     $this->assertCount(2, $contract['allOf'], 'The card\'s two conditionals, one per key.');
   }

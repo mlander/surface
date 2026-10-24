@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createApi, pageOf, SEND_FINGERPRINT, type Fetcher, type Settings } from './api';
 import type { Contract, Narrowed, Schema, Settled, Values, Violation } from './contract';
-import { ContractRefused, inlineSchema, narrow, narrowingStatus, watchedPaths, setAt, withoutComputed } from './contract';
+import { ContractRefused, inlineSchema, joinedFetch, narrow, narrowingStatus, watchedPaths, setAt, withoutComputed } from './contract';
 import { ContractPanel } from './ContractPanel';
 import { Properties } from './widgets/Field';
 import { LookupContext } from './widgets/Shell';
@@ -50,7 +50,11 @@ function byPath(violations: Violation[]): Record<string, string[]> {
  * On a change of any key something depends on, the form narrows itself
  * from the full schema's conditionals when every key that depends on the
  * change is stated there, by the rules the server's narrowing applies,
- * with no request. When one is not (`refine`, `live`, a stale value only
+ * with no request. A key `deferred` for its size is stated by the full
+ * schema fetched for the value chosen (its `fetch`, with the choices of
+ * every other deferred key the change reaches joined in), kept in memory
+ * for the page's life, and the form narrows from that, then from it for
+ * the changes after. When one is not stated (`refine`, `live`, a stale value only
  * the server knows), or anything cannot be settled here, the current
  * values are posted to the schema (debounced) and the form re-renders
  * from the contract that comes back, the way the operation form rebuilds
@@ -109,6 +113,9 @@ export function SurfaceForm({
   const pending = useRef(false);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const sequence = useRef(0);
+  // The full schema fetched for the choices made, which states the deferred
+  // keys they choose; null until a choice needs one.
+  const chosenFull = useRef<Schema | null>(null);
 
   // Value-independent, so resolved once for the page.
   const full = useMemo(() => (fullDocument === null ? null : inlineSchema(fullDocument)), [fullDocument]);
@@ -196,8 +203,51 @@ export function SurfaceForm({
     if (full === null || settled.current === null) {
       return { local: false, key: path, marker: 'unsettled' };
     }
-    return narrow({ full, previous: settled.current, stored: stored.current, values: current.current, stale: stale.current, changed: path });
+    return narrow({ full: chosenFull.current ?? full, previous: settled.current, stored: stored.current, values: current.current, stale: stale.current, changed: path });
   }, [full]);
+
+  // A change a deferred key depends on: the full schema with the choice
+  // stated is fetched (once per set of choices), and the change narrowed
+  // from it; a deferred key it reaches in turn joins its choice to the next
+  // fetch. Anything still not stated, or a fetch that fails, is asked of
+  // the server as before.
+  const fetchChosen = useCallback(async (path: string, first: Narrowed): Promise<Narrowed> => {
+    const mine = ++sequence.current;
+    pending.current = true;
+    setRefining(true);
+    let decided = first;
+    const fetches: string[] = [];
+    try {
+      while (!decided.local && decided.marker === 'deferred' && decided.fetch !== undefined && fetches.length < 8) {
+        fetches.push(decided.fetch);
+        const fetched = inlineSchema(await api.chosen(joinedFetch(fetches, settings.endpoints.schema)));
+        if (mine !== sequence.current || settled.current === null) {
+          // A later change took it over.
+          return { local: false, key: path, marker: 'pending' };
+        }
+        decided = narrow({ full: fetched, previous: settled.current, stored: stored.current, values: current.current, stale: stale.current, changed: path });
+        if (decided.local) {
+          chosenFull.current = fetched;
+          settled.current = decided.settled;
+          current.current = decided.settled.values;
+          stale.current = decided.settled.stale;
+          setSchema(decided.settled.schema);
+          setValues(decided.settled.values);
+          setNarrowing(narrowingStatus(decided, true));
+        }
+      }
+    }
+    catch {
+      decided = { local: false, key: path, marker: 'unsettled' };
+    }
+    finally {
+      if (mine === sequence.current) {
+        setRefining(false);
+        pending.current = false;
+      }
+    }
+    return decided;
+  }, [api, settings]);
 
   // The contract defines each part once and refers to it; the form reads
   // every key inline, resolved once per contract or narrowing, not once
@@ -229,8 +279,8 @@ export function SurfaceForm({
       });
       if (watched.has(path)) {
         const decided = decide(path);
-        setNarrowing(narrowingStatus(decided));
         if (decided.local) {
+          setNarrowing(narrowingStatus(decided));
           settled.current = decided.settled;
           current.current = decided.settled.values;
           stale.current = decided.settled.stale;
@@ -238,11 +288,22 @@ export function SurfaceForm({
           setValues(decided.settled.values);
           return;
         }
+        if (decided.marker === 'deferred' && decided.fetch !== undefined) {
+          void fetchChosen(path, decided).then((answered) => {
+            if (!answered.local && answered.marker !== 'pending') {
+              setNarrowing(narrowingStatus(answered));
+              clearTimeout(timer.current);
+              timer.current = setTimeout(() => void refine(), refineDelay);
+            }
+          });
+          return;
+        }
+        setNarrowing(narrowingStatus(decided));
         clearTimeout(timer.current);
         timer.current = setTimeout(() => void refine(), refineDelay);
       }
     },
-    [watched, refine, refineDelay, decide],
+    [watched, refine, refineDelay, decide, fetchChosen],
   );
 
   const submit = useCallback(async () => {

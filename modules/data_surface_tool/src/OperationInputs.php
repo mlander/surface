@@ -21,6 +21,7 @@ use Drupal\data_surface\ResourceBuild\OperationDefinition;
 use Drupal\data_surface\ResourceBuild\OperationParameter;
 use Drupal\data_surface\ResourceBuild\ResourceDefinition;
 use Drupal\data_surface\ResourceBuild\ResourcesInterface;
+use Drupal\data_surface_react\ServedPaths;
 use Drupal\tool\TypedData\InputDefinition;
 use Drupal\tool\TypedData\InputDefinitionInterface;
 use Drupal\tool\TypedData\ListOutputDefinition;
@@ -197,6 +198,9 @@ final class OperationInputs {
    * @param \Drupal\data_surface\Contract\SiteListBudget|null $budget
    *   How many entries of a list the site decides a listing spells out,
    *   which says whether an operation has a narrowing tool.
+   * @param \Drupal\data_surface_react\ServedPaths|null $servedPaths
+   *   The API's paths, where the site serves it: the path a key left out
+   *   for its size names to fetch one of its entries at.
    */
   public function __construct(
     protected readonly ResourcesInterface $resources,
@@ -205,6 +209,7 @@ final class OperationInputs {
     TranslationInterface $string_translation,
     protected readonly ?ModuleHandlerInterface $moduleHandler = NULL,
     protected readonly ?SiteListBudget $budget = NULL,
+    protected readonly ?ServedPaths $servedPaths = NULL,
   ) {
     $this->stringTranslation = $string_translation;
   }
@@ -732,6 +737,7 @@ final class OperationInputs {
       $this->t('The values, as the @resource resource describes them: every key it takes that the operation does not already know, including those other modules add, with its label, its meaning and the values it allows.', ['@resource' => $resource->id]),
       runtimeAccessSaidOnce: $operation !== NULL && $this->runtimeAccessWhole($resource, $operation),
       narrowing: $operation === NULL ? NULL : static::narrowingTool($resource, $operation),
+      schema: $operation === NULL ? NULL : $this->schemaPath($resource, $operation),
     );
     $this->inputDefinitions->withLookups($map, $built, $operation === NULL ? NULL : $this->lookup($resource, $operation));
     $this->listedTags = Cache::mergeTags($this->listedTags, $this->inputDefinitions->takeListTags());
@@ -1060,10 +1066,39 @@ final class OperationInputs {
    *   The description.
    */
   public function schemaDescription(ResourceDefinition $resource, OperationDefinition $operation): TranslatableMarkup {
-    return $this->t('Answers the schema of @label for the values you have so far, and writes nothing. @needs Some keys of @label take their list from the site and have too many to list, so the write tool lists them open: choose the key that decides them, send your values here, and read the keys the choice offers under schema. Send the values again when a choice changes.', [
+    $arguments = [
       '@label' => self::operationLabel($operation),
       '@needs' => $this->needs($operation),
-    ]);
+      '@path' => (string) $this->schemaPath($resource, $operation),
+    ];
+    // Decision: see
+    // docs/decisions.md#a-list-left-out-for-size-is-deferred-not-refined.
+    return $arguments['@path'] === ''
+      ? $this->t('Answers the schema of @label for the values you have so far, and writes nothing. @needs Some keys of @label take their list from the site and have too many to list, so the write tool lists them open: choose the key that decides them, send your values here, and read the keys the choice offers under schema. Send the values again when a choice changes.', $arguments)
+      : $this->t("Answers the schema of @label for the values you have so far, and writes nothing. @needs Some keys of @label take their list from the site and have too many to list, so the write tool lists them open, each naming two ways to learn its keys once you choose the key that decides them: fetch GET @path?choose={key}={value} once per value and keep the answer, a schema that changes only when the site's list does; or send your values here and read the keys the choice offers under schema, again when a choice changes.", $arguments);
+  }
+
+  /**
+   * Names the path an operation's full schema is fetched at.
+   *
+   * Where the site serves its API: `/surface-api/{resource}[/{id}]/schema`,
+   * `:{operation}` before `/schema` for an operation `GET` does not serve
+   * at the plain path, each identity segment a `{parameter}`.
+   *
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $resource
+   *   The resource.
+   * @param \Drupal\data_surface\ResourceBuild\OperationDefinition $operation
+   *   The operation.
+   *
+   * @return string|null
+   *   The path, or NULL when data_surface_react is not on.
+   */
+  protected function schemaPath(ResourceDefinition $resource, OperationDefinition $operation): ?string {
+    if ($this->servedPaths === NULL || !$this->moduleHandler?->moduleExists('data_surface_react')) {
+      return NULL;
+    }
+    [$path] = $this->servedPaths->template($resource, $operation, !$this->servedPaths->readsPlain($resource, $operation), TRUE);
+    return $path;
   }
 
   /**

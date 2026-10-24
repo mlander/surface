@@ -21,6 +21,11 @@ services:
     class: Drupal\data_surface_react\EventSubscriber\ProblemDetailsSubscriber
     tags:
       - { name: event_subscriber }
+  # Tags the full schema by its bytes, and answers 304 to a tag that holds.
+  data_surface_react.schema_tag:
+    class: Drupal\data_surface_react\EventSubscriber\SchemaTagSubscriber
+    tags:
+      - { name: event_subscriber }
   # The HTTP path and the React page an operation reaches, for the site
   # catalog.
   data_surface_react.catalog_doors:

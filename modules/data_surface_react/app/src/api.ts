@@ -66,6 +66,12 @@ export interface Api {
   contract(): Promise<Tagged<Contract>>;
   /** The full schema, which reads no value: fetched once, beside the contract. */
   schema(): Promise<Schema>;
+  /**
+   * The full schema with choices of deferred keys stated, at the URL their
+   * filled `fetch` templates name: fetched once per URL for the page's
+   * life, since it reads no value either.
+   */
+  chosen(url: string): Promise<Schema>;
   /** The envelope narrowed for these values. */
   narrow(values: Values, stale: string[]): Promise<Contract>;
   /** A dry run of the operation: nothing is written. */
@@ -241,6 +247,8 @@ async function fail(response: Response): Promise<never> {
 export function createApi(settings: Settings, fetcher: Fetcher): Api {
   const { endpoints } = settings;
   let token: Promise<string> | null = null;
+  // The full schema for each set of choices, by URL, for the page's life.
+  const chosen = new Map<string, Promise<Schema>>();
 
   const read = async <T>(response: Response): Promise<T> => {
     assertHeader(response);
@@ -313,6 +321,16 @@ export function createApi(settings: Settings, fetcher: Fetcher): Api {
       return { document: dottedContract(contract), etag: response.headers.get('ETag') };
     },
     schema: async () => assertSchema(await read<Schema>(await get(endpoints.schema, 'application/schema+json, application/json'))),
+    chosen: (url) => {
+      let answer = chosen.get(url);
+      if (answer === undefined) {
+        answer = get(url, 'application/schema+json, application/json').then(async (response) => assertSchema(await read<Schema>(response)));
+        // A failure is not kept: the next choice asks again.
+        answer.catch(() => chosen.delete(url));
+        chosen.set(url, answer);
+      }
+      return answer;
+    },
     narrow: async (values, stale) => dottedContract(assertContract(await read<Contract>(await send('POST', endpoints.schema, 'application/json', values, stale)))),
     validate: async (values, stale, etag) => (await run(values, stale, etag, true)).document,
     submit: async (values, stale, etag) => run(values, stale, etag, false),

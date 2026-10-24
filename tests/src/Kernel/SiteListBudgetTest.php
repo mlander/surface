@@ -6,7 +6,11 @@ namespace Drupal\Tests\data_surface\Kernel;
 
 use Drupal\Component\Render\PlainTextOutput;
 use Drupal\Core\Cache\Cache;
+use Drupal\Core\Cache\CacheableResponseInterface;
 use Drupal\data_surface\Contract\SiteListBudget;
+use Drupal\data_surface_react\Controller\ResourceApiController;
+use Drupal\data_surface_react\EventSubscriber\SchemaTagSubscriber;
+use Drupal\data_surface_react\ServedPaths;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface_resource_test\Keys\WorkshopBenches;
 use Drupal\data_surface_resource_test\Resource\Poster\PosterResource;
@@ -23,6 +27,10 @@ use Drupal\tool\TypedData\MapInputDefinition;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\IgnoreDeprecations;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Event\ResponseEvent;
+use Symfony\Component\HttpKernel\HttpKernelInterface;
 
 /**
  * A budget for what the site decides, and the tool that asks again.
@@ -30,14 +38,18 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * A list the site decides, variants from the site or keys from the site,
  * is spelled out in the full schema and the tool listing while it has at
  * most `data_surface.settings:site_list_limit` entries (20). Past it the
- * full schema states the key open and `refine`, the deciding key keeps its
- * options, and the keys from the site are named under `x-surface.entries`;
- * the schema for these answers states the chosen variant exactly; each
- * key counts at its own level; the write tool's listing names the
- * narrowing tool, `<resource>:<operation>:schema`, which is derived only
- * where such a key exists and answers what `POST .../schema` answers.
+ * full schema states the key open and `deferred`, with a `fetch` template,
+ * the deciding key keeps its options, and the keys from the site are named
+ * under `x-surface.entries`; `GET .../schema?choose=<pointer>=<value>`
+ * answers the full schema with that choice stated as the full schema under
+ * the limit states it; the schema for these answers states the chosen
+ * variant exactly; each key counts at its own level; the write tool's
+ * listing names the fetch and the narrowing tool,
+ * `<resource>:<operation>:schema`, which is derived only where such a key
+ * exists and answers what `POST .../schema` answers.
  *
  * @see docs/decisions.md#a-budget-for-what-the-site-decides
+ * @see docs/decisions.md#a-list-left-out-for-size-is-deferred-not-refined
  * @see docs/served-contract.md#asking-again-at-the-tool-door
  */
 #[Group('data_surface')]
@@ -179,18 +191,25 @@ class SiteListBudgetTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests twenty-five variants go `refine`, and the chooser keeps its options.
+   * Tests twenty-five variants are deferred; the chooser keeps its options.
    */
-  public function testPastTheLimitTheVariantsAreAskedFor(): void {
+  public function testPastTheLimitTheVariantsAreDeferred(): void {
     $this->layouts(25);
     $full = $this->full(PosterResource::class, 'resource_test.poster');
     $panels = $full['properties']['panels'];
-    // An open object, `refine`, its deciding key named: no union, no def
-    // and no conditional per variant.
+    // An open object, `deferred`, its deciding key named and the fetch of
+    // one variant beside it (its query alone: this document is served at
+    // no URL): no union, no def and no conditional per variant.
     $this->assertSame([
       'title' => 'Panels',
       'type' => ['object', 'null'],
-      'x-surface' => ['locked' => FALSE, 'dependsOn' => ['layout'], 'by' => 'layout', 'refine' => TRUE],
+      'x-surface' => [
+        'locked' => FALSE,
+        'dependsOn' => ['layout'],
+        'by' => 'layout',
+        'deferred' => TRUE,
+        'fetch' => '?choose=/panels={value}',
+      ],
     ], $panels);
     $this->assertArrayNotHasKey('$defs', $full);
     $this->assertArrayNotHasKey('allOf', $full);
@@ -214,7 +233,8 @@ class SiteListBudgetTest extends DataSurfaceKernelTestBase {
     $panels = $full['properties']['panels'];
     $this->assertCount(20, $panels['anyOf'], 'A def per layout, and null.');
     $this->assertCount(19, (array) $panels['x-surface']['variants']);
-    $this->assertArrayNotHasKey('refine', $panels['x-surface']);
+    $this->assertArrayNotHasKey('deferred', $panels['x-surface']);
+    $this->assertArrayNotHasKey('fetch', $panels['x-surface']);
     $this->assertCount(19, $full['allOf']);
     $this->assertFalse($this->validates($full, ['layout' => 'strip', 'panels' => ['columns' => 3]]));
 
@@ -222,7 +242,7 @@ class SiteListBudgetTest extends DataSurfaceKernelTestBase {
     $this->layouts(20);
     $this->assertArrayHasKey('anyOf', $this->full(PosterResource::class, 'resource_test.poster')['properties']['panels']);
     $this->config(SiteListBudget::SETTINGS)->set(SiteListBudget::LIMIT, 10)->save();
-    $this->assertTrue($this->full(PosterResource::class, 'resource_test.poster')['properties']['panels']['x-surface']['refine']);
+    $this->assertTrue($this->full(PosterResource::class, 'resource_test.poster')['properties']['panels']['x-surface']['deferred']);
   }
 
   /**
@@ -245,9 +265,10 @@ class SiteListBudgetTest extends DataSurfaceKernelTestBase {
     $this->assertTrue($this->validates($schema, $these['values']));
     $this->assertFalse($this->validates($schema, ['layout' => 'grid', 'panels' => ['columns' => 9]]));
 
-    // Nothing chosen: open and `refine`, as in the full schema.
+    // Nothing chosen: open and `deferred`, as in the full schema.
     $none = $this->these(PosterResource::class, 'resource_test.poster', ['layout' => '']);
-    $this->assertTrue($none['schema']['properties']['panels']['x-surface']['refine']);
+    $this->assertTrue($none['schema']['properties']['panels']['x-surface']['deferred']);
+    $this->assertArrayNotHasKey('refine', $none['schema']['properties']['panels']['x-surface']);
     $this->assertArrayNotHasKey('anyOf', $none['schema']['properties']['panels']);
 
     // The pipeline refuses another variant's keys by name, as ever.
@@ -268,7 +289,9 @@ class SiteListBudgetTest extends DataSurfaceKernelTestBase {
       $map = $full['properties'][$key];
       $this->assertSame(['object', 'null'], $map['type'], $key);
       $this->assertArrayNotHasKey('$ref', $map, $key);
-      $this->assertTrue($map['x-surface']['refine'], $key);
+      $this->assertTrue($map['x-surface']['deferred'], $key);
+      $this->assertArrayNotHasKey('refine', $map['x-surface'], $key);
+      $this->assertSame('?choose=/' . $key . '={value}', $map['x-surface']['fetch'], $key);
       $this->assertCount(25, $map['x-surface']['entries'], $key);
       $this->assertSame(['id' => 'bench_7', 'label' => 'Bench 7'], $map['x-surface']['entries'][6], $key);
       $this->assertArrayNotHasKey('resource_test.workshop.' . $key, $full['$defs'] ?? []);
@@ -282,7 +305,7 @@ class SiteListBudgetTest extends DataSurfaceKernelTestBase {
     $full = $this->full(WorkshopResource::class, 'resource_test.workshop');
     $this->assertSame('#/$defs/resource_test.workshop.lights', $full['properties']['lights']['$ref']);
     $this->assertCount(19, $full['$defs']['resource_test.workshop.lights']['properties']);
-    $this->assertArrayNotHasKey('refine', $full['properties']['lights']['x-surface']);
+    $this->assertArrayNotHasKey('deferred', $full['properties']['lights']['x-surface']);
   }
 
   /**
@@ -290,15 +313,16 @@ class SiteListBudgetTest extends DataSurfaceKernelTestBase {
    *
    * A layout whose panels hold a detail of twenty-five kinds, read from its
    * own schema as variants a sibling chooses: four layouts are spelled
-   * out, and inside the one, the detail is `refine`; at nineteen kinds it
-   * is spelled out too.
+   * out, and inside the one, the detail is `deferred`, its fetch naming the
+   * layout chosen on the way; at nineteen kinds it is spelled out too.
    */
   public function testNestedVariantsCountAtTheirLevel(): void {
     $this->layouts(4, ['nested' => ['label' => 'Nested', 'schema' => static::nested(25)]]);
     $full = $this->full(PosterResource::class, 'resource_test.poster');
     $this->assertCount(5, $full['properties']['panels']['anyOf']);
     $detail = $full['$defs']['resource_test.poster.panels.nested']['properties']['detail'];
-    $this->assertTrue($detail['x-surface']['refine']);
+    $this->assertTrue($detail['x-surface']['deferred']);
+    $this->assertSame('?choose=/panels=nested&choose=/panels/detail={value}', $detail['x-surface']['fetch']);
     $this->assertSame('kind', $detail['x-surface']['by']);
     $this->assertArrayNotHasKey('anyOf', $detail);
     $this->assertCount(25, array_filter($full['$defs']['resource_test.poster.panels.nested']['properties']['kind']['oneOf'], static fn (array $choice): bool => isset($choice['const'])));
@@ -397,7 +421,9 @@ class SiteListBudgetTest extends DataSurfaceKernelTestBase {
     $panels = $manager->getDefinition('data_surface:resource_test.poster:configure')->getInputDefinition(OperationInputs::VALUES)->getPropertyDefinitions()['panels'];
     $this->assertInstanceOf(MapInputDefinition::class, $panels);
     $this->assertSame([], $panels->getPropertyDefinitions());
-    $this->assertStringEndsWith("Too many to list: choose layout, then call data_surface:resource_test.poster:configure:schema with your values to get this key's schema.", (string) $panels->getDescription());
+    $this->assertStringEndsWith("Too many to list: choose layout, then fetch GET /surface-api/resource_test.poster/schema?choose=/panels={layout} once per layout, or call data_surface:resource_test.poster:configure:schema with your values, to get this key's schema.", (string) $panels->getDescription());
+    $this->assertStringContainsString('fetch GET /surface-api/resource_test.poster/schema?choose={key}={value} once per value and keep the answer', (string) $definition->getDescription());
+    $this->assertStringContainsString('or send your values here', (string) $definition->getDescription());
     $this->assertCount(25, $manager->getDefinition('data_surface:resource_test.poster:configure')->getInputDefinition(OperationInputs::VALUES)->getPropertyDefinitions()['layout']->getConstraint('Choice')['choices'] ?? []);
 
     // Keys from the site past the limit name it too.
@@ -406,7 +432,7 @@ class SiteListBudgetTest extends DataSurfaceKernelTestBase {
     $this->assertTrue($manager->hasDefinition('data_surface:resource_test.workshop:configure:schema'));
     $lights = $manager->getDefinition('data_surface:resource_test.workshop:configure')->getInputDefinition(OperationInputs::VALUES)->getPropertyDefinitions()['lights'];
     $this->assertSame([], $lights->getPropertyDefinitions());
-    $this->assertStringContainsString("Too many to list: call data_surface:resource_test.workshop:configure:schema with your values to get this key's schema.", (string) $lights->getDescription());
+    $this->assertStringContainsString("Too many to list: fetch GET /surface-api/resource_test.workshop/schema?choose=/lights={id} once per entry (GET /surface-api/resource_test.workshop/schema lists the ids under x-surface.entries), or call data_surface:resource_test.workshop:configure:schema with your values, to get this key's schema.", (string) $lights->getDescription());
   }
 
   /**
@@ -437,6 +463,179 @@ class SiteListBudgetTest extends DataSurfaceKernelTestBase {
     $this->setUpCurrentUser();
     $tool = $manager->createInstance(self::POSTER_SCHEMA);
     $this->assertFalse($tool->access());
+  }
+
+  /**
+   * Tests the fetch of one choice: the variant stated as under the limit.
+   *
+   * `GET .../schema?choose=/panels=extra_5` answers the full schema with
+   * the fifth extra layout's def and its one conditional, and nothing for
+   * the other layouts; the key stays open and `deferred`, so the answer
+   * accepts what the pipeline accepts. The def and the conditional are what
+   * the full schema states when every layout is spelled out. It depends on
+   * what the full schema depends on, the provider's tag and the setting
+   * among it, and carries an `ETag` of its bytes.
+   */
+  public function testTheFetchOfOneChoice(): void {
+    $this->layouts(25);
+    $response = $this->served('GET', '/surface-api/resource_test.poster/schema?choose=/panels=extra_5');
+    $this->assertSame(200, $response->getStatusCode(), (string) $response->getContent());
+    $this->assertSame(ResourceApiController::SCHEMA_TYPE, $response->headers->get('Content-Type'));
+    $chosen = json_decode((string) $response->getContent(), TRUE);
+    $this->assertSame('http://localhost/surface-api/resource_test.poster/schema?choose=/panels=extra_5', $chosen['$id']);
+    $panels = $chosen['properties']['panels'];
+    $this->assertSame(['object', 'null'], $panels['type']);
+    $this->assertArrayNotHasKey('anyOf', $panels);
+    $this->assertTrue($panels['x-surface']['deferred']);
+    $this->assertSame('http://localhost/surface-api/resource_test.poster/schema?choose=/panels={value}', $panels['x-surface']['fetch']);
+    $this->assertSame(['extra_5' => '#/$defs/resource_test.poster.panels.extra_5'], $panels['x-surface']['variants']);
+    $this->assertSame(['resource_test.poster.panels.extra_5'], array_keys($chosen['$defs']));
+    $this->assertCount(1, $chosen['allOf']);
+
+    // What the full schema states of it with every layout spelled out.
+    $listed = $this->container->get('data_surface.site_list_budget')->withLimit(100, fn (): array => $this->servedJson('GET', '/surface-api/resource_test.poster/schema'));
+    $this->assertSame($listed['$defs']['resource_test.poster.panels.extra_5'], $chosen['$defs']['resource_test.poster.panels.extra_5']);
+    $branch = array_values(array_filter($listed['allOf'], static fn (array $condition): bool => ($condition['if']['properties']['layout']['const'] ?? NULL) === 'extra_5'));
+    $this->assertSame($branch, $chosen['allOf']);
+    // The rest as the plain full schema says it.
+    $plain = $this->servedJson('GET', '/surface-api/resource_test.poster/schema');
+    unset($plain['$id'], $chosen['$id'], $chosen['allOf'], $chosen['$defs'], $chosen['properties']['panels']['x-surface']['variants']);
+    $this->assertSame($plain, $chosen);
+
+    // Never stricter: another layout's panels are accepted, the chosen
+    // layout's held to its keys.
+    $chosen = json_decode((string) $response->getContent(), TRUE);
+    $this->assertTrue($this->validates($chosen, ['layout' => 'strip', 'panels' => ['columns' => 3]]));
+    $this->assertTrue($this->validates($chosen, ['layout' => 'extra_5', 'panels' => ['caption_5' => 'Autumn']]));
+    $this->assertFalse($this->validates($chosen, ['layout' => 'extra_5', 'panels' => ['caption_4' => 'Autumn']]));
+
+    // Cacheable until the provider's list or the limit changes.
+    $this->assertInstanceOf(CacheableResponseInterface::class, $response);
+    $tags = $response->getCacheableMetadata()->getCacheTags();
+    $this->assertContains(PosterLayouts::TAG, $tags);
+    $this->assertContains('config:data_surface.settings', $tags);
+    $this->assertContains('url.query_args', $response->getCacheableMetadata()->getCacheContexts());
+
+    // An ETag of the bytes, and 304 to a request that holds them.
+    $request = Request::create('/surface-api/resource_test.poster/schema?choose=/panels=extra_5');
+    $request->attributes->set('_route', ServedPaths::ROUTE);
+    $tagged = $this->tagged($request, $response);
+    $this->assertSame('"' . hash('sha256', (string) $response->getContent()) . '"', $tagged->headers->get('ETag'));
+    $again = Request::create('/surface-api/resource_test.poster/schema?choose=/panels=extra_5', server: ['HTTP_IF_NONE_MATCH' => 'W/' . $tagged->headers->get('ETag')]);
+    $again->attributes->set('_route', ServedPaths::ROUTE);
+    $this->assertSame(304, $this->tagged($again, $this->served('GET', '/surface-api/resource_test.poster/schema?choose=/panels=extra_5'))->getStatusCode());
+    $this->assertNotSame($tagged->headers->get('ETag'), $this->tagged($request, $this->served('GET', '/surface-api/resource_test.poster/schema'))->headers->get('ETag'));
+  }
+
+  /**
+   * Runs the schema's tag subscriber over a response, as the kernel does.
+   *
+   * @param \Symfony\Component\HttpFoundation\Request $request
+   *   The request.
+   * @param \Symfony\Component\HttpFoundation\Response $response
+   *   The controller's response.
+   *
+   * @return \Symfony\Component\HttpFoundation\Response
+   *   The same, tagged.
+   */
+  protected function tagged(Request $request, Response $response): Response {
+    $event = new ResponseEvent($this->container->get('http_kernel'), $request, HttpKernelInterface::MAIN_REQUEST, $response);
+    (new SchemaTagSubscriber())->onResponse($event);
+    return $event->getResponse();
+  }
+
+  /**
+   * Tests nested choices: a key inside a variant, named with its parent's.
+   *
+   * Four layouts are spelled out; the nested one's detail, twenty-five
+   * kinds, is deferred. `choose=/panels=nested&choose=/panels/detail=kind_7`
+   * answers the nested layout's def with the seventh kind's def and
+   * conditional in it, in either order, as the full schema with every kind
+   * spelled out states them; the detail alone, its layout not named, is
+   * refused naming the layout's pointer and its four values.
+   */
+  public function testNestedChoices(): void {
+    $this->layouts(4, ['nested' => ['label' => 'Nested', 'schema' => static::nested(25)]]);
+    $queries = [
+      '?choose=/panels=nested&choose=/panels/detail=kind_7',
+      '?choose=/panels/detail=kind_7&choose=/panels=nested',
+    ];
+    foreach ($queries as $query) {
+      $chosen = $this->servedJson('GET', '/surface-api/resource_test.poster/schema' . $query);
+      $nested = $chosen['$defs']['resource_test.poster.panels.nested'] ?? NULL;
+      $this->assertIsArray($nested, $query . ': ' . json_encode($chosen));
+      $detail = $nested['properties']['detail'];
+      $this->assertTrue($detail['x-surface']['deferred'], $query);
+      $this->assertSame('http://localhost/surface-api/resource_test.poster/schema?choose=/panels=nested&choose=/panels/detail={value}', $detail['x-surface']['fetch'], $query);
+      $this->assertSame(['kind_7'], array_keys($detail['x-surface']['variants']), $query);
+      $kinds = array_values(array_filter($nested['allOf'] ?? [], static fn (array $condition): bool => isset($condition['if']['properties']['kind'])));
+      $this->assertCount(1, $kinds, $query);
+      $this->assertSame('kind_7', $kinds[0]['if']['properties']['kind']['const'], $query);
+    }
+    $listed = $this->container->get('data_surface.site_list_budget')->withLimit(100, fn (): array => $this->servedJson('GET', '/surface-api/resource_test.poster/schema'));
+    $def = substr((string) $kinds[0]['then']['properties']['detail']['$ref'], strlen('#/$defs/'));
+    $this->assertSame($listed['$defs'][$def], $chosen['$defs'][$def]);
+    $branch = array_values(array_filter($listed['$defs']['resource_test.poster.panels.nested']['allOf'], static fn (array $condition): bool => ($condition['if']['properties']['kind']['const'] ?? NULL) === 'kind_7'));
+    $this->assertSame($branch, $kinds);
+
+    $refused = $this->servedJson('GET', '/surface-api/resource_test.poster/schema?choose=/panels/detail=kind_7');
+    $this->assertSame(404, $refused['status']);
+    $this->assertSame('/panels', $refused['pointer']);
+    $this->assertSame(['banner', 'grid', 'strip', 'nested'], $refused['values']);
+    $this->assertStringContainsString('choose=/panels=<value>', $refused['detail']);
+  }
+
+  /**
+   * Tests a choice that names nothing is refused, naming its pointer.
+   */
+  public function testAnUnknownChoiceIsRefused(): void {
+    $this->layouts(25);
+    $refused = $this->servedJson('GET', '/surface-api/resource_test.poster/schema?choose=/panels=mural');
+    $this->assertSame(404, $refused['status']);
+    $this->assertSame('application/problem+json', $this->served('GET', '/surface-api/resource_test.poster/schema?choose=/panels=mural')->headers->get('Content-Type'));
+    $this->assertSame('/panels', $refused['pointer']);
+    // Twenty-five values: too many to list here; the full schema lists them.
+    $this->assertArrayNotHasKey('values', $refused);
+    $this->assertSame('The key of resource_test.poster at /panels has no mural to choose; it has 25, which the full schema lists.', $refused['detail']);
+
+    $this->assertSame('/nothing', $this->servedJson('GET', '/surface-api/resource_test.poster/schema?choose=/nothing=x')['pointer']);
+    $list = $this->servedJson('GET', '/surface-api/resource_test.poster/schema?choose=/layout=grid');
+    $this->assertSame([404, '/layout'], [$list['status'], $list['pointer']]);
+    $this->assertStringContainsString('takes no list from the site', $list['detail']);
+    $this->assertSame(400, $this->servedJson('GET', '/surface-api/resource_test.poster/schema?choose=panels')['status']);
+    // A name with no slash is a top-level key, as the lookup reads one.
+    $this->assertSame(['extra_5'], array_keys($this->servedJson('GET', '/surface-api/resource_test.poster/schema?choose=panels=extra_5')['properties']['panels']['x-surface']['variants']));
+  }
+
+  /**
+   * Tests the fetch of one entry of a map of keys from the site.
+   *
+   * `choose=/lights=bench_7` answers the map with that bench's key, and
+   * `choose=/benches=bench_3` with that bench's structure, as the map's def
+   * states them under the limit; the map stays open, `deferred`, its
+   * entries named.
+   */
+  public function testTheFetchOfOneEntry(): void {
+    $this->benches(25);
+    $chosen = $this->servedJson('GET', '/surface-api/resource_test.workshop/schema?choose=/lights=bench_7&choose=/benches=bench_3');
+    $listed = $this->container->get('data_surface.site_list_budget')->withLimit(100, fn (): array => $this->servedJson('GET', '/surface-api/resource_test.workshop/schema'));
+    $lights = $chosen['properties']['lights'];
+    $this->assertSame(['bench_7'], array_keys($lights['properties']));
+    $this->assertSame($listed['$defs']['resource_test.workshop.lights']['properties']['bench_7'], $lights['properties']['bench_7']);
+    $this->assertTrue($lights['x-surface']['deferred']);
+    $this->assertCount(25, $lights['x-surface']['entries']);
+    $this->assertArrayNotHasKey('additionalProperties', $lights);
+    $benches = $chosen['properties']['benches'];
+    $this->assertSame(['bench_3'], array_keys($benches['properties']));
+    $this->assertSame($listed['$defs']['resource_test.workshop.benches']['properties']['bench_3'], $benches['properties']['bench_3']);
+    $reference = substr((string) ($benches['properties']['bench_3']['$ref'] ?? ''), strlen('#/$defs/'));
+    $this->assertSame($listed['$defs'][$reference], $chosen['$defs'][$reference]);
+    // Open for the rest: a bench not chosen is not refused here.
+    $this->assertTrue($this->validates($chosen, ['lights' => ['bench_9' => TRUE]]));
+    $this->assertFalse($this->validates($chosen, ['lights' => ['bench_7' => 'on']]));
+
+    $refused = $this->servedJson('GET', '/surface-api/resource_test.workshop/schema?choose=/lights=drill');
+    $this->assertSame([404, '/lights'], [$refused['status'], $refused['pointer']]);
   }
 
   /**

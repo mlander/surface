@@ -802,9 +802,10 @@ A `#[RefinesInput]` method is static unless its attribute says
 `runtime: TRUE`. A static refiner promises to be a pure function of the
 siblings it watches, so the served contract runs it ahead of time and
 states its answers as conditionals (`enumerated`), or says they cannot
-be listed (`refine`: ask `POST .../schema` with values, `/refine` until contract 3), as a list the
-site decides says past its budget
-([A budget for what the site decides](#a-budget-for-what-the-site-decides)). A runtime refiner
+be listed (`refine`: ask `POST .../schema` with values, `/refine` until contract 3). A list the
+site decides past its budget is neither: it is static and could be
+listed, and is left out for its size, `deferred`, fetched per choice
+([A list left out for size is deferred](#a-list-left-out-for-size-is-deferred-not-refined)). A runtime refiner
 promises the schema nothing: the emitter never runs it, in either
 document; the key keeps the width its static refiners give it in the
 full schema and carries `live: true` (the markers were `dynamic` and
@@ -4484,9 +4485,10 @@ how strictly to apply them to a display builder. Each choice, and why:
   structure per def grows with their sum: 2,465 defs and a build of
   about two seconds on the development site. The documents and the tool
   listing state none of them there: 312 components are past the site
-  list limit, so the props and slots are `refine` and the chosen
-  component's defs are the schema for these answers'
-  ([A budget for what the site decides](#a-budget-for-what-the-site-decides)).
+  list limit, so the props and slots are `deferred`, and the chosen
+  component's defs are the full schema's fetched with it chosen, and
+  the schema for these answers'
+  ([A list left out for size is deferred](#a-list-left-out-for-size-is-deferred-not-refined)).
 - **Rendering.** `ComponentBlock::build()` turns each stored slot into
   `#slots`: text as `#plain_text`, a component as `#type => 'component'`
   with its props held and its own `#slots`, a list as a render array of
@@ -5068,15 +5070,21 @@ a structure read from a schema, a component in a slot) and keys from the
 site (`addEach()`, `attachEach()`). Each key is counted at its own
 level: a component in a slot counts the components the slot offers.
 
-- **Past the limit, open and `refine`.** In the full schema a key with
-  variants is an open object marked `x-surface.refine: true`, with
+- **Past the limit, open and `deferred`.** In the full schema a key with
+  variants is an open object marked `x-surface.deferred: true`, with
   `x-surface.by` naming its deciding key and no def and no conditional
   per variant. A map of keys from the site is an open object marked
-  `refine`, its entries under `x-surface.entries` by id and label alone.
+  `deferred`, its entries under `x-surface.entries` by id and label
+  alone. Each carries `x-surface.fetch`, the full schema with one choice
+  stated ([the next entry](#a-list-left-out-for-size-is-deferred-not-refined)).
   The tool listing states both as an open map, and its description
-  names the narrowing tool: "Too many to list: choose component, then
-  call data_surface:event.spotlight:configure:schema with your values to
-  get this key's schema." The schema for these answers, built with the
+  names both ways to learn the keys: "Too many to list: choose
+  component, then fetch GET
+  /surface-api/event.spotlight/schema?choose=/props={component} once per
+  component, or call data_surface:event.spotlight:configure:schema with
+  your values, to get this key's schema." *Changed 2026-10-24:* the
+  marker was `refine` and the listing named the narrowing tool alone.
+  The schema for these answers, built with the
   deciding key's value known, states the chosen variant exactly: its def
   and its one conditional, and no other variant's, since the narrowing
   is what a client asks for one variant; with every variant in it, the
@@ -5091,14 +5099,16 @@ level: a component in a slot counts the components the slot offers.
   everything fits. A count keeps the depth, spells out what a reader can
   scan, and moves only the listing of every variant to a request, so a
   site with few components keeps its exact documents.
-- **Why `refine` and not `live`.** The rule is static: the provider's
-  list is cacheable and the same for every account, and which variant a
-  value chooses is a pure function of the value. Nothing about it is
-  unknown ahead of time; it is too long to write. `refine` already says
-  "static, not captured here: ask `POST .../schema` with values", and a
-  client that handles it, the React page among them, needs nothing new.
-  `live` says a rule no schema can state, which would tell a client the
-  answer may change between two requests with the same values.
+- **Why `deferred` and not `refine` or `live`.** The rule is static:
+  the provider's list is cacheable and the same for every account, and
+  which variant a value chooses is a pure function of the value. Nothing
+  about it is unknown ahead of time; it is too long to write. `live`
+  says a rule no schema can state, which would tell a client the answer
+  may change between two requests with the same values. *Changed
+  2026-10-24:* this said `refine`, "static, not captured here: ask
+  `POST .../schema` with values", which a client then asked on every
+  change; the marker is `deferred` now, for the reasons in [the next
+  entry](#a-list-left-out-for-size-is-deferred-not-refined).
 - **Why the chooser's options are always listed.** The deciding key's
   `oneOf` is one id and one label per variant: 312 of them are 18 KB. A
   client cannot ask for a variant's keys without a value to send, and an
@@ -5126,11 +5136,11 @@ level: a component in a slot counts the components the slot offers.
   one walk per place a structure is used grows with the product of the
   lists, which exhausted 3 GB for the placed block here. Each variant's
   structure is still listed among those read from a schema.
-- **Read back.** The reader reads an open `refine` key with a deciding
+- **Read back.** The reader reads an open `deferred` key with a deciding
   key and no variant as an object like any other, since no variant is in
-  the document (`SchemaReader::variantsAt()`); a full schema past the
-  limit does not read back to itself, and `ResourceTestBase` reports it
-  by its kind, `site list`.
+  the document (`SchemaReader::variantsAt()`), and notes the marker; a
+  full schema past the limit does not read back to itself, and
+  `ResourceTestBase` reports it by its kind, `site list`.
 
 On the development site, 312 components, measured 2026-10-24 in one
 process each:
@@ -5158,6 +5168,80 @@ variant. (`Contract\SiteListBudget`, `ContractEmitter::variants()`,
 `ResourceOperationSchemaTool`, `SiteCatalog::keys()`,
 `SiteListBudgetTest`, `CatalogMemoryTest`,
 `AdvertisedSchemaAcceptanceTest::testListsPastTheSiteListLimit()`)
+
+### A list left out for size is deferred, not refined
+
+Decided 2026-10-24, from the owner's finding: the budget marked a list
+left out for its size `refine`, which tells an invoker "ask with values
+each time". The rule is better than that: static, cacheable and
+fetchable on its own; it was only too long to write out. So it has a
+marker of its own, and a fetch per choice. This entry amends [A budget
+for what the site decides](#a-budget-for-what-the-site-decides) in place
+(its marker and its tool text); the budget itself, the limit and how a
+key is counted, is unchanged.
+
+- **The marker.** `x-surface.deferred: true` is on a key with variants,
+  or a map of keys from the site, past `site_list_limit`, at its own
+  level as before. The key keeps `by`, the chooser keeps its options,
+  and a map keeps `entries`. `refine` means one thing again: a static
+  rule that cannot be written out (a coded refiner over a number, too
+  many combinations); `live` stays a rule only the runtime knows.
+- **Why a marker of its own.** An invoker treats each kind differently:
+  `refine` is asked again with every set of values, `live` is never
+  cached, and a list left out for size is fetched once per choice and
+  cached until the site's list changes. A cacheable fetch must not be
+  described as ask-every-time: a client that believes it pays one round
+  trip per change for a schema it could have held, and an agent reads
+  "call with your values" where "fetch once per component" is true.
+- **The fetch.** Beside the marker, `x-surface.fetch` is an RFC 6570
+  template: the full schema's URL with `choose=<pointer>={value}` for
+  the key, and a `choose` for each variant on the way to it, so a key
+  inside a chosen variant names that choice too
+  (`.../block.placement/schema?choose=/settings=data_surface_component&choose=/settings/props={value}`).
+  A client fills `{value}` with the deciding key's value, or an entry's
+  id. In a document no route serves (a baseline, the contract panel, the
+  tool's answer) the template is its query alone, read against the full
+  schema's URL.
+- **What the fetch answers.** `GET .../schema?choose=<pointer>=<value>`,
+  once or more, answers the full schema with each choice stated as the
+  full schema under the limit states it: a variant's def in `$defs` and
+  its one conditional, an entry's key in the map; nothing for the other
+  choices, and the rest as the plain full schema says it. The key stays
+  open and `deferred`, with `variants` naming the defs stated, so the
+  answer is never stricter than the pipeline for a value not chosen. A
+  pointer below a key with variants passes through the variant a choice
+  at that key names, in any order in the query; a choice at a key whose
+  variants are spelled out only says which variant to pass through. It
+  is built for the account as the full schema is, carries the same
+  cacheability (the provider's tags and the settings' among it), and an
+  `ETag` of its bytes, which `If-None-Match` answers 304. A choice that
+  names no key, no list the site decides, or no value of the list is a
+  404 problem naming the pointer, with the list's values when there are
+  no more than the limit.
+- **Why choices on the schema's own URL.** It is the full schema, with
+  more stated: a client that holds one holds the other's meaning, the
+  `$id` names what it states, and caching by URL is HTTP's own. A path
+  per variant (`.../schema/props/card`) would be a second address for
+  part of one document, and could not name two choices at once.
+- **Both ways stay.** The narrowing, `POST .../schema` and the `:schema`
+  tool, answers as before for an invoker that prefers to ask with
+  values. The tool listing and the narrowing tool's description name
+  both: the fetch, once per value, and the tool, with the values.
+- **React.** A change a `deferred` key depends on fetches the full
+  schema for the value chosen, the choices of every deferred key the
+  change reaches joined into one URL, keeps each answer in memory for
+  the page's life, and narrows from it; a `refine` key is still asked of
+  the narrowing. A fetch that fails is asked of the narrowing too.
+
+*Open:* a structure reused at two places in one document (a slot's
+component structure in two slots) has one def, so a choice at either
+place states the variant at both, and its `fetch` names the first place
+it was written from; the page leaves out the declared rules a slot's def
+carries in the narrowing's answer, as it does from a full schema that
+lists every component. (`Contract\Choices`, `ContractEmitter::fetch()`,
+`ContractEmitter::variants()`, `ResourceApiController::schema()`,
+`SchemaTagSubscriber`, `InputDefinitions::tooMany()`,
+`OperationInputs::schemaDescription()`, `SiteListBudgetTest`)
 
 ### A served contract is never stored
 

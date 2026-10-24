@@ -2385,23 +2385,30 @@ under it, and so is every site its tests run on, so this page and its
 tests show every component spelled out. A site whose themes provide
 more is past it, as the development site this page was written on is,
 with 312: the full schema and the tool listing then list each component
-by id and label, and state the props and slots open, marked `refine`,
-with no def and no conditional per component; the schema for these
-answers, built with a component chosen, states that component's defs
-exactly. The full schema went from 3 MB and 2,465 defs to 18 KB there,
+by id and label, and state the props and slots open, marked `deferred`,
+with no def and no conditional per component and a `fetch` template
+beside each; the full schema fetched with a component chosen,
+`GET /surface-api/event.spotlight/schema?choose=/props={component}`,
+states that component's defs exactly, and so does the schema for these
+answers. The React page fetches it once per component chosen, and the
+tool listing names that fetch beside the narrowing tool
+([decision](../../docs/decisions.md#a-list-left-out-for-size-is-deferred-not-refined)). The full schema went from 3 MB and 2,465 defs to 18 KB there,
 and the tool's definition from 1.6 MB to 12 KB
 ([decision](../../docs/decisions.md#a-budget-for-what-the-site-decides)).
 The props in the full schema, past the limit:
 
 ```json
 "props": {"title": "Props", "type": ["object", "null"],
-          "x-surface": {"locked": false, "dependsOn": ["component"], "by": "component", "refine": true}}
+          "x-surface": {"locked": false, "dependsOn": ["component"], "by": "component", "deferred": true,
+                        "fetch": "https://example.com/surface-api/event.spotlight/schema?choose=/props={value}"}}
 ```
 
-The form still swaps the props over AJAX, and the React page asks
-`POST /surface-api/event.spotlight/schema` when the component changes.
-An agent reads in the write tool's listing which tool answers them, and
-makes two calls, that one and then the write:
+The form still swaps the props over AJAX, and the React page fetches
+`GET /surface-api/event.spotlight/schema?choose=/props={component}`
+when the component changes (then the slots, joined), once per
+component, and narrows from it. An agent reads in the write tool's
+listing both ways to learn them: that fetch, or the tool it asks with
+its values, in two calls, that one and then the write:
 
 ```bash
 drush tool:run data_surface:event.spotlight:configure:schema --uid=1 --input='{"values":{"component":"data_surface_examples:call_to_action"}}'
@@ -2731,9 +2738,9 @@ structure's full schema cut to the four components this module ships
 (the same variants as example 12's, under the block's id), the hero's
 actions slot as the full schema narrows it, the four tools a placed
 block has, a link to place one, and what it cost. Past the site list
-limit the block's props and slots are open and `refine`, as example
-12's are, the hero's actions slot is read from the schema for these
-answers with the hero chosen, and the placement's create and update
+limit the block's props and slots are open and `deferred`, as example
+12's are, the hero's actions slot is read from the full schema fetched
+with the hero chosen, and the placement's create and update
 have a narrowing tool each, `data_surface:block.placement:create:schema`
 and `data_surface:block.placement:update:schema`, which the table lists
 too: a site with more than 20 block plugins is past the limit for the

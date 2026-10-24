@@ -434,24 +434,45 @@ class OpenApiDocumentTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests a list past the site list limit is asked at the schema path.
+   * Tests a list past the site list limit is fetched or asked at the schema.
    *
    * With the limit at two, a placed block's settings, a variant per block
-   * plugin, are stated open and `refine` in its component, the full
-   * schema; a client asks `POST .../schema` with the plugin chosen, which
-   * the document already describes. The narrowing tool beside the write
-   * tool is the tool door's, not a path: no path names `:schema`.
+   * plugin, are stated open and `deferred` in its component, the full
+   * schema, with the `fetch` template of one plugin's; the schema path's
+   * GET describes `choose`, the parameter that template fills, and the
+   * 304 and the `ETag` of a fetched schema; a client may still ask
+   * `POST .../schema` with the plugin chosen. The narrowing tool beside the
+   * write tool is the tool door's, not a path: no path names `:schema`.
    *
    * @see docs/decisions.md#a-budget-for-what-the-site-decides
+   * @see docs/decisions.md#a-list-left-out-for-size-is-deferred-not-refined
    */
-  public function testListPastTheLimitIsAskedAtTheSchemaPath(): void {
+  public function testListPastTheLimitIsFetchedOrAskedAtTheSchemaPath(): void {
     $this->config('data_surface.settings')->set('site_list_limit', 2)->save();
     $document = $this->decoded();
     $settings = $document['components']['schemas']['block.placement.create']['properties']['settings'];
-    $this->assertTrue($settings['x-surface']['refine']);
+    $this->assertTrue($settings['x-surface']['deferred']);
+    $this->assertArrayNotHasKey('refine', $settings['x-surface']);
+    $this->assertSame('?choose=/settings={value}', $settings['x-surface']['fetch']);
     $this->assertSame('plugin', $settings['x-surface']['by']);
     $this->assertArrayNotHasKey('anyOf', $settings);
-    $this->assertArrayHasKey('post', $document['paths']['/surface-api/block.placement/schema']);
+    $schema = $document['paths']['/surface-api/block.placement/schema'];
+    $this->assertArrayHasKey('post', $schema);
+    $choose = array_values(array_filter($schema['get']['parameters'], static fn (array $parameter): bool => ($parameter['name'] ?? NULL) === 'choose'));
+    $this->assertCount(1, $choose);
+    $this->assertSame(['query', FALSE, 'form', TRUE, 'array'], [
+      $choose[0]['in'],
+      $choose[0]['required'],
+      $choose[0]['style'],
+      $choose[0]['explode'],
+      $choose[0]['schema']['type'],
+    ]);
+    $this->assertStringContainsString('choose=/settings=data_surface_component&choose=/settings/props=card', $choose[0]['description']);
+    $this->assertArrayHasKey('304', $schema['get']['responses']);
+    $this->assertArrayHasKey('400', $schema['get']['responses']);
+    $this->assertArrayHasKey('ETag', $schema['get']['responses']['200']['headers']);
+    // Every schema path describes it, an item's too.
+    $this->assertContains('choose', array_column($document['paths']['/surface-api/block.placement/{id}/schema']['get']['parameters'], 'name'));
     $this->assertSame([], array_filter(array_keys($document['paths']), static fn (string $path): bool => str_contains($path, ':schema')));
     $this->assertContains('config:data_surface.settings', $this->description()->cacheability->getCacheTags());
   }

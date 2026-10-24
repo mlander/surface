@@ -13,6 +13,7 @@ use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
+use Drupal\data_surface\Contract\Choices;
 use Drupal\data_surface\Contract\SiteListBudget;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\Pipeline\Outbound;
@@ -112,6 +113,23 @@ final class InputDefinitions {
   protected array $listTags = [];
 
   /**
+   * The path the full schema is fetched at, for the surface being converted.
+   *
+   * NULL when the site serves no API, or outside fromSurface().
+   */
+  protected ?string $schemaPath = NULL;
+
+  /**
+   * Where the key being converted is.
+   *
+   * Its frame's JSON Pointer, and the choices of the variants on the way
+   * to it, each a pointer and a value.
+   *
+   * @var array{pointer: string, steps: list<array{0: string, 1: string}>}
+   */
+  protected array $at = ['pointer' => '', 'steps' => []];
+
+  /**
    * Constructs a InputDefinitions converter.
    *
    * @param \Drupal\data_surface\Options\DataSurfaceOptions $options
@@ -183,11 +201,48 @@ final class InputDefinitions {
    *   The id of the tool that answers the schema for some values, which a
    *   key whose list the site decides names past the budget; NULL when
    *   there is none.
+   * @param string|null $schema
+   *   The path the operation's full schema is fetched at, which such a key
+   *   names too, with the choice that states one of its entries; NULL when
+   *   the site serves no API.
    *
    * @return \Drupal\tool\TypedData\MapInputDefinition
    *   The map input definition.
    */
-  public function fromSurface(DataSurfaceInterface $surface, TranslatableMarkup|string $label, TranslatableMarkup|string $description, bool $required = FALSE, mixed $default_value = NULL, bool $runtimeAccessSaidOnce = FALSE, ?string $narrowing = NULL): MapInputDefinition {
+  public function fromSurface(DataSurfaceInterface $surface, TranslatableMarkup|string $label, TranslatableMarkup|string $description, bool $required = FALSE, mixed $default_value = NULL, bool $runtimeAccessSaidOnce = FALSE, ?string $narrowing = NULL, ?string $schema = NULL): MapInputDefinition {
+    $was = [$this->schemaPath, $this->at];
+    $this->schemaPath = $schema;
+    $this->at = ['pointer' => '', 'steps' => []];
+    try {
+      return $this->surfaceMap($surface, $label, $description, $required, $default_value, $runtimeAccessSaidOnce, $narrowing);
+    }
+    finally {
+      [$this->schemaPath, $this->at] = $was;
+    }
+  }
+
+  /**
+   * Converts a data surface into one map input, for fromSurface().
+   *
+   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   *   The data surface to convert.
+   * @param \Drupal\Core\StringTranslation\TranslatableMarkup|string $label
+   *   The label of the resulting map input.
+   * @param \Drupal\Core\StringTranslation\TranslatableMarkup|string $description
+   *   The description of the resulting map input.
+   * @param bool $required
+   *   Whether the resulting map input is required.
+   * @param mixed $default_value
+   *   The default for the map as a whole.
+   * @param bool $runtimeAccessSaidOnce
+   *   As fromSurface() takes it.
+   * @param string|null $narrowing
+   *   The narrowing tool's id, or NULL.
+   *
+   * @return \Drupal\tool\TypedData\MapInputDefinition
+   *   The map input definition.
+   */
+  protected function surfaceMap(DataSurfaceInterface $surface, TranslatableMarkup|string $label, TranslatableMarkup|string $description, bool $required, mixed $default_value, bool $runtimeAccessSaidOnce, ?string $narrowing): MapInputDefinition {
     // Said once by the tool's description, a mark every key carries from
     // the top is not said on each key again; a key's own mark still is.
     // Decision: see
@@ -567,25 +622,52 @@ final class InputDefinitions {
     if ($this->over($entry)) {
       return $this->tooMany($entry, $entry->definition, $narrowing);
     }
-    if ($entry->variants !== NULL && DefinitionMetadata::variantsBy($entry->definition) !== NULL) {
-      return $this->fromVariants($entry->variants, $entry->definition, $narrowing);
-    }
-    $item = $entry->definition instanceof ListDataDefinitionInterface ? $entry->definition->getItemDefinition() : NULL;
-    if ($entry->list !== NULL && $item instanceof ComplexDataDefinitionInterface) {
-      // A collection is a list of the child's maps, its Count carried as
-      // the list's constraint, each item converted the way the child's
-      // own entries say.
-      $list = $this->fromDefinition($entry->definition);
-      if ($list instanceof ListInputDefinition) {
-        $list->setItemDefinition($this->fromChild($entry->list->child(), $item, $narrowing));
+    $was = $this->at;
+    try {
+      if ($entry->variants !== NULL && DefinitionMetadata::variantsBy($entry->definition) !== NULL) {
+        $this->enter($entry->name);
+        return $this->fromVariants($entry->variants, $entry->definition, $narrowing);
       }
-      return $list;
+      $item = $entry->definition instanceof ListDataDefinitionInterface ? $entry->definition->getItemDefinition() : NULL;
+      if ($entry->list !== NULL && $item instanceof ComplexDataDefinitionInterface) {
+        // A collection is a list of the child's maps, its Count carried as
+        // the list's constraint, each item converted the way the child's
+        // own entries say.
+        $list = $this->fromDefinition($entry->definition);
+        if ($list instanceof ListInputDefinition) {
+          $this->enter($entry->name, '0');
+          $list->setItemDefinition($this->fromChild($entry->list->child(), $item, $narrowing));
+        }
+        return $list;
+      }
+      $child = $entry->attachment?->child;
+      if ($child === NULL || !$entry->definition instanceof ComplexDataDefinitionInterface) {
+        return $this->fromDefinition($entry->definition);
+      }
+      $this->enter($entry->name);
+      return $this->fromChild($child, $entry->definition, $narrowing);
     }
-    $child = $entry->attachment?->child;
-    if ($child === NULL || !$entry->definition instanceof ComplexDataDefinitionInterface) {
-      return $this->fromDefinition($entry->definition);
+    finally {
+      $this->at = $was;
     }
-    return $this->fromChild($child, $entry->definition, $narrowing);
+  }
+
+  /**
+   * Moves where the key being converted is, one key down.
+   *
+   * @param string $name
+   *   The key the next frame is at.
+   * @param string|null $below
+   *   A segment past it: a collection's item.
+   * @param string|null $chosen
+   *   The variant the next frame is, chosen at the key.
+   */
+  protected function enter(string $name, ?string $below = NULL, ?string $chosen = NULL): void {
+    $pointer = $this->at['pointer'] . '/' . Choices::escape($name);
+    if ($chosen !== NULL) {
+      $this->at['steps'][] = [$pointer, $chosen];
+    }
+    $this->at['pointer'] = $below === NULL ? $pointer : $pointer . '/' . $below;
   }
 
   /**
@@ -615,9 +697,12 @@ final class InputDefinitions {
    *
    * An open map, which takes any keys: the listing would otherwise carry
    * one map per variant or per entry. Its description says how to learn
-   * the keys: choose the deciding key, and ask the narrowing tool.
+   * the keys: choose the deciding key, then fetch the full schema with
+   * that choice, once per value, where the site serves its API, or ask the
+   * narrowing tool with the values.
    *
-   * Decision: see docs/decisions.md#a-budget-for-what-the-site-decides.
+   * Decision: see
+   * docs/decisions.md#a-list-left-out-for-size-is-deferred-not-refined.
    *
    * @param \Drupal\data_surface\Entry $entry
    *   The key.
@@ -631,7 +716,20 @@ final class InputDefinitions {
    */
   protected function tooMany(Entry $entry, DataDefinitionInterface $definition, ?string $narrowing): MapInputDefinition {
     $arguments = ['@by' => (string) $entry->variants?->by, '@tool' => (string) $narrowing];
+    $fetch = NULL;
+    if ($this->schemaPath !== NULL) {
+      $choices = [];
+      foreach ($this->at['steps'] as [$pointer, $value]) {
+        $choices[$pointer][] = $value;
+      }
+      $query = Choices::query($choices);
+      $arguments['@path'] = $this->schemaPath;
+      $arguments['@fetch'] = 'GET ' . $this->schemaPath . '?' . $query . ($query === '' ? '' : '&') . Choices::PARAMETER . '=' . $this->at['pointer'] . '/' . Choices::escape($entry->name) . '=';
+      $fetch = $entry->variants !== NULL;
+    }
     $note = match (TRUE) {
+      $fetch === TRUE && $narrowing !== NULL => $this->t("Too many to list: choose @by, then fetch @fetch{@by} once per @by, or call @tool with your values, to get this key's schema.", $arguments),
+      $fetch === FALSE && $narrowing !== NULL => $this->t("Too many to list: fetch @fetch{id} once per entry (GET @path lists the ids under x-surface.entries), or call @tool with your values, to get this key's schema.", $arguments),
       $entry->variants !== NULL && $narrowing !== NULL => $this->t("Too many to list: choose @by, then call @tool with your values to get this key's schema.", $arguments),
       $entry->variants !== NULL => $this->t('Too many to list: its keys depend on @by.', $arguments),
       $narrowing !== NULL => $this->t("Too many to list: call @tool with your values to get this key's schema.", $arguments),
@@ -670,7 +768,7 @@ final class InputDefinitions {
         $property = $properties[$name] ?? $child_entry->definition;
         $converted = match (TRUE) {
           $this->over($child_entry) => $this->tooMany($child_entry, $property, $narrowing),
-          $child_entry->variants !== NULL && isset($properties[$name]) && DefinitionMetadata::variantsBy($properties[$name]) !== NULL => $this->fromVariants($child_entry->variants, $properties[$name], $narrowing),
+          $child_entry->variants !== NULL && isset($properties[$name]) && DefinitionMetadata::variantsBy($properties[$name]) !== NULL => $this->variantsAt((string) $name, $child_entry->variants, $properties[$name], $narrowing),
           $child_entry->list !== NULL => $this->fromEntry($child_entry->withDefinition($property), $narrowing),
           default => $this->fromDefinition($property),
         };
@@ -690,6 +788,32 @@ final class InputDefinitions {
       }
     }
     return $map;
+  }
+
+  /**
+   * Converts variants at a key of the frame being converted.
+   *
+   * @param string $name
+   *   The key.
+   * @param \Drupal\data_surface\Variants $variants
+   *   The variant table.
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $placeholder
+   *   The variants' placeholder.
+   * @param string|null $narrowing
+   *   The narrowing tool's id, or NULL.
+   *
+   * @return \Drupal\tool\TypedData\MapInputDefinition
+   *   The union map.
+   */
+  protected function variantsAt(string $name, Variants $variants, DataDefinitionInterface $placeholder, ?string $narrowing): MapInputDefinition {
+    $was = $this->at;
+    $this->enter($name);
+    try {
+      return $this->fromVariants($variants, $placeholder, $narrowing);
+    }
+    finally {
+      $this->at = $was;
+    }
   }
 
   /**
@@ -730,6 +854,7 @@ final class InputDefinitions {
    *   The union map.
    */
   public function fromVariants(Variants $variants, DataDefinitionInterface $placeholder, ?string $narrowing = NULL): MapInputDefinition {
+    $at = $this->at;
     $owners = [];
     $first = [];
     $entries = [];
@@ -751,8 +876,15 @@ final class InputDefinitions {
     foreach ($first as $name => $definition) {
       if ($this->over($entries[$name])) {
         // A key inside the variant whose list the site decides, past the
-        // budget, at its own level.
-        $properties[$name] = $this->tooMany($entries[$name], $definition, $narrowing);
+        // budget, at its own level, reached through the first variant
+        // that holds it.
+        $this->at = ['pointer' => $at['pointer'], 'steps' => [...$at['steps'], [$at['pointer'], $owners[$name][0]]]];
+        try {
+          $properties[$name] = $this->tooMany($entries[$name], $definition, $narrowing);
+        }
+        finally {
+          $this->at = $at;
+        }
         $properties[$name]->setRequired(FALSE);
         continue;
       }

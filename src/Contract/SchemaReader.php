@@ -70,7 +70,8 @@ use Drupal\data_surface\ResourceBuild\ResourceRegistry;
  * named under `checkedOnServer`. A keyword that only annotates (`$comment`,
  * `deprecated`, `contentMediaType`, another vendor's `x-` keyword) is
  * dropped, and so is what only the server knew (`refine`, `live`, a
- * constraint named under `checkedOnServer`); each is noted, by its JSON
+ * constraint named under `checkedOnServer`) and a list left out for its
+ * size (`deferred`); each is noted, by its JSON
  * pointer. A document the reader cannot read at all (no object at its
  * root or at a def, a key holding a dot, a reference to a def it does not
  * hold, a type JSON Schema does not have) is refused, naming the pointer.
@@ -1220,10 +1221,11 @@ final class SchemaReader {
         ];
       }
     }
-    if ($variants === [] && $union === NULL && ($extension['refine'] ?? FALSE) === TRUE) {
-      // Variants a site lists past its budget, stated open: no variant is
-      // in the document to read, so the key is an object like any other.
-      // Decision: see docs/decisions.md#a-budget-for-what-the-site-decides.
+    if ($variants === [] && $union === NULL && ($extension['deferred'] ?? FALSE) === TRUE) {
+      // Variants a site lists past its budget, deferred: no variant is in
+      // the document to read, so the key is an object like any other.
+      // Decision: see
+      // docs/decisions.md#a-list-left-out-for-size-is-deferred-not-refined.
       return NULL;
     }
     return ['by' => $by, 'variants' => $variants, 'consumed' => $consumed];
@@ -1727,6 +1729,9 @@ final class SchemaReader {
       if (($extension[$marker] ?? FALSE) === TRUE) {
         $this->note(static::below($pointer, $marker), 'Not read: a rule only the server knows, which the key is as wide as without.');
       }
+    }
+    if (($extension['deferred'] ?? FALSE) === TRUE) {
+      $this->note(static::below($pointer, 'deferred'), 'Not read: a list the site decides, left out of this document for its size, so the key is read open.');
     }
     if (($extension['access'] ?? NULL) === 'live') {
       $this->note(static::below($pointer, 'access'), 'Not read: an access answer is the access class\'s, not the structure\'s.');

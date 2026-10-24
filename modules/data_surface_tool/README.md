@@ -339,13 +339,25 @@ serializer emits, and what an MCP client sees as `outputSchema`.
 A key whose list the site decides (a component per single-directory
 component, a key per thing a provider lists) is spelled out in the
 listing while the site lists at most `data_surface.settings:site_list_limit`
-entries, 20 as shipped. Past it, the write tool lists the key as an
-open map, the deciding key keeps its enum, and the key's description
-names a third tool beside the write and read tools:
+entries, 20 as shipped. Past it, the full schema marks the key
+`deferred` and the write tool lists it as an open map, the deciding key
+keeps its enum, and the key's description names two ways to learn its
+keys: the full schema fetched with the choice stated, once per value,
+where the site serves its API (data_surface_react on), and a third tool
+beside the write and read tools, asked with the values:
 
-> Too many to list: choose component, then call
-> data_surface:event.spotlight:configure:schema with your values to get
-> this key's schema.
+> Too many to list: choose component, then fetch GET
+> /surface-api/event.spotlight/schema?choose=/props={component} once per
+> component, or call data_surface:event.spotlight:configure:schema with
+> your values, to get this key's schema.
+
+A key inside a variant names the choice on the way,
+`?choose=/settings=data_surface_component&choose=/settings/props={component}`;
+a map of keys from the site names an entry's id, `{id}`, which the full
+schema lists under `x-surface.entries`. The fetch answers a schema that
+changes only when the site's list does, so an agent keeps it per value;
+the tool answers for the values sent, so it is asked again when a choice
+changes. The narrowing tool's own description says both.
 
 | Narrowing tool | Inputs | Outputs |
 | --- | --- | --- |
@@ -371,7 +383,9 @@ drush tool:run data_surface:event.spotlight:configure --uid=1 --input='{"values"
 ```
 
 ([Asking again at the tool door](../../docs/served-contract.md#asking-again-at-the-tool-door),
-[decision](../../docs/decisions.md#a-budget-for-what-the-site-decides).)
+[the fetch per choice](../../docs/served-contract.md#the-fetch-per-choice),
+[decision](../../docs/decisions.md#a-budget-for-what-the-site-decides),
+[deferred](../../docs/decisions.md#a-list-left-out-for-size-is-deferred-not-refined).)
 
 ## The contract panel
 

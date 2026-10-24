@@ -50,16 +50,27 @@ class ReactNarrowingTest extends ExamplesWebDriverTestBase {
   }
 
   /**
+   * Counts the full schemas the page fetched with a choice stated.
+   *
+   * @return int
+   *   How many `GET .../schema?choose=` it made.
+   */
+  protected function fetchedChosen(): int {
+    return (int) $this->getSession()->evaluateScript("performance.getEntriesByType('resource').filter((entry) => { const url = new URL(entry.name); return url.pathname.endsWith('/schema') && url.searchParams.has('choose'); }).length");
+  }
+
+  /**
    * Counts the times the page asked the server to narrow.
    *
-   * The full schema's path is fetched once with GET as the page loads;
-   * every other request to it is a POST, a narrowing for values.
+   * The full schema's path is fetched once with GET as the page loads,
+   * and with `?choose=` for a key deferred for its size; every other
+   * request to it is a POST, a narrowing for values.
    *
    * @return int
    *   How many times it asked.
    */
   protected function askedTheServer(): int {
-    return $this->fetched('/schema') - 1;
+    return $this->fetched('/schema') - 1 - $this->fetchedChosen();
   }
 
   /**
@@ -126,16 +137,18 @@ class ReactNarrowingTest extends ExamplesWebDriverTestBase {
   }
 
   /**
-   * Tests example 12 past the site list limit: the component asks.
+   * Tests example 12 past the site list limit: the component is fetched.
    *
    * With the limit at two, the four components are more than it: the full
-   * schema states the props and slots open, `refine`, so choosing the hero
-   * asks the server, which answers the hero's props, drawn from the schema
-   * for these answers.
+   * schema states the props and slots open, `deferred`, each with a
+   * `fetch` template, so choosing the hero fetches the full schema with
+   * the hero's props, then its props and slots, chosen, and narrows from
+   * it with no narrowing asked; a component chosen again is not fetched
+   * again.
    *
-   * @see docs/decisions.md#a-budget-for-what-the-site-decides
+   * @see docs/decisions.md#a-list-left-out-for-size-is-deferred-not-refined
    */
-  public function testTwelveAsksPastTheSiteListLimit(): void {
+  public function testTwelveFetchesPastTheSiteListLimit(): void {
     $this->config('data_surface.settings')->set('site_list_limit', 2)->save();
     $assert = $this->assertSession();
     $page = $this->getSession()->getPage();
@@ -144,8 +157,16 @@ class ReactNarrowingTest extends ExamplesWebDriverTestBase {
     $page->selectFieldOption('dsr-component', 'Hero');
     $this->assertNotNull($assert->waitForElement('css', '#dsr-props-overlay'));
     $assert->elementNotExists('css', '#dsr-props-heading');
-    $this->assertStringStartsWith('Asked the server', $this->narrowing());
-    $this->assertSame(1, $this->askedTheServer());
+    $this->assertStringStartsWith('Narrowed here, from the schema fetched for the choice', $this->narrowing());
+    $this->assertSame(2, $this->fetchedChosen());
+    $this->assertSame(0, $this->askedTheServer());
+
+    $page->selectFieldOption('dsr-component', 'Card');
+    $this->assertNotNull($assert->waitForElement('css', '#dsr-props-heading'));
+    $page->selectFieldOption('dsr-component', 'Hero');
+    $this->assertNotNull($assert->waitForElement('css', '#dsr-props-overlay'));
+    $this->assertSame(4, $this->fetchedChosen(), 'The hero, chosen again, is not fetched again.');
+    $this->assertSame(0, $this->askedTheServer());
   }
 
   /**

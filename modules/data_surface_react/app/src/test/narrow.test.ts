@@ -1,6 +1,6 @@
 import { pointerToDotted } from '../api';
 import type { Contract, Extension, Marker, Schema, Settled, Values } from '../contract';
-import { holdsValue, holdsIf, inlineSchema, narrow, narrowingStatus, setAt } from '../contract';
+import { filled, holdsValue, holdsIf, inlineSchema, joinedFetch, narrow, narrowingStatus, setAt } from '../contract';
 import example2 from './fixtures/refine-example2.json';
 import example3 from './fixtures/refine-example3.json';
 import compliance from './fixtures/refine-example3-compliance.json';
@@ -8,6 +8,7 @@ import license from './fixtures/refine-example3-license.json';
 import bulletin from './fixtures/refine-bulletin.json';
 import journal from './fixtures/refine-journal.json';
 import sales from './fixtures/refine-sales.json';
+import spotlight from './fixtures/deferred-spotlight.json';
 
 // The page's narrowing held to the server's. Each fixture is what
 // ResourceApiController answered, as an administrator after the examples
@@ -401,5 +402,72 @@ describe('a port on an entry of a map of keys from the site', () => {
     // The edit moves nothing, so there is nothing to narrow; the type
     // taken off sale and put back holds what is stored, not the edit.
     play(recorded, ['local', 'local', { key: 'limits.standard.per_order', marker: 'unsettled' }, 'local', 'local']);
+  });
+});
+
+describe('a key deferred for its size', () => {
+  // Example 12 with more components than the site list limit, as the API
+  // served it (the component list cut to the four examples): the full
+  // schema, the full schema fetched with the hero's props and slots
+  // chosen, and the server's narrowing for the hero.
+  const envelope = spotlight.envelope as unknown as Contract;
+  const chosen = spotlight.chosen as unknown as Record<string, Schema>;
+  const hero = 'data_surface_examples:hero';
+  const request = (full: Schema, values: Values) => ({ full: inlineSchema(full), previous: served(envelope), stored: envelope.values, values, stale: [], changed: 'component' });
+
+  it('names the schema to fetch for the value chosen, not the narrowing', () => {
+    const values = setAt(envelope.values, 'component', hero);
+    expect(narrow(request(spotlight.full as unknown as Schema, values))).toEqual({
+      local: false,
+      key: 'props',
+      marker: 'deferred',
+      fetch: '/surface-api/event.spotlight/schema?choose=/props=data_surface_examples%3Ahero',
+    });
+    // With the props stated, the slots still are not.
+    expect(narrow(request(chosen['choose=/props=data_surface_examples%3Ahero'], values))).toMatchObject({ key: 'slots', marker: 'deferred' });
+  });
+
+  it('is narrowed here from the fetched schema, as the server narrows it', () => {
+    const values = setAt(envelope.values, 'component', hero);
+    const narrowed = narrow(request(chosen['choose=/props=data_surface_examples%3Ahero&choose=/slots=data_surface_examples%3Ahero'], values));
+    expect(narrowed.local, narrowingStatus(narrowed)).toBe(true);
+    if (narrowed.local) {
+      const answer = served(spotlight.narrowed[`component=${hero}`] as unknown as Contract);
+      expect(narrowed.settled.values).toEqual(answer.values);
+      expect(narrowed.settled.stale).toEqual(answer.stale);
+      expect(narrowed.settled.schema.properties).toEqual(answer.schema.properties);
+      // The hero's props as its conditional states them, keyword for
+      // keyword. Its slots' frame is not compared: the page leaves out the
+      // declared rules a slot's def carries in the server's answer, as it
+      // does from a full schema that lists every component.
+      const props = (schema: Schema) => schema.allOf?.find((condition) => condition.then?.properties?.props !== undefined);
+      expect(props(narrowed.settled.schema)).toEqual(props(answer.schema));
+    }
+  });
+
+  it('is open where nothing is chosen, and the server\'s for a map of keys from the site', () => {
+    const extension = (more: Partial<Extension>): Extension => ({ widget: 'fieldset', locked: false, dependsOn: ['kind'], refined: false, stale: false, ...more });
+    const full: Schema = {
+      type: 'object',
+      properties: {
+        kind: { title: 'Kind', type: ['string', 'null'], oneOf: [{ const: 'a', title: 'A' }], 'x-surface': extension({ widget: 'select', dependsOn: [] }) },
+        detail: { title: 'Detail', type: ['object', 'null'], 'x-surface': extension({ widget: 'variants', by: 'kind', deferred: true, fetch: '?choose=/detail={value}' }) },
+        benches: { title: 'Benches', type: ['object', 'null'], 'x-surface': extension({ deferred: true, fetch: '?choose=/benches={value}', entries: [{ id: 'b1', label: 'Bench 1' }] }) },
+      },
+    };
+    const previous: Settled = { schema: full, values: { kind: null, detail: null, benches: {} }, stale: [] };
+    const asked = narrow({ full, previous, stored: previous.values, values: { ...previous.values, kind: null }, stale: [], changed: 'kind' });
+    expect(asked).toEqual({ local: false, key: 'benches', marker: 'deferred' });
+    expect(narrowingStatus(asked)).toBe('Asked the server: benches is a list left out for its size');
+  });
+
+  it('fills a template and joins several into one URL, its choices sorted', () => {
+    expect(filled('/s/schema?choose=/props={value}', 'theme:card')).toBe('/s/schema?choose=/props=theme%3Acard');
+    expect(joinedFetch([
+      '/s/schema?bundle=article&choose=/slots=theme%3Acard',
+      '/s/schema?bundle=article&choose=/props=theme%3Ahero',
+      '/s/schema?choose=/slots=theme%3Ahero',
+    ], '/s/schema')).toBe('/s/schema?bundle=article&choose=/props=theme%3Ahero&choose=/slots=theme%3Ahero');
+    expect(joinedFetch(['https://example.com/s/schema?choose=/a~1b=x%26y'], '/s/schema')).toBe('https://example.com/s/schema?choose=/a~1b=x%26y');
   });
 });

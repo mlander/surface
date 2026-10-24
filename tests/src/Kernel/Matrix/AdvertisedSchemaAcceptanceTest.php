@@ -639,11 +639,11 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Lists the site decides, past the site list limit: open, and `refine`.
+   * Lists the site decides, past the site list limit: open, and `deferred`.
    *
    * Twenty-five poster layouts and twenty-five benches. The full schema
    * states the panels and each map of benches open and marks them
-   * `refine`, so it accepts what only a chosen variant or a listed entry
+   * `deferred`, so it accepts what only a chosen variant or a listed entry
    * refuses, which the marker documents; the schema for these answers is
    * built for the chosen layout and every bench, so it is exact. The
    * grid's columns sent for the strip are refused by the pipeline by name
@@ -670,7 +670,7 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
     Cache::invalidateTags([PosterLayouts::TAG]);
     $poster = $this->build('resource_test.poster');
     $full = $this->decoded($this->container->get('data_surface.contract_emitter')->emitFull($poster, 'resource_test.poster')->document);
-    $this->assertTrue($full['schema']['properties']['panels']['x-surface']['refine']);
+    $this->assertTrue($full['schema']['properties']['panels']['x-surface']['deferred']);
     $this->assertTable('resource_test.poster', $poster, $this->stored('resource_test.poster'), [
       'as stored' => [[], TRUE],
       'the strip with a caption' => [['layout' => 'strip', 'panels' => ['caption' => 'Spring']], TRUE],

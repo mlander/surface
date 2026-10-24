@@ -11,6 +11,7 @@ import narrowed2 from './fixtures/refine-example2.json';
 import narrowed3 from './fixtures/refine-example3.json';
 import compliance from './fixtures/refine-example3-compliance.json';
 import bulletin from './fixtures/refine-bulletin.json';
+import spotlight from './fixtures/deferred-spotlight.json';
 
 // One integration test over a mocked server: the contracts are what the
 // module's emitter wrote for examples 2 and 3 (ServedContractTest's
@@ -934,5 +935,71 @@ describe('the lookup', () => {
     expect(lookupOf({ read: '/surface-api/event.sponsorship', schema: '', write: { method: 'PATCH', url: '' } })).toBe('/surface-api/event.sponsorship:lookup');
     expect(lookupOf({ read: '/surface-api/node.type/recipe?x=1', schema: '', write: { method: 'PATCH', url: '' } })).toBe('/surface-api/node.type/recipe:lookup');
     expect(lookupOf({ read: '/surface-api/event.venue:create', schema: '', write: { method: 'POST', url: '' }, lookup: null })).toBeNull();
+  });
+});
+
+describe('a key deferred for its size', () => {
+  // Example 12 on a site with more components than the site list limit:
+  // the full schema states the props and slots open, `deferred`, each with
+  // a `fetch` template; the mocked server answers the full schema with the
+  // choices named in the query, as GET .../schema?choose= does, and 404
+  // for any other set.
+  const resource = 'event.spotlight';
+  const routes = routesOf(resource);
+  const chosen = spotlight.chosen as Record<string, unknown>;
+  const spotlightServer = () =>
+    server({
+      [routes.read]: () => spotlight.envelope,
+      [routes.schema]: (call) => {
+        const query = call.url.split('?')[1];
+        if (query === undefined) {
+          return spotlight.full;
+        }
+        return chosen[query] ?? problem(403);
+      },
+    });
+  const fetches = (calls: Call[]) => calls.filter((call) => methodOf(call) === 'GET' && call.url.includes('?choose='));
+
+  it('fetches the chosen variant with choose and narrows from it, asking no narrowing', async () => {
+    const { calls, fetcher } = spotlightServer();
+    render(<SurfaceForm settings={settingsOf(resource)} fetcher={fetcher} refineDelay={0} />);
+    expect(await screen.findByLabelText(/Heading/)).toBeInTheDocument();
+
+    await userEvent.selectOptions(screen.getByLabelText(/^Component/), 'Hero');
+    expect(await screen.findByLabelText(/Subtitle/)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/Heading/)).not.toBeInTheDocument();
+    // The props, then the slots the props' answer still left out, joined:
+    // each a GET of the full schema, never a POST of the values.
+    expect(fetches(calls).map((call) => call.url)).toEqual([
+      '/surface-api/event.spotlight/schema?choose=/props=data_surface_examples%3Ahero',
+      '/surface-api/event.spotlight/schema?choose=/props=data_surface_examples%3Ahero&choose=/slots=data_surface_examples%3Ahero',
+    ]);
+    expect(narrows(calls)).toHaveLength(0);
+    expect(narrowingLine()).toBe('Narrowed here, from the schema fetched for the choice: props, slots.');
+  });
+
+  it('keeps each fetch for the page: a choice made again is not fetched again', async () => {
+    const { calls, fetcher } = spotlightServer();
+    render(<SurfaceForm settings={settingsOf(resource)} fetcher={fetcher} refineDelay={0} />);
+    await userEvent.selectOptions(await screen.findByLabelText(/^Component/), 'Hero');
+    await screen.findByLabelText(/Subtitle/);
+    await userEvent.selectOptions(screen.getByLabelText(/^Component/), 'Card');
+    expect(await screen.findByLabelText(/Heading/)).toBeInTheDocument();
+    await userEvent.selectOptions(screen.getByLabelText(/^Component/), 'Hero');
+    expect(await screen.findByLabelText(/Subtitle/)).toBeInTheDocument();
+    expect(fetches(calls)).toHaveLength(4);
+    expect(narrows(calls)).toHaveLength(0);
+  });
+
+  it('asks the narrowing when the fetch is refused', async () => {
+    const { calls, fetcher } = server({
+      [routes.read]: () => spotlight.envelope,
+      [routes.schema]: (call) => (call.url.includes('?') ? problem(403) : spotlight.full),
+      [routes.narrow]: () => spotlight.envelope,
+    });
+    render(<SurfaceForm settings={settingsOf(resource)} fetcher={fetcher} refineDelay={0} />);
+    await userEvent.selectOptions(await screen.findByLabelText(/^Component/), 'Hero');
+    await waitFor(() => expect(narrows(calls)).toHaveLength(1));
+    expect(fetches(calls)).toHaveLength(1);
   });
 });

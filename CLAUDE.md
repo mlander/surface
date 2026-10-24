@@ -168,6 +168,16 @@ the record of the rework that brought the module to the pattern.
   `computed` (example 15's slug,
   `docs/decisions.md#a-computed-key-is-a-pure-function-of-its-sources`).
 - **Contract**: the JSON Schema a built resource or structure emits.
+- **Markers**: what a key's `x-surface` says of how far the schema holds
+  it, and what an invoker does: `enumerated`, stated in full, narrow
+  locally; `deferred`, a list the site decides left out for its size,
+  fetch per choice (`GET .../schema?choose=<pointer>=<value>`, the
+  key's `fetch` template filled) and cache, or ask the narrowing;
+  `refine`, a static rule that cannot be written out, ask the narrowing
+  with values; `live`, a runtime rule, ask per request and never cache;
+  `checkedOnServer`, a constraint only the server checks
+  (`docs/served-contract.md#what-a-key-marked-says-and-what-to-do`,
+  `docs/decisions.md#a-list-left-out-for-size-is-deferred-not-refined`).
 - **Version**: `#[Resource(version:)]` or `#[Structure(version:)]`, from
   1, counting the breaking changes made to its stored values; stamped
   `x-surface.version` at the top of both documents and on a def above 1.
@@ -266,9 +276,10 @@ answering with the stored values less secrets
 (`ResourceCatalog::reads()`, `ResourceOperationReadTool`). Where an
 operation's listing has a key whose list the site decides (variants or
 keys from the site) past `data_surface.settings:site_list_limit`, which
-the full schema and the listing state open and `refine`, it derives a
+the full schema and the listing state open and `deferred`, it derives a
 narrowing tool too, `data_surface:<id>:<operation>:schema`, answering
-what `POST .../schema` answers for the values sent
+what `POST .../schema` answers for the values sent, and the key's
+description names the fetch beside it, `GET .../schema?choose=<pointer>=<value>`
 (`OperationInputs::narrows()`, `ResourceOperationSchemaTool`,
 `docs/decisions.md#a-budget-for-what-the-site-decides`). Both declare
 the operation's permission to the Tool API, unless it has a `%key`
@@ -402,7 +413,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 The full lane's phpunit line reads, as of this writing:
 
 ```
-phpunit: Tests: 1580, Assertions: 37408, Errors: 0, Failures: 0, Skipped: 3. Classes: 214 of 214, 8 at a time, browser classes 4.
+phpunit: Tests: 1584, Assertions: 37525, Errors: 0, Failures: 0, Skipped: 3. Classes: 214 of 214, 8 at a time, browser classes 4.
 ```
 
 the same counts a plain phpunit run of the tree gives. The skipped
@@ -494,7 +505,8 @@ sealed data surface and its values into JSON Schema 2020-12 with an
 on their deciding sibling. That is the schema as it stands, for one set
 of values; `emitFull()` is the second document, the full schema, which
 reads no value: every key as declared, every listable dependency as
-conditionals, the rest `refine` or `live`, and never stricter than the pipeline
+conditionals, the rest `refine` or `live`, a list the site decides
+past its limit `deferred`, and never stricter than the pipeline
 (`docs/decisions.md#two-documents-never-stricter-than-the-runtime`).
 It names no widget unless asked
 (`emit(..., widgets: TRUE)`); `data_surface_tool`'s contract panel shows

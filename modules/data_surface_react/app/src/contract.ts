@@ -143,6 +143,21 @@ export interface Extension {
    */
   refine?: boolean;
   /**
+   * Static and stated, but left out for its size: a list the site decides
+   * with more entries than the site's limit. `fetch` names the full schema
+   * with one choice stated; the page fetches it for the value chosen, once,
+   * and narrows from it.
+   */
+  deferred?: boolean;
+  /**
+   * Beside `deferred`: an RFC 6570 template, the full schema's URL with
+   * `choose` for this key, its value `{value}`: the deciding key's value,
+   * or an entry's id.
+   */
+  fetch?: string;
+  /** Beside `deferred`, on a map of keys from the site: each key it holds. */
+  entries?: { id: string; label: string }[];
+  /**
    * A live refiner narrows the key too: a rule only the server applies,
    * when asked, which no schema states ahead of time. The full schema
    * keeps the key wider; this document is refined by it for its values.
@@ -1193,7 +1208,7 @@ export function fieldId(path: string): string {
 // (ContractEmitter::property()), keyword for keyword.
 
 /** Why a change was asked of the server rather than narrowed here. */
-export type Marker = 'live' | 'refine' | 'access' | 'stored' | 'computed' | 'unsettled' | 'pending';
+export type Marker = 'live' | 'refine' | 'deferred' | 'access' | 'stored' | 'computed' | 'unsettled' | 'pending';
 
 /** A change the page cannot narrow by itself, and the key that says why. */
 export class Unsettled extends Error {
@@ -1232,16 +1247,17 @@ export interface Narrowing {
 
 export type Narrowed =
   | { local: true; keys: string[]; settled: Settled }
-  | { local: false; key: string; marker: Marker };
+  | { local: false; key: string; marker: Marker; fetch?: string };
 
-/** What the server would be asked about, said in the panel. */
-export function narrowingStatus(narrowed: Narrowed): string {
+/** What the server would be asked about, said in the panel; `fetched` when it was narrowed from a schema fetched for a choice. */
+export function narrowingStatus(narrowed: Narrowed, fetched = false): string {
   if (narrowed.local) {
-    return `Narrowed here: ${narrowed.keys.join(', ')}`;
+    return `${fetched ? 'Narrowed here, from the schema fetched for the choice' : 'Narrowed here'}: ${narrowed.keys.join(', ')}`;
   }
   const why: Record<Marker, string> = {
     live: 'depends on a live rule',
     refine: 'depends on a rule to refine with values',
+    deferred: 'is a list left out for its size',
     access: 'has access only the server decides',
     stored: 'stands for a stored value only the server holds',
     computed: 'is computed on the server',
@@ -1278,7 +1294,7 @@ export function narrow(request: Narrowing): Narrowed {
       return { local: false, key: request.changed, marker: 'unsettled' };
     }
     const keys = found.names.map((name) => found.prefix + name);
-    const marked = markedIn(found.frame, found.names, found.prefix);
+    const marked = markedIn(found.frame, found.names, found.prefix, request.values);
     if (marked !== null) {
       return { local: false, ...marked };
     }
@@ -1383,15 +1399,47 @@ function closure(frame: Schema, key: string): string[] {
   return Object.keys(properties).filter((name) => reached.has(name));
 }
 
-/** The first dependent the server must narrow, by its marker: on the key, or anywhere inside it. */
-function markedIn(frame: Schema, names: string[], prefix: string): { key: string; marker: Marker } | null {
-  const marker = (schema: Schema): Marker | null =>
-    schema['x-surface']?.live ? 'live' : schema['x-surface']?.refine ? 'refine' : null;
-  const inside = (schema: Schema, at: string): { key: string; marker: Marker } | null => {
+/**
+ * The first dependent the page cannot narrow from this schema, by its
+ * marker: on the key, or anywhere inside it.
+ *
+ * A `deferred` key with variants is narrowed here once its deciding key's
+ * value is stated in it; with a value it does not state, it names the
+ * schema to fetch for that value, and with nothing chosen it is open, as
+ * the server would answer it. A deferred map of keys from the site has no
+ * deciding key, so it is the server's.
+ */
+function markedIn(frame: Schema, names: string[], prefix: string, values: Values): { key: string; marker: Marker; fetch?: string } | null {
+  const marker = (schema: Schema, at: string, name: string): { key: string; marker: Marker; fetch?: string } | 'open' | null => {
+    const extension = schema['x-surface'];
+    if (extension?.live) {
+      return { key: at + name, marker: 'live' };
+    }
+    if (extension?.refine) {
+      return { key: at + name, marker: 'refine' };
+    }
+    if (extension?.deferred) {
+      if (extension.by === undefined || extension.fetch === undefined) {
+        return { key: at + name, marker: 'deferred' };
+      }
+      const value = getAt(values, at + extension.by);
+      if (isEmpty(value)) {
+        return 'open';
+      }
+      if (extension.variants?.[String(value)] === undefined) {
+        return { key: at + name, marker: 'deferred', fetch: filled(extension.fetch, value) };
+      }
+    }
+    return null;
+  };
+  const inside = (schema: Schema, at: string): { key: string; marker: Marker; fetch?: string } | null => {
     for (const [name, property] of Object.entries(schema.properties ?? {})) {
-      const own = marker(property);
+      const own = marker(property, at, name);
+      if (own === 'open') {
+        continue;
+      }
       if (own !== null) {
-        return { key: at + name, marker: own };
+        return own;
       }
       const deeper = inside(property, `${at}${name}.`) ?? (property.items ? inside(property.items, `${at}${name}.*.`) : null);
       if (deeper !== null) {
@@ -1410,9 +1458,12 @@ function markedIn(frame: Schema, names: string[], prefix: string): { key: string
   };
   for (const name of names) {
     const property = frame.properties?.[name] ?? {};
-    const own = marker(property);
+    const own = marker(property, prefix, name);
+    if (own === 'open') {
+      continue;
+    }
     if (own !== null) {
-      return { key: prefix + name, marker: own };
+      return own;
     }
     const branches = (frame.allOf ?? []).filter((condition) => conditionalKey(condition) === name).map((condition) => narrowingOf(condition, name)).filter((branch): branch is Schema => branch !== null);
     for (const child of [property, ...branches, ...(property.items ? [property.items] : [])]) {
@@ -1423,6 +1474,40 @@ function markedIn(frame: Schema, names: string[], prefix: string): { key: string
     }
   }
   return null;
+}
+
+/** Fills a deferred key's `fetch` template (RFC 6570, simple expansion) with a value. */
+export function filled(template: string, value: unknown): string {
+  return template.replace('{value}', encodeURIComponent(String(value)));
+}
+
+/**
+ * Joins the choices of several filled `fetch` templates into one URL.
+ *
+ * Each template is the full schema's URL with the `choose` that states one
+ * key, and those of the variants on the way to it; the server takes any
+ * number. A pointer named twice keeps the last value. The choices are
+ * sorted, so one set of choices is one URL, and one cached answer.
+ */
+export function joinedFetch(urls: string[], base: string): string {
+  const origin = typeof window === 'undefined' ? 'http://localhost' : window.location.href;
+  const first = new URL(urls[0], new URL(base, origin));
+  const choices = new Map<string, string>();
+  for (const url of urls) {
+    for (const choice of new URL(url, first).searchParams.getAll('choose')) {
+      const at = choice.indexOf('=');
+      if (at > 0) {
+        choices.set(choice.slice(0, at), choice.slice(at + 1));
+      }
+    }
+  }
+  const kept = [...first.searchParams.entries()].filter(([name]) => name !== 'choose').map(([name, value]) => `${encodeURIComponent(name)}=${encodeURIComponent(value)}`);
+  // A pointer is kept as written but for what would end it in a query.
+  const pointer = (text: string): string => text.replace(/[%&=+#\s]/g, (character) => encodeURIComponent(character));
+  const chosen = [...choices.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([at, value]) => `choose=${pointer(at)}=${encodeURIComponent(value)}`);
+  const query = [...kept, ...chosen].join('&');
+  const absolute = /^[a-z][a-z0-9+.-]*:/i.test(urls[0]);
+  return `${absolute ? first.origin : ''}${first.pathname}${query === '' ? '' : `?${query}`}`;
 }
 
 /**
@@ -2093,6 +2178,13 @@ function present(schema: Schema, full: Schema, values: Values, path: string, map
       const chosen = branches.find((condition) => sameValue(condition.if.properties[by]?.const, values[by])) ?? null;
       const id = chosen === null ? null : variantId(extension, chosen.if.properties[by]?.const);
       properties[name] = { ...property, 'x-surface': { ...extension, chosen: id, refined: id !== null, stale: false } };
+      if (extension.deferred && id !== null) {
+        // A key deferred for its size, its variant chosen and stated: the
+        // server's narrowing states that variant exactly, open no longer.
+        const { type: _open, ...exact } = properties[name];
+        const { deferred: _deferred, fetch: _fetch, ...said } = exact['x-surface'] as Extension;
+        properties[name] = { ...exact, 'x-surface': said };
+      }
       shown[name] = held;
       for (const branch of branches) {
         const variant = narrowingOf(branch, name) as Schema;

@@ -1864,14 +1864,16 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
   narrows locally, and a payload carrying another variant's keys is
   refused by name: `props.align belongs to the data_surface_examples:hero
   variant, but component chose data_surface_examples:card.`
-- **Past the site list limit, asked for.** While the provider lists at
+- **Past the site list limit, deferred.** While the provider lists at
   most `data_surface.settings:site_list_limit` variants (20 as shipped),
   both documents and the tool listing state each. Past it, the full
-  schema and the listing state the key open, marked `refine`, the
-  deciding key still listing every value; the schema for these answers
-  states the variant chosen, and the narrowing tool,
+  schema and the listing state the key open, marked `deferred`, the
+  deciding key still listing every value; the full schema fetched with
+  a value chosen, `GET .../schema?choose=/props=<value>`, and the schema
+  for these answers state the variant chosen, and the narrowing tool,
   `data_surface:<resource>:<operation>:schema`, answers it to an agent
-  ([decision](decisions.md#a-budget-for-what-the-site-decides)).
+  that asks with values
+  ([decision](decisions.md#a-list-left-out-for-size-is-deferred-not-refined)).
 - **Storage.** The key is open in the config schema written from the
   resource (`type: ignore`): which variants a site has is not the
   code's, and the chosen variant holds the value to its own keys before
@@ -1919,7 +1921,7 @@ read structure, built once per request and context and held at every key
 it is attached at, so a site with hundreds of components builds a
 structure per def, not one per place a def is used. Each level counts
 against the site list limit by itself: on a site with 312 components,
-the props and slots are `refine` at every depth, and the documents hold
+the props and slots are `deferred` at every depth, and the documents hold
 the chosen component's defs alone.
 
 ### A child that cannot be listed
@@ -2050,10 +2052,12 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
   change one is access.
 - **Past the site list limit.** A map of more keys than
   `data_surface.settings:site_list_limit` (20 as shipped) is stated open
-  in the full schema and the tool listing, marked `refine`, its keys
-  named under `x-surface.entries` by id and label; the schema for these
-  answers states every key, and the narrowing tool answers it to an agent
-  ([decision](decisions.md#a-budget-for-what-the-site-decides)).
+  in the full schema and the tool listing, marked `deferred`, its keys
+  named under `x-surface.entries` by id and label; the full schema
+  fetched with an entry chosen, `GET .../schema?choose=/limits=<id>`,
+  states that key, the schema for these answers states every key, and
+  the narrowing tool answers it to an agent
+  ([decision](decisions.md#a-list-left-out-for-size-is-deferred-not-refined)).
 - **A locked thing** (`add($id, $label, locked: TRUE)`) is held to what
   is stored: drawn fixed on the form, `readOnly` in both documents, locked
   in the tool listing, and a value posted for it is not taken, which the
