@@ -9,6 +9,7 @@ use Drupal\Core\Block\BlockPluginInterface;
 use Drupal\Core\Cache\CacheableDependencyInterface;
 use Drupal\Core\Extension\ModuleHandlerInterface;
 use Drupal\Core\Plugin\Context\ContextDefinitionInterface;
+use Drupal\data_surface\Contract\ConfigSchemaDocument;
 use Drupal\data_surface\Resource\Attribute\UsesStructure;
 use Drupal\data_surface\Resource\VariantList;
 use Drupal\data_surface\Resource\VariantsFromSiteInterface;
@@ -63,7 +64,7 @@ final class BlockPluginStructures implements VariantsFromSiteInterface {
    *
    * @param \Drupal\Core\Block\BlockManagerInterface $blocks
    *   The block plugin manager.
-   * @param \Drupal\data_surface_block\Variants\ConfigSchemaDocument $schemas
+   * @param \Drupal\data_surface\Contract\ConfigSchemaDocument $schemas
    *   Writes a plugin's settings schema as JSON Schema.
    * @param \Drupal\Core\Extension\ModuleHandlerInterface $moduleHandler
    *   The module handler, asked which modules derive plugins from content.

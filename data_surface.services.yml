@@ -83,6 +83,13 @@ services:
     class: Drupal\data_surface\Contract\SchemaReader
     arguments: ['@data_surface.resource_registry', '@typed_data_manager']
   Drupal\data_surface\Contract\SchemaReader: '@data_surface.schema_reader'
+  # Writes a config schema type as JSON Schema, for the schema reader: a
+  # plugin's settings (data_surface_block), a config object a resource is
+  # first written from (drush generate surface:resource).
+  data_surface.config_schema_document:
+    class: Drupal\data_surface\Contract\ConfigSchemaDocument
+    arguments: ['@config.typed']
+  Drupal\data_surface\Contract\ConfigSchemaDocument: '@data_surface.config_schema_document'
   # The additive-diff lint: each module's committed contract baselines,
   # and today's full schemas judged against them.
   data_surface.contract_baselines:

@@ -1,0 +1,30 @@
+{% autoescape false %}
+<?php
+
+declare(strict_types=1);
+
+namespace Drupal\{{ r.module }}\Storage;
+
+use Drupal\data_surface\Storage\ConfigObjectStorage;
+
+/**
+{% for line in r.storage_summary %}
+ *{{ line ? ' ' ~ line : '' }}
+{% endfor %}
+ */
+final class {{ r.storage_class }} extends ConfigObjectStorage {
+
+  /**
+   * {@inheritdoc}
+   */
+  public const CONFIG = {{ r.config_literal }};
+{% if r.always_held %}
+
+  /**
+   * {@inheritdoc}
+   */
+  public const ALWAYS_HELD = {{ r.always_held }};
+{% endif %}
+
+}
+{% endautoescape %}

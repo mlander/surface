@@ -1363,6 +1363,18 @@ renames sit in A because they are cheapest before new code exists.
     structure or under an alter's mount; recomputing on demand; a
     deriver the React page runs locally.
 
+22. **The generator.** DONE 2026-10-24
+    (`docs/decisions.md#the-generator-writes-what-the-first-page-shows`).
+    `drush generate surface:resource` writes what the first page lists
+    from an interview, `--from-config-schema=<name>` or
+    `--from-json-schema=<file>`; the newsletter's answers write
+    `data_surface_first` byte for byte, a foreign constraint is a comment
+    naming the keyword and the key, and a routing or permissions file is
+    added to, never replaced ([Generating a resource](docs/generating.md)).
+    Open: a resource with identity in a config entity type; a variant, a
+    mixin or a port read from a schema written as code rather than as a
+    comment.
+
 ## Maintenance
 
 - **Functional tests convert to kernel tests as units touch them**, by

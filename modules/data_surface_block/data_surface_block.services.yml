@@ -1,13 +1,11 @@
 services:
   # The providers the placement's variants are read from, each named by
-  # its class where the blueprint attaches them, and the writer of a
-  # config schema as JSON Schema they share.
-  Drupal\data_surface_block\Variants\ConfigSchemaDocument:
-    arguments: ['@config.typed']
+  # its class where the blueprint attaches them; both write a plugin's
+  # config schema as JSON Schema with the main module's writer.
   Drupal\data_surface_block\Variants\BlockPluginStructures:
-    arguments: ['@plugin.manager.block', '@Drupal\data_surface_block\Variants\ConfigSchemaDocument', '@module_handler']
+    arguments: ['@plugin.manager.block', '@data_surface.config_schema_document', '@module_handler']
   Drupal\data_surface_block\Variants\ConditionPluginStructures:
-    arguments: ['@plugin.manager.condition', '@context.repository', '@context.handler', '@language_manager', '@Drupal\data_surface_block\Variants\ConfigSchemaDocument', '@string_translation']
+    arguments: ['@plugin.manager.condition', '@context.repository', '@context.handler', '@language_manager', '@data_surface.config_schema_document', '@string_translation']
 
   # The cosmetic layer the three routes name beside the operation: the
   # message and the block layout to return to.

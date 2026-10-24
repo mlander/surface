@@ -100,7 +100,10 @@ The first writes nothing: it prints how each file differs from what the
 resources declare, as a unified diff, and fails when one does, so a
 check can run it. The second writes them; commit what it writes. Without
 `--module` it names every installed module owning a resource stored in
-a simple config object, or writing an entry for one.
+a simple config object, or writing an entry for one. An object another
+module provides (its name's first part is that module) keeps its
+owner's schema, which the resource is held to, and no entry is written
+for it ([decision](decisions.md#the-generator-writes-what-the-first-page-shows)).
 
 A module named need not be installed. Its resources, structures, shapes
 and alters are read from its `src/`, as discovery reads an installed

@@ -19,7 +19,8 @@ On its own the base module adds the resource and structure model, the
 pipeline, the two plugin types (widgets and options resolvers), the stock
 storage classes, and the host adoption layer. It adds no resources or
 structures, no routes and no permissions. Those come from the modules
-that declare them.
+that declare them. `drush generate surface:resource` writes a settings
+page's files into one ([Generating a resource](generating.md)).
 
 ## In production: compile assertions out
 

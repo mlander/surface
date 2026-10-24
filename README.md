@@ -393,6 +393,7 @@ nothing on it is needed to build.
 | [Home](docs/index.md) | What a resource and a structure are, and where each concept lives in the code. |
 | [Your first resource](docs/first-resource.md) | A settings page from a resource, an operation, a storage and `add()`: the whole module, pinned to `data_surface_first`. |
 | [Your second resource](docs/second-resource.md) | One key whose allowed values depend on another's, with one refiner. |
+| [Generating a resource](docs/generating.md) | `drush generate surface:resource`: the first page's files from an interview, a config schema entry or a JSON Schema document, and the comments it leaves for what it cannot write. |
 | [Concepts](docs/concepts.md) | Every concept, the question that makes you need it, when to skip it, and the page that shows it. |
 | [Transformations](docs/transformations.md) | A value asked for one way and stored another (coercion, layouts, the doors' wire forms), what runs because something was saved, and a value nobody types. |
 | [Common settings recipes](docs/recipes.md) | A time of day, a multi-select, a text area and the other keys a settings page often asks for, one snippet each. |

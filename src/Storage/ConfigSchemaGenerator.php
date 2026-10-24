@@ -43,7 +43,9 @@ use Symfony\Component\Yaml\Yaml;
  * The resource is the one description of a config object; its config
  * schema and the values it is installed with are derived from it, until
  * core can read a data definition as the schema. For every resource whose
- * storage is a ConfigObjectStorage, sealed as declared:
+ * storage is a ConfigObjectStorage of an object its own module provides
+ * (another module's object keeps its owner's schema, which the resource is
+ * held to), sealed as declared:
  *
  * - `config/schema/<module>.schema.yml` gains the object's entry, a
  *   `config_object` that is fully validatable, its mapping in declaration
@@ -171,20 +173,24 @@ final class ConfigSchemaGenerator {
    *
    * @param string[] $modules
    *   The modules, installed or not.
+   * @param bool $fromCode
+   *   TRUE to read the named modules from their code even where they are
+   *   installed: a resource class written since the container was built
+   *   (drush generate surface:resource) is in no registry yet.
    *
    * @return static
-   *   This generator when every one is installed; otherwise one reading
-   *   them beside the installed modules.
+   *   This generator when every one is installed and none is read again;
+   *   otherwise one reading them beside the installed modules.
    *
    * @throws \InvalidArgumentException
    *   When no module of a name is there to read.
    */
-  public function including(array $modules): static {
-    $missing = array_values(array_diff($modules, array_keys($this->installed)));
+  public function including(array $modules, bool $fromCode = FALSE): static {
+    $missing = $fromCode ? array_values($modules) : array_values(array_diff($modules, array_keys($this->installed)));
     if ($missing === [] || $this->container === NULL || $this->classResolver === NULL) {
       return $this;
     }
-    $absent = array_filter($missing, fn (string $module): bool => !$this->moduleList->exists($module));
+    $absent = array_filter($missing, fn (string $module): bool => !isset($this->installed[$module]) && !$this->moduleList->exists($module));
     if ($absent !== []) {
       // A module written since the list was cached is not in it yet.
       $this->moduleList->reset();
@@ -196,7 +202,7 @@ final class ConfigSchemaGenerator {
     $scanned = $this->installed;
     $loader = new ClassLoader();
     foreach ($missing as $module) {
-      $pathname = $this->moduleList->getPathname($module);
+      $pathname = $this->installed[$module]['pathname'] ?? $this->moduleList->getPathname($module);
       $loader->addPsr4('Drupal\\' . $module . '\\', $this->root . '/' . dirname($pathname) . '/src');
       $scanned[$module] = ['pathname' => $pathname];
     }
@@ -219,6 +225,13 @@ final class ConfigSchemaGenerator {
     $found = [];
     foreach ($this->registry->getDefinitions() as $name => $definition) {
       if ($definition->isDerived() || $definition->storage === NULL) {
+        continue;
+      }
+      if (is_subclass_of($definition->storage, ConfigObjectStorage::class) && !static::owns($definition->module, (string) constant($definition->storage . '::CONFIG'))) {
+        // Another module's object: its owner's schema describes it, and the
+        // resource is held to that schema (HeldToConfigSchemaInterface).
+        // Decision: see
+        // docs/decisions.md#the-generator-writes-what-the-first-page-shows.
         continue;
       }
       if (is_subclass_of($definition->storage, ConfigObjectStorage::class) || $this->entityType($definition) !== NULL) {
@@ -294,7 +307,7 @@ final class ConfigSchemaGenerator {
       $files[$path] = static::merge($this->read($path), $entries);
     }
     foreach ($installs as $path => $values) {
-      $files[$path] = $values === [] ? "{  }\n" : Yaml::dump($values, PHP_INT_MAX, 2, Yaml::DUMP_EXCEPTION_ON_INVALID_TYPE | Yaml::DUMP_MULTI_LINE_LITERAL_BLOCK | Yaml::DUMP_NULL_AS_TILDE | Yaml::DUMP_EMPTY_ARRAY_AS_SEQUENCE);
+      $files[$path] = static::installFile($values);
     }
     ksort($files);
     return $files;
@@ -319,17 +332,51 @@ final class ConfigSchemaGenerator {
     $config = (string) constant($definition->storage . '::CONFIG');
     $built = $this->resources->declaration($definition->name(), $this->context($definition));
     $existing = $this->existing($definition->module, $config);
-    $this->alwaysHeld = array_map('strval', (array) constant($definition->storage . '::ALWAYS_HELD'));
+    $always_held = array_map('strval', (array) constant($definition->storage . '::ALWAYS_HELD'));
+    return $this->describeBuilt($built, $definition, $config, $always_held, $existing['schema'], $existing['install']);
+  }
+
+  /**
+   * Describes the config object a sealed resource is stored in.
+   *
+   * What describe() writes for a resource discovery found, for one built
+   * any other way: the resource generator builds what it is about to
+   * write before any class of it exists, and writes its schema and install
+   * file from this, the same mapping the command uses.
+   *
+   * Decision: see
+   * docs/decisions.md#the-generator-writes-what-the-first-page-shows.
+   *
+   * @param \Drupal\data_surface\DataSurfaceInterface $built
+   *   The resource, sealed as declared.
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $owner
+   *   What it was built from: its id names the entry, its module the file.
+   * @param string $config
+   *   The config object.
+   * @param string[] $always_held
+   *   The optional keys its storage always holds, by dotted path.
+   * @param array $schema
+   *   The entries the module's schema file holds now, by name, for what
+   *   the resource does not say: the object's label.
+   * @param array $install
+   *   What the object's install file holds now.
+   *
+   * @return array{config: string, entries: list<array{module: string, name: string, resource: string, schema: array}>, install: array}
+   *   The object's name, each schema entry with the module it is written
+   *   in, and the values it is installed with.
+   */
+  public function describeBuilt(DataSurfaceInterface $built, ResourceDefinition $owner, string $config, array $always_held, array $schema, array $install): array {
+    $this->alwaysHeld = $always_held;
     $entries = [];
-    $install = $this->install($built, $existing['install']);
-    $mapping = $this->mapping($built->getDefinitions(), $config, $definition, $entries, $existing['schema'], TRUE, installed: $install);
+    $installed = $this->install($built, $install);
+    $mapping = $this->mapping($built->getDefinitions(), $config, $owner, $entries, $schema, TRUE, installed: $installed);
     array_unshift($entries, [
-      'module' => $definition->module,
+      'module' => $owner->module,
       'name' => $config,
-      'resource' => $definition->id,
+      'resource' => $owner->id,
       'schema' => [
         'type' => 'config_object',
-        'label' => $existing['schema'][$config]['label'] ?? $definition->id,
+        'label' => $schema[$config]['label'] ?? $owner->id,
         'constraints' => ['FullyValidatable' => NULL],
         'mapping' => $mapping,
       ],
@@ -337,8 +384,23 @@ final class ConfigSchemaGenerator {
     return [
       'config' => $config,
       'entries' => $entries,
-      'install' => $install,
+      'install' => $installed,
     ];
+  }
+
+  /**
+   * Answers whether a config object is a module's own, by core's rule.
+   *
+   * @param string $module
+   *   The module.
+   * @param string $config
+   *   The object's name, whose first part is the module that provides it.
+   *
+   * @return bool
+   *   TRUE when the module provides it.
+   */
+  public static function owns(string $module, string $config): bool {
+    return explode('.', $config, 2)[0] === $module;
   }
 
   /**
@@ -930,6 +992,19 @@ final class ConfigSchemaGenerator {
   protected function read(string $path): string {
     $file = $this->root . '/' . $path;
     return is_file($file) ? (string) file_get_contents($file) : '';
+  }
+
+  /**
+   * Writes an install file's values as YAML, the way Drupal's own are.
+   *
+   * @param array $values
+   *   The values the object is installed with.
+   *
+   * @return string
+   *   The file.
+   */
+  public static function installFile(array $values): string {
+    return $values === [] ? "{  }\n" : Yaml::dump($values, PHP_INT_MAX, 2, Yaml::DUMP_EXCEPTION_ON_INVALID_TYPE | Yaml::DUMP_MULTI_LINE_LITERAL_BLOCK | Yaml::DUMP_NULL_AS_TILDE | Yaml::DUMP_EMPTY_ARRAY_AS_SEQUENCE);
   }
 
   /**

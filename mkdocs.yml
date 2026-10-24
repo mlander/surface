@@ -27,6 +27,7 @@ nav:
   - Home: index.md
   - Your first resource: first-resource.md
   - Your second resource: second-resource.md
+  - Generating a resource: generating.md
   - Concepts: concepts.md
   - Transformations: transformations.md
   - Common settings recipes: recipes.md

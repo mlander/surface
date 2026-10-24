@@ -12,6 +12,7 @@ use Drupal\Core\Plugin\Context\ContextHandlerInterface;
 use Drupal\Core\Plugin\Context\ContextRepositoryInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslationInterface;
+use Drupal\data_surface\Contract\ConfigSchemaDocument;
 use Drupal\data_surface\Resource\Attribute\UsesStructure;
 use Drupal\data_surface\Resource\VariantList;
 use Drupal\data_surface\Resource\VariantsFromSiteInterface;
@@ -64,7 +65,7 @@ final class ConditionPluginStructures implements VariantsFromSiteInterface {
    *   Matches a condition's contexts with the site's.
    * @param \Drupal\Core\Language\LanguageManagerInterface $languageManager
    *   Says whether the site has more than one language.
-   * @param \Drupal\data_surface_block\Variants\ConfigSchemaDocument $schemas
+   * @param \Drupal\data_surface\Contract\ConfigSchemaDocument $schemas
    *   Writes a condition's schema as JSON Schema.
    * @param \Drupal\Core\StringTranslation\TranslationInterface $string_translation
    *   The string translation service.

@@ -1897,6 +1897,80 @@ format core is asked to replace with data definitions
 `Storage\HeldToConfigSchemaTrait`, `Resources::assertHeldToSchema()`,
 `ConfigSchemaDriftTest`, `ConfigSchemaCheckTest`, `ConfigSchemaCommandTest`)
 
+### The generator writes what the first page shows
+
+Decided 2026-10-24. `drush generate surface:resource` writes every file
+[Your first resource](first-resource.md) lists: the permission and the
+route, the resource class, its storage, and the config object's schema
+entry and install file, from an interview or from one of two sources,
+`--from-config-schema=<name>` and `--from-json-schema=<file>`
+([Generating a resource](generating.md)).
+
+- **One generator, three sources.** Each source is built into a sealed
+  data surface by the build step before anything is written: the
+  answers declared as the class will declare them
+  (`Drush\Generators\Resource\KeyAnswers`), a config schema entry
+  written as JSON Schema (`Contract\ConfigSchemaDocument::document()`)
+  and read, a document read as it is. One writer turns the built keys
+  into the calls an author makes (`ResourceCode`). Why: a key the reader
+  learns to read reaches all three at once, where a template per source
+  would drift from the others.
+- **The page stays the truth.** The page quotes the shipped module, as
+  it did; `ResourceGeneratorTest` answers the interview as the
+  newsletter needs and compares each file it writes with
+  `data_surface_first` byte for byte, whitespace included. Why: the page
+  is the module's concept budget (ROADMAP item 13). Generating the page
+  from the generator would make the generator the description and the
+  page a copy that nothing reads back.
+- **The schema entry and install file come from the command's mapping.**
+  `ConfigSchemaGenerator::describeBuilt()` is what `describe()` runs, for
+  a resource built any way. The generator writes from the build of its
+  source; once the files are in the module's own directory, installed or
+  not, it builds the class just written as the command does (a module
+  read again from its code, `including(..., fromCode: TRUE)`) and writes the
+  class's files where they differ, saying so. Why: the first build runs
+  under `--dry-run` and before any class exists; the second catches a
+  writer that left something out.
+- **Seeding from a config schema, once.** [A config object is described
+  by its resource](#a-config-object-is-described-by-its-resource) turned
+  down seeding the class from the schema as the lasting description. The
+  generator seeds once: after it, the class is the description. For
+  another module's object (`node.settings`) the owner's schema stays
+  that object's description and the resource is held to it
+  (`HeldToConfigSchemaInterface`), so the config schema generator writes
+  no entry for an object whose name another module provides (core's
+  rule: the first part of the name), and the generator writes neither
+  file for one.
+- **A foreign constraint is a comment.** What the reader keeps as a
+  `JsonSchema` constraint, and what a config schema states that its
+  document does not carry, is written as a comment above the key,
+  naming the keyword and the key. Why: written as a `JsonSchema`
+  constraint it would still be checked, but as a schema array the author
+  did not write and may not read; a comment is in plain sight, and the
+  author writes the constraint the module has for it. For a constraint
+  the build holds a resource to its object's schema by (`Regex`,
+  `Length`, `Range`, `Choice`, `Count`, `NotBlank`, `Email`), the comment
+  says the build refuses the resource until it states it.
+- **A YAML file is added to, never replaced.** A routing or permissions
+  file is read, the entry added at its end after a blank line, and
+  written; the rest is kept byte for byte, an entry of the same name is
+  kept and the generated one left out, and a note says which. Why: those
+  files carry entries the generator knows nothing of, and parsing and
+  dumping them would rewrite their quoting and comments.
+- **Two source options through Drush.** Drush hands a generator its
+  answers and its own few options, so a listener declares both on the
+  `generate` command and the generator reads them from Drush's input
+  (`Drush\Listeners\GenerateSourceOptionsListener`).
+- *Open:* a resource with identity, stored in a config entity type. The
+  interview offers it, asks the identity key and stops, naming example
+  15; writing the entity type, its storage and the operations' methods
+  is later.
+
+(`Drush\Generators\ResourceGenerator`, `Drush\Generators\Resource\ResourceSources`,
+`Drush\Generators\Resource\ResourceCode`, `Drush\Generators\Resource\YamlEntryResolver`,
+`Storage\ConfigSchemaGenerator::describeBuilt()`, `ResourceGeneratorTest`,
+`ResourceGeneratorPathautoTest`)
+
 ### The whole object is checked
 
 `ConfigObjectStorage::prepare()` validates the written values laid over

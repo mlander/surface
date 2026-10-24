@@ -383,7 +383,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 The full lane's phpunit line reads, as of this writing:
 
 ```
-phpunit: Tests: 1509, Assertions: 31297, Errors: 0, Failures: 0, Skipped: 0. Classes: 201 of 201, 8 at a time, browser classes 4.
+phpunit: Tests: 1516, Assertions: 31377, Errors: 0, Failures: 0, Skipped: 0. Classes: 203 of 203, 8 at a time, browser classes 4.
 ```
 
 the same counts a plain phpunit run of the tree gives. `run-tests.sh`
@@ -619,7 +619,8 @@ src/Hook/                #[UsesStructure] into plugin definitions.
 src/Pipeline/            Access, accept, validate, prepare, commit; results.
 src/Storage/             Where accepted values are written; settings layouts.
 src/Contract/            The served contract's emitter (JSON Schema); the contract diff.
-src/Drush/               The contract diff's Drush command.
+src/Drush/               Drush commands (the contract diff, the config schema) and
+                         the resource generator, drush generate surface:resource.
 src/Form/                Form builder, host traits, the operation form.
 src/Widget/ src/Plugin/  Definition to form element; resolvers, hosts, constraints.
 src/Options/             Option sets, the resolver plugin base and manager.

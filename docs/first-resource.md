@@ -1,5 +1,21 @@
 # Your first resource
 
+**The one command.** `drush generate surface:resource` writes every file
+on this page from an interview: the module (any in the code base), the
+resource's id and label, the operation, the config object, the
+permission and the route path, then each key in turn, with its type,
+label, whether it is required, its default and what it allows. An answer
+can be given ahead, in the order asked, with `--answer`: `drush generate
+surface:resource --answer=data_surface_first --answer=first.newsletter
+--answer='Newsletter settings'` asks only from the class name on, and
+`--dry-run` prints the files without writing them. A routing or
+permissions file the module has gains the new entry and keeps every
+other. This page still shows each file in full and stays the source of
+truth: a test answers the interview as the newsletter needs and fails
+when a single byte it writes differs from the files below. The keys can
+also come from a config schema entry or a JSON Schema document
+([Generating a resource](generating.md)).
+
 A settings page, from nothing: a newsletter's sender, how often it goes
 out and how many recipients one send reaches. You write one class that
 says what the settings are, and the module derives the form, the tool an

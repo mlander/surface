@@ -35,7 +35,7 @@ $inputs->attachList('visibility', VisibilityConditionStructure::class)
   settings with `#[UsesStructure]` (the component block, the demo block)
   is that structure, built as declared. Any other is read from its
   config schema, `block.settings.<plugin id>`, less the keys every block
-  has, written as JSON Schema by `Variants\ConfigSchemaDocument` and
+  has, written as JSON Schema by `Contract\ConfigSchemaDocument` and
   read by the schema reader, the plugin's own defaults its defaults.
 - **The theme chooses the region.** The theme is one of the installed
   themes (core's `ExtensionExists`, read by the main module's
