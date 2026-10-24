@@ -301,7 +301,7 @@ class DeclaredNarrowingTest extends DataSurfaceKernelTestBase {
     $freight = ['service' => 'freight', 'weight' => 40, 'handling' => 'cold'];
     $this->assertSame([], $refusals([]));
     $this->assertSame([
-      'declared_value' => 'This value should be between 0 and 500. This applies when all 4 of these hold: Weight in kilograms is 1; Reference is empty; Insured is off; Customs code is empty.',
+      'declared_value' => 'This value should be between 0 and 500. This applies when all 4 of these hold: Weight in kilograms is 1; Reference is empty; Insured is off; Data Surface Resource Test: Customs code is empty.',
     ], $refusals(['declared_value' => 501]));
     // A declared rule's require() names what it read, as a refused
     // constraint does; a key declared required names nothing.
@@ -341,10 +341,10 @@ class DeclaredNarrowingTest extends DataSurfaceKernelTestBase {
       return $messages;
     };
     $this->assertSame([
-      'declared_value' => 'This value should be between 0 and 500. This applies when all 4 of these hold: Weight in kilograms is 1; Reference is set; Insured is off; Customs code is empty.',
+      'declared_value' => 'This value should be between 0 and 500. This applies when all 4 of these hold: Weight in kilograms is 1; Reference is set; Insured is off; Data Surface Resource Test: Customs code is empty.',
     ], $refusals(['declared_value' => 501, 'reference' => 'R1']));
     $this->assertSame([
-      'declared_value' => 'This value should be between 1 and 100000. This applies when all 4 of these hold: Weight in kilograms is 2; Reference is set; Insured is off; Customs code is set.',
+      'declared_value' => 'This value should be between 1 and 100000. This applies when all 4 of these hold: Weight in kilograms is 2; Reference is set; Insured is off; Data Surface Resource Test: Customs code is set.',
     ], $refusals(['weight' => 2, 'declared_value' => 0, 'reference' => 'R1'] + self::customs('C1')), 'A key an alter mounted, the same.');
     $this->assertSame([
       'tracking' => 'A tracking code is two capitals and six digits, such as AB123456. This applies when all 3 of these hold: Reference is set; Service is Express; Insured is off.',
@@ -612,7 +612,7 @@ class DeclaredNarrowingTest extends DataSurfaceKernelTestBase {
     $tool->setInputValue(OperationInputs::VALUES, $parcel);
     $tool->execute();
     $this->assertFalse($tool->getResult()->isSuccess());
-    $this->assertStringContainsString('signature: Signed for by is required when insured is on and declared_value is 100.', (string) $tool->getResult()->getMessage());
+    $this->assertStringContainsString('signature: Signed for by is required when Insured is on and Declared value is 100.', (string) $tool->getResult()->getMessage());
 
     $tool = $tools->createInstance('data_surface:resource_test.parcel:configure');
     $tool->setInputValue(OperationInputs::VALUES, $parcel + ['signature' => 'Ann', 'declared_value' => 400]);

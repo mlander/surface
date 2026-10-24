@@ -526,8 +526,8 @@ key, or the mounted property the refusal is about, is watched by a
 refiner and the refiners changed its constraints for these values; a
 rule the key declared itself names no condition. A watched value its
 own key refused was handed over as nothing, and is said so: "... This
-applies when Room is Main hall and Event license is empty (EV-2048 was
-refused)." A value not on its key's list is followed by what may be
+applies when Room is Main hall and Compliance: Event license is empty
+(EV-2048 was refused)." A value not on its key's list is followed by what may be
 chosen, as refined for the values sent, at most ten and then how many
 more: "The value you selected is not a valid choice. This applies when
 Venue is Riverside Hall. Choose Main hall or East room." The
@@ -536,16 +536,19 @@ and each sentence added is one source a translator sees entire, never a
 concatenation of translated fragments
 ([decision](decisions.md#a-refusal-names-what-it-depends-on)).
 
-The same sentence has two renderings. Rendered for a form, the
-default, a key it depends on is named by its label and a value by its
-option label, as above. Rendered for a machine
+A key it depends on is named by its label; a key held by another (an
+alter's mounted key, a key of a child, a variant or an item) by the
+label of what holds it, then its own, "Compliance: Event license"; a key
+with no label by its JSON Pointer. The same sentence has two renderings,
+which differ in the values alone. Rendered for a form, the default, a
+value is named by its option label, as above. Rendered for a machine
 (`Sentences::machine()`), which the tool's text and the `message` of
-its result are, a key is named by its dotted path in the
-values a caller sends and a value by what is sent, its label beside
-it: "... This applies when venue is riverside (Riverside Hall). Choose
-riverside_main (Main hall) or riverside_east (East room)." The keys and
-values are `Pipeline\Named` placeholders, so a translator still meets
-one source per sentence. The renderer is the door's choice: the API, a
+its result are, a value is named by what is sent, its label beside it:
+"... This applies when Venue is riverside (Riverside Hall). Choose
+riverside_main (Main hall) or riverside_east (East room)." The path of
+the refused key is the result's `path`. The values are
+`Pipeline\Named` placeholders, so a translator still meets one source
+per sentence. The renderer is the door's choice: the API, a
 person's door through the React page, renders `message` as the form
 does, with the same `path` and `code` as the tool.
 

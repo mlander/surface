@@ -253,15 +253,15 @@ class ToolFeedbackTest extends DataSurfaceKernelTestBase {
       ],
       'a value on another venue\'s list' => [
         ['room' => 'library_reading'] + $event,
-        '/room: ' . $not_valid . '. This applies when venue is riverside (Riverside Hall). ' . $rooms . '.',
+        '/room: ' . $not_valid . '. This applies when Venue is riverside (Riverside Hall). ' . $rooms . '.',
       ],
       'a value on no room\'s list' => [
         ['room' => 'main_hall'] + $event,
-        '/room: ' . $not_valid . '. This applies when venue is riverside (Riverside Hall). ' . $rooms . '.',
+        '/room: ' . $not_valid . '. This applies when Venue is riverside (Riverside Hall). ' . $rooms . '.',
       ],
       'a bound siblings set' => [
         ['capacity' => 500] + $event,
-        '/capacity: This value should be between 1 and 100. This applies when room is riverside_east (East room) and ' . self::COMPLIANCE . '.license is empty.',
+        '/capacity: This value should be between 1 and 100. This applies when Room is riverside_east (East room) and Compliance: Event license is empty.',
       ],
       'a pattern' => [
         $compliance(['license' => 'EV-2048', 'stewards' => 1]) + $event,
@@ -269,7 +269,7 @@ class ToolFeedbackTest extends DataSurfaceKernelTestBase {
       ],
       'a bound through a port' => [
         $compliance(['stewards' => 1]) + ['capacity' => 100] + $event,
-        ResultDocument::pointer(self::COMPLIANCE) . '/stewards: This value should be 2 or more. This applies when capacity is 100.',
+        ResultDocument::pointer(self::COMPLIANCE) . '/stewards: This value should be 2 or more. This applies when Capacity is 100.',
       ],
       'a key its own declaration requires names no condition' => [
         ['title' => ''] + $event,
@@ -295,7 +295,7 @@ class ToolFeedbackTest extends DataSurfaceKernelTestBase {
       'A bound no sibling sets says itself.',
     );
     $this->assertSame(
-      [FALSE, "The values were refused:\n" . '/send_day: Send day does not apply when frequency is monthly (Monthly).'],
+      [FALSE, "The values were refused:\n" . '/send_day: Send day does not apply when Frequency is monthly (Monthly).'],
       $this->call('data_surface:resource_test.bulletin:configure', ['frequency' => 'monthly', 'send_day' => 'monday']),
       'A key that does not apply says so, in the sentence it always said.',
     );
@@ -369,12 +369,12 @@ class ToolFeedbackTest extends DataSurfaceKernelTestBase {
       'a room of another venue' => [
         '/room',
         'no_such_choice',
-        'The value you selected is not a valid choice. This applies when venue is riverside (Riverside Hall). Choose riverside_main (Main hall) or riverside_east (East room).',
+        'The value you selected is not a valid choice. This applies when Venue is riverside (Riverside Hall). Choose riverside_main (Main hall) or riverside_east (East room).',
       ],
       'twice the capacity' => [
         ResultDocument::pointer(self::COMPLIANCE) . '/stewards',
         'too_low',
-        'This value should be 5 or more. This applies when capacity is 240.',
+        'This value should be 5 or more. This applies when Capacity is 240.',
       ],
     ], $said);
     $this->assertSame(['riverside', 'riverside_main', 240, 5], [

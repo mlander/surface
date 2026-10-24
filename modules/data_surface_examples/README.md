@@ -1007,13 +1007,13 @@ Success: Configure registration (step 3): the values were accepted and written.
 
 2. A capacity above the room's
 Failed: The values were refused:
-/capacity: This value should be between 1 and 30. This applies when room is library_garden (Garden room).
+/capacity: This value should be between 1 and 30. This applies when Room is library_garden (Garden room).
   ok: false
   committed: false
   changed: false
   changes: []
   values: {"title":"Garden party","open":true,"venue":"library","room":"library_garden","capacity":45,"pricing":"free","ticket":{"note":null},"contact":{"email":"events@example.com","phone":""}}
-  violations: [{"path":"/capacity","code":"not_in_range","message":"This value should be between 1 and 30. This applies when room is library_garden (Garden room)."}]
+  violations: [{"path":"/capacity","code":"not_in_range","message":"This value should be between 1 and 30. This applies when Room is library_garden (Garden room)."}]
   notes: []
   stale: []
 
@@ -1106,9 +1106,9 @@ leaving the stewards at three. The three refusals:
 Failed: The values were refused:
 /venue: The value you selected is not a valid choice. Choose riverside (Riverside Hall), library (Old Library) or harbour (Harbour Centre).
 Failed: The values were refused:
-/room: The value you selected is not a valid choice. This applies when venue is riverside (Riverside Hall). Choose riverside_main (Main hall) or riverside_east (East room).
+/room: The value you selected is not a valid choice. This applies when Venue is riverside (Riverside Hall). Choose riverside_main (Main hall) or riverside_east (East room).
 Failed: The values were refused:
-/third_party_settings/data_surface_examples_compliance/stewards: This value should be 5 or more. This applies when capacity is 240.
+/third_party_settings/data_surface_examples_compliance/stewards: This value should be 5 or more. This applies when Capacity is 240.
 ```
 
 Each time the agent reads the fix from the refusal alone and the next
@@ -1261,11 +1261,11 @@ drush tool:run data_surface:event.bulletin:configure --uid=1 --input='{"values":
 ```
 1. A send day for a monthly bulletin
 Failed: The values were refused:
-/send_day: Send day does not apply when frequency is monthly (Monthly).
+/send_day: Send day does not apply when Frequency is monthly (Monthly).
 
 2. Eight items in a weekly issue
 Failed: The values were refused:
-/items: This value should be between 1 and 5. This applies when frequency is weekly (Weekly).
+/items: This value should be between 1 and 5. This applies when Frequency is weekly (Weekly).
 
 3. Eight items in a monthly issue, and no send day
 Success: Dry run of Configure the bulletin: the values were accepted and prepared, and nothing was written.
@@ -1455,7 +1455,7 @@ drush tool:run data_surface:event.press:configure --uid=1 --input='{"values":{"r
 ```
 1. A public contact with the email cleared
 Failed: The values were refused:
-/contact/email: Email is required when public is on.
+/contact/email: Email is required when Show on the press page is on.
 
 2. The same contact, not shown on the press page
 Success: Dry run of Configure the press page: the values were accepted and prepared, and nothing was written.
@@ -1463,7 +1463,7 @@ Success: Dry run of Configure the press page: the values were accepted and prepa
 
 3. A review date with no reviewer
 Failed: The values were refused:
-/reviewed_by: Reviewed by is required when reviewed_on is set.
+/reviewed_by: Reviewed by is required when Reviewed on is set.
 ```
 
 ```bash
@@ -1680,7 +1680,7 @@ Success: Dry run of Configure ticket sales: the values were accepted and prepare
 
 2. Student tickets taken off sale, with a new limit for them
 Failed: The values were refused:
-/limits/student/per_order: Per order does not apply when on_sale.student is off.
+/limits/student/per_order: Per order does not apply when On sale: Student is off.
 ```
 
 ### Files
@@ -3285,7 +3285,7 @@ drush tool:run data_surface:event.webhook:configure --uid=1 --input='{"values":{
 ```
 3. A pasted key sent beside a managed key: refused, naming the key it depends on
 Failed: The values were refused:
-/api_key: API key does not apply when third_party_settings.data_surface_examples_keys.key_id is set.
+/api_key: API key does not apply when Managed key: Key is set.
 ```
 
 ### Files

@@ -6,7 +6,8 @@ module, derived and read-back ones included; per operation its id,
 kind, label, permission, parameters and the doors it reaches; and every
 refusal discovery or a build raised, with its message and the file it
 points at. [The catalog](catalog.md) is this command's markdown for the
-modules in this repository.
+modules in this repository, and [the catalog page](#the-catalog-page)
+shows the same on the site, each door linked.
 
 ```
 drush surface:catalog                         # a table, one row per operation
@@ -36,7 +37,27 @@ configuration is it, and its permission names no placeholder its
 parameters cannot fill. A structure a plugin uses has none; its
 plugin's host configures it. A module that opens a door of its own
 implements `ResourceBuild\CatalogDoorsInterface` as a service tagged
-`data_surface.catalog_doors`.
+`data_surface.catalog_doors`, and `ResourceBuild\CatalogDoorLinksInterface`
+beside it to link the door on the catalog page.
+
+## The catalog page
+
+`/admin/config/development/surfaces` (Configuration, Development, "Data
+surface catalog"), for a role with the restricted permission "View the
+data surface catalog" (`access data surface catalog`), shows what the
+table lists, from the same `SiteCatalog` data: one row per operation
+with its kind, permission and parameters, and its doors, each linked
+where it has a URL: the form route, the HTTP path (one that names no
+parameter), the React page, and the OpenAPI operation in the API
+reference (`/surface-api/redoc#operation/<operationId>`); a tool id is
+shown as text. A second table, Refused, lists every message and the file
+it points at. Each resource or structure links to its own page,
+`/admin/config/development/surfaces/<id>`, which shows what `--resource`
+does: its facts, its operations and doors, and every key. The listing is
+built for no account, and the page says so: the documents a request
+answers (the schema for an account, its tool listing) differ by account.
+The command's table prints the page's URL last; `CatalogPageTest` holds
+the page's table to the command's rows.
 
 ## Read from a schema
 

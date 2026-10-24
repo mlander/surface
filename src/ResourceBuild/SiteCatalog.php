@@ -308,6 +308,47 @@ final class SiteCatalog {
   }
 
   /**
+   * Gives the URL of each door of one operation that has one.
+   *
+   * Asked of every door provider that links its doors
+   * (CatalogDoorLinksInterface), for the catalog page; a door none links
+   * is shown as text.
+   *
+   * @param string $resource
+   *   The resource's id, as describe() keys it.
+   * @param string $operation
+   *   The operation's id.
+   *
+   * @return array<string, \Drupal\Core\Url>
+   *   By door name, in DOORS order.
+   */
+  public function links(string $resource, string $operation): array {
+    $entry = $this->describe()[$resource] ?? NULL;
+    if ($entry === NULL) {
+      return [];
+    }
+    $definition = $this->registry->getDefinition((string) ($entry['class'] ?? $resource));
+    $linked = [];
+    foreach ($entry['operations'] as $delta => $described) {
+      if ($described['id'] !== $operation) {
+        continue;
+      }
+      foreach ($this->doors as $doors) {
+        if (!$doors instanceof CatalogDoorLinksInterface) {
+          continue;
+        }
+        try {
+          $linked += $doors->links($definition, $definition->operations[$delta], $described['standalone'], $described['reads']);
+        }
+        catch (\Throwable) {
+          // A door with no URL here is shown as text.
+        }
+      }
+    }
+    return array_intersect_key(array_replace(array_flip(self::DOORS), $linked), $linked);
+  }
+
+  /**
    * Renders the catalog as markdown: what docs/catalog.md is.
    *
    * @return string

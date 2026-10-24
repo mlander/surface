@@ -249,7 +249,7 @@ class ToolResultShapeTest extends DataSurfaceKernelTestBase {
       [
         'path' => '/room',
         'code' => 'no_such_choice',
-        'message' => $not_valid . 'This applies when venue is harbour (Harbour Centre). Choose harbour_auditorium (Auditorium) or harbour_deck (Upper deck).',
+        'message' => $not_valid . 'This applies when Venue is harbour (Harbour Centre). Choose harbour_auditorium (Auditorium) or harbour_deck (Upper deck).',
       ],
     ], $at_tool);
     $this->assertSame([

@@ -183,13 +183,13 @@ drush tool:run data_surface:registration.step3:configure --uid=1 --json \
 
 ```json
 {"success": false,
- "message": "The values were refused:\nroom: The value you selected is not a valid choice. This applies when venue is riverside (Riverside Hall). Choose riverside_main (Main hall) or riverside_east (East room).\ncapacity: This value should be between 1 and 100. This applies when room is empty (harbour_deck was refused) and third_party_settings.data_surface_examples_compliance.license is empty.",
+ "message": "The values were refused:\nroom: The value you selected is not a valid choice. This applies when Venue is riverside (Riverside Hall). Choose riverside_main (Main hall) or riverside_east (East room).\ncapacity: This value should be between 1 and 100. This applies when Room is empty (harbour_deck was refused) and Compliance: Event license is empty.",
  "outputs": {
    "ok": false, "committed": false, "changed": false, "changes": [],
    "values": {"title": "Spring meetup", "open": true, "venue": "riverside", "room": "harbour_deck", "capacity": 500, ...},
    "violations": [
-     {"path": "/room", "code": "no_such_choice", "message": "The value you selected is not a valid choice. This applies when venue is riverside (Riverside Hall). Choose riverside_main (Main hall) or riverside_east (East room)."},
-     {"path": "/capacity", "code": "not_in_range", "message": "This value should be between 1 and 100. This applies when room is empty (harbour_deck was refused) and third_party_settings.data_surface_examples_compliance.license is empty."}],
+     {"path": "/room", "code": "no_such_choice", "message": "The value you selected is not a valid choice. This applies when Venue is riverside (Riverside Hall). Choose riverside_main (Main hall) or riverside_east (East room)."},
+     {"path": "/capacity", "code": "not_in_range", "message": "This value should be between 1 and 100. This applies when Room is empty (harbour_deck was refused) and Compliance: Event license is empty."}],
    "notes": [], "stale": []}}
 ```
 

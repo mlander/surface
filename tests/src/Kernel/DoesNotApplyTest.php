@@ -350,7 +350,7 @@ class DoesNotApplyTest extends DataSurfaceKernelTestBase {
     $tool->setInputValue(OperationInputs::VALUES, ['frequency' => 'monthly', 'send_day' => 'monday']);
     $tool->execute();
     $this->assertFalse($tool->getResult()->isSuccess());
-    $this->assertStringContainsString('/send_day: Send day does not apply when frequency is monthly (Monthly).', (string) $tool->getResult()->getMessage());
+    $this->assertStringContainsString('/send_day: Send day does not apply when Frequency is monthly (Monthly).', (string) $tool->getResult()->getMessage());
 
     $read = $tools->createInstance('data_surface:resource_test.bulletin:configure:read');
     $read->execute();

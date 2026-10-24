@@ -675,7 +675,7 @@ own is a tool, `data_surface:<resource id>:<operation id>`, derived by
   what is allowed for them
   ([decision](decisions.md#a-refusal-names-what-it-depends-on)), by path
   and by what to send: "room: The value you selected is not a valid
-  choice. This applies when venue is riverside (Riverside Hall). Choose
+  choice. This applies when Venue is riverside (Riverside Hall). Choose
   riverside_main (Main hall) or riverside_east (East room)."
 - **Title and description** are the operation's. The title is its
   label; where operations of several resources share one, each tool

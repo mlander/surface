@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\data_surface\Pipeline;
 
+use Drupal\Component\Render\FormattableMarkup;
 use Drupal\Component\Utility\NestedArray;
 use Drupal\Core\Access\AccessResultInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
@@ -45,12 +46,13 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
    * The data types that hold one scalar.
    *
    * An array for one of them is a type mismatch, refused rather than
-   * coerced. Every other
+   * coerced, here and by the tool's shape check before the Tool API's
+   * validators run (InputDefinitions::withoutNonScalars()). Every other
    * type ('any', a map that declares no properties, anything a
    * contributed typed data plugin adds) is left alone by both, because a
    * rule it never defined would be a guess.
    */
-  protected const SCALAR_TYPES = [
+  public const SCALAR_TYPES = [
     'integer',
     'float',
     'boolean',
@@ -115,16 +117,17 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
   /**
    * Where the level being validated sits in the values a caller sends.
    *
-   * The dotted prefix of the level's keys, and each port it reads mapped
-   * to the full path of the key it reads, so a refusal rendered for a
-   * machine names a key it depends on by the path a caller sends it at.
-   * Set by validateFramed() for each child and put back after it.
+   * The dotted prefix of the level's keys; each port it reads mapped to
+   * the full path of the key it reads; and the levels around it, each by
+   * its prefix, the outermost first. So a refusal names a key it depends
+   * on by the path a caller sends it at, and by the label of what holds
+   * it. Set by validateFramed() for each child and put back after it.
    *
    * Decision: see docs/decisions.md#a-refusal-names-what-it-depends-on.
    *
-   * @var array{0: string, 1: array<string, string>}
+   * @var array{0: string, 1: array<string, string>, 2: array<string, \Drupal\data_surface\DataSurfaceInterface>}
    */
-  protected array $frame = ['', []];
+  protected array $frame = ['', [], []];
 
   /**
    * Constructs a DataSurfacePipeline.
@@ -1136,7 +1139,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
    * {@inheritdoc}
    */
   public function validate(DataSurfaceInterface $surface, array $values, array $current = []): ViolationSet {
-    $this->frame = ['', []];
+    $this->frame = ['', [], []];
     return new ViolationSet($this->validateLevel($surface, $values, $current));
   }
 
@@ -1155,13 +1158,15 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
    * @param array<string, string> $reads
    *   Its ports, each mapped to the path in the current level's frame of
    *   the key it reads.
+   * @param \Drupal\data_surface\DataSurfaceInterface $level
+   *   The current level, refined, which holds the child.
    *
    * @return \Drupal\data_surface\Pipeline\Violation[]
    *   The violations, filed under the child's own keys.
    */
-  protected function validateFramed(DataSurfaceInterface $child, array $values, array $current, string $at, array $reads): array {
+  protected function validateFramed(DataSurfaceInterface $child, array $values, array $current, string $at, array $reads, DataSurfaceInterface $level): array {
     $outer = $this->frame;
-    [$prefix, $ports] = $outer;
+    [$prefix, $ports, $levels] = $outer;
     $resolved = [];
     foreach ($reads as $port => $path) {
       // A path through a port of this frame (an entry of a map of keys
@@ -1170,7 +1175,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
       [$first, $rest] = array_pad(explode('.', $path, 2), 2, NULL);
       $resolved[(string) $port] = $ports[$path] ?? (isset($ports[$first]) && $rest !== NULL ? $ports[$first] . '.' . $rest : $prefix . $path);
     }
-    $this->frame = [$prefix . $at . '.', $resolved];
+    $this->frame = [$prefix . $at . '.', $resolved, $levels + [$prefix => $level]];
     try {
       return $this->validateLevel($child, $values, $current);
     }
@@ -1254,12 +1259,12 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
         continue;
       }
       if ($entry->list !== NULL) {
-        $errors = array_merge($errors, $this->validateCollection($entry, $entry->list, $value, $current[$name] ?? NULL));
+        $errors = array_merge($errors, $this->validateCollection($entry, $entry->list, $value, $current[$name] ?? NULL, $refined));
         continue;
       }
       $child = $entry->childFor($values);
       if ($child !== NULL) {
-        $errors = array_merge($errors, $this->validateChild($entry, $child, $value, $current[$name] ?? [], $values));
+        $errors = array_merge($errors, $this->validateChild($entry, $child, $value, $current[$name] ?? [], $values, $refined));
         continue;
       }
       if ($entry->variants !== NULL) {
@@ -1467,13 +1472,10 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
     $presence = $entry?->presenceDependencies() ?? [];
     $withheld = $refined->withheldValues();
     $context = ['context' => self::REFUSAL_CONTEXT];
-    [$prefix, $ports] = $this->frame;
     foreach ($dependencies as $dependency) {
       $at = explode('.', $dependency);
       $watched = static::definitionAt($refined, $at);
-      // By its label for a form, by its path for a machine; a port by the
-      // path of the key it reads.
-      $arguments = ['@key' => Named::key($watched?->getLabel() ?? $dependency, $ports[$dependency] ?? $prefix . $dependency)];
+      $arguments = ['@key' => $this->conditionKey($refined, $dependency)];
       if (array_key_exists($dependency, $withheld)) {
         // What the rule was handed: nothing, since its own key refused it.
         // Decision: see
@@ -1501,6 +1503,82 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
       };
     }
     return $conditions;
+  }
+
+  /**
+   * Names a key a condition reads, the same for a person and a machine.
+   *
+   * By its label; a key held by another (a key an alter mounted, a
+   * property of a map, a key of a child, a variant or an item) by the
+   * label of what holds it, then its own, "Managed key: Key", the item of
+   * a list by the list's label; by its JSON Pointer only where it has no
+   * label. A port is named as the key it reads. The two labels are set
+   * side by side outside translation, as a heading's trail is: each is a
+   * name, and no word joins them.
+   *
+   * Decision: see docs/decisions.md#a-refusal-names-what-it-depends-on.
+   *
+   * @param \Drupal\data_surface\DataSurfaceInterface $refined
+   *   The level, refined against the values.
+   * @param string $dependency
+   *   The key, by its dotted path in the level, or a port by its name.
+   *
+   * @return string|\Stringable
+   *   Its name.
+   */
+  protected function conditionKey(DataSurfaceInterface $refined, string $dependency): string|\Stringable {
+    [$prefix, $ports] = $this->frame;
+    $full = $ports[$dependency] ?? $prefix . $dependency;
+    $label = static::labelOf(static::definitionAt($refined, explode('.', $dependency)));
+    if ($label === NULL) {
+      return ResultDocument::pointer($full);
+    }
+    $holder = explode('.', $full);
+    array_pop($holder);
+    // An item has no label of its own: the list holding it names it.
+    while ($holder !== [] && ctype_digit((string) end($holder))) {
+      array_pop($holder);
+    }
+    $parent = $holder === [] ? NULL : $this->labelAt($refined, implode('.', $holder));
+    return $parent === NULL ? $label : new FormattableMarkup('@parent: @key', ['@parent' => $parent, '@key' => $label]);
+  }
+
+  /**
+   * Reads the label of a key anywhere in the values, from its full path.
+   *
+   * @param \Drupal\data_surface\DataSurfaceInterface $refined
+   *   The current level, refined.
+   * @param string $path
+   *   The key's dotted path from the top.
+   *
+   * @return string|\Stringable|null
+   *   Its label, or NULL where it has none or nothing declares it.
+   */
+  protected function labelAt(DataSurfaceInterface $refined, string $path): string|\Stringable|null {
+    [$prefix, , $levels] = $this->frame;
+    $levels[$prefix] = $refined;
+    // The innermost level the path lies inside.
+    foreach (array_reverse($levels, TRUE) as $at => $level) {
+      $at = (string) $at;
+      if ($at === '' || str_starts_with($path, $at)) {
+        return static::labelOf(static::definitionAt($level, explode('.', substr($path, strlen($at)))));
+      }
+    }
+    return NULL;
+  }
+
+  /**
+   * Reads a definition's label, an empty one as none.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface|null $definition
+   *   The definition.
+   *
+   * @return string|\Stringable|null
+   *   The label, or NULL.
+   */
+  protected static function labelOf(?DataDefinitionInterface $definition): string|\Stringable|null {
+    $label = $definition?->getLabel();
+    return $label === NULL || (string) $label === '' ? NULL : $label;
   }
 
   /**
@@ -1863,11 +1941,13 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
    *   What storage holds for the key.
    * @param array $values
    *   The values of the key's own level, for the variants' deciding key.
+   * @param \Drupal\data_surface\DataSurfaceInterface $level
+   *   The key's own level, refined.
    *
    * @return \Drupal\data_surface\Pipeline\Violation[]
    *   The violations, filed under the key.
    */
-  protected function validateChild(Entry $entry, DataSurfaceInterface $child, mixed $value, mixed $current, array $values): array {
+  protected function validateChild(Entry $entry, DataSurfaceInterface $child, mixed $value, mixed $current, array $values, DataSurfaceInterface $level): array {
     $name = $entry->name;
     if (!is_array($value)) {
       return [
@@ -1895,7 +1975,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
       // declares, and nothing it does not.
       $value = array_diff_key($value, array_flip($strangers));
     }
-    foreach ($this->validateFramed($child, $value, is_array($current) ? $current : [], $name, $reads) as $violation) {
+    foreach ($this->validateFramed($child, $value, is_array($current) ? $current : [], $name, $reads, $level) as $violation) {
       $errors[] = $violation->at($name, $violation->fullPath());
     }
     return $errors;
@@ -1922,11 +2002,13 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
    *   The list, configured.
    * @param mixed $current
    *   What storage holds for it.
+   * @param \Drupal\data_surface\DataSurfaceInterface $level
+   *   The key's own level, refined.
    *
    * @return \Drupal\data_surface\Pipeline\Violation[]
    *   The violations, filed under the key.
    */
-  protected function validateCollection(Entry $entry, Collection $list, mixed $value, mixed $current): array {
+  protected function validateCollection(Entry $entry, Collection $list, mixed $value, mixed $current, DataSurfaceInterface $level): array {
     $name = $entry->name;
     if (!is_array($value)) {
       return [
@@ -1959,7 +2041,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
         continue;
       }
       $held = is_array($stored[$delta] ?? NULL) ? $stored[$delta] : [];
-      foreach ($this->validateFramed($child, $item, $held, $name . '.' . $delta, $list->item->reads) as $violation) {
+      foreach ($this->validateFramed($child, $item, $held, $name . '.' . $delta, $list->item->reads, $level) as $violation) {
         $errors[] = $violation->at($name, $delta . '.' . $violation->fullPath());
       }
     }
@@ -2374,7 +2456,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
       $prepared = $this->prepare($surface, $write, $storage);
     }
     catch (StorageViolationsException $e) {
-      $this->frame = ['', []];
+      $this->frame = ['', [], []];
       return new DataSurfaceResult($values, new ViolationSet($this->namingSources(iterator_to_array($e->getViolations(), FALSE), $surface)), access: $access, notes: $notes);
     }
     // The set travels on rather than being replaced by an empty one: it

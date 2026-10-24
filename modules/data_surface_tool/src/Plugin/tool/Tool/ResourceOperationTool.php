@@ -24,6 +24,7 @@ use Drupal\tool\Tool\ToolOperation;
 use Drupal\tool\TypedData\InputDefinitionInterface;
 use Drupal\tool\TypedData\InputDefinitionRefinerInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
+use Symfony\Component\Validator\ConstraintViolation;
 use Symfony\Component\Validator\ConstraintViolationListInterface;
 
 /**
@@ -79,6 +80,11 @@ final class ResourceOperationTool extends ResourceOperationToolBase implements I
    * The Tool API's messages that carry a position inside an input.
    */
   protected const POSITIONED = ['(property @position) @message', '(item @position) @message'];
+
+  /**
+   * The refusal of a value of another type, the pipeline's sentence.
+   */
+  protected const TYPE_MISMATCH = 'This value must be of type @expected, @actual given.';
 
   /**
    * The pipeline that accepts, validates, prepares and commits values.
@@ -194,13 +200,21 @@ final class ResourceOperationTool extends ResourceOperationToolBase implements I
     if ($shape instanceof DataDefinition) {
       $shape->setRequired(TRUE);
     }
+    // A map or a list sent for a scalar key is refused here, by its path,
+    // before core's validators read it as a scalar and throw.
+    [$values[OperationInputs::VALUES], $mismatched] = InputDefinitions::withoutNonScalars($shape, $values[OperationInputs::VALUES], OperationInputs::VALUES);
     $this->inputDefinitions[OperationInputs::VALUES] = $shape;
     try {
-      return parent::validateInputValues($values);
+      $violations = parent::validateInputValues($values);
     }
     finally {
       $this->inputDefinitions[OperationInputs::VALUES] = $listed;
     }
+    foreach ($mismatched as $path => [$expected, $actual]) {
+      $arguments = ['@expected' => $expected, '@actual' => $actual];
+      $violations->add(new ConstraintViolation($this->t('This value must be of type @expected, @actual given.', $arguments), self::TYPE_MISMATCH, $arguments, NULL, $path, NULL));
+    }
+    return $violations;
   }
 
   /**
@@ -240,7 +254,10 @@ final class ResourceOperationTool extends ResourceOperationToolBase implements I
       $code = match (TRUE) {
         $constraint === NULL && $message instanceof TranslatableMarkup && $message->getUntranslatedString() === 'This property is required.' => Violation::REQUIRED,
         // A value of another type than the key's, as the pipeline names it.
-        $constraint === NULL && $violation->getMessageTemplate() === (new PrimitiveTypeConstraint())->message => Violation::TYPE_MISMATCH,
+        $constraint === NULL && in_array($violation->getMessageTemplate(), [
+          (new PrimitiveTypeConstraint())->message,
+          self::TYPE_MISMATCH,
+        ], TRUE) => Violation::TYPE_MISMATCH,
         default => Violation::codeOf($violation),
       };
       if ($path === OperationInputs::VALUES || str_starts_with($path, OperationInputs::VALUES . '.')) {

@@ -10,7 +10,8 @@ namespace Drupal\data_surface\ResourceBuild;
  * What `drush surface:catalog --format=markdown` prints. docs/catalog.md
  * is this document for the modules in this repository, written by
  * ResourceCatalogTest through SiteCatalog::markdown(), the same call the
- * command makes, so the two cannot drift.
+ * command makes, so the two cannot drift. The rows, counts and notes the
+ * command's table and the catalog page both show are read here too.
  *
  * @internal
  */
@@ -141,6 +142,153 @@ final class CatalogDocument {
     }
     $document .= "\n" . self::refusals($refused);
     return $document;
+  }
+
+  /**
+   * Lists the rows of the catalog's table: one per operation.
+   *
+   * What `drush surface:catalog` prints as its table and the catalog page
+   * at /admin/config/development/surfaces shows, from the same call, so
+   * the two list the same rows: a resource or structure with no
+   * operation in one row, then one row where structures are read from a
+   * schema, with how many.
+   *
+   * @param array $catalog
+   *   What SiteCatalog::describe() answers.
+   *
+   * @return list<array{resource: string, kind: string, operation: string, operation_id: string|null, permission: string, needs: string, doors: array<string, string>|null, read: int|null}>
+   *   Each row: the resource or structure, its kind, the operation and its
+   *   kind, the operation's id, its permission, its parameters; the doors
+   *   it reaches by name, NULL on a row with no operation; and how many
+   *   structures are read there, on a row of those, NULL on any other.
+   */
+  public static function rows(array $catalog): array {
+    $rows = [];
+    // A row with no operation: no permission, parameters or doors.
+    $none = ['operation' => 'none', 'operation_id' => NULL, 'permission' => '', 'needs' => '', 'doors' => NULL];
+    foreach ($catalog as $entry) {
+      if ($entry['read'] !== NULL) {
+        continue;
+      }
+      if ($entry['operations'] === []) {
+        $rows[] = ['resource' => $entry['id'], 'kind' => $entry['kind']] + $none + ['read' => NULL];
+        continue;
+      }
+      foreach ($entry['operations'] as $operation) {
+        $rows[] = [
+          'resource' => $entry['id'],
+          'kind' => $entry['kind'],
+          'operation' => $operation['id'] . ' (' . $operation['kind'] . ')',
+          'operation_id' => $operation['id'],
+          'permission' => $operation['permission'] ?? 'none',
+          'needs' => $operation['parameters'] === [] ? 'nothing' : implode(', ', $operation['parameters']),
+          'doors' => $operation['doors'],
+          'read' => NULL,
+        ];
+      }
+    }
+    foreach (self::readGroups($catalog) as $at => $group) {
+      $rows[] = ['resource' => $at . '.*', 'kind' => 'structure'] + $none + ['read' => $group['count']];
+    }
+    return $rows;
+  }
+
+  /**
+   * Says a row's doors as the table's text: their names, or why none.
+   *
+   * @param array $row
+   *   A row, as rows() lists it.
+   *
+   * @return string
+   *   The names, comma separated; "none" for an operation that reaches
+   *   none; how many are read, on a row of those; empty with no operation.
+   */
+  public static function doorNames(array $row): string {
+    return match (TRUE) {
+      $row['read'] !== NULL => sprintf('%d read from a schema', $row['read']),
+      $row['doors'] === NULL => '',
+      $row['doors'] === [] => 'none',
+      default => implode(', ', array_keys($row['doors'])),
+    };
+  }
+
+  /**
+   * Counts what the catalog lists.
+   *
+   * @param array $catalog
+   *   What SiteCatalog::describe() answers.
+   *
+   * @return array{resources: int, structures: int, operations: int, read: int}
+   *   The declared resources and structures, their operations, and the
+   *   structures read from a schema.
+   */
+  public static function counts(array $catalog): array {
+    $declared = array_filter($catalog, static fn (array $entry): bool => $entry['read'] === NULL);
+    $kinds = array_count_values(array_column($declared, 'kind'));
+    return [
+      'resources' => $kinds['resource'] ?? 0,
+      'structures' => $kinds['structure'] ?? 0,
+      'operations' => array_sum(array_map(static fn (array $entry): int => count($entry['operations']), $declared)),
+      'read' => count($catalog) - count($declared),
+    ];
+  }
+
+  /**
+   * Says what answers access to one resource, and of which kind.
+   *
+   * @param array{class: string|null, alters: string[], kind: string} $access
+   *   Its `answers`, as SiteCatalog::resource() gives them.
+   *
+   * @return string
+   *   One line.
+   */
+  public static function access(array $access): string {
+    if ($access['kind'] === 'none') {
+      return 'the operation\'s permission alone';
+    }
+    $who = array_filter([$access['class'], ...$access['alters']]);
+    return implode(', ', $who) . ', ' . $access['kind'];
+  }
+
+  /**
+   * Says what else is true of a key, one line each.
+   *
+   * @param array $key
+   *   A key, as SiteCatalog::resource() lists it.
+   *
+   * @return string[]
+   *   The notes.
+   */
+  public static function notes(array $key): array {
+    return array_values(array_filter([
+      $key['label'] === '' ? NULL : 'label: ' . $key['label'],
+      $key['locked'] ? 'locked' : NULL,
+      $key['secret'] ? 'secret' : NULL,
+      $key['computed'] === NULL ? NULL : 'computed from ' . implode(', ', $key['computed']['from']) . ' by ' . self::short($key['computed']['by']) . ', ' . $key['computed']['when'],
+      $key['refiners'] === [] ? NULL : 'refined by ' . implode('; ', $key['refiners']),
+      $key['rules'] === [] ? NULL : 'declared rules reading ' . implode(', ', $key['rules']),
+      $key['watches'] === [] ? NULL : 'watches ' . implode(', ', $key['watches']),
+      $key['runtime'] ? 'refined at runtime' : NULL,
+      $key['contributor'] === NULL ? NULL : 'added by ' . $key['contributor'],
+      $key['child'] === NULL ? NULL : 'child ' . $key['child'],
+      $key['variants'] === NULL ? NULL : 'variants by ' . $key['variants']['by'] . ': ' . implode(', ', array_map(static fn (int|string $value, ?string $id): string => $value . ' ' . ($id ?? 'read'), array_keys($key['variants']['values']), $key['variants']['values'])),
+      $key['items'] === NULL ? NULL : 'items ' . $key['items'],
+    ]));
+  }
+
+  /**
+   * Encodes a value as JSON, as the catalog prints a default or a constraint.
+   *
+   * @param mixed $value
+   *   The value.
+   * @param bool $pretty
+   *   Whether to print it over lines.
+   *
+   * @return string
+   *   The JSON.
+   */
+  public static function json(mixed $value, bool $pretty = TRUE): string {
+    return (string) json_encode($value, ($pretty ? JSON_PRETTY_PRINT : 0) | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION);
   }
 
   /**

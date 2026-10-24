@@ -841,7 +841,7 @@ class ExamplesExtensionTest extends DataSurfaceKernelTestBase {
     $this->assertSame(['/credential/key_id' => 'Key is required.'], self::refusals($outputs));
     [$ok, $outputs] = $this->call('event.webhook:configure', ['api_key' => 'wh-1'] + self::MOUNTED, TRUE);
     $this->assertFalse($ok);
-    $this->assertSame(['/api_key' => 'API key does not apply when third_party_settings.data_surface_examples_keys.key_id is set.'], self::refusals($outputs));
+    $this->assertSame(['/api_key' => 'API key does not apply when Managed key: Key is set.'], self::refusals($outputs));
     [$ok, $outputs] = $this->call('event.webhook:configure', ['third_party_settings' => ['data_surface_examples_keys' => ['key_id' => 'vault']]], TRUE);
     $this->assertFalse($ok);
     $this->assertSame(["The site manages no key named 'vault'."], array_values(self::refusals($outputs)));

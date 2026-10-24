@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\data_surface\Drush\Commands;
 
+use Drupal\Core\Url;
 use Drupal\data_surface\ResourceBuild\CatalogDocument;
 use Drupal\data_surface\ResourceBuild\SiteCatalog;
 use Drush\Commands\AutowireTrait;
@@ -28,7 +29,8 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
  * build seals them; `--refused` lists only what did not build, and fails
  * when it lists anything, so a check can run it. Every build is for no
  * account, as the tool listing is. `--format=markdown` is what
- * docs/catalog.md is.
+ * docs/catalog.md is. The table's rows are the catalog page's
+ * (/admin/config/development/surfaces), whose URL it prints last.
  *
  * @see \Drupal\data_surface\ResourceBuild\SiteCatalog
  */
@@ -85,7 +87,7 @@ final class CatalogCommand extends Command {
     if ($input->getOption('refused')) {
       $refused = $this->catalog->refused();
       match ($format) {
-        'json' => $output->writeln(static::json($refused)),
+        'json' => $output->writeln(CatalogDocument::json($refused)),
         'markdown' => $output->write(CatalogDocument::refusals($refused)),
         default => $this->refusalTable($io, $refused),
       };
@@ -98,52 +100,66 @@ final class CatalogCommand extends Command {
     $catalog = $this->catalog->describe();
     $refused = $this->catalog->refused();
     if ($format === 'json') {
-      $output->writeln(static::json([
+      $output->writeln(CatalogDocument::json([
         'resources' => $catalog,
         'derivers' => $this->catalog->derivers(),
         'refused' => $refused,
       ]));
       return self::SUCCESS;
     }
-    $rows = [];
-    $operations = 0;
-    foreach ($catalog as $entry) {
-      if ($entry['read'] !== NULL) {
-        continue;
-      }
-      if ($entry['operations'] === []) {
-        $rows[] = [$entry['id'], $entry['kind'], 'none', '', '', ''];
-        continue;
-      }
-      foreach ($entry['operations'] as $operation) {
-        $operations++;
-        $rows[] = [
-          $entry['id'],
-          $entry['kind'],
-          $operation['id'] . ' (' . $operation['kind'] . ')',
-          $operation['permission'] ?? 'none',
-          $operation['parameters'] === [] ? 'nothing' : implode(', ', $operation['parameters']),
-          $operation['doors'] === [] ? 'none' : implode(', ', array_keys($operation['doors'])),
-        ];
-      }
-    }
-    // Read from a schema: one row where they are read, counted.
-    foreach (CatalogDocument::readGroups($catalog) as $at => $group) {
-      $rows[] = [$at . '.*', 'structure', 'none', '', '', sprintf('%d read from a schema', $group['count'])];
-    }
-    $io->table(['Resource or structure', 'Kind', 'Operation', 'Permission', 'Needs', 'Doors'], $rows);
-    $declared = array_filter($catalog, static fn (array $entry): bool => $entry['read'] === NULL);
-    $kinds = array_count_values(array_column($declared, 'kind'));
+    $io->table(['Resource or structure', 'Kind', 'Operation', 'Permission', 'Needs', 'Doors'], static::rows($catalog));
+    $counts = CatalogDocument::counts($catalog);
     $io->text(sprintf(
       '%d resources and %d structures, %d operations, %d structures read from a schema; %d refused%s.',
-      $kinds['resource'] ?? 0,
-      $kinds['structure'] ?? 0,
-      $operations,
-      count($catalog) - count($declared),
+      $counts['resources'],
+      $counts['structures'],
+      $counts['operations'],
+      $counts['read'],
       count($refused),
       $refused === [] ? '' : ' (drush surface:catalog --refused lists them)',
     ));
+    $this->page($io, 'The catalog page lists the same, each door linked: ', Url::fromRoute('data_surface.catalog'));
     return self::SUCCESS;
+  }
+
+  /**
+   * Writes the table's rows: what the catalog page lists, as text.
+   *
+   * @param array $catalog
+   *   What SiteCatalog::describe() answers.
+   *
+   * @return list<list<string>>
+   *   One row per operation, each door by its name
+   *   (CatalogDocument::rows()).
+   */
+  public static function rows(array $catalog): array {
+    return array_map(static fn (array $row): array => [
+      $row['resource'],
+      $row['kind'],
+      $row['operation'],
+      $row['permission'],
+      $row['needs'],
+      CatalogDocument::doorNames($row),
+    ], CatalogDocument::rows($catalog));
+  }
+
+  /**
+   * Says where the catalog page shows the same, with links.
+   *
+   * @param \Drush\Style\DrushStyle $io
+   *   The output.
+   * @param string $saying
+   *   What comes before the URL.
+   * @param \Drupal\Core\Url $page
+   *   The page.
+   */
+  protected function page(DrushStyle $io, string $saying, Url $page): void {
+    try {
+      $io->text($saying . $page->setAbsolute()->toString());
+    }
+    catch (\Exception) {
+      // No route to it on a site whose router is not built yet.
+    }
   }
 
   /**
@@ -170,7 +186,7 @@ final class CatalogCommand extends Command {
       return self::FAILURE;
     }
     if ($format === 'json') {
-      $output->writeln(static::json($entry));
+      $output->writeln(CatalogDocument::json($entry));
       return self::SUCCESS;
     }
     if ($format === 'markdown') {
@@ -183,7 +199,7 @@ final class CatalogCommand extends Command {
       ['Declared by' => ($entry['class'] ?? 'derived under ' . $entry['deriver']) . ' (' . $entry['module'] . ')'],
       ['Identity' => $entry['identity'] === [] ? 'none' : implode(', ', $entry['identity'])],
       ['Storage' => $entry['storage'] ?? 'none'],
-      ['Access' => static::access($entry['answers'])],
+      ['Access' => CatalogDocument::access($entry['answers'])],
       ['Keys read in' => $entry['built'] ?? 'nothing: it did not build'],
     );
     if ($entry['operations'] !== []) {
@@ -208,9 +224,9 @@ final class CatalogCommand extends Command {
       $rows[] = [
         $key['key'] . ($key['variant'] === NULL ? '' : "\n(" . $key['variant'] . ')'),
         $key['type'] . ($key['required'] ? ', required' : ''),
-        static::json($key['default'], FALSE),
-        $key['constraints'] === [] ? '' : static::json($key['constraints'], FALSE),
-        implode("\n", static::notes($key)),
+        CatalogDocument::json($key['default'], FALSE),
+        $key['constraints'] === [] ? '' : CatalogDocument::json($key['constraints'], FALSE),
+        implode("\n", CatalogDocument::notes($key)),
       ];
     }
     if ($rows !== []) {
@@ -219,6 +235,7 @@ final class CatalogCommand extends Command {
     if ($entry['refused'] !== []) {
       $this->refusalTable($io, $entry['refused']);
     }
+    $this->page($io, 'Its page in the catalog: ', Url::fromRoute('data_surface.catalog.resource', ['resource' => $entry['read'] ?? $entry['id']]));
     return self::SUCCESS;
   }
 
@@ -263,7 +280,7 @@ final class CatalogCommand extends Command {
     $document .= '- Declared by: `' . ($entry['class'] ?? $entry['deriver']) . '` (`' . $entry['module'] . "`)\n";
     $document .= '- Identity: ' . ($entry['identity'] === [] ? 'none' : '`' . implode('`, `', $entry['identity']) . '`') . "\n";
     $document .= '- Storage: ' . ($entry['storage'] === NULL ? 'none' : '`' . $entry['storage'] . '`') . "\n";
-    $document .= '- Access: ' . static::access($entry['answers']) . "\n";
+    $document .= '- Access: ' . CatalogDocument::access($entry['answers']) . "\n";
     foreach ($entry['operations'] as $operation) {
       $document .= "\n## " . $operation['id'] . "\n\n" . $operation['label'] . ', ' . $operation['kind'] . ', permission ' . ($operation['permission'] === NULL ? 'none' : '`' . $operation['permission'] . '`') . ".\n\n";
       foreach ($operation['doors'] as $door => $what) {
@@ -277,73 +294,15 @@ final class CatalogCommand extends Command {
         $key['key'],
         $key['variant'] === NULL ? '' : ' (' . $key['variant'] . ')',
         $key['type'] . ($key['required'] ? ', required' : ''),
-        str_replace('|', '\\|', static::json($key['default'], FALSE)),
-        $key['constraints'] === [] ? '' : '`' . str_replace('|', '\\|', static::json($key['constraints'], FALSE)) . '`',
-        str_replace('|', '\\|', implode('; ', static::notes($key))),
+        str_replace('|', '\\|', CatalogDocument::json($key['default'], FALSE)),
+        $key['constraints'] === [] ? '' : '`' . str_replace('|', '\\|', CatalogDocument::json($key['constraints'], FALSE)) . '`',
+        str_replace('|', '\\|', implode('; ', CatalogDocument::notes($key))),
       );
     }
     if ($entry['refused'] !== []) {
       $document .= "\n" . CatalogDocument::refusals($entry['refused']);
     }
     return $document;
-  }
-
-  /**
-   * Says what answers access, and of which kind.
-   *
-   * @param array{class: string|null, alters: string[], kind: string} $access
-   *   The entry's access.
-   *
-   * @return string
-   *   One line.
-   */
-  protected static function access(array $access): string {
-    if ($access['kind'] === 'none') {
-      return 'the operation\'s permission alone';
-    }
-    $who = array_filter([$access['class'], ...$access['alters']]);
-    return implode(', ', $who) . ', ' . $access['kind'];
-  }
-
-  /**
-   * Says what else is true of a key, one line each.
-   *
-   * @param array $key
-   *   A key, as SiteCatalog::resource() lists it.
-   *
-   * @return string[]
-   *   The notes.
-   */
-  protected static function notes(array $key): array {
-    return array_values(array_filter([
-      $key['label'] === '' ? NULL : 'label: ' . $key['label'],
-      $key['locked'] ? 'locked' : NULL,
-      $key['secret'] ? 'secret' : NULL,
-      $key['computed'] === NULL ? NULL : 'computed from ' . implode(', ', $key['computed']['from']) . ' by ' . CatalogDocument::short($key['computed']['by']) . ', ' . $key['computed']['when'],
-      $key['refiners'] === [] ? NULL : 'refined by ' . implode('; ', $key['refiners']),
-      $key['rules'] === [] ? NULL : 'declared rules reading ' . implode(', ', $key['rules']),
-      $key['watches'] === [] ? NULL : 'watches ' . implode(', ', $key['watches']),
-      $key['runtime'] ? 'refined at runtime' : NULL,
-      $key['contributor'] === NULL ? NULL : 'added by ' . $key['contributor'],
-      $key['child'] === NULL ? NULL : 'child ' . $key['child'],
-      $key['variants'] === NULL ? NULL : 'variants by ' . $key['variants']['by'] . ': ' . implode(', ', array_map(static fn (int|string $value, ?string $id): string => $value . ' ' . ($id ?? 'read'), array_keys($key['variants']['values']), $key['variants']['values'])),
-      $key['items'] === NULL ? NULL : 'items ' . $key['items'],
-    ]));
-  }
-
-  /**
-   * Encodes a value as JSON.
-   *
-   * @param mixed $value
-   *   The value.
-   * @param bool $pretty
-   *   Whether to print it over lines.
-   *
-   * @return string
-   *   The JSON.
-   */
-  protected static function json(mixed $value, bool $pretty = TRUE): string {
-    return (string) json_encode($value, ($pretty ? JSON_PRETTY_PRINT : 0) | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION);
   }
 
 }

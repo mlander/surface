@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Drupal\data_surface\ResourceBuild;
 
 use Drupal\Core\Routing\RouteProviderInterface;
+use Drupal\Core\Url;
 
 /**
  * The form routes modules declare for an operation.
@@ -12,9 +13,9 @@ use Drupal\Core\Routing\RouteProviderInterface;
  * A route served by an operation names the resource and the operation in
  * its defaults (OperationRoute); this reads every route once and keeps
  * which ones name which operation, the resource named by its class or by
- * its id.
+ * its id. The link is the first such route whose path holds no parameter.
  */
-final class FormRouteDoors implements CatalogDoorsInterface {
+final class FormRouteDoors implements CatalogDoorLinksInterface {
 
   /**
    * The form routes, by resource name or id, then operation id.
@@ -22,6 +23,13 @@ final class FormRouteDoors implements CatalogDoorsInterface {
    * @var array<string, array<string, list<string>>>|null
    */
   protected ?array $routes = NULL;
+
+  /**
+   * The names of the form routes with no parameter, the same way.
+   *
+   * @var array<string, array<string, list<string>>>
+   */
+  protected array $plain = [];
 
   /**
    * Constructs a FormRouteDoors.
@@ -46,6 +54,18 @@ final class FormRouteDoors implements CatalogDoorsInterface {
   }
 
   /**
+   * {@inheritdoc}
+   */
+  public function links(ResourceDefinition $resource, OperationDefinition $operation, bool $standalone, bool $reads): array {
+    $this->routes();
+    $plain = [
+      ...$this->plain[$resource->name()][$operation->id] ?? [],
+      ...$this->plain[$resource->id][$operation->id] ?? [],
+    ];
+    return $plain === [] ? [] : [SiteCatalog::FORM => Url::fromRoute($plain[0])];
+  }
+
+  /**
    * Reads which form routes name which operation.
    *
    * @return array<string, array<string, list<string>>>
@@ -64,6 +84,9 @@ final class FormRouteDoors implements CatalogDoorsInterface {
       $resource = (string) $route->getDefault(OperationRoute::RESOURCE);
       $operation = (string) $route->getDefault(OperationRoute::OPERATION);
       $this->routes[$resource][$operation][] = $route->getPath() . ' (' . $name . ')';
+      if (!str_contains($route->getPath(), '{')) {
+        $this->plain[$resource][$operation][] = (string) $name;
+      }
     }
     return $this->routes;
   }

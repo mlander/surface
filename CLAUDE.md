@@ -276,7 +276,9 @@ hand-written `field_add` / `field_update` are gone.
 `data_surface.site_catalog` adds each operation's doors (each module
 that opens one names it, a `CatalogDoorsInterface` service tagged
 `data_surface.catalog_doors`) and every build refusal, which `drush
-surface:catalog` prints (`docs/catalog-command.md`); `docs/catalog.md`
+surface:catalog` prints and the page `/admin/config/development/surfaces`
+shows, its doors linked (`Controller\CatalogController`,
+`docs/catalog-command.md`); `docs/catalog.md`
 is its markdown for this repository's modules, written by
 `ResourceCatalogTest` through `SiteCatalog::markdown()`
 (`scripts/generate-catalog.php` runs it). An adopter holds its own
@@ -393,13 +395,14 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 The full lane's phpunit line reads, as of this writing:
 
 ```
-phpunit: Tests: 1534, Assertions: 31916, Errors: 0, Failures: 0, Skipped: 1. Classes: 205 of 205, 8 at a time, browser classes 4.
+phpunit: Tests: 1555, Assertions: 32409, Errors: 0, Failures: 0, Skipped: 3. Classes: 209 of 209, 8 at a time, browser classes 4.
 ```
 
-the same counts a plain phpunit run of the tree gives. The one skipped
-test is `FirstResourceInvariantsTest`'s round trip of the store
-location, reported by kind (a coded refiner), as `ResourceTestBase`
-reports a document that cannot read back to itself. `run-tests.sh`
+the same counts a plain phpunit run of the tree gives. The skipped
+tests are the round trips `ResourceTestBase` reports by kind, as it
+reports a document that cannot read back to itself:
+`FirstResourceInvariantsTest`'s store location (a coded refiner) and
+`ExamplesSecretsInvariantsTest`'s mailer and webhook. `run-tests.sh`
 prints one line per class counting passed tests only, so `check.sh`
 reads the counts from the JUnit log each class's phpunit writes, and
 checks them against the classes `run-tests.sh` listed. A failure or an
@@ -412,8 +415,8 @@ fail the gate, in either lane: plain phpunit counts them (42 as of this
 writing) and passes, and the full lane passes `--suppress-deprecations`,
 without which `run-tests.sh` adds `--fail-on-deprecation` to every class.
 The fast lane's line sums phpunit's own lines, one per class:
-`Tests: 1430, Assertions: 28053, Deprecations: 102, Skipped: 1. Classes:
-158, 8 at a time.`; its deprecation count is per process, so it is higher than one
+`Tests: 1450, Assertions: 28535, Deprecations: 102, Skipped: 3. Classes:
+161, 8 at a time.`; its deprecation count is per process, so it is higher than one
 run's.
 
 The test and assertion counts drift upward as work lands and are not the

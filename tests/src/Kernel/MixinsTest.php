@@ -554,7 +554,7 @@ class MixinsTest extends DataSurfaceKernelTestBase {
     $tool->setInputValue(OperationInputs::VALUES, ['changed' => 1600000000] + self::JOURNAL);
     $tool->execute();
     $this->assertFalse($tool->getResult()->isSuccess());
-    $this->assertSame("The values were refused:\n" . '/changed: This value should be 1700000000 or more. This applies when created is 1700000000.', strip_tags((string) $tool->getResult()->getMessage()));
+    $this->assertSame("The values were refused:\n" . '/changed: This value should be 1700000000 or more. This applies when Created is 1700000000.', strip_tags((string) $tool->getResult()->getMessage()));
     $tool = $manager->createInstance('data_surface:resource_test.journal:configure');
     $tool->setInputValue(OperationInputs::VALUES, ['owner' => 'bea', 'changed' => 1700000900] + self::JOURNAL);
     $tool->execute();

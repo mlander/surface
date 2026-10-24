@@ -1,0 +1,4 @@
+access data surface catalog:
+  title: 'View the data surface catalog'
+  description: 'The catalog page lists every resource and structure on the site, its operations, the doors each reaches, and every build refusal with the file it points at.'
+  restrict access: true

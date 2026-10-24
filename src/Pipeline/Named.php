@@ -16,9 +16,12 @@ use Drupal\Component\Utility\Html;
  * and a value its option label ("when Venue is Riverside Hall"); rendered
  * for a machine (Sentences::machine()), the tool's text and its result's
  * `message`, a key is its dotted path and a value what is sent, its label
- * beside it ("when venue is riverside (Riverside Hall)"), the vocabulary
+ * beside it ("riverside (Riverside Hall)"), the vocabulary
  * the listing uses. One sentence, two renderings, so a translation is
- * made once.
+ * made once. The key a condition reads is named by its label in both
+ * renderings (DataSurfacePipeline::conditionKey()); a key is named here
+ * where a sentence names a computed key's sources or the deciding key
+ * of variants.
  *
  * Decision: see docs/decisions.md#a-refusal-names-what-it-depends-on.
  *

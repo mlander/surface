@@ -2876,7 +2876,9 @@ value not on its list unexplained.
 - **The machine's rendering: keys by path, values as sent** (decided
   2026-10-20, from the AI agents review, group C of the reviews'
   synthesis, approved by the owner, amending the form's bullet above,
-  whose list named each label with its value in brackets). The tool's
+  whose list named each label with its value in brackets; amended
+  2026-10-24 for the key a condition names, which both renderings now
+  name by its label, in the next bullet). The tool's
   text and the `message` of its result ([One result at every
   door](#one-result-at-every-door)) render the same sentences for a
   machine: a key a condition names by its dotted path in the values a
@@ -2895,6 +2897,39 @@ value not on its list unexplained.
   chooses, so a translator still meets each sentence once. The refused
   key itself keeps its label in "@label is required when ...": the
   violation's path already names it.
+- **A condition names a key by its label** (decided 2026-10-24,
+  amending the bullet above). The clauses "when <key> is <value>", "when
+  <key> is set" and the rest name the key a condition reads by its
+  label, at every door and in both renderings; a key held by another (a
+  key an alter mounted, a property of a map, a key of a child, a variant
+  or an item) by the label of what holds it, a colon, then its own; an
+  item by its list's label; a port as the key it reads; and only a key
+  with no label by its JSON Pointer, `/third_party_settings/x/flag`.
+  Only the sentence changes: the refused key's pointer stays the
+  result's `path`, and the value keeps what is sent beside its label
+  for a machine. Example 14's webhook said "API key does not apply when
+  third_party_settings.data_surface_examples_keys.key_id is set." and
+  says "API key does not apply when Managed key: Key is set."; the
+  parcel's declared value said "... Customs code is empty." and says
+  "... Data Surface Resource Test: Customs code is empty." (the mount is
+  titled with its module's name); a crate's layers, in the fruit
+  variant at `contents_settings`, say "This applies when Contents
+  settings: Fruit is peach."; the bulletin's send day says "when
+  Frequency is monthly (Monthly)" where it said "when frequency is
+  ...". Why: a path in the middle of a sentence reads as storage
+  layout, and a mounted key's names the module that mounts it, not the
+  thing a caller chose; the caller already has the path of what to fix
+  in `path` and the path of what it depends on in the listing's
+  "Depends on" line, so the sentence carries the words a person and an
+  agent both read, and one quote of it holds at every door. Why
+  "Managed key: Key" and not "Key, under Managed key,": the colon joins
+  two names with no translated word, as the semicolons between three
+  or more conditions do, so each clause stays one source string, and
+  "under" would be a fragment glued into a name or a second set of
+  clauses for every kind. Why the holder alone and not the whole trail:
+  one level says where the key is, and the levels above it
+  ("Third party settings") are grouping a caller never chose
+  (`DataSurfacePipeline::conditionKey()`, `RefusalLabelsTest`).
 - **Whole sentences, for translation** (decided 2026-10-20, from the
   multilingual review, B10). Every sentence a refusal adds is one source
   string a translator sees entire, in the context `data_surface
@@ -2923,8 +2958,9 @@ value not on its list unexplained.
   sibling](#a-refiner-never-sees-an-invalid-sibling)), so it is said as
   empty, with what was refused. With an event license of "EV-2048" and a
   capacity of 150, the capacity's refusal reads "This value should be
-  between 1 and 100. This applies when Room is Main hall and Event
-  license is empty (EV-2048 was refused)."; it read "... is set", the
+  between 1 and 100. This applies when Room is Main hall and
+  Compliance: Event license is empty (EV-2048 was refused)."; it read
+  "... is set", the
   opposite of the reason, and an agent cleared the license
   (`DataSurfaceInterface::withheldValues()`).
 - **Why each part.** The caller who sent stewards and no capacity learns
@@ -2974,7 +3010,17 @@ value not on its list unexplained.
   keeps every constraint it advertises, and the MCP server, which holds
   arguments to the advertised schema before a tool runs, refuses a
   value off an advertised list with that list. A value of the wrong type,
-  or a required key left out, is still the Tool API's to refuse.
+  or a required key left out, is still the Tool API's to refuse, with
+  one exception (decided 2026-10-24): a map or a list sent for a key of
+  a scalar type, at any depth, is refused by the tool's shape check
+  before the Tool API's validators run, `type_mismatch` by its path, in
+  the pipeline's sentence ("This value must be of type uri, array
+  given."), and taken out of what they read. Core's
+  `PrimitiveTypeConstraintValidator` reads a `uri` with `parse_url()`
+  and a `decimal` with `preg_match()`, and either throws a `TypeError`
+  on an array, which the Tool API answered as "Tool execution failed:
+  TypeError" (`InputDefinitions::withoutNonScalars()`,
+  `ArraySentForAScalarTest`).
 - **The listing names what a key depends on.** In a tool listing a key
   another narrows says so in its own description, once: "Depends on
   venue." Each key by its path in `values`, what a caller sends it
@@ -3847,10 +3893,23 @@ why:
   renderer, so the document and the command cannot drift. The static
   layer's own reading (`ResourceCatalog::describe()`) stays what the
   rest of the module reads.
+- **The page is the command's table, linked** (decided 2026-10-24).
+  `/admin/config/development/surfaces` shows the rows the command
+  prints, read from the same call (`CatalogDocument::rows()`), each door
+  linked by the module that opens it (`CatalogDoorLinksInterface`), and
+  the refusals; `/admin/config/development/surfaces/<id>` shows one in
+  full. Under a restricted permission of its own, since it names every
+  class and file a refusal points at. No dry run on it: the doors
+  themselves run one. The data is no account's, so the page says the
+  per-request documents differ by account; `CatalogPageTest` reads the
+  page's table as text and holds it to the command's rows on whatever
+  the site has.
 
 (`ResourceBuild\SiteCatalog`, `ResourceBuild\CatalogDocument`,
-`ResourceBuild\CatalogDoorsInterface`, `Drush\Commands\CatalogCommand`,
-`CatalogCommandTest`, `ResourceCatalogTest`)
+`ResourceBuild\CatalogDoorsInterface`,
+`ResourceBuild\CatalogDoorLinksInterface`, `Drush\Commands\CatalogCommand`,
+`Controller\CatalogController`, `CatalogCommandTest`, `CatalogPageTest`,
+`ResourceCatalogTest`)
 
 ## Derived resources
 
@@ -6137,15 +6196,20 @@ run). Each choice, and why:
   fails ours; nothing of this module's is compared.
 
 Open: an operation that needs a subject is built with none and left out
-of the checks that need values; a resource whose keys are typed `uri`
-fails the door check when a value of another type reaches core's
+of the checks that need values. Closed 2026-10-24: a resource whose keys
+are typed `uri` failed the door check when an array reached core's
 `PrimitiveTypeConstraintValidator` through the Tool API's input
-validation, which calls `parse_url()` on an array (a `TypeError` the Tool
-API answers as a runtime failure): found by this base class over example
-14, not fixed here.
+validation, which calls `parse_url()` on it (a `TypeError` the Tool API
+answered as a runtime failure, found by this base class over example
+14); the tool's shape check now refuses a map or a list sent for a
+scalar key first ([A refusal names what it depends
+on](#a-refusal-names-what-it-depends-on)), and
+`ExamplesSecretsInvariantsTest` holds example 14's mailer and webhook to
+every check.
 
 (`Tests\data_surface\Kernel\ResourceTestBase`,
-`FirstResourceInvariantsTest`, `Traits\NeverStricterTrait`,
+`FirstResourceInvariantsTest`, `ExamplesSecretsInvariantsTest`,
+`Traits\NeverStricterTrait`,
 `Traits\SchemaRoundTripTrait`, `SchemaRoundTripTest`,
 `ResourceOperationTool::execute()`, [Testing a
 resource](testing-a-resource.md))

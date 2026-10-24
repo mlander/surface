@@ -165,6 +165,9 @@ wired.
 `drush surface:catalog` lists every resource and structure the site's
 modules declare, with the doors each operation reaches, and `drush
 surface:catalog --refused` what did not build, with the file to open
-([The site's catalog](catalog-command.md)). To hold your own resources
+([The site's catalog](catalog-command.md)). The same listing, each door
+linked, is the page at `/admin/config/development/surfaces`, for a role
+with "View the data surface catalog" ([the catalog
+page](catalog-command.md#the-catalog-page)). To hold your own resources
 to the invariants from your module's tests, see [Testing a
 resource](testing-a-resource.md).

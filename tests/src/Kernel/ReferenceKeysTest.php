@@ -336,12 +336,12 @@ class ReferenceKeysTest extends DataSurfaceKernelTestBase {
     $this->assertSame([
       'success' => FALSE,
       'refused' => [
-        '/credit/id' => sprintf('This entity (node: %d) cannot be referenced. This applies when credit.entity_type is node (Content).', $nodes['page']),
+        '/credit/id' => sprintf('This entity (node: %d) cannot be referenced. This applies when Credited on: Entity type is node (Content).', $nodes['page']),
       ],
     ], $this->call(['credit' => ['entity_type' => 'node', 'id' => (string) $nodes['page']]]), 'The bundle list holds the id of each entity type it names.');
     $this->assertSame([
       'success' => FALSE,
-      'refused' => ['/thing/id' => 'ID is required when thing.entity_type is node (Content).'],
+      'refused' => ['/thing/id' => 'ID is required when Featured beside: Entity type is node (Content).'],
     ], $this->call(['thing' => ['entity_type' => 'node', 'id' => NULL]]), 'An entity type chosen names an id.');
   }
 

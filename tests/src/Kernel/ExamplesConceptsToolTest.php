@@ -115,16 +115,16 @@ class ExamplesConceptsToolTest extends DataSurfaceKernelTestBase {
 
     // The answer's first line and, after a refusal, its first violation.
     $first = static fn (string $answer): string => implode("\n", array_slice(explode("\n", $answer), 0, str_starts_with($answer, 'Failed: ') ? 2 : 1));
-    $this->assertSame("Failed: The values were refused:\n" . '/send_day: Send day does not apply when frequency is monthly (Monthly).', $first($answers['event.bulletin']['monthly_with_day']));
-    $this->assertSame("Failed: The values were refused:\n" . '/items: This value should be between 1 and 5. This applies when frequency is weekly (Weekly).', $first($answers['event.bulletin']['weekly_items']));
+    $this->assertSame("Failed: The values were refused:\n" . '/send_day: Send day does not apply when Frequency is monthly (Monthly).', $first($answers['event.bulletin']['monthly_with_day']));
+    $this->assertSame("Failed: The values were refused:\n" . '/items: This value should be between 1 and 5. This applies when Frequency is weekly (Weekly).', $first($answers['event.bulletin']['weekly_items']));
     $this->assertStringContainsString('values: {"frequency":"monthly","items":8}', $answers['event.bulletin']['monthly_items'], 'The send day does not apply, so no answer says it; storage keeps it.');
-    $this->assertSame("Failed: The values were refused:\n" . '/contact/email: Email is required when public is on.', $first($answers['event.press']['listed_without_email']));
+    $this->assertSame("Failed: The values were refused:\n" . '/contact/email: Email is required when Show on the press page is on.', $first($answers['event.press']['listed_without_email']));
     $this->assertStringStartsWith('Success: ', $answers['event.press']['unlisted_without_email']);
-    $this->assertSame("Failed: The values were refused:\n" . '/reviewed_by: Reviewed by is required when reviewed_on is set.', $first($answers['event.press']['reviewed_by_nobody']));
+    $this->assertSame("Failed: The values were refused:\n" . '/reviewed_by: Reviewed by is required when Reviewed on is set.', $first($answers['event.press']['reviewed_by_nobody']));
     $this->assertSame("Failed: The values were refused:\n" . '/phone: Write the number in digits, such as +1 555 0100.', $first($answers['event.desk']['phone_with_dashes']));
     $this->assertStringContainsString("nothing was written.\n/on_sale/speaker: Speaker is locked and kept as stored; the value sent was not taken.\n", $answers['event.sales']['speaker_on_sale'], 'A note on a line of its own, after the message.');
     $this->assertStringContainsString('"speaker":false', $answers['event.sales']['speaker_on_sale']);
-    $this->assertSame("Failed: The values were refused:\n" . '/limits/student/per_order: Per order does not apply when on_sale.student is off.', $first($answers['event.sales']['limit_off_sale']));
+    $this->assertSame("Failed: The values were refused:\n" . '/limits/student/per_order: Per order does not apply when On sale: Student is off.', $first($answers['event.sales']['limit_off_sale']));
     $this->assertSame('Success: Check a program changes nothing: the values were accepted and prepared, and nothing was written.', $first($answers['event.program']['check']));
     $this->assertSame("Failed: The values were refused:\n" . '/sessions: This value should be between 1 and 30.', $first($answers['event.program']['check_too_many']));
     $this->assertSame("Failed: The values were refused:\n" . 'This may be seen and not changed, so nothing was written: The program is published in its workflow, so it is fixed.', $first($answers['event.program']['published_in_workflow']));
@@ -147,7 +147,7 @@ class ExamplesConceptsToolTest extends DataSurfaceKernelTestBase {
     $this->assertSame("Failed: The values were refused:\n" . '/credential/api_key: credential.api_key belongs to the pasted variant, but source chose managed.', $first($answers['event.mailer']['pasted_while_managed']), 'Refused, naming the source that chose the other variant.');
     $this->assertSame('Success: Configure the mailer: the stored values were read, and nothing was written.', $first($answers['event.mailer']['read']));
     $this->assertStringContainsString('"credential":{"key_id":"webhook_signing"}', str_replace('"third_party_settings":{"data_surface_examples_keys":', '"credential":', $answers['event.webhook']['managed']));
-    $this->assertSame("Failed: The values were refused:\n" . '/api_key: API key does not apply when third_party_settings.data_surface_examples_keys.key_id is set.', $first($answers['event.webhook']['pasted_beside_managed']), 'Refused, naming the key it depends on.');
+    $this->assertSame("Failed: The values were refused:\n" . '/api_key: API key does not apply when Managed key: Key is set.', $first($answers['event.webhook']['pasted_beside_managed']), 'Refused, naming the key it depends on.');
     $this->assertStringContainsString("\n  items: [{\"id\":\"riverside\",\"label\":\"Riverside Hall\",\"capacity\":520,\"weight\":0},{\"id\":\"library\",\"label\":\"Old Library\",\"capacity\":90,\"weight\":1}]\n  total: 3", $answers['event.venue']['list'], 'The listing answers its page and its total beside the result.');
     $this->assertSame('Success: Add a venue: the values were accepted and written.', $first($answers['event.venue']['create']), 'Town Hall written, so the next calls find it.');
     $this->assertSame('Success: Edit a venue: the values were accepted and written.', $first($answers['event.venue']['update']));

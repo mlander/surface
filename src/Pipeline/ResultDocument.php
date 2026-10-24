@@ -56,9 +56,9 @@ final class ResultDocument {
    * @param array|\stdClass $values
    *   Its values as the door may return them.
    * @param bool $machine
-   *   TRUE for a door a program reads, whose messages name keys by path
-   *   and values as sent; FALSE for a door a person reads, whose messages
-   *   read as the form's.
+   *   TRUE for a door a program reads, whose messages name values as
+   *   sent (Sentences::machine()); FALSE for a door a person reads, whose
+   *   messages read as the form's.
    *
    * @return array
    *   The result, every key in KEYS.
@@ -147,8 +147,9 @@ final class ResultDocument {
    * @param \Drupal\data_surface\Pipeline\Violation $violation
    *   The violation.
    * @param bool $machine
-   *   TRUE to render it for a machine, keys by path and values as sent;
-   *   FALSE to render it as the form does, by labels.
+   *   TRUE to render it for a machine, values as sent
+   *   (Sentences::machine()); FALSE to render it as the form does, by
+   *   labels.
    *
    * @return string
    *   The message.

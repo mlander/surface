@@ -16,6 +16,7 @@ use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\Pipeline\Outbound;
 use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Options\DataSurfaceOptions;
+use Drupal\data_surface\Pipeline\DataSurfacePipeline;
 use Drupal\data_surface\Pipeline\ViolationMessage;
 use Drupal\data_surface\Reference\EntityReferenceStructure;
 use Drupal\data_surface\Reference\References;
@@ -415,6 +416,62 @@ final class InputDefinitions {
     $shape = clone $input;
     static::withoutConstraints($shape, $requiresNothing);
     return $shape;
+  }
+
+  /**
+   * Takes out each value sent for a scalar key that holds no scalar.
+   *
+   * Core's PrimitiveTypeConstraintValidator assumes a scalar for some
+   * types: a `uri` is read with parse_url() and a `decimal` with
+   * preg_match(), and an array there throws a TypeError, which the Tool
+   * API answers as a runtime failure rather than a refusal. So the shape
+   * is held here first: a map, a list or an object sent for a key of one
+   * of DataSurfacePipeline::SCALAR_TYPES, at any depth, is refused by its
+   * path, as the pipeline refuses it, and taken out of what the Tool
+   * API's validators are handed, the key made optional in the shape so
+   * its absence says nothing more.
+   *
+   * Decision: see docs/decisions.md#a-refusal-names-what-it-depends-on.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $shape
+   *   The shape, a copy (shapeOf()); a refused key is made optional in it.
+   * @param mixed $value
+   *   What was sent for it.
+   * @param string $path
+   *   The dotted path of the value, from the input's name.
+   *
+   * @return array{0: mixed, 1: array<string, array{0: string, 1: string}>}
+   *   The value less what was refused; and what was refused, by its dotted
+   *   path, the type the key holds and the type sent.
+   */
+  public static function withoutNonScalars(DataDefinitionInterface $shape, mixed $value, string $path): array {
+    if (!is_array($value)) {
+      return [$value, []];
+    }
+    $refused = [];
+    $members = match (TRUE) {
+      $shape instanceof ListDataDefinitionInterface => array_fill_keys(array_keys($value), $shape->getItemDefinition()),
+      $shape instanceof ComplexDataDefinitionInterface => array_intersect_key($shape->getPropertyDefinitions(), $value),
+      default => [],
+    };
+    foreach ($members as $name => $member) {
+      $at = $path . '.' . $name;
+      $sent = $value[$name];
+      $scalar = !$member instanceof ComplexDataDefinitionInterface
+        && !$member instanceof ListDataDefinitionInterface
+        && in_array($member->getDataType(), DataSurfacePipeline::SCALAR_TYPES, TRUE);
+      if ($scalar && (is_array($sent) || is_object($sent))) {
+        $refused[$at] = [$member->getDataType(), get_debug_type($sent)];
+        unset($value[$name]);
+        if ($member instanceof DataDefinition) {
+          $member->setRequired(FALSE);
+        }
+        continue;
+      }
+      [$value[$name], $below] = static::withoutNonScalars($member, $sent, $at);
+      $refused += $below;
+    }
+    return [$value, $refused];
   }
 
   /**

@@ -18,7 +18,8 @@ use Symfony\Component\Console\Tester\CommandTester;
  * table, the JSON and the markdown list every resource and structure with
  * each operation's doors; `--resource` shows one in full; `--refused`
  * lists only what did not build, each with its message and its file, and
- * fails.
+ * fails. The table ends with the URL of the catalog page, which lists the
+ * same rows (CatalogPageTest holds the two to each other).
  */
 #[Group('data_surface')]
 #[RunTestsInSeparateProcesses]
@@ -75,6 +76,8 @@ class CatalogCommandTest extends DataSurfaceKernelTestBase {
     // A structure no operation asks for on its own.
     $this->assertStringContainsString(' resource_test.digest.daily structure none ', $line('resource_test.digest.daily'));
     $this->assertMatchesRegularExpression('/\d+ resources and \d+ structures, \d+ operations, \d+ structures read from a schema; [1-9]\d* refused \(drush surface:catalog --refused lists them\)\./', (string) preg_replace('/\s+/', ' ', $display));
+    // Last, the page that lists the same with every door linked.
+    $this->assertMatchesRegularExpression('#The catalog page lists the same, each door linked: http\S*/admin/config/development/surfaces\s*$#', $display);
   }
 
   /**
@@ -143,6 +146,7 @@ class CatalogCommandTest extends DataSurfaceKernelTestBase {
     foreach (['Keys read in', 'regionOfCountry', 'PATCH /surface-api/first.store', 'LabeledChoice'] as $said) {
       $this->assertStringContainsString($said, $display);
     }
+    $this->assertMatchesRegularExpression('#Its page in the catalog: http\S*/admin/config/development/surfaces/first\.store\s*$#', $display);
     [$status, $markdown] = $this->catalog(['--resource' => 'first.store', '--format' => 'markdown']);
     $this->assertSame(0, $status);
     $this->assertStringStartsWith("# first.store\n", $markdown);
