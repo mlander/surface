@@ -106,8 +106,8 @@ final class CountingResources implements ResourcesInterface {
   /**
    * {@inheritdoc}
    */
-  public function storage(string $resource, OperationContext $context, ?DataSurfaceInterface $built = NULL): DataSurfaceStorageInterface {
-    return $this->inner->storage($resource, $context, $built);
+  public function storage(string $resource, OperationContext $context, ?DataSurfaceInterface $built = NULL, ?AccountInterface $account = NULL): DataSurfaceStorageInterface {
+    return $this->inner->storage($resource, $context, $built, $account);
   }
 
 }

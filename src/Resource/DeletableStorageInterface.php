@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Drupal\data_surface\Resource;
 
+use Drupal\Core\Session\AccountInterface;
+
 /**
  * A resource's storage that can remove the thing its context names.
  *
@@ -25,6 +27,8 @@ interface DeletableStorageInterface extends ResourceStorageInterface {
    *
    * @param \Drupal\data_surface\Resource\OperationContext $context
    *   The delete's context, which knows the thing's identity.
+   * @param \Drupal\Core\Session\AccountInterface $account
+   *   The account the removal is made as.
    *
    * @return array
    *   What delete() is handed: enough to name what it removes.
@@ -33,7 +37,7 @@ interface DeletableStorageInterface extends ResourceStorageInterface {
    *   When the store would refuse the removal, filed under the identity
    *   key or the whole call.
    */
-  public function prepareDelete(OperationContext $context): array;
+  public function prepareDelete(OperationContext $context, AccountInterface $account): array;
 
   /**
    * Removes what prepareDelete() rehearsed.
@@ -42,7 +46,9 @@ interface DeletableStorageInterface extends ResourceStorageInterface {
    *   The delete's context.
    * @param array $prepared
    *   What prepareDelete() returned for this context.
+   * @param \Drupal\Core\Session\AccountInterface $account
+   *   The account the removal is made as.
    */
-  public function delete(OperationContext $context, array $prepared): void;
+  public function delete(OperationContext $context, array $prepared, AccountInterface $account): void;
 
 }

@@ -19,6 +19,7 @@ use Drupal\data_surface\Storage\SchemaViolations;
 use Drupal\node\Entity\NodeType;
 use Drupal\node\NodePreviewMode;
 use Drupal\node\NodeTypeInterface;
+use Drupal\Core\Session\AccountInterface;
 
 /**
  * Where a content type's values live: the entity, and its base fields.
@@ -191,11 +192,11 @@ final class NodeTypeStorage extends ConfigEntityStorage {
    * type's exported array under NODE_TYPE, and each moved override's,
    * keyed by base field name, under OVERRIDES.
    */
-  public function prepare(OperationContext $context, array $values): array {
+  public function prepare(OperationContext $context, array $values, AccountInterface $account): array {
     $violations = [];
     $record = [];
     try {
-      $record = parent::prepare($context, $values);
+      $record = parent::prepare($context, $values, $account);
     }
     catch (StorageViolationsException $e) {
       $violations = iterator_to_array($e->getViolations(), FALSE);
@@ -230,12 +231,12 @@ final class NodeTypeStorage extends ConfigEntityStorage {
    * content type form writes them, because the overrides belong to the
    * bundle.
    */
-  public function commit(OperationContext $context, array $prepared): void {
+  public function commit(OperationContext $context, array $prepared, AccountInterface $account): void {
     $record = $prepared[self::NODE_TYPE] ?? NULL;
     if (!is_array($record) || !isset($record['type'])) {
       throw new \InvalidArgumentException('The prepared values did not come from a content type storage.');
     }
-    parent::commit($context, $record);
+    parent::commit($context, $record, $account);
     $overrides = is_array($prepared[self::OVERRIDES] ?? NULL) ? $prepared[self::OVERRIDES] : [];
     if ($overrides !== []) {
       $this->overrides((string) $record['type'])->write([

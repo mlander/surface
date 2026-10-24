@@ -159,8 +159,8 @@ class ContentEntityStorageTest extends DataSurfaceKernelTestBase {
     $body = array_intersect_key($body, array_flip(['value', 'summary', 'format']));
     $this->assertSame(['value' => '<p>Body.</p>', 'summary' => 'Short.', 'format' => 'basic'], $body);
     $this->assertFalse($node->isPublished());
-    // A field nobody answered keeps the entity's own default: the owner
-    // from its default value callback.
+    // A new node is the account's it is written as: the current user,
+    // since the storage was asked for none.
     $this->assertSame((int) $this->container->get('current_user')->id(), (int) $node->getOwnerId());
     // The storage describes what it saved, so the id output answers.
     $this->assertInstanceOf(StorageAdapter::class, $storage);
@@ -183,6 +183,47 @@ class ContentEntityStorageTest extends DataSurfaceKernelTestBase {
     // The resource carries the revision log, so an edit is a revision.
     $this->assertGreaterThan($revision, (int) $node->getRevisionId());
     $this->assertSame('Through the resource.', $node->getRevisionLogMessage());
+  }
+
+  /**
+   * Tests a write is made as the account the storage is handed.
+   *
+   * The account travels as an argument: a storage made for another account
+   * than the current user writes as that one, the new node its owner's and
+   * the revision of an edit by it, and never reads the current user.
+   *
+   * @see docs/decisions.md#nothing-an-operation-runs-reads-the-request
+   */
+  public function testTheWriteIsMadeAsTheAccountItIsHanded(): void {
+    $writer = $this->createUser([
+      'access content',
+      'create page content',
+      'edit any page content',
+      'administer nodes',
+      'use text format basic',
+      'bypass surface entity test field access',
+    ]);
+    $this->assertNotSame((int) $writer->id(), (int) $this->container->get('current_user')->id());
+    $context = $this->resources()->operation(self::RESOURCE, 'create');
+    $surface = $this->resources()->build(self::RESOURCE, $context);
+    $storage = $this->resources()->storage(self::RESOURCE, $context, $surface, $writer);
+    $this->assertSame([], $this->submit($surface, $storage, [
+      'title' => ['value' => 'Written as another'],
+      'field_description' => ['value' => 'x'],
+    ]));
+    $node = $this->newest();
+    $this->assertSame((int) $writer->id(), (int) $node->getOwnerId());
+
+    $context = $this->resources()->operation(self::RESOURCE, 'update', ['id' => $node->id()]);
+    $surface = $this->resources()->build(self::RESOURCE, $context);
+    $storage = $this->resources()->storage(self::RESOURCE, $context, $surface, $writer);
+    $this->assertSame([], $this->submit($surface, $storage, [
+      'title' => ['value' => 'Edited as another'],
+      'revision_log' => ['value' => 'By the account handed in.'],
+    ]));
+    $node = $this->newest();
+    $this->assertSame('Edited as another', $node->label());
+    $this->assertSame((int) $writer->id(), (int) $node->getRevisionUserId());
   }
 
   /**

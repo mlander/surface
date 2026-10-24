@@ -377,6 +377,12 @@ The routes of `data_surface_examples` name it.
 
 ## Who may run them
 
+A tool runs as the current user, and the build hands that account to the
+access class, to each storage write and to a runtime refiner that asks
+for it; nothing the operation runs reads the request, so a call through
+`drush tool:run --uid` or an MCP bridge answers as the form does
+([No door-specific context](../../docs/resources.md#no-door-specific-context)).
+
 A write tool is `ToolOperation::Write`, or `ToolOperation::Read` for an
 operation that says it is read only, and destructive when its operation
 says so (`ResourceOperationToolDeriver::behaves()`); the MCP bridge

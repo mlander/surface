@@ -7,6 +7,7 @@ namespace Drupal\data_surface_paths_test\Storage;
 use Drupal\Core\State\StateInterface;
 use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface\Resource\ResourceStorageInterface;
+use Drupal\Core\Session\AccountInterface;
 
 /**
  * Keeps a singleton's note in State, under one key for all of them.
@@ -38,14 +39,14 @@ final class NoteStorage implements ResourceStorageInterface {
    *
    * State has no schema and refuses nothing.
    */
-  public function prepare(OperationContext $context, array $values): array {
+  public function prepare(OperationContext $context, array $values, AccountInterface $account): array {
     return $values;
   }
 
   /**
    * {@inheritdoc}
    */
-  public function commit(OperationContext $context, array $prepared): void {
+  public function commit(OperationContext $context, array $prepared, AccountInterface $account): void {
     $this->state->set(self::KEY, $prepared);
   }
 

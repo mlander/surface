@@ -431,7 +431,9 @@ Two tiers, and another module's alter may answer after both
   the permission allows: what depends on the thing itself.
   `NodeTypeAccess` asks the node type entity whether one may be created,
   or this one updated, so this module never grants more than core's own
-  form; `FieldInstanceAccess` refuses a locked storage.
+  form; `FieldInstanceAccess` refuses a locked storage. It answers for
+  the account it is handed and reads nothing a door has
+  ([No door-specific context](#no-door-specific-context)).
 
 `ResourcesInterface::access()` is that answer, and every caller reads it:
 the route requirement `_data_surface_operation_access`, the form's
@@ -549,14 +551,17 @@ account; a state-based one is settled at call time
 
 **Narrowing by account is not access.** "An editor sees fewer venues"
 narrows the values a key allows, which is a refiner's: it reads the
-current user, so it is a runtime refiner, and the full schema keeps the
-key wide and marked `live`. Access only says whether the keys may be
-changed, seen, or neither.
+account, so it is a runtime refiner, and the full schema keeps the key
+wide and marked `live`. Access only says whether the keys may be
+changed, seen, or neither. The refiner takes the account as its last
+parameter, typed `AccountInterface`, and is handed the account the
+operation runs as; it never reads the current user itself
+([No door-specific context](#no-door-specific-context)).
 
 ```php
 #[RefinesInput('room', runtime: TRUE)]
-public static function roomsForAccount(DataDefinitionInterface $room): DataDefinitionInterface {
-  if (\Drupal::currentUser()->hasPermission('use the vault')) {
+public static function roomsForAccount(DataDefinitionInterface $room, AccountInterface $account): DataDefinitionInterface {
+  if ($account->hasPermission('use the vault')) {
     return $room;
   }
   return $room->addConstraint('LabeledChoice', ['choices' => array_diff_key(self::ROOMS, ['vault' => TRUE])]);
@@ -590,12 +595,15 @@ it along the tree:
 
 ## Prepare
 
-`prepare(OperationContext $context, array $values): array` rehearses the
-write. It builds what `commit()` would store, in storage's own layout,
-holds it to every check storage itself would make (the config schema,
-which for a config entity is also its entity validation) and has no
-side effects. It returns that array, and `commit(OperationContext
-$context, array $prepared)` writes exactly it.
+`prepare(OperationContext $context, array $values, AccountInterface
+$account): array` rehearses the write. It builds what `commit()` would
+store, in storage's own layout, holds it to every check storage itself
+would make (the config schema, which for a config entity is also its
+entity validation) and has no side effects. It returns that array, and
+`commit(OperationContext $context, array $prepared, AccountInterface
+$account)` writes exactly it. Both are handed the account the write is
+made as, which a storage that records who wrote reads there
+([No door-specific context](#no-door-specific-context)).
 
 - **A dry run stops after prepare** and reports what it returned. The
   pipeline's result carries it as `PreparedValues`; the adapter's
@@ -628,6 +636,64 @@ $context, array $prepared)` writes exactly it.
   the layout the field stores, to `field.field_settings.address`.
 - What a prepare returns is what is stored: the node type's prepared
   array is the config the commit writes, uuid included.
+
+## No door-specific context
+
+Everything an operation needs comes through it: the parameters and
+identity its context knows, the values, the account, and site state
+through services whose answers carry their cacheability. Nothing the
+build or the pipeline runs on an operation's behalf reads the request,
+its route, the session, the form being built, the theme a page renders
+in, or the current user, because code that does behaves one way on the
+form and another over HTTP or through a tool, and the doors stop
+agreeing. The doors themselves (the operation form, the HTTP API, the
+tool, the React page) read the request: that is their job, and each
+turns it into a context, values and an account
+([decision](decisions.md#nothing-an-operation-runs-reads-the-request)).
+
+| What runs | It may read | It gets the account |
+| --- | --- | --- |
+| A static refiner, a computed key's deriver | the keys it watches or is computed from, and nothing else | never |
+| A declared rule | nothing: it is data the engine evaluates | never |
+| A runtime refiner | site state through a service with cacheability | as its last parameter, typed `AccountInterface` |
+| An access class, an alter answering access | site state with cacheability; a static answer the account alone | `access($context, $account)` |
+| An alter's keys and refiners | site state with cacheability | as a runtime refiner does |
+| A provider of keys or variants from the site, a deriver of variants or resources, an options resolver | site state with cacheability; never anything varying by the account | never |
+| A storage's `load()` | what it stores | never: what is stored is no account's |
+| A storage's `prepare()`, `commit()`, `prepareDelete()`, `delete()` | what it stores, and site state its checks read | as its last argument |
+
+Refused to all of them: `request_stack`, `current_route_match`,
+`router.request_context`, `session`, `session_manager`,
+`tempstore.private`, `form_builder`, `path.current`,
+`path_alias.manager`, `theme.manager` and `current_user`, by
+`\Drupal::request()`, `::routeMatch()`, `::currentUser()`,
+`::formBuilder()`, `::theme()`, `::service()` or injection alike.
+
+**The account is an argument.** A door makes the account it runs for
+the current user, and the build reads it once and hands it on: to an
+access class as it always did, to each storage write verb, and to a
+runtime refiner that asks for it. `ResourcesInterface::storage()` takes
+an account for a write made as another than the current user, as
+`access()` does, and a content entity written through
+`ContentEntityStorage` is that account's and its new revision by it:
+
+```php
+$storage = $resources->storage('entity.content:node.page', $context, $surface, $account);
+$pipeline->submit($surface, $values, $storage, access: $resources->access('entity.content:node.page', $context, $account));
+```
+
+**Held in three ways.** With assertions on, each such call runs with the
+global container guarded (`Pipeline\PipelineGuard`): the class's own
+code asking for one of those services throws, naming the service, the
+class, the method and why, and an instance built with one injected is
+refused when it is first used. Core's code it calls is core's. The
+module's PHPStan rule (`tests/src/PHPStan/DoorSpecificRule.php`) flags
+the same reads before anything runs. And
+`Tests\data_surface\Traits\DoorAgreementTrait` sends one document
+through the pipeline, the tool, the HTTP API and the form and holds
+them to one answer, for an adopter's resources through
+`ResourceTestBase` ([Testing a resource](testing-a-resource.md)) and
+for this repository's in `EveryDoorAgreesTest`.
 
 ## Tools
 

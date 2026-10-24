@@ -31,7 +31,7 @@ use Drupal\data_surface\Refinement\DoesNotApply;
 use Drupal\data_surface\Refinement\Narrowing;
 use Drupal\data_surface\Refinement\Rule;
 use Drupal\data_surface\Refinement\RuntimeRefiner;
-use Drupal\data_surface\Refinement\StaticRefinerContainer;
+use Drupal\data_surface\Pipeline\PipelineGuard;
 use Drupal\data_surface\Refinement\WatchedValueCheckInterface;
 use Drupal\data_surface\Resource\AltersOutputsInterface;
 use Drupal\data_surface\Resource\DefinesOutputsInterface;
@@ -702,12 +702,14 @@ final class Resources implements ResourcesInterface {
       if (!$alter->appliesIn($context->id)) {
         continue;
       }
-      $instance = $this->classResolver->getInstanceFromDefinition($alter->class);
+      $instance = $this->alter($alter->class);
       if ($instance instanceof AltersInputsInterface) {
-        $instance->alterInputs($additions[$alter->module][0] ??= (new ResourceBlueprintAdditions($builder, $this->typedDataManager, $alter->module))->useShapes($this->shapes())->useReferences($this->references()));
+        $blueprint = $additions[$alter->module][0] ??= (new ResourceBlueprintAdditions($builder, $this->typedDataManager, $alter->module))->useShapes($this->shapes())->useReferences($this->references());
+        PipelineGuard::onBehalf(PipelineGuard::ALTER, $alter->class, 'alterInputs', static fn () => $instance->alterInputs($blueprint));
       }
       if ($instance instanceof AltersOutputsInterface) {
-        $instance->alterOutputs($additions[$alter->module][1] ??= (new ResourceBlueprintAdditions($builder, $this->typedDataManager, $alter->module, TRUE))->useShapes($this->shapes())->useReferences($this->references()));
+        $blueprint = $additions[$alter->module][1] ??= (new ResourceBlueprintAdditions($builder, $this->typedDataManager, $alter->module, TRUE))->useShapes($this->shapes())->useReferences($this->references());
+        PipelineGuard::onBehalf(PipelineGuard::ALTER, $alter->class, 'alterOutputs', static fn () => $instance->alterOutputs($blueprint));
       }
       if ($instance instanceof AltersStorageLayoutInterface) {
         $builder->setThirdPartyLayout($alter->module, $instance->storageLayout());
@@ -911,7 +913,9 @@ final class Resources implements ResourcesInterface {
       if ($deriver !== NULL) {
         // A withheld variant is still declared: nothing derives in its
         // place.
-        foreach ($deriver->variants([...array_keys($variants), ...$withheld]) as $value => $definitions) {
+        $named = [...array_keys($variants), ...$withheld];
+        assert(PipelineGuard::holdsNothingDoorSpecific($deriver, PipelineGuard::DERIVED));
+        foreach (PipelineGuard::onBehalf(PipelineGuard::DERIVED, get_class($deriver), 'variants', static fn (): array => $deriver->variants($named)) as $value => $definitions) {
           $variants[(string) $value] ??= new Attachment((new DataSurfaceBuilder($definitions))->setWatchedValueCheck($this->watchedValueCheck)->seal());
         }
       }
@@ -1424,7 +1428,8 @@ final class Resources implements ResourcesInterface {
    *   When the list cannot be cached, or varies by the account.
    */
   protected function keysFrom(ResourceDefinition $definition, string $key, string $from): KeyedList {
-    $keys = $this->instance($from, KeysFromSiteInterface::class)->keys();
+    $provider = $this->instance($from, KeysFromSiteInterface::class);
+    $keys = PipelineGuard::onBehalf(PipelineGuard::PROVIDER, $from, 'keys', static fn (): KeyedList => $provider->keys());
     if ($keys->getCacheMaxAge() === 0) {
       throw new \LogicException(sprintf('%s lists the keys of "%s" on %s with max-age 0. Keys from the site must be cacheable, since the form, both schema documents and the tool listing are kept with them: declare the cache tags of what it reads (a configuration object\'s, an entity type\'s list) instead.', $from, $key, $definition->id));
     }
@@ -1771,7 +1776,7 @@ final class Resources implements ResourcesInterface {
       if (!$alter->appliesIn($context->id)) {
         continue;
       }
-      $instance = $this->classResolver->getInstanceFromDefinition($alter->class);
+      $instance = $this->alter($alter->class);
       $within = [$structure->id, $definition->id, $keys];
       $additions = (new ResourceBlueprintAdditions($builder, $this->typedDataManager, $alter->module, FALSE, $within))->useShapes($this->shapes())->useReferences($this->references());
       if ($instance instanceof AltersInputsInterface) {
@@ -2412,7 +2417,7 @@ final class Resources implements ResourcesInterface {
    * A static answer depends on nothing but the account, so it is asked
    * once for a context and an account kind (the account's roles and its
    * permissions) and kept. With assertions on, it is asked a second time
-   * with the global container guarded (StaticRefinerContainer::guardAccess())
+   * with the global container guarded (PipelineGuard::guardAccess())
    * and must answer the same, static again, having asked for no service
    * that reads site state: an answer whose cacheability left out what it
    * read is refused, naming the class.
@@ -2446,7 +2451,7 @@ final class Resources implements ResourcesInterface {
     }
     $instance = $this->instance($class, $interface);
     assert($instance instanceof OperationAccessInterface || $instance instanceof AltersAccessInterface);
-    $answer = AccessAnswer::fromAnswer($instance->access($context, $account));
+    $answer = AccessAnswer::fromAnswer(PipelineGuard::onBehalf($instance instanceof OperationAccessInterface ? PipelineGuard::ACCESS : PipelineGuard::ALTER, $class, 'access', static fn (): AccessResultInterface|AccessAnswer => $instance->access($context, $account)));
     if (!$answer->isStatic()) {
       return $answer;
     }
@@ -2513,7 +2518,7 @@ final class Resources implements ResourcesInterface {
    *   When it answers otherwise, or asks for a service reading site state.
    */
   protected function answersAgain(string $class, OperationAccessInterface|AltersAccessInterface $instance, OperationContext $context, AccountInterface $account, AccessAnswer $first): bool {
-    $again = AccessAnswer::fromAnswer(StaticRefinerContainer::guardAccess($class, static fn (): AccessResultInterface|AccessAnswer => $instance->access($context, $account)));
+    $again = AccessAnswer::fromAnswer(PipelineGuard::guardAccess($class, static fn (): AccessResultInterface|AccessAnswer => $instance->access($context, $account)));
     if ($again->getAnswer() !== $first->getAnswer() || !$again->isStatic()) {
       throw new \LogicException(sprintf(
         'The %s %s answered %s, static by its cacheability, and asked again for the same account in the same context answered %s, %s. A static answer depends on the account alone and is the same every time it is asked; one that depends on anything else says so in its cacheability.',
@@ -2658,7 +2663,8 @@ final class Resources implements ResourcesInterface {
    *   When the list cannot be cached, or varies by the account.
    */
   protected function variantsFrom(ResourceDefinition $definition, string $key, string $from): VariantList {
-    $list = $this->instance($from, VariantsFromSiteInterface::class)->variants();
+    $provider = $this->instance($from, VariantsFromSiteInterface::class);
+    $list = PipelineGuard::onBehalf(PipelineGuard::PROVIDER, $from, 'variants', static fn (): VariantList => $provider->variants());
     if ($list->getCacheMaxAge() === 0) {
       throw new \LogicException(sprintf('%s lists the variants at "%s" on %s with max-age 0. Variants from the site must be cacheable, since the form, both schema documents and the tool listing are kept with them: declare the cache tags of what it reads instead.', $from, $key, $definition->id));
     }
@@ -2876,7 +2882,7 @@ final class Resources implements ResourcesInterface {
       }
     }
     if ($definition->access !== NULL) {
-      $answer = static::atTheTop($this->instance($definition->access, OperationAccessInterface::class)->access($context, $account));
+      $answer = static::atTheTop($this->answerAccess($definition->access, $context, $account));
       $result = $permission === NULL ? $answer : $result->andIf($answer);
     }
     // Then each alter that answers access, which may refuse and never
@@ -3030,7 +3036,7 @@ final class Resources implements ResourcesInterface {
     try {
       $this->fillBlueprints($definition, $inputs);
       foreach ($definition->alters as $alter) {
-        $instance = $this->classResolver->getInstanceFromDefinition($alter->class);
+        $instance = $this->alter($alter->class);
         if ($instance instanceof AltersInputsInterface) {
           $instance->alterInputs($blueprints[] = (new ResourceBlueprintAdditions($builder, $this->typedDataManager, $alter->module))->useShapes($this->shapes())->useReferences($this->references()));
         }
@@ -3093,7 +3099,7 @@ final class Resources implements ResourcesInterface {
         $variant = $this->registry->getDefinition($class);
         [$variant_context] = $this->invokeChild($variant, $context, $key, $parent->id);
         if ($variant->answersAccess()) {
-          $answer = $variant->access === NULL ? AccessResult::allowed() : static::atTheTop($this->instance($variant->access, OperationAccessInterface::class)->access($variant_context, $account));
+          $answer = $variant->access === NULL ? AccessResult::allowed() : static::atTheTop($this->answerAccess($variant->access, $variant_context, $account));
           $answer = $this->alteredAtTheTop($answer, $variant, $variant_context, $account);
           $answers[] = $answer;
           if ($answer->isForbidden()) {
@@ -3129,7 +3135,7 @@ final class Resources implements ResourcesInterface {
   /**
    * {@inheritdoc}
    */
-  public function storage(string $resource, OperationContext $context, ?DataSurfaceInterface $built = NULL): DataSurfaceStorageInterface {
+  public function storage(string $resource, OperationContext $context, ?DataSurfaceInterface $built = NULL, ?AccountInterface $account = NULL): DataSurfaceStorageInterface {
     $definition = $this->registry->getDefinition($resource);
     if ($definition->storage === NULL) {
       throw new \LogicException(sprintf(
@@ -3139,7 +3145,7 @@ final class Resources implements ResourcesInterface {
         $definition->id,
       ));
     }
-    return $this->storageFor($definition, $context, $built ?? $this->build($definition->name(), $context));
+    return $this->storageFor($definition, $context, $built ?? $this->build($definition->name(), $context), $account ?? $this->currentUser);
   }
 
   /**
@@ -3157,11 +3163,13 @@ final class Resources implements ResourcesInterface {
    *   Its context.
    * @param \Drupal\data_surface\DataSurfaceInterface $built
    *   The resource as built, whose entries carry the children.
+   * @param \Drupal\Core\Session\AccountInterface $account
+   *   The account each level writes as.
    *
    * @return \Drupal\data_surface\ResourceBuild\StorageAdapter
    *   The storage.
    */
-  protected function storageFor(ResourceDefinition $definition, OperationContext $context, DataSurfaceInterface $built): StorageAdapter {
+  protected function storageFor(ResourceDefinition $definition, OperationContext $context, DataSurfaceInterface $built, AccountInterface $account): StorageAdapter {
     $routes = [];
     foreach ($built->getDefinitions()->entries() as $key => $entry) {
       $children = $entry->attachment !== NULL
@@ -3170,7 +3178,7 @@ final class Resources implements ResourcesInterface {
       foreach ($children as $id => $attachment) {
         $child = $attachment->source === NULL ? NULL : $this->registry->getDefinition($attachment->source);
         if ($child?->storage !== NULL) {
-          $routes[(string) $key][(string) $id] = $this->storageFor($child, $this->invokeChild($child, $context, (string) $key, $definition->id)[0], $attachment->child);
+          $routes[(string) $key][(string) $id] = $this->storageFor($child, $this->invokeChild($child, $context, (string) $key, $definition->id)[0], $attachment->child, $account);
         }
       }
     }
@@ -3182,6 +3190,7 @@ final class Resources implements ResourcesInterface {
       $definition->identity,
       $this->omittedKeys($this->shapeOf($definition, $context), $built),
       $operation?->kind() === OperationDefinition::DELETE,
+      $account,
     );
   }
 
@@ -3734,7 +3743,9 @@ final class Resources implements ResourcesInterface {
    * with, so the language holds it to that promise where it can: an
    * instance method can read whatever its alter was injected with, and
    * is only allowed as a runtime refiner. A static method may still
-   * declare runtime, since it can reach the global container.
+   * declare runtime, since it can reach the global container. A method
+   * that takes the account is runtime too: it is handed the account the
+   * operation runs as, which no schema knows ahead of time.
    *
    * Decision: see docs/decisions.md#static-by-default-runtime-by-declaration.
    *
@@ -3753,6 +3764,15 @@ final class Resources implements ResourcesInterface {
         '%s is an instance method of an alter of %s and does not declare runtime: TRUE. A static refiner is a pure function of the siblings it watches, which the served contract runs ahead of time, and an instance method can read the services its alter was built with: make it `public static` (translating with t()), or, if its answer depends on site state, declare #[RefinesInput(\'%s\', runtime: TRUE)].',
         $refiner->describe(),
         $definition->id,
+        $refiner->key,
+      ));
+    }
+    if ($refiner->takesAccount && !$refiner->runtime) {
+      // Decision: see
+      // docs/decisions.md#nothing-an-operation-runs-reads-the-request.
+      throw new \LogicException(sprintf(
+        '%s takes the account and does not declare runtime: TRUE. What the account may choose is a fact about the account, which no schema states ahead of time: declare #[RefinesInput(\'%s\', runtime: TRUE)].',
+        $refiner->describe(),
         $refiner->key,
       ));
     }
@@ -4138,7 +4158,48 @@ final class Resources implements ResourcesInterface {
     if (!$instance instanceof $interface) {
       throw new \LogicException(sprintf('%s is named as a %s but does not implement it.', $class, $interface));
     }
+    // Decision: see
+    // docs/decisions.md#nothing-an-operation-runs-reads-the-request.
+    assert(PipelineGuard::holdsNothingDoorSpecific($instance, match ($interface) {
+      ResourceStorageInterface::class => PipelineGuard::STORAGE,
+      OperationAccessInterface::class => PipelineGuard::ACCESS,
+      AltersAccessInterface::class => PipelineGuard::ALTER,
+      default => PipelineGuard::PROVIDER,
+    }));
     return $instance;
+  }
+
+  /**
+   * Gets an alter, held to holding no door-specific service.
+   *
+   * @param class-string $class
+   *   The alter's class.
+   *
+   * @return object
+   *   The instance.
+   */
+  protected function alter(string $class): object {
+    $instance = $this->classResolver->getInstanceFromDefinition($class);
+    assert(PipelineGuard::holdsNothingDoorSpecific($instance, PipelineGuard::ALTER));
+    return $instance;
+  }
+
+  /**
+   * Asks an access class at the top, guarded as everything an operation runs.
+   *
+   * @param class-string $class
+   *   The access class.
+   * @param \Drupal\data_surface\Resource\OperationContext $context
+   *   The context it answers for.
+   * @param \Drupal\Core\Session\AccountInterface $account
+   *   The account.
+   *
+   * @return \Drupal\Core\Access\AccessResultInterface|\Drupal\data_surface\Resource\AccessAnswer
+   *   Its answer.
+   */
+  protected function answerAccess(string $class, OperationContext $context, AccountInterface $account): AccessResultInterface|AccessAnswer {
+    $instance = $this->instance($class, OperationAccessInterface::class);
+    return PipelineGuard::onBehalf(PipelineGuard::ACCESS, $class, 'access', static fn (): AccessResultInterface|AccessAnswer => $instance->access($context, $account));
   }
 
 }

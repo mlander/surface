@@ -7,6 +7,7 @@ namespace Drupal\data_surface\ResourceBuild;
 use Drupal\Core\Cache\Cache;
 use Drupal\Core\Cache\CacheBackendInterface;
 use Drupal\Core\DependencyInjection\ClassResolverInterface;
+use Drupal\Core\Session\AccountInterface;
 use Drupal\data_surface\Hook\ResourcePluginHooks;
 use Drupal\data_surface\Resource\Attribute\Alters;
 use Drupal\data_surface\Resource\Attribute\DerivesResources;
@@ -1542,6 +1543,15 @@ final class ResourceRegistry {
       foreach ($method->getAttributes(RefinesInput::class) as $attribute) {
         $refines = $attribute->newInstance();
         $parameters = $method->getParameters();
+        // The account the operation runs as is handed to a last parameter
+        // typed for it, and is no watched key.
+        // Decision: see
+        // docs/decisions.md#nothing-an-operation-runs-reads-the-request.
+        $last = count($parameters) > 1 ? $parameters[count($parameters) - 1]->getType() : NULL;
+        $account = $last instanceof \ReflectionNamedType && is_a($last->getName(), AccountInterface::class, TRUE);
+        if ($account) {
+          array_pop($parameters);
+        }
         $refiners[] = new RefinerDefinition(
           class: $class->getName(),
           method: $method->getName(),
@@ -1555,6 +1565,7 @@ final class ResourceRegistry {
           isStatic: $method->isStatic(),
           runtime: $refines->runtime,
           mayNotApply: DoesNotApply::isDeclaredBy($method),
+          takesAccount: $account,
         );
       }
     }

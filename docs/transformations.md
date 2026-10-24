@@ -276,7 +276,7 @@ written by its parent under its key:
 foreach ($before as [$route, $child_prepared]) {
   $route->withParentIdentity($known)->commit($child_prepared);
 }
-$this->storage->commit($this->context, $own);
+$this->written('commit', $own);
 foreach ($after as [$route, $child_prepared]) {
   $route->withParentIdentity($known)->commit($child_prepared);
 }
@@ -341,6 +341,13 @@ changes no value and writes nothing.
   A callback on a key would be the same: either every door runs it,
   the form, the tool, HTTP, a config action and a PHP caller, or the
   doors disagree about what a write does.
+- **A read of the request runs at one door.** A refiner, an access
+  class, a provider or a storage that reads the request, the route, the
+  session or the current user answers one thing on the form and another
+  over HTTP or through a tool, which has no request of its own. Nothing
+  an operation runs reads them: the account is handed in, and with
+  assertions on the guard refuses the rest
+  ([No door-specific context](resources.md#no-door-specific-context)).
 - **A callback makes the contract wrong.** Both schema documents
   describe what a key accepts and what is stored. Code that changes a
   value after validation stores something the contract never described,

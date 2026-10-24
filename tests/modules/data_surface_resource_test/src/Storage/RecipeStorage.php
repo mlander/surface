@@ -7,6 +7,7 @@ namespace Drupal\data_surface_resource_test\Storage;
 use Drupal\Core\State\StateInterface;
 use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface\Resource\ResourceStorageInterface;
+use Drupal\Core\Session\AccountInterface;
 
 /**
  * Keeps recipes in state, by the identity the context knows.
@@ -52,14 +53,14 @@ final class RecipeStorage implements ResourceStorageInterface {
    * State has no schema and refuses nothing, so what would be stored is
    * what was accepted.
    */
-  public function prepare(OperationContext $context, array $values): array {
+  public function prepare(OperationContext $context, array $values, AccountInterface $account): array {
     return $values;
   }
 
   /**
    * {@inheritdoc}
    */
-  public function commit(OperationContext $context, array $prepared): void {
+  public function commit(OperationContext $context, array $prepared, AccountInterface $account): void {
     $values = $prepared;
     $this->state->set(self::key((string) $values['kitchen'], (string) $values['name']), $values);
   }

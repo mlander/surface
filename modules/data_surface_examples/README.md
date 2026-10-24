@@ -3727,15 +3727,12 @@ final class VenueStorage extends ConfigEntityStorage {
    *   The string translation service, autowired.
    * @param \Drupal\data_surface\ResourceBuild\ResourcesInterface $resources
    *   The build step, autowired, which answers access for each venue.
-   * @param \Drupal\Core\Session\AccountProxyInterface $currentUser
-   *   The account a listing is answered for, autowired.
    */
   public function __construct(
     EntityTypeManagerInterface $entityTypeManager,
     TypedConfigManagerInterface $typedConfig,
     TranslationInterface $string_translation,
     protected readonly ResourcesInterface $resources,
-    protected readonly AccountProxyInterface $currentUser,
   ) {
     parent::__construct($entityTypeManager, $typedConfig, $string_translation);
   }
@@ -3764,11 +3761,11 @@ final class VenueStorage extends ConfigEntityStorage {
    * A listing's answer, a reorder's rehearsal, or a venue's, its slug
    * and its rooms held to what no other venue has.
    */
-  public function prepare(OperationContext $context, array $values): array {
+  public function prepare(OperationContext $context, array $values, AccountInterface $account): array {
     return match ($context->id) {
-      self::LIST => $this->listing($context, $values),
+      self::LIST => $this->listing($context, $values, $account),
       self::REORDER => $this->reordering($values),
-      default => $this->venue($context, $values),
+      default => $this->venue($context, $values, $account),
     };
   }
 
@@ -3777,9 +3774,9 @@ final class VenueStorage extends ConfigEntityStorage {
    *
    * A reorder saves each venue it rehearsed with its new weight.
    */
-  public function commit(OperationContext $context, array $prepared): void {
+  public function commit(OperationContext $context, array $prepared, AccountInterface $account): void {
     if ($context->id !== self::REORDER) {
-      parent::commit($context, $prepared);
+      parent::commit($context, $prepared, $account);
       return;
     }
     $storage = $this->storage();
@@ -3798,11 +3795,13 @@ final class VenueStorage extends ConfigEntityStorage {
    *   The listing's context.
    * @param array $values
    *   The accepted offset, limit and status.
+   * @param \Drupal\Core\Session\AccountInterface $account
+   *   The account the listing is read as.
    *
    * @return array{items: list<array{id: string, label: string, capacity: int, weight: int}>, total: int}
    *   The page and how many venues matched.
    */
-  protected function listing(OperationContext $context, array $values): array {
+  protected function listing(OperationContext $context, array $values, AccountInterface $account): array {
     $status = $values['status'] ?? NULL;
     $matched = [];
     foreach ($this->venues() as $venue) {
@@ -3811,7 +3810,7 @@ final class VenueStorage extends ConfigEntityStorage {
       }
       // Decision: see
       // docs/decisions.md#a-listing-is-a-read-only-operation-with-outputs-a-reorder-is-an-update-over-the-collection.
-      if (!$this->resources->access(VenueResource::class, $context->withKnown(['id' => (string) $venue->id()]), $this->currentUser)->isAllowed()) {
+      if (!$this->resources->access(VenueResource::class, $context->withKnown(['id' => (string) $venue->id()]), $account)->isAllowed()) {
         continue;
       }
       $matched[] = [
@@ -3879,6 +3878,8 @@ final class VenueStorage extends ConfigEntityStorage {
    *   The create or the update.
    * @param array $values
    *   The accepted values.
+   * @param \Drupal\Core\Session\AccountInterface $account
+   *   The account the venue is written as.
    *
    * @return array
    *   The venue's exported array.
@@ -3887,7 +3888,7 @@ final class VenueStorage extends ConfigEntityStorage {
    *   When another venue holds the slug, a room id is held twice, here or
    *   by another venue, or as ConfigEntityStorage refuses.
    */
-  protected function venue(OperationContext $context, array $values): array {
+  protected function venue(OperationContext $context, array $values, AccountInterface $account): array {
     $own = $context->known['id'] ?? $values['id'] ?? NULL;
     $elsewhere = [];
     foreach ($this->venues() as $id => $venue) {
@@ -3925,7 +3926,7 @@ final class VenueStorage extends ConfigEntityStorage {
       $seen[$id] = TRUE;
     }
     try {
-      $record = parent::prepare($context, $values);
+      $record = parent::prepare($context, $values, $account);
     }
     catch (StorageViolationsException $e) {
       $refused = [...iterator_to_array($e->getViolations(), FALSE), ...$refused];
@@ -4261,7 +4262,7 @@ of code, counted without blank lines or comments:
 | [`modules/data_surface_examples/src/Structure/VenueListingStructure.php`](src/Structure/VenueListingStructure.php) | what the listing takes, a page and a filter, and what it answers, the page and the total | 27 |
 | [`modules/data_surface_examples/src/Structure/VenueReorderStructure.php`](src/Structure/VenueReorderStructure.php) | what the reorder takes: a list of venues and their weights | 9 |
 | [`modules/data_surface_examples/src/Structure/VenueOrderStructure.php`](src/Structure/VenueOrderStructure.php) | an item of that list: a venue and its new weight | 12 |
-| [`modules/data_surface_examples/src/Storage/VenueStorage.php`](src/Storage/VenueStorage.php) | the storage: a ConfigEntityStorage, which reads the listing, writes the reorder in one commit, and holds a slug to one venue | 152 |
+| [`modules/data_surface_examples/src/Storage/VenueStorage.php`](src/Storage/VenueStorage.php) | the storage: a ConfigEntityStorage, which reads the listing, writes the reorder in one commit, and holds a slug to one venue | 151 |
 | [`modules/data_surface_examples/src/Access/VenueAccess.php`](src/Access/VenueAccess.php) | the access class: a disabled venue is only for an account that administers the venues | 17 |
 | [`modules/data_surface_examples/config/schema/data_surface_examples.schema.yml`](config/schema/data_surface_examples.schema.yml), entry `data_surface_examples.event_venue.*` | the entity type's config schema, generated from the resource | 84 |
 | [`modules/data_surface_examples/config/install/data_surface_examples.event_venue.riverside.yml`](config/install/data_surface_examples.event_venue.riverside.yml) | Riverside Hall, shipped | 18 |

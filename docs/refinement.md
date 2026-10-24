@@ -270,8 +270,11 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
   values, at `POST .../schema`. Which rooms a venue has is static.
 - **Runtime, `runtime: TRUE`.** A rule whose answer depends on something
   no schema can state: a lookup in the database or a remote service,
-  uniqueness (a machine name nobody has taken), the current account,
-  the time, any service. It promises the schema nothing. The served
+  uniqueness (a machine name nobody has taken), the account, the time,
+  any service. The account is handed to a last parameter typed
+  `AccountInterface`; the request, the route, the session and the
+  current user are never read
+  ([No door-specific context](resources.md#no-door-specific-context)). It promises the schema nothing. The served
   contract never runs it ahead of time, in either document, and marks
   the key `live`; only the pipeline, a form and the schema for one
   set of values run it, against those values. Which rooms are closed
@@ -327,7 +330,7 @@ trust; three layers hold a static refiner to it
    compiled), every call to a static refiner, from the build, the
    engine's refinement, the pipeline or the emitter's enumeration, runs
    with the global container replaced by
-   `Refinement\StaticRefinerContainer`, which throws when asked for a
+   `Pipeline\PipelineGuard`, which throws when asked for a
    service or a parameter:
 
    > The refiner `Class::method()` is declared static but asked for the
@@ -375,8 +378,17 @@ refiner, said on the method.
 
 A computed key's deriver is held to the same promise by the first two
 layers: its `derive()` is static, it runs with the container guarded
-(`StaticRefinerContainer::guardDeriver()`), and the PHPStan rule flags
+(`PipelineGuard::guardDeriver()`), and the PHPStan rule flags
 `\Drupal::` in it ([Computed keys](declaring-a-resource.md#computed-keys)).
+
+A runtime refiner may read site state, and nothing a door has: with
+assertions on it runs guarded too, its class refused the request, the
+route, the session, the form being built, the theme and the current
+user, and a second PHPStan rule flags the same reads. One that narrows
+by account takes the account as its last parameter, typed
+`AccountInterface`, and is handed the account the operation runs as;
+that parameter is no watched key, and a static refiner that takes it is
+refused at build ([No door-specific context](resources.md#no-door-specific-context)).
 
 Access has the same split, read from an answer's cacheability rather
 than declared, and the same three layers: the build for the account
@@ -385,6 +397,9 @@ again with the container guarded (refusing services that read site
 state, since an access class holds injected ones), and
 `StaticAccessAgreementTrait` holds the full schema's access marks to the
 build ([Static and runtime access](resources.md#static-and-runtime-access)).
+An access answer of either kind is for the account it is handed and
+reads nothing a door has
+([No door-specific context](resources.md#no-door-specific-context)).
 
 ## When a key does not apply
 

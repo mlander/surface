@@ -8,6 +8,7 @@ use Drupal\Component\Plugin\Exception\PluginNotFoundException;
 use Drupal\Core\DependencyInjection\DependencySerializationTrait;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\Validation\ConstraintManager;
+use Drupal\data_surface\Pipeline\PipelineGuard;
 use Psr\Log\LoggerInterface;
 
 /**
@@ -131,10 +132,12 @@ final class DataSurfaceOptions {
         continue;
       }
       foreach ($this->resolvers() as $resolver) {
-        if (!$resolver->applies($constraint)) {
+        // Decision: see
+        // docs/decisions.md#nothing-an-operation-runs-reads-the-request.
+        if (!PipelineGuard::onBehalf(PipelineGuard::OPTIONS, get_class($resolver), 'applies', static fn (): bool => $resolver->applies($constraint))) {
           continue;
         }
-        $set = $resolver->resolve($constraint, $definition);
+        $set = PipelineGuard::onBehalf(PipelineGuard::OPTIONS, get_class($resolver), 'resolve', static fn (): OptionSet => $resolver->resolve($constraint, $definition));
         $resolved = $resolved === NULL ? $set : $resolved->intersect($set);
       }
     }
@@ -233,6 +236,7 @@ final class DataSurfaceOptions {
       foreach (array_keys($this->optionsManager->getDefinitions()) as $id) {
         /** @var \Drupal\data_surface\Options\DataSurfaceOptionsResolverInterface $resolver */
         $resolver = $this->optionsManager->createInstance($id);
+        assert(PipelineGuard::holdsNothingDoorSpecific($resolver, PipelineGuard::OPTIONS));
         $this->resolvers[$id] = $resolver;
       }
     }

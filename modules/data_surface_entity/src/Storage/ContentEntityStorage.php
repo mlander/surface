@@ -9,6 +9,7 @@ use Drupal\Core\DependencyInjection\ContainerInjectionInterface;
 use Drupal\Core\DependencyInjection\DependencySerializationTrait;
 use Drupal\Core\Entity\ContentEntityInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
+use Drupal\user\EntityOwnerInterface;
 use Drupal\Core\Entity\RevisionLogInterface;
 use Drupal\Core\Field\FieldDefinitionInterface;
 use Drupal\Core\Session\AccountInterface;
@@ -72,8 +73,6 @@ final class ContentEntityStorage implements ResourceStorageInterface, ContainerI
    *   The entity type manager.
    * @param \Drupal\data_surface_entity\FieldItemDerivation $derivation
    *   Which fields and properties the resource carries.
-   * @param \Drupal\Core\Session\AccountInterface $currentUser
-   *   The account a new revision is by.
    * @param \Drupal\Component\Datetime\TimeInterface $time
    *   When a new revision is made.
    * @param array<class-string, string> $overrides
@@ -83,7 +82,6 @@ final class ContentEntityStorage implements ResourceStorageInterface, ContainerI
   public function __construct(
     protected readonly EntityTypeManagerInterface $entityTypeManager,
     protected readonly FieldItemDerivation $derivation,
-    protected readonly AccountInterface $currentUser,
     protected readonly TimeInterface $time,
     protected readonly array $overrides = [],
   ) {}
@@ -96,7 +94,6 @@ final class ContentEntityStorage implements ResourceStorageInterface, ContainerI
     return new static(
       $container->get('entity_type.manager'),
       $container->get('data_surface_entity.field_item_derivation'),
-      $container->get('current_user'),
       $container->get('datetime.time'),
       is_array($classes) ? ($classes['overrides'][FieldItemStructures::class] ?? []) : [],
     );
@@ -135,7 +132,7 @@ final class ContentEntityStorage implements ResourceStorageInterface, ContainerI
   /**
    * {@inheritdoc}
    */
-  public function prepare(OperationContext $context, array $values): array {
+  public function prepare(OperationContext $context, array $values, AccountInterface $account): array {
     [$entity_type_id, $bundle, $id] = static::identity($context);
     $fields = $this->fields($entity_type_id, $bundle);
     $items = [];
@@ -159,11 +156,11 @@ final class ContentEntityStorage implements ResourceStorageInterface, ContainerI
       'new_revision' => !$context->creates && isset($fields['revision_log']),
       'fields' => $items,
     ];
-    $entity = $this->apply($prepared);
+    $entity = $this->apply($prepared, $account);
     $violations = $entity->validate();
     // As core's form: what the account may not edit, and what the form
     // does not show, is not this submission's to answer for.
-    $violations->filterByFieldAccess($this->currentUser);
+    $violations->filterByFieldAccess($account);
     $violations->filterByFields(array_diff(array_keys($entity->getFieldDefinitions()), array_keys($fields)));
     $refused = [];
     foreach ($violations as $violation) {
@@ -178,8 +175,8 @@ final class ContentEntityStorage implements ResourceStorageInterface, ContainerI
   /**
    * {@inheritdoc}
    */
-  public function commit(OperationContext $context, array $prepared): void {
-    $entity = $this->apply($prepared);
+  public function commit(OperationContext $context, array $prepared, AccountInterface $account): void {
+    $entity = $this->apply($prepared, $account);
     $entity->save();
     $this->committed = [$prepared['entity_type'], $prepared['bundle'], $entity->id()];
   }
@@ -187,17 +184,30 @@ final class ContentEntityStorage implements ResourceStorageInterface, ContainerI
   /**
    * Puts prepared values on an entity: a new one, or a fresh copy.
    *
+   * A new entity with an owner is the account's, and a new revision is
+   * by it: the account the operation is written as, handed in, never the
+   * current user read here.
+   *
+   * Decision: see
+   * docs/decisions.md#nothing-an-operation-runs-reads-the-request.
+   *
    * @param array $prepared
    *   What prepare() returned.
+   * @param \Drupal\Core\Session\AccountInterface $account
+   *   The account the write is made as.
    *
    * @return \Drupal\Core\Entity\ContentEntityInterface
    *   The entity, unsaved.
    */
-  protected function apply(array $prepared): ContentEntityInterface {
+  protected function apply(array $prepared, AccountInterface $account): ContentEntityInterface {
     $storage = $this->entityTypeManager->getStorage($prepared['entity_type']);
     if ($prepared['id'] === NULL) {
       $bundle_key = (string) $this->entityTypeManager->getDefinition($prepared['entity_type'])->getKey('bundle');
       $entity = $storage->create($bundle_key === '' ? [] : [$bundle_key => $prepared['bundle']]);
+      if ($entity instanceof EntityOwnerInterface) {
+        // A value the resource carries for the owner is set below.
+        $entity->setOwnerId((int) $account->id());
+      }
     }
     else {
       // Never the object the static cache, a form or a route holds.
@@ -219,7 +229,7 @@ final class ContentEntityStorage implements ResourceStorageInterface, ContainerI
     if ($prepared['new_revision'] && $entity->getEntityType()->isRevisionable()) {
       $entity->setNewRevision(TRUE);
       if ($entity instanceof RevisionLogInterface) {
-        $entity->setRevisionUserId((int) $this->currentUser->id());
+        $entity->setRevisionUserId((int) $account->id());
         $entity->setRevisionCreationTime($this->time->getRequestTime());
       }
     }

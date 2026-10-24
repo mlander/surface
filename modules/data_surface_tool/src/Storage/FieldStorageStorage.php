@@ -16,6 +16,7 @@ use Drupal\data_surface\Resource\ResourceStorageInterface;
 use Drupal\data_surface\Storage\SchemaViolations;
 use Drupal\field\Entity\FieldStorageConfig;
 use Drupal\field\FieldStorageConfigInterface;
+use Drupal\Core\Session\AccountInterface;
 
 /**
  * A field storage's values live on its field storage config entity.
@@ -78,7 +79,7 @@ final class FieldStorageStorage implements ResourceStorageInterface {
    *   When the context does not say which storage: a field storage is
    *   created by the field that uses it, which hands it its identity.
    */
-  public function prepare(OperationContext $context, array $values): array {
+  public function prepare(OperationContext $context, array $values, AccountInterface $account): array {
     $original = $this->storage($context->known);
     $this->assertSameType($context, $original, $values['field_type'] ?? NULL);
     $storage = $original === NULL ? $this->create($context, NULL, $values['field_type'] ?? NULL) : clone $original;
@@ -103,7 +104,7 @@ final class FieldStorageStorage implements ResourceStorageInterface {
    *
    * A storage whose values did not move is not saved.
    */
-  public function commit(OperationContext $context, array $prepared): void {
+  public function commit(OperationContext $context, array $prepared, AccountInterface $account): void {
     $storage = $this->storage($context->known);
     if ($storage === NULL) {
       $storage = $this->create($context, $prepared['uuid'] ?? NULL, $prepared['type'] ?? NULL);

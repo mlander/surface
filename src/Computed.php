@@ -6,7 +6,7 @@ namespace Drupal\data_surface;
 
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\data_surface\Pipeline\ValueState;
-use Drupal\data_surface\Refinement\StaticRefinerContainer;
+use Drupal\data_surface\Pipeline\PipelineGuard;
 use Drupal\data_surface\Resource\Derive;
 
 /**
@@ -127,8 +127,8 @@ final class Computed {
     $deriver = $this->deriver;
     $call = static fn (): mixed => $deriver::derive($from);
     $guarded = FALSE;
-    assert(StaticRefinerContainer::asserting($guarded));
-    return $guarded ? StaticRefinerContainer::guardDeriver($deriver . '::derive()', $call) : $call();
+    assert(PipelineGuard::asserting($guarded));
+    return $guarded ? PipelineGuard::guardDeriver($deriver . '::derive()', $call) : $call();
   }
 
   /**

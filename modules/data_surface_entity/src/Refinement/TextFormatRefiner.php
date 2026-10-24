@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\data_surface_entity\Refinement;
 
+use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\data_surface\Resource\Attribute\RefinesInput;
 use Drupal\filter\FilterFormatRepositoryInterface;
@@ -23,21 +24,23 @@ use Drupal\filter\FilterFormatRepositoryInterface;
 final class TextFormatRefiner {
 
   /**
-   * Keeps the formats the current account may use.
+   * Keeps the formats the account may use.
    *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $format
    *   The format key, with the field's formats as a LabeledChoice.
+   * @param \Drupal\Core\Session\AccountInterface $account
+   *   The account the operation runs as, handed in.
    *
    * @return \Drupal\Core\TypedData\DataDefinitionInterface
    *   The key, its choices narrowed.
    */
   #[RefinesInput('format', runtime: TRUE)]
-  public static function formatsTheAccountMayUse(DataDefinitionInterface $format): DataDefinitionInterface {
+  public static function formatsTheAccountMayUse(DataDefinitionInterface $format, AccountInterface $account): DataDefinitionInterface {
     $constraints = $format->getConstraints();
     if (!isset($constraints['LabeledChoice']['choices'])) {
       return $format;
     }
-    $usable = array_map('strval', array_keys(static::usable()));
+    $usable = array_map('strval', array_keys(static::usable($account)));
     $choice = $constraints['LabeledChoice'];
     $choice['choices'] = array_values(array_filter($choice['choices'], static fn ($id): bool => in_array((string) $id, $usable, TRUE)));
     $choice['labels'] = array_intersect_key($choice['labels'] ?? [], array_flip($choice['choices']));
@@ -46,13 +49,15 @@ final class TextFormatRefiner {
   }
 
   /**
-   * Lists the formats the current account may use.
+   * Lists the formats an account may use.
+   *
+   * @param \Drupal\Core\Session\AccountInterface $account
+   *   The account.
    *
    * @return array<string, \Drupal\filter\FilterFormatInterface>
    *   The formats, by id.
    */
-  protected static function usable(): array {
-    $account = \Drupal::currentUser();
+  protected static function usable(AccountInterface $account): array {
     // The repository is core's from 11.4, where filter_formats() is
     // deprecated; before, the function is all there is.
     if (interface_exists(FilterFormatRepositoryInterface::class) && \Drupal::hasService(FilterFormatRepositoryInterface::class)) {

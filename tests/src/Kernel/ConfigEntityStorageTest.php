@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\data_surface\Kernel;
 
+use Drupal\Core\Session\AnonymousUserSession;
 use Drupal\Core\Config\Entity\ConfigEntityInterface;
 use Drupal\data_surface\Pipeline\StorageViolationsException;
 use Drupal\data_surface\Pipeline\Violation;
@@ -140,7 +141,7 @@ class ConfigEntityStorageTest extends DataSurfaceKernelTestBase {
     $this->assertSame(['label'], $this->submit('create', ['id' => 'two', 'label' => "Two\nlines"])->violations->keys());
     $storage = $this->container->get('class_resolver')->getInstanceFromDefinition(ConfigTestStorage::class);
     try {
-      $storage->prepare(new OperationContext('create', TRUE), ['id' => 'two', 'label' => "Two\nlines"]);
+      $storage->prepare(new OperationContext('create', TRUE), ['id' => 'two', 'label' => "Two\nlines"], new AnonymousUserSession());
       $this->fail('The schema refuses a label on two lines.');
     }
     catch (StorageViolationsException $e) {
@@ -174,16 +175,16 @@ class ConfigEntityStorageTest extends DataSurfaceKernelTestBase {
     $prepared = $storage->prepare($context, [
       'label' => 'Mounted',
       'third_party_settings' => ['data_surface_storage_test' => ['note' => 'Written by a third party']],
-    ]);
+    ], new AnonymousUserSession());
     $this->assertSame(['data_surface_storage_test' => ['note' => 'Written by a third party']], $prepared['third_party_settings']);
     $this->assertSame(['module' => ['data_surface_storage_test']], $prepared['dependencies'], 'The dependencies a save would calculate.');
-    $storage->commit($context, $prepared);
+    $storage->commit($context, $prepared, new AnonymousUserSession());
     $this->assertSame('Written by a third party', $this->stored('four')->getThirdPartySetting('data_surface_storage_test', 'note'));
     $this->assertSame(['data_surface_storage_test' => ['note' => 'Written by a third party']], $storage->load($context)['third_party_settings']);
 
     // A setting no schema describes is refused under the mount.
     try {
-      $storage->prepare($context, ['third_party_settings' => ['data_surface_storage_test' => ['note' => ['not' => 'a string']]]]);
+      $storage->prepare($context, ['third_party_settings' => ['data_surface_storage_test' => ['note' => ['not' => 'a string']]]], new AnonymousUserSession());
       $this->fail('A setting of the wrong type is refused.');
     }
     catch (StorageViolationsException $e) {
@@ -216,7 +217,7 @@ class ConfigEntityStorageTest extends DataSurfaceKernelTestBase {
 
     $storage = $this->container->get('class_resolver')->getInstanceFromDefinition(ConfigTestStorage::class);
     try {
-      $storage->prepareDelete(new OperationContext('delete', known: ['id' => 'five']));
+      $storage->prepareDelete(new OperationContext('delete', known: ['id' => 'five']), new AnonymousUserSession());
       $this->fail('Nothing stored is nothing to remove.');
     }
     catch (StorageViolationsException $e) {

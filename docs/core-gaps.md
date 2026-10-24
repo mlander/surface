@@ -439,7 +439,7 @@ static](decisions.md#a-resource-or-structure-is-static)). The guard that
 stops a static refiner reading site state lets `t()` through, because
 `t()` only builds the lazy object; the language and the translation are
 read when it is rendered, after the refiner has returned
-(`src/Refinement/StaticRefinerContainer.php`).
+(`src/Pipeline/PipelineGuard.php`).
 
 **The core change.** None in core: the standards name `t()` as the
 sanctioned spelling in static and declarative context.

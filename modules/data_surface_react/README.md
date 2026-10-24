@@ -68,6 +68,12 @@ and so on.
 
 ## What it does and does not
 
+The HTTP API is a door: it reads the request (the path, the method, the
+body, `?dryRun`, `If-Match`) and turns it into a context, values and the
+current user as the account, and nothing the operation runs reads the
+request after it
+([No door-specific context](../../docs/resources.md#no-door-specific-context)).
+
 - **Resolves** the contract's references before drawing anything. The
   emitter writes each part (an attached structure, a variant) once,
   under the schema's `$defs`, and refers to it where it is used, with

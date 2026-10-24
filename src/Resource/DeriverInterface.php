@@ -13,7 +13,7 @@ namespace Drupal\data_surface\Resource;
  * calls it with the values in progress, so the same values in must give
  * the same value out, whatever is stored, whoever asks and whenever. With
  * assertions on it runs with the global container guarded
- * (Refinement\StaticRefinerContainer::guardDeriver()), which refuses every
+ * (Pipeline\PipelineGuard::guardDeriver()), which refuses every
  * service, and the module's PHPStan rule flags a call to `\Drupal::` in
  * it. A value that needs a service or the clock (a changed time) is no
  * computed key: a storage's prepare() adds it.

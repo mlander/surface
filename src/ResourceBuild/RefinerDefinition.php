@@ -41,6 +41,10 @@ final class RefinerDefinition {
    * @param bool $mayNotApply
    *   Whether its return type names DoesNotApply: it may answer that the
    *   key does not apply.
+   * @param bool $takesAccount
+   *   Whether its last parameter is typed AccountInterface: it is handed
+   *   the account the operation runs as, never a watched key. Only a
+   *   runtime refiner may take it.
    */
   public function __construct(
     public readonly string $class,
@@ -52,6 +56,7 @@ final class RefinerDefinition {
     public readonly bool $isStatic = FALSE,
     public readonly bool $runtime = FALSE,
     public readonly bool $mayNotApply = FALSE,
+    public readonly bool $takesAccount = FALSE,
   ) {}
 
   /**

@@ -12,12 +12,15 @@
 
 declare(strict_types=1);
 
+use Drupal\Tests\data_surface\PHPStan\DoorSpecificRule;
 use Drupal\Tests\data_surface\PHPStan\StaticRefinerRule;
 
 require_once __DIR__ . '/tests/src/PHPStan/StaticRefinerRule.php';
+require_once __DIR__ . '/tests/src/PHPStan/DoorSpecificRule.php';
 
 return [
   'rules' => [
     StaticRefinerRule::class,
+    DoorSpecificRule::class,
   ],
 ];

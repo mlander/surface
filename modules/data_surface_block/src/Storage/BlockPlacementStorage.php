@@ -17,6 +17,7 @@ use Drupal\data_surface\Pipeline\ViolationSet;
 use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface\Storage\ConfigEntityStorage;
 use Drupal\data_surface_block\Variants\BlockPluginStructures;
+use Drupal\Core\Session\AccountInterface;
 
 /**
  * A placed block lives on its block config entity, `block.block.<id>`.
@@ -102,7 +103,7 @@ final class BlockPlacementStorage extends ConfigEntityStorage {
    * Refuses a condition held twice, and files a condition's violations by
    * its place in the list.
    */
-  public function prepare(OperationContext $context, array $values): array {
+  public function prepare(OperationContext $context, array $values, AccountInterface $account): array {
     $refused = [];
     $positions = [];
     foreach (array_values(is_array($values['visibility'] ?? NULL) ? $values['visibility'] : []) as $delta => $condition) {
@@ -123,7 +124,7 @@ final class BlockPlacementStorage extends ConfigEntityStorage {
       throw new StorageViolationsException(new ViolationSet($refused));
     }
     try {
-      return parent::prepare($context, $values);
+      return parent::prepare($context, $values, $account);
     }
     catch (StorageViolationsException $e) {
       $placed = [];

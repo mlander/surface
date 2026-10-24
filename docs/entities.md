@@ -183,9 +183,13 @@ item derivation's keys, which the engine does not own
   just created, so the `id` output answers with the new id, the derived
   tool returns it and the React app can open the page it made.
 - **Revisions**: on an update, a resource that carries the revision log field
-  makes a new revision, by the current account, at the request time,
-  with the log the caller gave; one that does not leaves revisions to
-  the entity type's default (none, for a node saved outside a form).
+  makes a new revision, by the account the write is made as, at the
+  request time, with the log the caller gave; one that does not leaves
+  revisions to the entity type's default (none, for a node saved
+  outside a form). A new entity with an owner is that account's too,
+  unless the values name one. The account is handed to `prepare()` and
+  `commit()`, the current user when the caller names none
+  ([No door-specific context](resources.md#no-door-specific-context)).
 - **Secrets**: none; a node has no secret field.
 
 A dry run stops after prepare; a PHP caller reads the prepared values

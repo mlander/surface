@@ -231,15 +231,31 @@ class DataSurfaceOperationForm extends FormBase {
    * {@inheritdoc}
    */
   public function validateForm(array &$form, FormStateInterface $form_state): void {
-    [$served, $surface, $storage] = $this->operationServed();
-    if ($served->operation->kind() === OperationDefinition::DELETE) {
-      // A delete takes no values: the pipeline judges the removal.
+    [$served, $surface, $storage, $access] = $this->operationServed();
+    $deletes = $served->operation->kind() === OperationDefinition::DELETE;
+    $builder = $this->surfaceFormBuilder();
+    // A delete takes no values: the pipeline judges the removal.
+    $values = $deletes ? [] : $builder->extractSurfaceValues($surface, $form[static::SURFACE_KEY], $form_state, $this->storedSurfaceValues($surface, $storage));
+    // The whole run, dry: access, the values, and what storage's own
+    // prepare refuses, said here, on the elements, since a submit handler
+    // may no longer set an error. The submit runs it again and writes.
+    // Decision: see docs/decisions.md#one-result-at-every-door.
+    $result = $this->surfacePipeline()->submit(
+      $surface,
+      $values,
+      $storage,
+      TRUE,
+      DataSurfaceAccess::decisive($access, 'The resource this form configures may not be written by this account.'),
+    );
+    if ($deletes) {
+      foreach ($result->violations as $violation) {
+        $form_state->setErrorByName('', $violation->message);
+      }
       return;
     }
-    $current = $this->storedSurfaceValues($surface, $storage);
-    $builder = $this->surfaceFormBuilder();
-    $values = $builder->extractSurfaceValues($surface, $form[static::SURFACE_KEY], $form_state, $current);
-    $builder->validateSurfaceForm($surface, $values, $form[static::SURFACE_KEY], $form_state, $current);
+    // Every refusal on its element, and every stale value kept said
+    // beside it, as validation always said them.
+    $builder->flagSurfaceErrors($result->violations, $form[static::SURFACE_KEY], $form_state);
   }
 
   /**
@@ -265,13 +281,13 @@ class DataSurfaceOperationForm extends FormBase {
       access: DataSurfaceAccess::decisive($access, 'The resource this form configures may not be written by this account.'),
     );
     if (!$result->isValid()) {
-      if ($deletes) {
-        foreach ($result->violations as $violation) {
-          $form_state->setErrorByName('', $violation->message);
-        }
-        return;
+      // Refused since it was validated (what is stored moved in between):
+      // validation is over, so the refusal is said as a message, and
+      // nothing was written.
+      foreach ($result->violations as $violation) {
+        $this->messenger()->addError($violation->message);
       }
-      $builder->flagSurfaceErrors($result->violations, $form[static::SURFACE_KEY], $form_state);
+      $form_state->setRebuild();
       return;
     }
     $operation = $served->operation->id;

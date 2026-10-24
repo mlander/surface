@@ -697,7 +697,7 @@ renames sit in A because they are cheapest before new code exists.
    the account alone, static answers applied, runtime ones set aside and
    their keys marked; a static answer is asked once per context and
    account kind and kept, asked again under `assert()` with the container
-   guarded (`StaticRefinerContainer::guardAccess()`), and held to the
+   guarded (`PipelineGuard::guardAccess()`), and held to the
    build by `StaticAccessAgreementTrait`; the full schema (the schema
    route, the contract panel) and the tool listing, a tool instance
    listing `values` for the account that asks, state static answers and
@@ -1400,6 +1400,23 @@ renames sit in A because they are cheapest before new code exists.
     resources with it; run over the honeypot port it passes. Open: an
     operation that needs a subject; a `uri` key sent a value of another
     type crashes core's primitive type validator through the Tool API.
+
+25. **Nothing an operation runs reads the request.** DONE 2026-10-24
+    (`docs/decisions.md#nothing-an-operation-runs-reads-the-request`,
+    `docs/resources.md#no-door-specific-context`). The guard
+    (`Pipeline\PipelineGuard`, once `StaticRefinerContainer`) refuses
+    the request, route, session, form, theme and current user to runtime
+    refiners, access classes, alters, providers, derivers, options
+    resolvers and storages under `assert()`, an injected one included;
+    `DoorSpecificRule` flags the same in PHPStan. The account is an
+    argument: each storage write verb and a runtime refiner's
+    `AccountInterface` parameter. `DoorAgreementTrait` holds the
+    pipeline, the tool, the HTTP API and the form to one answer, and
+    `EveryDoorAgreesTest` runs it over every resource shipped and every
+    fixture, which found and fixed four disagreements. Open: a nullable
+    boolean filter drawn as a checkbox cannot say "any"; the plugin
+    hosts' forms say a refusal from their submit handler; core's
+    selection handler reads the current user for a reference's options.
 
 ## Maintenance
 

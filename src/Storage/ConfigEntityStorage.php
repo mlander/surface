@@ -19,6 +19,7 @@ use Drupal\data_surface\Resource\DeletableStorageInterface;
 use Drupal\data_surface\Resource\HeldToConfigSchemaInterface;
 use Drupal\data_surface\Resource\KnowsClearableKeysInterface;
 use Drupal\data_surface\Resource\OperationContext;
+use Drupal\Core\Session\AccountInterface;
 
 /**
  * Keeps a resource's values on one config entity, named by its identity.
@@ -242,7 +243,7 @@ abstract class ConfigEntityStorage implements DeletableStorageInterface, KnowsCl
    * @throws \Drupal\data_surface\Pipeline\StorageViolationsException
    *   When the entity's config schema refuses it, or its id is taken.
    */
-  public function prepare(OperationContext $context, array $values): array {
+  public function prepare(OperationContext $context, array $values, AccountInterface $account): array {
     $entity = $this->entity($context);
     $violations = [];
     if ($entity === NULL) {
@@ -274,7 +275,7 @@ abstract class ConfigEntityStorage implements DeletableStorageInterface, KnowsCl
   /**
    * {@inheritdoc}
    */
-  public function commit(OperationContext $context, array $prepared): void {
+  public function commit(OperationContext $context, array $prepared, AccountInterface $account): void {
     $id_key = (string) $this->entityType()->getKey('id');
     $id = $prepared[$id_key] ?? NULL;
     if (!is_string($id) || $id === '') {
@@ -300,7 +301,7 @@ abstract class ConfigEntityStorage implements DeletableStorageInterface, KnowsCl
   /**
    * {@inheritdoc}
    */
-  public function prepareDelete(OperationContext $context): array {
+  public function prepareDelete(OperationContext $context, AccountInterface $account): array {
     $entity = $this->entity($context);
     if ($entity === NULL) {
       $nothing = new Violation('', '', $this->t('Nothing is stored under this name, so nothing was removed.'), Violation::NOT_FOUND);
@@ -312,7 +313,7 @@ abstract class ConfigEntityStorage implements DeletableStorageInterface, KnowsCl
   /**
    * {@inheritdoc}
    */
-  public function delete(OperationContext $context, array $prepared): void {
+  public function delete(OperationContext $context, array $prepared, AccountInterface $account): void {
     $id = $prepared[(string) $this->entityType()->getKey('id')] ?? NULL;
     $entity = is_string($id) ? $this->storage()->load($id) : NULL;
     $entity?->delete();

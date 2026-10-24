@@ -6,7 +6,7 @@ namespace Drupal\data_surface_examples\Storage;
 
 use Drupal\Core\Config\TypedConfigManagerInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
-use Drupal\Core\Session\AccountProxyInterface;
+use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\StringTranslation\TranslationInterface;
 use Drupal\data_surface\Pipeline\StorageViolationsException;
 use Drupal\data_surface\Pipeline\Violation;
@@ -28,10 +28,11 @@ use Drupal\data_surface_examples\Resource\VenueResource;
  *
  * - **list** loads nothing, since a query has nothing stored, and its
  *   prepare() reads the venues, lighter first, as its answer: those the
- *   filter matches and the account may read, a page of them, and how
- *   many there are. An account may read a venue when the resource's
- *   access answer for it, asked in the listing's own context knowing the
- *   venue, is allowed: the listing's permission, then the access class.
+ *   filter matches and the account it is handed may read, a page of
+ *   them, and how many there are. An account may read a venue when the
+ *   resource's access answer for it, asked in the listing's own context
+ *   knowing the venue, is allowed: the listing's permission, then the
+ *   access class.
  * - **reorder** loads every venue's id and weight, and its prepare()
  *   refuses an id that names no venue or that is named twice, and
  *   rehearses each named venue with its new weight, held to its config
@@ -78,15 +79,12 @@ final class VenueStorage extends ConfigEntityStorage {
    *   The string translation service, autowired.
    * @param \Drupal\data_surface\ResourceBuild\ResourcesInterface $resources
    *   The build step, autowired, which answers access for each venue.
-   * @param \Drupal\Core\Session\AccountProxyInterface $currentUser
-   *   The account a listing is answered for, autowired.
    */
   public function __construct(
     EntityTypeManagerInterface $entityTypeManager,
     TypedConfigManagerInterface $typedConfig,
     TranslationInterface $string_translation,
     protected readonly ResourcesInterface $resources,
-    protected readonly AccountProxyInterface $currentUser,
   ) {
     parent::__construct($entityTypeManager, $typedConfig, $string_translation);
   }
@@ -115,11 +113,11 @@ final class VenueStorage extends ConfigEntityStorage {
    * A listing's answer, a reorder's rehearsal, or a venue's, its slug
    * and its rooms held to what no other venue has.
    */
-  public function prepare(OperationContext $context, array $values): array {
+  public function prepare(OperationContext $context, array $values, AccountInterface $account): array {
     return match ($context->id) {
-      self::LIST => $this->listing($context, $values),
+      self::LIST => $this->listing($context, $values, $account),
       self::REORDER => $this->reordering($values),
-      default => $this->venue($context, $values),
+      default => $this->venue($context, $values, $account),
     };
   }
 
@@ -128,9 +126,9 @@ final class VenueStorage extends ConfigEntityStorage {
    *
    * A reorder saves each venue it rehearsed with its new weight.
    */
-  public function commit(OperationContext $context, array $prepared): void {
+  public function commit(OperationContext $context, array $prepared, AccountInterface $account): void {
     if ($context->id !== self::REORDER) {
-      parent::commit($context, $prepared);
+      parent::commit($context, $prepared, $account);
       return;
     }
     $storage = $this->storage();
@@ -149,11 +147,13 @@ final class VenueStorage extends ConfigEntityStorage {
    *   The listing's context.
    * @param array $values
    *   The accepted offset, limit and status.
+   * @param \Drupal\Core\Session\AccountInterface $account
+   *   The account the listing is read as.
    *
    * @return array{items: list<array{id: string, label: string, capacity: int, weight: int}>, total: int}
    *   The page and how many venues matched.
    */
-  protected function listing(OperationContext $context, array $values): array {
+  protected function listing(OperationContext $context, array $values, AccountInterface $account): array {
     $status = $values['status'] ?? NULL;
     $matched = [];
     foreach ($this->venues() as $venue) {
@@ -162,7 +162,7 @@ final class VenueStorage extends ConfigEntityStorage {
       }
       // Decision: see
       // docs/decisions.md#a-listing-is-a-read-only-operation-with-outputs-a-reorder-is-an-update-over-the-collection.
-      if (!$this->resources->access(VenueResource::class, $context->withKnown(['id' => (string) $venue->id()]), $this->currentUser)->isAllowed()) {
+      if (!$this->resources->access(VenueResource::class, $context->withKnown(['id' => (string) $venue->id()]), $account)->isAllowed()) {
         continue;
       }
       $matched[] = [
@@ -230,6 +230,8 @@ final class VenueStorage extends ConfigEntityStorage {
    *   The create or the update.
    * @param array $values
    *   The accepted values.
+   * @param \Drupal\Core\Session\AccountInterface $account
+   *   The account the venue is written as.
    *
    * @return array
    *   The venue's exported array.
@@ -238,7 +240,7 @@ final class VenueStorage extends ConfigEntityStorage {
    *   When another venue holds the slug, a room id is held twice, here or
    *   by another venue, or as ConfigEntityStorage refuses.
    */
-  protected function venue(OperationContext $context, array $values): array {
+  protected function venue(OperationContext $context, array $values, AccountInterface $account): array {
     $own = $context->known['id'] ?? $values['id'] ?? NULL;
     $elsewhere = [];
     foreach ($this->venues() as $id => $venue) {
@@ -276,7 +278,7 @@ final class VenueStorage extends ConfigEntityStorage {
       $seen[$id] = TRUE;
     }
     try {
-      $record = parent::prepare($context, $values);
+      $record = parent::prepare($context, $values, $account);
     }
     catch (StorageViolationsException $e) {
       $refused = [...iterator_to_array($e->getViolations(), FALSE), ...$refused];

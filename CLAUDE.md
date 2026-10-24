@@ -395,7 +395,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 The full lane's phpunit line reads, as of this writing:
 
 ```
-phpunit: Tests: 1555, Assertions: 32409, Errors: 0, Failures: 0, Skipped: 3. Classes: 209 of 209, 8 at a time, browser classes 4.
+phpunit: Tests: 1568, Assertions: 37161, Errors: 0, Failures: 0, Skipped: 3. Classes: 212 of 212, 8 at a time, browser classes 4.
 ```
 
 the same counts a plain phpunit run of the tree gives. The skipped
@@ -553,10 +553,13 @@ so the rule is this sentence. `npm test` is not part of
   (`docs/decisions.md#static-by-default-runtime-by-declaration`).
 - The kind is enforced, not trusted: the build refuses an instance
   refiner not declared runtime; with assertions on, a static refiner runs
-  with the container guarded (`Refinement\StaticRefinerContainer`) and the
+  with the container guarded (`Pipeline\PipelineGuard`) and the
   emitter asks it twice; `StaticRefinerAgreementTrait` holds conditionals
   to a fresh `refine()`; and the module's PHPStan rule flags a static
   refiner calling `\Drupal::` (`docs/refinement.md#enforcing-the-kind`).
+- Nothing an operation runs reads the request, the route, the session,
+  the form, the theme or the current user; the account is an argument
+  (`docs/resources.md#no-door-specific-context`).
 - A rule between keys whose condition and effect a schema can state is
   declared in the blueprint, `$inputs->narrow($key)->when(Condition::...)`
   and its effects: a static refiner, bound after its contributor's coded

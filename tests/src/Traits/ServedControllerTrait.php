@@ -81,18 +81,21 @@ trait ServedControllerTrait {
    *   The operation id.
    * @param array $values
    *   The values document.
+   * @param array<string, scalar> $parameters
+   *   The parameters naming the thing, by name, for an operation on one.
    *
    * @return array
    *   The decoded answer: the result, or a refusal's problem details.
    */
-  protected function httpDryRun(string $resource, string $operation, array $values): array {
+  protected function httpDryRun(string $resource, string $operation, array $values, array $parameters = []): array {
     $registry = $this->container->get('data_surface.resource_registry');
     $paths = $this->container->get('data_surface_react.served_paths');
     $definition = $registry->getDefinition($resource);
     $found = $registry->getOperation($definition->name(), $operation);
     [$method, $named] = $paths->writes($definition, $found);
-    $url = $paths->url($definition, $found, [], $named, FALSE, ['query' => ['dryRun' => 'true']])->getGeneratedUrl();
-    return $this->servedJson($method, $url, $values);
+    $url = $paths->url($definition, $found, $parameters, $named, FALSE, ['query' => ['dryRun' => 'true']])->getGeneratedUrl();
+    // A delete takes no body.
+    return $this->servedJson($method, $url, $found->kind() === 'delete' && $values === [] ? NULL : $values);
   }
 
 }

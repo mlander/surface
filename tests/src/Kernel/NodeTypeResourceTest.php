@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\data_surface\Kernel;
 
+use Drupal\Core\Session\AnonymousUserSession;
 use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\Form\FormState;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
@@ -389,7 +390,7 @@ class NodeTypeResourceTest extends DataSurfaceKernelTestBase {
       ->prepare($this->resources()->operation(NodeTypeResource::class, 'create'), [
         'name' => "Two\nlines",
         'type' => 'two_lines',
-      ]);
+      ], new AnonymousUserSession());
   }
 
   /**

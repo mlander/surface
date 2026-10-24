@@ -32,7 +32,7 @@ zend.assertions = -1
 
 The module checks, under `assert()`, what a declaration promises and
 no type can say: a static refiner runs with the container guarded and
-throws if it asks for a service (`Refinement\StaticRefinerContainer`),
+throws if it asks for a service (`Pipeline\PipelineGuard`),
 the emitter asks each enumerated key's static refiners a second time
 and refuses a different answer, and a static access answer is asked a
 second time and held to the first

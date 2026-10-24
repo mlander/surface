@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\data_surface\Kernel;
 
+use Drupal\Core\Session\AnonymousUserSession;
 use Drupal\data_surface\Pipeline\StorageViolationsException;
 use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface\Storage\ConfigObjectStorage;
@@ -76,7 +77,7 @@ class ConfigObjectStorageTest extends DataSurfaceKernelTestBase {
    */
   protected function refusals(ConfigObjectStorage $storage, array $values): array {
     try {
-      $storage->prepare($this->context(), $values);
+      $storage->prepare($this->context(), $values, new AnonymousUserSession());
     }
     catch (StorageViolationsException $e) {
       $refusals = [];
@@ -109,15 +110,15 @@ class ConfigObjectStorageTest extends DataSurfaceKernelTestBase {
   public function testTranslatableValuesAreStoredWithTheirLanguageCode(): void {
     $storage = $this->storage(TranslatableSettingsStorage::class);
 
-    $prepared = $storage->prepare($this->context(), ['greeting' => 'Hello', 'limit' => 3]);
+    $prepared = $storage->prepare($this->context(), ['greeting' => 'Hello', 'limit' => 3], new AnonymousUserSession());
     $this->assertSame(['greeting' => 'Hello', 'limit' => 3, 'langcode' => 'en'], $prepared, 'The site default language, when none is stored.');
     $this->assertTrue($this->config(TranslatableSettingsStorage::CONFIG)->isNew(), 'prepare() writes nothing.');
 
-    $storage->commit($this->context(), $prepared);
+    $storage->commit($this->context(), $prepared, new AnonymousUserSession());
     $this->assertSame(['langcode' => 'en', 'greeting' => 'Hello', 'limit' => 3], $this->config(TranslatableSettingsStorage::CONFIG)->getRawData(), 'Saved in schema order.');
 
     $this->config(TranslatableSettingsStorage::CONFIG)->set('langcode', 'fr')->save();
-    $this->assertSame('fr', $storage->prepare($this->context(), ['greeting' => 'Bonjour', 'limit' => 3])['langcode'], 'A stored language code is kept.');
+    $this->assertSame('fr', $storage->prepare($this->context(), ['greeting' => 'Bonjour', 'limit' => 3], new AnonymousUserSession())['langcode'], 'A stored language code is kept.');
   }
 
   /**
@@ -127,9 +128,9 @@ class ConfigObjectStorageTest extends DataSurfaceKernelTestBase {
     $this->config(PlainSettingsStorage::CONFIG)->setData(['langcode' => 'en', 'limit' => 1])->save();
     $storage = $this->storage(PlainSettingsStorage::class);
 
-    $prepared = $storage->prepare($this->context(), ['limit' => 2, 'langcode' => 'de']);
+    $prepared = $storage->prepare($this->context(), ['limit' => 2, 'langcode' => 'de'], new AnonymousUserSession());
     $this->assertSame(['limit' => 2], $prepared, 'A language code among the values is not the resource\'s to write.');
-    $storage->commit($this->context(), $prepared);
+    $storage->commit($this->context(), $prepared, new AnonymousUserSession());
     $this->assertSame(['limit' => 2], $this->config(PlainSettingsStorage::CONFIG)->getRawData());
   }
 
@@ -177,7 +178,7 @@ class ConfigObjectStorageTest extends DataSurfaceKernelTestBase {
   public function testAnObjectWithNoSchemaIsAnError(): void {
     $this->expectException(\LogicException::class);
     $this->expectExceptionMessage('No config schema describes data_surface_storage_test.missing');
-    $this->storage(MissingSchemaSettingsStorage::class)->prepare($this->context(), ['limit' => 1]);
+    $this->storage(MissingSchemaSettingsStorage::class)->prepare($this->context(), ['limit' => 1], new AnonymousUserSession());
   }
 
 }

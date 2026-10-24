@@ -11,6 +11,7 @@ use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface\Resource\ResourceStorageInterface;
 use Drupal\data_surface\Storage\SchemaViolations;
 use Drupal\data_surface_address\AddressStorageLayout;
+use Drupal\Core\Session\AccountInterface;
 
 /**
  * An address field's settings live on its field config entity.
@@ -63,7 +64,7 @@ final class AddressFieldSettingsStorage implements ResourceStorageInterface {
    * against nothing stored and the field's own defaults fill the rest
    * when it is committed.
    */
-  public function prepare(OperationContext $context, array $values): array {
+  public function prepare(OperationContext $context, array $values, AccountInterface $account): array {
     $field = $this->field($context);
     if ($field === NULL && !$context->creates) {
       throw $this->noField($context);
@@ -77,7 +78,7 @@ final class AddressFieldSettingsStorage implements ResourceStorageInterface {
   /**
    * {@inheritdoc}
    */
-  public function commit(OperationContext $context, array $prepared): void {
+  public function commit(OperationContext $context, array $prepared, AccountInterface $account): void {
     $field = $this->field($context) ?? throw $this->noField($context);
     $field->setSettings($prepared + $field->getSettings())->save();
   }

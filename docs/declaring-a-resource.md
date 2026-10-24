@@ -582,7 +582,7 @@ The class implements `DeriverInterface`, whose one method is static,
 `derive(array $from): mixed`: handed the value of each key `from:`
 names, it answers the value. It is a pure function of those values, held
 to it as a static refiner is: with assertions on it runs with the
-container guarded (`StaticRefinerContainer::guardDeriver()`), and the
+container guarded (`PipelineGuard::guardDeriver()`), and the
 module's PHPStan rule flags a `\Drupal::` call in it. A value that needs
 a service, the clock or the request, such as a changed time, is no
 computed key: a storage's `prepare()` adds it.

@@ -759,8 +759,14 @@ refine all get it from one place. The check is
 into every data surface the build step makes and serialized by its
 service id; a data surface sealed without one, which only the engine's
 tests build,
-hands every configured value over. A refiner may therefore assume what
-it is handed satisfies its sibling's constraints, and
+hands every configured value over. A value its key's definition as
+declared refuses is withheld before the first pass, since every
+definition refined from it refuses it too: until 2026-10-24 the first
+pass ran with it, and a refiner typed for a number was handed a word
+([Nothing an operation runs reads the
+request](#nothing-an-operation-runs-reads-the-request) found it). A
+refiner may therefore assume what it is handed satisfies its sibling's
+constraints, and
 `RegistrationComplianceAlter` tests only that a license is there. The
 refined data surface says which values it withheld
 (`withheldValues()`), so a refusal that names what a key depends on
@@ -843,7 +849,7 @@ config is the plain case), and no declaration alone stops it:
   default constraints. `t()` passes: it builds a lazy markup. Production
   compiles no assertion and pays nothing. It catches `\Drupal::service()`
   and every shortcut through the container, `::currentUser()` and
-  `::time()` included. (`Refinement\StaticRefinerContainer`,
+  `::time()` included. (`Pipeline\PipelineGuard`,
   `RefinesInputRefiner::invoke()`)
 - **Agreement.** Under `assert()` the emitter asks each enumerated key's
   static refiners again for one combination and refuses a different
@@ -2014,7 +2020,7 @@ any key, and the read answers it. Three choices settle it:
 
 - **Pure derivations only.** A deriver is handed the values of `from`
   and nothing else. With assertions on it runs with the container
-  guarded (`StaticRefinerContainer::guardDeriver()`, which refuses every
+  guarded (`PipelineGuard::guardDeriver()`, which refuses every
   service), and the module's PHPStan rule flags `\Drupal::` in it. Why:
   a pure deriver can run anywhere the values are, so `POST .../schema`
   and a form's rebuild answer the value a write of the values in
@@ -2080,7 +2086,7 @@ stored value its sources no longer give; the React page computing a
 deriver locally, which needs the deriver in a language the page runs.
 (`Computed`, `DeriverInterface`, `Derive`, `ResourceBlueprint::derive()`,
 `DataSurfacePipeline::acceptComputed()`, `DataSurfacePipeline::notComputed()`,
-`DataSurfacePipeline::namingSources()`, `StaticRefinerContainer::guardDeriver()`,
+`DataSurfacePipeline::namingSources()`, `PipelineGuard::guardDeriver()`,
 `DataSurfaceFormBuilder::refinementOverlay()`, `Slugify`, `ComputedKeysTest`,
 `VenueResourceTest`)
 
@@ -2167,7 +2173,7 @@ is known. Decided 2026-10-18, point by point.
   `assert()`: the first asking of a static answer is repeated with the
   global container guarded and must answer the same, static, having
   asked for no service that reads site state beside the account
-  (`StaticRefinerContainer::guardAccess()`, `Resources::answersAgain()`).
+  (`PipelineGuard::guardAccess()`, `Resources::answersAgain()`).
   The refiner's guard is reused with another rule for what passes: a
   refiner may reach nothing but the typed data manager, while an access
   class is a service with injected collaborators and core's handlers
@@ -2646,6 +2652,105 @@ moves with the site's language and its alters.
 `OperationInputs::outputs()`, `ResourceApiController::validate()`,
 `ResourceApiController::submit()`, `ResultCodesTest`,
 `ToolResultShapeTest`)
+
+### Nothing an operation runs reads the request
+
+Decided 2026-10-24. Every door asks one surface, so the form, the HTTP
+API, the tool and a PHP caller give one answer for one document; the
+one way to break that is code run on an operation's behalf reading what
+only one door has. So nothing the build or the pipeline runs for an
+operation reads the request, its route, the session, the form being
+built, the theme a page renders in, or the current user: a runtime
+refiner, an access class, static or runtime, an alter, a computed key's
+deriver, an options resolver, a provider of keys or variants from the
+site, a deriver of variants or resources, and a storage's `load()`,
+`prepare()`, `commit()`, `prepareDelete()` and `delete()`. Everything an
+operation needs comes through it: the parameters and identity its
+context knows, the values, the account, and site state through services
+whose answers carry their cacheability. The doors read the request:
+that is their job ([No door-specific context](resources.md#no-door-specific-context)).
+
+- **The account travels as an argument.** A door sets the account as the
+  current user; the framework reads it once and hands it on. An access
+  class has it in `access($context, $account)`, as before. Each storage
+  write verb takes it, `prepare($context, $values, $account)`,
+  `commit($context, $prepared, $account)`, `prepareDelete($context,
+  $account)` and `delete($context, $prepared, $account)`: the account
+  `ResourcesInterface::storage()` is given, or the current user. A
+  runtime refiner whose last parameter is typed `AccountInterface` is
+  handed it, and that parameter is no watched key; a static refiner that
+  takes it is refused at build, since what an account may choose is a
+  fact no schema states ahead of time. `load()` takes none: what is
+  stored is no account's, and what a caller sees of it is the read
+  tool's projection and the access answers'. Why an argument and not a
+  read: a door that runs for another account than the session's (a
+  queue worker, a tool called for a delegated account) hands one account
+  to every piece, and nothing reads a second one behind it. Why not on
+  the context: the context keys every build kept for the request and
+  rides in a serialized form; an account on it would key them by user
+  and serialize a session.
+- **Enforced as static refiners are.** Under `assert()`, each such call
+  runs with the global container replaced by `Pipeline\PipelineGuard`
+  (the name was `StaticRefinerContainer` while it held static refiners
+  alone), which refuses the door-specific services (`request_stack`,
+  `current_route_match`, `router.request_context`, `session`,
+  `session_manager`, `tempstore.private`, `form_builder`, `path.current`,
+  `path_alias.manager`, `theme.manager`, `current_user`) when the class's
+  own code asks for one, naming the service, the class, the method and
+  why: "a door-specific service makes the doors disagree". Core's code
+  it calls is core's: an entity's save reads the current user for its
+  own hooks. A service injected when the class was built never passes
+  through the container, so the instance's properties are looked through
+  once for one (`PipelineGuard::holdsNothingDoorSpecific()`). Site state
+  with cacheability passes; a static refiner and a deriver still reach
+  nothing but the typed data manager, and a static access answer asked
+  again nothing that reads site state. A declared rule is data the
+  engine evaluates and runs no code of the author's, so it has nothing
+  to guard. Before anything runs, the module's PHPStan rule
+  (`DoorSpecificRule`) flags, in those classes, the `\Drupal` shortcuts
+  to these services, a container's `get()` naming one, and a constructor
+  parameter typed for one. Production compiles no assertion and pays
+  nothing.
+- **Held by a test over every door.** `DoorAgreementTrait` runs one
+  document through the pipeline, the tool (`execute()`, dry), the HTTP
+  submit (`?dryRun=true`) and the operation's form (drawn with the
+  document, posted as a browser posts it, submitting dry) and holds them
+  to one verdict, one accepted document, one refusal list by pointer and
+  code and one set of notes. `ResourceTestBase::testEveryDoorAgrees`
+  runs it for an adopter, and `EveryDoorAgreesTest` over every resource
+  this repository ships and every fixture, with the documents the
+  declaration generates and the examples' README calls. A door it
+  cannot drive for a document is counted by kind (the Tool API's own
+  shape check, a value no form posts, a key the form does not draw, a
+  secret, a delete's confirmation, an operation not asked on its own, a
+  resource with no storage, a subject the site there does not have), and
+  the kinds are held to that list, so a new one fails.
+- **What it found.** Four disagreements, fixed with it. The operation
+  form said a refusal that storage's `prepare()` or the access answer
+  made from its submit handler, which Form API refuses once validation
+  is over (a placed block made again threw); it now runs the whole run
+  dry in validation and says every refusal on its elements. A collection
+  whose items hold variants (a placed block's visibility conditions) was
+  read through the item's plain map, which knows none of the variants'
+  keys, so an untouched save cleared them; it is read a level at a time.
+  Refinement's first pass handed a refiner a value its key's declared
+  definition refuses, so a refiner typed for a number threw on a word
+  (`ComplianceStructure::stewardsForCapacity()`); such a value is now
+  withheld before any refiner runs ([A refiner never sees an invalid
+  sibling](#a-refiner-never-sees-an-invalid-sibling)). And the HTTP API
+  writes a whole float as a JSON integer, `20` for `20.0`, which the
+  comparison reads as JSON does.
+
+*Open:* the listing form draws a boolean filter that holds nothing as a
+checkbox left clear, so it cannot say "any" (the venues' `status`); the
+plugin hosts' forms (`DataSurfaceHostFormTrait`, the demo form) still
+say a refusal from their submit handler; core's selection handler reads
+the current user itself for a reference's options, which every door
+sets alike. (`PipelineGuard`, `RefinesInputRefiner::invoke()`,
+`StorageAdapter`, `ResourceStorageInterface`, `DeletableStorageInterface`,
+`Tests\data_surface\PHPStan\DoorSpecificRule`, `PipelineGuardTest`,
+`DoorAgreementTrait`, `EveryDoorAgreesTest`,
+`ContentEntityStorageTest::testTheWriteIsMadeAsTheAccountItIsHanded()`)
 
 ### Locked at the top
 
@@ -6164,7 +6269,8 @@ run). Each choice, and why:
   check and the resource. The checks are this module's own, moved into
   traits its tests use too (`NeverStricterTrait`,
   `SchemaRoundTripTrait`, `StaticRefinerAgreementTrait`,
-  `StaticAccessAgreementTrait`), so the two cannot drift.
+  `StaticAccessAgreementTrait`, and since the same day the doors',
+  `DoorAgreementTrait`), so the two cannot drift.
 - **Skipped by kind, not failed.** A full schema that cannot read back
   to itself for a known reason (a coded refiner, an access answer, an
   alter's mount, keys from the site, a computed key, a constraint only

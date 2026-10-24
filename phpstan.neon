@@ -3,7 +3,8 @@
 #   vendor/bin/phpstan analyse -c web/modules/custom/data_surface/phpstan.neon
 # A static #[RefinesInput] method is a pure function of the keys it
 # watches: one that calls \Drupal:: is flagged before it ever runs
-# (tests/src/PHPStan/StaticRefinerRule.php).
+# (tests/src/PHPStan/StaticRefinerRule.php); and nothing an operation runs
+# reads a door's own services (tests/src/PHPStan/DoorSpecificRule.php).
 includes:
   - phpstan-rules.php
 
@@ -40,6 +41,9 @@ parameters:
       path: tests/modules/*/src/*/Broken/*
     -
       identifier: dataSurface.deriver
+      path: tests/modules/*/src/*/Broken/*
+    -
+      identifier: dataSurface.doorSpecific
       path: tests/modules/*/src/*/Broken/*
     - identifier: missingType.iterableValue
     - identifier: missingType.generics

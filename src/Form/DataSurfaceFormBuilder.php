@@ -2113,13 +2113,21 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
       }
     }
     $widget = $this->widgetManager->getWidgetFor($map);
+    // An item holding variants (a placed block's visibility conditions,
+    // each one's settings chosen by its plugin id) is read a level at a
+    // time, each variant through what its deciding key chose in the item,
+    // as the top of the form reads its own: the item's plain map knows
+    // none of the variants' keys.
+    $frame = $child !== NULL && static::nestsVariants($child);
     $items = [];
     $deltas = [];
     foreach (static::elementChildren($element) as $delta) {
       if (!is_int($delta)) {
         continue;
       }
-      $value = $widget->extractValue($map, $element[$delta], $form_state, [$name, $delta]);
+      $value = $frame
+        ? $this->extractFrame($child, $element[$delta], $form_state)
+        : $widget->extractValue($map, $element[$delta], $form_state, [$name, $delta]);
       foreach ($inner as $nested) {
         $value += $this->extractCollection($nested, $element[$delta], $form_state, $container_key);
       }

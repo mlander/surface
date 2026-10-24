@@ -7,6 +7,7 @@ namespace Drupal\data_surface_resource_test\Storage;
 use Drupal\Core\State\StateInterface;
 use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface\Resource\ResourceStorageInterface;
+use Drupal\Core\Session\AccountInterface;
 
 /**
  * Keeps one part of a pantry in state, by the pantry its context knows.
@@ -59,14 +60,14 @@ class PantryStorage implements ResourceStorageInterface {
    * State has no schema and refuses nothing, so what would be stored is
    * what was accepted.
    */
-  public function prepare(OperationContext $context, array $values): array {
+  public function prepare(OperationContext $context, array $values, AccountInterface $account): array {
     return $values;
   }
 
   /**
    * {@inheritdoc}
    */
-  public function commit(OperationContext $context, array $prepared): void {
+  public function commit(OperationContext $context, array $prepared, AccountInterface $account): void {
     $values = $prepared;
     // A new pantry is named by what was accepted; a part stored apart
     // has only its context to go by.

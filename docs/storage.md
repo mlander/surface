@@ -494,7 +494,11 @@ first:
   `ConfigEntityStorage`, and `StorageAdapter` adapts a resource's
   storage to it.
 - `Drupal\data_surface\Resource\ResourceStorageInterface`, what
-  `#[Resource(storage:)]` names, over the context.
+  `#[Resource(storage:)]` names, over the context; its write verbs,
+  `prepare()` and `commit()` (and a deleting storage's
+  `prepareDelete()` and `delete()`), are handed the account the write
+  is made as, and it never reads the current user
+  ([No door-specific context](resources.md#no-door-specific-context)).
 
 The pipeline's:
 

@@ -260,6 +260,10 @@ interface ResourcesInterface {
    * @param \Drupal\data_surface\DataSurfaceInterface|null $built
    *   The resource already built in that context, which saves building
    *   it again to find its children; NULL builds it.
+   * @param \Drupal\Core\Session\AccountInterface|null $account
+   *   The account the write is made as, handed to each write verb of
+   *   each level's storage, or NULL for the current user: a storage
+   *   never reads the current user itself.
    *
    * @return \Drupal\data_surface\Pipeline\DataSurfaceStorageInterface
    *   The storage, for the pipeline's submit(). Composed along the tree
@@ -270,6 +274,6 @@ interface ResourcesInterface {
    * @throws \LogicException
    *   When it names no storage: its host supplies it.
    */
-  public function storage(string $resource, OperationContext $context, ?DataSurfaceInterface $built = NULL): DataSurfaceStorageInterface;
+  public function storage(string $resource, OperationContext $context, ?DataSurfaceInterface $built = NULL, ?AccountInterface $account = NULL): DataSurfaceStorageInterface;
 
 }
