@@ -1,0 +1,3 @@
+# Up to this many targets, a reference key lists them as its options;
+# above it, the key takes an id, looked up with the resource's :lookup.
+reference_enum_limit: 50

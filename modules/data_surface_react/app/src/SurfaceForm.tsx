@@ -4,6 +4,7 @@ import type { Contract, Narrowed, Schema, Settled, Values, Violation } from './c
 import { ContractRefused, inlineSchema, narrow, narrowingStatus, watchedPaths, setAt } from './contract';
 import { ContractPanel } from './ContractPanel';
 import { Properties } from './widgets/Field';
+import { LookupContext } from './widgets/Shell';
 
 /** How long a change waits before the narrowing it asks of the server is sent: the request path only. */
 export const REFINE_DELAY = 300;
@@ -355,7 +356,9 @@ export function SurfaceForm({
       {contract.schema.readOnly ? (
         <p className="dsr-status">This may be seen and not changed.</p>
       ) : null}
-      <Properties schema={schema} values={values} prefix="" onChange={onChange} errors={errors} />
+      <LookupContext.Provider value={api.lookup}>
+        <Properties schema={schema} values={values} prefix="" onChange={onChange} errors={errors} />
+      </LookupContext.Provider>
       {contract.schema.readOnly ? null : (
         <div className="dsr-actions">
           <button type="submit" className="dsr-button dsr-button--primary" disabled={submitting}>

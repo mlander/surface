@@ -39,6 +39,7 @@ class ExampleFilesTest extends UnitTestCase {
     'data_surface_examples_workflow',
     'data_surface_component_block',
     'data_surface_examples_keys',
+    'data_surface_examples_references',
   ];
 
   /**
@@ -77,7 +78,7 @@ class ExampleFilesTest extends UnitTestCase {
    * Tests every listed file is there, and is read as the docs tests read it.
    */
   public function testEveryListedFileIsThere(): void {
-    $this->assertSame(range(1, 15), array_keys(Series::examples()));
+    $this->assertSame(range(1, 16), array_keys(Series::examples()));
     foreach (Series::examples() as $number => $example) {
       $this->assertNotSame('', (string) $example['title']);
       $this->assertNotSame('', (string) $example['concept']);
@@ -98,7 +99,9 @@ class ExampleFilesTest extends UnitTestCase {
     }
     foreach (Series::examples() as $number => $example) {
       foreach ($example['routes'] as $route) {
-        $this->assertNotNull(FirstResourceDocsTest::entry(self::ROOT . '/' . Series::MODULE . 'data_surface_examples.routing.yml', $route), sprintf('Example %d names a route, %s, the module does not have.', $number, $route));
+        // The examples' routes, or one of the module an example is in.
+        $found = array_filter(self::MODULES, static fn (string $module): bool => is_file(self::ROOT . '/modules/' . $module . '/' . $module . '.routing.yml') && FirstResourceDocsTest::entry(self::ROOT . '/modules/' . $module . '/' . $module . '.routing.yml', $route) !== NULL);
+        $this->assertNotSame([], $found, sprintf('Example %d names a route, %s, no module of the examples has.', $number, $route));
       }
     }
   }
@@ -196,8 +199,11 @@ class ExampleFilesTest extends UnitTestCase {
             $this->assertArrayHasKey($storage, $example['files'], sprintf('Example %d lists %s without its storage.', $number, $path));
             $this->assertMatchesRegularExpression('/const CONFIG = \'([\w.]+)\';/', self::source($storage));
             preg_match('/const CONFIG = \'([\w.]+)\';/', self::source($storage), $config);
-            $this->assertArrayHasKey(Series::INSTALL . $config[1] . '.yml', $example['files'], sprintf('Example %d lists %s without the settings it ships.', $number, $path));
-            $this->assertArrayHasKey(Series::SCHEMA . $config[1], $example['files'], sprintf('Example %d lists %s without its config schema.', $number, $path));
+            // The module the storage is in ships the settings and the schema.
+            $module = explode('/', $storage)[1];
+            $base = 'modules/' . $module . '/config/';
+            $this->assertArrayHasKey($base . 'install/' . $config[1] . '.yml', $example['files'], sprintf('Example %d lists %s without the settings it ships.', $number, $path));
+            $this->assertArrayHasKey($base . 'schema/' . $module . '.schema.yml#' . $config[1], $example['files'], sprintf('Example %d lists %s without its config schema.', $number, $path));
           }
           foreach ($variants[$path] ?? [] as $variant) {
             $this->assertArrayHasKey($variant, $example['files'], sprintf('Example %d lists %s without its variant %s.', $number, $path, $variant));

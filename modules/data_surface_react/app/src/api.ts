@@ -25,6 +25,17 @@ export interface Endpoints {
   schema: string;
   /** A run of the operation. */
   write: { method: 'PATCH' | 'POST'; url: string };
+  /**
+   * The lookup of the path's reference keys: GET, `?key=&q=`; null for a
+   * page whose operation GET does not serve, which has none.
+   */
+  lookup?: string | null;
+}
+
+/** One candidate a lookup answers. */
+export interface Candidate {
+  id: string | number;
+  label: string;
 }
 
 /** What the page hands the app in drupalSettings.dataSurfaceReact. */
@@ -61,6 +72,24 @@ export interface Api {
   validate(values: Values, stale: string[], etag: string | null): Promise<Submission>;
   /** A run of the operation, and the ETag of what it stored. */
   submit(values: Values, stale: string[], etag: string | null): Promise<Tagged<Submission>>;
+  /** The candidates of one reference key whose labels contain the text. */
+  lookup(path: string, text: string, type?: string): Promise<Candidate[]>;
+}
+
+/**
+ * Where a page's lookup is: the one the page names, or the read path's.
+ *
+ * The read path with any `:{operation}` and query taken off, then
+ * `:lookup`: the custom read every resource path answers.
+ */
+export function lookupOf(endpoints: Endpoints): string | null {
+  if (endpoints.lookup !== undefined) {
+    return endpoints.lookup;
+  }
+  const path = endpoints.read.split('?')[0];
+  const slash = path.lastIndexOf('/');
+  const colon = path.indexOf(':', slash);
+  return `${colon === -1 ? path : path.slice(0, colon)}:lookup`;
 }
 
 /** The React page a created thing now lives at. */
@@ -287,5 +316,17 @@ export function createApi(settings: Settings, fetcher: Fetcher): Api {
     narrow: async (values, stale) => dottedContract(assertContract(await read<Contract>(await send('POST', endpoints.schema, 'application/json', values, stale)))),
     validate: async (values, stale, etag) => (await run(values, stale, etag, true)).document,
     submit: async (values, stale, etag) => run(values, stale, etag, false),
+    lookup: async (path, text, type) => {
+      const at = lookupOf(endpoints);
+      if (at === null) {
+        return [];
+      }
+      let url = withQuery(withQuery(at, 'key', dottedToPointer(path)), 'q', text);
+      if (type !== undefined) {
+        url = withQuery(url, 'type', type);
+      }
+      const answer = await read<{ items?: Candidate[] }>(await get(url, 'application/json'));
+      return Array.isArray(answer.items) ? answer.items : [];
+    },
   };
 }

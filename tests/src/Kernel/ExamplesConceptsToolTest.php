@@ -6,18 +6,20 @@ namespace Drupal\Tests\data_surface\Kernel;
 
 use Drupal\data_surface_examples\ConceptCalls;
 use Drupal\data_surface_examples\Hook\SpotlightBlockHooks;
+use Drupal\data_surface_examples_references\Sponsorship;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
 /**
- * Tests the tool calls of examples 7 to 15, and the README quoting them.
+ * Tests the tool calls of examples 7 to 16, and the README quoting them.
  *
  * Makes every call ConceptCalls writes down, on the settings the module
  * ships, the way each example's panel makes it, with example 10's
  * workflow module on for the call that needs it, example 13's
  * component block and placement resource on with its Spotlight block
- * placed, and example 14's module that manages keys on: what each
+ * placed, example 14's module that manages keys on, and example 16's
+ * module on with its three nodes written: what each
  * answers is
  * pinned here for the rule it shows, the README must quote every command
  * and every answer as made, and nothing is left written: example 15's
@@ -47,6 +49,10 @@ class ExamplesConceptsToolTest extends DataSurfaceKernelTestBase {
     'data_surface_component_block',
     'data_surface_block',
     'data_surface_examples_keys',
+    'text',
+    'filter',
+    'node',
+    'data_surface_examples_references',
   ];
 
   /**
@@ -55,11 +61,24 @@ class ExamplesConceptsToolTest extends DataSurfaceKernelTestBase {
   protected function setUp(): void {
     parent::setUp();
     $this->installEntitySchema('user');
-    $this->installConfig(['system', 'data_surface_examples', 'data_surface_examples_keys']);
+    $this->installEntitySchema('node');
+    $this->installSchema('node', ['node_access']);
+    // Example 16's bare key counts what each content entity type holds.
+    $this->installEntitySchema('path_alias');
+    $this->installConfig([
+      'system',
+      'node',
+      'filter',
+      'data_surface_examples',
+      'data_surface_examples_keys',
+      'data_surface_examples_references',
+    ]);
     $this->container->get('theme_installer')->install(['stark']);
     $this->config('system.theme')->set('default', 'stark')->save();
     $this->container->get('class_resolver')->getInstanceFromDefinition(SpotlightBlockHooks::class)->place();
     $this->setUpCurrentUser(admin: TRUE);
+    // Example 16's three nodes, as its module writes them when installed.
+    $this->container->get('class_resolver')->getInstanceFromDefinition(Sponsorship::class)->writeNodes();
   }
 
   /**
@@ -136,6 +155,11 @@ class ExamplesConceptsToolTest extends DataSurfaceKernelTestBase {
     $this->assertSame("Failed: The values were refused:\n/venues/0/id: No venue is named concert_hall.\n/venues/2/id: The library venue is named already, at position 1: a reorder names each venue once.", $answers['event.venue']['reorder_unknown'], 'Refused by the storage, at each place.');
     $this->assertStringContainsString('"capacity":350', $answers['event.venue']['remove_rehearsed'], 'The removal rehearsed answers what Town Hall holds, its capacity changed.');
     $this->assertSame('Success: Remove a venue: removed. The values it held are answered.', $answers['event.venue']['remove'], 'The last call removes Town Hall, so the three venues shipped are what is left.');
+    $nodes = $this->container->get('class_resolver')->getInstanceFromDefinition(Sponsorship::class)->ids();
+    $this->assertStringContainsString(sprintf('values: {"venue":"library","contact":1,"page":%d,"thing":{"entity_type":"node","id":"%d"}', $nodes['article'], $nodes['article']), $answers['event.sponsorship']['valid'], 'Each id as its key keeps it: the bare key\'s a string.');
+    $this->assertSame("Failed: The values were refused:\n" . sprintf('/page: This entity (node: %d) cannot be referenced.', $nodes['page']), $first($answers['event.sponsorship']['wrong_bundle']), 'A page where an article is asked for.');
+    $this->assertSame("Failed: The values were refused:\n" . sprintf('/page: This entity (node: %d) cannot be referenced.', $nodes['draft']), $first($answers['event.sponsorship']['not_referenceable']), 'The draft, for an account that may not see unpublished content.');
+    $this->assertStringContainsString('/setting/entity_type: The entity type node cannot be referenced here.', $answers['event.sponsorship']['not_config']);
 
     // The examples' README quotes every command, and every answer under
     // its call's label.

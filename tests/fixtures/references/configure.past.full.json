@@ -1,0 +1,462 @@
+{
+    "resource": "event.sponsorship",
+    "operation": "configure",
+    "label": "Configure the sponsorship",
+    "schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "Configure the sponsorship",
+        "description": "Sets the sponsor's venue, contact and announcement, and what the sponsor is featured beside, linked to and credited on.",
+        "x-surface": {
+            "contract": 3,
+            "operation": {
+                "id": "configure",
+                "label": "Configure the sponsorship",
+                "description": "Sets the sponsor's venue, contact and announcement, and what the sponsor is featured beside, linked to and credited on.",
+                "kind": "update",
+                "creates": false,
+                "destructive": false,
+                "idempotent": true
+            },
+            "version": 1
+        },
+        "type": "object",
+        "properties": {
+            "venue": {
+                "title": "Venue",
+                "description": "Where the sponsor's stand is.",
+                "type": "string",
+                "default": "riverside",
+                "x-surface": {
+                    "widget": "autocomplete",
+                    "locked": false,
+                    "dependsOn": [],
+                    "reference": {
+                        "entityType": "event_venue"
+                    },
+                    "checkedOnServer": [
+                        {
+                            "constraint": "DataSurfaceValidReference",
+                            "message": "Refers to an entity the account may reference"
+                        }
+                    ]
+                }
+            },
+            "contact": {
+                "title": "Contact",
+                "description": "Who answers for the sponsor.",
+                "type": [
+                    "integer",
+                    "null"
+                ],
+                "x-surface": {
+                    "widget": "autocomplete",
+                    "locked": false,
+                    "dependsOn": [],
+                    "reference": {
+                        "entityType": "user"
+                    },
+                    "checkedOnServer": [
+                        {
+                            "constraint": "DataSurfaceValidReference",
+                            "message": "Refers to an entity the account may reference"
+                        }
+                    ]
+                }
+            },
+            "page": {
+                "title": "Announcement",
+                "description": "The article that announces the sponsor.",
+                "type": [
+                    "integer",
+                    "null"
+                ],
+                "x-surface": {
+                    "widget": "autocomplete",
+                    "locked": false,
+                    "dependsOn": [],
+                    "reference": {
+                        "entityType": "node",
+                        "bundles": [
+                            "article"
+                        ]
+                    },
+                    "checkedOnServer": [
+                        {
+                            "constraint": "DataSurfaceValidReference",
+                            "message": "Refers to an entity the account may reference"
+                        }
+                    ]
+                }
+            },
+            "thing": {
+                "title": "Featured beside",
+                "description": "Any content the sponsor is featured beside.",
+                "$ref": "#/$defs/event.sponsorship.thing",
+                "x-surface": {
+                    "widget": "fieldset",
+                    "locked": false,
+                    "dependsOn": []
+                }
+            },
+            "setting": {
+                "title": "Linked to",
+                "description": "A venue or a role the sponsorship is linked to.",
+                "$ref": "#/$defs/event.sponsorship.setting",
+                "x-surface": {
+                    "widget": "fieldset",
+                    "locked": false,
+                    "dependsOn": []
+                }
+            },
+            "credit": {
+                "title": "Credited on",
+                "description": "An article or a user the sponsor is credited on.",
+                "$ref": "#/$defs/event.sponsorship.credit",
+                "x-surface": {
+                    "widget": "fieldset",
+                    "locked": false,
+                    "dependsOn": []
+                }
+            }
+        },
+        "additionalProperties": false,
+        "required": [
+            "venue"
+        ],
+        "$defs": {
+            "event.sponsorship.thing": {
+                "title": "event.sponsorship.thing",
+                "type": "object",
+                "properties": {
+                    "entity_type": {
+                        "title": "Entity type",
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "oneOf": [
+                            {
+                                "const": "node",
+                                "title": "Content"
+                            },
+                            {
+                                "const": "user",
+                                "title": "User"
+                            },
+                            {
+                                "const": null
+                            }
+                        ],
+                        "x-surface": {
+                            "widget": "select",
+                            "locked": false,
+                            "dependsOn": []
+                        }
+                    },
+                    "id": {
+                        "title": "ID",
+                        "description": "The id of an entity of the entity type chosen.",
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "x-surface": {
+                            "widget": "autocomplete",
+                            "locked": false,
+                            "dependsOn": [
+                                "entity_type"
+                            ],
+                            "reference": {
+                                "by": "entity_type"
+                            },
+                            "enumerated": true,
+                            "declared": true
+                        }
+                    }
+                },
+                "additionalProperties": false,
+                "allOf": [
+                    {
+                        "if": {
+                            "properties": {
+                                "entity_type": {
+                                    "type": "null"
+                                }
+                            }
+                        },
+                        "then": {
+                            "properties": {
+                                "id": false
+                            }
+                        }
+                    },
+                    {
+                        "if": {
+                            "allOf": [
+                                {
+                                    "properties": {
+                                        "entity_type": {
+                                            "not": {
+                                                "type": "null"
+                                            }
+                                        }
+                                    },
+                                    "required": [
+                                        "entity_type"
+                                    ]
+                                },
+                                {
+                                    "not": {
+                                        "properties": {
+                                            "entity_type": {
+                                                "type": "null"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        },
+                        "then": {
+                            "properties": {
+                                "id": {
+                                    "type": "string"
+                                }
+                            },
+                            "required": [
+                                "id"
+                            ]
+                        }
+                    }
+                ],
+                "x-surface": {
+                    "rules": [
+                        0,
+                        1
+                    ]
+                }
+            },
+            "event.sponsorship.setting": {
+                "title": "event.sponsorship.setting",
+                "type": "object",
+                "properties": {
+                    "entity_type": {
+                        "title": "Entity type",
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "oneOf": [
+                            {
+                                "const": "event_venue",
+                                "title": "Venue"
+                            },
+                            {
+                                "const": "user_role",
+                                "title": "Role"
+                            },
+                            {
+                                "const": null
+                            }
+                        ],
+                        "x-surface": {
+                            "widget": "select",
+                            "locked": false,
+                            "dependsOn": []
+                        }
+                    },
+                    "id": {
+                        "title": "ID",
+                        "description": "The id of an entity of the entity type chosen.",
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "x-surface": {
+                            "widget": "autocomplete",
+                            "locked": false,
+                            "dependsOn": [
+                                "entity_type"
+                            ],
+                            "reference": {
+                                "by": "entity_type"
+                            },
+                            "enumerated": true,
+                            "declared": true
+                        }
+                    }
+                },
+                "additionalProperties": false,
+                "allOf": [
+                    {
+                        "if": {
+                            "properties": {
+                                "entity_type": {
+                                    "type": "null"
+                                }
+                            }
+                        },
+                        "then": {
+                            "properties": {
+                                "id": false
+                            }
+                        }
+                    },
+                    {
+                        "if": {
+                            "allOf": [
+                                {
+                                    "properties": {
+                                        "entity_type": {
+                                            "not": {
+                                                "type": "null"
+                                            }
+                                        }
+                                    },
+                                    "required": [
+                                        "entity_type"
+                                    ]
+                                },
+                                {
+                                    "not": {
+                                        "properties": {
+                                            "entity_type": {
+                                                "type": "null"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        },
+                        "then": {
+                            "properties": {
+                                "id": {
+                                    "type": "string"
+                                }
+                            },
+                            "required": [
+                                "id"
+                            ]
+                        }
+                    }
+                ],
+                "x-surface": {
+                    "rules": [
+                        0,
+                        1
+                    ]
+                }
+            },
+            "event.sponsorship.credit": {
+                "title": "event.sponsorship.credit",
+                "type": "object",
+                "properties": {
+                    "entity_type": {
+                        "title": "Entity type",
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "oneOf": [
+                            {
+                                "const": "node",
+                                "title": "Content"
+                            },
+                            {
+                                "const": "user",
+                                "title": "User"
+                            },
+                            {
+                                "const": null
+                            }
+                        ],
+                        "x-surface": {
+                            "widget": "select",
+                            "locked": false,
+                            "dependsOn": []
+                        }
+                    },
+                    "id": {
+                        "title": "ID",
+                        "description": "The id of an entity of the entity type chosen.",
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "x-surface": {
+                            "widget": "autocomplete",
+                            "locked": false,
+                            "dependsOn": [
+                                "entity_type"
+                            ],
+                            "reference": {
+                                "by": "entity_type"
+                            },
+                            "enumerated": true,
+                            "declared": true
+                        }
+                    }
+                },
+                "additionalProperties": false,
+                "allOf": [
+                    {
+                        "if": {
+                            "properties": {
+                                "entity_type": {
+                                    "type": "null"
+                                }
+                            }
+                        },
+                        "then": {
+                            "properties": {
+                                "id": false
+                            }
+                        }
+                    },
+                    {
+                        "if": {
+                            "allOf": [
+                                {
+                                    "properties": {
+                                        "entity_type": {
+                                            "not": {
+                                                "type": "null"
+                                            }
+                                        }
+                                    },
+                                    "required": [
+                                        "entity_type"
+                                    ]
+                                },
+                                {
+                                    "not": {
+                                        "properties": {
+                                            "entity_type": {
+                                                "type": "null"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        },
+                        "then": {
+                            "properties": {
+                                "id": {
+                                    "type": "string"
+                                }
+                            },
+                            "required": [
+                                "id"
+                            ]
+                        }
+                    }
+                ],
+                "x-surface": {
+                    "rules": [
+                        0,
+                        1
+                    ]
+                }
+            }
+        }
+    }
+}

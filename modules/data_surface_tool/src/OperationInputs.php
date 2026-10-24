@@ -6,6 +6,7 @@ namespace Drupal\data_surface_tool;
 
 use Drupal\Core\Cache\Cache;
 use Drupal\Core\Session\AnonymousUserSession;
+use Drupal\Core\Extension\ModuleHandlerInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\StringTranslation\TranslationInterface;
@@ -183,12 +184,16 @@ final class OperationInputs {
    *   The converter from a data surface to the Tool API's definitions.
    * @param \Drupal\Core\StringTranslation\TranslationInterface $string_translation
    *   The string translation service.
+   * @param \Drupal\Core\Extension\ModuleHandlerInterface|null $moduleHandler
+   *   The module handler, which says whether the site serves the API a
+   *   reference key's lookup is on.
    */
   public function __construct(
     protected readonly ResourcesInterface $resources,
     protected readonly OperationArguments $operationArguments,
     protected readonly InputDefinitions $inputDefinitions,
     TranslationInterface $string_translation,
+    protected readonly ?ModuleHandlerInterface $moduleHandler = NULL,
   ) {
     $this->stringTranslation = $string_translation;
   }
@@ -670,11 +675,46 @@ final class OperationInputs {
       $this->t('The values, as the @resource resource describes them: every key it takes that the operation does not already know, including those other modules add, with its label, its meaning and the values it allows.', ['@resource' => $resource->id]),
       runtimeAccessSaidOnce: $operation !== NULL && $this->runtimeAccessWhole($resource, $operation),
     );
+    $this->inputDefinitions->withLookups($map, $built, $operation === NULL ? NULL : $this->lookup($resource, $operation));
     $this->listedTags = Cache::mergeTags($this->listedTags, $this->inputDefinitions->takeListTags());
     $properties = array_diff_key($map->getPropertyDefinitions(), array_flip($known));
     $map->setPropertyDefinitions($properties);
     $map->setRequired(array_filter($properties, static fn (DataDefinitionInterface $property): bool => $property->isRequired()) !== []);
     return $map;
+  }
+
+  /**
+   * Names the resource's lookup, where the site serves its API.
+   *
+   * `GET /surface-api/{resource}:lookup`, or for an operation about one
+   * thing `/surface-api/{resource}/{<parameter>}:lookup`, as
+   * data_surface_react serves it.
+   *
+   * Decision: see
+   * docs/decisions.md#a-reference-is-an-id-with-a-list-the-site-decides-listed-or-looked-up.
+   *
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $resource
+   *   The resource.
+   * @param \Drupal\data_surface\ResourceBuild\OperationDefinition $operation
+   *   The operation.
+   *
+   * @return string|null
+   *   The path, or NULL when data_surface_react is not on.
+   */
+  protected function lookup(ResourceDefinition $resource, OperationDefinition $operation): ?string {
+    if (!$this->moduleHandler?->moduleExists('data_surface_react')) {
+      return NULL;
+    }
+    $path = '/surface-api/' . $resource->id;
+    if ($resource->identity !== [] && !$operation->creates && !$operation->needsNothing()) {
+      foreach ($operation->parameters as $parameter) {
+        if ($parameter->optional) {
+          break;
+        }
+        $path .= '/{' . $parameter->name . '}';
+      }
+    }
+    return $path . ':lookup';
   }
 
   /**

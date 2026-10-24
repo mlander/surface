@@ -118,6 +118,8 @@ class ExamplesReadmeTest extends UnitTestCase {
     foreach ($venues as $class) {
       $this->assertContains('src/' . $class . '.php', $quoted);
     }
+    // Example 16: the resource, in its own module.
+    $this->assertContains('../data_surface_examples_references/src/Resource/SponsorshipResource.php', $quoted);
     foreach ($blocks as [, $path, $code]) {
       $file = self::MODULE . '/' . $path;
       $this->assertFileExists($file);

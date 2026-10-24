@@ -6,8 +6,10 @@ namespace Drupal\data_surface_examples;
 
 use Drupal\Component\Render\PlainTextOutput;
 use Drupal\Core\DependencyInjection\ClassResolverInterface;
+use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\Extension\ModuleHandlerInterface;
 use Drupal\Core\Session\AccountSwitcherInterface;
+use Drupal\Core\Session\AnonymousUserSession;
 use Drupal\Core\Session\UserSession;
 use Drupal\Core\State\StateInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
@@ -21,6 +23,7 @@ use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface\Pipeline\ResultDocument;
 use Drupal\data_surface\ResourceBuild\OperationRoute;
 use Drupal\data_surface\ResourceBuild\ResourceRegistry;
+use Drupal\data_surface\Reference\References;
 use Drupal\data_surface\ResourceBuild\ResourcesInterface;
 use Drupal\data_surface\Variants\ComponentProps;
 use Drupal\data_surface_component_block\Structure\ComponentBlockStructure;
@@ -29,10 +32,14 @@ use Drupal\data_surface_examples\Entity\EventVenue;
 use Drupal\data_surface_examples\Keys\TicketTypes;
 use Drupal\data_surface_examples\Resource\SpotlightResource;
 use Drupal\data_surface_examples\Resource\VenueResource;
+use Drupal\data_surface_react\Controller\ResourceApiController;
 use Drupal\data_surface_tool\OperationInputs;
 use Drupal\tool\Tool\ToolDefinition;
 use Drupal\tool\Tool\ToolManager;
+use Drupal\tool\TypedData\MapInputDefinition;
 use Drupal\user\RoleInterface;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 
 /**
  * Says what one of examples 7 to 14 shows, above its contract panel.
@@ -95,6 +102,12 @@ final class ConceptPanel {
     ],
     'event.mailer' => self::EXTENSION_DOCS,
     'event.webhook' => self::EXTENSION_DOCS,
+    'event.sponsorship' => [
+      'docs/options.md#a-key-that-refers-to-an-entity',
+      'docs/served-contract.md#a-lookup',
+      'docs/widgets.md#the-stock-widgets',
+      'docs/decisions.md#a-reference-is-an-id-with-a-list-the-site-decides-listed-or-looked-up',
+    ],
     'event.venue' => [
       'docs/storage.md#a-config-entity',
       'docs/resources.md#an-operation-that-takes-keys-of-its-own',
@@ -119,6 +132,24 @@ final class ConceptPanel {
     ['DELETE', '/surface-api/event.venue/riverside', 'remove', 'the removal, no body'],
     ['PATCH', '/surface-api/event.venue:reorder', 'reorder', 'the reorder, a custom method on the collection'],
     ['GET', '/surface-api/event.venue/schema', 'list', "the listing's full schema, its inputs and its outputs"],
+  ];
+
+  /**
+   * Example 16: the limit its page holds to show a key past it.
+   *
+   * Held in memory for the documents and the listing it shows
+   * (References::withLimit()), never saved.
+   */
+  public const LOWERED = 1;
+
+  /**
+   * Example 16: the lookups its page makes, each a key and what it sends.
+   */
+  public const LOOKUPS = [
+    '/surface-api/event.sponsorship:lookup?key=/venue&q=riv&limit=10',
+    '/surface-api/event.sponsorship:lookup?key=/contact&q=adm',
+    '/surface-api/event.sponsorship:lookup?key=/thing/id&type=node&q=Sponsor',
+    '/surface-api/event.sponsorship:lookup?key=/setting&type=node&q=Sponsor',
   ];
 
   /**
@@ -197,6 +228,10 @@ final class ConceptPanel {
    *   The single-directory components, for example 12's chosen one.
    * @param \Drupal\data_surface\Contract\SchemaReader $reader
    *   The schema reader, for what it noted of example 12's chosen one.
+   * @param \Drupal\data_surface\Reference\References $references
+   *   What reference keys are, for example 16's limit, held lower.
+   * @param \Drupal\data_surface_tool\OperationInputs $operationInputs
+   *   What a tool takes, for example 16's listing past the limit.
    */
   public function __construct(
     protected readonly ContractEmitter $emitter,
@@ -210,6 +245,8 @@ final class ConceptPanel {
     protected readonly StateInterface $state,
     protected readonly ComponentPluginManager $components,
     protected readonly SchemaReader $reader,
+    protected readonly References $references,
+    protected readonly OperationInputs $operationInputs,
   ) {
     $this->stringTranslation = $string_translation;
   }
@@ -238,6 +275,7 @@ final class ConceptPanel {
       'event.doors' => $this->widgets($declared, $values, $served),
       'event.spotlight' => $this->schemaRead($declared, $values, $served),
       'event.mailer', 'event.webhook' => $this->extension(),
+      'event.sponsorship' => $this->references($served),
       default => NULL,
     };
     if ($blocks === NULL) {
@@ -278,8 +316,188 @@ final class ConceptPanel {
       'event.spotlight' => $this->t("A JSON Schema the site already has is read into a structure, keyword by keyword: each single-directory component says what props it takes, and that schema is a variant at <code>props</code>, chosen by the component. The class names no component and no prop: a provider lists the components, with their schemas, and the reader turns each schema into keys with their types, labels, defaults, lists of values, bounds and required keys, and a nested object into a map. Choose another component and the props below it are that component's, over AJAX, and in React with no request. Both documents state the components as variants, <code>anyOf</code> of each component's def and one conditional per component, and the full schema of a component read back from them is the same document again. What the reader cannot say is kept, as a JsonSchema constraint the server checks, and noted. A tool that sends one component's props for another is refused, naming the component they belong to. Beside the props, the component's slots are a second key the same component chooses, read from its metadata: each slot holds text, one component or a list of them, narrowed to what the slot expects, three deep at most."),
       'event.venue' => $this->t("A module that declares its own config entity type puts a resource over it from the start: the venue entity, with no form classes, no list builder and no links, and the resource <code>event.venue</code> naming it through a ConfigEntityStorage. Its config schema, <code>data_surface_examples.event_venue.*</code>, is written from the resource by <code>drush data_surface:config-schema --write</code>, as a config object's is. Add, edit and remove are about one venue. Listing and reordering are about the venues together, so they name none: each takes the keys of a structure of its own, a page and a filter, or a list of ids and weights, which <code>values:</code> on its <code>#[Operation]</code> names. The listing is read only and declares outputs, the page and the total, each venue in it one the account may read; on HTTP it is what <code>GET</code> on the collection answers. The reorder is an update over the collection, written in one commit, served as a custom method, <code>PATCH /surface-api/event.venue:reorder</code>. Example 2 chooses its venue and room from these venues: add one here and example 2 offers it at the next request."),
       'event.mailer', 'event.webhook' => $this->t("Two resources call a service with a credential: a key pasted here, a secret, or a key the site manages, once a module that manages keys is on. @module stands in for the Key module. The mailer, at /surface-examples/14, is the owner's way: it declares both sources, each a structure of its own, and a provider lists them, the pasted one always and the managed one while the module is on. With one source to choose, the source is drawn as that source and stated as <code>const</code>. A pasted key stored is kept when the managed key is chosen, and taken up again when the pasted source is chosen back. The webhook, at /surface-examples/14/webhook, is the alter's way: it declares a pasted key and knows nothing of managed keys, and the module's alter mounts a managed key beside it and rules the pasted key out once one is chosen. Install the module and reload: the second source and the managed key are there at the next request, with no cache rebuild.", ['@module' => self::KEYS]),
+      'event.sponsorship' => $this->t("A key that refers to an entity is declared by the data type string of what it refers to, and holds the entity's id: <code>entity:event_venue</code> a venue, <code>entity:user</code> a user, <code>entity:node:article</code> an article. Which entities it may name is core's selection handler's answer for the account asking, with the bundle and the access it checks, so a draft article is not one for an account that may not see it. While the site has at most @limit of them, <code>data_surface.settings:reference_enum_limit</code>, the key lists them: a select on the form, a <code>oneOf</code> with their labels in both documents, an enum in the tool listing. Past it, the key is an id: core's entity autocomplete on the form, <code>x-surface.widget: autocomplete</code> in the documents, and the resource's lookup, <code>GET /surface-api/event.sponsorship:lookup</code>, which finds candidates by label for the same account. The bare <code>entity</code> is any entity: an entity type, then an id of it, narrowed to that type by the same constraint; its entity types are filtered by what kind of entity type they are, by bundle, and by what the account may reference.", ['@limit' => $this->references->limit()]),
       default => $this->t('Not an example of this series.'),
     };
+  }
+
+  /**
+   * Example 16: each key, its schema under and past the limit, the lookup.
+   *
+   * The documents past the limit are emitted with the limit held lower in
+   * memory for this request (References::withLimit()), so a site with few
+   * entities shows what one with many would say; nothing is saved.
+   *
+   * @param \Drupal\data_surface\ResourceBuild\OperationRoute $served
+   *   What the form serves.
+   *
+   * @return array
+   *   The blocks.
+   */
+  protected function references(OperationRoute $served): array {
+    $keys = ['venue', 'contact', 'page', 'thing', 'setting', 'credit'];
+    // A bare key's def, cut to its two keys and the conditional that
+    // narrows its id to nodes.
+    $excerpt = static function (array $full) use ($keys): array {
+      $excerpt = [];
+      foreach ($keys as $key) {
+        $property = $full['properties'][$key] ?? NULL;
+        if (!isset($property['$ref'])) {
+          $excerpt[$key] = $property;
+          continue;
+        }
+        $def = SchemaResolver::resolve($property, $full);
+        $excerpt[$key] = ['properties' => $def['properties'] ?? []] + array_filter([
+          'allOf' => array_values(array_filter($def['allOf'] ?? [], static fn (array $condition): bool => ($condition['if']['properties']['entity_type']['const'] ?? NULL) === 'node')),
+        ]);
+      }
+      return $excerpt;
+    };
+    $declared = fn (): array => $this->emitter->emitFull($this->resources->buildStatic($served->resource, $served->context), 'event.sponsorship', $served->operation->id, $served->operation->label, widgets: TRUE, operation: $served->operation->facts())->document['schema'];
+    $now = $declared();
+    $rows = [];
+    $resource = $this->registry->getDefinition($served->resource);
+    foreach ($keys as $key) {
+      $property = $now['properties'][$key] ?? [];
+      $def = isset($property['$ref']) ? SchemaResolver::resolve($property, $now) : $property;
+      $rows[] = [
+        $key,
+        ['data' => ['#markup' => '<code>' . htmlspecialchars(self::SPELLINGS[$key]) . '</code>']],
+        (string) ($def[ContractEmitter::EXTENSION]['widget'] ?? '—'),
+        isset($def['oneOf']) ? (string) count(array_filter($def['oneOf'], static fn (array $choice): bool => $choice['const'] !== NULL)) : '—',
+      ];
+    }
+    $past = $this->pastTheLimit(fn (): array => $excerpt($declared()));
+    $listing = [
+      'now' => $this->listedDescriptions($resource->name()),
+      'past the limit' => $this->pastTheLimit(fn (): array => $this->listedDescriptions($resource->name())),
+    ];
+    return [
+      'keys' => [
+        '#type' => 'table',
+        '#caption' => $this->t('Each key, how it is declared, the widget the full schema names for it now, and how many candidates it lists for you'),
+        '#header' => [$this->t('Key'), $this->t('Declared as'), $this->t('Widget'), $this->t('Listed')],
+        '#rows' => $rows,
+        '#attributes' => ['class' => ['data-surface-concept-references']],
+      ],
+      'now' => $this->details(
+        $this->t('The keys, as the full schema states them now'),
+        $this->t('Up to the limit, each candidate is a <code>oneOf</code> entry with its label; <code>x-surface.reference</code> says what the key refers to; and the bare keys are a def each, its id narrowed per entity type by one conditional, so a client narrows it locally.'),
+        $this->json($excerpt($now)),
+      ),
+      'past' => $this->details(
+        $this->t('The same keys past the limit'),
+        $this->t('Emitted with the limit held at @limit for this request, as <code>ddev drush config:set data_surface.settings reference_enum_limit @limit</code> would set it: no <code>oneOf</code>, <code>x-surface.widget: autocomplete</code>, and the constraint named under <code>checkedOnServer</code>.', ['@limit' => self::LOWERED]),
+        $this->json($past),
+      ),
+      'listing' => $this->details(
+        $this->t('What the tool listing says of the contact'),
+        $this->t("Now, and past the limit, as the listing is derived, for no account: the enum of the users an anonymous caller may reference, or a sentence naming the lookup."),
+        $this->json($listing),
+      ),
+      'lookup' => $this->details(
+        $this->t('Ask the lookup'),
+        $this->t("Each made now, as you: the candidates the key's selection handler finds by label, the same the key lists and its check accepts."),
+        $this->lookups(),
+      ),
+    ];
+  }
+
+  /**
+   * Example 16: how each key is declared, by key.
+   */
+  public const SPELLINGS = [
+    'venue' => "add('venue', 'entity:event_venue', ...)",
+    'contact' => "add('contact', 'entity:user', ...)",
+    'page' => "add('page', 'entity:node:article', ...)",
+    'thing' => "add('thing', 'entity', ...), content entities",
+    'setting' => "add('setting', 'entity', ...), config entities among three",
+    'credit' => "add('credit', 'entity', ...), an article or a user",
+  ];
+
+  /**
+   * Example 16: runs a callback with the limit held lower, built afresh.
+   *
+   * @param callable $callback
+   *   What to run.
+   *
+   * @return mixed
+   *   What it returned.
+   */
+  protected function pastTheLimit(callable $callback): mixed {
+    // A build is kept by the limit it was made under, so this one is made
+    // afresh, and the page's own is kept.
+    return $this->references->withLimit(self::LOWERED, $callback);
+  }
+
+  /**
+   * Example 16: the descriptions the tool listing gives each key.
+   *
+   * @param string $resource
+   *   The resource's name.
+   *
+   * @return array<string, array{description: string, enum: array|null}>
+   *   The contact's description and enum, and the bare key's id's.
+   */
+  protected function listedDescriptions(string $resource): array {
+    $definition = $this->registry->getDefinition($resource);
+    // As the deriver lists it: as the anonymous account, for no account.
+    // Decision: see docs/decisions.md#a-static-tool-definition-is-no-accounts.
+    $this->accountSwitcher->switchTo(new AnonymousUserSession());
+    try {
+      $values = $this->operationInputs->inputs($definition, $this->registry->getOperation($resource, 'configure'))[OperationInputs::VALUES] ?? NULL;
+    }
+    finally {
+      $this->accountSwitcher->switchBack();
+    }
+    $listed = [];
+    if ($values instanceof MapInputDefinition) {
+      $properties = $values->getPropertyDefinitions();
+      $thing = $properties['thing'] ?? NULL;
+      foreach ([
+        'contact' => $properties['contact'] ?? NULL,
+        'thing/id' => $thing instanceof MapInputDefinition ? ($thing->getPropertyDefinitions()['id'] ?? NULL) : NULL,
+      ] as $key => $property) {
+        $listed[$key] = [
+          'description' => (string) $property?->getDescription(),
+          'enum' => $property?->getConstraints()['Choice']['choices'] ?? NULL,
+        ];
+      }
+    }
+    return $listed;
+  }
+
+  /**
+   * Example 16: the lookups, made now through the API, or where they are.
+   *
+   * @return array
+   *   A render array: each path and its answer.
+   */
+  protected function lookups(): array {
+    if (!$this->moduleHandler->moduleExists('data_surface_react')) {
+      return [
+        '#markup' => '<p>' . $this->t('The lookup is served by data_surface_react, which is not on: enable it to ask @path.', [
+          '@path' => self::LOOKUPS[0],
+        ]) . '</p>',
+      ];
+    }
+    $answers = [];
+    $controller = $this->classResolver->getInstanceFromDefinition(ResourceApiController::class);
+    foreach (self::LOOKUPS as $path) {
+      $request = Request::create($path);
+      parse_str((string) parse_url($path, PHP_URL_QUERY), $query);
+      $request->query->replace($query);
+      try {
+        $response = $controller->handle($request, 'event.sponsorship:lookup');
+        $answer = $response->getStatusCode() . ' ' . $response->getContent();
+      }
+      catch (HttpExceptionInterface $e) {
+        // As the API answers it: problem details, the status first.
+        $answer = $e->getStatusCode() . ' ' . $e->getMessage();
+      }
+      $answers[] = 'GET ' . $path . "\n" . $answer;
+    }
+    return $this->pre(implode("\n\n", $answers));
   }
 
   /**
@@ -302,7 +520,9 @@ final class ConceptPanel {
       'enable' => [
         '#theme' => 'item_list',
         '#items' => [
-          ['#markup' => $this->t('Enable it: <code>ddev drush pm:install @module</code>; take it away again with <code>ddev drush pm:uninstall @module</code>.', ['@module' => self::KEYS])],
+          [
+            '#markup' => $this->t('Enable it: <code>ddev drush pm:install @module</code>; take it away again with <code>ddev drush pm:uninstall @module</code>.', ['@module' => self::KEYS]),
+          ],
           $on
             ? $this->t('It is enabled on this site now: the mailer offers two sources, and the webhook a managed key beside its pasted one.')
             : $this->t('It is not enabled on this site yet: the mailer has one source, drawn as that source, and the webhook a pasted key alone.'),
@@ -819,7 +1039,10 @@ final class ConceptPanel {
     // each is a dry run, and the page says so.
     $rehearsed = $id === 'event.venue' && $this->venueExists((string) ConceptCalls::TOWN_HALL['id']);
     $note = match (TRUE) {
-      $rehearsed => $this->t('This site has a venue named @id, so each call below is made now as a dry run, and nothing is written: the add is refused for the name it took, and the edit, the reorder and the removals rehearse what they would do to it. Remove that venue and the calls write and remove their own again. The command asks the same from Drush.', ['@id' => ConceptCalls::TOWN_HALL['id']]),
+      $rehearsed => $this->t('This site has a venue named @id, so each call below is made now as a dry run, and nothing is written: the add is refused for the name it took, and the edit, the reorder and the removals rehearse what they would do to it. Remove that venue and the calls write and remove their own again. The command asks the same from Drush.', [
+        '@id' => ConceptCalls::TOWN_HALL['id'],
+      ]),
+      $id === 'event.sponsorship' => $this->t('Each call made now, as this page was drawn, and none writes anything: each is a dry run, which accepts, validates and prepares the values and stops. The draft is sent as an account whose only role is @role, which may not see unpublished content; every other call as you. The command asks the same from Drush.', ['@role' => ConceptCalls::EDITOR]),
       $id === 'event.venue' => $this->t('Each call made now, as this page was drawn, in order: the second add writes Town Hall, so the edit, the reorder and the removals find it, and the last call removes it again, so the three venues the module ships are what is left. A dry run accepts, validates and prepares the values and stops, and the listing changes nothing, so it stops there by itself. The command asks the same from Drush.'),
       default => $this->t('Each call made now, as this page was drawn, and none writes anything: a dry run accepts, validates and prepares the values and stops, and an operation that changes nothing stops there by itself. The command asks the same from Drush.'),
     };
@@ -839,6 +1062,23 @@ final class ConceptPanel {
       }
     }
     return $calls;
+  }
+
+  /**
+   * Makes the account a call says it is made as.
+   *
+   * @param string|null $role
+   *   The role, or NULL for the account viewing the page.
+   *
+   * @return \Drupal\Core\Session\AccountInterface|null
+   *   An account of no user, authenticated and holding that role alone;
+   *   NULL for none.
+   */
+  public static function accountOf(?string $role): ?AccountInterface {
+    return $role === NULL ? NULL : new UserSession([
+      'uid' => PHP_INT_MAX,
+      'roles' => [RoleInterface::AUTHENTICATED_ID, $role],
+    ]);
   }
 
   /**
@@ -864,6 +1104,10 @@ final class ConceptPanel {
     $state = ConceptCalls::CALLS[$resource][$name]['state'] ?? [];
     $was = $this->state->getMultiple(array_keys($state));
     $this->state->setMultiple($state);
+    $account = static::accountOf(ConceptCalls::CALLS[$resource][$name]['account'] ?? NULL);
+    if ($account !== NULL) {
+      $this->accountSwitcher->switchTo($account);
+    }
     try {
       $tool = $this->toolManager->createInstance($tool_id);
       foreach (ConceptCalls::CALLS[$resource][$name]['parameters'] ?? [] as $parameter => $value) {
@@ -882,6 +1126,9 @@ final class ConceptPanel {
       $result = $tool->getResult();
     }
     finally {
+      if ($account !== NULL) {
+        $this->accountSwitcher->switchBack();
+      }
       $this->state->deleteMultiple(array_keys(array_diff_key($state, $was)));
       $this->state->setMultiple($was);
     }

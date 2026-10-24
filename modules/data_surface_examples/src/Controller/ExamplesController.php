@@ -7,8 +7,10 @@ namespace Drupal\data_surface_examples\Controller;
 use Drupal\Core\Controller\ControllerBase;
 use Drupal\Core\Extension\ModuleExtensionList;
 use Drupal\Core\Link;
+use Drupal\Core\Routing\RouteProviderInterface;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\Url;
+use Drupal\data_surface\Reference\References;
 use Drupal\data_surface_examples\CodeLines;
 use Drupal\data_surface_examples\ConceptPanel;
 use Drupal\data_surface_examples\ConfigSchemaPanel;
@@ -123,6 +125,11 @@ final class ExamplesController extends ControllerBase {
   public const KEYS = ConceptPanel::KEYS;
 
   /**
+   * Example 16's module, which needs node.
+   */
+  public const REFERENCES = 'data_surface_examples_references';
+
+  /**
    * That module's list, constraint, validator, resolver and alter.
    */
   public const KEYS_FILES = [
@@ -145,12 +152,18 @@ final class ExamplesController extends ControllerBase {
    *   The panel saying what an example shows, for example 13's parts.
    * @param \Drupal\data_surface_examples\FilesPanel $filesPanel
    *   The panel listing the files an example is made of.
+   * @param \Drupal\Core\Routing\RouteProviderInterface $routeProvider
+   *   The route provider, which says whether an example's module is on.
+   * @param \Drupal\data_surface\Reference\References $references
+   *   What reference keys are, for example 16's limit.
    */
   public function __construct(
     protected readonly ModuleExtensionList $moduleList,
     protected readonly ConfigSchemaPanel $configSchemaPanel,
     protected readonly ConceptPanel $conceptPanel,
     protected readonly FilesPanel $filesPanel,
+    protected readonly RouteProviderInterface $routeProvider,
+    protected readonly References $references,
   ) {}
 
   /**
@@ -162,6 +175,8 @@ final class ExamplesController extends ControllerBase {
       $container->get('data_surface_examples.config_schema_panel'),
       $container->get('data_surface_examples.concept_panel'),
       $container->get('data_surface_examples.files_panel'),
+      $container->get('router.route_provider'),
+      $container->get('data_surface.references'),
     );
   }
 
@@ -174,6 +189,11 @@ final class ExamplesController extends ControllerBase {
   public function index(): array {
     $steps = [];
     foreach ($this->steps() as $number => $step) {
+      if ($number === 16) {
+        $steps['references'] = [
+          '#markup' => '<h2>' . $this->t('References') . '</h2><p>' . $this->t("Example 16 is a key that refers to an entity: declared by the data type string of what it refers to, its candidates the selection handler's for the account, listed while there are few and looked up past that.") . '</p>',
+        ];
+      }
       if ($number === 15) {
         $steps['entity'] = [
           '#markup' => '<h2>' . $this->t('A config entity of your own') . '</h2><p>' . $this->t("Example 15 is a module's own config entity type with a resource over it from the start: one venue added, edited and removed, the venues listed a page at a time and reordered in one write. Example 2's venues and rooms are these venues.") . '</p>',
@@ -238,7 +258,9 @@ final class ExamplesController extends ControllerBase {
       $title = $this->t('@number. @title', ['@number' => $number, '@title' => $example['title']]);
       $rows[] = [
         'data' => [
-          ['data' => $example['routes'] === [] ? ['#markup' => $title] : Link::fromTextAndUrl($title, Url::fromRoute($example['routes'][0]))->toRenderable()],
+          [
+            'data' => $example['routes'] === [] || !$this->routed($example['routes'][0]) ? ['#markup' => $title] : Link::fromTextAndUrl($title, Url::fromRoute($example['routes'][0]))->toRenderable(),
+          ],
           (string) $example['concept'],
           ['data' => $github($example['docs'], $example['docs'])],
           ['data' => $github('docs/decisions.md#' . $example['decision'], 'decisions.md#' . $example['decision'])],
@@ -696,6 +718,20 @@ final class ExamplesController extends ControllerBase {
           $this->t('The entity type, the resource, its three structures and its storage: @lines lines of code.', ['@lines' => $this->venueLines()]),
         ],
       ],
+      16 => [
+        'title' => $series[16]['title'],
+        'sentence' => $this->t("A key that refers to an entity, declared by the data type string of what it refers to and holding its id: a venue, a user, an article, or an entity of any type, filtered by what kind of entity type it is and by bundle. While the site has at most @limit candidates the key lists them; past that it is looked up, on the form with core's entity autocomplete and over HTTP with the resource's lookup. It lives in @module, which needs node.", [
+          '@limit' => $this->references->limit(),
+          '@module' => self::REFERENCES,
+        ]),
+        'items' => $this->moduleHandler()->moduleExists(self::REFERENCES)
+          ? [$this->route('data_surface_examples.step16'), $this->react('event.sponsorship')]
+          : [
+            [
+              '#markup' => $this->t('Enable it: <code>ddev drush pm:install @module</code>; its page is then /surface-examples/16.', ['@module' => self::REFERENCES]),
+            ],
+          ],
+      ],
     ];
   }
 
@@ -751,6 +787,19 @@ final class ExamplesController extends ControllerBase {
   protected function route(string $route): array {
     $url = Url::fromRoute($route);
     return Link::fromTextAndUrl($url->toString(), $url)->toRenderable();
+  }
+
+  /**
+   * Answers whether a route is there: an example in a module may be off.
+   *
+   * @param string $route
+   *   The route name.
+   *
+   * @return bool
+   *   TRUE when the router has it.
+   */
+  protected function routed(string $route): bool {
+    return $this->routeProvider->getRoutesByNames([$route]) !== [];
   }
 
   /**

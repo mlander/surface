@@ -2332,6 +2332,60 @@
                         "properties": {},
                         "additionalProperties": false
                     },
+                    "block.placement.condition.settings.entity_bundle:node": {
+                        "title": "block.placement.condition.settings.entity_bundle:node",
+                        "type": "object",
+                        "properties": {
+                            "bundles": {
+                                "title": "Sequence",
+                                "type": "array",
+                                "items": {
+                                    "title": "String",
+                                    "type": "string",
+                                    "x-surface": {
+                                        "locked": false,
+                                        "dependsOn": []
+                                    }
+                                },
+                                "default": [],
+                                "x-surface": {
+                                    "locked": false,
+                                    "dependsOn": []
+                                }
+                            },
+                            "context_mapping": {
+                                "title": "Context assignments",
+                                "type": [
+                                    "object",
+                                    "null"
+                                ],
+                                "properties": {
+                                    "node": {
+                                        "title": "Content",
+                                        "description": "The context the condition reads its node from.",
+                                        "type": "string",
+                                        "oneOf": [
+                                            {
+                                                "const": "@node.node_route_context:node",
+                                                "title": "@node.node_route_context:node"
+                                            }
+                                        ],
+                                        "default": "@node.node_route_context:node",
+                                        "x-surface": {
+                                            "locked": false,
+                                            "dependsOn": []
+                                        }
+                                    }
+                                },
+                                "additionalProperties": false,
+                                "x-surface": {
+                                    "locked": false,
+                                    "dependsOn": []
+                                }
+                            }
+                        },
+                        "additionalProperties": false
+                    },
                     "block.placement.condition.settings.request_path": {
                         "title": "block.placement.condition.settings.request_path",
                         "type": "object",
@@ -2450,6 +2504,10 @@
                                 "type": "string",
                                 "oneOf": [
                                     {
+                                        "const": "entity_bundle:node",
+                                        "title": "Content type"
+                                    },
+                                    {
                                         "const": "request_path",
                                         "title": "Request Path"
                                     },
@@ -2485,6 +2543,9 @@
                                 "description": "The settings of the condition chosen.",
                                 "anyOf": [
                                     {
+                                        "$ref": "#/$defs/block.placement.condition.settings.entity_bundle:node"
+                                    },
+                                    {
                                         "$ref": "#/$defs/block.placement.condition.settings.request_path"
                                     },
                                     {
@@ -2504,6 +2565,7 @@
                                     ],
                                     "by": "id",
                                     "variants": {
+                                        "entity_bundle:node": "#/$defs/block.placement.condition.settings.entity_bundle:node",
                                         "request_path": "#/$defs/block.placement.condition.settings.request_path",
                                         "response_status": "#/$defs/block.placement.condition.settings.response_status",
                                         "user_role": "#/$defs/block.placement.condition.settings.user_role"
@@ -2516,6 +2578,27 @@
                             "id"
                         ],
                         "allOf": [
+                            {
+                                "if": {
+                                    "properties": {
+                                        "id": {
+                                            "const": "entity_bundle:node"
+                                        }
+                                    },
+                                    "required": [
+                                        "id"
+                                    ]
+                                },
+                                "then": {
+                                    "properties": {
+                                        "settings": {
+                                            "title": "Settings",
+                                            "description": "The settings of the condition chosen.",
+                                            "$ref": "#/$defs/block.placement.condition.settings.entity_bundle:node"
+                                        }
+                                    }
+                                }
+                            },
                             {
                                 "if": {
                                     "properties": {

@@ -10,6 +10,8 @@ use Drupal\data_surface\Contract\ContractChange;
 use Drupal\data_surface\DataSurfaceBuilder;
 use Drupal\data_surface_examples\Resource\RegistrationStep1Resource;
 use Drupal\Tests\user\Traits\UserCreationTrait;
+use Drupal\user\Entity\Role;
+use Drupal\user\Entity\User;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
@@ -59,6 +61,10 @@ class ContractBaselineTest extends DataSurfaceKernelTestBase {
     'data_surface_component_block',
     'data_surface_block',
     'data_surface_examples_keys',
+    'text',
+    'filter',
+    'node',
+    'data_surface_examples_references',
   ];
 
   /**
@@ -70,6 +76,7 @@ class ContractBaselineTest extends DataSurfaceKernelTestBase {
     'data_surface_first',
     'data_surface_component_block',
     'data_surface_block',
+    'data_surface_examples_references',
   ];
 
   /**
@@ -78,10 +85,27 @@ class ContractBaselineTest extends DataSurfaceKernelTestBase {
   protected function setUp(): void {
     parent::setUp();
     $this->installEntitySchema('user');
-    $this->installConfig(['data_surface_examples', 'data_surface_first']);
+    // Example 16's bare reference counts what each content entity type
+    // holds, and its keys list the site's users, roles and articles: each
+    // of a fixed name, so its baseline is the same on every run.
+    $this->installEntitySchema('node');
+    $this->installEntitySchema('path_alias');
+    $this->installSchema('node', ['node_access']);
+    $this->installConfig([
+      'data_surface_examples',
+      'data_surface_first',
+      'node',
+      'filter',
+      'data_surface_examples_references',
+    ]);
     // A theme, so the placement's themes and regions are pinned.
     $this->container->get('theme_installer')->install(['stark']);
-    $this->setUpCurrentUser(admin: TRUE);
+    User::create(['uid' => 0, 'name' => '', 'status' => 0])->save();
+    User::create(['uid' => 1, 'name' => 'admin', 'status' => 1])->save();
+    Role::create(['id' => 'administrator', 'label' => 'Administrator', 'is_admin' => TRUE])->save();
+    $sponsor = User::create(['name' => 'sponsor', 'status' => 1, 'roles' => ['administrator']]);
+    $sponsor->save();
+    $this->setCurrentUser($sponsor);
   }
 
   /**
@@ -96,7 +120,9 @@ class ContractBaselineTest extends DataSurfaceKernelTestBase {
       // the site holds only these modules: the drush command, run on a
       // site with more, would pin that site's.
       foreach ($current as $id => $baseline) {
-        $baselines->write($baselines->directory('data_surface'), $baseline + ['allowed' => $committed[$id]['allowed'] ?? []]);
+        $baselines->write($baselines->directory('data_surface'), $baseline + [
+          'allowed' => $committed[$id]['allowed'] ?? [],
+        ]);
       }
       $this->markTestSkipped(sprintf('%d baselines written.', count($current)));
     }
@@ -117,6 +143,7 @@ class ContractBaselineTest extends DataSurfaceKernelTestBase {
       'event.program',
       'event.review',
       'event.sales',
+      'event.sponsorship',
       'event.spotlight',
       'event.ticket_limit',
       'event.venue',

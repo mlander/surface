@@ -1,0 +1,12 @@
+data_surface.settings:
+  type: config_object
+  label: 'Data Surface settings'
+  constraints:
+    FullyValidatable: ~
+  mapping:
+    reference_enum_limit:
+      type: integer
+      label: 'Most targets a reference key lists as its options'
+      constraints:
+        Range:
+          min: 0

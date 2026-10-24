@@ -17,6 +17,8 @@ use Drupal\data_surface\Pipeline\Outbound;
 use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Options\DataSurfaceOptions;
 use Drupal\data_surface\Pipeline\ViolationMessage;
+use Drupal\data_surface\Reference\EntityReferenceStructure;
+use Drupal\data_surface\Reference\References;
 use Drupal\data_surface\Entry;
 use Drupal\data_surface\Variants;
 use Drupal\tool\TypedData\InputDefinition;
@@ -115,10 +117,14 @@ final class InputDefinitions {
    * @param \Drupal\Core\StringTranslation\TranslationInterface $string_translation
    *   The string translation service, which the notes and fallback
    *   labels this converter writes are built through.
+   * @param \Drupal\data_surface\Reference\References|null $references
+   *   What reference keys are: the limit up to which one lists its
+   *   candidates.
    */
   public function __construct(
     protected readonly DataSurfaceOptions $options,
     TranslationInterface $string_translation,
+    protected readonly ?References $references = NULL,
   ) {
     $this->stringTranslation = $string_translation;
   }
@@ -207,6 +213,71 @@ final class InputDefinitions {
       default_value: $default_value,
       property_definitions: $properties,
     );
+  }
+
+  /**
+   * Says on each reference key with too many to list where to find an id.
+   *
+   * A key that refers to one entity type and whose candidates are not
+   * listed as its enum, there being more than the site's limit, and the id
+   * of a bare `entity` key, which the listing cannot list per entity type,
+   * each say in their description that a caller sends an id, and where it
+   * looks one up: the resource's lookup, when the site serves its API.
+   *
+   * Decision: see
+   * docs/decisions.md#a-reference-is-an-id-with-a-list-the-site-decides-listed-or-looked-up.
+   *
+   * @param \Drupal\tool\TypedData\MapInputDefinition $map
+   *   The converted data surface, or a converted child; changed in place.
+   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   *   The data surface it was converted from.
+   * @param string|null $lookup
+   *   The resource's lookup, `/surface-api/{resource}:lookup`, or NULL
+   *   when the site serves no API.
+   * @param string $pointer
+   *   The JSON Pointer of the map in the values.
+   *
+   * @return \Drupal\tool\TypedData\MapInputDefinition
+   *   The same map.
+   */
+  public function withLookups(MapInputDefinition $map, DataSurfaceInterface $surface, ?string $lookup, string $pointer = ''): MapInputDefinition {
+    if ($this->references === NULL) {
+      return $map;
+    }
+    $properties = $map->getPropertyDefinitions();
+    foreach ($surface->getDefinitions()->entries() as $name => $entry) {
+      $property = $properties[$name] ?? NULL;
+      $at = $pointer . '/' . str_replace(['~', '/'], ['~0', '~1'], (string) $name);
+      $child = $entry->attachment?->child;
+      if ($property instanceof MapInputDefinition && $child !== NULL) {
+        $this->withLookups($property, $child, $lookup, $at);
+        continue;
+      }
+      if (!$property instanceof DataDefinition) {
+        continue;
+      }
+      $target = References::target($entry->definition);
+      $bare = $entry->definition->getSetting(EntityReferenceStructure::TARGETS) !== NULL;
+      if (($target === NULL || $this->options->resolve($entry->definition) !== NULL) && !$bare) {
+        continue;
+      }
+      // Whether a key lists its candidates depends on the limit, so the
+      // listing is derived again when it changes.
+      $this->listTags = Cache::mergeTags($this->listTags, $this->references->limitCacheability()->getCacheTags());
+      $arguments = [
+        '@limit' => $this->references->limit(),
+        '@lookup' => (string) $lookup,
+        '@key' => $at,
+      ];
+      $note = match (TRUE) {
+        $bare && $lookup !== NULL => $this->t('Send the id of an entity of the entity type chosen; GET @lookup?key=@key&type={entity type}&q={text} looks one up by its label.', $arguments),
+        $bare => $this->t('Send the id of an entity of the entity type chosen.', $arguments),
+        $lookup !== NULL => $this->t('Too many to list (more than @limit): send the id of one; GET @lookup?key=@key&q={text} looks one up by its label.', $arguments),
+        default => $this->t('Too many to list (more than @limit): send the id of one.', $arguments),
+      };
+      $this->noted($property, $note);
+    }
+    return $map;
   }
 
   /**

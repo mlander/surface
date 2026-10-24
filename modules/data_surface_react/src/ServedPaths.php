@@ -105,6 +105,18 @@ final class ServedPaths {
   ];
 
   /**
+   * The custom read method every resource path answers: a reference's lookup.
+   *
+   * `GET /surface-api/{resource}[/{id}]:lookup?key=/venue&q=riv`, unless
+   * the resource declares an operation of that name, which is then the
+   * method.
+   *
+   * Decision: see
+   * docs/decisions.md#a-reference-is-an-id-with-a-list-the-site-decides-listed-or-looked-up.
+   */
+  public const LOOKUP = 'lookup';
+
+  /**
    * The suffixes of a contract 2 path after `{resource}/{operation}`.
    */
   public const GONE = ['schema', 'refine', 'validate', 'submit'];
@@ -175,6 +187,9 @@ final class ServedPaths {
       throw $this->notFound($this->t('The @resource resource is a singleton: its path carries no identity.', ['@resource' => $definition->id]));
     }
     $placement = $segments === [] ? self::COLLECTION : self::ITEM;
+    if ($named === self::LOOKUP && !isset($operations[$named])) {
+      return $this->lookupTarget($request, $definition, $operations, $segments, $placement, $method, $schema);
+    }
     if ($named !== NULL) {
       $named_args = ['@resource' => $definition->id, '@operation' => $named];
       $operation = $operations[$named] ?? throw $this->notFound($this->t('The @resource resource has no @operation operation.', $named_args));
@@ -232,6 +247,46 @@ final class ServedPaths {
       $operation = $operations[$id];
     }
     return new ServedTarget($definition, $operation, $this->parameters($request, $operation, $segments), $action, $named !== NULL);
+  }
+
+  /**
+   * Reads a lookup: the custom read every resource path answers.
+   *
+   * It is asked of the operation `GET` serves at the path, whose keys it
+   * looks a value up for, and gated as that operation is.
+   *
+   * @param \Symfony\Component\HttpFoundation\Request $request
+   *   The request.
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   *   The resource.
+   * @param array<string, \Drupal\data_surface\ResourceBuild\OperationDefinition> $operations
+   *   Its operations.
+   * @param string[] $segments
+   *   The identity segments.
+   * @param string $placement
+   *   COLLECTION or ITEM.
+   * @param string $method
+   *   The request's method.
+   * @param bool $schema
+   *   Whether the path ended in `schema`.
+   *
+   * @return \Drupal\data_surface_react\ServedTarget
+   *   The target, its action LOOKUP.
+   *
+   * @throws \Drupal\data_surface_react\ProblemException
+   *   405 for any method but GET, or a schema; 404 when no operation is
+   *   served at the path.
+   */
+  protected function lookupTarget(Request $request, ResourceDefinition $definition, array $operations, array $segments, string $placement, string $method, bool $schema): ServedTarget {
+    if ($method !== 'GET' || $schema) {
+      throw $this->notAllowed($method, $schema ? [] : ['GET']);
+    }
+    $defaults = $this->defaults($definition)[$placement];
+    $id = $this->readDefault($defaults, $placement);
+    if ($id === NULL) {
+      throw $this->notFound($this->t('No operation of @resource is served at this path, so it has no keys to look a value up for.', ['@resource' => $definition->id]));
+    }
+    return new ServedTarget($definition, $operations[$id], $this->parameters($request, $operations[$id], $segments), ServedTarget::LOOKUP, TRUE);
   }
 
   /**
@@ -502,14 +557,56 @@ final class ServedPaths {
    *   on.
    */
   public function url(ResourceDefinition $definition, OperationDefinition $operation, array $parameters, bool $named, bool $schema = FALSE, array $options = []): GeneratedUrl {
+    return $this->path($definition, $operation, $parameters, $named ? $operation->id : NULL, $schema, $options);
+  }
+
+  /**
+   * Names the URL of the lookup at the path an operation is read at.
+   *
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   *   The resource.
+   * @param \Drupal\data_surface\ResourceBuild\OperationDefinition $operation
+   *   The operation `GET` serves at the path.
+   * @param array<string, scalar> $parameters
+   *   Its parameters by name.
+   * @param array $options
+   *   Options for the URL: its query, whether it is absolute.
+   *
+   * @return \Drupal\Core\GeneratedUrl
+   *   The URL, `.../{x}:lookup`, and what it depends on.
+   */
+  public function lookupUrl(ResourceDefinition $definition, OperationDefinition $operation, array $parameters, array $options = []): GeneratedUrl {
+    return $this->path($definition, $operation, $parameters, self::LOOKUP, FALSE, $options);
+  }
+
+  /**
+   * Builds a URL of the API, naming a custom method or none.
+   *
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   *   The resource.
+   * @param \Drupal\data_surface\ResourceBuild\OperationDefinition $operation
+   *   The operation.
+   * @param array<string, scalar> $parameters
+   *   Its parameters by name.
+   * @param string|null $method
+   *   The custom method after the last segment, or NULL for none.
+   * @param bool $schema
+   *   TRUE for the schema's URL.
+   * @param array $options
+   *   Options for the URL.
+   *
+   * @return \Drupal\Core\GeneratedUrl
+   *   The URL, its colons written as colons, and what it depends on.
+   */
+  protected function path(ResourceDefinition $definition, OperationDefinition $operation, array $parameters, ?string $method, bool $schema, array $options): GeneratedUrl {
     [$segments, $query] = $this->split($definition, $operation, $parameters);
     $route = ['resource' => $definition->id];
-    if ($named) {
+    if ($method !== NULL) {
       if ($segments === []) {
-        $route['resource'] .= ':' . $operation->id;
+        $route['resource'] .= ':' . $method;
       }
       else {
-        $segments[count($segments) - 1] .= ':' . $operation->id;
+        $segments[count($segments) - 1] .= ':' . $method;
       }
     }
     if ($schema) {
@@ -557,6 +654,33 @@ final class ServedPaths {
       }
     }
     $url = $this->url($definition, $operation, $parameters, $named, $schema);
+    return [strtr($url->getGeneratedUrl(), $markers), array_keys($parameters), $url];
+  }
+
+  /**
+   * Writes the template of the lookup's path, as OpenAPI names it.
+   *
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   *   The resource.
+   * @param \Drupal\data_surface\ResourceBuild\OperationDefinition $operation
+   *   The operation `GET` serves at the path.
+   *
+   * @return array{0: string, 1: string[], 2: \Drupal\Core\GeneratedUrl}
+   *   As template() answers, for `.../{x}:lookup`.
+   */
+  public function lookupTemplate(ResourceDefinition $definition, OperationDefinition $operation): array {
+    $markers = [];
+    $parameters = [];
+    if ($this->placement($definition, $operation) === self::ITEM) {
+      foreach (array_values($operation->parameters) as $delta => $parameter) {
+        if ($parameter->optional) {
+          break;
+        }
+        $markers['placeholder' . $delta] = '{' . $parameter->name . '}';
+        $parameters[$parameter->name] = 'placeholder' . $delta;
+      }
+    }
+    $url = $this->lookupUrl($definition, $operation, $parameters);
     return [strtr($url->getGeneratedUrl(), $markers), array_keys($parameters), $url];
   }
 

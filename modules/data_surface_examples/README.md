@@ -24,15 +24,19 @@ once by the owner and once by that submodule's alter
 entity type of the module's own, a venue, with a resource over it from
 the start: one venue added, edited and removed, the venues listed a
 page at a time and reordered in one write
-([below](#example-15-a-config-entity-of-your-own)).
+([below](#example-15-a-config-entity-of-your-own)). Example 16 is a key
+that refers to an entity, declared by the data type string of what it
+refers to, listed while the site has few and looked up past that, in a
+submodule that needs node
+([below](#example-16-references-three-ways)).
 
 ```bash
 drush pm:install data_surface_examples
 ```
 
 Then visit `/surface-examples` as an administrator. Every page asks for
-"administer site configuration", and example 15's for "administer event
-venues". Nothing else is needed: the venues and rooms are the three
+"administer site configuration", example 15's for "administer event
+venues", and example 16's for "set event sponsorship". Nothing else is needed: the venues and rooms are the three
 venues the module ships, example 15's config entities, and each example
 keeps its settings in a config object of its own
 (`data_surface_examples.registration_step1` to `_step3`, then
@@ -4161,6 +4165,178 @@ of code, counted without blank lines or comments:
 | [`modules/data_surface_examples/data_surface_examples.routing.yml`](data_surface_examples.routing.yml), entry `data_surface_examples.step15_remove` | the remove form: a confirmation, since a delete takes no values | 14 |
 | [`modules/data_surface_examples/src/Form/VenueFormCosmetics.php`](src/Form/VenueFormCosmetics.php) | what the three forms say once they wrote, and the page they go back to | 20 |
 
+## Example 16: references, three ways
+
+`/surface-examples/16`, once its module is on:
+
+```bash
+drush pm:install data_surface_examples_references
+```
+
+The module needs node: the sponsorship's announcement is an article. It
+ships the article and page bundles as optional config, for a site that
+has neither, a role, Sponsorship editor, and when it is installed it
+writes three nodes the calls name: an article, a draft article and a
+page. Uninstalled, it deletes them.
+
+A key that refers to an entity is declared by the data type string of
+what it refers to, and stores the entity's id, as the entity type keeps
+it: an integer for a node or a user, a string for a venue.
+
+<!-- code: ../data_surface_examples_references/src/Resource/SponsorshipResource.php -->
+
+```php
+#[Resource('event.sponsorship', storage: SponsorshipStorage::class)]
+#[Operation('configure',
+  label: new TranslatableMarkup('Configure the sponsorship'),
+  description: new TranslatableMarkup("Sets the sponsor's venue, contact and announcement, and what the sponsor is featured beside, linked to and credited on."),
+  permission: 'set event sponsorship',
+)]
+final class SponsorshipResource implements ResourceInterface {
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function defineInputs(BlueprintInterface $inputs): void {
+    $inputs->add('venue', 'entity:event_venue', t('Venue'), default: 'riverside')
+      ->setDescription(t("Where the sponsor's stand is."))
+      ->setRequired(TRUE);
+    $inputs->add('contact', 'entity:user', t('Contact'))
+      ->setDescription(t('Who answers for the sponsor.'));
+    $inputs->add('page', 'entity:node:article', t('Announcement'))
+      ->setDescription(t('The article that announces the sponsor.'));
+    // Of any type: an entity type, then an id of it.
+    $inputs->add('thing', 'entity', t('Featured beside'))
+      ->setDescription(t('Any content the sponsor is featured beside.'))
+      ->addConstraint('DataSurfaceReferenceableType', ['interface' => ContentEntityInterface::class]);
+    $inputs->add('setting', 'entity', t('Linked to'))
+      ->setDescription(t('A venue or a role the sponsorship is linked to.'))
+      ->addConstraint('DataSurfaceReferenceableType', [
+        'interface' => ConfigEntityInterface::class,
+        'targets' => ['event_venue' => [], 'user_role' => [], 'node' => []],
+      ]);
+    $inputs->add('credit', 'entity', t('Credited on'))
+      ->setDescription(t('An article or a user the sponsor is credited on.'))
+      ->addConstraint('DataSurfaceReferenceableType', [
+        'targets' => ['node' => ['article'], 'user' => []],
+      ]);
+  }
+
+}
+```
+
+| Key | Declared as | What it builds |
+| --- | --- | --- |
+| `venue` | `entity:event_venue` | a string, the venue's machine name, with `DataSurfaceValidReference` naming the entity type |
+| `contact` | `entity:user` | an integer, a user's id, with the same constraint |
+| `page` | `entity:node:article` | an integer, a node's id, the constraint naming the bundle too |
+| `thing` | `entity`, content entities | two keys attached at the key: `entity_type`, a choice of the content entity types the account may reference one of, and `id`, a string, which a refiner narrows to the entity type chosen with the same constraint |
+| `setting` | `entity`, config entities among three | the same two keys; of the three entity types it names, node is no config entity, so the venue and the role are offered |
+| `credit` | `entity`, an article or a user | the same two keys; the bundle list narrows a node's id to articles |
+
+Which entities a key may name is core's entity reference selection
+handler's answer for the account asking: the `default` handler for the
+entity type, the bundle as its target bundles, sorted by label. Its query
+carries the entity type's access tag, so a node's leaves out unpublished
+nodes for an account without "bypass node access", and a user's leaves
+out blocked users without "administer users". The list varies by what
+the handler read, `user.permissions` and, for a node, `user.node_grants:view`.
+
+While the site has at most 50 candidates, the setting
+`data_surface.settings:reference_enum_limit`, the key lists them: a
+select on the form, a `oneOf` with their labels in both documents, an
+enum in the tool listing. Past it, the key is an id: core's
+`entity_autocomplete` element on the form, `x-surface.widget:
+autocomplete` and the constraint under `checkedOnServer` in both
+documents, and a sentence in the tool listing naming where to look one
+up: the resource's lookup, `GET
+/surface-api/event.sponsorship:lookup?key=/contact&q=adm`, which answers
+ids and labels through the same handler, for the same account. Both
+documents mark every reference key `x-surface.reference`, `{"entityType":
+"node", "bundles": ["article"]}`, or for a bare key's id `{"by":
+"entity_type"}`. The page shows the keys as the full schema states them
+now, and again with the limit held at 1 for its own request, as
+`ddev drush config:set data_surface.settings reference_enum_limit 1`
+would set it, without saving it.
+
+### The calls
+
+Made on the settings the module ships and the three nodes it wrote, each
+a dry run. The draft is sent as an account whose only role is
+Sponsorship editor, which may not see unpublished content; Drush names
+that account by its id, which the site chose when it made it.
+
+```bash
+drush tool:run data_surface:event.sponsorship:configure --uid=1 --input='{"values":{"venue":"library","contact":1,"page":1,"thing":{"entity_type":"node","id":1}}}' --input=dry_run=true
+```
+
+```
+1. A venue, a contact, an article and a node of any content type: accepted
+Success: Dry run of Configure the sponsorship: the values were accepted and prepared, and nothing was written.
+  values: {"venue":"library","contact":1,"page":1,"thing":{"entity_type":"node","id":"1"},"setting":{"entity_type":null},"credit":{"entity_type":null}}
+```
+
+```bash
+drush tool:run data_surface:event.sponsorship:configure --uid=1 --input='{"values":{"page":3}}' --input=dry_run=true
+```
+
+```
+2. A page where an article is asked for: refused
+Failed: The values were refused:
+/page: This entity (node: 3) cannot be referenced.
+```
+
+```bash
+# UID: an account whose only role, beside authenticated, is event_sponsorship_editor.
+drush tool:run data_surface:event.sponsorship:configure --uid="$UID" --input='{"values":{"page":2}}' --input=dry_run=true
+```
+
+```
+3. The draft article, as an account that may not see unpublished content: refused
+Failed: The values were refused:
+/page: This entity (node: 2) cannot be referenced.
+```
+
+```bash
+drush tool:run data_surface:event.sponsorship:configure --uid=1 --input='{"values":{"setting":{"entity_type":"node","id":1}}}' --input=dry_run=true
+```
+
+```
+4. A node where a config entity is asked for: refused
+Failed: The values were refused:
+/setting/id: ID does not apply.
+/setting/entity_type: The entity type node cannot be referenced here.
+```
+
+### Files
+
+What example 16 is made of, as its page lists them, each with its lines
+of code, counted without blank lines or comments:
+
+<!-- files: 16 -->
+
+| File | What it is | Lines |
+| --- | --- | --- |
+| [`modules/data_surface_examples_references/data_surface_examples_references.info.yml`](../data_surface_examples_references/data_surface_examples_references.info.yml) | the module: a second one, which needs node for the article the announcement is | 11 |
+| [`modules/data_surface_examples_references/src/Resource/SponsorshipResource.php`](../data_surface_examples_references/src/Resource/SponsorshipResource.php) | the resource: three keys declared by the data type string of what they refer to, and three of any entity type, each filtered | 31 |
+| [`modules/data_surface_examples_references/src/Storage/SponsorshipStorage.php`](../data_surface_examples_references/src/Storage/SponsorshipStorage.php) | the storage: names the config object | 3 |
+| [`modules/data_surface_examples_references/data_surface_examples_references.routing.yml`](../data_surface_examples_references/data_surface_examples_references.routing.yml), entry `data_surface_examples.step16` | the route: the generic operation form, with the examples' panels | 10 |
+| [`modules/data_surface_examples_references/data_surface_examples_references.permissions.yml`](../data_surface_examples_references/data_surface_examples_references.permissions.yml) | its permission, to set the sponsorship | 3 |
+| [`modules/data_surface_examples_references/config/schema/data_surface_examples_references.schema.yml`](../data_surface_examples_references/config/schema/data_surface_examples_references.schema.yml), entry `data_surface_examples_references.sponsorship` | the config schema, generated from the class: each id an integer or a string, as its entity type keeps it | 53 |
+| [`modules/data_surface_examples_references/config/install/data_surface_examples_references.sponsorship.yml`](../data_surface_examples_references/config/install/data_surface_examples_references.sponsorship.yml) | the settings the module ships with | 12 |
+| [`modules/data_surface_examples_references/config/install/user.role.event_sponsorship_editor.yml`](../data_surface_examples_references/config/install/user.role.event_sponsorship_editor.yml) | the role of the account that may not see a draft, which one call is made as | 13 |
+| [`modules/data_surface_examples_references/config/optional/node.type.article.yml`](../data_surface_examples_references/config/optional/node.type.article.yml) | the article bundle, for a site that has none | 10 |
+| [`modules/data_surface_examples_references/config/optional/node.type.page.yml`](../data_surface_examples_references/config/optional/node.type.page.yml) | the page bundle, which the announcement refuses | 10 |
+| [`modules/data_surface_examples_references/src/Hook/SponsorshipHooks.php`](../data_surface_examples_references/src/Hook/SponsorshipHooks.php) | writes the three nodes the calls name once the module is installed | 11 |
+| [`modules/data_surface_examples_references/data_surface_examples_references.install`](../data_surface_examples_references/data_surface_examples_references.install) | deletes them when it is uninstalled | 3 |
+| [`modules/data_surface_examples_references/src/Sponsorship.php`](../data_surface_examples_references/src/Sponsorship.php) | the three nodes: an article, a draft article and a page, their ids kept in State | 40 |
+| [`src/Reference/References.php`](../../src/Reference/References.php) | what a reference key is: its definition, core's selection handler for its candidates, the limit and the lookup; the main module's | 182 |
+| [`src/Reference/EntityReferenceStructure.php`](../../src/Reference/EntityReferenceStructure.php) | the two parts of a bare entity key, and the refiner that narrows its id to the entity type chosen; the main module's | 46 |
+| [`src/Plugin/Validation/Constraint/ValidReferenceConstraint.php`](../../src/Plugin/Validation/Constraint/ValidReferenceConstraint.php) | the id's constraint, core's ValidReference for a key that holds one id; the main module's | 20 |
+| [`src/Plugin/Validation/Constraint/ReferenceableTypeConstraint.php`](../../src/Plugin/Validation/Constraint/ReferenceableTypeConstraint.php) | the entity type's constraint, which the filters are options of; the main module's | 17 |
+| [`src/Plugin/DataSurfaceOptionsResolver/ReferenceOptions.php`](../../src/Plugin/DataSurfaceOptionsResolver/ReferenceOptions.php) | the resolver that lists the candidates up to the limit; the main module's | 39 |
+| [`src/Plugin/DataSurfaceWidget/AutocompleteWidget.php`](../../src/Plugin/DataSurfaceWidget/AutocompleteWidget.php) | core's entity autocomplete, for a key past the limit; the main module's | 59 |
+
 ## How this page is kept true
 
 Every code block above is the file it names, from its first attribute
@@ -4169,7 +4345,7 @@ when one drifts, and so does the component example 12 quotes. Each
 example's Files table is its list in `Series`, the one its page and the
 landing page's reading order are drawn from, and `ExampleFilesTest`
 fails when a table and the list differ, or the list and the module. The Drush
-commands and answers of examples 7 to 15 are asserted by
+commands and answers of examples 7 to 16 are asserted by
 `ExamplesConceptsToolTest`, and example 15's config schema entry is the
 schema file's, which `ExamplesReadmeTest` checks. The JSON of example 1's config schema is asserted by
 `ConfigSchemaContractTest`, which also checks this page quotes it. The tool's three answers are asserted by
@@ -4196,9 +4372,11 @@ Drush commands are checked against `ExampleCalls`.
 | `Kernel\ExamplesResetTest` | Reset to defaults puts every example, and what another module stored on example 3, back to the shipped files, puts example 15's venues back as shipped, a venue removed made again and one added removed, and opens every room example 4 closed. |
 | `Kernel\ExamplesConceptsTest` | Examples 7 to 12 and 14: each form builds and saves; example 7's rules in the full schema as declared, the send day gone for a monthly bulletin and kept in storage; example 8's one def at two sites with each wiring, the mixed-in keys flat, the shape at two keys, the volunteers' collection; example 9's keys from the configuration, a type added without a cache rebuild, the locked type in both documents and on the form; example 10's fees for two accounts, locked once published, and both operations' facts and tools; example 11's widgets, the always held badges and the notes that clear; example 12's four components read as four variants at the props and again at the slots, the card's props as keys with their constraints, its text a slot, both documents stating them, the form swapped to the hero and saved with its slot, a hero too dark refused; the panel above each, and none above examples 1 to 3; each class stays screen sized; example 13's page with its modules off, saying how to enable both, then with the block alone on, its parts and no call, then with the placement resource on too, the Spotlight and Tonight blocks placed through the add operation, the three lines side by side, the block's contract cut to the four components, the hero's actions narrowed, the four placement tools and the five calls' answers, nothing written.; example 14's panel with its module off, then on: how to enable it, the one source and then two in the contract excerpt, the webhook's rule, the gap, the lock not shipped, and the calls each state allows. |
 | `Kernel\ExamplesWorkflowTest` | Example 10 with the workflow module: the fees left out of the full schema, the tool listing and the read tool for an account without "see event fees" and kept for one with it; the program locked whole once the workflow state is published, settled at call time and left unmarked in the full schema; checking still answers; the panel's paragraph, with the module and without it. |
-| `Kernel\ExamplesConceptsToolTest` | Examples 7 to 15: every call `ConceptCalls` writes down, its answer, nothing left written, the two blocks and the venues included, and this page quoting each command and answer. |
+| `Kernel\ExamplesConceptsToolTest` | Examples 7 to 16: every call `ConceptCalls` writes down, its answer, nothing left written, the two blocks and the venues included, and this page quoting each command and answer. |
 | `Kernel\VenueResourceTest` | Example 15: the entity type installs with its three venues and holds to its generated schema; the resource builds for each operation; both documents of add, edit, list and reorder; the listing's outputs schema; the tools, the listing paged and filtered and an account that only views left without the disabled venue; the reorder written in one commit, and refused for an unknown venue and one named twice; example 2 offering a venue added, with no cache rebuild. |
 | `Functional\VenueApiTest` | Example 15 over HTTP and through its forms: `GET` on the collection answering the listing, a refused query, `POST` 201 with `Location`, the venue's `PATCH` and `DELETE`, the reorder's `PATCH` and its 405 for `POST`; the add and edit forms saving, the remove form's confirmation removing; the page and its calls. |
+| `Kernel\ReferenceKeysTest` | Example 16: the three spellings and what each builds; both documents of the sponsorship pinned whole under the limit and past it, under `tests/fixtures/references/`; the candidates the account's, cached by what they read; the refusals, in one message; the lookup and what it leaves out; the tool listing's enum and the sentence naming the lookup; the OpenAPI document's lookup; the page's panel. |
+| `Functional\ReferenceKeysFormTest` | Example 16 without JavaScript: a select up to the limit, core's entity autocomplete past it, the id saved either way and refused in the constraint's words; the lookup answering, refusing an account without the permission and leaving the draft out for one that may not see it; the React page told where the lookup is, and the full schema stating a bare key's id per entity type. |
 | `Functional\ExamplesConceptsRoutesTest` | Every route of examples 7 to 12 and 14 answers an administrator and refuses anonymous; the landing page lists them; each page shows its panel and its Files panel and saves through its form; example 10's check writes nothing. Example 13 refuses anonymous, says to enable its two modules, then, with them on, shows its parts and the calls' answers, and draws the Spotlight card and the Tonight section below on its page alone; its Files panel, the modules on or off. |
 | `Kernel\ExamplesExtensionTest` | Example 14 with the module that manages keys off, then on: both resources' full schemas, whole; the one source stated as `const` and drawn fixed, then two; the second source and the managed key there with no cache rebuild, in the documents and the tool; a pasted key kept across a switch to the managed key and back, and the config schema each source's stored value holds to; the read tool leaving the pasted key out and naming the managed key; the refusals, a pasted key sent while the managed source is chosen, a pasted key beside a managed key on the webhook, a key the site does not manage; the webhook's pasted key back with its value once the module is off; and this page quoting the documents, the gap and the lock it does not ship. |
 | `Functional\ExamplesExtensionFormTest` | Example 14 through its forms without JavaScript: the one source drawn as its label and no select, then a select of two; the mailer's pasted key saved, the managed key chosen and the pasted source chosen back with nothing typed, the key kept; the webhook's pasted box gone once a managed key is saved, and back when the module is off. |

@@ -55,7 +55,19 @@ export type Widget =
   | 'fieldset'
   | 'variants'
   | 'list'
-  | 'fixed';
+  | 'fixed'
+  | 'autocomplete';
+
+/**
+ * What a key that refers to an entity refers to (`x-surface.reference`):
+ * one entity type, and the bundles it is narrowed to; or, for a bare
+ * reference's id, the sibling whose value is its entity type.
+ */
+export interface Reference {
+  entityType?: string;
+  bundles?: string[];
+  by?: string;
+}
 
 export interface EmptyOption {
   show: boolean;
@@ -104,6 +116,8 @@ export interface Extension {
   checkedOnServer?: { constraint: string; message: string }[];
   /** A Regex's own message: how a person is told what `pattern` allows. */
   patternMessage?: string;
+  /** On a key that refers to an entity: what it refers to. Its value is the id. */
+  reference?: Reference;
   /** On an object that only groups each module's fieldset: draw nothing around them. */
   group?: boolean;
   /** On a module's fieldset inside a group: draw it right after this sibling of the group instead. */

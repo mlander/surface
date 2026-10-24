@@ -46,10 +46,13 @@ secret, or a key the site manages once a module that manages keys is
 on, built once by the owner and once by another module's alter. Example
 15 is a config entity type of the module's own, a venue, with a resource
 over it from the start: one venue added, edited and removed, the venues
-listed a page at a time and reordered in one write.
+listed a page at a time and reordered in one write. Example 16 is a key
+that refers to an entity, declared by the data type string of what it
+refers to, listed while the site has few and looked up past that, in a
+submodule that needs node.
 
 Read in this order: [Your first resource](first-resource.md), then the
-examples 1 to 15 in order, with [Concepts](concepts.md) as the map. The
+examples 1 to 16 in order, with [Concepts](concepts.md) as the map. The
 examples index, `/surface-examples`, lists each example's concept, docs
 page, decision and files, and each example's page lists its files.
 
@@ -214,7 +217,7 @@ The pages fall in the same groups as the README's documentation table.
 The module ships no resources of its own on a production site. It
 provides the model, the pipeline, the two plugin types and the host
 adoption layer; resources and structures come from the modules that
-declare them. Seventeen experimental submodules demonstrate the model and
+declare them. Eighteen experimental submodules demonstrate the model and
 double as the fixtures the tests run against: see
 [Installation](installation.md).
 

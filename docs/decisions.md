@@ -4313,6 +4313,104 @@ than an offset; a `sort` input. (`Operation::$values`,
 `DataSurfaceOptions::isStatedByList()`, `VenueResource`, `VenueStorage`,
 `VenueAccess`, `EventVenue`, `VenueResourceTest`, `VenueApiTest`)
 
+### A reference is an id with a list the site decides, listed or looked up
+
+Decided 2026-10-23, with example 16, the sponsorship
+(`event.sponsorship`): a key that refers to an entity.
+
+- **One spelling, the data type string.** `add('venue',
+  'entity:event_venue', ...)`, `add('contact', 'entity:user', ...)`,
+  `add('page', 'entity:node:article', ...)` and the bare `add('thing',
+  'entity', ...)`: typed data's own names for an entity, an entity of a
+  type and one of a bundle, so an author writes what core already calls
+  it. Why not a verb of its own, `reference()`: the type string says the
+  type and the bundle in the place a type is said, and `add()` returns
+  the definition the rest is written on, as for any key.
+- **The value is the id.** The key holds the entity's id as the entity
+  type keeps it, an integer where a content entity type's id field is
+  one and a string for a config entity, never the entity object: what is
+  stored, sent and answered is the id, at every door. The tool door
+  keeps the bridge's own representation, which already sends an
+  operation's entity parameter as its id (`OperationInputs::parameterInput()`):
+  the Tool API's `EntityInputDefinition` would hand the pipeline a
+  loaded entity, and nothing in `values` is typed that way, so a
+  reference in `values` is the id there too. The read tool answers the
+  id and no label beside it: its answer is the write's values, and a
+  label is no key of the resource; both documents label each listed id
+  in their `oneOf`, and the lookup answers labels for the rest. A uuid
+  representation stays open.
+- **The bare `entity` is two keys, narrowed by a refiner.** An entity
+  type, then an id, attached at the key: `entity_type`, a choice of the
+  entity types the account may reference one of, and `id`, a string,
+  which a static refiner narrows to the entity type chosen with the
+  constraint `entity:<type>` builds. So one mechanism serves all three
+  spellings, and since the refiner is static the full schema states the
+  id once per entity type as a conditional, which a client narrows from
+  with no round trip. The parts are registered per key
+  (`ResourceRegistry::defineReference()`), as a structure read from a
+  schema is, because what the author narrowed the key by is the key's:
+  `DataSurfaceReferenceableType` written on the key (`interface`,
+  `targets`) is moved onto `entity_type` when the parts are built. A
+  parent cannot name a key inside its child; this is the build writing
+  the child from what the parent declared, not the parent reaching in.
+- **The selection plugin for candidates and access.** Core's entity
+  reference selection handler, `default:<type>` with the bundles as its
+  `target_bundles` and the label as its `sort`, answers the options, the
+  lookup and the check, for the account asking: one answer in three
+  places, and the access filtering is the handler's query's own (a
+  node's unpublished nodes, a user's blocked users, node grants). The
+  check is core's `ValidReference` for a key that holds one id
+  (`DataSurfaceValidReference`, its subclass): core's validator reads
+  the handler off a field's item list, and a key has no field. One
+  message for every refusal, core's "This entity (%type: %id) cannot be
+  referenced.", so a refusal never says whether an entity the account
+  cannot see exists. Rejected: a `Choice` filled at build, which needs
+  services in a static class and cannot say "any id the handler
+  accepts" past the limit.
+- **The threshold, `data_surface.settings:reference_enum_limit`.** Up to
+  it (50 as shipped) the key lists its candidates: a select, a `oneOf`
+  with labels in both documents, an enum in the tool listing, narrowed
+  by a client locally. Past it the key is an id: core's
+  `entity_autocomplete` on the form, `x-surface.widget: autocomplete`
+  and the constraint under `checkedOnServer` in both documents, and a
+  sentence in the tool listing naming the lookup. Why a setting and not
+  the enumeration cap: the cap counts conditionals a document can
+  afford; the limit counts what a person scans and what a tool listing
+  should carry, which a site decides. Field references
+  (`ReferenceableOptions`) read the same limit, where they read the cap.
+  The list's cacheability carries the settings' tag; an answer past the
+  limit carries nothing and is the wider one, so a cached document is
+  never stricter than the site.
+- **The lookup is a custom read.** `GET
+  /surface-api/{resource}[/{id}]:lookup?key=/venue&q=riv`, every
+  resource path's, answered for the operation `GET` serves there, gated
+  as it is, through the same handler, ids and labels. Why a custom
+  method and not an operation each resource declares: it is the same for
+  every resource and needs nothing of one; a resource that declares an
+  operation named `lookup` keeps it. The tool listing names it in the
+  key's description, since an agent reads the listing first ("Too many to
+  list (more than 50): send the id of one; GET ...:lookup?key=/contact&q={text}
+  looks one up by its label."); the React app's autocomplete calls it.
+- **A marker on the wire.** `x-surface.reference: {entityType,
+  bundles?}` on every reference key in both documents, listed or not, and
+  `{by: "entity_type"}` on a bare key's id: the reference keyword the
+  Portable Schema notes argued for, as an `x-surface` keyword, so a
+  client that does not read it reads an id of the key's type.
+
+*Open:* a uuid representation; a multi-value reference, a list of
+references (`addList()` of an entity type); the entity side's two
+shapes, a reference field's `target_id` item (`DataSurfaceReferenceable`,
+no marker) beside a reference key; a lookup tool for an agent with no
+HTTP; a custom method's own lookup; a stored id the account may no
+longer reference, which core's field validator keeps and this refuses.
+(`References`, `EntityReferenceStructure`, `ValidReferenceConstraint`,
+`ReferenceableTypeConstraint`, `ReferenceOptions`,
+`ReferenceableTypeOptions`, `AutocompleteWidget`,
+`ResourceRegistry::defineReference()`, `ServedPaths::LOOKUP`,
+`ResourceApiController::lookup()`, `InputDefinitions::withLookups()`,
+`OpenApiDocument::lookup()`, `SponsorshipResource`, `ReferenceKeysTest`,
+`ReferenceKeysFormTest`)
+
 ## Examples
 
 ### What the examples are made of

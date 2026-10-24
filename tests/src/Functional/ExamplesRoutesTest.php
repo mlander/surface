@@ -191,7 +191,9 @@ class ExamplesRoutesTest extends BrowserTestBase {
         Series::url($example['docs'], Series::BRANCH),
         Series::url('docs/decisions.md#' . $example['decision'], Series::BRANCH),
       ];
-      if ($example['routes'] !== []) {
+      // An example whose module is off, as example 16's is here, names
+      // no page to link.
+      if ($example['routes'] !== [] && $this->container->get('router.route_provider')->getRoutesByNames([$example['routes'][0]]) !== []) {
         array_unshift($expected, Url::fromRoute($example['routes'][0])->toString());
       }
       $this->assertSame($expected, $links, sprintf('Example %d', $number));

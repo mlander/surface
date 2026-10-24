@@ -19,6 +19,7 @@ use Drupal\data_surface\Resource\Attribute\Structure;
 use Drupal\data_surface\Resource\Attribute\Variant;
 use Drupal\data_surface\Resource\DerivedOperation;
 use Drupal\data_surface\Resource\OperationContext;
+use Drupal\data_surface\Reference\EntityReferenceStructure;
 use Drupal\data_surface\Resource\ResourceCallable;
 use Drupal\data_surface\Resource\DefinesOutputsInterface;
 use Drupal\data_surface\Resource\AltersAccessInterface;
@@ -599,6 +600,48 @@ final class ResourceRegistry {
       access: NULL,
       refiners: [],
       inputs: $inputs,
+      kind: ResourceDefinition::STRUCTURE,
+      readAs: $name,
+    );
+    return $name;
+  }
+
+  /**
+   * Registers the two parts of a bare `entity` key, for one key's filter.
+   *
+   * Like a structure read from a schema, listed by nothing and built by
+   * name: its inputs EntityReferenceStructure::fill() with the filter, its
+   * refiner EntityReferenceStructure::id().
+   *
+   * Decision: see
+   * docs/decisions.md#a-reference-is-an-id-with-a-list-the-site-decides-listed-or-looked-up.
+   *
+   * @param string $id
+   *   Its id: the owner's, then the key.
+   * @param string $module
+   *   The owner's module.
+   * @param array{interface: string|null, targets: array<string, string[]>, required: bool} $filter
+   *   What the key's author narrowed it by, as
+   *   EntityReferenceStructure::filter() reads it.
+   *
+   * @return string
+   *   The name it is attached and built by.
+   */
+  public function defineReference(string $id, string $module, array $filter): string {
+    $name = 'reference:' . $id . ':' . hash('xxh128', serialize($filter));
+    $this->read[$name] ??= new ResourceDefinition(
+      class: NULL,
+      id: $id,
+      module: $module,
+      identity: [],
+      storage: NULL,
+      access: NULL,
+      refiners: self::refinersOf(new \ReflectionClass(EntityReferenceStructure::class)),
+      inputs: new ResourceCallable(EntityReferenceStructure::class, 'fill', [
+        $filter['interface'],
+        $filter['targets'],
+        $filter['required'],
+      ]),
       kind: ResourceDefinition::STRUCTURE,
       readAs: $name,
     );

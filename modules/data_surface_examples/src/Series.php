@@ -86,6 +86,11 @@ final class Series {
   public const KEYS = 'modules/data_surface_examples_keys/';
 
   /**
+   * Example 16's module, which needs node for the article it refers to.
+   */
+  public const REFERENCES = 'modules/data_surface_examples_references/';
+
+  /**
    * Lists the examples, in the order they are read.
    *
    * @return array<int, array{title: \Stringable, concept: \Stringable, docs: string, decision: string, routes: string[], files: array<string, \Stringable>, from?: int}>
@@ -375,6 +380,34 @@ final class Series {
           self::ROUTES . 'data_surface_examples.step15_edit' => t('the edit form, its {id} the venue'),
           self::ROUTES . 'data_surface_examples.step15_remove' => t('the remove form: a confirmation, since a delete takes no values'),
           self::MODULE . 'src/Form/VenueFormCosmetics.php' => t('what the three forms say once they wrote, and the page they go back to'),
+        ],
+      ],
+      16 => [
+        'title' => t('references, three ways'),
+        'concept' => t('a key that refers to an entity: listed while the site has few, looked up past the limit, and of any entity type'),
+        'docs' => 'docs/options.md#a-key-that-refers-to-an-entity',
+        'decision' => 'a-reference-is-an-id-with-a-list-the-site-decides-listed-or-looked-up',
+        'routes' => ['data_surface_examples.step16'],
+        'files' => [
+          self::REFERENCES . 'data_surface_examples_references.info.yml' => t('the module: a second one, which needs node for the article the announcement is'),
+          self::REFERENCES . 'src/Resource/SponsorshipResource.php' => t('the resource: three keys declared by the data type string of what they refer to, and three of any entity type, each filtered'),
+          self::REFERENCES . 'src/Storage/SponsorshipStorage.php' => t('the storage: names the config object'),
+          self::REFERENCES . 'data_surface_examples_references.routing.yml#data_surface_examples.step16' => t("the route: the generic operation form, with the examples' panels"),
+          self::REFERENCES . 'data_surface_examples_references.permissions.yml' => t('its permission, to set the sponsorship'),
+          self::REFERENCES . 'config/schema/data_surface_examples_references.schema.yml#data_surface_examples_references.sponsorship' => t('the config schema, generated from the class: each id an integer or a string, as its entity type keeps it'),
+          self::REFERENCES . 'config/install/data_surface_examples_references.sponsorship.yml' => t('the settings the module ships with'),
+          self::REFERENCES . 'config/install/user.role.event_sponsorship_editor.yml' => t('the role of the account that may not see a draft, which one call is made as'),
+          self::REFERENCES . 'config/optional/node.type.article.yml' => t('the article bundle, for a site that has none'),
+          self::REFERENCES . 'config/optional/node.type.page.yml' => t('the page bundle, which the announcement refuses'),
+          self::REFERENCES . 'src/Hook/SponsorshipHooks.php' => t('writes the three nodes the calls name once the module is installed'),
+          self::REFERENCES . 'data_surface_examples_references.install' => t('deletes them when it is uninstalled'),
+          self::REFERENCES . 'src/Sponsorship.php' => t('the three nodes: an article, a draft article and a page, their ids kept in State'),
+          'src/Reference/References.php' => t("what a reference key is: its definition, core's selection handler for its candidates, the limit and the lookup; the main module's"),
+          'src/Reference/EntityReferenceStructure.php' => t("the two parts of a bare entity key, and the refiner that narrows its id to the entity type chosen; the main module's"),
+          'src/Plugin/Validation/Constraint/ValidReferenceConstraint.php' => t("the id's constraint, core's ValidReference for a key that holds one id; the main module's"),
+          'src/Plugin/Validation/Constraint/ReferenceableTypeConstraint.php' => t("the entity type's constraint, which the filters are options of; the main module's"),
+          'src/Plugin/DataSurfaceOptionsResolver/ReferenceOptions.php' => t("the resolver that lists the candidates up to the limit; the main module's"),
+          'src/Plugin/DataSurfaceWidget/AutocompleteWidget.php' => t("core's entity autocomplete, for a key past the limit; the main module's"),
         ],
       ],
     ];

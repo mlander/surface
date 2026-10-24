@@ -19,6 +19,7 @@ use Drupal\data_surface\DataSurface;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\DefinitionMap;
 use Drupal\data_surface\DefinitionMetadata;
+use Drupal\data_surface\Plugin\DataSurfaceWidget\AutocompleteWidget;
 use Drupal\data_surface\Plugin\DataSurfaceWidget\CheckboxesWidget;
 use Drupal\data_surface\Plugin\Validation\Constraint\JsonSchemaConstraint;
 use Drupal\data_surface\Plugin\DataSurfaceWidget\OptionsWidget;
@@ -28,6 +29,8 @@ use Drupal\data_surface\Form\DataSurfaceFormBuilderInterface;
 use Drupal\data_surface\Options\DataSurfaceOptions;
 use Drupal\data_surface\Options\OptionSet;
 use Drupal\data_surface\Pipeline\ValueState;
+use Drupal\data_surface\Reference\EntityReferenceStructure;
+use Drupal\data_surface\Reference\References;
 use Drupal\data_surface\Resource\Arrangement;
 use Drupal\data_surface\Refinement\DeclaredRefiner;
 use Drupal\data_surface\Refinement\DoesNotApply;
@@ -3219,7 +3222,22 @@ final class ContractEmitter {
       $schema += $type + $this->keywords($definition, $type['type'] ?? NULL);
       $radios = $listed && RadiosWidget::drawsOne($definition);
       $fixed = $listed && OptionsWidget::drawsFixed($definition, $set, $value);
-      $extension = $this->extension($fixed ? 'fixed' : ($listed ? ($radios ? 'radios' : 'select') : $this->widget($definition)), $locked, $depends, $refined);
+      // A reference with too many candidates to list is looked up.
+      // Decision: see
+      // docs/decisions.md#a-reference-is-an-id-with-a-list-the-site-decides-listed-or-looked-up.
+      $widget = match (TRUE) {
+        $fixed => 'fixed',
+        $listed => $radios ? 'radios' : 'select',
+        // A bare reference's id is drawn once its entity type is chosen:
+        // listed, or looked up.
+        AutocompleteWidget::draws($definition), $definition->getSetting(EntityReferenceStructure::TARGETS) !== NULL => 'autocomplete',
+        default => $this->widget($definition),
+      };
+      $extension = $this->extension($widget, $locked, $depends, $refined);
+      $reference = static::referenceMarker($definition);
+      if ($reference !== NULL) {
+        $extension['reference'] = $reference;
+      }
       if ($fixed) {
         // A deciding key whose variants offer one value: that value, and
         // the label it is offered as, which the form draws fixed.
@@ -3461,6 +3479,32 @@ final class ContractEmitter {
       'refined' => $refined,
       'stale' => FALSE,
     ];
+  }
+
+  /**
+   * Says what a key that refers to an entity refers to.
+   *
+   * `{entityType, bundles?}` for a key that names one entity type, as
+   * `entity:<type>[:<bundle>]` builds it and a bare `entity` key's id is
+   * once its entity type is chosen; `{by: "entity_type"}` for that id
+   * before it is, its entity type its sibling's value. The id is the value
+   * either way.
+   *
+   * Decision: see
+   * docs/decisions.md#a-reference-is-an-id-with-a-list-the-site-decides-listed-or-looked-up.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The key.
+   *
+   * @return array|null
+   *   The marker, or NULL for a key that refers to nothing.
+   */
+  protected static function referenceMarker(DataDefinitionInterface $definition): ?array {
+    $target = References::target($definition);
+    if ($target !== NULL) {
+      return $target['bundles'] === [] ? ['entityType' => $target['entityType']] : $target;
+    }
+    return $definition->getSetting(EntityReferenceStructure::TARGETS) !== NULL ? ['by' => 'entity_type'] : NULL;
   }
 
   /**

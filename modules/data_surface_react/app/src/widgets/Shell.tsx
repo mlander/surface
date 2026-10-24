@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { createContext, type ReactNode } from 'react';
 import type { Schema, Values } from '../contract';
 import { fieldId } from '../contract';
 
@@ -21,6 +21,15 @@ export interface FieldProps {
   /** Set when an enclosing fieldset is locked. */
   disabled?: boolean;
 }
+
+/**
+ * Looks candidates of a reference key up, by the key's dotted path and
+ * the text their labels contain; for a bare reference's id, of the entity
+ * type its sibling holds. Null where no page provides one.
+ */
+export type Lookup = (path: string, text: string, type?: string) => Promise<{ id: string | number; label: string }[]>;
+
+export const LookupContext = createContext<Lookup | null>(null);
 
 /** The note a locked element carries, as the form builder appends it. */
 export const LOCKED_NOTE = 'Fixed for this operation.';

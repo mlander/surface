@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Drupal\data_surface_examples;
 
 /**
- * The tool calls examples 7 to 15 show, written down once.
+ * The tool calls examples 7 to 16 show, written down once.
  *
  * None leaves anything written: every call is a dry run, which accepts,
  * validates and prepares the values, answers with what would be stored
@@ -45,6 +45,33 @@ final class ConceptCalls {
   public const DEFAULT_THEME = '@default_theme';
 
   /**
+   * Example 16: a value that stands for one of its nodes, by name.
+   *
+   * `@node:article`, `@node:draft` or `@node:page`: the id the references
+   * module wrote it under when it was installed, read from State
+   * (NODES) when the call is made.
+   */
+  public const NODE = '@node:';
+
+  /**
+   * Example 16: the State key its nodes' ids are kept under, by name.
+   *
+   * \Drupal\data_surface_examples_references\Sponsorship::NODES, spelled
+   * here so this class needs nothing of a module that may be off.
+   */
+  public const NODES = 'data_surface_examples_references.nodes';
+
+  /**
+   * Example 16: the module its resource is in.
+   */
+  public const REFERENCES = 'data_surface_examples_references';
+
+  /**
+   * Example 16: the role of the account a call is made as, when it says.
+   */
+  public const EDITOR = 'event_sponsorship_editor';
+
+  /**
    * The calls, by resource id and then by name.
    *
    * Each says what it shows, the operation it calls (configure unless it
@@ -52,8 +79,10 @@ final class ConceptCalls {
    * sends (none for a delete), and whether it is a dry run (unless it
    * says). A call that shows another module's part names the module, made
    * only where it is enabled, and the State it is made in, set for the
-   * call and put back after it. A value DEFAULT_THEME is the site's
-   * default theme when the call is made (values()).
+   * call and put back after it. A call that says an account is made as an
+   * account whose only role, beside authenticated, is that one. A value
+   * DEFAULT_THEME is the site's default theme when the call is made, and
+   * a value NODE and a name one of example 16's nodes (values()).
    */
   public const CALLS = [
     'event.bulletin' => [
@@ -257,6 +286,34 @@ final class ConceptCalls {
         'dry_run' => FALSE,
       ],
     ],
+    'event.sponsorship' => [
+      'valid' => [
+        'label' => 'A venue, a contact, an article and a node of any content type: accepted',
+        'module' => self::REFERENCES,
+        'values' => [
+          'venue' => 'library',
+          'contact' => 1,
+          'page' => self::NODE . 'article',
+          'thing' => ['entity_type' => 'node', 'id' => self::NODE . 'article'],
+        ],
+      ],
+      'wrong_bundle' => [
+        'label' => 'A page where an article is asked for: refused',
+        'module' => self::REFERENCES,
+        'values' => ['page' => self::NODE . 'page'],
+      ],
+      'not_referenceable' => [
+        'label' => 'The draft article, as an account that may not see unpublished content: refused',
+        'module' => self::REFERENCES,
+        'account' => self::EDITOR,
+        'values' => ['page' => self::NODE . 'draft'],
+      ],
+      'not_config' => [
+        'label' => 'A node where a config entity is asked for: refused',
+        'module' => self::REFERENCES,
+        'values' => ['setting' => ['entity_type' => 'node', 'id' => self::NODE . 'article']],
+      ],
+    ],
     'block.placement' => [
       'place' => [
         'label' => 'The Spotlight block placed through add, made again: refused for the machine name it took',
@@ -379,7 +436,7 @@ final class ConceptCalls {
    *   The modules enabled, to leave out a call whose module is not; NULL
    *   for every call.
    *
-   * @return array<string, array{label: string, operation?: string, parameters?: array<string, string>, values?: array, dry_run?: bool, module?: string, state?: array<string, mixed>}>
+   * @return array<string, array{label: string, operation?: string, parameters?: array<string, string>, values?: array, dry_run?: bool, module?: string, state?: array<string, mixed>, account?: string}>
    *   Its calls, by name; none for a resource with no calls.
    */
   public static function of(string $resource, ?array $modules = NULL): array {
@@ -406,6 +463,9 @@ final class ConceptCalls {
     array_walk_recursive($values, static function (mixed &$value): void {
       if ($value === self::DEFAULT_THEME) {
         $value = (string) \Drupal::config('system.theme')->get('default');
+      }
+      elseif (is_string($value) && str_starts_with($value, self::NODE)) {
+        $value = (int) (\Drupal::state()->get(self::NODES, [])[substr($value, strlen(self::NODE))] ?? 0);
       }
     });
     return $values;
@@ -449,9 +509,13 @@ final class ConceptCalls {
     $values = self::values($resource, $call);
     $sent = (self::CALLS[$resource][$call]['parameters'] ?? []) + ($values === NULL ? [] : ['values' => $values]);
     $input = json_encode($sent, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION);
+    // A call made as an account of a role names that account's id, which
+    // the site chose when it made the account.
+    $account = isset(self::CALLS[$resource][$call]['account']) ? '"$UID"' : '1';
     $command = sprintf(
-      "drush tool:run %s --uid=1%s%s",
+      "drush tool:run %s --uid=%s%s%s",
       self::tool($resource, $call),
+      $account,
       // A read takes nothing: it names no thing and sends no values.
       $sent === [] ? '' : sprintf(" --input='%s'", str_replace("'", "'\\''", (string) $input)),
       (self::CALLS[$resource][$call]['dry_run'] ?? TRUE) ? ' --input=dry_run=true' : '',
@@ -459,6 +523,9 @@ final class ConceptCalls {
     $state = self::CALLS[$resource][$call]['state'] ?? [];
     foreach (array_reverse($state, TRUE) as $key => $value) {
       $command = sprintf("drush state:set %s %s\n%s\ndrush state:delete %s", $key, $value, $command, $key);
+    }
+    if (isset(self::CALLS[$resource][$call]['account'])) {
+      $command = sprintf("# UID: an account whose only role, beside authenticated, is %s.\n%s", self::CALLS[$resource][$call]['account'], $command);
     }
     return $command;
   }

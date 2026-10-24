@@ -12,6 +12,13 @@ services:
   data_surface.options:
     class: Drupal\data_surface\Options\DataSurfaceOptions
     arguments: ['@plugin.manager.data_surface_options_resolver', '@validation.constraint', '@logger.channel.data_surface']
+  # What a key that refers to an entity is (`entity:<type>[:<bundle>]` and
+  # the bare `entity`), its candidates through core's selection handler,
+  # the limit up to which it lists them, and the lookup past it.
+  data_surface.references:
+    class: Drupal\data_surface\Reference\References
+    arguments: ['@entity_type.manager', '@entity_field.manager', '@plugin.manager.entity_reference_selection', '@config.factory', '@typed_data_manager']
+  Drupal\data_surface\Reference\References: '@data_surface.references'
   data_surface.secret_codec:
     class: Drupal\data_surface\Storage\SodiumSecretCodec
   Drupal\data_surface\Storage\SecretCodecInterface: '@data_surface.secret_codec'

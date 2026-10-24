@@ -277,7 +277,10 @@ done about it.
     selection handler checks access, so the list is live: a constraint,
     `DataSurfaceReferenceable`, points at it, and its options resolver
     lists the targets for the account asking while there are at most
-    64 (the served contract's cap), carrying what the selection read:
+    `data_surface.settings:reference_enum_limit` (50 as shipped, the
+    limit a reference key a resource declares lists up to,
+    [Options](options.md#a-key-that-refers-to-an-entity)), carrying what
+    the selection read:
     `user.permissions`, and `user.node_grants:view` for a node or a
     comment, `user` for a target type core does not list
     ([decided](decisions.md#every-door-projects-what-the-read-tool-projects));

@@ -29,6 +29,7 @@ use Drupal\Tests\data_surface\Traits\ContractValidationTrait;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\IgnoreDeprecations;
+use Drupal\data_surface_examples_references\Sponsorship;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
 /**
@@ -47,8 +48,9 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * gallery, keys that come from the site on the workshop, variants chosen
  * by a plugin and a region by a theme on a placed block, and on example
  * 14 a source with one value and then two, a secret in a variant, and an
- * alter's key ruling the owner's out, and on example 15 a venue added, a
- * listing's query and a reorder's list),
+ * alter's key ruling the owner's out, on example 15 a venue added, a
+ * listing's query and a reorder's list, and on example 16 references
+ * listed, past the limit and of any type),
  * a table of documents the pipeline accepts and documents it refuses.
  * Each row is asserted three times: against the pipeline (accept(), then
  * validate() over what is stored), against the full
@@ -137,6 +139,10 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
     'data_surface_tool_test',
     'data_surface_component_block',
     'data_surface_block',
+    'text',
+    'filter',
+    'node',
+    'data_surface_examples_references',
   ];
 
   /**
@@ -752,7 +758,9 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
       'a pasted key for the managed source' => [$managed('mail_service', ['api_key' => 'mk-1']), FALSE],
       'a source no variant is for' => [['source' => 'vault', 'credential' => ['api_key' => 'mk-1']], FALSE],
     ]);
-    $mount = static fn (?string $key): array => ['third_party_settings' => ['data_surface_examples_keys' => ['key_id' => $key]]];
+    $mount = static fn (?string $key): array => [
+      'third_party_settings' => ['data_surface_examples_keys' => ['key_id' => $key]],
+    ];
     $this->assertTable('event.webhook', $this->build('event.webhook'), $this->stored('event.webhook'), [
       'as stored' => [[], TRUE],
       'a pasted key' => [['api_key' => 'wh-1'], TRUE],
@@ -921,6 +929,58 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
       'a weight too light' => [['venues' => [['id' => 'harbour', 'weight' => -5000]]], FALSE],
       'a venue with no weight' => [['venues' => [['id' => 'harbour']]], FALSE],
     ]);
+  }
+
+  /**
+   * Example 16's references: listed, past the limit, and of any type.
+   *
+   * Up to the limit, a reference's candidates are its `oneOf`, so both
+   * documents refuse an id the site does not offer, a page where an
+   * article is asked for among them; past it, both take any id of the
+   * key's type and the pipeline's check refuses it. A bare key's entity
+   * type is a list, its id stated per entity type, required once one is
+   * chosen and ruled out while none is.
+   */
+  public function testReferences(): void {
+    $this->installEntitySchema('node');
+    $this->installSchema('node', ['node_access']);
+    $this->installConfig(['node', 'filter', 'data_surface_examples_references']);
+    $this->container->get('class_resolver')->getInstanceFromDefinition(Sponsorship::class)->writeNodes();
+    $nodes = $this->container->get('class_resolver')->getInstanceFromDefinition(Sponsorship::class)->ids();
+    $rows = [
+      'a venue the site has' => [['venue' => 'library'], TRUE],
+      'a venue it does not' => [['venue' => 'concert_hall'], FALSE],
+      'an article' => [['page' => $nodes['article']], TRUE],
+      'a page where an article is asked for' => [['page' => $nodes['page']], FALSE],
+      'a node of any content type' => [['thing' => ['entity_type' => 'node', 'id' => (string) $nodes['page']]], TRUE],
+      'an entity type no content type' => [['thing' => ['entity_type' => 'event_venue', 'id' => 'library']], FALSE],
+      'a node where a config entity is asked for' => [
+        ['setting' => ['entity_type' => 'node', 'id' => (string) $nodes['article']]],
+        FALSE,
+      ],
+      'an entity type and no id' => [['thing' => ['entity_type' => 'node', 'id' => NULL]], FALSE],
+      'an id and no entity type' => [['thing' => ['id' => (string) $nodes['article']]], FALSE],
+    ];
+    $this->assertTable('event.sponsorship', $this->build('event.sponsorship'), $this->stored('event.sponsorship'), $rows);
+
+    // Past the limit: an id of the key's type, which only the server
+    // holds to what the account may reference.
+    $resources = $this->container->get('data_surface.resources');
+    $this->container->get('data_surface.references')->withLimit(1, function () use ($resources, $nodes): void {
+      $resources->forgetBuilds();
+      $this->assertTable('event.sponsorship', $this->build('event.sponsorship'), $this->stored('event.sponsorship'), [
+        'a venue the site has' => [['venue' => 'library'], TRUE],
+        'a venue it does not, wider in both documents' => [['venue' => 'concert_hall'], FALSE, TRUE, TRUE],
+        'a page where an article is asked for, wider in both documents' => [
+          ['page' => $nodes['page']],
+          FALSE,
+          TRUE,
+          TRUE,
+        ],
+        'an id of another type' => [['page' => 'sponsor'], FALSE],
+      ]);
+    });
+    $resources->forgetBuilds();
   }
 
   /**
@@ -1226,7 +1286,9 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
       // A modifier left out is wider, never narrower.
       ['/^[a-z]+$/iD', 'A1', FALSE, TRUE],
     ] as [$regex, $value, $pipeline, $schema]) {
-      $surface = $this->surface(['k' => DataDefinition::create('string')->setLabel('K')->addConstraint('Regex', ['pattern' => $regex])]);
+      $surface = $this->surface([
+        'k' => DataDefinition::create('string')->setLabel('K')->addConstraint('Regex', ['pattern' => $regex]),
+      ]);
       $label = $regex . ' ' . json_encode($value);
       $accepted = $this->pipeline()->accept($surface, ['k' => $value]);
       $this->assertSame($pipeline, $this->pipeline()->validate($surface, $accepted)->isEmpty(), $label . ': the pipeline.');
@@ -1481,14 +1543,18 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
       'AuditRuleNobodyDeclares',
     ];
     foreach ($names as $name) {
-      $property = $full($this->surface(['k' => DataDefinition::create('string')->setLabel('K')->addConstraint($name, [])]))['properties']['k'];
+      $property = $full($this->surface([
+        'k' => DataDefinition::create('string')->setLabel('K')->addConstraint($name, []),
+      ]))['properties']['k'];
       $this->assertSame([$name], array_column($property['x-surface']['checkedOnServer'], 'constraint'), $name);
       $this->assertNotSame('', $property['x-surface']['checkedOnServer'][0]['message'], $name . ': what it checks is said.');
       $this->assertSame(array_diff_key($bare, ['x-surface' => TRUE]), array_diff_key($property, ['x-surface' => TRUE]), $name . ': no keyword.');
     }
 
     // The languages the site has: as narrow as the validator.
-    $language = $this->surface(['k' => DataDefinition::create('string')->setLabel('K')->addConstraint('LanguageExists', [])]);
+    $language = $this->surface([
+      'k' => DataDefinition::create('string')->setLabel('K')->addConstraint('LanguageExists', []),
+    ]);
     $schema = $full($language);
     $offered = array_values(array_filter(array_column($schema['properties']['k']['oneOf'], 'const'), static fn (mixed $value): bool => $value !== NULL));
     $this->assertSame(array_keys($this->container->get('language_manager')->getLanguages()), $offered);
@@ -1510,7 +1576,9 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
     $this->assertTrue($this->pipeline()->validate($plugin, ['k' => 'no_such_block'])->isEmpty());
     $this->assertTrue($this->validates($schema, ['k' => 'no_such_block']));
     // Without it, the defined blocks are the list, as before.
-    $strict = $this->surface(['k' => DataDefinition::create('string')->setLabel('K')->addConstraint('PluginExists', ['manager' => 'plugin.manager.block'])]);
+    $strict = $this->surface([
+      'k' => DataDefinition::create('string')->setLabel('K')->addConstraint('PluginExists', ['manager' => 'plugin.manager.block']),
+    ]);
     $this->assertNotNull($this->options()->resolve($strict->getDefinitions()->get('k')));
   }
 

@@ -139,6 +139,17 @@ the record of the rework that brought the module to the pattern.
   ['selling' => 'on_sale'])` wires each entry's port to the entry of the
   same id in a sibling map from the same provider
   (`docs/resources.md#keys-that-come-from-the-site`).
+- **Reference key**: a key that refers to an entity, declared by the
+  data type string of what it refers to, `add('page', 'entity:node:article',
+  ...)`, `'entity:user'`, or the bare `'entity'` (two parts attached at
+  the key, `entity_type` and `id`, filtered by `DataSurfaceReferenceableType`
+  written on the key); it stores the id. Its candidates are core's
+  selection handler's for the account (`Reference\References`), listed
+  up to `data_surface.settings:reference_enum_limit` and looked up past
+  it, with core's entity autocomplete on the form and `GET
+  .../{x}:lookup` over HTTP; `x-surface.reference` marks it in both
+  documents (example 16, `docs/options.md#a-key-that-refers-to-an-entity`,
+  `docs/decisions.md#a-reference-is-an-id-with-a-list-the-site-decides-listed-or-looked-up`).
 - **Contract**: the JSON Schema a built resource or structure emits.
 - **Version**: `#[Resource(version:)]` or `#[Structure(version:)]`, from
   1, counting the breaking changes made to its stored values; stamped
@@ -355,7 +366,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 The full lane's phpunit line reads, as of this writing:
 
 ```
-phpunit: Tests: 1464, Assertions: 30385, Errors: 0, Failures: 0, Skipped: 0. Classes: 197 of 197, 8 at a time, browser classes 4.
+phpunit: Tests: 1477, Assertions: 30910, Errors: 0, Failures: 0, Skipped: 0. Classes: 199 of 199, 8 at a time, browser classes 4.
 ```
 
 the same counts a plain phpunit run of the tree gives. `run-tests.sh`
@@ -371,7 +382,7 @@ fail the gate, in either lane: plain phpunit counts them (42 as of this
 writing) and passes, and the full lane passes `--suppress-deprecations`,
 without which `run-tests.sh` adds `--fail-on-deprecation` to every class.
 The fast lane's line sums phpunit's own lines, one per class:
-`Tests: 1352, Assertions: 25920, Deprecations: 95. Classes: 150, 8 at a
+`Tests: 1374, Assertions: 27106, Deprecations: 95. Classes: 152, 8 at a
 time.`; its deprecation count is per process, so it is higher than one
 run's.
 
@@ -552,8 +563,9 @@ so the rule is this sentence. `npm test` is not part of
   data_surface:config-schema --write` (the test modules' through
   `ConfigSchemaDriftTest` with `DATA_SURFACE_CONFIG_SCHEMA_WRITE=1`), and
   example 15's documents under `tests/fixtures/venues/` by
-  `VenueResourceTest` with `DATA_SURFACE_VENUE_WRITE=1`. Never edit any
-  of them by hand.
+  `VenueResourceTest` with `DATA_SURFACE_VENUE_WRITE=1`, and example
+  16's under `tests/fixtures/references/` by `ReferenceKeysTest` with
+  `DATA_SURFACE_REFERENCES_WRITE=1`. Never edit any of them by hand.
 - Commit messages are one line.
 
 ## Naming
@@ -596,7 +608,7 @@ src/Widget/ src/Plugin/  Definition to form element; resolvers, hosts, constrain
 src/Options/             Option sets, the resolver plugin base and manager.
 src/Variants/            Variants from the site: ComponentProps and ComponentSlots.
 src/Refinement/          Narrowing and choice sets.
-modules/                 Seventeen experimental submodules; each has its own README.
+modules/                 Eighteen experimental submodules; each has its own README.
 tests/src/               Unit, Kernel, Functional, FunctionalJavascript.
 docs/ scripts/           Published documentation; check.sh and the generators.
 ```

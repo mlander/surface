@@ -321,9 +321,11 @@ their configuration may change without a deprecation path.
   example 13, a block that embeds a component, which says to enable
   `data_surface_component_block` and `data_surface_block`; and example
   14, a credential pasted or a key the site manages, which says to
-  enable `data_surface_examples_keys`; and example 15, a config entity
+  enable `data_surface_examples_keys`; example 15, a config entity
   type of its own, the venues example 2 chooses from, with a resource
-  that adds, edits, lists, reorders and removes them. Needs
+  that adds, edits, lists, reorders and removes them; and example 16,
+  keys that refer to an entity, which says to enable
+  `data_surface_examples_references`. Needs
   [Tool](https://www.drupal.org/project/tool).
 - **Data Surface Examples - Compliance**
   (`data_surface_examples_compliance`): example 4, a compliance
@@ -335,6 +337,13 @@ their configuration may change without a deprecation path.
   constraint and resolver that offer them, and an alter that offers one
   on a resource that takes a pasted key, ruling the pasted key out once
   one is chosen.
+- **Data Surface examples: references**
+  (`data_surface_examples_references`): example 16, keys that refer to
+  an entity, declared by the data type string of what they refer to: a
+  venue, a user, an article and an entity of any type, listed while the
+  site has few and looked up past that. Needs node; ships the article
+  and page bundles for a site that has neither, and writes three nodes
+  its calls name.
 - **Data Surface Examples - Workflow**
   (`data_surface_examples_workflow`): example 10, extended, two alters
   that answer access for the program and its fees, which do not know

@@ -1,0 +1,621 @@
+{
+    "resource": "event.sponsorship",
+    "module": "data_surface_examples_references",
+    "contract": 3,
+    "documents": [
+        {
+            "resource": "event.sponsorship",
+            "operation": "configure",
+            "label": "Configure the sponsorship",
+            "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "title": "Configure the sponsorship",
+                "description": "Sets the sponsor's venue, contact and announcement, and what the sponsor is featured beside, linked to and credited on.",
+                "x-surface": {
+                    "contract": 3,
+                    "operation": {
+                        "id": "configure",
+                        "label": "Configure the sponsorship",
+                        "description": "Sets the sponsor's venue, contact and announcement, and what the sponsor is featured beside, linked to and credited on.",
+                        "kind": "update",
+                        "creates": false,
+                        "destructive": false,
+                        "idempotent": true
+                    },
+                    "version": 1
+                },
+                "type": "object",
+                "properties": {
+                    "venue": {
+                        "title": "Venue",
+                        "description": "Where the sponsor's stand is.",
+                        "type": "string",
+                        "oneOf": [
+                            {
+                                "const": "harbour",
+                                "title": "Harbour Centre"
+                            },
+                            {
+                                "const": "library",
+                                "title": "Old Library"
+                            },
+                            {
+                                "const": "riverside",
+                                "title": "Riverside Hall"
+                            }
+                        ],
+                        "default": "riverside",
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": [],
+                            "reference": {
+                                "entityType": "event_venue"
+                            },
+                            "checkedOnServer": [
+                                {
+                                    "constraint": "DataSurfaceValidReference",
+                                    "message": "Refers to an entity the account may reference"
+                                }
+                            ]
+                        }
+                    },
+                    "contact": {
+                        "title": "Contact",
+                        "description": "Who answers for the sponsor.",
+                        "type": [
+                            "integer",
+                            "null"
+                        ],
+                        "oneOf": [
+                            {
+                                "const": 0,
+                                "title": ""
+                            },
+                            {
+                                "const": 1,
+                                "title": "admin"
+                            },
+                            {
+                                "const": 2,
+                                "title": "sponsor"
+                            },
+                            {
+                                "const": null
+                            }
+                        ],
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": [],
+                            "reference": {
+                                "entityType": "user"
+                            },
+                            "checkedOnServer": [
+                                {
+                                    "constraint": "DataSurfaceValidReference",
+                                    "message": "Refers to an entity the account may reference"
+                                }
+                            ]
+                        }
+                    },
+                    "page": {
+                        "title": "Announcement",
+                        "description": "The article that announces the sponsor.",
+                        "type": [
+                            "integer",
+                            "null"
+                        ],
+                        "oneOf": [
+                            {
+                                "const": null
+                            }
+                        ],
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": [],
+                            "reference": {
+                                "entityType": "node",
+                                "bundles": [
+                                    "article"
+                                ]
+                            },
+                            "checkedOnServer": [
+                                {
+                                    "constraint": "DataSurfaceValidReference",
+                                    "message": "Refers to an entity the account may reference"
+                                }
+                            ]
+                        }
+                    },
+                    "thing": {
+                        "title": "Featured beside",
+                        "description": "Any content the sponsor is featured beside.",
+                        "$ref": "#/$defs/event.sponsorship.thing",
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": []
+                        }
+                    },
+                    "setting": {
+                        "title": "Linked to",
+                        "description": "A venue or a role the sponsorship is linked to.",
+                        "$ref": "#/$defs/event.sponsorship.setting",
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": []
+                        }
+                    },
+                    "credit": {
+                        "title": "Credited on",
+                        "description": "An article or a user the sponsor is credited on.",
+                        "$ref": "#/$defs/event.sponsorship.credit",
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": []
+                        }
+                    }
+                },
+                "additionalProperties": false,
+                "required": [
+                    "venue"
+                ],
+                "$defs": {
+                    "event.sponsorship.thing": {
+                        "title": "event.sponsorship.thing",
+                        "type": "object",
+                        "properties": {
+                            "entity_type": {
+                                "title": "Entity type",
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "oneOf": [
+                                    {
+                                        "const": "user",
+                                        "title": "User"
+                                    },
+                                    {
+                                        "const": null
+                                    }
+                                ],
+                                "x-surface": {
+                                    "locked": false,
+                                    "dependsOn": []
+                                }
+                            },
+                            "id": {
+                                "title": "ID",
+                                "description": "The id of an entity of the entity type chosen.",
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "x-surface": {
+                                    "locked": false,
+                                    "dependsOn": [
+                                        "entity_type"
+                                    ],
+                                    "reference": {
+                                        "by": "entity_type"
+                                    },
+                                    "enumerated": true,
+                                    "declared": true
+                                }
+                            }
+                        },
+                        "additionalProperties": false,
+                        "allOf": [
+                            {
+                                "if": {
+                                    "properties": {
+                                        "entity_type": {
+                                            "const": "user"
+                                        }
+                                    },
+                                    "required": [
+                                        "entity_type"
+                                    ]
+                                },
+                                "then": {
+                                    "properties": {
+                                        "id": {
+                                            "oneOf": [
+                                                {
+                                                    "const": "0",
+                                                    "title": ""
+                                                },
+                                                {
+                                                    "const": "1",
+                                                    "title": "admin"
+                                                },
+                                                {
+                                                    "const": "2",
+                                                    "title": "sponsor"
+                                                },
+                                                {
+                                                    "const": null
+                                                }
+                                            ]
+                                        }
+                                    }
+                                }
+                            },
+                            {
+                                "if": {
+                                    "properties": {
+                                        "entity_type": {
+                                            "type": "null"
+                                        }
+                                    }
+                                },
+                                "then": {
+                                    "properties": {
+                                        "id": false
+                                    }
+                                }
+                            },
+                            {
+                                "if": {
+                                    "allOf": [
+                                        {
+                                            "properties": {
+                                                "entity_type": {
+                                                    "not": {
+                                                        "type": "null"
+                                                    }
+                                                }
+                                            },
+                                            "required": [
+                                                "entity_type"
+                                            ]
+                                        },
+                                        {
+                                            "not": {
+                                                "properties": {
+                                                    "entity_type": {
+                                                        "type": "null"
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    ]
+                                },
+                                "then": {
+                                    "properties": {
+                                        "id": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "id"
+                                    ]
+                                }
+                            }
+                        ],
+                        "x-surface": {
+                            "rules": [
+                                1,
+                                2
+                            ]
+                        }
+                    },
+                    "event.sponsorship.setting": {
+                        "title": "event.sponsorship.setting",
+                        "type": "object",
+                        "properties": {
+                            "entity_type": {
+                                "title": "Entity type",
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "oneOf": [
+                                    {
+                                        "const": "event_venue",
+                                        "title": "Venue"
+                                    },
+                                    {
+                                        "const": "user_role",
+                                        "title": "Role"
+                                    },
+                                    {
+                                        "const": null
+                                    }
+                                ],
+                                "x-surface": {
+                                    "locked": false,
+                                    "dependsOn": []
+                                }
+                            },
+                            "id": {
+                                "title": "ID",
+                                "description": "The id of an entity of the entity type chosen.",
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "x-surface": {
+                                    "locked": false,
+                                    "dependsOn": [
+                                        "entity_type"
+                                    ],
+                                    "reference": {
+                                        "by": "entity_type"
+                                    },
+                                    "enumerated": true,
+                                    "declared": true
+                                }
+                            }
+                        },
+                        "additionalProperties": false,
+                        "allOf": [
+                            {
+                                "if": {
+                                    "properties": {
+                                        "entity_type": {
+                                            "const": "event_venue"
+                                        }
+                                    },
+                                    "required": [
+                                        "entity_type"
+                                    ]
+                                },
+                                "then": {
+                                    "properties": {
+                                        "id": {
+                                            "oneOf": [
+                                                {
+                                                    "const": "harbour",
+                                                    "title": "Harbour Centre"
+                                                },
+                                                {
+                                                    "const": "library",
+                                                    "title": "Old Library"
+                                                },
+                                                {
+                                                    "const": "riverside",
+                                                    "title": "Riverside Hall"
+                                                },
+                                                {
+                                                    "const": null
+                                                }
+                                            ]
+                                        }
+                                    }
+                                }
+                            },
+                            {
+                                "if": {
+                                    "properties": {
+                                        "entity_type": {
+                                            "const": "user_role"
+                                        }
+                                    },
+                                    "required": [
+                                        "entity_type"
+                                    ]
+                                },
+                                "then": {
+                                    "properties": {
+                                        "id": {
+                                            "oneOf": [
+                                                {
+                                                    "const": "administrator",
+                                                    "title": "Administrator"
+                                                },
+                                                {
+                                                    "const": "event_sponsorship_editor",
+                                                    "title": "Sponsorship editor"
+                                                },
+                                                {
+                                                    "const": null
+                                                }
+                                            ]
+                                        }
+                                    }
+                                }
+                            },
+                            {
+                                "if": {
+                                    "properties": {
+                                        "entity_type": {
+                                            "type": "null"
+                                        }
+                                    }
+                                },
+                                "then": {
+                                    "properties": {
+                                        "id": false
+                                    }
+                                }
+                            },
+                            {
+                                "if": {
+                                    "allOf": [
+                                        {
+                                            "properties": {
+                                                "entity_type": {
+                                                    "not": {
+                                                        "type": "null"
+                                                    }
+                                                }
+                                            },
+                                            "required": [
+                                                "entity_type"
+                                            ]
+                                        },
+                                        {
+                                            "not": {
+                                                "properties": {
+                                                    "entity_type": {
+                                                        "type": "null"
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    ]
+                                },
+                                "then": {
+                                    "properties": {
+                                        "id": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "id"
+                                    ]
+                                }
+                            }
+                        ],
+                        "x-surface": {
+                            "rules": [
+                                2,
+                                3
+                            ]
+                        }
+                    },
+                    "event.sponsorship.credit": {
+                        "title": "event.sponsorship.credit",
+                        "type": "object",
+                        "properties": {
+                            "entity_type": {
+                                "title": "Entity type",
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "oneOf": [
+                                    {
+                                        "const": "user",
+                                        "title": "User"
+                                    },
+                                    {
+                                        "const": null
+                                    }
+                                ],
+                                "x-surface": {
+                                    "locked": false,
+                                    "dependsOn": []
+                                }
+                            },
+                            "id": {
+                                "title": "ID",
+                                "description": "The id of an entity of the entity type chosen.",
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "x-surface": {
+                                    "locked": false,
+                                    "dependsOn": [
+                                        "entity_type"
+                                    ],
+                                    "reference": {
+                                        "by": "entity_type"
+                                    },
+                                    "enumerated": true,
+                                    "declared": true
+                                }
+                            }
+                        },
+                        "additionalProperties": false,
+                        "allOf": [
+                            {
+                                "if": {
+                                    "properties": {
+                                        "entity_type": {
+                                            "const": "user"
+                                        }
+                                    },
+                                    "required": [
+                                        "entity_type"
+                                    ]
+                                },
+                                "then": {
+                                    "properties": {
+                                        "id": {
+                                            "oneOf": [
+                                                {
+                                                    "const": "0",
+                                                    "title": ""
+                                                },
+                                                {
+                                                    "const": "1",
+                                                    "title": "admin"
+                                                },
+                                                {
+                                                    "const": "2",
+                                                    "title": "sponsor"
+                                                },
+                                                {
+                                                    "const": null
+                                                }
+                                            ]
+                                        }
+                                    }
+                                }
+                            },
+                            {
+                                "if": {
+                                    "properties": {
+                                        "entity_type": {
+                                            "type": "null"
+                                        }
+                                    }
+                                },
+                                "then": {
+                                    "properties": {
+                                        "id": false
+                                    }
+                                }
+                            },
+                            {
+                                "if": {
+                                    "allOf": [
+                                        {
+                                            "properties": {
+                                                "entity_type": {
+                                                    "not": {
+                                                        "type": "null"
+                                                    }
+                                                }
+                                            },
+                                            "required": [
+                                                "entity_type"
+                                            ]
+                                        },
+                                        {
+                                            "not": {
+                                                "properties": {
+                                                    "entity_type": {
+                                                        "type": "null"
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    ]
+                                },
+                                "then": {
+                                    "properties": {
+                                        "id": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "id"
+                                    ]
+                                }
+                            }
+                        ],
+                        "x-surface": {
+                            "rules": [
+                                1,
+                                2
+                            ]
+                        }
+                    }
+                }
+            }
+        }
+    ]
+}

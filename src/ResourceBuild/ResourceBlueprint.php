@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Drupal\data_surface\ResourceBuild;
 
 use Drupal\Core\Cache\CacheableDependencyInterface;
+use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Component\Plugin\Exception\PluginNotFoundException;
 use Drupal\Core\TypedData\ListDataDefinition;
@@ -13,6 +14,7 @@ use Drupal\Core\TypedData\TypedDataManagerInterface;
 use Drupal\data_surface\DataSurfaceBuilderInterface;
 use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Port;
+use Drupal\data_surface\Reference\EntityReferenceStructure;
 use Drupal\data_surface\Resource\Arrangement;
 use Drupal\data_surface\Resource\BlueprintInterface;
 use Drupal\data_surface\Resource\DefinesInputsInterface;
@@ -96,6 +98,16 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
   protected array $origins = [];
 
   /**
+   * The keys declared as a bare `entity`, each with the map at the key.
+   *
+   * Its two parts are registered once its author is done narrowing it,
+   * when the build step first asks for the children (attachments()).
+   *
+   * @var array<string, \Drupal\Core\TypedData\MapDataDefinition>
+   */
+  protected array $entities = [];
+
+  /**
    * Constructs a blueprint.
    *
    * @param \Drupal\data_surface\DataSurfaceBuilderInterface $builder
@@ -163,7 +175,7 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
     if (is_subclass_of($structure, DefinesOutputsInterface::class)) {
       throw new \LogicException(sprintf('%s mixes %s in, which declares outputs. A structure\'s inputs are mixed in; its outputs are not, yet.', $who, $this->name($structure)));
     }
-    $mixin = (new static($this->builder, $this->typedDataManager, FALSE, $this->registry, $structure, $this))->useShapes($this->shapes);
+    $mixin = (new static($this->builder, $this->typedDataManager, FALSE, $this->registry, $structure, $this))->useShapes($this->shapes)->useReferences($this->references);
     $structure::defineInputs($mixin);
     $this->mixins[] = ['class' => $structure, 'reads' => $reads, 'blueprint' => $mixin];
     return $this;
@@ -319,6 +331,50 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
   public function attach(string $key, string $child, array $reads = []): MapDataDefinition {
     $this->assertHoldsNoChild('attaches ' . $child, $key);
     return parent::attach($key, $child, $reads);
+  }
+
+  /**
+   * {@inheritdoc}
+   *
+   * A key declared as a bare `entity` holds its two parts, registered for
+   * what its author narrowed it by.
+   */
+  public function attachments(): array {
+    foreach ($this->entities as $key => $shell) {
+      assert($this->registry !== NULL);
+      $owner = $this->owner === NULL ? NULL : $this->registry->getDefinition($this->owner);
+      $this->attachments[$key] = $this->registry->defineReference(
+        ($owner->id ?? $this->name($this->owner)) . '.' . $key,
+        $owner->module ?? 'data_surface',
+        EntityReferenceStructure::filter($shell),
+      );
+    }
+    $this->entities = [];
+    return parent::attachments();
+  }
+
+  /**
+   * {@inheritdoc}
+   *
+   * Decision: see
+   * docs/decisions.md#a-reference-is-an-id-with-a-list-the-site-decides-listed-or-looked-up.
+   */
+  protected function addEntity(string $key, string|\Stringable $label, mixed $default): DataDefinition {
+    if ($default !== NULL) {
+      throw new \LogicException(sprintf('add("%s", "entity") was given a default: a reference to an entity of any type is two keys, its entity type and its id, which start from nothing.', $key));
+    }
+    if ($this->registry === NULL || $this->references === NULL || $this->outputs) {
+      throw new \LogicException(sprintf('add("%s", "entity") declares a reference to an entity of any type where nothing can attach its two parts: a resource or a structure declares it among its inputs.', $key));
+    }
+    // Held for its two parts, registered once its author is done with it
+    // (attachments()).
+    $this->assertHoldsNoChild('attaches a reference to an entity of any type', $key);
+    $shell = $this->reserveChild('add', $key);
+    $this->attachments[$key] = EntityReferenceStructure::class;
+    $this->wirings[$key] = [];
+    $shell->setLabel($label);
+    $this->entities[$key] = $shell;
+    return $shell;
   }
 
   /**
@@ -511,7 +567,7 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
    *   For SchemaReader alone.
    */
   public function mixInRead(string $name): static {
-    $mixin = (new static($this->builder, $this->typedDataManager, FALSE, $this->registry, $name, $this))->useShapes($this->shapes);
+    $mixin = (new static($this->builder, $this->typedDataManager, FALSE, $this->registry, $name, $this))->useShapes($this->shapes)->useReferences($this->references);
     $inputs = $this->registry?->getDefinition($name)->inputs;
     if ($inputs !== NULL) {
       // A read structure's inputs are SchemaReader::fill(), a static

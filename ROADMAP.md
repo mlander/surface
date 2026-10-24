@@ -1327,6 +1327,23 @@ renames sit in A because they are cheapest before new code exists.
     `sort` input; example 2's capacity cap still read from `Venues`,
     until a refiner can read a site's list as a resolver does.
 
+20. **A key that refers to an entity.** DONE 2026-10-23
+    (`docs/decisions.md#a-reference-is-an-id-with-a-list-the-site-decides-listed-or-looked-up`).
+    Example 16 at `/surface-examples/16`, in
+    `data_surface_examples_references`: `add($key, 'entity:<type>')`,
+    `'entity:<type>:<bundle>'` and the bare `'entity'`, the id stored;
+    the candidates core's selection handler's for the account; listed up
+    to `data_surface.settings:reference_enum_limit`, an id past it, with
+    core's entity autocomplete on the form, `x-surface.widget:
+    autocomplete` in both documents and the resource's lookup, `GET
+    .../{x}:lookup`, which the tool listing names, the React app calls
+    and the OpenAPI document describes; `x-surface.reference` on every
+    reference key. Open: a uuid representation; a multi-value reference,
+    a list of references; the entity side's two shapes, a reference
+    field's `target_id` item beside a reference key, with no marker; a
+    lookup tool for an agent with no HTTP; a custom method's own lookup;
+    a stored id the account may no longer reference.
+
 ## Maintenance
 
 - **Functional tests convert to kernel tests as units touch them**, by

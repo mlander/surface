@@ -48,6 +48,11 @@ final class ServedTarget {
   public const LIST = 'list';
 
   /**
+   * A reference's lookup: GET `.../{x}:lookup`, the candidates of one key.
+   */
+  public const LOOKUP = 'lookup';
+
+  /**
    * Constructs a ServedTarget.
    *
    * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
@@ -58,7 +63,7 @@ final class ServedTarget {
    *   The operation's parameters by name, as raw values: those the path's
    *   identity segments carry, then those the query string does.
    * @param string $action
-   *   What is asked: READ, SCHEMA, NARROW, WRITE or LIST.
+   *   What is asked: READ, SCHEMA, NARROW, WRITE, LIST or LOOKUP.
    * @param bool $custom
    *   Whether the path names the operation, `:{operation}`, rather than
    *   the method implying it.

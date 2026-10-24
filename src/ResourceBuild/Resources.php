@@ -23,6 +23,7 @@ use Drupal\data_surface\DataSurfaceBuilderInterface;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Pipeline\DataSurfaceStorageInterface;
+use Drupal\data_surface\Reference\References;
 use Drupal\data_surface\Refinement\ChoiceSet;
 use Drupal\data_surface\Refinement\Condition;
 use Drupal\data_surface\Refinement\DeclaredRefiner;
@@ -424,7 +425,8 @@ final class Resources implements ResourcesInterface {
    * Names what a sealed build is kept by within the request.
    *
    * The resource's name, everything the context says, the kind of build,
-   * whether it is held to its config schema, and the account kind: none
+   * whether it is held to its config schema, the limit up to which a
+   * reference key lists its candidates, and the account kind: none
    * for a build for no account, the roles and permissions for one for the
    * account alone, and the account itself beside them for a build with
    * every answer applied, which a runtime answer may read.
@@ -454,7 +456,18 @@ final class Resources implements ResourcesInterface {
         sort($roles);
         $kind = [$roles, $this->permissionsHashGenerator->generate($account), $alone ? NULL : (string) $account->id()];
       }
-      return hash('xxh3', serialize([$name, $context, $alone, $declaring, $this->holdsToSchema, $kind]));
+      // Whether a reference key lists its candidates is the limit's.
+      // Decision: see
+      // docs/decisions.md#a-reference-is-an-id-with-a-list-the-site-decides-listed-or-looked-up.
+      return hash('xxh3', serialize([
+        $name,
+        $context,
+        $alone,
+        $declaring,
+        $this->holdsToSchema,
+        $kind,
+        $this->references()->limit(),
+      ]));
     }
     catch (\Throwable) {
       return NULL;
@@ -691,10 +704,10 @@ final class Resources implements ResourcesInterface {
       }
       $instance = $this->classResolver->getInstanceFromDefinition($alter->class);
       if ($instance instanceof AltersInputsInterface) {
-        $instance->alterInputs($additions[$alter->module][0] ??= (new ResourceBlueprintAdditions($builder, $this->typedDataManager, $alter->module))->useShapes($this->shapes()));
+        $instance->alterInputs($additions[$alter->module][0] ??= (new ResourceBlueprintAdditions($builder, $this->typedDataManager, $alter->module))->useShapes($this->shapes())->useReferences($this->references()));
       }
       if ($instance instanceof AltersOutputsInterface) {
-        $instance->alterOutputs($additions[$alter->module][1] ??= (new ResourceBlueprintAdditions($builder, $this->typedDataManager, $alter->module, TRUE))->useShapes($this->shapes()));
+        $instance->alterOutputs($additions[$alter->module][1] ??= (new ResourceBlueprintAdditions($builder, $this->typedDataManager, $alter->module, TRUE))->useShapes($this->shapes())->useReferences($this->references()));
       }
       if ($instance instanceof AltersStorageLayoutInterface) {
         $builder->setThirdPartyLayout($alter->module, $instance->storageLayout());
@@ -1156,7 +1169,14 @@ final class Resources implements ResourcesInterface {
    *   The sealed structure.
    */
   protected function buildRead(string $name, OperationContext $context, array $ancestry): DataSurfaceInterface {
-    $key = hash('xxh3', serialize([$name, $context, $this->accountAlone, $this->declaring, $this->holdsToSchema]));
+    $key = hash('xxh3', serialize([
+      $name,
+      $context,
+      $this->accountAlone,
+      $this->declaring,
+      $this->holdsToSchema,
+      $this->references()->limit(),
+    ]));
     if (isset($this->readBuilds[$key])) {
       $this->buildCounts['reused']++;
       return $this->readBuilds[$key]['surface'];
@@ -1227,7 +1247,7 @@ final class Resources implements ResourcesInterface {
     // schema is written from.
     $shell = $builder->getDefinition($key);
     if ($shell !== NULL) {
-      DefinitionMetadata::setEach($shell, $each['child'] ? $each['each'] : (new ResourceBlueprint(new DataSurfaceBuilder(), $this->typedDataManager))->useShapes($this->shapes())->add($key, $each['each'], $shell->getLabel() ?? $key, $each['default']));
+      DefinitionMetadata::setEach($shell, $each['child'] ? $each['each'] : (new ResourceBlueprint(new DataSurfaceBuilder(), $this->typedDataManager))->useShapes($this->shapes())->useReferences($this->references())->add($key, $each['each'], $shell->getLabel() ?? $key, $each['default']));
     }
     $entries = $keys->entries();
     $map = (new DataSurfaceBuilder())->setWatchedValueCheck($this->watchedValueCheck);
@@ -1282,7 +1302,7 @@ final class Resources implements ResourcesInterface {
       }
     }
     else {
-      $blueprint = (new ResourceBlueprint($map, $this->typedDataManager))->useShapes($this->shapes());
+      $blueprint = (new ResourceBlueprint($map, $this->typedDataManager))->useShapes($this->shapes())->useReferences($this->references());
       foreach ($entries as $id => $entry) {
         $blueprint->add((string) $id, $each['each'], $entry['label'], $entry['default'] ?? $each['default']);
         if ($entry['locked']) {
@@ -1291,7 +1311,9 @@ final class Resources implements ResourcesInterface {
       }
       // Decision: see docs/decisions.md#a-key-its-storage-always-holds.
       $held = $frame['held'] ?? NULL;
-      $this->markAlwaysHeld($map, array_map('strval', array_keys($entries)), is_array($held) ? ['prefix' => $held['prefix'] . $key . '.'] + $held : NULL);
+      $this->markAlwaysHeld($map, array_map('strval', array_keys($entries)), is_array($held) ? [
+        'prefix' => $held['prefix'] . $key . '.',
+      ] + $held : NULL);
     }
     $sealed = $map->seal();
     $reads = [];
@@ -1751,12 +1773,12 @@ final class Resources implements ResourcesInterface {
       }
       $instance = $this->classResolver->getInstanceFromDefinition($alter->class);
       $within = [$structure->id, $definition->id, $keys];
-      $additions = (new ResourceBlueprintAdditions($builder, $this->typedDataManager, $alter->module, FALSE, $within))->useShapes($this->shapes());
+      $additions = (new ResourceBlueprintAdditions($builder, $this->typedDataManager, $alter->module, FALSE, $within))->useShapes($this->shapes())->useReferences($this->references());
       if ($instance instanceof AltersInputsInterface) {
         $instance->alterInputs($additions);
       }
       if ($instance instanceof AltersOutputsInterface) {
-        $instance->alterOutputs((new ResourceBlueprintAdditions($builder, $this->typedDataManager, $alter->module, TRUE, $within))->useShapes($this->shapes()));
+        $instance->alterOutputs((new ResourceBlueprintAdditions($builder, $this->typedDataManager, $alter->module, TRUE, $within))->useShapes($this->shapes())->useReferences($this->references()));
       }
       $this->bindRefiners($builder, $structure, $instance, $alter->refiners, $keys, [], [], NULL, $alter->module, $additions->extended(), ports: $ports, translated: $reads);
       $this->bindRules($builder, $structure, $additions->rules(), $alter->module, $keys, [], [], $additions->extended(), [], [], $ruling, $ports, translated: $reads);
@@ -3010,7 +3032,7 @@ final class Resources implements ResourcesInterface {
       foreach ($definition->alters as $alter) {
         $instance = $this->classResolver->getInstanceFromDefinition($alter->class);
         if ($instance instanceof AltersInputsInterface) {
-          $instance->alterInputs($blueprints[] = (new ResourceBlueprintAdditions($builder, $this->typedDataManager, $alter->module))->useShapes($this->shapes()));
+          $instance->alterInputs($blueprints[] = (new ResourceBlueprintAdditions($builder, $this->typedDataManager, $alter->module))->useShapes($this->shapes())->useReferences($this->references()));
         }
       }
     }
@@ -3987,7 +4009,7 @@ final class Resources implements ResourcesInterface {
    *   The blueprint, which names a structure mixed in by discovery's id.
    */
   protected function blueprint(DataSurfaceBuilderInterface $builder, ResourceDefinition $definition, bool $outputs = FALSE): ResourceBlueprint {
-    return (new ResourceBlueprint($builder, $this->typedDataManager, $outputs, $this->registry, $definition->name()))->useShapes($this->shapes());
+    return (new ResourceBlueprint($builder, $this->typedDataManager, $outputs, $this->registry, $definition->name()))->useShapes($this->shapes())->useReferences($this->references());
   }
 
   /**
@@ -3998,6 +4020,18 @@ final class Resources implements ResourcesInterface {
    */
   protected function shapes(): Shapes {
     return $this->shapes ??= new Shapes($this->registry, $this->classResolver);
+  }
+
+  /**
+   * Gets what builds a key that refers to an entity, for a blueprint.
+   *
+   * @return \Drupal\data_surface\Reference\References
+   *   The service.
+   */
+  protected function references(): References {
+    $references = $this->classResolver->getInstanceFromDefinition('data_surface.references');
+    assert($references instanceof References);
+    return $references;
   }
 
   /**

@@ -1,6 +1,7 @@
 import type { Arrangement, ArrangementGroup, Schema, Values } from '../contract';
 import { fieldId, isObject, jsonType, resolveVariants } from '../contract';
 import {
+  AutocompleteField,
   CheckboxesField,
   CheckboxField,
   FixedField,
@@ -49,6 +50,8 @@ export function Field(props: FieldProps): JSX.Element | null {
       return <ListField {...props} />;
     case 'fixed':
       return <FixedField {...props} />;
+    case 'autocomplete':
+      return <AutocompleteField {...props} />;
     default:
       return <UnsupportedField {...props} />;
   }

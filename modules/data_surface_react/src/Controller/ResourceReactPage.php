@@ -92,6 +92,11 @@ final class ResourceReactPage implements ContainerInjectionInterface {
       'schema' => $this->servedPaths->url($served->definition, $served->operation, $parameters, $read, TRUE),
       'write' => $this->servedPaths->url($served->definition, $served->operation, $parameters, $named),
     ];
+    // The lookup answers for the operation GET serves at the path, so a
+    // page of another operation has none.
+    // Decision: see
+    // docs/decisions.md#a-reference-is-an-id-with-a-list-the-site-decides-listed-or-looked-up.
+    $lookup = $read ? NULL : $this->servedPaths->lookupUrl($served->definition, $served->operation, $parameters)->getGeneratedUrl();
     $build = [
       '#type' => 'html_tag',
       '#tag' => 'div',
@@ -117,6 +122,7 @@ final class ResourceReactPage implements ContainerInjectionInterface {
               'read' => $urls['read']->getGeneratedUrl(),
               'schema' => $urls['schema']->getGeneratedUrl(),
               'write' => ['method' => $method, 'url' => $urls['write']->getGeneratedUrl()],
+              'lookup' => $lookup,
             ],
             'tokenUrl' => $token->getGeneratedUrl(),
           ],

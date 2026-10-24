@@ -14,6 +14,7 @@ the operation (contract 3):
 | Create | `POST /surface-api/{resource}` | The default create: 201 with the created thing's `Location`. |
 | Delete | `DELETE /surface-api/{resource}/{id}` | The default delete, an operation that says `deletes: TRUE` (`block.placement:remove`): no body, 200 with the values the thing held and no envelope or `ETag`. |
 | Any other | `GET` and `POST .../{x}:{operation}` | An operation that is not a default, by name: `event.program:check`. |
+| Lookup | `GET .../{x}:lookup?key=/venue&q=riv` | The candidates of one key that refers to an entity, of the operation `GET` serves at the path, by label, for the account: `{key, entityType, bundles, items}`, each item `{id, label}`; `type` names the entity type for a key of any type. What the app's autocomplete asks past the limit ([the lookup](../../docs/served-contract.md#a-lookup)). |
 
 `{resource}` is the `#[Resource]` id (`registration.step2`); `{id}` the
 parameters of the operation that addresses one thing, in order

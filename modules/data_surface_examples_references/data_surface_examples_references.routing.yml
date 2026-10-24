@@ -1,0 +1,12 @@
+# Example 16: one operation of the sponsorship, served by the generic
+# operation form, with the examples' panels beside it.
+data_surface_examples.step16:
+  path: '/surface-examples/16'
+  defaults:
+    _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
+    _title: 'Example 16: references, three ways'
+    _data_surface_resource: 'Drupal\data_surface_examples_references\Resource\SponsorshipResource'
+    _data_surface_operation: 'configure'
+    _data_surface_panel: 'data_surface_examples.panels'
+  requirements:
+    _data_surface_operation_access: 'TRUE'

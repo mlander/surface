@@ -1,6 +1,6 @@
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { createApi, dottedToPointer, pageOf, pointerToDotted, type Endpoints, type Settings } from '../api';
+import { createApi, dottedToPointer, lookupOf, pageOf, pointerToDotted, type Endpoints, type Settings } from '../api';
 import type { Contract, Schema } from '../contract';
 import { ContractRefused, getAt } from '../contract';
 import { SurfaceForm } from '../SurfaceForm';
@@ -926,5 +926,13 @@ describe('contract 3 only', () => {
     await expect(createApi(settings, one.fetcher).submit({}, [], null)).rejects.toThrow(refusalOf('1'));
     const three = server({ [step2.write]: () => written(example2 as unknown as Contract) });
     await expect(createApi(settings, three.fetcher).submit({}, [], null)).resolves.toMatchObject({ document: { committed: true, changes: ['title'] } });
+  });
+});
+
+describe('the lookup', () => {
+  it("is the page's, or the read path's custom read, an operation named in it taken off", () => {
+    expect(lookupOf({ read: '/surface-api/event.sponsorship', schema: '', write: { method: 'PATCH', url: '' } })).toBe('/surface-api/event.sponsorship:lookup');
+    expect(lookupOf({ read: '/surface-api/node.type/recipe?x=1', schema: '', write: { method: 'PATCH', url: '' } })).toBe('/surface-api/node.type/recipe:lookup');
+    expect(lookupOf({ read: '/surface-api/event.venue:add', schema: '', write: { method: 'POST', url: '' }, lookup: null })).toBeNull();
   });
 });

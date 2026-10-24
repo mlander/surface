@@ -12,6 +12,7 @@ use Drupal\Core\StringTranslation\TranslationInterface;
 use Drupal\data_surface\Contract\ContractEmitter;
 use Drupal\data_surface\Contract\ServedContract;
 use Drupal\data_surface\Form\DataSurfaceFormBuilderInterface;
+use Drupal\data_surface\Reference\References;
 use Drupal\data_surface\Pipeline\DataSurfacePipelineInterface;
 use Drupal\data_surface\Pipeline\ResultDocument;
 use Drupal\data_surface\Pipeline\Violation;
@@ -90,6 +91,11 @@ final class ResourceApiController implements ContainerInjectionInterface {
   public const DRY_RUN = 'x-surface-dry-run';
 
   /**
+   * How many candidates a lookup answers when it is not told.
+   */
+  public const LOOKUP_LIMIT = 10;
+
+  /**
    * Constructs a ResourceApiController.
    *
    * @param \Drupal\data_surface_react\ServedOperations $servedOperations
@@ -104,6 +110,8 @@ final class ResourceApiController implements ContainerInjectionInterface {
    *   The pipeline, which a write runs.
    * @param \Drupal\Core\StringTranslation\TranslationInterface $stringTranslation
    *   The string translation service.
+   * @param \Drupal\data_surface\Reference\References $references
+   *   What reference keys are, and the lookup.
    */
   public function __construct(
     protected readonly ServedOperations $servedOperations,
@@ -112,6 +120,7 @@ final class ResourceApiController implements ContainerInjectionInterface {
     protected readonly DataSurfaceFormBuilderInterface $formBuilder,
     protected readonly DataSurfacePipelineInterface $pipeline,
     TranslationInterface $stringTranslation,
+    protected readonly References $references,
   ) {
     $this->stringTranslation = $stringTranslation;
   }
@@ -127,6 +136,7 @@ final class ResourceApiController implements ContainerInjectionInterface {
       $container->get('data_surface.form_builder'),
       $container->get('data_surface.pipeline'),
       $container->get('string_translation'),
+      $container->get('data_surface.references'),
     );
   }
 
@@ -164,6 +174,7 @@ final class ResourceApiController implements ContainerInjectionInterface {
       ServedTarget::NARROW => $this->narrow($request, $target),
       ServedTarget::WRITE => $this->write($request, $target),
       ServedTarget::LIST => $this->listing($request, $target),
+      ServedTarget::LOOKUP => $this->lookup($request, $target),
       default => $this->read($target),
     };
   }
@@ -230,6 +241,54 @@ final class ResourceApiController implements ContainerInjectionInterface {
     $response = $this->respond($outputs);
     $response->headers->set('Link', sprintf('<%s>; rel="describedby"', $this->location($served, TRUE)->getGeneratedUrl()));
     return $response;
+  }
+
+  /**
+   * Answers a lookup: candidates for one reference key, by their label.
+   *
+   * `GET .../{x}:lookup?key=/venue&q=riv&limit=10`: the key, a JSON
+   * Pointer (or a top-level name), of the operation `GET` serves at the
+   * path, built for the account; `q`, text the label contains; `limit`,
+   * the most to answer, 10 unless said, at most 50. A bare `entity` key, or
+   * its id, takes `type`, the entity type to look an id up of, one its
+   * entity type key allows. The candidates are the selection handler's
+   * that the key's options and its check ask, for the same account, so
+   * the lookup answers no id a write would refuse for access.
+   *
+   * Decision: see
+   * docs/decisions.md#a-reference-is-an-id-with-a-list-the-site-decides-listed-or-looked-up.
+   *
+   * @param \Symfony\Component\HttpFoundation\Request $request
+   *   The request.
+   * @param \Drupal\data_surface_react\ServedTarget $target
+   *   What the path named.
+   *
+   * @return \Symfony\Component\HttpFoundation\JsonResponse
+   *   `key`, the pointer; `entityType` and `bundles`, what it refers to;
+   *   `items`, each `{id, label}`, sorted by label.
+   *
+   * @throws \Drupal\data_surface_react\ProblemException
+   *   404 when no key at the pointer refers to one entity type, or the
+   *   type given is not one a bare key allows.
+   */
+  public function lookup(Request $request, ServedTarget $target): JsonResponse {
+    $served = $this->served($target);
+    $key = (string) $request->query->get('key', '');
+    $pointer = str_starts_with($key, '/') ? $key : '/' . $key;
+    $path = array_map(static fn (string $segment): string => str_replace(['~1', '~0'], ['/', '~'], $segment), explode('/', substr($pointer, 1)));
+    $type = $request->query->get('type');
+    $definition = $key === '' ? NULL : $this->references->definitionAt($served->surface, $path, is_string($type) && $type !== '' ? $type : NULL);
+    $found = $definition === NULL ? NULL : References::target($definition);
+    if ($definition === NULL || $found === NULL) {
+      $detail = (string) $this->t('No key of @resource at @pointer refers to one entity type: name a reference key, and the type for a key that refers to an entity of any type.', [
+        '@resource' => $served->definition->id,
+        '@pointer' => $pointer,
+      ]);
+      throw new ProblemException(404, $detail);
+    }
+    $limit = $request->query->get('limit');
+    $items = $this->references->lookup($found['entityType'], $found['bundles'], (string) $request->query->get('q', ''), is_numeric($limit) ? (int) $limit : self::LOOKUP_LIMIT, $definition->getDataType());
+    return $this->respond(['key' => $pointer] + $found + ['items' => $items]);
   }
 
   /**

@@ -17,6 +17,7 @@ use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\Pipeline\DataSurfacePipelineInterface;
 use Drupal\data_surface\Pipeline\ResultDocument;
 use Drupal\data_surface\Pipeline\Violation;
+use Drupal\data_surface\Reference\References;
 use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface\ResourceBuild\OperationDefinition;
 use Drupal\data_surface\ResourceBuild\ResourceCatalog;
@@ -489,6 +490,21 @@ final class OpenApiDocument {
       $items[] = [FALSE, FALSE, $listed];
     }
     $paths = [];
+    // The lookup of the keys that refer to an entity, at the path GET
+    // serves this operation at.
+    // Decision: see
+    // docs/decisions.md#a-reference-is-an-id-with-a-list-the-site-decides-listed-or-looked-up.
+    $references = static::references($full->document['schema']);
+    if (!$readNamed && $references !== []) {
+      [$path, $names, $url] = $this->paths->lookupTemplate($definition, $operation);
+      $cacheability->addCacheableDependency($url);
+      $lookup = $this->lookup($definition, $common, $references, $denied);
+      $lookup['get']['parameters'] = [
+        ...$this->operationParameters($operation, $names),
+        ...$lookup['get']['parameters'],
+      ];
+      $paths[$path] = $lookup;
+    }
     foreach ($items as [$custom, $isSchema, $calls]) {
       [$path, $names, $url] = $this->paths->template($definition, $operation, $custom, $isSchema);
       $cacheability->addCacheableDependency($url);
@@ -562,6 +578,131 @@ final class OpenApiDocument {
             'content' => ['application/json' => ['schema' => ['$ref' => SchemaComponents::POINTER . $outputs]]],
           ],
         ] + $problems(['422' => (string) $this->t('A value of the query was refused: each error a JSON Pointer, a code and a message.')]) + $denied,
+      ],
+    ];
+  }
+
+  /**
+   * Finds the keys of a full schema that refer to an entity.
+   *
+   * @param array $schema
+   *   The full schema.
+   * @param array|null $frame
+   *   The object being read; NULL for the top.
+   * @param string $prefix
+   *   Its JSON Pointer.
+   *
+   * @return string[]
+   *   The JSON Pointer of each key `x-surface.reference` marks, and of the
+   *   object a bare reference's id is in, which names it too.
+   */
+  protected static function references(array $schema, ?array $frame = NULL, string $prefix = ''): array {
+    $frame ??= $schema;
+    $found = [];
+    foreach (is_array($frame['properties'] ?? NULL) ? $frame['properties'] : [] as $name => $property) {
+      if (!is_array($property)) {
+        continue;
+      }
+      $at = $prefix . '/' . str_replace(['~', '/'], ['~0', '~1'], (string) $name);
+      if (isset($property['$ref']) && is_string($property['$ref']) && str_starts_with($property['$ref'], ContractEmitter::DEFS)) {
+        $def = $schema['$defs'][substr($property['$ref'], strlen(ContractEmitter::DEFS))] ?? NULL;
+        $inside = is_array($def) ? static::references($schema, $def, $at) : [];
+        if (in_array($at . '/id', $inside, TRUE) && (($def['properties']['id'][ContractEmitter::EXTENSION]['reference']['by'] ?? NULL) !== NULL)) {
+          $found[] = $at;
+        }
+        array_push($found, ...$inside);
+        continue;
+      }
+      if (isset($property[ContractEmitter::EXTENSION]['reference'])) {
+        $found[] = $at;
+      }
+    }
+    return $found;
+  }
+
+  /**
+   * Describes the lookup: candidates for one reference key, by label.
+   *
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   *   The resource.
+   * @param array $common
+   *   What every call of the operation says.
+   * @param string[] $references
+   *   The JSON Pointers of its reference keys.
+   * @param array $denied
+   *   The 403 and 404 answers.
+   *
+   * @return array
+   *   The path item's one call, `get`.
+   */
+  protected function lookup(ResourceDefinition $definition, array $common, array $references, array $denied): array {
+    return [
+      'get' => ['x-surface-kind' => OperationDefinition::READ] + $common + [
+        'operationId' => $definition->id . ':lookup',
+        'summary' => (string) $this->t('@resource: look up an entity a key may refer to', ['@resource' => $definition->id]),
+        'description' => (string) $this->t("The candidates of one reference key whose label contains q, for the account that asks: the selection handler the key's options and its check ask. A key with too many candidates to list states none, and this is where a client finds one. Nothing is written."),
+        'parameters' => [
+          [
+            'name' => 'key',
+            'in' => 'query',
+            'required' => TRUE,
+            'description' => (string) $this->t('The JSON Pointer of the reference key.'),
+            'schema' => ['type' => 'string', 'enum' => $references],
+          ],
+          [
+            'name' => 'q',
+            'in' => 'query',
+            'required' => FALSE,
+            'description' => (string) $this->t('Text the label contains; none for the first candidates.'),
+            'schema' => ['type' => 'string'],
+          ],
+          [
+            'name' => 'type',
+            'in' => 'query',
+            'required' => FALSE,
+            'description' => (string) $this->t('For a key that refers to an entity of any type: the entity type, one its entity_type allows.'),
+            'schema' => ['type' => 'string'],
+          ],
+          [
+            'name' => 'limit',
+            'in' => 'query',
+            'required' => FALSE,
+            'description' => (string) $this->t('The most to answer.'),
+            'schema' => [
+              'type' => 'integer',
+              'minimum' => 1,
+              'maximum' => References::LOOKUP_MAX,
+              'default' => ResourceApiController::LOOKUP_LIMIT,
+            ],
+          ],
+        ],
+        'responses' => [
+          '200' => [
+            'description' => (string) $this->t('The candidates found, sorted by label.'),
+            'headers' => [ResourceApiController::VERSION_HEADER => ['$ref' => '#/components/headers/ContractVersion']],
+            'content' => [
+              'application/json' => [
+                'schema' => [
+                  'type' => 'object',
+                  'properties' => [
+                    'key' => ['type' => 'string'],
+                    'entityType' => ['type' => 'string'],
+                    'bundles' => ['type' => 'array', 'items' => ['type' => 'string']],
+                    'items' => [
+                      'type' => 'array',
+                      'items' => [
+                        'type' => 'object',
+                        'properties' => ['id' => ['type' => ['integer', 'string']], 'label' => ['type' => 'string']],
+                        'required' => ['id', 'label'],
+                      ],
+                    ],
+                  ],
+                  'required' => ['key', 'entityType', 'bundles', 'items'],
+                ],
+              ],
+            ],
+          ],
+        ] + $denied,
       ],
     ];
   }
