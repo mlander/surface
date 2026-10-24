@@ -645,7 +645,7 @@ class ExamplesConceptsTest extends DataSurfaceKernelTestBase {
     $this->assertArrayNotHasKey('calls', $page);
     $this->container->get('module_installer')->install([SpotlightBlockHooks::PLACEMENT]);
     $block = $this->container->get('entity_type.manager')->getStorage('block')->load(SpotlightBlockHooks::BLOCK);
-    $this->assertNotNull($block, 'Enabling both placed the Spotlight block, through the add operation.');
+    $this->assertNotNull($block, 'Enabling both placed the Spotlight block, through the create operation.');
     $this->assertSame('stark', $block->get('theme'));
     $this->assertSame('content', $block->get('region'));
     $this->assertSame(SpotlightBlockHooks::PAGE, $block->get('visibility')['request_path']['pages']);
@@ -675,19 +675,19 @@ class ExamplesConceptsTest extends DataSurfaceKernelTestBase {
     $this->assertSame(['data_surface_examples:call_to_action'], array_column($actions['component.nested.data_surface_examples:call_to_action.1']['properties']['component']['oneOf'], 'const'), 'The actions offer the call to action alone.');
     $this->assertSame(2, $actions['component.slot.data_surface_examples:hero.actions.1']['properties']['components']['maxItems']);
     $this->assertSame([
-      ['data_surface:block.placement:add', 'Place a block', 'write', 'values, dry_run'],
-      ['data_surface:block.placement:edit', 'Edit a placed block', 'write', 'id, values, dry_run'],
-      ['data_surface:block.placement:edit:read', 'Current values: Edit a placed block', 'read', 'id'],
-      ['data_surface:block.placement:remove', 'Remove a placed block', 'write', 'id, dry_run'],
+      ['data_surface:block.placement:create', 'Place a block', 'write', 'values, dry_run'],
+      ['data_surface:block.placement:update', 'Edit a placed block', 'write', 'id, values, dry_run'],
+      ['data_surface:block.placement:update:read', 'Current values: Edit a placed block', 'read', 'id'],
+      ['data_surface:block.placement:delete', 'Remove a placed block', 'write', 'id, dry_run'],
     ], $page['parts']['tools']['#rows']);
     $answer = static fn (string $call): string => htmlspecialchars_decode((string) $page['calls']['block.placement:' . $call]['answer']['#value']);
     $this->assertStringStartsWith("Failed: The values were refused:\n/id: The machine name data_surface_examples_spotlight is already in use", $answer('place'));
     $this->assertStringStartsWith("Failed: The values were refused:\n/id: The machine name data_surface_examples_section is already in use", $answer('section'));
     $this->assertStringStartsWith('Success: Dry run of Edit a placed block', $answer('props'));
     $this->assertStringStartsWith("Failed: The values were refused:\n/settings/slots/actions/component/component: The value you selected is not a valid choice. Choose data_surface_examples:call_to_action (Call to action).", $answer('wrong_slot'));
-    $this->assertStringStartsWith('Success: Dry run of Remove a placed block', $answer('remove'));
+    $this->assertStringStartsWith('Success: Dry run of Remove a placed block', $answer('delete'));
     $this->assertSame('data_surface_examples:card', $this->container->get('entity_type.manager')->getStorage('block')->loadUnchanged(SpotlightBlockHooks::BLOCK)->get('settings')['component'], 'No call wrote anything.');
-    $this->assertStringContainsString('Below, the Spotlight block, data_surface_examples_spotlight, placed through the add operation in the content region of stark', (string) $page['placed']['#markup']);
+    $this->assertStringContainsString('Below, the Spotlight block, data_surface_examples_spotlight, placed through the create operation in the content region of stark', (string) $page['placed']['#markup']);
     $this->assertStringContainsString('Below it, the Tonight block, data_surface_examples_section, placed the same way', (string) $page['section']['#markup']);
   }
 
@@ -742,18 +742,18 @@ class ExamplesConceptsTest extends DataSurfaceKernelTestBase {
     $this->assertSame('Main hall (400), East room (120)', $page['venues']['#rows'][0][3]);
     $this->assertCount(count(ConceptPanel::VENUE_PATHS), $page['served']['paths']['#rows']);
     $this->assertSame([
-      'data_surface:event.venue:add',
+      'data_surface:event.venue:create',
       'data_surface:event.venue:list',
       'data_surface:event.venue:reorder',
       'data_surface:event.venue:reorder:read',
-      'data_surface:event.venue:edit',
-      'data_surface:event.venue:edit:read',
-      'data_surface:event.venue:remove',
+      'data_surface:event.venue:update',
+      'data_surface:event.venue:update:read',
+      'data_surface:event.venue:delete',
     ], array_column($page['served']['tools']['#rows'], 0));
     $answer = static fn (array $page, string $call): string => htmlspecialchars_decode((string) $page['calls']['event.venue:' . $call]['answer']['#value']);
     $this->assertStringContainsString('  total: 3', $answer($page, 'list'));
-    $this->assertSame('Success: Add a venue: the values were accepted and written.', $answer($page, 'add'));
-    $this->assertStringStartsWith('Success: Remove a venue: removed.', $answer($page, 'remove'));
+    $this->assertSame('Success: Add a venue: the values were accepted and written.', $answer($page, 'create'));
+    $this->assertStringStartsWith('Success: Remove a venue: removed.', $answer($page, 'delete'));
     $this->assertNull(EventVenue::load('town_hall'), 'The last call removed the fourth venue again.');
 
     // A venue of that name on the site: every call is a dry run, and the
@@ -762,8 +762,8 @@ class ExamplesConceptsTest extends DataSurfaceKernelTestBase {
     $this->container->get('entity_type.manager')->getStorage('event_venue')->create($ours)->save();
     $page = $controller->step15();
     $this->assertStringContainsString('This site has a venue named town_hall', (string) $page['calls']['note']['#markup']);
-    $this->assertSame("Failed: The values were refused:\n/id: The machine name town_hall is already in use: choose another.", $answer($page, 'add'));
-    $this->assertStringStartsWith('Success: Dry run of Remove a venue', $answer($page, 'remove'));
+    $this->assertSame("Failed: The values were refused:\n/id: The machine name town_hall is already in use: choose another.", $answer($page, 'create'));
+    $this->assertStringStartsWith('Success: Dry run of Remove a venue', $answer($page, 'delete'));
     $kept = $this->container->get('entity_type.manager')->getStorage('event_venue')->loadUnchanged('town_hall');
     $this->assertSame('Our town hall', $kept?->label(), 'Left as it was.');
   }

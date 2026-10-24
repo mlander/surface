@@ -23,7 +23,7 @@ use Symfony\Component\Routing\Route;
  *   defaults:
  *     _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
  *     _data_surface_resource: 'Drupal\example\Resource\ExampleResource'
- *     _data_surface_operation: 'edit'
+ *     _data_surface_operation: 'update'
  *   requirements:
  *     _data_surface_operation_access: 'TRUE'
  *   options:

@@ -29,17 +29,17 @@ final class PantryResource implements ResourceInterface {
   /**
    * A new pantry.
    */
-  #[Operation('add', label: 'Add a pantry', creates: TRUE)]
-  public static function add(): OperationContext {
-    return new OperationContext('add', creates: TRUE);
+  #[Operation('create', label: 'Add a pantry', creates: TRUE)]
+  public static function create(): OperationContext {
+    return new OperationContext('create', creates: TRUE);
   }
 
   /**
    * An existing pantry.
    */
-  #[Operation('edit', label: 'Edit a pantry')]
-  public static function edit(string $pantry): OperationContext {
-    return new OperationContext('edit', known: ['pantry' => $pantry]);
+  #[Operation('update', label: 'Edit a pantry')]
+  public static function update(string $pantry): OperationContext {
+    return new OperationContext('update', known: ['pantry' => $pantry]);
   }
 
   /**

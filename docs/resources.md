@@ -177,14 +177,14 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
   an operation belongs to, a storage class, an access class. Never an
   instance or a string.
 
-## Operations: add, edit, and the rest
+## Operations: create, update, and the rest
 
-A resource never mentions add or edit. The difference is how much is
+A resource never mentions create or update. The difference is how much is
 already known, and that is a **context**, an `OperationContext`:
 
 - `#[Resource(identity: [...])]` names the identity keys. An identity
   key the context knows is locked to that value; one it does not know
-  stays open. That is the whole difference between add and edit. A
+  stays open. That is the whole difference between create and update. A
   resource with no identity keys is a singleton.
 - The ways a resource is asked for are `#[Operation]` attributes. Each
   states the operation's static facts, read at discovery without
@@ -233,20 +233,20 @@ already known, and that is a **context**, an `OperationContext`:
   operation that does not create is idempotent, one that creates is not,
   a read only one is; say `idempotent:` only where you know better: an
   operation that appends is not, and a create whose caller names the
-  thing (`node.type:add`, `field.instance:add`) is, a second identical
+  thing (`node.type:create`, `field.instance:create`) is, a second identical
   call finding the name taken. A tool carries them to the Tool API,
   which MCP reads as a tool's annotations, and both schema documents
   state them at the top, under `x-surface.operation`
   ([decision](decisions.md#an-operation-states-how-it-behaves)). A read
   only operation writes nothing at any door: its pipeline accepts,
   validates and prepares, stops where a dry run does, and refuses to
-  commit what it prepared. An edit
+  commit what it prepared. An update
   destroys nothing: it changes the keys it is sent, and a key left out
   keeps its value. `deletes: TRUE`, beside `destructive: TRUE`, makes an
   operation a delete: it takes no values, its storage removes the thing
   its context names (`DeletableStorageInterface`), its tool takes the
   parameters and a dry run, and HTTP serves it as `DELETE` (the
-  placement's `remove`,
+  placement's `delete`,
   [decision](decisions.md#a-placed-block-is-a-resource)).
 
 The content type resource is the worked example:
@@ -259,24 +259,24 @@ The content type resource is the worked example:
 )]
 final class NodeTypeResource implements ResourceInterface {
 
-  #[Operation('add',
+  #[Operation('create',
     label: new TranslatableMarkup('Add a content type'),
     description: new TranslatableMarkup('Creates a content type under a machine name the caller chooses; a machine name already in use is refused.'),
     permission: self::PERMISSION,
     creates: TRUE,
     idempotent: TRUE,
   )]
-  public static function add(): OperationContext {
-    // Unique on add only: that is where you are, not what was entered.
+  public static function create(): OperationContext {
+    // Unique on create only: that is where you are, not what was entered.
     return (new OperationContext())->withConstraint('type', 'DataSurfaceUniqueNodeType');
   }
 
-  #[Operation('edit',
+  #[Operation('update',
     label: new TranslatableMarkup('Edit a content type'),
     description: new TranslatableMarkup('Changes a content type, named by its machine name, which stays as it is.'),
     permission: self::PERMISSION,
   )]
-  public static function edit(NodeTypeInterface $type): OperationContext {
+  public static function update(NodeTypeInterface $type): OperationContext {
     return new OperationContext(known: ['type' => $type->id()]);
   }
 
@@ -285,8 +285,8 @@ final class NodeTypeResource implements ResourceInterface {
 }
 ```
 
-Both are methods because their contexts need more: add narrows the
-machine name, edit knows it. A settings object's one `configure` needs
+Both are methods because their contexts need more: the create narrows
+the machine name, the update knows it. A settings object's one `configure` needs
 nothing, so it is the attribute alone, as on [the first
 resource](first-resource.md):
 
@@ -301,10 +301,10 @@ final class NewsletterResource implements ResourceInterface {
 ```
 
 and the field instance resource has three, each knowing more than the
-last: `add($entity_type_id, $bundle)`, `reuse($storage, $bundle)` (an
-add for the field and, through `withChild('storage',
-FieldStorageResource::edit($storage))`, an edit for its storage) and
-`edit($field)`. The storage's edit operation narrows cardinality not to
+last: `create($entity_type_id, $bundle)`, `reuse($storage, $bundle)` (a
+create for the field and, through `withChild('storage',
+FieldStorageResource::update($storage))`, an update for its storage) and
+`update($field)`. The storage's update operation narrows cardinality not to
 shrink once the field has data, with `withConstraint()`, and knows the
 field type, its one identity key, which locks its settings to that
 type's.
@@ -315,7 +315,7 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
 $resources = \Drupal::service('data_surface.resources');
 // By parameter name or position; an entity parameter takes the entity
 // or its id, loaded by the entity type whose class satisfies the type.
-$context = $resources->operation(NodeTypeResource::class, 'edit', ['type' => 'article']);
+$context = $resources->operation(NodeTypeResource::class, 'update', ['type' => 'article']);
 $surface = $resources->build(NodeTypeResource::class, $context);
 $access = $resources->access(NodeTypeResource::class, $context);
 $storage = $resources->storage(NodeTypeResource::class, $context, $surface);
@@ -326,7 +326,7 @@ open, and it is still the same resource.
 
 ### An operation that takes keys of its own
 
-Most operations take the resource's keys: an add sends them, an edit
+Most operations take the resource's keys: a create sends them, an update
 changes some. An operation about the things together takes other keys:
 a listing's page and filter, a reorder's ids and weights. It names the
 structure they are with `values:` on its `#[Operation]`, and that
@@ -388,12 +388,12 @@ composed storage and submits through the pipeline to it. The route's
 requirement is the operation's access:
 
 ```yaml
-data_surface_demo_node_type.edit:
+data_surface_demo_node_type.update:
   path: '/admin/structure/types/manage/{type}/surface-edit'
   defaults:
     _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
     _data_surface_resource: 'Drupal\data_surface_demo_node_type\Resource\NodeTypeResource'
-    _data_surface_operation: 'edit'
+    _data_surface_operation: 'update'
     _data_surface_cosmetics: 'data_surface_demo_node_type.form_cosmetics'
   requirements:
     _data_surface_operation_access: 'TRUE'
@@ -637,12 +637,12 @@ own is a tool, `data_surface:<resource id>:<operation id>`, derived by
 
 | Tool | Inputs |
 | --- | --- |
-| `data_surface:node.type:add` | `values` (every key, `type` unique), `dry_run` |
-| `data_surface:node.type:edit` | `type` (the content type's id), `values` (every key but `type`), `dry_run` |
-| `data_surface:field.instance:add` | `entity_type_id`, `bundle`, `values`, `dry_run` |
+| `data_surface:node.type:create` | `values` (every key, `type` unique), `dry_run` |
+| `data_surface:node.type:update` | `type` (the content type's id), `values` (every key but `type`), `dry_run` |
+| `data_surface:field.instance:create` | `entity_type_id`, `bundle`, `values`, `dry_run` |
 | `data_surface:field.instance:reuse` | `storage` (its id), `bundle`, `values`, `dry_run` |
-| `data_surface:field.instance:edit` | `field` (its id), `values`, `dry_run` |
-| `data_surface:field.storage:edit` | `storage` (its id), `values`, `dry_run` |
+| `data_surface:field.instance:update` | `field` (its id), `values`, `dry_run` |
+| `data_surface:field.storage:update` | `storage` (its id), `values`, `dry_run` |
 
 - **Inputs** are the operation's parameters, by name (an entity
   parameter as the entity's id, resolved when the tool runs; a scalar
@@ -657,7 +657,7 @@ own is a tool, `data_surface:<resource id>:<operation id>`, derived by
   default: each key the resource requires says "Required; a value
   already stored stands when left out.", since a listing is cached by
   its clients and the Tool API refuses a required key left out before
-  the tool runs. The pipeline still refuses an edit
+  the tool runs. The pipeline still refuses an update
   of a thing that holds no value for a required key, in the key's own
   words
   ([decision](decisions.md#required-is-the-resources-and-an-update-tool-requires-nothing-at-its-door)).
@@ -708,7 +708,7 @@ two (`ResourceCatalog::standalone()`):
 1. **A permission nothing can name.** An operation whose permission has
    a `%key` placeholder that none of its parameters can supply (one
    named for it, or an entity its operation reads identity off) could
-   never be allowed, so it is no tool. `field.storage`'s `add` needs
+   never be allowed, so it is no tool. `field.storage`'s `create` needs
    nothing and asks `administer %entity_type_id fields`: only a field
    adding its storage can ask it, as that field's child.
 2. **Something a host or a parent stores.** A class with no storage of
@@ -729,8 +729,8 @@ is what the composed storage loads, in the shape the write tool's
 every secret, at any depth. Its access is the write tool's. Which
 operations those are is `ResourceCatalog::reads()`: the updates, read
 off the attribute, an operation that neither creates nor is read only.
-So `node.type:edit`, `field.instance:edit` and `field.storage:edit`
-read, and `node.type:add`, `field.instance:add` and
+So `node.type:update`, `field.instance:update` and `field.storage:update`
+read, and `node.type:create`, `field.instance:create` and
 `field.instance:reuse` do not.
 
 ## Catalog
@@ -1640,12 +1640,12 @@ first of these that applies:
    operation and hands it identity. Naming an operation the child does
    not declare is refused at build, naming the parent, the key and the
    operation. A context handed whole, `withChild('storage',
-   FieldStorageResource::edit($storage))`, is still taken as it is: the
+   FieldStorageResource::update($storage))`, is still taken as it is: the
    parent built it, so the child invokes no operation of its own through
    it, and no operation's permission is asked of it. Its access class
    still answers, below.
 2. **The child's operation with the parent's operation id.** Adding a
-   field invokes its storage's own `add`.
+   field invokes its storage's own `create`.
 3. **The child's default**, the one operation it marks
    `#[Operation(..., default: TRUE)]`. Two defaults on one class are
    refused when it is built.
@@ -1698,9 +1698,9 @@ and stated fixed ([A variant is open, locked or not
 offered](decisions.md#a-variant-is-open-locked-or-not-offered)).
 
 The test module's larder is the worked example: one spice rack resource
-attached twice, invoked through its `edit` at one key, matched by the
+attached twice, invoked through its `update` at one key, matched by the
 larder's own operation id, and through `restock`, which the larder's
-edit operation names, at the other, with an access class that answers
+update operation names, at the other, with an access class that answers
 open, locked or omitted by permission. Its `stock` operation hands both
 racks a context whole, where the access class answers the same and
 `restock`'s permission is not asked (`ChildOperationTest`).
@@ -1738,7 +1738,7 @@ another key, adds `FieldStorageResource`'s from
 the schema says and nothing more: its keys, their types and labels, and
 the field type's own default settings where their type fits. A string's
 `max_length` is `storage.settings.max_length` when the field is added,
-and `settings.max_length` on `data_surface:field.storage:edit`. The
+and `settings.max_length` on `data_surface:field.storage:update`. The
 catalog lists the declared variants per key, and says where the
 derived ones come from.
 
@@ -2064,8 +2064,8 @@ final class ContentEntityResources implements ResourceDeriverInterface, KnowsDer
           inputs: new ResourceCallable(self::class, 'defineInputs', $bound),
           identity: ['entity_type', 'bundle', 'id'],
           operations: [
-            new DerivedOperation('add', $this->t('Add @bundle', ['@bundle' => $label]), new ResourceCallable(self::class, 'add', $bound)),
-            new DerivedOperation('edit', $this->t('Edit @bundle', ['@bundle' => $label]), new ResourceCallable(self::class, 'edit', $bound), ['id' => 'entity:' . $entity_type_id]),
+            new DerivedOperation('create', $this->t('Add @bundle', ['@bundle' => $label]), new ResourceCallable(self::class, 'create', $bound)),
+            new DerivedOperation('update', $this->t('Edit @bundle', ['@bundle' => $label]), new ResourceCallable(self::class, 'update', $bound), ['id' => 'entity:' . $entity_type_id]),
           ],
           storage: ContentEntityStorage::class,
           access: ContentEntityAccess::class,

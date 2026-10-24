@@ -110,7 +110,7 @@ class ResourceDiscoveryTest extends DataSurfaceKernelTestBase {
 
     // An operation from another class names its resource with `of`.
     $operations = $this->registry()->getOperations(RecipeResource::class);
-    $this->assertSame(['add', 'edit', 'clone', 'mislabeled'], array_keys($operations));
+    $this->assertSame(['create', 'update', 'clone', 'mislabeled'], array_keys($operations));
     $this->assertSame('cook in %kitchen', $operations['clone']->permission);
     $this->assertSame('Clone a recipe', (string) $operations['clone']->label);
 
@@ -118,7 +118,7 @@ class ResourceDiscoveryTest extends DataSurfaceKernelTestBase {
       [EditOnlyRecipeAlter::class, RecipeAlter::class],
       array_map(static fn ($alter) => $alter->class, $this->registry()->getAlters(RecipeResource::class)),
     );
-    $this->assertSame(['edit'], $this->registry()->getAlters(RecipeResource::class)[0]->operations);
+    $this->assertSame(['update'], $this->registry()->getAlters(RecipeResource::class)[0]->operations);
 
     // The variant is found at the key it names, for its value.
     $this->assertSame(['herb' => HerbGarnishStructure::class], $this->registry()->getVariants(RecipeResource::class, 'garnish_settings'));

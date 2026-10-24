@@ -218,7 +218,7 @@ class ContractBaselineTest extends DataSurfaceKernelTestBase {
    *
    * Nothing stored or sent before held it. On `configure`, an update, the
    * lint passes it and says what it asks of a write, since a key left out
-   * keeps what is stored; on a create of the same declaration (an `add`
+   * keeps what is stored; on a create of the same declaration (an `create`
    * document beside it, as `node.type` has) every old create leaves it
    * out and is refused, so it is breaking there, and an allowance with a
    * reason answers it. A default answers for both. An optional key made
@@ -231,8 +231,8 @@ class ContractBaselineTest extends DataSurfaceKernelTestBase {
 
     // The same declaration in a create beside its update.
     $create = static function (array $document): array {
-      $document['operation'] = 'add';
-      $document['schema']['x-surface']['operation'] = ['id' => 'add', 'kind' => 'create', 'creates' => TRUE] + $document['schema']['x-surface']['operation'];
+      $document['operation'] = 'create';
+      $document['schema']['x-surface']['operation'] = ['id' => 'create', 'kind' => 'create', 'creates' => TRUE] + $document['schema']['x-surface']['operation'];
       return $document;
     };
     $committed['registration.step2']['documents'][] = $create($committed['registration.step2']['documents'][0]);
@@ -257,7 +257,7 @@ class ContractBaselineTest extends DataSurfaceKernelTestBase {
         ContractChange::COMPATIBLE,
       ],
       [
-        'add#/properties/organizer',
+        'create#/properties/organizer',
         'required key added with no default: a create that leaves organizer out is refused',
         'narrows',
         ContractChange::BREAKING,
@@ -266,7 +266,10 @@ class ContractBaselineTest extends DataSurfaceKernelTestBase {
 
     $allowing = $committed;
     $allowing['registration.step2']['allowed'] = [
-      ['path' => 'add#/properties/organizer', 'reason' => 'Every caller that creates one names its organizer already.'],
+      [
+        'path' => 'create#/properties/organizer',
+        'reason' => 'Every caller that creates one names its organizer already.',
+      ],
     ];
     $this->assertSame(ContractChange::ALLOWED, $organizer($baselines->compare($allowing, $added))[1][3]);
 
@@ -276,7 +279,7 @@ class ContractBaselineTest extends DataSurfaceKernelTestBase {
     unset($document);
     $this->assertSame([
       ['configure#/properties/organizer', 'required key added, with a default', 'note', ContractChange::COMPATIBLE],
-      ['add#/properties/organizer', 'required key added, with a default', 'note', ContractChange::COMPATIBLE],
+      ['create#/properties/organizer', 'required key added, with a default', 'note', ContractChange::COMPATIBLE],
     ], $organizer($baselines->compare($committed, $added)));
 
     $made = $baselines->emit(self::PINNED);

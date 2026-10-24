@@ -46,8 +46,8 @@ final class BlockPlacementFormCosmetics implements DataSurfaceFormCosmeticsInter
   public function surfaceFormMessage(DataSurfaceResult $result, string $operation, ?string $subject): \Stringable {
     $label = (string) ($result->values['label'] ?? $subject ?? '');
     return match ($operation) {
-      'add' => $this->t('The block %label has been placed.', ['%label' => $label]),
-      'remove' => $this->t('The block %label has been removed.', ['%label' => $label]),
+      'create' => $this->t('The block %label has been placed.', ['%label' => $label]),
+      'delete' => $this->t('The block %label has been removed.', ['%label' => $label]),
       default => $this->t('The block %label has been saved.', ['%label' => $label]),
     };
   }

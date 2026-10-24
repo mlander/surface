@@ -48,7 +48,7 @@ already asks access by: an entity's access is asked per operation, and
 here an operation's permission and then the access class are asked the
 same way. A structure may still declare operations, but only for its
 container to choose between (the larder's spice rack, invoked through
-`edit` or `restock`); asked on its own, it is the container that is
+`update` or `restock`); asked on its own, it is the container that is
 reached.
 
 The attribute decides the kind, not the directory: a module's
@@ -207,6 +207,69 @@ Deferred:
 - Dated records (`REWORK.md`, `PLAN.md`, `ADOPTION.md`, `HARDENING.md`,
   the fresh-eyes log, the never-stricter audit) keep the words of their
   day.
+
+### The ids are the standard five, the labels are Drupal's
+
+Decided 2026-10-23, by the owner. An operation's id is what a program
+reads: the tool id (`data_surface:event.venue:create`), the custom
+method after a path, `x-surface.operation.id` in both documents, a
+route's `_data_surface_operation`. Its label is what a person reads:
+the form's title and the tool's. The default ids are the kinds' own
+names, `create`, `read`, `list`, `update` and `delete`, and Drupal's
+words for them stay in the labels: `create` is "Add a venue", `update`
+is "Configure the newsletter" or "Edit a content type", `delete` is
+"Remove a placed block".
+
+- **Why the standard ids.** An agent choosing between tools and a client
+  generator naming methods expect these five; `add`, `edit` and `remove`
+  were Drupal's words for the same kinds, which a reader outside Drupal
+  has to map first. An operation's kind (`OperationDefinition::kind()`)
+  has carried these names since
+  [An operation states how it behaves](#an-operation-states-how-it-behaves),
+  so the id of a default and its kind now agree.
+- **Why the labels keep Drupal's words.** People read the label, and a
+  Drupal site's people read "Add", "Edit" and "Remove" on every form. A
+  label changed only where it repeated the old id.
+- **`configure` for an update on a singleton.** A resource with no
+  identity is a settings object, and every settings page has said
+  "Configure" for twenty years, so `configure` stays an accepted id for
+  an update there, a default as `update` is. On a resource with identity
+  it is a custom method like any other. The first resource and every
+  settings example keep it.
+- **`read`, not `get`.** The same operation is a form, a tool and an
+  HTTP path. `get` names one door's method; `read` says what the
+  operation does at all three, and is its kind's name.
+- **The rule.** The default of a kind at a path is the operation whose
+  id is the kind's standard name (`create`, `update`, `read` or `list`,
+  `delete`), or `configure` for an update on a singleton; else the only
+  operation of that kind there; else none, and every operation of the
+  kind is a custom method
+  ([Contract 3](#contract-3-the-operation-is-the-method);
+  `OperationDefinition::defaultIds()`, `ServedPaths::defaults()`). A
+  custom operation keeps any name (`check`, `reorder`, `reuse`).
+- **The old words are refused at discovery.** An operation id `add`,
+  `edit`, `remove` or `get` is refused when discovery reads it, the
+  message naming the standard id that replaces it
+  (`OperationDefinition::RETIRED_IDS`). Refused, not warned: a warning
+  is read once and the id kept, and every tool id, path and document
+  built from it carries the old word on. A contract 2 path that carries
+  one is still gone, read as the renamed operation's
+  (`ServedPaths::CONTRACT_2_IDS`).
+- **What followed.** Every shipped operation so named was renamed with
+  its method, its label kept: the venues, the placed block, the content
+  type, the field and its storage, every content entity resource and
+  field item, and the test modules'. Tool ids follow
+  (`data_surface:event.venue:update`, `:update:read`, `:delete`); the
+  read tool's suffix stays `:read`. Route names follow the id
+  (`data_surface_block.update`, `data_surface_examples.step15_delete`).
+  A path keeps Drupal's own convention where it had one, `/add` and
+  `/edit` (`/admin/structure/block/surface/add`,
+  `/surface-entity/node/{id}/edit`, `/admin/structure/types/surface-add`);
+  a removal's path, `/remove`, followed no convention, and is `/delete`,
+  Drupal's own word for that path.
+  (`OperationDefinition`, `ServedPaths`, `ServedPathsDefaultsTest`,
+  `OperationFactsTest::testRetiredIdsAreRefusedAtDiscovery()`,
+  `ServedPathsTest::testContractTwoPathsAreGone()`)
 
 ### A resource has storage or a host
 
@@ -512,7 +575,7 @@ not declare is reused within the request; that was already a bug,
 since every caller that caches (the schema route, the tool listing)
 trusts the same cacheability.
 
-What it saves: a dry-run call to a basic page's edit tool built three
+What it saves: a dry-run call to a basic page's update tool built three
 times and builds twice (the account's listing, for the account alone,
 and one build the refined `values` and the run share); a schema request
 built its operation twice and builds it once, beside the build for the
@@ -576,8 +639,8 @@ the build resolved that operation (named, matched or the default).
 Permission and access are two questions. A permission is about entering
 an operation, and a parent that built its child's context itself took
 responsibility for that entry, so the child's permission is not asked
-again: a field's reuse and edit build its storage through
-`FieldStorageResource::edit()`, and the field's own permission is the
+again: a field's reuse and update build its storage through
+`FieldStorageResource::update()`, and the field's own permission is the
 gate. Access is about what may be done with what is there, and only
 access composes down the tree. A module like field_permissions hides a
 single field through access, so a context handed whole must not be a
@@ -630,7 +693,7 @@ caller sees first and may replace. (`Resources::applyContext()`)
 
 A known key that is not one of `#[Resource(identity:)]` is not locked;
 it stays on the context for the storage and the access class to read.
-`FieldStorageResource::edit()` knows the field storage's entity type and
+`FieldStorageResource::update()` knows the field storage's entity type and
 field name this way, which `FieldStorageStorage` loads by, while
 `field_type`, its one
 identity key, is locked. (Before storage settings existed, the field
@@ -2050,7 +2113,7 @@ is known. Decided 2026-10-18, point by point.
   for every account, says `user.permissions`, the widest the account
   alone varies by. A context naming no field, as a tool's static
   definition for an operation that needs a subject is built in, asks
-  nothing and is runtime, so an entity's edit tool lists every field
+  nothing and is runtime, so an entity's update tool lists every field
   marked, where it listed them open before. The classes asked only at
   the top (`NodeTypeAccess`, `FieldInstanceAccess`,
   `ContentEntityAccess`, the test module's recipe) answer whether the
@@ -2188,7 +2251,7 @@ gated the caller; that left a child one author's mistake away from
 being let through unasked, and a build that knows too little anywhere
 else is that mistake ([Every door projects what the read tool
 projects](#every-door-projects-what-the-read-tool-projects)).*
-Adding a field invokes its storage's `add`, whose permission names the
+Adding a field invokes its storage's `create`, whose permission names the
 entity type the field's context knows; a bare context knows none. For
 the same reason a child operation's permission that resolves to the very
 permission its parent's operation asks says nothing either: the parent's
@@ -2601,7 +2664,7 @@ configures. (`ResourceOperationToolDeriver`, `ResourceCatalog::standalone()`)
 ### A permission nothing can name is no tool
 
 An operation whose permission has a `%key` none of its parameters can
-supply is no tool: it could never be allowed. `field.storage`'s `add`
+supply is no tool: it could never be allowed. `field.storage`'s `create`
 is only ever a field's child. (`ResourceOperationToolDeriver`,
 `ResourceCatalog::standalone()`)
 
@@ -2797,11 +2860,11 @@ that destroys, or that is not idempotent, is refused at discovery.
   knows better: an operation that appends is not idempotent, and a
   create whose caller names the thing is. An edit destroys nothing: it
   changes the keys it is sent, and a key left out keeps its value. The
-  first operation that does is the placement's `remove`, a delete
+  first operation that does is the placement's `delete`, a delete
   (decided 2026-10-23); a delete that does not say it is destructive is
   refused at discovery.
 - **A create the caller names is idempotent** (decided 2026-10-20).
-  `node.type:add`, `field.instance:add` and `field.instance:reuse`
+  `node.type:create`, `field.instance:create` and `field.instance:reuse`
   create a thing whose identity the caller sends, a machine name or a
   field name on a bundle: the second identical call finds that name
   taken and leaves what the first left (the content type's is refused
@@ -2810,7 +2873,7 @@ that destroys, or that is not idempotent, is refused at discovery.
   stays `create`: whether a tool requires the resource's keys at its
   door follows from creating, not from idempotence, and no `put` kind
   was added. A create whose storage gives the id (a content entity's
-  add) stays derived, not idempotent. Derivation was weighed (a
+  create) stays derived, not idempotent. Derivation was weighed (a
   creating context that leaves an identity key for the caller) and not
   taken: it reads the context, which waits for the parameters, and the
   attribute already says it in one word.
@@ -2831,8 +2894,8 @@ that destroys, or that is not idempotent, is refused at discovery.
   `readOnlyHint` from a kind that does not modify, `idempotentHint` from
   the kind, and `destructiveHint` from the flag. *Gap, to file:*
   idempotence is a property of the kind in the Tool API, not of the
-  tool, and every kind that modifies is not idempotent, so an edit
-  cannot say it is idempotent while an add says it is not: both are
+  tool, and every kind that modifies is not idempotent, so an update
+  cannot say it is idempotent while a create says it is not: both are
   `Write`, and both read as not idempotent. `Write` is the least wrong
   kind for an idempotent operation that changes what exists: every
   idempotent kind does not modify, and would also say the operation
@@ -3546,7 +3609,7 @@ Measured, before and after:
 | Tool listing after one field saved | 240 ms, 106 builds, every tool derived | 149 ms, 3 builds, the page's three tools derived and 62 read from their entries; the rest is the Tool API discovering every other module's tools |
 | Tool listing, warm | 7.6 ms | 6.1 ms |
 | This module's deriver, everything cold | 54 to 58 ms, 106 builds | 45 to 52 ms, 45 builds |
-| A dry-run call to a basic page's edit tool | 3 builds | 2 |
+| A dry-run call to a basic page's update tool | 3 builds | 2 |
 | A schema request | 2 builds of the operation, and 1 for the account alone | 1, and 1 |
 | The schema route's access check | 1 build | none |
 | A content type saved | every tool and every definition read again | the index, the page's entry and three resources' tools written again (the page, and two whose keys list content types); the other 90 entries and 24 tool entries kept |
@@ -3663,7 +3726,7 @@ and access stay derived, because they are the field's, not its type's.
 ### Field access is child access
 
 Each field of a content entity resource is a child invoked through its
-own operation, `add` or `edit` to match the parent's, so field
+own operation, `create` or `update` to match the parent's, so field
 access is the child's access, through the three answers access already
 had: edit allowed is open, view allowed is locked, neither is omitted.
 No mechanism of its own was needed, which is what the child operations
@@ -3699,7 +3762,7 @@ rebuild. An invalidator in `data_surface_tool` closes the gap without
 coupling the engine to the Tool API: the tool deriver remembers the cache
 tags of every derived definition and of every resource it built, and an
 invalidation of any of them clears the tool definitions, so a field added
-to a bundle reaches the `add` tool's static `values` at the next listing.
+to a bundle reaches the `create` tool's static `values` at the next listing.
 Since 2026-10-20 the listing derived again is made from each resource's
 own entry, kept under that resource's tags, so the field's bundle is
 derived again and every other resource's tools are read as they were
@@ -3855,8 +3918,8 @@ the place to say where they go.
 A plugin host builds the structure its plugin names in a bare context
 whose id is the host's own verb (`configure`, `field_settings`),
 which is no declared operation. The pattern says the host "supplies the
-operation" without naming one; a plugin's configuration has no add or
-edit, only the instance the host holds. (`DataSurfaceHostTrait`)
+operation" without naming one; a plugin's configuration has no create or
+update, only the instance the host holds. (`DataSurfaceHostTrait`)
 
 ### A plugin host cannot overlay a full submission
 
@@ -3873,7 +3936,7 @@ With JavaScript the parent's AJAX rebuild offers the new choices first
 and the case does not arise, and an invalid pair is refused either way.
 The fix is a host supplying its subform's parents to
 `surfaceSubmissionPath()`. `DemoBlockTest` pins today's refusal. The
-component block's add form is the same case with variants: without
+component block's create form is the same case with variants: without
 JavaScript the props are drawn for the component stored, none, so a
 component chosen and saved at once is refused for the props it requires
 ("Heading is required."), which `ComponentBlockPlacementTest` pins.
@@ -3962,12 +4025,12 @@ structure of two keys, example 12's two lines under the block's id,
 
 Example 13 (`/surface-examples/13`) shows the structure beside example
 12's resource, the block's contract, the placement's tools, and three
-calls to them: the add that placed the Spotlight block, made again, an
-edit of its props and its removal, each a dry run. The examples place
-the Spotlight block through the add operation in the default theme's
-content region, shown on that page alone, once the block and the
-placement are on. *Open:* listing the placed blocks; the add
-form without JavaScript ([A plugin host cannot overlay a full
+calls to them: the create that placed the Spotlight block, made again,
+an update of its props and its removal, each a dry run. The examples
+place the Spotlight block through the create operation in the
+default theme's content region, shown on that page alone, once the
+block and the placement are on. *Open:* listing the placed blocks; the
+create form without JavaScript ([A plugin host cannot overlay a full
 submission](#a-plugin-host-cannot-overlay-a-full-submission)). *Closed
 2026-10-23:* one resource for a placed block of any plugin, and placing,
 moving within a theme and removing blocks through a tool
@@ -4085,11 +4148,11 @@ form, each validated as any resource is. Each choice, and why:
   offers whatever plugins the site has, the component block among them
   when it is on. Rejected: renaming `data_surface_component_block`,
   which would tie every placed block to one plugin's module.
-- **Three operations, by the machine name.** `add` creates under an `id`
+- **Three operations, by the machine name.** `create` creates under an `id`
   the caller types, idempotent since the caller names it, and refuses an
-  id in use (code `taken`, from the storage); `edit` takes the block and
+  id in use (code `taken`, from the storage); `update` takes the block and
   holds its theme to the one it is in, so moving a block between themes
-  is not offered; `remove` deletes it. Each asks "administer blocks",
+  is not offered; `delete` deletes it. Each asks "administer blocks",
   the block layout's permission.
 - **The settings are variants chosen by the plugin id.**
   `attachVariants('settings', by: 'plugin', from:
@@ -4173,8 +4236,8 @@ form, each validated as any resource is. Each choice, and why:
   block whose region its theme dropped must still be removable.
 - **At each door.** The tool takes the parameters and `dry_run` and no
   `values`, is a destructive Write, and has no read tool beside it.
-  HTTP serves a resource's default delete, the one named `remove` or
-  `delete` or the only delete at a path, as `DELETE` on the thing's
+  HTTP serves a resource's default delete, the one named `delete` or
+  the only delete at a path, as `DELETE` on the thing's
   path, with no body; it answers 200 with the result and no envelope or
   `ETag`, the thing being gone, and takes `dryRun` and `If-Match` as any
   write ([Contract 3](#contract-3-the-operation-is-the-method)); the
@@ -4184,8 +4247,8 @@ form, each validated as any resource is. Each choice, and why:
 
 *Open:* context-aware plugins (a placed block's context mapping);
 moving a block between themes; Layout Builder's components; a block in
-a region its theme hides, which edit reads as stale; a block setting
-whose sequence is a keyed map, read as a list; the add form without
+a region its theme hides, which an update reads as stale; a block setting
+whose sequence is a keyed map, read as a list; the create form without
 JavaScript for a plugin's settings, which are drawn once the plugin is
 chosen. (`BlockPlacementResource`, `BlockPlacementStorage`,
 `BlockPluginStructures`, `ConditionPluginStructures`,
@@ -4243,7 +4306,7 @@ listed, and how they are put in order.
   a `Link` to its full schema, the collection's `.../schema`; a value
   refused is 422. A resource with no listing answers `GET` on its
   collection with its create's envelope, as before; with one, the
-  create's envelope is its custom method's, `GET .../{resource}:add`,
+  create's envelope is its custom method's, `GET .../{resource}:create`,
   and the listing's envelope `GET .../{resource}:list`. Why the outputs
   and not an envelope: the listing's answer is the thing a client asked
   for, and it carries stored values, so it is never stored either, as
@@ -4259,7 +4322,7 @@ listed, and how they are put in order.
   (`Resources::access()`), and a venue whose answer is not allowed is
   left out of the page and of the total. `VenueAccess` refuses a
   disabled venue to an account without `administer event venues`,
-  which only the venue can say. Asking the edit's answer, the read
+  which only the venue can say. Asking the update's answer, the read
   tool's rule ([Reading asks what writing
   asks](#reading-asks-what-writing-asks)), was weighed and turned down:
   an account that may list the venues need not edit them.
@@ -4970,9 +5033,9 @@ door](#one-result-at-every-door)). (`ResourceApiController::submit()`)
 Where a created thing now lives is read from the outputs and the
 identity the write accepted, and checked against the operation those
 build; an identity key the write left empty is not compared, since it
-named nothing: a content entity's add knows its id as empty, and its
+named nothing: a content entity's create knows its id as empty, and its
 `id` output says what storage made it. Before, every accepted identity
-key was compared, and an add whose id storage gives could never say
+key was compared, and a create whose id storage gives could never say
 where its thing lives. (`ServedOperations::created()`)
 
 ### A fingerprint is opt-in
@@ -5178,42 +5241,47 @@ door spells a path. The endpoint table is in
   the operation is asked by them (`node.type`'s `type`) and the thing's
   own id where it is asked by that (a content entity's `id`, a field's
   `field`, `node.article.field_x`): `field.instance` declares four
-  identity keys, and its edit takes none of them by name, so a path made
+  identity keys, and its update takes none of them by name, so a path made
   of the identity keys could not be mapped to the call. An operation
   addresses one thing when its resource has identity, it does not
   create, and it needs a parameter; any other is addressed at the
   collection, `/surface-api/{resource}`, its parameters in the query
-  string (`field.instance`'s add, `?entity_type_id=node&bundle=article`).
+  string (`field.instance`'s create, `?entity_type_id=node&bundle=article`).
   (`ServedPaths::placement()`)
-- **The method is the operation.** At each path, `GET` reads, `PATCH`
-  is the default update and `POST` on the collection the default create.
-  The default of a kind is the operation named for it (`add` for a
-  create; `configure` or `edit` for an update; `read` for a read), or
-  else the only operation of that kind at the path; two of a kind with
-  neither named so leaves the kind with no default, and every operation
-  of it is a custom method. A read is a default only where no update is:
-  `GET` on a path answers what is stored, and with an update there, it
-  is the update's envelope, the values a `PATCH` changes; a read-only
-  operation beside it (example 10's `check`, which takes values and
-  checks them) is a call of its own. `GET` on a collection with no
-  update or read answers the default create's envelope, its declared
-  defaults and the schema a `POST` takes: there is no listing, since a
-  listing would carry stored values a client caches
-  ([Required is the resource's](#required-is-the-resources-and-an-update-tool-requires-nothing-at-its-door)).
+- **The method is the operation.** At each path, `GET` reads, `PATCH` is
+  the default update and `POST` on the collection the default create.
+  The default of a kind is the operation whose id is the kind's standard
+  one (`create`, `update`, `read` or `list`, `delete`), or `configure`
+  for an update on a singleton; else the only operation of that kind at
+  the path; else none, two of a kind with neither named so leaving the
+  kind with no default, and every operation of it is a custom method.
+  *Changed 2026-10-23:* the names were Drupal's words (`add`;
+  `configure` or `edit`; `remove`), and are the standard five now,
+  Drupal's words kept in the labels ([The ids are the standard
+  five](#the-ids-are-the-standard-five-the-labels-are-drupals)). A read
+  is a default only where no update is: `GET` on a path answers what is
+  stored, and with an update there, it is the update's envelope, the
+  values a `PATCH` changes; a read-only operation beside it (example
+  10's `check`, which takes values and checks them) is a call of its
+  own. `GET` on a collection with no update or read answers the default
+  create's envelope, its declared defaults and the schema a `POST`
+  takes: there is no listing, since a listing would carry stored values
+  a client caches ([Required is the
+  resource's](#required-is-the-resources-and-an-update-tool-requires-nothing-at-its-door)).
   *Changed 2026-10-23:* where a resource with identity declares a read
   only operation that names no thing, `GET` on its collection answers
   that listing's outputs, its query string the values; else the default
   create's envelope as before. The collection of a resource with
   identity has no default update, and a custom method of an update is
-  run with `PATCH`
-  ([A listing is a read-only operation with outputs](#a-listing-is-a-read-only-operation-with-outputs-a-reorder-is-an-update-over-the-collection)).
+  run with `PATCH` ([A listing is a read-only operation with
+  outputs](#a-listing-is-a-read-only-operation-with-outputs-a-reorder-is-an-update-over-the-collection)).
   *Added 2026-10-23:* `DELETE` on a path is its default delete, the
-  operation named `remove` or `delete`, or else the only delete there:
-  it takes no body, answers 200 with the result, and leaves no envelope
-  or `ETag`, the thing being gone; a delete that is not a default is a
-  custom method, `POST .../{x}:{operation}`, as any other
-  ([A placed block is a resource](#a-placed-block-is-a-resource)).
-  (`ServedPaths::defaults()`, `ServedPaths::writes()`)
+  operation named `delete`, or else the only delete there: it takes no
+  body, answers 200 with the result, and leaves no envelope or `ETag`,
+  the thing being gone; a delete that is not a default is a custom
+  method, `POST .../{x}:{operation}`, as any other ([A placed block is a
+  resource](#a-placed-block-is-a-resource)). (`ServedPaths::defaults()`,
+  `ServedPaths::writes()`)
 - **A custom method for the rest.** Any other operation, of any kind, is
   `:{operation}` after the last segment of the path it addresses:
   `GET /surface-api/event.program:check` its envelope, `POST` a run of
@@ -5327,8 +5395,12 @@ door spells a path. The endpoint table is in
   tells a client its call changed shape. The price: a second segment
   that names one of the resource's operations is read as a contract 2
   path, so a thing whose id is an operation's id (a content type named
-  `edit`) cannot be addressed by its path, and neither can one whose id
-  is `schema`.
+  `update`) cannot be addressed by its path, and neither can one whose
+  id is `schema`. *Changed 2026-10-23:* contract 2's paths carried the
+  ids of then, `add`, `edit` and `remove`, so those three are read as
+  the operation renamed from them (`.../node.type/edit` as `update`'s)
+  and stay gone, not 404 (`ServedPaths::CONTRACT_2_IDS`); a thing
+  named `edit` is not addressable by its path either.
 - **The OpenAPI document follows.** One path item per resource path,
   the methods on it, custom methods as path items of their own, each
   with a `/schema` path item; an operation that addresses one thing is
@@ -5676,7 +5748,7 @@ resource](evolution.md#compatible-and-breaking). Each choice, and why:
   creates it and judges it as a create; each container's document
   judges the same key in its own kind. The lint reports per document,
   so one declaration can be a note on `configure` and breaking on
-  `add`. With a default, which a create gives and a value stored before
+  `create`. With a default, which a create gives and a value stored before
   reads, it asks nothing of any kind and stays a note. An optional key
   made required stays breaking for every kind: the nothing a stored
   value holds may be a `null` a client sent on purpose, which cleared

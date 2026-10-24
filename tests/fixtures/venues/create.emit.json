@@ -1,6 +1,6 @@
 {
     "resource": "event.venue",
-    "operation": "add",
+    "operation": "create",
     "label": "Add a venue",
     "schema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -9,7 +9,7 @@
         "x-surface": {
             "contract": 3,
             "operation": {
-                "id": "add",
+                "id": "create",
                 "label": "Add a venue",
                 "description": "Adds a venue under a machine name the caller chooses, with its capacity, address and rooms; a machine name already in use is refused.",
                 "kind": "create",

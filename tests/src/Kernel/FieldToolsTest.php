@@ -32,7 +32,7 @@ use PHPUnit\Framework\Attributes\Group;
 /**
  * Tests the field tools, derived from the field instance resource.
  *
- * `data_surface:field.instance:add`, `:reuse` and `:edit`, one per
+ * `data_surface:field.instance:create`, `:reuse` and `:update`, one per
  * operation of FieldInstanceResource, replace the two hand-written tools
  * this module used to ship. What has to hold is what held for them: a
  * tool contributes nothing of its own to the settings. The field type's
@@ -58,7 +58,7 @@ class FieldToolsTest extends DataSurfaceKernelTestBase {
   /**
    * The tool adding a field with a storage of its own.
    */
-  protected const ADD = 'data_surface:field.instance:add';
+  protected const ADD = 'data_surface:field.instance:create';
 
   /**
    * The tool adding an existing storage's field to a bundle.
@@ -68,7 +68,7 @@ class FieldToolsTest extends DataSurfaceKernelTestBase {
   /**
    * The tool editing a field.
    */
-  protected const EDIT = 'data_surface:field.instance:edit';
+  protected const EDIT = 'data_surface:field.instance:update';
 
   /**
    * {@inheritdoc}
@@ -558,7 +558,7 @@ class FieldToolsTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Adds a string field with a short storage, through the add tool.
+   * Adds a string field with a short storage, through the create tool.
    *
    * @return \Drupal\tool\Tool\ToolInterface
    *   The executed tool.
@@ -588,7 +588,7 @@ class FieldToolsTest extends DataSurfaceKernelTestBase {
    *   The executed tool.
    */
   protected function editCodeStorage(array $values) {
-    $tool = $this->toolManager->createInstance('data_surface:field.storage:edit');
+    $tool = $this->toolManager->createInstance('data_surface:field.storage:update');
     $tool->setInputValue('storage', 'entity_test.field_code');
     $tool->setInputValue(OperationInputs::VALUES, $values);
     $tool->execute();
@@ -648,7 +648,7 @@ class FieldToolsTest extends DataSurfaceKernelTestBase {
   public function testStorageEditChangesOneStorageSetting(): void {
     $this->addShortStringField();
 
-    $tool = $this->toolManager->createInstance('data_surface:field.storage:edit');
+    $tool = $this->toolManager->createInstance('data_surface:field.storage:update');
     $tool->setInputValue('storage', 'entity_test.field_code');
     $values = $tool->getInputDefinition(OperationInputs::VALUES);
     $this->assertInstanceOf(MapInputDefinition::class, $values);
@@ -665,7 +665,7 @@ class FieldToolsTest extends DataSurfaceKernelTestBase {
   /**
    * Tests that a storage with data keeps its cardinality and its columns.
    *
-   * The edit operation still constrains cardinality not to shrink; a
+   * The update operation still constrains cardinality not to shrink; a
    * settings change that would alter the database columns is refused at
    * prepare, where the SQL storage would otherwise throw on save.
    */
@@ -707,7 +707,7 @@ class FieldToolsTest extends DataSurfaceKernelTestBase {
       $this->assertFalse($tool->access($stranger), $id);
     }
 
-    // The edit tool run as the stranger anyway.
+    // The update tool run as the stranger anyway.
     $this->setCurrentUser($stranger);
     $edit = $this->createTool(self::EDIT);
     $edit->setInputValue(OperationInputs::VALUES, ['label' => 'Renamed']);

@@ -51,7 +51,7 @@ class AttachedStructureEmissionTest extends DataSurfaceKernelTestBase {
   protected function schema(DataSurfaceInterface $surface): array {
     $definition = $this->container->get('data_surface_tool.input_definitions')->fromSurface($surface, 'Pantry', '');
     $this->assertInstanceOf(InputDefinitionInterface::class, $definition);
-    $tool = $this->container->get('plugin.manager.tool')->createInstance('data_surface:field.instance:add');
+    $tool = $this->container->get('plugin.manager.tool')->createInstance('data_surface:field.instance:create');
     return $this->container->get('tool.definition_serializer')->normalizeInputDefinition($tool, 'pantry', $definition);
   }
 
@@ -59,7 +59,7 @@ class AttachedStructureEmissionTest extends DataSurfaceKernelTestBase {
    * Tests an attached child: a nested object of the child's keys.
    */
   public function testAttachedChildIsNestedObject(): void {
-    $schema = $this->schema($this->container->get('data_surface.resources')->build(PantryResource::class, PantryResource::add()));
+    $schema = $this->schema($this->container->get('data_surface.resources')->build(PantryResource::class, PantryResource::create()));
     $shelf = $schema['properties']['shelf'];
     // Optional, so the Tool API lets it be null as well.
     $this->assertSame(['object', 'null'], $shelf['type']);
@@ -73,7 +73,7 @@ class AttachedStructureEmissionTest extends DataSurfaceKernelTestBase {
    * Tests unresolved variants: every variant's keys, none required.
    */
   public function testUnresolvedVariantsAreTheWidestHonestObject(): void {
-    $schema = $this->schema($this->container->get('data_surface.resources')->build(PantryResource::class, PantryResource::add()));
+    $schema = $this->schema($this->container->get('data_surface.resources')->build(PantryResource::class, PantryResource::create()));
     $variants = $schema['properties']['kind_settings'];
     $this->assertSame(['object', 'null'], $variants['type']);
     $this->assertEqualsCanonicalizing(['lid', 'volume', 'opener'], array_keys($variants['properties']));
@@ -96,7 +96,7 @@ class AttachedStructureEmissionTest extends DataSurfaceKernelTestBase {
    * Tests resolved variants: exactly the chosen variant's object.
    */
   public function testResolvedVariantsAreTheChosenVariant(): void {
-    $surface = $this->container->get('data_surface.resources')->build(PantryResource::class, PantryResource::add());
+    $surface = $this->container->get('data_surface.resources')->build(PantryResource::class, PantryResource::create());
     $variants = $this->schema($surface->refine(['kind' => 'tin']))['properties']['kind_settings'];
     $this->assertSame(['object', 'null'], $variants['type']);
     $this->assertSame(['opener', 'volume'], array_keys($variants['properties']));

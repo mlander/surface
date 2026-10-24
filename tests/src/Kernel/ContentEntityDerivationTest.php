@@ -82,7 +82,7 @@ class ContentEntityDerivationTest extends DataSurfaceKernelTestBase {
    *   The built resource.
    */
   protected function add(string $bundle): DataSurfaceInterface {
-    return $this->resources()->buildOperation('entity.content:node.' . $bundle, 'add');
+    return $this->resources()->buildOperation('entity.content:node.' . $bundle, 'create');
   }
 
   /**
@@ -123,13 +123,13 @@ class ContentEntityDerivationTest extends DataSurfaceKernelTestBase {
     $this->assertTrue($page->hasOutputs());
 
     $operations = $this->registry()->getOperations('entity.content:node.page');
-    $this->assertSame(['add', 'edit'], array_keys($operations));
-    $this->assertSame([], $operations['add']->parameters);
-    $this->assertSame(['entity:node $id'], array_map(static fn ($parameter): string => $parameter->describe(), $operations['edit']->parameters));
-    $this->assertSame('node', $this->container->get('data_surface.operation_arguments')->entityTypeOf($operations['edit']->parameters[0]));
+    $this->assertSame(['create', 'update'], array_keys($operations));
+    $this->assertSame([], $operations['create']->parameters);
+    $this->assertSame(['entity:node $id'], array_map(static fn ($parameter): string => $parameter->describe(), $operations['update']->parameters));
+    $this->assertSame('node', $this->container->get('data_surface.operation_arguments')->entityTypeOf($operations['update']->parameters[0]));
 
-    // The add operation knows the bundle, and that there is no id yet.
-    $context = $this->resources()->operation('entity.content:node.page', 'add');
+    // The create operation knows the bundle, and that there is no id yet.
+    $context = $this->resources()->operation('entity.content:node.page', 'create');
     $this->assertTrue($context->creates);
     $this->assertSame(['entity_type' => 'node', 'bundle' => 'page', 'id' => NULL], $context->known);
 
@@ -155,7 +155,7 @@ class ContentEntityDerivationTest extends DataSurfaceKernelTestBase {
     $this->assertSame(FieldItemStructures::class, $item->deriver);
     $this->assertSame(FieldItemAccess::class, $item->access);
     $this->assertNull($item->storage);
-    $this->assertSame(['add', 'edit'], array_keys($this->registry()->getOperations('field.item:node.page.body')));
+    $this->assertSame(['create', 'update'], array_keys($this->registry()->getOperations('field.item:node.page.body')));
   }
 
   /**
@@ -313,7 +313,7 @@ class ContentEntityDerivationTest extends DataSurfaceKernelTestBase {
    * operation's children need an id, so they inherit.
    */
   public function testBareContextBuilds(): void {
-    $surface = $this->resources()->build('entity.content:node.page', new OperationContext('edit'));
+    $surface = $this->resources()->build('entity.content:node.page', new OperationContext('update'));
     $this->assertFalse($surface->isLocked('id'));
     $this->assertSame(['value'], array_keys(static::child($surface, 'title')->getDefinitions()->toArray()));
   }

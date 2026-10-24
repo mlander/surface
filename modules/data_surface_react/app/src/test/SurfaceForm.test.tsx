@@ -438,7 +438,7 @@ describe('submitting an operation that creates', () => {
   const add: Settings = {
     ...settings,
     resource: 'node.type',
-    operation: 'add',
+    operation: 'create',
     pageBase: '/base/surface-react',
     endpoints: { read: '/surface-api/node.type', schema: '/surface-api/node.type/schema', write: { method: 'POST', url: '/surface-api/node.type' } },
   };
@@ -458,7 +458,7 @@ describe('submitting an operation that creates', () => {
             stale: [],
             outputs: {},
             contract: example2,
-            created: { resource: 'node.type', operation: 'edit', parameters: { type: 'recipe' } },
+            created: { resource: 'node.type', operation: 'update', parameters: { type: 'recipe' } },
           },
           { status: 201, headers: { Location: 'http://localhost/surface-api/node.type/recipe' } },
         ),
@@ -468,7 +468,7 @@ describe('submitting an operation that creates', () => {
     const navigate = vi.fn();
     render(<SurfaceForm settings={add} fetcher={fetcher} refineDelay={0} navigate={navigate} />);
     await userEvent.click(await screen.findByRole('button', { name: 'Submit' }));
-    await waitFor(() => expect(navigate).toHaveBeenCalledWith('/base/surface-react/node.type/edit?type=recipe'));
+    await waitFor(() => expect(navigate).toHaveBeenCalledWith('/base/surface-react/node.type/update?type=recipe'));
     expect(screen.getByRole('status')).toHaveTextContent('Saved: the values were written.');
 
     const [created] = writes(calls);
@@ -479,8 +479,8 @@ describe('submitting an operation that creates', () => {
   });
 
   it('finds the pages beside the API when the page names no page base', () => {
-    expect(pageOf({ ...settings, apiBase: '/sub/surface-api' }, { resource: 'node.type', operation: 'edit', parameters: { type: 'a b' } })).toBe(
-      '/sub/surface-react/node.type/edit?type=a+b',
+    expect(pageOf({ ...settings, apiBase: '/sub/surface-api' }, { resource: 'node.type', operation: 'update', parameters: { type: 'a b' } })).toBe(
+      '/sub/surface-react/node.type/update?type=a+b',
     );
   });
 });
@@ -933,6 +933,6 @@ describe('the lookup', () => {
   it("is the page's, or the read path's custom read, an operation named in it taken off", () => {
     expect(lookupOf({ read: '/surface-api/event.sponsorship', schema: '', write: { method: 'PATCH', url: '' } })).toBe('/surface-api/event.sponsorship:lookup');
     expect(lookupOf({ read: '/surface-api/node.type/recipe?x=1', schema: '', write: { method: 'PATCH', url: '' } })).toBe('/surface-api/node.type/recipe:lookup');
-    expect(lookupOf({ read: '/surface-api/event.venue:add', schema: '', write: { method: 'POST', url: '' }, lookup: null })).toBeNull();
+    expect(lookupOf({ read: '/surface-api/event.venue:create', schema: '', write: { method: 'POST', url: '' }, lookup: null })).toBeNull();
   });
 });

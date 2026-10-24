@@ -226,7 +226,7 @@ final class VenueStorage extends ConfigEntityStorage {
    * Rehearses one venue, its rooms held to ids no other venue has.
    *
    * @param \Drupal\data_surface\Resource\OperationContext $context
-   *   The add or the edit.
+   *   The create or the update.
    * @param array $values
    *   The accepted values.
    *

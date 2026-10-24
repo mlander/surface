@@ -38,6 +38,41 @@ final class OperationDefinition {
   public const DELETE = 'delete';
 
   /**
+   * The ids that are a kind's default by their name, by kind.
+   *
+   * Each kind's own name, and `list` for a read: the ids an agent and a
+   * client generator expect. An update on a singleton may also be named
+   * `configure` (defaultIds()).
+   *
+   * Decision: see
+   * docs/decisions.md#the-ids-are-the-standard-five-the-labels-are-drupals.
+   */
+  public const STANDARD_IDS = [
+    self::CREATE => ['create'],
+    self::UPDATE => ['update'],
+    self::READ => ['read', 'list'],
+    self::DELETE => ['delete'],
+  ];
+
+  /**
+   * The id an update on a singleton may carry beside `update`.
+   */
+  public const CONFIGURE = 'configure';
+
+  /**
+   * Ids refused at discovery, each with the standard id that replaces it.
+   *
+   * Drupal's words for the kinds, which belong in the label, where
+   * people read them: "Add a venue" is the label of `create`.
+   */
+  public const RETIRED_IDS = [
+    'add' => 'create',
+    'edit' => 'update',
+    'remove' => 'delete',
+    'get' => 'read',
+  ];
+
+  /**
    * Constructs an OperationDefinition.
    *
    * @param string $id
@@ -88,9 +123,10 @@ final class OperationDefinition {
    *   or NULL for the resource's own.
    *
    * @throws \LogicException
-   *   When the facts contradict each other: a read only operation that
-   *   destroys, or that is not idempotent; a delete that does not say it
-   *   destroys, that creates or that is read only.
+   *   When the id is a retired one (RETIRED_IDS), or the facts contradict
+   *   each other: a read only operation that destroys, or that is not
+   *   idempotent; a delete that does not say it destroys, that creates or
+   *   that is read only.
    */
   public function __construct(
     public readonly string $id,
@@ -111,6 +147,16 @@ final class OperationDefinition {
     public readonly bool $deletes = FALSE,
     public readonly ?string $values = NULL,
   ) {
+    // Decision: see
+    // docs/decisions.md#the-ids-are-the-standard-five-the-labels-are-drupals.
+    if (isset(self::RETIRED_IDS[$id])) {
+      throw new \LogicException(sprintf(
+        'The "%s" operation, %s, is named with a word the module retired as an id. Name it "%s", the standard id an agent and a client generator expect, and keep Drupal\'s word in its label, where people read it.',
+        $id,
+        $this->describe(),
+        self::RETIRED_IDS[$id],
+      ));
+    }
     // Decision: see
     // docs/decisions.md#a-listing-is-a-read-only-operation-with-outputs-a-reorder-is-an-update-over-the-collection.
     if ($values !== NULL && ($creates || $deletes)) {
@@ -185,6 +231,31 @@ final class OperationDefinition {
       $this->deletes => self::DELETE,
       default => self::UPDATE,
     };
+  }
+
+  /**
+   * Lists the ids that make an operation its kind's default by name.
+   *
+   * The kind's standard ids (STANDARD_IDS), and, for an update on a
+   * singleton, `configure` too: every settings page says it.
+   *
+   * Decision: see
+   * docs/decisions.md#the-ids-are-the-standard-five-the-labels-are-drupals.
+   *
+   * @param string $kind
+   *   self::CREATE, self::UPDATE, self::READ or self::DELETE.
+   * @param bool $singleton
+   *   Whether the resource has no identity keys.
+   *
+   * @return string[]
+   *   The ids.
+   */
+  public static function defaultIds(string $kind, bool $singleton): array {
+    $ids = self::STANDARD_IDS[$kind] ?? [];
+    if ($kind === self::UPDATE && $singleton) {
+      $ids[] = self::CONFIGURE;
+    }
+    return $ids;
   }
 
   /**

@@ -62,7 +62,7 @@ final class NodeTypeResourceHooks {
    *
    * The link asks exactly what the route it points at asks, and asks it
    * in the one place the question is answered: the content type
-   * resource's access for its edit operation with this content type, which
+   * resource's access for its update operation with this content type, which
    * is this module's permission and then the entity's own say over it.
    * So the link is never offered where it would be refused, and it cannot
    * drift from the route or from the form's own write. The answer's
@@ -76,7 +76,7 @@ final class NodeTypeResourceHooks {
     // The operation the route the link points at is served by.
     $access = $this->resources->access(
       NodeTypeResource::class,
-      $this->resources->operation(NodeTypeResource::class, 'edit', [$entity]),
+      $this->resources->operation(NodeTypeResource::class, 'update', [$entity]),
     );
     $cacheability->addCacheableDependency($access);
     if (!$access->isAllowed()) {
@@ -85,7 +85,7 @@ final class NodeTypeResourceHooks {
     return [
       'surface_edit' => [
         'title' => $this->t('Edit (resource)'),
-        'url' => Url::fromRoute('data_surface_demo_node_type.edit', ['type' => $entity->id()]),
+        'url' => Url::fromRoute('data_surface_demo_node_type.update', ['type' => $entity->id()]),
         'weight' => 30,
       ],
     ];

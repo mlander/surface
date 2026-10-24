@@ -263,7 +263,7 @@ class ContractDiffTest extends UnitTestCase {
    * breaking where no kind is stated, a structure described alone, whose
    * containers may create it. With a default, a note for every kind. One
    * declaration is judged per document, so the same key can be a note on
-   * `configure` and breaking on `add`.
+   * `configure` and breaking on `create`.
    */
   public function testRequiredKeyAddedIsJudgedByTheKind(): void {
     $judged = static function (?string $kind, bool $default = FALSE): ContractChange {

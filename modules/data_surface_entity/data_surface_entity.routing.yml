@@ -4,7 +4,7 @@
 # what was derived and what was left out, read from the registry.
 #
 # Each route is one operation of the derived resource, named by its id:
-# a derived resource has no class. The edit route's {id} is the
+# a derived resource has no class. The update route's {id} is the
 # operation's one parameter, the node, upcast; a node of another bundle
 # is refused by the operation, and so by the route's access.
 
@@ -16,24 +16,24 @@ data_surface_entity.index:
   requirements:
     _permission: 'access content overview'
 
-data_surface_entity.node_page_add:
+data_surface_entity.node_page_create:
   path: '/surface-entity/node/page/add'
   defaults:
     _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
     _title: 'Add a basic page (resource)'
     _data_surface_resource: 'entity.content:node.page'
-    _data_surface_operation: 'add'
+    _data_surface_operation: 'create'
     _data_surface_panel: 'data_surface_tool.contract_panel'
   requirements:
     _data_surface_operation_access: 'TRUE'
 
-data_surface_entity.node_page_edit:
+data_surface_entity.node_page_update:
   path: '/surface-entity/node/{id}/edit'
   defaults:
     _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
     _title: 'Edit a basic page (resource)'
     _data_surface_resource: 'entity.content:node.page'
-    _data_surface_operation: 'edit'
+    _data_surface_operation: 'update'
     _data_surface_panel: 'data_surface_tool.contract_panel'
   requirements:
     _data_surface_operation_access: 'TRUE'

@@ -333,9 +333,9 @@ final class ServedOperations {
    * The answer is checked rather than trusted: the operation is built
    * from those parameters, has to load what they name, and has to know
    * the same identity the write was given. A content type added as
-   * `recipe` lives at `edit` with `{type: recipe}`; a page added through
-   * its derived resource lives at `edit` with `{id: <its new id>}`, which
-   * its `id` output says, the add operation knowing only that it had
+   * `recipe` lives at `update` with `{type: recipe}`; a page added through
+   * its derived resource lives at `update` with `{id: <its new id>}`, which
+   * its `id` output says, the create operation knowing only that it had
    * none; a field added to a bundle has no answer, because its edit
    * operation takes the field's own id, which neither its outputs nor
    * its identity carry.

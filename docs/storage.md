@@ -424,7 +424,7 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
 config entity type puts a resource over it from the start: the entity
 class carries `#[ConfigEntityType]` with its keys and `config_export`,
 and no form classes, no list builder and no links, since the resource's
-operations are what add, edit and remove one, at every door. Its config
+operations are what create, update and delete one, at every door. Its config
 schema is written from the resource by `drush data_surface:config-schema
 --write`, as a config object's is: for a resource whose
 `ConfigEntityStorage` names an entity type its own module declares, the
@@ -503,8 +503,8 @@ The pipeline's:
 
 The data surface is an argument rather than something the storage
 holds. Storage describes a destination and a data surface describes
-values: the same node type is the destination of the add operation and
-the edit operation, and storage holding the built resource for one of
+values: the same node type is the destination of the create operation and
+the update operation, and storage holding the built resource for one of
 them could not serve both.
 
 `load()` is what makes a partial update legal. It is the `current`
@@ -540,7 +540,7 @@ among the field storage's settings.
 
 ```php
 $resources = \Drupal::service('data_surface.resources');
-$context = $resources->operation(NodeTypeResource::class, 'edit', ['type' => 'article']);
+$context = $resources->operation(NodeTypeResource::class, 'update', ['type' => 'article']);
 $storage = $resources->storage(NodeTypeResource::class, $context);
 ```
 
@@ -578,7 +578,7 @@ and nothing would have been stored.
 
 ### When the destination is named by the submission
 
-An add operation knows no identity, because the thing it creates does
+A create operation knows no identity, because the thing it creates does
 not exist to be named, and yet its destination may depend on what is
 being created. The node type demo is the worked example: a content
 type's base field overrides belong to a bundle, and the bundle IS the
@@ -586,7 +586,7 @@ machine name being submitted.
 
 The answer is that storage reads the identity in `prepare()`, not
 before. `NodeTypeStorage` loads by the machine name the context knows,
-and on add, where it knows none, loads nothing; `prepare()` builds the
+and on a create, where it knows none, loads nothing; `prepare()` builds the
 node type around the machine name the accepted values carry, and has
 `BaseFieldOverrideStorage` plan the overrides for that bundle, which
 need not exist yet. Storage taking the accepted values when it is made
@@ -707,7 +707,7 @@ A few things each of them is opinionated about:
 - **`CompositeStorage` ordering is load-bearing.** Children run in the
   order they were listed, which matters when a later write needs an
   earlier one to have happened: base field overrides belong to a bundle,
-  so on an add operation the storage that creates the bundle must be
+  so on a create operation the storage that creates the bundle must be
   listed first. A resource's own children are composed by
   `StorageAdapter` instead, which routes variants by their deciding
   key's value; a composite hands each child only the keys it claims.

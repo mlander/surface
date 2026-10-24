@@ -57,8 +57,8 @@ final class EntityResourcesController extends ControllerBase {
   public function index(): array {
     $build = [
       'intro' => [
-        '#markup' => '<p>' . $this->t('Each bundle with a form display is a resource, derived from its fields\' typed data: one part per field the form shows, in the same order, each asking field access whether you may change it, only see it, or not see it at all. A basic page can be <a href=":add">added</a> and edited through it here, and every resource below is also a tool (<code>data_surface:&lt;resource&gt;:add</code>, <code>:edit</code>, <code>:edit:read</code>).', [
-          ':add' => Url::fromRoute('data_surface_entity.node_page_add')->toString(),
+        '#markup' => '<p>' . $this->t('Each bundle with a form display is a resource, derived from its fields\' typed data: one part per field the form shows, in the same order, each asking field access whether you may change it, only see it, or not see it at all. A basic page can be <a href=":add">added</a> and edited through it here, and every resource below is also a tool (<code>data_surface:&lt;resource&gt;:create</code>, <code>:update</code>, <code>:update:read</code>).', [
+          ':add' => Url::fromRoute('data_surface_entity.node_page_create')->toString(),
         ]) . '</p>',
       ],
     ];
@@ -128,7 +128,7 @@ final class EntityResourcesController extends ControllerBase {
     $ids = $storage->getQuery()->accessCheck(TRUE)->condition('type', 'page')->sort('changed', 'DESC')->range(0, 5)->execute();
     $items = [];
     foreach ($storage->loadMultiple($ids) as $node) {
-      $items[] = Link::createFromRoute($node->label() ?? (string) $node->id(), 'data_surface_entity.node_page_edit', ['id' => $node->id()])->toRenderable();
+      $items[] = Link::createFromRoute($node->label() ?? (string) $node->id(), 'data_surface_entity.node_page_update', ['id' => $node->id()])->toRenderable();
     }
     return $items;
   }

@@ -102,7 +102,7 @@ class VenueApiTest extends BrowserTestBase {
     $this->assertSame([$limit], $refused['errors']);
     $schema = $this->decoded($this->send('GET', self::COLLECTION . '/schema'), 200, 'application/schema+json');
     $this->assertSame(['offset', 'limit', 'status'], array_keys($schema['properties']), "The collection's schema is the listing's.");
-    $this->assertSame('add', $this->decoded($this->send('GET', self::COLLECTION . ':add'))['operation'], "The create's envelope is its custom method's.");
+    $this->assertSame('create', $this->decoded($this->send('GET', self::COLLECTION . ':create'))['operation'], "The create's envelope is its custom method's.");
     $this->assertSame('list', $this->decoded($this->send('GET', self::COLLECTION . ':list'))['operation']);
     $this->problem($this->send('PATCH', self::COLLECTION, ['venues' => []]), 405);
 
@@ -111,9 +111,9 @@ class VenueApiTest extends BrowserTestBase {
     $added = $this->decoded($response, 201);
     $this->assertSame([...ResultDocument::KEYS, 'outputs', 'contract', 'created'], array_keys($added));
     $this->assertStringEndsWith('/surface-api/event.venue/town_hall', $response->getHeaderLine('Location'));
-    $this->assertSame(['resource' => 'event.venue', 'operation' => 'edit', 'parameters' => ['id' => 'town_hall']], $added['created']);
+    $this->assertSame(['resource' => 'event.venue', 'operation' => 'update', 'parameters' => ['id' => 'town_hall']], $added['created']);
     $read = $this->send('GET', self::COLLECTION . '/town_hall');
-    $this->assertSame('edit', $this->decoded($read)['operation']);
+    $this->assertSame('update', $this->decoded($read)['operation']);
     $tag = $read->getHeaderLine('ETag');
     $this->assertNotSame('', $tag);
     $this->assertSame(4, $this->decoded($this->send('GET', self::COLLECTION))['total']);
@@ -193,7 +193,7 @@ class VenueApiTest extends BrowserTestBase {
     $this->assertSame(350, $storage->loadUnchanged('town_hall')->get('capacity'));
 
     // Removed after a confirmation.
-    $this->drupalGet('surface-examples/15/venue/town_hall/remove');
+    $this->drupalGet('surface-examples/15/venue/town_hall/delete');
     $assert->pageTextContains('town_hall is removed, and this cannot be undone.');
     $this->submitForm([], 'Remove a venue');
     $assert->pageTextContains('The venue Town Hall has been removed.');
@@ -206,7 +206,7 @@ class VenueApiTest extends BrowserTestBase {
     $assert->elementsCount('css', '.data-surface-venues tbody tr', 3);
     $assert->pageTextContains('Riverside Hall');
     $assert->linkByHrefExists('/surface-examples/15/venue/riverside');
-    $assert->linkByHrefExists('/surface-react/event.venue/add');
+    $assert->linkByHrefExists('/surface-react/event.venue/create');
     $assert->elementsCount('css', '.data-surface-concept-paths tbody tr', count(ConceptPanel::VENUE_PATHS));
     $assert->pageTextContains('data_surface:event.venue:reorder');
     $assert->pageTextContains('Town Hall removed: written, so the three venues shipped are what is left');

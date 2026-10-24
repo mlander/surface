@@ -334,7 +334,7 @@ for the context it is running and hands the answer over:
 
 ```php
 $resources = \Drupal::service('data_surface.resources');
-$context = $resources->operation(NodeTypeResource::class, 'edit', ['type' => 'article']);
+$context = $resources->operation(NodeTypeResource::class, 'update', ['type' => 'article']);
 $result = $pipeline->submit(
   $resources->build(NodeTypeResource::class, $context),
   $values,

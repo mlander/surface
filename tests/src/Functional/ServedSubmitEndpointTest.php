@@ -210,7 +210,7 @@ class ServedSubmitEndpointTest extends BrowserTestBase {
     // defaults, two of them answered.
     $collection = $this->send('GET', 'surface-api/node.type');
     $form = $this->decoded($collection);
-    $this->assertSame('add', $form['operation']);
+    $this->assertSame('create', $form['operation']);
     $this->assertNull($form['values']['type']);
     $this->assertSame('', $collection->getHeaderLine('ETag'), 'Nothing stored, nothing to match.');
     $document = ['name' => 'Recipe', 'type' => 'recipe', 'title_label' => 'Recipe name'] + array_filter($form['values'], static fn ($value): bool => $value !== NULL);
@@ -226,7 +226,7 @@ class ServedSubmitEndpointTest extends BrowserTestBase {
     $this->assertTrue($answer['committed'], (string) json_encode($answer['violations']));
     $this->assertSame([
       'resource' => 'node.type',
-      'operation' => 'edit',
+      'operation' => 'update',
       'parameters' => ['type' => 'recipe'],
     ], $answer['created']);
     $location = $response->getHeaderLine('Location');
@@ -244,7 +244,7 @@ class ServedSubmitEndpointTest extends BrowserTestBase {
       'http_errors' => FALSE,
     ]);
     $edit = $this->decoded($read);
-    $this->assertSame('edit', $edit['operation']);
+    $this->assertSame('update', $edit['operation']);
     $this->assertSame('Recipe', $edit['values']['name']);
     $this->assertSame('recipe', $edit['values']['type']);
     $this->assertSame('Recipe name', $edit['values']['title_label']);

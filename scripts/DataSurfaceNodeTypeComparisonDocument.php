@@ -53,7 +53,7 @@ final class DataSurfaceNodeTypeComparisonDocument {
    */
   public static function render(array $surface, array $classic, array $outcomes): string {
     $flags = JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE;
-    $table = "| Case | `data_surface:node.type:add` | `tool_belt:entity_bundle_add` | Core's content type form, for a person |\n"
+    $table = "| Case | `data_surface:node.type:create` | `tool_belt:entity_bundle_add` | Core's content type form, for a person |\n"
       . "| --- | --- | --- | --- |\n";
     foreach ($outcomes as $row) {
       $table .= '| ' . implode(' | ', array_map([self::class, 'cell'], $row)) . " |\n";
@@ -62,7 +62,7 @@ final class DataSurfaceNodeTypeComparisonDocument {
       . "\n## What happens\n\n"
       . self::casesNote()
       . "\n" . $table
-      . "\n## What an agent is handed: `data_surface:node.type:add`\n\n```json\n"
+      . "\n## What an agent is handed: `data_surface:node.type:create`\n\n```json\n"
       . json_encode($surface, $flags)
       . "\n```\n\n## What an agent is handed: `tool_belt:entity_bundle_add`, for `node`\n\n```json\n"
       . json_encode($classic, $flags)
@@ -136,8 +136,8 @@ answer: the schema-only agent's best inference is in range, accepted,
 and wrong.
 
 Neither tool below was written with those settings in mind.
-`data_surface:node.type:add` is not written at all: it is generated from
-the content type resource's `add` operation, one tool per operation of
+`data_surface:node.type:create` is not written at all: it is generated from
+the content type resource's `create` operation, one tool per operation of
 every resource that names storage, and no tool class names a resource
 or a key. Its values input is the resource as built for that operation,
 in the static plugin definition. (It was `data_surface:node_type_add`, a

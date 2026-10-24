@@ -52,14 +52,14 @@ final class FieldStorageResource implements ResourceInterface {
    * on its own: a storage is added by the field that uses it, whose
    * operation is the one asked.
    */
-  #[Operation('add',
+  #[Operation('create',
     label: new TranslatableMarkup('New field storage'),
     description: new TranslatableMarkup('Creates the storage of a field being added; asked only by the field that uses it.'),
     permission: 'administer %entity_type_id fields',
     creates: TRUE,
   )]
-  public static function add(): OperationContext {
-    return new OperationContext('add', creates: TRUE);
+  public static function create(): OperationContext {
+    return new OperationContext('create', creates: TRUE);
   }
 
   /**
@@ -73,15 +73,15 @@ final class FieldStorageResource implements ResourceInterface {
    * in it is the storage class's to refuse, at prepare, because only the
    * field storage knows which settings reach the schema.
    */
-  #[Operation('edit',
+  #[Operation('update',
     label: new TranslatableMarkup('Edit a field storage'),
     description: new TranslatableMarkup('Changes a field storage, named by its id; once the field holds data, its number of values may not shrink.'),
     permission: 'administer %entity_type_id fields',
   )]
-  public static function edit(FieldStorageConfigInterface $storage): OperationContext {
+  public static function update(FieldStorageConfigInterface $storage): OperationContext {
     // The field type is identity, so it is locked; the entity type and
     // the name are no keys here, known for the storage to load by.
-    $context = new OperationContext('edit', known: [
+    $context = new OperationContext('update', known: [
       'entity_type_id' => $storage->getTargetEntityTypeId(),
       'field_name' => $storage->getName(),
       'field_type' => $storage->getType(),

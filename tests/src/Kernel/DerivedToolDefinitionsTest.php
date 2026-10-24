@@ -28,7 +28,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * Yaml::encode(), which copies every constraint's options and refuses an
  * object: a LabeledChoice's TranslatableMarkup labels on the node type's
  * preview mode and on the extras' deadline unit broke the page for
- * data_surface:node.type:add. And a module installed after the tool
+ * data_surface:node.type:create. And a module installed after the tool
  * definitions were cached has to have its resources' tools discovered
  * without anyone clearing a plugin cache by hand.
  */
@@ -140,12 +140,12 @@ class DerivedToolDefinitionsTest extends DataSurfaceKernelTestBase {
     // The tools that carry what broke, so this cannot pass by having
     // nothing to look at: the node type's add, built in its real
     // context with the extras' LabeledChoice units, and the examples.
-    $this->assertContains('data_surface:node.type:add', $ids);
-    $this->assertContains('data_surface:node.type:edit', $ids);
+    $this->assertContains('data_surface:node.type:create', $ids);
+    $this->assertContains('data_surface:node.type:update', $ids);
     $this->assertContains('data_surface:registration.step3:configure', $ids);
-    $this->assertContains('data_surface:field.instance:edit', $ids);
+    $this->assertContains('data_surface:field.instance:update', $ids);
     $this->assertContains('data_surface:registration.step3:configure:read', $ids);
-    $this->assertContains('data_surface:field.instance:edit:read', $ids);
+    $this->assertContains('data_surface:field.instance:update:read', $ids);
 
     $explorer = $this->explorer();
     foreach ($ids as $id) {
@@ -166,7 +166,7 @@ class DerivedToolDefinitionsTest extends DataSurfaceKernelTestBase {
     }
 
     // The labels still say what they said, as strings.
-    $add = $this->toolManager()->getDefinition('data_surface:node.type:add');
+    $add = $this->toolManager()->getDefinition('data_surface:node.type:create');
     assert($add instanceof ToolDefinition);
     $values = $add->getInputDefinition('values');
     $this->assertInstanceOf(MapInputDefinition::class, $values);
@@ -183,7 +183,7 @@ class DerivedToolDefinitionsTest extends DataSurfaceKernelTestBase {
    */
   public function testInstalledModuleResourcesBecomeTools(): void {
     $before = $this->derivedIds();
-    $this->assertContains('data_surface:node.type:add', $before);
+    $this->assertContains('data_surface:node.type:create', $before);
     $this->assertNotContains('data_surface:registration.step3:configure', $before);
     $this->assertNotFalse($this->container->get('cache.discovery')->get('tool_plugins'));
 
@@ -208,13 +208,13 @@ class DerivedToolDefinitionsTest extends DataSurfaceKernelTestBase {
       'data_surface:event.sales:configure:read',
       'data_surface:event.spotlight:configure',
       'data_surface:event.spotlight:configure:read',
-      'data_surface:event.venue:add',
-      'data_surface:event.venue:edit',
-      'data_surface:event.venue:edit:read',
+      'data_surface:event.venue:create',
+      'data_surface:event.venue:delete',
       'data_surface:event.venue:list',
-      'data_surface:event.venue:remove',
       'data_surface:event.venue:reorder',
       'data_surface:event.venue:reorder:read',
+      'data_surface:event.venue:update',
+      'data_surface:event.venue:update:read',
       'data_surface:event.webhook:configure',
       'data_surface:event.webhook:configure:read',
       'data_surface:registration.step1:configure',
@@ -243,14 +243,14 @@ class DerivedToolDefinitionsTest extends DataSurfaceKernelTestBase {
    */
   public function testDerivedToolsDeclareTheOperationsPermission(): void {
     $definitions = $this->toolManager()->getDefinitions();
-    $this->assertSame(NodeTypeResource::PERMISSION, $definitions['data_surface:node.type:add']->getPermission());
-    $this->assertSame(NodeTypeResource::PERMISSION, $definitions['data_surface:node.type:edit']->getPermission());
-    $this->assertSame(NodeTypeResource::PERMISSION, $definitions['data_surface:node.type:edit:read']->getPermission());
-    $this->assertNull($definitions['data_surface:field.instance:add']->getPermission());
-    $this->assertNull($definitions['data_surface:field.instance:edit:read']->getPermission());
+    $this->assertSame(NodeTypeResource::PERMISSION, $definitions['data_surface:node.type:create']->getPermission());
+    $this->assertSame(NodeTypeResource::PERMISSION, $definitions['data_surface:node.type:update']->getPermission());
+    $this->assertSame(NodeTypeResource::PERMISSION, $definitions['data_surface:node.type:update:read']->getPermission());
+    $this->assertNull($definitions['data_surface:field.instance:create']->getPermission());
+    $this->assertNull($definitions['data_surface:field.instance:update:read']->getPermission());
 
     // The declared permission is asked first, before any input is read.
-    $refused = ToolManager::checkPermission($definitions['data_surface:node.type:add'], new AnonymousUserSession());
+    $refused = ToolManager::checkPermission($definitions['data_surface:node.type:create'], new AnonymousUserSession());
     $this->assertFalse($refused->isAllowed());
     $this->assertInstanceOf(AccessResultReasonInterface::class, $refused);
     $this->assertStringContainsString(NodeTypeResource::PERMISSION, (string) $refused->getReason());

@@ -42,7 +42,7 @@ use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
  *     _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
  *     _title: 'Edit example'
  *     _data_surface_resource: 'Drupal\example\Resource\ExampleResource'
- *     _data_surface_operation: 'edit'
+ *     _data_surface_operation: 'update'
  *     _data_surface_cosmetics: 'example.surface_form_cosmetics'
  *   requirements:
  *     _data_surface_operation_access: 'TRUE'

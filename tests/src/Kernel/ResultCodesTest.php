@@ -240,8 +240,8 @@ class ResultCodesTest extends DataSurfaceKernelTestBase {
 
     // A parameter that names nothing, at the write and the read tool.
     $tools = [
-      'data_surface:node.type:edit' => [OperationInputs::VALUES => []],
-      'data_surface:node.type:edit:read' => [],
+      'data_surface:node.type:update' => [OperationInputs::VALUES => []],
+      'data_surface:node.type:update:read' => [],
     ];
     foreach ($tools as $tool => $inputs) {
       $missing = $this->runTool($tool, ['type' => 'nowhere'] + $inputs);

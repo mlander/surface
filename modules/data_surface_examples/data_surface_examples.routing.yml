@@ -227,28 +227,28 @@ data_surface_examples.step15:
     _permission: 'administer event venues'
 
 # Example 15's three forms, each one operation of the venue resource,
-# served by the generic operation form: the edit and remove routes' {id}
-# is upcast to the venue the operations take. The remove route draws a
+# served by the generic operation form: the update and delete routes' {id}
+# is upcast to the venue the operations take. The delete route draws a
 # confirmation, since a delete takes no values; the cosmetic layer says
 # what was done and goes back to the example's page.
-data_surface_examples.step15_add:
+data_surface_examples.step15_create:
   path: '/surface-examples/15/add'
   defaults:
     _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
     _title: 'Example 15, add a venue'
     _data_surface_resource: 'Drupal\data_surface_examples\Resource\VenueResource'
-    _data_surface_operation: 'add'
+    _data_surface_operation: 'create'
     _data_surface_cosmetics: 'data_surface_examples.venue_form_cosmetics'
   requirements:
     _data_surface_operation_access: 'TRUE'
 
-data_surface_examples.step15_edit:
+data_surface_examples.step15_update:
   path: '/surface-examples/15/venue/{id}'
   defaults:
     _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
     _title: 'Example 15, edit a venue'
     _data_surface_resource: 'Drupal\data_surface_examples\Resource\VenueResource'
-    _data_surface_operation: 'edit'
+    _data_surface_operation: 'update'
     _data_surface_cosmetics: 'data_surface_examples.venue_form_cosmetics'
   requirements:
     _data_surface_operation_access: 'TRUE'
@@ -257,13 +257,13 @@ data_surface_examples.step15_edit:
       id:
         type: 'entity:event_venue'
 
-data_surface_examples.step15_remove:
-  path: '/surface-examples/15/venue/{id}/remove'
+data_surface_examples.step15_delete:
+  path: '/surface-examples/15/venue/{id}/delete'
   defaults:
     _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
     _title: 'Example 15, remove a venue'
     _data_surface_resource: 'Drupal\data_surface_examples\Resource\VenueResource'
-    _data_surface_operation: 'remove'
+    _data_surface_operation: 'delete'
     _data_surface_cosmetics: 'data_surface_examples.venue_form_cosmetics'
   requirements:
     _data_surface_operation_access: 'TRUE'

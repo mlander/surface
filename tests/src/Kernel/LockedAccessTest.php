@@ -91,7 +91,7 @@ class LockedAccessTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Submits values to the cabinet's edit operation, as a form would.
+   * Submits values to the cabinet's update operation, as a form would.
    *
    * @param array $input
    *   The values.
@@ -101,7 +101,7 @@ class LockedAccessTest extends DataSurfaceKernelTestBase {
    * @return \Drupal\data_surface\Pipeline\DataSurfaceResult
    *   The result.
    */
-  protected function submit(array $input, string $operation = 'edit') {
+  protected function submit(array $input, string $operation = 'update') {
     $context = $this->resources()->operation(CabinetResource::class, $operation);
     $built = $this->resources()->build(CabinetResource::class, $context);
     return $this->pipeline()->submit($built, $input, $this->resources()->storage(CabinetResource::class, $context, $built), access: $this->resources()->access(CabinetResource::class, $context));
@@ -138,7 +138,7 @@ class LockedAccessTest extends DataSurfaceKernelTestBase {
    */
   public function testLockedAtTheTop(): void {
     $this->actAs('audit cabinet');
-    $context = $this->resources()->operation(CabinetResource::class, 'edit');
+    $context = $this->resources()->operation(CabinetResource::class, 'update');
     // Locked is let in: the route and the read tool answer it.
     $this->assertTrue($this->resources()->access(CabinetResource::class, $context)->isAllowed());
     $built = $this->resources()->build(CabinetResource::class, $context);
@@ -159,18 +159,18 @@ class LockedAccessTest extends DataSurfaceKernelTestBase {
     $this->assertSame('This may be seen and not changed, so nothing was written: The cabinet may be audited, not changed.', (string) $violation->message);
     $this->assertSame(self::STORED, $this->container->get('state')->get(CabinetStorage::KEY));
 
-    $write = $this->runTool('data_surface:tool_test.cabinet:edit', [OperationInputs::VALUES => ['drawers' => 9]]);
+    $write = $this->runTool('data_surface:tool_test.cabinet:update', [OperationInputs::VALUES => ['drawers' => 9]]);
     $this->assertFalse($write['success']);
     $this->assertStringContainsString('The cabinet may be audited, not changed.', $write['message']);
-    $read = $this->runTool('data_surface:tool_test.cabinet:edit:read');
+    $read = $this->runTool('data_surface:tool_test.cabinet:update:read');
     $this->assertTrue($read['success'], $read['message']);
     $this->assertSame(self::STORED, $read['values']);
 
     // Both documents say it at the top and on every key.
     $emitter = $this->container->get('data_surface.contract_emitter');
     $documents = [
-      'the schema for these answers' => $emitter->emit($built, self::STORED, 'tool_test.cabinet', 'edit')->document['schema'],
-      'the full schema' => $emitter->emitFull($this->resources()->buildStatic(CabinetResource::class, $context), 'tool_test.cabinet', 'edit')->document['schema'],
+      'the schema for these answers' => $emitter->emit($built, self::STORED, 'tool_test.cabinet', 'update')->document['schema'],
+      'the full schema' => $emitter->emitFull($this->resources()->buildStatic(CabinetResource::class, $context), 'tool_test.cabinet', 'update')->document['schema'],
     ];
     foreach ($documents as $which => $schema) {
       $this->assertTrue($schema['readOnly'] ?? FALSE, $which);
@@ -189,7 +189,7 @@ class LockedAccessTest extends DataSurfaceKernelTestBase {
     $open = $this->resources()->build(CabinetResource::class, $context);
     $this->assertNull($open->lockedWhole());
     $this->assertFalse($open->isLocked('drawers'));
-    $this->assertArrayNotHasKey('readOnly', $emitter->emit($open, self::STORED, 'tool_test.cabinet', 'edit')->document['schema']);
+    $this->assertArrayNotHasKey('readOnly', $emitter->emit($open, self::STORED, 'tool_test.cabinet', 'update')->document['schema']);
     $this->assertTrue($this->submit(['drawers' => 9])->committed);
 
     // Omitted is still refused.
@@ -202,7 +202,7 @@ class LockedAccessTest extends DataSurfaceKernelTestBase {
    */
   public function testLockedVariantIsOfferedReadOnly(): void {
     $this->actAs('keep cabinet');
-    $built = $this->resources()->buildOperation(CabinetResource::class, 'edit');
+    $built = $this->resources()->buildOperation(CabinetResource::class, 'update');
     // Offered: both values can be chosen.
     $offered = $built->getDefinitions()->entry('lock_settings')?->variants?->variantIds() ?? [];
     sort($offered);
@@ -212,7 +212,7 @@ class LockedAccessTest extends DataSurfaceKernelTestBase {
     $this->assertTrue($code->isLocked('digits'));
     $this->assertFalse(static::variant($built, 'key')->isLocked('keys'));
     // The parent is not refused by it, and is written whole.
-    $this->assertTrue($this->resources()->access(CabinetResource::class, $this->resources()->operation(CabinetResource::class, 'edit'))->isAllowed());
+    $this->assertTrue($this->resources()->access(CabinetResource::class, $this->resources()->operation(CabinetResource::class, 'update'))->isAllowed());
 
     // What a locked variant holds is kept, whatever is posted for it, and
     // the caller is told its value was not taken, once per key.
@@ -225,7 +225,7 @@ class LockedAccessTest extends DataSurfaceKernelTestBase {
     $this->assertSame('lock_settings.digits', $result->notes[0]->fullPath());
     $this->assertSame('Digits is locked and kept as stored; the value sent was not taken.', (string) $result->notes[0]->message);
     $this->assertSame([], $this->submit(['lock_settings' => ['digits' => 5]])->notes, 'What it holds, sent back, was taken.');
-    $write = $this->runTool('data_surface:tool_test.cabinet:edit', [OperationInputs::VALUES => ['lock_settings' => ['digits' => 7]]]);
+    $write = $this->runTool('data_surface:tool_test.cabinet:update', [OperationInputs::VALUES => ['lock_settings' => ['digits' => 7]]]);
     $this->assertTrue($write['success'], $write['message']);
     $this->assertSame("Edit the cabinet: the values were accepted, and they are what is stored, so nothing was written.\n/lock_settings/digits: Digits is locked and kept as stored; the value sent was not taken.", $write['message']);
 
@@ -238,7 +238,7 @@ class LockedAccessTest extends DataSurfaceKernelTestBase {
 
     // Both documents mark the variant's keys locked.
     $emitter = $this->container->get('data_surface.contract_emitter');
-    $full = $emitter->emitFull($this->resources()->buildStatic(CabinetResource::class, $this->resources()->operation(CabinetResource::class, 'edit')), 'tool_test.cabinet', 'edit')->document['schema'];
+    $full = $emitter->emitFull($this->resources()->buildStatic(CabinetResource::class, $this->resources()->operation(CabinetResource::class, 'update')), 'tool_test.cabinet', 'update')->document['schema'];
     // The code lock's site says its key is fixed; the key lock's says
     // nothing of the kind.
     $sites = [];
@@ -250,7 +250,7 @@ class LockedAccessTest extends DataSurfaceKernelTestBase {
 
     // A locksmith finds it open.
     $this->actAs('keep cabinet', 'set cabinet codes');
-    $built = $this->resources()->buildOperation(CabinetResource::class, 'edit');
+    $built = $this->resources()->buildOperation(CabinetResource::class, 'update');
     $this->assertNull(static::variant($built, 'code')->lockedWhole());
   }
 
@@ -261,7 +261,7 @@ class LockedAccessTest extends DataSurfaceKernelTestBase {
     $this->actAs('keep cabinet');
     $built = $this->resources()->buildOperation(CabinetResource::class, 'count');
     $this->assertTrue($built->changesNothing());
-    $this->assertFalse($this->resources()->buildOperation(CabinetResource::class, 'edit')->changesNothing());
+    $this->assertFalse($this->resources()->buildOperation(CabinetResource::class, 'update')->changesNothing());
 
     // Accepted, validated and prepared, as a dry run is, never committed.
     $result = $this->submit(['drawers' => 9], 'count');

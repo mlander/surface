@@ -11,6 +11,7 @@ use Drupal\data_surface\ResourceBuild\ResourceRegistry;
 use Drupal\data_surface_examples\Resource\RegistrationStep3Resource;
 use Drupal\data_surface_resource_test\OutsideDiscovery\ContradictingCreatesStructure;
 use Drupal\data_surface_resource_test\OutsideDiscovery\MisnamedContextStructure;
+use Drupal\data_surface_resource_test\OutsideDiscovery\RetiredIdStructure;
 use Drupal\data_surface_resource_test\OutsideDiscovery\StampedStructure;
 use Drupal\data_surface_tool_test\Resource\LogbookResource;
 use Drupal\data_surface_tool_test\Resource\VaultResource;
@@ -203,6 +204,39 @@ class OperationFactsTest extends DataSurfaceKernelTestBase {
       catch (\LogicException $e) {
         $this->assertStringStartsWith($message, $e->getMessage(), $class);
       }
+    }
+  }
+
+  /**
+   * Tests an id the module retired is refused at discovery, naming its own.
+   *
+   * Drupal's words for the kinds, `create`, `update`, `delete`, and `get`, are
+   * labels, not ids: each is refused with the standard id that replaces
+   * it, on the class through discovery and on any definition, a derived
+   * resource's included.
+   *
+   * @see docs/decisions.md#the-ids-are-the-standard-five-the-labels-are-drupals
+   */
+  public function testRetiredIdsAreRefusedAtDiscovery(): void {
+    try {
+      $this->registryOf(RetiredIdStructure::class)->getDefinitions();
+      $this->fail('An operation named edit was not refused at discovery.');
+    }
+    catch (\LogicException $e) {
+      $this->assertSame('The "edit" operation, #[Operation] on ' . RetiredIdStructure::class . ' in data_surface_resource_test, is named with a word the module retired as an id. Name it "update", the standard id an agent and a client generator expect, and keep Drupal\'s word in its label, where people read it.', $e->getMessage());
+    }
+    foreach (['add' => 'create', 'edit' => 'update', 'remove' => 'delete', 'get' => 'read'] as $retired => $standard) {
+      try {
+        new OperationDefinition($retired, 'A label', 'example', self::class, '', NULL, 'data_surface');
+        $this->fail($retired . ' was not refused.');
+      }
+      catch (\LogicException $e) {
+        $this->assertStringContainsString('Name it "' . $standard . '"', $e->getMessage(), $retired);
+      }
+    }
+    // The standard ids, configure and any custom one are let through.
+    foreach (['create', 'update', 'read', 'list', 'delete', 'configure', 'check'] as $id) {
+      $this->assertSame($id, (new OperationDefinition($id, 'A label', 'example', self::class, '', NULL, 'data_surface'))->id);
     }
   }
 

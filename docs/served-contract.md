@@ -334,7 +334,7 @@ since a key left out keeps what is stored
 `creates` is the attribute's, stamped on the context; `description` is
 there only when the operation says one; `idempotent` is the operation's
 own, derived from `creates` unless declared (a create whose caller names
-the thing, such as `node.type:add`, declares it), which a tool listing cannot
+the thing, such as `node.type:create`, declares it), which a tool listing cannot
 always say (the Tool API reads idempotence off the operation kind, and
 every kind that writes is not idempotent). Then `version`, which
 version of its stored values the resource or structure describes
@@ -548,8 +548,8 @@ its def, so every reference is bare:
 }
 ```
 
-A narrowing, from the full schema of `field.instance:edit` for a long
-text field: the field's storage is attached in the storage's own `edit`
+A narrowing, from the full schema of `field.instance:update` for a long
+text field: the field's storage is attached in the storage's own `update`
 context, which knows its field type and locks it, while the
 `field.storage` def is the storage as declared, with the field type
 open:
@@ -1086,10 +1086,13 @@ An operation's parameters that are not in the path arrive in the query
 string: `POST /surface-api/field.instance?entity_type_id=node&bundle=article`.
 
 **Which operation is the default.** At each path, of each kind: the
-operation named for it (`add` for a create; `configure` or `edit` for
-an update; `read` or `list` for a read; `remove` or `delete` for a
-delete), or else the only operation of that kind at the path; two of a
-kind with neither named so leaves the kind with no default. A read is a
+operation whose id is the kind's standard one (`create`, `update`,
+`read` or `list`, `delete`), or `configure` for an update on a
+singleton; or else the only operation of that kind at the path; two of
+a kind with neither named so leaves the kind with no default
+([decision](decisions.md#the-ids-are-the-standard-five-the-labels-are-drupals)).
+An id `add`, `edit`, `remove` or `get` is refused at discovery, naming
+the standard id. A read is a
 default only where no update is, and the collection of a resource with
 identity has no default update: `PATCH` there would change every thing,
 which no operation means, so an update over the collection, example
@@ -1102,7 +1105,7 @@ other operation is a custom method, `:{operation}` after the last
 segment of the path it addresses, run with `PATCH` when it is an update
 and `POST` otherwise: example 10's `check`, read-only beside the
 program's `configure`, is `POST /surface-api/event.program:check`; the
-field instance's `reuse`, a second create beside `add`, is `POST
+field instance's `reuse`, a second create beside `create`, is `POST
 /surface-api/field.instance:reuse`; example 15's `reorder` is `PATCH
 /surface-api/event.venue:reorder`. A resource id with a colon of its own,
 `entity.content:node.page`, is read whole first. A default may be named
@@ -1155,7 +1158,7 @@ Its envelope is its custom method's, `GET /surface-api/event.venue:list`,
 and its full schema the collection's, `GET /surface-api/event.venue/schema`:
 the paging and the filter, and under `outputs` the page and the total.
 The create's envelope moves to its custom method too,
-`GET /surface-api/event.venue:add`. A resource with no listing answers
+`GET /surface-api/event.venue:create`. A resource with no listing answers
 `GET` on its collection with its create's envelope, as before.
 
 ### A lookup
@@ -1351,11 +1354,11 @@ Example 2, the harbour's deck written with `PATCH
 
 A content type added with `POST /surface-api/node.type` as
 `served_demo` answers 201, `Location:
-https://example.com/surface-api/node.type/served_demo`, the add
+https://example.com/surface-api/node.type/served_demo`, the create
 operation's envelope as `contract`, and:
 
 ```json
-"created": {"resource": "node.type", "operation": "edit", "parameters": {"type": "served_demo"}}
+"created": {"resource": "node.type", "operation": "update", "parameters": {"type": "served_demo"}}
 ```
 
 The operation form's cosmetic message and redirect are its route's;
@@ -1366,8 +1369,8 @@ client says the rest.
 
 **`DELETE /surface-api/{resource}/{id}`** runs the path's default
 delete: an operation that says `#[Operation(deletes: TRUE)]` (and
-`destructive: TRUE`), whose kind is `delete`, named `remove` or `delete`
-or the only delete there
+`destructive: TRUE`), whose kind is `delete`, named `delete` or the
+only delete there
 ([decision](decisions.md#a-placed-block-is-a-resource)). A delete takes
 no values, so the request has no body; one sent is held to JSON and each
 of its keys refused, code `unknown_key`. Nothing is accepted or
@@ -1388,7 +1391,7 @@ no `ETag`: the thing is gone, and there is no envelope to rebuild. A thing
 that is not there is a 404, as on any path. A delete that is not its
 path's default is a custom method, `POST .../{x}:{operation}`, its
 envelope `GET .../{x}:{operation}` as any other's; the placement's
-`remove` is the default, `DELETE /surface-api/block.placement/{id}`.
+`delete` is the default, `DELETE /surface-api/block.placement/{id}`.
 
 ### Problem details
 
@@ -1459,8 +1462,12 @@ the path:
 
 So a second segment that names one of the resource's operations is
 read as a contract 2 path: a thing whose id is an operation's id (a
-content type named `edit`) cannot be addressed by its path, and neither
-can one whose id is `schema`.
+content type named `update`) cannot be addressed by its path, and
+neither can one whose id is `schema`. Contract 2's paths carried the
+ids of their day, so `add`, `edit` and `remove` there are read as the
+operation renamed from them, `create`, `update` and `delete`, and are
+gone too; a thing named one of those three is not addressable by its
+path either.
 
 ### Where a created thing lives
 
@@ -1473,10 +1480,10 @@ the creating operation already knew. The answer is checked, not
 assumed: the operation is built from those parameters (an entity
 parameter loads what its id names), its context must not create, and
 every identity key it knows must equal what was written. The content
-type's `edit(NodeTypeInterface $type)` is answered by the `type` the
+type's `update(NodeTypeInterface $type)` is answered by the `type` the
 write accepted, and its read is the `Location`. A field added at
-`field.instance:add` gets `null` and no `Location`: its
-`edit(FieldConfigInterface $field)` takes the field's own id
+`field.instance:create` gets `null` and no `Location`: its
+`update(FieldConfigInterface $field)` takes the field's own id
 (`node.article.field_x`), which neither its outputs (it declares none)
 nor its identity keys carry by that name; declaring a `field` output
 would answer it. Example 2's `configure` creates nothing, so `null`.
@@ -1545,7 +1552,7 @@ is open.
   default delete is `delete` on the thing's path item,
   `/surface-api/block.placement/{id}` with `get`, `patch` and `delete`,
   with no request body and no `ETag` in its answer; its envelope is its
-  custom method's, `/surface-api/block.placement/{id}:remove`, `get`. A
+  custom method's, `/surface-api/block.placement/{id}:delete`, `get`. A
   listing is `get` on the collection's path item, `/surface-api/event.venue`,
   its values query parameters, each with its schema, and its answer the
   outputs' component; its envelope is its custom method's,
@@ -1662,8 +1669,8 @@ What this list asked for before Submit was wired, and where each is now:
   `created`, and the app says "Saved" itself.
 - Its stale references said out loud, as the form's warning is.
   **Done**: `stale` on every answer.
-- An operation that creates (`add`) answering where the created thing now
-  lives, so the app can move to its `edit` operation's page. **Done**
+- An operation that creates (`create`) answering where the created thing
+  now lives, so the app can move to its `update` operation's page. **Done**
   for any resource whose non-creating operation's parameters the outputs
   or identity answer (the content type); not for the field instance,
   [above](#where-a-created-thing-lives).

@@ -124,7 +124,7 @@ class FieldInstanceResourceTest extends DataSurfaceKernelTestBase {
    */
   public function testEditResolvesTheVariantFromTheFieldType(): void {
     $field = $this->createField();
-    $surface = $this->resources()->build(FieldInstanceResource::class, FieldInstanceResource::edit($field));
+    $surface = $this->resources()->build(FieldInstanceResource::class, FieldInstanceResource::update($field));
 
     foreach (['entity_type_id', 'bundle', 'field_name', 'field_type'] as $key) {
       $this->assertTrue($surface->isLocked($key), $key);
@@ -151,7 +151,7 @@ class FieldInstanceResourceTest extends DataSurfaceKernelTestBase {
    * Tests that adding leaves the variant open until a field type arrives.
    */
   public function testAddLeavesTheVariantToTheFieldType(): void {
-    $surface = $this->resources()->buildOperation(FieldInstanceResource::class, 'add', ['entity_test', 'entity_test']);
+    $surface = $this->resources()->buildOperation(FieldInstanceResource::class, 'create', ['entity_test', 'entity_test']);
     $this->assertFalse($surface->isLocked('field_type'));
     $this->assertSame('field_type', DefinitionMetadata::variantsBy($surface->getDefinition('settings')));
     $resolved = $surface->refine(['field_type' => 'address'])->getDefinition('settings');
@@ -187,7 +187,7 @@ class FieldInstanceResourceTest extends DataSurfaceKernelTestBase {
 
     // Edited: loaded through both storage classes, and a partial payload
     // changes what it names and nothing else.
-    $context = $this->resources()->operation(FieldInstanceResource::class, 'edit', [$field]);
+    $context = $this->resources()->operation(FieldInstanceResource::class, 'update', [$field]);
     $surface = $this->resources()->build(FieldInstanceResource::class, $context);
     $resource_storage = $this->resources()->storage(FieldInstanceResource::class, $context, $surface);
     $loaded = $resource_storage->load($surface);
@@ -213,7 +213,7 @@ class FieldInstanceResourceTest extends DataSurfaceKernelTestBase {
   public function testLockedStorageIsRefused(): void {
     $field = $this->createField();
     $account = $this->setUpCurrentUser([], ['administer entity_test fields']);
-    $context = FieldInstanceResource::edit($field);
+    $context = FieldInstanceResource::update($field);
     $this->assertTrue($this->resources()->access(FieldInstanceResource::class, $context, $account)->isAllowed());
 
     FieldStorageConfig::loadByName('entity_test', 'field_address')->setLocked(TRUE)->save();
@@ -224,7 +224,7 @@ class FieldInstanceResourceTest extends DataSurfaceKernelTestBase {
    * Tests the storage child's access, whichever way it is invoked.
    *
    * Edit and reuse hand the storage a context whole, built by its own
-   * edit operation; add invokes the storage's add by the context's id.
+   * update operation; add invokes the storage's add by the context's id.
    * A child's access class answers on every one of those paths, and the
    * permission of an operation is asked only where the build resolved
    * it, so a handed storage is not asked its edit's permission again. The
@@ -236,9 +236,9 @@ class FieldInstanceResourceTest extends DataSurfaceKernelTestBase {
     $this->assertNull($this->container->get('data_surface.resource_registry')->getDefinition(FieldStorageResource::class)->access);
     $field = $this->createField();
     $contexts = [
-      'add' => FieldInstanceResource::add('entity_test', 'entity_test'),
+      'create' => FieldInstanceResource::create('entity_test', 'entity_test'),
       'reuse' => $this->addContext(),
-      'edit' => FieldInstanceResource::edit($field),
+      'update' => FieldInstanceResource::update($field),
     ];
     foreach (['with' => ['administer entity_test fields'], 'without' => []] as $who => $permissions) {
       $account = $this->setUpCurrentUser([], $permissions);
@@ -264,7 +264,7 @@ class FieldInstanceResourceTest extends DataSurfaceKernelTestBase {
     $reuse = $this->addContext();
     $this->assertSame('reuse', $reuse->id);
     $this->assertTrue($reuse->creates);
-    $this->assertSame('edit', $reuse->forChild('storage')->id);
+    $this->assertSame('update', $reuse->forChild('storage')->id);
     $this->assertFalse($reuse->forChild('storage')->creates);
     $this->assertSame('reuse', $reuse->forChild('settings')->id);
 
@@ -309,8 +309,8 @@ class FieldInstanceResourceTest extends DataSurfaceKernelTestBase {
 
     // Add, with no storage yet: the storage is created first, then the
     // field on it, both from one payload.
-    $add = FieldInstanceResource::add('entity_test', 'entity_test');
-    $this->assertSame('add', $add->forChild('storage')->id);
+    $add = FieldInstanceResource::create('entity_test', 'entity_test');
+    $this->assertSame('create', $add->forChild('storage')->id);
     $surface = $this->resources()->build(FieldInstanceResource::class, $add);
     $result = $this->pipeline()->submit($surface, [
       'field_name' => 'field_postal',
@@ -324,7 +324,7 @@ class FieldInstanceResourceTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests the has-data constraint the storage's edit operation adds.
+   * Tests the has-data constraint the storage's update operation adds.
    *
    * Where you are, not what was entered: once the field holds data the
    * storage's cardinality may not shrink, which the operation says with
@@ -333,14 +333,14 @@ class FieldInstanceResourceTest extends DataSurfaceKernelTestBase {
   public function testStorageWithDataMayNotShrink(): void {
     $field = $this->createField();
     FieldStorageConfig::loadByName('entity_test', 'field_address')->setCardinality(3)->save();
-    $context = FieldInstanceResource::edit($field);
+    $context = FieldInstanceResource::update($field);
     $this->assertSame([], $context->forChild('storage')->constraints);
 
     $this->container->get('entity_type.manager')->getStorage('entity_test')->create([
       'field_address' => [['country_code' => 'US', 'locality' => 'Boston']],
     ])->save();
     $field = $this->reloadField();
-    $context = FieldInstanceResource::edit($field);
+    $context = FieldInstanceResource::update($field);
     $this->assertSame(['cardinality' => ['Range' => ['min' => 3]]], $context->forChild('storage')->constraints);
     $surface = $this->resources()->build(FieldInstanceResource::class, $context);
     $cardinality = $surface->getDefinitions()->entry('storage')->attachment->child->getDefinition('cardinality');
@@ -375,7 +375,7 @@ class FieldInstanceResourceTest extends DataSurfaceKernelTestBase {
 
     $this->expectException(\LogicException::class);
     $this->expectExceptionMessage('does not create');
-    $this->resources()->build(FieldInstanceResource::class, FieldInstanceResource::edit($field)->withDefaults(['label' => 'Nope']));
+    $this->resources()->build(FieldInstanceResource::class, FieldInstanceResource::update($field)->withDefaults(['label' => 'Nope']));
   }
 
 }

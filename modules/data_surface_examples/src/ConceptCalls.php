@@ -240,20 +240,20 @@ final class ConceptCalls {
         'values' => ['limit' => 2],
         'dry_run' => FALSE,
       ],
-      'add_rehearsed' => [
+      'create_rehearsed' => [
         'label' => 'A fourth venue, Town Hall, added: rehearsed',
-        'operation' => 'add',
+        'operation' => 'create',
         'values' => self::TOWN_HALL,
       ],
-      'add' => [
+      'create' => [
         'label' => 'Town Hall added: written, so the next calls find it',
-        'operation' => 'add',
+        'operation' => 'create',
         'values' => self::TOWN_HALL,
         'dry_run' => FALSE,
       ],
-      'edit' => [
+      'update' => [
         'label' => "Town Hall's capacity changed: written",
-        'operation' => 'edit',
+        'operation' => 'update',
         'parameters' => ['id' => 'town_hall'],
         'values' => ['capacity' => 350],
         'dry_run' => FALSE,
@@ -274,14 +274,14 @@ final class ConceptCalls {
           ],
         ],
       ],
-      'remove_rehearsed' => [
+      'delete_rehearsed' => [
         'label' => 'Town Hall removed: rehearsed',
-        'operation' => 'remove',
+        'operation' => 'delete',
         'parameters' => ['id' => 'town_hall'],
       ],
-      'remove' => [
+      'delete' => [
         'label' => 'Town Hall removed: written, so the three venues shipped are what is left',
-        'operation' => 'remove',
+        'operation' => 'delete',
         'parameters' => ['id' => 'town_hall'],
         'dry_run' => FALSE,
       ],
@@ -316,8 +316,8 @@ final class ConceptCalls {
     ],
     'block.placement' => [
       'place' => [
-        'label' => 'The Spotlight block placed through add, made again: refused for the machine name it took',
-        'operation' => 'add',
+        'label' => 'The Spotlight block placed through create, made again: refused for the machine name it took',
+        'operation' => 'create',
         'module' => 'data_surface_block',
         'values' => [
           'label' => 'Spotlight',
@@ -350,8 +350,8 @@ final class ConceptCalls {
         ],
       ],
       'section' => [
-        'label' => 'The Tonight block, a section holding a card, placed through add, made again: refused for the machine name it took',
-        'operation' => 'add',
+        'label' => 'The Tonight block, a section holding a card, placed through create, made again: refused for the machine name it took',
+        'operation' => 'create',
         'module' => 'data_surface_block',
         'values' => [
           'label' => 'Tonight',
@@ -387,7 +387,7 @@ final class ConceptCalls {
       ],
       'props' => [
         'label' => 'The Spotlight block set to the hero',
-        'operation' => 'edit',
+        'operation' => 'update',
         'module' => 'data_surface_block',
         'parameters' => ['id' => 'data_surface_examples_spotlight'],
         'values' => [
@@ -399,7 +399,7 @@ final class ConceptCalls {
       ],
       'wrong_slot' => [
         'label' => "A hero in the hero's actions, which expect a call to action: refused, naming the one it expects",
-        'operation' => 'edit',
+        'operation' => 'update',
         'module' => 'data_surface_block',
         'parameters' => ['id' => 'data_surface_examples_spotlight'],
         'values' => [
@@ -418,9 +418,9 @@ final class ConceptCalls {
           ],
         ],
       ],
-      'remove' => [
+      'delete' => [
         'label' => 'The Spotlight block removed, rehearsed',
-        'operation' => 'remove',
+        'operation' => 'delete',
         'module' => 'data_surface_block',
         'parameters' => ['id' => 'data_surface_examples_spotlight'],
       ],

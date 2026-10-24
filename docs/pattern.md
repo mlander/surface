@@ -84,7 +84,7 @@ modules/data_surface_address/src/
   Storage/AddressFieldSettingsStorage.php    and stores them itself
 
 modules/data_surface_demo_node_type/src/
-  Resource/NodeTypeResource.php       a content type, with add and edit
+  Resource/NodeTypeResource.php       a content type, with create and update
 
 modules/data_surface_demo_extras/src/
   Alter/DemoBlockAlter.php            adds a key, rewords one, narrows one
@@ -291,9 +291,9 @@ something from its parent, the parent hands it over as identity in the
 child's context, which is how the storage learns which field it belongs
 to. That keeps every child buildable and testable on its own.
 
-## Operations: add, reuse, edit
+## Operations: create, reuse, update
 
-A resource never mentions add or edit. The difference between them is
+A resource never mentions create or update. The difference between them is
 not which keys there are. It is how much is already known.
 
 - `#[Resource(identity: [...])]` names the **identity keys**: the input
@@ -307,7 +307,7 @@ not which keys there are. It is how much is already known.
   whether it creates. One that needs nothing more stands on the class
   and has no method (a settings object's `configure`); one whose
   context needs more is a **static method on the class**:
-  `FieldInstanceResource::add()`, `::reuse()`, `::edit()`. Each returns
+  `FieldInstanceResource::create()`, `::reuse()`, `::update()`. Each returns
   an `OperationContext` and knows more than the last; what it needs is
   its own signature. Whether it creates is on the attribute, stamped on
   the context, where the storage reads it.
@@ -318,24 +318,24 @@ not which keys there are. It is how much is already known.
   giving the context starting values with `withDefaults()`.
 
 That makes operations listable ([the catalog](catalog.md)),
-addressable (`field.instance:edit`), and generatable: one route or one
+addressable (`field.instance:update`), and generatable: one route or one
 tool per operation, its inputs being the parameters plus the resource's
 open keys.
 
-| Keys | `add()` | `reuse()` | `edit()` |
+| Keys | `create()` | `reuse()` | `update()` |
 | --- | --- | --- | --- |
 | Entity type, bundle | locked | locked | locked |
 | Field type, machine name | open | locked | locked |
 | Label, help text, required | open | open | open, current values loaded |
-| Storage (attached resource) | its own add | its own edit | its own edit |
+| Storage (attached resource) | its own create | its own update | its own update |
 | Field settings | chosen by field type | fixed by the known type | fixed by the known type |
 | Storage settings | chosen by the storage's field type | fixed by the known type | fixed by the known type |
 
 An operation can hand a child its own context (`withChild()`), or name
 one of the child's operations for it (`withChild('storage',
-operation: 'edit', known: [...])`): reusing a storage is an add for
-the field and an edit for its storage.
-An operation can also narrow (`withConstraint()`): the storage's edit
+operation: 'update', known: [...])`): reusing a storage is a create for
+the field and an update for its storage.
+An operation can also narrow (`withConstraint()`): the storage's update
 operation, when the field has data, constrains cardinality not to
 shrink. The rule: **what depends on where you are is the operation's;
 what depends on what was entered is a refiner's.**

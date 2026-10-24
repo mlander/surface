@@ -110,7 +110,7 @@ function hook_data_surface_options_resolver_info_alter(array &$definitions): voi
  *   storage: ExampleStorage::class,
  *   access: ExampleAccess::class,
  * )]
- * #[Operation('add',
+ * #[Operation('create',
  *   label: new TranslatableMarkup('Add a thing'),
  *   description: new TranslatableMarkup('Creates a thing.'),
  *   permission: ExampleResource::PERMISSION,
@@ -120,12 +120,12 @@ function hook_data_surface_options_resolver_info_alter(array &$definitions): voi
  *
  *   public const PERMISSION = 'administer things';
  *
- *   #[Operation('edit',
+ *   #[Operation('update',
  *     label: new TranslatableMarkup('Edit a thing'),
  *     description: new TranslatableMarkup('Changes a thing, named by its id.'),
  *     permission: self::PERMISSION,
  *   )]
- *   public static function edit(ExampleInterface $thing): OperationContext {
+ *   public static function update(ExampleInterface $thing): OperationContext {
  *     return new OperationContext(known: ['id' => $thing->id()]);
  *   }
  *

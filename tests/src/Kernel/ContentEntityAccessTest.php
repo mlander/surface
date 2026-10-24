@@ -100,7 +100,7 @@ class ContentEntityAccessTest extends DataSurfaceKernelTestBase {
    *   The built resource.
    */
   protected function edit(): DataSurfaceInterface {
-    return $this->resources()->buildOperation('entity.content:node.page', 'edit', ['id' => $this->node->id()]);
+    return $this->resources()->buildOperation('entity.content:node.page', 'update', ['id' => $this->node->id()]);
   }
 
   /**
@@ -112,16 +112,16 @@ class ContentEntityAccessTest extends DataSurfaceKernelTestBase {
     $this->assertTrue($edit->isLocked(EntityTestHooks::LOCKED));
     $this->assertFalse($edit->isLocked('title'));
     // Adding one is the same answer, asked on a throwaway page.
-    $add = $this->resources()->buildOperation('entity.content:node.page', 'add');
+    $add = $this->resources()->buildOperation('entity.content:node.page', 'create');
     $this->assertTrue($add->isLocked(EntityTestHooks::LOCKED));
     $this->assertContains('user.permissions', $edit->getCacheContexts());
 
     // Both contracts say it is shown and fixed.
     $emitter = $this->container->get('data_surface.contract_emitter');
-    $context = $this->resources()->operation('entity.content:node.page', 'edit', ['id' => $this->node->id()]);
+    $context = $this->resources()->operation('entity.content:node.page', 'update', ['id' => $this->node->id()]);
     $storage = $this->resources()->storage('entity.content:node.page', $context, $edit);
     $stored = $storage->load($edit);
-    $now = $emitter->emit($edit, array_replace($edit->getDefaultValues(), $stored), 'entity.content:node.page', 'edit')->document;
+    $now = $emitter->emit($edit, array_replace($edit->getDefaultValues(), $stored), 'entity.content:node.page', 'update')->document;
     $this->assertTrue($now['schema']['properties'][EntityTestHooks::LOCKED]['readOnly'] ?? FALSE);
     $this->assertSame('Stored locked', $now['values'][EntityTestHooks::LOCKED]['value']);
 
@@ -154,7 +154,7 @@ class ContentEntityAccessTest extends DataSurfaceKernelTestBase {
     }
 
     // A write leaves what the account could not see as it was.
-    $context = $this->resources()->operation('entity.content:node.page', 'edit', ['id' => $this->node->id()]);
+    $context = $this->resources()->operation('entity.content:node.page', 'update', ['id' => $this->node->id()]);
     $result = $this->pipeline()->submit($edit, ['title' => ['value' => 'Changed again']], $this->resources()->storage('entity.content:node.page', $context, $edit));
     $this->assertTrue($result->isValid());
     $node = $this->reload();
@@ -183,7 +183,7 @@ class ContentEntityAccessTest extends DataSurfaceKernelTestBase {
    */
   public function testInheritedFieldIsDescribedOpen(): void {
     $this->actAs();
-    $bare = $this->resources()->build('entity.content:node.page', new OperationContext('edit'));
+    $bare = $this->resources()->build('entity.content:node.page', new OperationContext('update'));
     $this->assertNotNull($bare->getDefinitions()->entry(EntityTestHooks::HIDDEN));
     $this->assertFalse($bare->isLocked(EntityTestHooks::LOCKED));
   }
@@ -193,11 +193,11 @@ class ContentEntityAccessTest extends DataSurfaceKernelTestBase {
    */
   public function testTheParentAsksEntityAccess(): void {
     $this->actAs();
-    $context = $this->resources()->operation('entity.content:node.page', 'edit', ['id' => $this->node->id()]);
+    $context = $this->resources()->operation('entity.content:node.page', 'update', ['id' => $this->node->id()]);
     $this->assertTrue($this->resources()->access('entity.content:node.page', $context)->isAllowed());
     $this->setUpCurrentUser([], ['access content']);
     $this->assertFalse($this->resources()->access('entity.content:node.page', $context)->isAllowed());
-    $add = $this->resources()->operation('entity.content:node.page', 'add');
+    $add = $this->resources()->operation('entity.content:node.page', 'create');
     $this->assertFalse($this->resources()->access('entity.content:node.page', $add)->isAllowed());
   }
 
@@ -217,7 +217,7 @@ class ContentEntityAccessTest extends DataSurfaceKernelTestBase {
     $this->assertInstanceOf(MapDataDefinition::class, $own);
     $this->assertNotNull($own->getPropertyDefinition('reviewer_note'));
     // Its key has nowhere to live on a node, and the write goes on.
-    $context = $this->resources()->operation('entity.content:node.page', 'edit', ['id' => $this->node->id()]);
+    $context = $this->resources()->operation('entity.content:node.page', 'update', ['id' => $this->node->id()]);
     $result = $this->pipeline()->submit($edit, ['third_party_settings' => ['data_surface_entity_test' => ['reviewer_note' => 'Fine.']]], $this->resources()->storage('entity.content:node.page', $context, $edit));
     $this->assertTrue($result->isValid());
   }
@@ -242,7 +242,7 @@ class ContentEntityAccessTest extends DataSurfaceKernelTestBase {
     $this->assertSame('Phone', (string) $edit->getDefinitions()->entry('field_phone')?->definition->getLabel());
 
     // And the storage writes it by its property name.
-    $context = $this->resources()->operation('entity.content:node.page', 'edit', ['id' => $this->node->id()]);
+    $context = $this->resources()->operation('entity.content:node.page', 'update', ['id' => $this->node->id()]);
     $result = $this->pipeline()->submit($edit, ['field_phone' => ['value' => '+44 20 7946 0000']], $this->resources()->storage('entity.content:node.page', $context, $edit));
     $this->assertTrue($result->isValid());
     $this->assertSame('+44 20 7946 0000', $this->reload()->get('field_phone')->value);

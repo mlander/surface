@@ -165,19 +165,19 @@ class ResourceBuildTest extends DataSurfaceKernelTestBase {
    * Tests that the identity a context knows is locked, and the rest open.
    */
   public function testKnownIdentityIsLocked(): void {
-    $add = $this->resources()->buildOperation(RecipeResource::class, 'add', ['main']);
+    $add = $this->resources()->buildOperation(RecipeResource::class, 'create', ['main']);
     $this->assertTrue($add->isLocked('kitchen'));
     $this->assertSame('main', $add->getDefault('kitchen'));
     $this->assertFalse($add->isLocked('name'));
 
-    $edit = $this->resources()->buildOperation('resource_test.recipe', 'edit', ['kitchen' => 'main', 'name' => 'stew']);
+    $edit = $this->resources()->buildOperation('resource_test.recipe', 'update', ['kitchen' => 'main', 'name' => 'stew']);
     $this->assertTrue($edit->isLocked('kitchen'));
     $this->assertTrue($edit->isLocked('name'));
     $this->assertSame('stew', $edit->getDefault('name'));
 
     // A generic caller passes an empty context: nothing is locked, and it
     // is still the same resource.
-    $open = $this->resources()->build(RecipeResource::class, new OperationContext('add'));
+    $open = $this->resources()->build(RecipeResource::class, new OperationContext('create'));
     $this->assertFalse($open->isLocked('kitchen'));
     $this->assertSame(array_keys($add->getDefinitions()->toArray()), array_keys($open->getDefinitions()->toArray()));
   }
@@ -186,14 +186,14 @@ class ResourceBuildTest extends DataSurfaceKernelTestBase {
    * Tests that a context's constraints narrow, and may not widen.
    */
   public function testContextConstraintsNarrow(): void {
-    $context = RecipeResource::add('main')->withConstraint('servings', 'Range', ['min' => 2, 'max' => 12]);
+    $context = RecipeResource::create('main')->withConstraint('servings', 'Range', ['min' => 2, 'max' => 12]);
     $surface = $this->resources()->build(RecipeResource::class, $context);
     $this->assertSame(['min' => 2, 'max' => 12], $surface->getDefinition('servings')->getConstraints()['Range']);
     $this->assertContains('servings', $this->pipeline()->validate($surface, ['servings' => 1] + $surface->getDefaultValues() + ['name' => 'x'])->keys());
 
     $this->expectException(\LogicException::class);
-    $this->expectExceptionMessage('Refining "servings" for the "add" operation widened what it was given: the max of the Range constraint moved from 12 to 99.');
-    $widening = RecipeResource::add('main')->withConstraint('servings', 'Range', [
+    $this->expectExceptionMessage('Refining "servings" for the "create" operation widened what it was given: the max of the Range constraint moved from 12 to 99.');
+    $widening = RecipeResource::create('main')->withConstraint('servings', 'Range', [
       'min' => 1,
       'max' => 99,
     ]);
@@ -214,15 +214,15 @@ class ResourceBuildTest extends DataSurfaceKernelTestBase {
     $this->assertFalse($surface->isLocked('course'));
 
     $this->expectException(\LogicException::class);
-    $this->expectExceptionMessage('The "edit" context carries starting values for course but does not create.');
-    $this->resources()->build(RecipeResource::class, RecipeResource::edit('main', 'stew')->withDefaults(['course' => 'starter']));
+    $this->expectExceptionMessage('The "update" context carries starting values for course but does not create.');
+    $this->resources()->build(RecipeResource::class, RecipeResource::update('main', 'stew')->withDefaults(['course' => 'starter']));
   }
 
   /**
    * Tests refiner dispatch: by name, by watches, owner first, then alters.
    */
   public function testRefinerDispatch(): void {
-    $surface = $this->resources()->build(RecipeResource::class, RecipeResource::add('main'));
+    $surface = $this->resources()->build(RecipeResource::class, RecipeResource::create('main'));
     $choices = static fn (DataSurfaceInterface $refined): array => $refined->getDefinition('dish')->getConstraints()['Choice']['choices'];
 
     // The dish is refined by the owner (watching course, by name) and by
@@ -434,7 +434,7 @@ class ResourceBuildTest extends DataSurfaceKernelTestBase {
    * Tests that alters add inputs and outputs, in the operations they name.
    */
   public function testAltersApply(): void {
-    $add = $this->resources()->buildOperation(RecipeResource::class, 'add', ['main']);
+    $add = $this->resources()->buildOperation(RecipeResource::class, 'create', ['main']);
     $this->assertSame(['garnish'], array_keys($this->mounted($add->getDefinition('third_party_settings'))));
     $this->assertSame('parsley', $add->getDefaultValues()['third_party_settings']['data_surface_resource_test']['garnish']);
     $outputs = $add->getOutputDefinitions()->toArray();
@@ -443,7 +443,7 @@ class ResourceBuildTest extends DataSurfaceKernelTestBase {
 
     // The edit-only alter applies where it says, and nowhere else. Alters
     // apply in discovery order, which is class name order within a module.
-    $edit = $this->resources()->buildOperation(RecipeResource::class, 'edit', ['main', 'stew']);
+    $edit = $this->resources()->buildOperation(RecipeResource::class, 'update', ['main', 'stew']);
     $this->assertSame(['revision_note', 'garnish'], array_keys($this->mounted($edit->getDefinition('third_party_settings'))));
   }
 
@@ -452,11 +452,11 @@ class ResourceBuildTest extends DataSurfaceKernelTestBase {
    */
   public function testOperations(): void {
     $operations = $this->container->get('data_surface.resource_registry')->getOperations(RecipeResource::class);
-    $this->assertSame(['add', 'edit', 'clone', 'mislabeled'], array_keys($operations));
+    $this->assertSame(['create', 'update', 'clone', 'mislabeled'], array_keys($operations));
     $this->assertSame('data_surface_resource_test', $operations['clone']->module);
 
     $this->expectException(\LogicException::class);
-    $this->expectExceptionMessage('returned a context whose id is "add"');
+    $this->expectExceptionMessage('returned a context whose id is "create"');
     $this->resources()->operation(RecipeResource::class, 'mislabeled', ['main']);
   }
 
@@ -470,15 +470,15 @@ class ResourceBuildTest extends DataSurfaceKernelTestBase {
 
     // The permission, its placeholder filled from the known kitchen,
     // then the access class.
-    $this->assertTrue($resources->access(RecipeResource::class, RecipeResource::edit('main', 'stew'), $cook)->isAllowed());
-    $this->assertFalse($resources->access(RecipeResource::class, RecipeResource::edit('main', 'stew'), $stranger)->isAllowed());
-    $this->assertFalse($resources->access(RecipeResource::class, RecipeResource::add('pantry'), $cook)->isAllowed());
+    $this->assertTrue($resources->access(RecipeResource::class, RecipeResource::update('main', 'stew'), $cook)->isAllowed());
+    $this->assertFalse($resources->access(RecipeResource::class, RecipeResource::update('main', 'stew'), $stranger)->isAllowed());
+    $this->assertFalse($resources->access(RecipeResource::class, RecipeResource::create('pantry'), $cook)->isAllowed());
     // The permission passes; the access class, which reads the subject,
     // does not.
-    $this->assertTrue($resources->access(RecipeResource::class, RecipeResource::edit('closed', 'stew'), $cook)->isForbidden());
+    $this->assertTrue($resources->access(RecipeResource::class, RecipeResource::update('closed', 'stew'), $cook)->isForbidden());
     // A placeholder the context cannot fill is not a permission anybody
     // has.
-    $this->assertTrue($resources->access(RecipeResource::class, new OperationContext('add'), $cook)->isForbidden());
+    $this->assertTrue($resources->access(RecipeResource::class, new OperationContext('create'), $cook)->isForbidden());
     // A context that is no operation has no permission tier.
     $this->assertTrue($resources->access(RecipeResource::class, new OperationContext('configure'), $stranger)->isAllowed());
     $this->assertTrue($resources->access(DemoBlockStructure::class, new OperationContext('configure'), $stranger)->isNeutral());
@@ -488,7 +488,7 @@ class ResourceBuildTest extends DataSurfaceKernelTestBase {
    * Tests that the resource's storage is reached through the pipeline.
    */
   public function testStorageThroughThePipeline(): void {
-    $context = RecipeResource::add('main');
+    $context = RecipeResource::create('main');
     $surface = $this->resources()->build(RecipeResource::class, $context);
     $result = $this->pipeline()->submit($surface, [
       'kitchen' => 'main',
@@ -504,7 +504,7 @@ class ResourceBuildTest extends DataSurfaceKernelTestBase {
     $this->assertSame(4, $stored['servings']);
     $this->assertSame('risotto', $stored['dish']);
 
-    $edit = RecipeResource::edit('main', 'stew');
+    $edit = RecipeResource::update('main', 'stew');
     $loaded = $this->resources()->storage(RecipeResource::class, $edit)->load($this->resources()->build(RecipeResource::class, $edit));
     $this->assertSame('risotto', $loaded['dish']);
 

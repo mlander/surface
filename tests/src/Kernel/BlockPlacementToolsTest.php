@@ -113,17 +113,17 @@ class BlockPlacementToolsTest extends DataSurfaceKernelTestBase {
     $tools = $this->container->get('plugin.manager.tool');
     $this->assertFalse($tools->hasDefinition('data_surface:block.data_surface_component:configure'), 'The plugin\'s structure is held by its host: no tool.');
     $this->assertFalse($tools->hasDefinition('data_surface:block.placed_component:configure'), 'The stop-gap resource is gone.');
-    $this->assertFalse($tools->hasDefinition(self::TOOL . 'remove:read'), 'A delete has nothing to read before.');
+    $this->assertFalse($tools->hasDefinition(self::TOOL . 'delete:read'), 'A delete has nothing to read before.');
     $expected = [
-      'add' => ['Place a block', ToolOperation::Write, FALSE, [OperationInputs::VALUES, OperationInputs::DRY_RUN]],
-      'edit' => [
+      'create' => ['Place a block', ToolOperation::Write, FALSE, [OperationInputs::VALUES, OperationInputs::DRY_RUN]],
+      'update' => [
         'Edit a placed block',
         ToolOperation::Write,
         FALSE,
         ['id', OperationInputs::VALUES, OperationInputs::DRY_RUN],
       ],
-      'edit:read' => ['Current values: Edit a placed block', ToolOperation::Read, FALSE, ['id']],
-      'remove' => ['Remove a placed block', ToolOperation::Write, TRUE, ['id', OperationInputs::DRY_RUN]],
+      'update:read' => ['Current values: Edit a placed block', ToolOperation::Read, FALSE, ['id']],
+      'delete' => ['Remove a placed block', ToolOperation::Write, TRUE, ['id', OperationInputs::DRY_RUN]],
     ];
     foreach ($expected as $operation => [$label, $kind, $destructive, $inputs]) {
       $definition = $tools->getDefinition(self::TOOL . $operation);
@@ -133,11 +133,11 @@ class BlockPlacementToolsTest extends DataSurfaceKernelTestBase {
       $this->assertSame($inputs, array_keys($definition->getInputDefinitions()), $operation);
       $this->assertSame('administer blocks', $definition->getPermission(), $operation);
     }
-    $this->assertStringEndsWith('Delete: send only what names it; the values it held are answered, and a dry run removes nothing.', (string) $tools->getDefinition(self::TOOL . 'remove')->getDescription());
-    $this->assertSame('Rehearse the removal without removing anything.', (string) $tools->getDefinition(self::TOOL . 'remove')->getInputDefinition(OperationInputs::DRY_RUN)->getDescription());
+    $this->assertStringEndsWith('Delete: send only what names it; the values it held are answered, and a dry run removes nothing.', (string) $tools->getDefinition(self::TOOL . 'delete')->getDescription());
+    $this->assertSame('Rehearse the removal without removing anything.', (string) $tools->getDefinition(self::TOOL . 'delete')->getInputDefinition(OperationInputs::DRY_RUN)->getDescription());
 
     // The listing: the plugins offered, the variants flattened.
-    $listed = $this->container->get('tool.definition_serializer')->normalizeInputSchema($tools->createInstance(self::TOOL . 'add'));
+    $listed = $this->container->get('tool.definition_serializer')->normalizeInputSchema($tools->createInstance(self::TOOL . 'create'));
     $this->assertContains('data_surface_component', $listed['properties']['values']['properties']['plugin']['enum']);
     $this->assertContains('system_branding_block', $listed['properties']['values']['properties']['plugin']['enum']);
     $this->assertSame(['label', 'id', 'plugin', 'theme', 'region'], $listed['properties']['values']['required']);
@@ -147,7 +147,7 @@ class BlockPlacementToolsTest extends DataSurfaceKernelTestBase {
    * Tests placing a hero: rehearsed, then placed, then refused under its name.
    */
   public function testAddDryRunThenReal(): void {
-    $rehearsed = $this->call('add', ['values' => self::HERO, 'dry_run' => TRUE]);
+    $rehearsed = $this->call('create', ['values' => self::HERO, 'dry_run' => TRUE]);
     $this->assertTrue($rehearsed['success'], $rehearsed['message']);
     $this->assertFalse($rehearsed['committed']);
     $this->assertSame('Dry run of Place a block: the values were accepted and prepared, and nothing was written.', $rehearsed['message']);
@@ -161,7 +161,7 @@ class BlockPlacementToolsTest extends DataSurfaceKernelTestBase {
     $this->assertSame($props, $rehearsed['values']['settings']['props'], 'The hero\'s props, its defaults filled in.');
     $this->assertNull(Block::load('doors_hero'));
 
-    $placed = $this->call('add', ['values' => self::HERO]);
+    $placed = $this->call('create', ['values' => self::HERO]);
     $this->assertTrue($placed['committed'], $placed['message'] . json_encode($placed['violations'] ?? []));
     $block = $this->container->get('entity_type.manager')->getStorage('block')->loadUnchanged('doors_hero');
     $this->assertSame('stark', $block->getTheme());
@@ -180,7 +180,7 @@ class BlockPlacementToolsTest extends DataSurfaceKernelTestBase {
     ];
     $this->assertSame($dependencies, $block->getDependencies(), 'Its theme, its plugin\'s, its component\'s and its condition\'s.');
 
-    $again = $this->call('add', ['values' => self::HERO, 'dry_run' => TRUE]);
+    $again = $this->call('create', ['values' => self::HERO, 'dry_run' => TRUE]);
     $this->assertFalse($again['success']);
     $this->assertSame([
       [
@@ -216,7 +216,7 @@ class BlockPlacementToolsTest extends DataSurfaceKernelTestBase {
       'theme' => 'stark',
       'region' => 'sidebar_first',
     ];
-    $placed = $this->call('add', ['values' => $section]);
+    $placed = $this->call('create', ['values' => $section]);
     $this->assertTrue($placed['committed'], $placed['message'] . json_encode($placed['violations'] ?? []));
     $card = [
       'component' => 'data_surface_examples:card',
@@ -229,7 +229,7 @@ class BlockPlacementToolsTest extends DataSurfaceKernelTestBase {
     $build = $block->getPlugin()->build();
     $html = (string) $this->container->get('renderer')->renderInIsolation($build);
     $this->assertStringContainsString('<h3>Talks start at seven</h3>', $html);
-    $read = $this->call('edit:read', ['id' => 'tonight']);
+    $read = $this->call('update:read', ['id' => 'tonight']);
     $this->assertSame($placed['values']['settings']['slots'], $read['values']['settings']['slots']);
 
     // A hero where the hero's actions expect a call to action: refused,
@@ -244,7 +244,7 @@ class BlockPlacementToolsTest extends DataSurfaceKernelTestBase {
         'code' => 'no_such_choice',
         'message' => 'The value you selected is not a valid choice. Choose data_surface_examples:call_to_action (Call to action).',
       ],
-    ], $this->call('add', ['values' => $hero, 'dry_run' => TRUE])['violations']);
+    ], $this->call('create', ['values' => $hero, 'dry_run' => TRUE])['violations']);
     $cta = [
       'component' => 'data_surface_examples:call_to_action',
       'props' => ['text' => 'Go', 'url' => 'https://example.com'],
@@ -253,7 +253,7 @@ class BlockPlacementToolsTest extends DataSurfaceKernelTestBase {
       'component' => 'data_surface_examples:section',
       'slots' => ['content' => ['kind' => 'component', 'component' => $cta]],
     ];
-    $wrong_tag = $this->call('edit', ['id' => 'tonight', 'values' => ['settings' => $settings], 'dry_run' => TRUE]);
+    $wrong_tag = $this->call('update', ['id' => 'tonight', 'values' => ['settings' => $settings], 'dry_run' => TRUE]);
     $this->assertSame('/settings/slots/content/component/component', $wrong_tag['violations'][0]['path']);
     $this->assertSame('The value you selected is not a valid choice. Choose data_surface_examples:card (Card) or data_surface_examples:hero (Hero).', $wrong_tag['violations'][0]['message']);
   }
@@ -262,22 +262,22 @@ class BlockPlacementToolsTest extends DataSurfaceKernelTestBase {
    * Tests what is refused: another theme's region, another component's props.
    */
   public function testRefusals(): void {
-    $wrong_region = $this->call('add', ['values' => ['region' => 'pre_content'] + self::HERO, 'dry_run' => TRUE]);
+    $wrong_region = $this->call('create', ['values' => ['region' => 'pre_content'] + self::HERO, 'dry_run' => TRUE]);
     $this->assertFalse($wrong_region['success']);
     $this->assertSame('/region', $wrong_region['violations'][0]['path']);
     $this->assertStringStartsWith('The stark theme has no region named pre_content.', $wrong_region['violations'][0]['message'], 'Claro\'s region, refused for Stark by name.');
-    $nowhere = $this->call('add', ['values' => ['region' => 'nowhere'] + self::HERO, 'dry_run' => TRUE]);
+    $nowhere = $this->call('create', ['values' => ['region' => 'nowhere'] + self::HERO, 'dry_run' => TRUE]);
     $this->assertStringStartsWith('No installed theme has a region named nowhere.', $nowhere['violations'][0]['message']);
 
     $hero = self::HERO;
     $hero['settings']['props'] = ['heading' => 'A card\'s heading'] + $hero['settings']['props'];
-    $wrong_props = $this->call('add', ['values' => $hero, 'dry_run' => TRUE]);
+    $wrong_props = $this->call('create', ['values' => $hero, 'dry_run' => TRUE]);
     $this->assertFalse($wrong_props['success']);
     $this->assertSame('/settings/props/heading', $wrong_props['violations'][0]['path']);
 
     $hero = self::HERO;
     $hero['settings']['props']['overlay'] = 140;
-    $too_dark = $this->call('add', ['values' => $hero, 'dry_run' => TRUE])['violations'];
+    $too_dark = $this->call('create', ['values' => $hero, 'dry_run' => TRUE])['violations'];
     $this->assertSame([
       [
         'path' => '/settings/props/overlay',
@@ -288,7 +288,7 @@ class BlockPlacementToolsTest extends DataSurfaceKernelTestBase {
 
     $twice = self::HERO;
     $twice['visibility'][] = ['id' => 'request_path', 'settings' => ['pages' => '/news']];
-    $answer = $this->call('add', ['values' => $twice, 'dry_run' => TRUE]);
+    $answer = $this->call('create', ['values' => $twice, 'dry_run' => TRUE]);
     $this->assertSame('/visibility/1/id', $answer['violations'][0]['path']);
     $this->assertSame(Violation::TAKEN, $answer['violations'][0]['code']);
   }
@@ -297,8 +297,8 @@ class BlockPlacementToolsTest extends DataSurfaceKernelTestBase {
    * Tests changing the hero's props, and reading it back.
    */
   public function testEditAndRead(): void {
-    $this->call('add', ['values' => self::HERO]);
-    $read = $this->call('edit:read', ['id' => 'doors_hero']);
+    $this->call('create', ['values' => self::HERO]);
+    $read = $this->call('update:read', ['id' => 'doors_hero']);
     $keys = [
       'label',
       'label_display',
@@ -317,10 +317,10 @@ class BlockPlacementToolsTest extends DataSurfaceKernelTestBase {
       'component' => 'data_surface_examples:hero',
       'props' => ['title' => 'Doors open at six', 'align' => 'center'],
     ];
-    $rehearsed = $this->call('edit', ['id' => 'doors_hero', 'values' => ['settings' => $centered], 'dry_run' => TRUE]);
+    $rehearsed = $this->call('update', ['id' => 'doors_hero', 'values' => ['settings' => $centered], 'dry_run' => TRUE]);
     $this->assertTrue($rehearsed['success']);
     $this->assertSame('start', Block::load('doors_hero')->get('settings')['props']['align']);
-    $edited = $this->call('edit', ['id' => 'doors_hero', 'values' => ['settings' => $centered, 'weight' => 5]]);
+    $edited = $this->call('update', ['id' => 'doors_hero', 'values' => ['settings' => $centered, 'weight' => 5]]);
     $this->assertTrue($edited['committed']);
     $this->assertSame(['/settings/props/title', '/settings/props/align', '/weight'], $edited['changes']);
     $block = $this->container->get('entity_type.manager')->getStorage('block')->loadUnchanged('doors_hero');
@@ -329,7 +329,7 @@ class BlockPlacementToolsTest extends DataSurfaceKernelTestBase {
     $this->assertSame('Doors', $block->label(), 'A key left out keeps what it holds.');
 
     // The theme is the block's: moving it is not offered.
-    $moved = $this->call('edit', ['id' => 'doors_hero', 'values' => ['theme' => 'olivero'], 'dry_run' => TRUE]);
+    $moved = $this->call('update', ['id' => 'doors_hero', 'values' => ['theme' => 'olivero'], 'dry_run' => TRUE]);
     $this->assertFalse($moved['success']);
     $this->assertSame('/theme', $moved['violations'][0]['path']);
 
@@ -341,9 +341,9 @@ class BlockPlacementToolsTest extends DataSurfaceKernelTestBase {
       'plugin' => 'system_branding_block',
       'settings' => ['label' => 'Branding'],
     ])->save();
-    $this->assertSame(['use_site_logo' => TRUE, 'use_site_name' => TRUE, 'use_site_slogan' => TRUE], $this->call('edit:read', ['id' => 'branding'])['values']['settings']);
+    $this->assertSame(['use_site_logo' => TRUE, 'use_site_name' => TRUE, 'use_site_slogan' => TRUE], $this->call('update:read', ['id' => 'branding'])['values']['settings']);
     $quiet = ['settings' => ['use_site_slogan' => FALSE], 'label_display' => FALSE];
-    $this->assertTrue($this->call('edit', ['id' => 'branding', 'values' => $quiet])['committed']);
+    $this->assertTrue($this->call('update', ['id' => 'branding', 'values' => $quiet])['committed']);
     $settings = Block::load('branding')->get('settings');
     $this->assertFalse($settings['use_site_slogan']);
     $this->assertSame('0', $settings['label_display']);
@@ -353,8 +353,8 @@ class BlockPlacementToolsTest extends DataSurfaceKernelTestBase {
    * Tests removing: rehearsed, then removed, then nothing there.
    */
   public function testRemoveDryRunThenReal(): void {
-    $this->call('add', ['values' => self::HERO]);
-    $rehearsed = $this->call('remove', ['id' => 'doors_hero', 'dry_run' => TRUE]);
+    $this->call('create', ['values' => self::HERO]);
+    $rehearsed = $this->call('delete', ['id' => 'doors_hero', 'dry_run' => TRUE]);
     $this->assertTrue($rehearsed['success']);
     $this->assertFalse($rehearsed['committed']);
     $this->assertSame([''], $rehearsed['changes']);
@@ -362,13 +362,13 @@ class BlockPlacementToolsTest extends DataSurfaceKernelTestBase {
     $this->assertSame('Doors', $rehearsed['values']['label']);
     $this->assertNotNull(Block::load('doors_hero'));
 
-    $removed = $this->call('remove', ['id' => 'doors_hero']);
+    $removed = $this->call('delete', ['id' => 'doors_hero']);
     $this->assertTrue($removed['committed']);
     $this->assertTrue($removed['changed']);
     $this->assertSame('Remove a placed block: removed. The values it held are answered.', $removed['message']);
     $this->assertNull($this->container->get('entity_type.manager')->getStorage('block')->loadUnchanged('doors_hero'));
 
-    $gone = $this->call('remove', ['id' => 'doors_hero']);
+    $gone = $this->call('delete', ['id' => 'doors_hero']);
     $this->assertFalse($gone['success']);
     $this->assertSame(Violation::NOT_FOUND, $gone['violations'][0]['code']);
   }

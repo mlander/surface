@@ -44,7 +44,7 @@ class BlockPlacementReactTest extends WebDriverTestBase {
     $page = $this->getSession()->getPage();
     $this->drupalLogin($this->drupalCreateUser(['administer blocks']));
 
-    $this->drupalGet('surface-react/block.placement/add');
+    $this->drupalGet('surface-react/block.placement/create');
     $this->assertNotNull($assert->waitForElement('css', '#dsr-plugin'));
     $page->fillField('dsr-label', 'Branding');
     $page->fillField('dsr-id', 'branding');
@@ -56,14 +56,14 @@ class BlockPlacementReactTest extends WebDriverTestBase {
     $page->uncheckField('dsr-settings-use_site_slogan');
     $page->pressButton('Submit');
     // Created, the page moves to where the block now lives: its edit.
-    $this->assertTrue($this->getSession()->wait(10000, "window.location.pathname.endsWith('/surface-react/block.placement/edit')"), 'The page moved to the placed block.');
+    $this->assertTrue($this->getSession()->wait(10000, "window.location.pathname.endsWith('/surface-react/block.placement/update')"), 'The page moved to the placed block.');
     $this->container->get('entity_type.manager')->getStorage('block')->resetCache();
     $block = Block::load('branding');
     $this->assertNotNull($block);
     $this->assertSame('sidebar_first', $block->getRegion());
     $this->assertFalse($block->get('settings')['use_site_slogan']);
 
-    $this->drupalGet('surface-react/block.placement/edit', ['query' => ['id' => 'branding']]);
+    $this->drupalGet('surface-react/block.placement/update', ['query' => ['id' => 'branding']]);
     $this->assertNotNull($assert->waitForElement('css', '#dsr-weight'));
     $this->assertSame('Branding', $page->findField('dsr-label')->getValue());
     $page->fillField('dsr-weight', '4');

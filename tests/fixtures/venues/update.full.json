@@ -1,6 +1,6 @@
 {
     "resource": "event.venue",
-    "operation": "edit",
+    "operation": "update",
     "label": "Edit a venue",
     "schema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -9,7 +9,7 @@
         "x-surface": {
             "contract": 3,
             "operation": {
-                "id": "edit",
+                "id": "update",
                 "label": "Edit a venue",
                 "description": "Changes a venue, named by its machine name, which stays as it is: its name, capacity, address, rooms, weight and status.",
                 "kind": "update",
@@ -27,9 +27,7 @@
                 "maxLength": 128,
                 "x-surface": {
                     "locked": false,
-                    "dependsOn": [],
-                    "refined": false,
-                    "stale": false
+                    "dependsOn": []
                 }
             },
             "id": {
@@ -44,8 +42,6 @@
                 "x-surface": {
                     "locked": true,
                     "dependsOn": [],
-                    "refined": false,
-                    "stale": false,
                     "patternMessage": "The machine name may hold only lowercase letters, numbers and underscores."
                 }
             },
@@ -57,9 +53,7 @@
                 "maximum": 100000,
                 "x-surface": {
                     "locked": false,
-                    "dependsOn": [],
-                    "refined": false,
-                    "stale": false
+                    "dependsOn": []
                 }
             },
             "address": {
@@ -71,9 +65,7 @@
                 "maxLength": 255,
                 "x-surface": {
                     "locked": false,
-                    "dependsOn": [],
-                    "refined": false,
-                    "stale": false
+                    "dependsOn": []
                 }
             },
             "rooms": {
@@ -90,8 +82,6 @@
                 "x-surface": {
                     "locked": false,
                     "dependsOn": [],
-                    "refined": false,
-                    "stale": false,
                     "list": true
                 }
             },
@@ -104,9 +94,7 @@
                 "default": 0,
                 "x-surface": {
                     "locked": false,
-                    "dependsOn": [],
-                    "refined": false,
-                    "stale": false
+                    "dependsOn": []
                 }
             },
             "status": {
@@ -116,9 +104,7 @@
                 "default": true,
                 "x-surface": {
                     "locked": false,
-                    "dependsOn": [],
-                    "refined": false,
-                    "stale": false
+                    "dependsOn": []
                 }
             }
         },
@@ -141,8 +127,6 @@
                         "x-surface": {
                             "locked": false,
                             "dependsOn": [],
-                            "refined": false,
-                            "stale": false,
                             "patternMessage": "A room id holds only lowercase letters, numbers and underscores."
                         }
                     },
@@ -152,9 +136,7 @@
                         "maxLength": 128,
                         "x-surface": {
                             "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
+                            "dependsOn": []
                         }
                     },
                     "seats": {
@@ -164,9 +146,7 @@
                         "maximum": 10000,
                         "x-surface": {
                             "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
+                            "dependsOn": []
                         }
                     }
                 },
@@ -178,26 +158,5 @@
                 ]
             }
         }
-    },
-    "values": {
-        "label": "Old Library",
-        "id": "library",
-        "capacity": 90,
-        "address": "12 Church Lane",
-        "rooms": [
-            {
-                "id": "library_reading",
-                "label": "Reading room",
-                "seats": 60
-            },
-            {
-                "id": "library_garden",
-                "label": "Garden room",
-                "seats": 30
-            }
-        ],
-        "weight": 1,
-        "status": true
-    },
-    "stale": []
+    }
 }

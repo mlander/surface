@@ -29,7 +29,7 @@ use Symfony\Component\Validator\ConstraintViolationListInterface;
  * A tool for one operation of one resource, generated from the operation.
  *
  * One class, one tool per (resource, operation) the deriver finds:
- * `data_surface:node.type:add`, `data_surface:field.instance:edit`.
+ * `data_surface:node.type:create`, `data_surface:field.instance:update`.
  * Nothing here names a resource, a key or an operation; all of it is read
  * from the derivative id and the static layer.
  *

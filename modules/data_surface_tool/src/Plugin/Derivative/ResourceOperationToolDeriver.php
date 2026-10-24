@@ -35,7 +35,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * resources discovery found, the operations on each, and what each
  * operation's signature says it needs. The derivative id is
  * `<resource id>:<operation id>`, so a plugin id reads
- * `data_surface:node.type:add`: the address the pattern gives an
+ * `data_surface:node.type:create`: the address the pattern gives an
  * operation.
  *
  * Two rules say which operations are not tools, and the catalog

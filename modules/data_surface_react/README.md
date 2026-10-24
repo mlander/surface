@@ -12,7 +12,7 @@ the operation (contract 3):
 | Narrowing | `POST .../schema` | The envelope narrowed for in-progress values, the body a values document: the AJAX rebuild's equivalent. Writes nothing. |
 | Update | `PATCH /surface-api/{resource}[/{id}]` | The default update, the body a values document (`application/merge-patch+json` or JSON): the one result shape every door answers, `{ok, committed, changed, changes, values, violations, notes, stale}`, then `outputs`, `contract` and `created`, and the new `ETag`. |
 | Create | `POST /surface-api/{resource}` | The default create: 201 with the created thing's `Location`. |
-| Delete | `DELETE /surface-api/{resource}/{id}` | The default delete, an operation that says `deletes: TRUE` (`block.placement:remove`): no body, 200 with the values the thing held and no envelope or `ETag`. |
+| Delete | `DELETE /surface-api/{resource}/{id}` | The default delete, an operation that says `deletes: TRUE` (`block.placement:delete`): no body, 200 with the values the thing held and no envelope or `ETag`. |
 | Any other | `GET` and `POST .../{x}:{operation}` | An operation that is not a default, by name: `event.program:check`. |
 | Lookup | `GET .../{x}:lookup?key=/venue&q=riv` | The candidates of one key that refers to an entity, of the operation `GET` serves at the path, by label, for the account: `{key, entityType, bundles, items}`, each item `{id, label}`; `type` names the entity type for a key of any type. What the app's autocomplete asks past the limit ([the lookup](../../docs/served-contract.md#a-lookup)). |
 
@@ -136,7 +136,7 @@ and so on.
   kept, and re-renders from the envelope the answer carries, whose
   `ETag` the next write sends. A write that created something (a 201
   from `node.type`) moves to the page where it now lives,
-  `/surface-react/node.type/edit?type=…`. `If-Match` is on by default
+  `/surface-react/node.type/update?type=…`. `If-Match` is on by default
   (`SEND_FINGERPRINT` in `api.ts`); a page turns it off with
   `sendFingerprint: false` in its `drupalSettings.dataSurfaceReact`.
 

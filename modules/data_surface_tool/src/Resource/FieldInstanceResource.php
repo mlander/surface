@@ -35,15 +35,15 @@ use Drupal\field\FieldStorageConfigInterface;
  * the UI with no settings class still has a variant, the one
  * FieldSettingsSchemaVariants derives from its config schema.
  *
- * Add, reuse and edit are not three resources. They are how much is already
- * known, so they are the three ways to ask for this resource, below.
+ * Create, reuse and update are not three resources. They are how much is
+ * already known, so they are the three ways to ask for this resource, below.
  *
  * @code
- *                              add      reuse    edit
+ *                              create   reuse    update
  *   entity_type_id, bundle     locked   locked   locked
  *   field_type, field_name     open     locked   locked
  *   label, description, ...    open     open     open, current values loaded
- *   storage                    its add  its edit its edit
+ *   storage, its own           create   update   update
  *   settings                   by type  fixed by the known type
  * @endcode
  */
@@ -60,15 +60,15 @@ final class FieldInstanceResource implements ResourceInterface {
    * The caller names the field, so the same call twice leaves what the
    * first left: idempotent, though it creates.
    */
-  #[Operation('add',
+  #[Operation('create',
     label: new TranslatableMarkup('Add a field to a bundle'),
     description: new TranslatableMarkup('Adds a new field, with a storage of its own, to a bundle of an entity type, under a machine name the caller chooses.'),
     permission: 'administer %entity_type_id fields',
     creates: TRUE,
     idempotent: TRUE,
   )]
-  public static function add(string $entity_type_id, string $bundle): OperationContext {
-    return self::handSettingsTheField(new OperationContext('add', creates: TRUE, known: [
+  public static function create(string $entity_type_id, string $bundle): OperationContext {
+    return self::handSettingsTheField(new OperationContext('create', creates: TRUE, known: [
       'entity_type_id' => $entity_type_id,
       'bundle' => $bundle,
     ]));
@@ -77,8 +77,8 @@ final class FieldInstanceResource implements ResourceInterface {
   /**
    * Adds an existing storage's field to another bundle.
    *
-   * An add for the field, an edit for its storage: parent and child see
-   * different operations. The caller names the field, as for add.
+   * A create for the field, an update for its storage: parent and child
+   * see different operations. The caller names the field, as for create.
    */
   #[Operation('reuse',
     label: new TranslatableMarkup('Add an existing field to another bundle'),
@@ -88,25 +88,25 @@ final class FieldInstanceResource implements ResourceInterface {
     idempotent: TRUE,
   )]
   public static function reuse(FieldStorageConfigInterface $storage, string $bundle): OperationContext {
-    return self::handSettingsTheField(self::add($storage->getTargetEntityTypeId(), $bundle)
+    return self::handSettingsTheField(self::create($storage->getTargetEntityTypeId(), $bundle)
       ->withId('reuse')
       ->withKnown(['field_type' => $storage->getType(), 'field_name' => $storage->getName()]))
-      ->withChild('storage', FieldStorageResource::edit($storage));
+      ->withChild('storage', FieldStorageResource::update($storage));
   }
 
   /**
    * Edits a field. Everything that says which field it is, is known.
    */
-  #[Operation('edit',
+  #[Operation('update',
     label: new TranslatableMarkup('Edit a field'),
     description: new TranslatableMarkup('Changes a field and its storage; the field is named by its id, which stays as it is.'),
     permission: 'administer %entity_type_id fields',
   )]
-  public static function edit(FieldConfigInterface $field): OperationContext {
+  public static function update(FieldConfigInterface $field): OperationContext {
     $storage = $field->getFieldStorageDefinition();
     assert($storage instanceof FieldStorageConfigInterface);
     return self::handSettingsTheField(self::reuse($storage, $field->getTargetBundle())
-      ->withId('edit', creates: FALSE));
+      ->withId('update', creates: FALSE));
   }
 
   /**

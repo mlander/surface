@@ -59,7 +59,7 @@ class PerformanceBudgetTest extends DataSurfaceKernelTestBase {
    * One build per write tool's operation, shared by its inputs, its read
    * tool and its outputs; and one more for the outputs of each operation
    * that needs nothing and creates, built in the bare context: the two
-   * bundles' `add`. Before the derivation memo it was about 1.6 per tool,
+   * bundles' `create`. Before the derivation memo it was about 1.6 per tool,
    * read tools included.
    */
   public function testDerivingEveryToolBuildsEachOperationOnce(): void {

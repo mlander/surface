@@ -1,101 +1,23 @@
 {
     "resource": "block.placement",
-    "operation": "edit",
-    "label": "Edit a placed block",
+    "operation": "create",
+    "label": "Place a block",
     "schema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
-        "title": "Edit a placed block",
-        "description": "Changes a placed block, named by its machine name: its label, region, weight, status, plugin settings and visibility. Its theme stays as it is.",
+        "title": "Place a block",
+        "description": "Places a block under a machine name the caller chooses, in a region of a theme, with the settings its plugin takes; a machine name already in use is refused.",
         "x-surface": {
             "contract": 3,
             "operation": {
-                "id": "edit",
-                "label": "Edit a placed block",
-                "description": "Changes a placed block, named by its machine name: its label, region, weight, status, plugin settings and visibility. Its theme stays as it is.",
-                "kind": "update",
-                "creates": false,
+                "id": "create",
+                "label": "Place a block",
+                "description": "Places a block under a machine name the caller chooses, in a region of a theme, with the settings its plugin takes; a machine name already in use is refused.",
+                "kind": "create",
+                "creates": true,
                 "destructive": false,
                 "idempotent": true
             },
-            "version": 1,
-            "within": {
-                "/allOf/0/then/properties/settings/allOf/1/properties/props": {
-                    "locked": false,
-                    "dependsOn": [
-                        "component"
-                    ],
-                    "refined": true,
-                    "stale": false,
-                    "by": "component",
-                    "variants": {
-                        "data_surface_examples:call_to_action": "#/$defs/block.data_surface_component.props.data_surface_examples:call_to_action",
-                        "data_surface_examples:card": "#/$defs/block.data_surface_component.props.data_surface_examples:card",
-                        "data_surface_examples:hero": "#/$defs/block.data_surface_component.props.data_surface_examples:hero",
-                        "data_surface_examples:section": "#/$defs/block.data_surface_component.props.data_surface_examples:section"
-                    },
-                    "chosen": "data_surface_examples:card"
-                },
-                "/allOf/0/then/properties/settings/allOf/1/properties/slots": {
-                    "locked": false,
-                    "dependsOn": [
-                        "component"
-                    ],
-                    "refined": true,
-                    "stale": false,
-                    "by": "component",
-                    "variants": {
-                        "data_surface_examples:call_to_action": "#/$defs/block.data_surface_component.slots.data_surface_examples:call_to_action",
-                        "data_surface_examples:card": "#/$defs/block.data_surface_component.slots.data_surface_examples:card",
-                        "data_surface_examples:hero": "#/$defs/block.data_surface_component.slots.data_surface_examples:hero",
-                        "data_surface_examples:section": "#/$defs/block.data_surface_component.slots.data_surface_examples:section"
-                    },
-                    "chosen": "data_surface_examples:card"
-                },
-                "/allOf/0/then/properties/settings/allOf/1/allOf/0/then/properties/slots/allOf/1/properties/body/allOf/1/properties/text": {
-                    "locked": false,
-                    "dependsOn": [
-                        "kind"
-                    ],
-                    "refined": false,
-                    "stale": false
-                },
-                "/allOf/0/then/properties/settings/allOf/1/allOf/1/then/properties/slots/allOf/1/properties/actions/allOf/1": {
-                    "doesNotApply": {
-                        "component": [
-                            "kind"
-                        ],
-                        "components": [
-                            "kind"
-                        ]
-                    }
-                },
-                "/allOf/0/then/properties/settings/allOf/1/allOf/1/then/properties/slots/allOf/1/properties/actions/allOf/1/properties/text": {
-                    "locked": false,
-                    "dependsOn": [
-                        "kind"
-                    ],
-                    "refined": false,
-                    "stale": false
-                },
-                "/allOf/0/then/properties/settings/allOf/1/allOf/2/then/properties/slots/allOf/1/properties/content/allOf/1": {
-                    "doesNotApply": {
-                        "component": [
-                            "kind"
-                        ],
-                        "components": [
-                            "kind"
-                        ]
-                    }
-                },
-                "/allOf/0/then/properties/settings/allOf/1/allOf/2/then/properties/slots/allOf/1/properties/content/allOf/1/properties/text": {
-                    "locked": false,
-                    "dependsOn": [
-                        "kind"
-                    ],
-                    "refined": false,
-                    "stale": false
-                }
-            }
+            "version": 1
         },
         "type": "object",
         "properties": {
@@ -107,8 +29,6 @@
                 "x-surface": {
                     "locked": false,
                     "dependsOn": [],
-                    "refined": false,
-                    "stale": false,
                     "checkedOnServer": [
                         {
                             "constraint": "Regex",
@@ -123,14 +43,9 @@
                 "description": "A unique name for the placed block: lowercase letters, numbers, underscores and periods, not starting with a period.",
                 "type": "string",
                 "maxLength": 166,
-                "default": "spotlight",
-                "readOnly": true,
-                "const": "spotlight",
                 "x-surface": {
-                    "locked": true,
+                    "locked": false,
                     "dependsOn": [],
-                    "refined": false,
-                    "stale": false,
                     "checkedOnServer": [
                         {
                             "constraint": "Regex",
@@ -150,9 +65,7 @@
                 "default": true,
                 "x-surface": {
                     "locked": false,
-                    "dependsOn": [],
-                    "refined": false,
-                    "stale": false
+                    "dependsOn": []
                 }
             },
             "plugin": {
@@ -227,13 +140,7 @@
                 ],
                 "x-surface": {
                     "locked": false,
-                    "dependsOn": [],
-                    "refined": false,
-                    "stale": false,
-                    "emptyOption": {
-                        "show": false,
-                        "label": "- Select -"
-                    }
+                    "dependsOn": []
                 }
             },
             "settings": {
@@ -297,8 +204,6 @@
                     "dependsOn": [
                         "plugin"
                     ],
-                    "refined": true,
-                    "stale": false,
                     "by": "plugin",
                     "variants": {
                         "data_surface_component": "#/$defs/block.data_surface_component",
@@ -317,8 +222,7 @@
                         "system_messages_block": "#/$defs/block.placement.settings.system_messages_block",
                         "system_powered_by_block": "#/$defs/block.placement.settings.system_powered_by_block",
                         "user_login_block": "#/$defs/block.placement.settings.user_login_block"
-                    },
-                    "chosen": "data_surface_component"
+                    }
                 }
             },
             "theme": {
@@ -327,6 +231,10 @@
                 "type": "string",
                 "oneOf": [
                     {
+                        "const": "claro",
+                        "title": "Claro"
+                    },
+                    {
                         "const": "stark",
                         "title": "Stark"
                     }
@@ -334,12 +242,6 @@
                 "x-surface": {
                     "locked": false,
                     "dependsOn": [],
-                    "refined": false,
-                    "stale": false,
-                    "emptyOption": {
-                        "show": false,
-                        "label": "- Select -"
-                    },
                     "checkedOnServer": [
                         {
                             "constraint": "ExtensionExists",
@@ -392,6 +294,10 @@
                     {
                         "const": "breadcrumb",
                         "title": "Breadcrumb"
+                    },
+                    {
+                        "const": "pre_content",
+                        "title": "Pre-content"
                     }
                 ],
                 "x-surface": {
@@ -399,22 +305,13 @@
                     "dependsOn": [
                         "theme"
                     ],
-                    "refined": true,
-                    "stale": false,
-                    "emptyOption": {
-                        "show": false,
-                        "label": "- Select -"
-                    },
                     "checkedOnServer": [
                         {
                             "constraint": "DataSurfaceAnyThemeRegion",
                             "message": "Region of an installed theme"
-                        },
-                        {
-                            "constraint": "DataSurfaceThemeRegion",
-                            "message": "Region of a theme"
                         }
-                    ]
+                    ],
+                    "enumerated": true
                 }
             },
             "weight": {
@@ -426,9 +323,7 @@
                 "default": 0,
                 "x-surface": {
                     "locked": false,
-                    "dependsOn": [],
-                    "refined": false,
-                    "stale": false
+                    "dependsOn": []
                 }
             },
             "status": {
@@ -438,9 +333,7 @@
                 "default": true,
                 "x-surface": {
                     "locked": false,
-                    "dependsOn": [],
-                    "refined": false,
-                    "stale": false
+                    "dependsOn": []
                 }
             },
             "visibility": {
@@ -456,8 +349,6 @@
                 "x-surface": {
                     "locked": false,
                     "dependsOn": [],
-                    "refined": false,
-                    "stale": false,
                     "list": true
                 }
             }
@@ -487,144 +378,7 @@
                         "settings": {
                             "title": "Settings",
                             "description": "The settings of the block chosen, as its plugin declares them.",
-                            "allOf": [
-                                {
-                                    "$ref": "#/$defs/block.data_surface_component"
-                                },
-                                {
-                                    "allOf": [
-                                        {
-                                            "if": {
-                                                "type": "object",
-                                                "properties": {
-                                                    "component": {
-                                                        "const": "data_surface_examples:card"
-                                                    }
-                                                },
-                                                "required": [
-                                                    "component"
-                                                ]
-                                            },
-                                            "then": {
-                                                "type": "object",
-                                                "properties": {
-                                                    "slots": {
-                                                        "title": "Slots",
-                                                        "allOf": [
-                                                            {
-                                                                "$ref": "#/$defs/block.data_surface_component.slots.data_surface_examples:card"
-                                                            },
-                                                            {
-                                                                "type": "object",
-                                                                "properties": {
-                                                                    "body": {
-                                                                        "allOf": [
-                                                                            {
-                                                                                "$ref": "#/$defs/component.slot.text"
-                                                                            },
-                                                                            true
-                                                                        ]
-                                                                    }
-                                                                }
-                                                            }
-                                                        ]
-                                                    }
-                                                }
-                                            }
-                                        },
-                                        {
-                                            "if": {
-                                                "type": "object",
-                                                "properties": {
-                                                    "component": {
-                                                        "const": "data_surface_examples:hero"
-                                                    }
-                                                },
-                                                "required": [
-                                                    "component"
-                                                ]
-                                            },
-                                            "then": {
-                                                "type": "object",
-                                                "properties": {
-                                                    "slots": {
-                                                        "title": "Slots",
-                                                        "allOf": [
-                                                            {
-                                                                "$ref": "#/$defs/block.data_surface_component.slots.data_surface_examples:hero"
-                                                            },
-                                                            {
-                                                                "type": "object",
-                                                                "properties": {
-                                                                    "actions": {
-                                                                        "allOf": [
-                                                                            {
-                                                                                "$ref": "#/$defs/component.slot.data_surface_examples:hero.actions.1"
-                                                                            },
-                                                                            {
-                                                                                "type": "object",
-                                                                                "properties": {
-                                                                                    "component": false,
-                                                                                    "components": false
-                                                                                }
-                                                                            }
-                                                                        ]
-                                                                    }
-                                                                }
-                                                            }
-                                                        ]
-                                                    }
-                                                }
-                                            }
-                                        },
-                                        {
-                                            "if": {
-                                                "type": "object",
-                                                "properties": {
-                                                    "component": {
-                                                        "const": "data_surface_examples:section"
-                                                    }
-                                                },
-                                                "required": [
-                                                    "component"
-                                                ]
-                                            },
-                                            "then": {
-                                                "type": "object",
-                                                "properties": {
-                                                    "slots": {
-                                                        "title": "Slots",
-                                                        "allOf": [
-                                                            {
-                                                                "$ref": "#/$defs/block.data_surface_component.slots.data_surface_examples:section"
-                                                            },
-                                                            {
-                                                                "type": "object",
-                                                                "properties": {
-                                                                    "content": {
-                                                                        "allOf": [
-                                                                            {
-                                                                                "$ref": "#/$defs/component.slot.data_surface_examples:section.content.1"
-                                                                            },
-                                                                            {
-                                                                                "type": "object",
-                                                                                "properties": {
-                                                                                    "component": false,
-                                                                                    "components": false
-                                                                                }
-                                                                            }
-                                                                        ]
-                                                                    }
-                                                                }
-                                                            }
-                                                        ]
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    ]
-                                }
-                            ]
+                            "$ref": "#/$defs/block.data_surface_component"
                         }
                     }
                 }
@@ -943,6 +697,110 @@
                         }
                     }
                 }
+            },
+            {
+                "if": {
+                    "properties": {
+                        "theme": {
+                            "const": "claro"
+                        }
+                    },
+                    "required": [
+                        "theme"
+                    ]
+                },
+                "then": {
+                    "properties": {
+                        "region": {
+                            "oneOf": [
+                                {
+                                    "const": "content",
+                                    "title": "Content"
+                                },
+                                {
+                                    "const": "header",
+                                    "title": "Header"
+                                },
+                                {
+                                    "const": "highlighted",
+                                    "title": "Highlighted"
+                                },
+                                {
+                                    "const": "help",
+                                    "title": "Help"
+                                },
+                                {
+                                    "const": "breadcrumb",
+                                    "title": "Breadcrumb"
+                                },
+                                {
+                                    "const": "pre_content",
+                                    "title": "Pre-content"
+                                }
+                            ]
+                        }
+                    }
+                }
+            },
+            {
+                "if": {
+                    "properties": {
+                        "theme": {
+                            "const": "stark"
+                        }
+                    },
+                    "required": [
+                        "theme"
+                    ]
+                },
+                "then": {
+                    "properties": {
+                        "region": {
+                            "oneOf": [
+                                {
+                                    "const": "sidebar_first",
+                                    "title": "Left sidebar"
+                                },
+                                {
+                                    "const": "sidebar_second",
+                                    "title": "Right sidebar"
+                                },
+                                {
+                                    "const": "content",
+                                    "title": "Content"
+                                },
+                                {
+                                    "const": "header",
+                                    "title": "Header"
+                                },
+                                {
+                                    "const": "primary_menu",
+                                    "title": "Primary menu"
+                                },
+                                {
+                                    "const": "secondary_menu",
+                                    "title": "Secondary menu"
+                                },
+                                {
+                                    "const": "footer",
+                                    "title": "Footer"
+                                },
+                                {
+                                    "const": "highlighted",
+                                    "title": "Highlighted"
+                                },
+                                {
+                                    "const": "help",
+                                    "title": "Help"
+                                },
+                                {
+                                    "const": "breadcrumb",
+                                    "title": "Breadcrumb"
+                                }
+                            ]
+                        }
+                    }
+                }
             }
         ],
         "$defs": {
@@ -956,9 +814,7 @@
                         "maxLength": 40,
                         "x-surface": {
                             "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
+                            "dependsOn": []
                         }
                     },
                     "url": {
@@ -967,9 +823,7 @@
                         "format": "uri",
                         "x-surface": {
                             "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
+                            "dependsOn": []
                         }
                     },
                     "style": {
@@ -988,13 +842,7 @@
                         "default": "primary",
                         "x-surface": {
                             "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false,
-                            "emptyOption": {
-                                "show": false,
-                                "label": "- Select -"
-                            }
+                            "dependsOn": []
                         }
                     },
                     "new_window": {
@@ -1003,9 +851,7 @@
                         "default": false,
                         "x-surface": {
                             "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
+                            "dependsOn": []
                         }
                     },
                     "tags": {
@@ -1019,17 +865,13 @@
                             "type": "string",
                             "x-surface": {
                                 "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false
+                                "dependsOn": []
                             }
                         },
                         "maxItems": 3,
                         "x-surface": {
                             "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
+                            "dependsOn": []
                         }
                     }
                 },
@@ -1049,9 +891,7 @@
                         "maxLength": 80,
                         "x-surface": {
                             "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
+                            "dependsOn": []
                         }
                     },
                     "tone": {
@@ -1070,13 +910,7 @@
                         "default": "plain",
                         "x-surface": {
                             "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false,
-                            "emptyOption": {
-                                "show": false,
-                                "label": "- Select -"
-                            }
+                            "dependsOn": []
                         }
                     },
                     "link": {
@@ -1095,9 +929,7 @@
                                 "format": "uri",
                                 "x-surface": {
                                     "locked": false,
-                                    "dependsOn": [],
-                                    "refined": false,
-                                    "stale": false
+                                    "dependsOn": []
                                 }
                             },
                             "label": {
@@ -1108,18 +940,14 @@
                                 ],
                                 "x-surface": {
                                     "locked": false,
-                                    "dependsOn": [],
-                                    "refined": false,
-                                    "stale": false
+                                    "dependsOn": []
                                 }
                             }
                         },
                         "additionalProperties": false,
                         "x-surface": {
                             "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
+                            "dependsOn": []
                         }
                     }
                 },
@@ -1137,9 +965,7 @@
                         "type": "string",
                         "x-surface": {
                             "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
+                            "dependsOn": []
                         }
                     },
                     "subtitle": {
@@ -1150,9 +976,7 @@
                         ],
                         "x-surface": {
                             "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
+                            "dependsOn": []
                         }
                     },
                     "align": {
@@ -1171,13 +995,7 @@
                         "default": "center",
                         "x-surface": {
                             "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false,
-                            "emptyOption": {
-                                "show": false,
-                                "label": "- Select -"
-                            }
+                            "dependsOn": []
                         }
                     },
                     "overlay": {
@@ -1189,9 +1007,7 @@
                         "default": 40,
                         "x-surface": {
                             "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
+                            "dependsOn": []
                         }
                     },
                     "full_width": {
@@ -1200,9 +1016,7 @@
                         "default": false,
                         "x-surface": {
                             "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
+                            "dependsOn": []
                         }
                     }
                 },
@@ -1223,9 +1037,7 @@
                         ],
                         "x-surface": {
                             "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
+                            "dependsOn": []
                         }
                     }
                 },
@@ -1253,13 +1065,7 @@
                         "default": "text",
                         "x-surface": {
                             "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false,
-                            "emptyOption": {
-                                "show": false,
-                                "label": "- Select -"
-                            }
+                            "dependsOn": []
                         }
                     },
                     "text": {
@@ -1273,8 +1079,6 @@
                             "dependsOn": [
                                 "kind"
                             ],
-                            "refined": false,
-                            "stale": false,
                             "declared": true
                         }
                     }
@@ -1317,9 +1121,7 @@
                         "$ref": "#/$defs/component.slot.text",
                         "x-surface": {
                             "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
+                            "dependsOn": []
                         }
                     }
                 },
@@ -1335,9 +1137,7 @@
                         "maxLength": 40,
                         "x-surface": {
                             "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
+                            "dependsOn": []
                         }
                     },
                     "url": {
@@ -1346,9 +1146,7 @@
                         "format": "uri",
                         "x-surface": {
                             "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
+                            "dependsOn": []
                         }
                     },
                     "style": {
@@ -1367,13 +1165,7 @@
                         "default": "primary",
                         "x-surface": {
                             "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false,
-                            "emptyOption": {
-                                "show": false,
-                                "label": "- Select -"
-                            }
+                            "dependsOn": []
                         }
                     },
                     "new_window": {
@@ -1382,9 +1174,7 @@
                         "default": false,
                         "x-surface": {
                             "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
+                            "dependsOn": []
                         }
                     },
                     "tags": {
@@ -1398,17 +1188,13 @@
                             "type": "string",
                             "x-surface": {
                                 "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false
+                                "dependsOn": []
                             }
                         },
                         "maxItems": 3,
                         "x-surface": {
                             "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
+                            "dependsOn": []
                         }
                     }
                 },
@@ -1439,13 +1225,7 @@
                         ],
                         "x-surface": {
                             "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false,
-                            "emptyOption": {
-                                "show": true,
-                                "label": "- Select -"
-                            }
+                            "dependsOn": []
                         }
                     },
                     "props": {
@@ -1463,13 +1243,10 @@
                             "dependsOn": [
                                 "component"
                             ],
-                            "refined": false,
-                            "stale": false,
                             "by": "component",
                             "variants": {
                                 "data_surface_examples:call_to_action": "#/$defs/component.props.data_surface_examples:call_to_action"
-                            },
-                            "chosen": null
+                            }
                         }
                     },
                     "slots": {
@@ -1487,13 +1264,10 @@
                             "dependsOn": [
                                 "component"
                             ],
-                            "refined": false,
-                            "stale": false,
                             "by": "component",
                             "variants": {
                                 "data_surface_examples:call_to_action": "#/$defs/component.slots.data_surface_examples:call_to_action.2"
-                            },
-                            "chosen": null
+                            }
                         }
                     }
                 },
@@ -1568,13 +1342,7 @@
                         "default": "text",
                         "x-surface": {
                             "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false,
-                            "emptyOption": {
-                                "show": false,
-                                "label": "- Select -"
-                            }
+                            "dependsOn": []
                         }
                     },
                     "text": {
@@ -1588,8 +1356,6 @@
                             "dependsOn": [
                                 "kind"
                             ],
-                            "refined": false,
-                            "stale": false,
                             "declared": true
                         }
                     },
@@ -1601,8 +1367,6 @@
                             "dependsOn": [
                                 "kind"
                             ],
-                            "refined": false,
-                            "stale": false,
                             "declared": true
                         }
                     },
@@ -1618,8 +1382,6 @@
                             "dependsOn": [
                                 "kind"
                             ],
-                            "refined": false,
-                            "stale": false,
                             "list": true,
                             "declared": true
                         }
@@ -1703,9 +1465,7 @@
                         "$ref": "#/$defs/component.slot.data_surface_examples:hero.actions.1",
                         "x-surface": {
                             "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
+                            "dependsOn": []
                         }
                     }
                 },
@@ -1721,9 +1481,7 @@
                         "maxLength": 80,
                         "x-surface": {
                             "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
+                            "dependsOn": []
                         }
                     },
                     "tone": {
@@ -1742,13 +1500,7 @@
                         "default": "plain",
                         "x-surface": {
                             "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false,
-                            "emptyOption": {
-                                "show": false,
-                                "label": "- Select -"
-                            }
+                            "dependsOn": []
                         }
                     },
                     "link": {
@@ -1767,9 +1519,7 @@
                                 "format": "uri",
                                 "x-surface": {
                                     "locked": false,
-                                    "dependsOn": [],
-                                    "refined": false,
-                                    "stale": false
+                                    "dependsOn": []
                                 }
                             },
                             "label": {
@@ -1780,18 +1530,14 @@
                                 ],
                                 "x-surface": {
                                     "locked": false,
-                                    "dependsOn": [],
-                                    "refined": false,
-                                    "stale": false
+                                    "dependsOn": []
                                 }
                             }
                         },
                         "additionalProperties": false,
                         "x-surface": {
                             "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
+                            "dependsOn": []
                         }
                     }
                 },
@@ -1809,9 +1555,7 @@
                         "type": "string",
                         "x-surface": {
                             "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
+                            "dependsOn": []
                         }
                     },
                     "subtitle": {
@@ -1822,9 +1566,7 @@
                         ],
                         "x-surface": {
                             "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
+                            "dependsOn": []
                         }
                     },
                     "align": {
@@ -1843,13 +1585,7 @@
                         "default": "center",
                         "x-surface": {
                             "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false,
-                            "emptyOption": {
-                                "show": false,
-                                "label": "- Select -"
-                            }
+                            "dependsOn": []
                         }
                     },
                     "overlay": {
@@ -1861,9 +1597,7 @@
                         "default": 40,
                         "x-surface": {
                             "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
+                            "dependsOn": []
                         }
                     },
                     "full_width": {
@@ -1872,9 +1606,7 @@
                         "default": false,
                         "x-surface": {
                             "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
+                            "dependsOn": []
                         }
                     }
                 },
@@ -1893,9 +1625,7 @@
                         "$ref": "#/$defs/component.slot.text",
                         "x-surface": {
                             "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
+                            "dependsOn": []
                         }
                     }
                 },
@@ -1922,13 +1652,7 @@
                         ],
                         "x-surface": {
                             "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false,
-                            "emptyOption": {
-                                "show": true,
-                                "label": "- Select -"
-                            }
+                            "dependsOn": []
                         }
                     },
                     "props": {
@@ -1946,13 +1670,10 @@
                             "dependsOn": [
                                 "component"
                             ],
-                            "refined": false,
-                            "stale": false,
                             "by": "component",
                             "variants": {
                                 "data_surface_examples:call_to_action": "#/$defs/component.props.data_surface_examples:call_to_action"
-                            },
-                            "chosen": null
+                            }
                         }
                     },
                     "slots": {
@@ -1970,13 +1691,10 @@
                             "dependsOn": [
                                 "component"
                             ],
-                            "refined": false,
-                            "stale": false,
                             "by": "component",
                             "variants": {
                                 "data_surface_examples:call_to_action": "#/$defs/component.slots.data_surface_examples:call_to_action.3"
-                            },
-                            "chosen": null
+                            }
                         }
                     }
                 },
@@ -2051,13 +1769,7 @@
                         "default": "text",
                         "x-surface": {
                             "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false,
-                            "emptyOption": {
-                                "show": false,
-                                "label": "- Select -"
-                            }
+                            "dependsOn": []
                         }
                     },
                     "text": {
@@ -2071,8 +1783,6 @@
                             "dependsOn": [
                                 "kind"
                             ],
-                            "refined": false,
-                            "stale": false,
                             "declared": true
                         }
                     },
@@ -2084,8 +1794,6 @@
                             "dependsOn": [
                                 "kind"
                             ],
-                            "refined": false,
-                            "stale": false,
                             "declared": true
                         }
                     },
@@ -2101,8 +1809,6 @@
                             "dependsOn": [
                                 "kind"
                             ],
-                            "refined": false,
-                            "stale": false,
                             "list": true,
                             "declared": true
                         }
@@ -2186,9 +1892,7 @@
                         "$ref": "#/$defs/component.slot.data_surface_examples:hero.actions.2",
                         "x-surface": {
                             "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
+                            "dependsOn": []
                         }
                     }
                 },
@@ -2213,13 +1917,7 @@
                         ],
                         "x-surface": {
                             "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false,
-                            "emptyOption": {
-                                "show": true,
-                                "label": "- Select -"
-                            }
+                            "dependsOn": []
                         }
                     },
                     "props": {
@@ -2240,14 +1938,11 @@
                             "dependsOn": [
                                 "component"
                             ],
-                            "refined": false,
-                            "stale": false,
                             "by": "component",
                             "variants": {
                                 "data_surface_examples:card": "#/$defs/component.props.data_surface_examples:card",
                                 "data_surface_examples:hero": "#/$defs/component.props.data_surface_examples:hero"
-                            },
-                            "chosen": null
+                            }
                         }
                     },
                     "slots": {
@@ -2268,14 +1963,11 @@
                             "dependsOn": [
                                 "component"
                             ],
-                            "refined": false,
-                            "stale": false,
                             "by": "component",
                             "variants": {
                                 "data_surface_examples:card": "#/$defs/component.slots.data_surface_examples:card.2",
                                 "data_surface_examples:hero": "#/$defs/component.slots.data_surface_examples:hero.2"
-                            },
-                            "chosen": null
+                            }
                         }
                     }
                 },
@@ -2390,13 +2082,7 @@
                         "default": "text",
                         "x-surface": {
                             "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false,
-                            "emptyOption": {
-                                "show": false,
-                                "label": "- Select -"
-                            }
+                            "dependsOn": []
                         }
                     },
                     "text": {
@@ -2410,8 +2096,6 @@
                             "dependsOn": [
                                 "kind"
                             ],
-                            "refined": false,
-                            "stale": false,
                             "declared": true
                         }
                     },
@@ -2423,8 +2107,6 @@
                             "dependsOn": [
                                 "kind"
                             ],
-                            "refined": false,
-                            "stale": false,
                             "declared": true
                         }
                     },
@@ -2439,8 +2121,6 @@
                             "dependsOn": [
                                 "kind"
                             ],
-                            "refined": false,
-                            "stale": false,
                             "list": true,
                             "declared": true
                         }
@@ -2524,9 +2204,7 @@
                         "$ref": "#/$defs/component.slot.data_surface_examples:section.content.1",
                         "x-surface": {
                             "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
+                            "dependsOn": []
                         }
                     }
                 },
@@ -2565,13 +2243,7 @@
                         ],
                         "x-surface": {
                             "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false,
-                            "emptyOption": {
-                                "show": true,
-                                "label": "- None -"
-                            }
+                            "dependsOn": []
                         }
                     },
                     "props": {
@@ -2598,16 +2270,13 @@
                             "dependsOn": [
                                 "component"
                             ],
-                            "refined": false,
-                            "stale": false,
                             "by": "component",
                             "variants": {
                                 "data_surface_examples:call_to_action": "#/$defs/block.data_surface_component.props.data_surface_examples:call_to_action",
                                 "data_surface_examples:card": "#/$defs/block.data_surface_component.props.data_surface_examples:card",
                                 "data_surface_examples:hero": "#/$defs/block.data_surface_component.props.data_surface_examples:hero",
                                 "data_surface_examples:section": "#/$defs/block.data_surface_component.props.data_surface_examples:section"
-                            },
-                            "chosen": null
+                            }
                         }
                     },
                     "slots": {
@@ -2634,16 +2303,13 @@
                             "dependsOn": [
                                 "component"
                             ],
-                            "refined": false,
-                            "stale": false,
                             "by": "component",
                             "variants": {
                                 "data_surface_examples:call_to_action": "#/$defs/block.data_surface_component.slots.data_surface_examples:call_to_action",
                                 "data_surface_examples:card": "#/$defs/block.data_surface_component.slots.data_surface_examples:card",
                                 "data_surface_examples:hero": "#/$defs/block.data_surface_component.slots.data_surface_examples:hero",
                                 "data_surface_examples:section": "#/$defs/block.data_surface_component.slots.data_surface_examples:section"
-                            },
-                            "chosen": null
+                            }
                         }
                     }
                 },
@@ -2827,9 +2493,7 @@
                         "default": true,
                         "x-surface": {
                             "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
+                            "dependsOn": []
                         }
                     },
                     "secondary": {
@@ -2838,9 +2502,7 @@
                         "default": true,
                         "x-surface": {
                             "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
+                            "dependsOn": []
                         }
                     }
                 },
@@ -2862,9 +2524,7 @@
                         "default": true,
                         "x-surface": {
                             "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
+                            "dependsOn": []
                         }
                     },
                     "use_site_name": {
@@ -2873,9 +2533,7 @@
                         "default": true,
                         "x-surface": {
                             "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
+                            "dependsOn": []
                         }
                     },
                     "use_site_slogan": {
@@ -2884,9 +2542,7 @@
                         "default": true,
                         "x-surface": {
                             "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
+                            "dependsOn": []
                         }
                     }
                 },
@@ -2920,9 +2576,7 @@
                         "default": 1,
                         "x-surface": {
                             "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
+                            "dependsOn": []
                         }
                     },
                     "depth": {
@@ -2933,9 +2587,7 @@
                         ],
                         "x-surface": {
                             "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
+                            "dependsOn": []
                         }
                     },
                     "expand_all_items": {
@@ -2944,9 +2596,7 @@
                         "default": false,
                         "x-surface": {
                             "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
+                            "dependsOn": []
                         }
                     },
                     "ignore_active_trail": {
@@ -2957,9 +2607,7 @@
                         ],
                         "x-surface": {
                             "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
+                            "dependsOn": []
                         }
                     }
                 },
@@ -2975,9 +2623,7 @@
                         "default": 1,
                         "x-surface": {
                             "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
+                            "dependsOn": []
                         }
                     },
                     "depth": {
@@ -2988,9 +2634,7 @@
                         ],
                         "x-surface": {
                             "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
+                            "dependsOn": []
                         }
                     },
                     "expand_all_items": {
@@ -2999,9 +2643,7 @@
                         "default": false,
                         "x-surface": {
                             "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
+                            "dependsOn": []
                         }
                     },
                     "ignore_active_trail": {
@@ -3012,9 +2654,7 @@
                         ],
                         "x-surface": {
                             "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
+                            "dependsOn": []
                         }
                     }
                 },
@@ -3030,9 +2670,7 @@
                         "default": 1,
                         "x-surface": {
                             "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
+                            "dependsOn": []
                         }
                     },
                     "depth": {
@@ -3043,9 +2681,7 @@
                         ],
                         "x-surface": {
                             "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
+                            "dependsOn": []
                         }
                     },
                     "expand_all_items": {
@@ -3054,9 +2690,7 @@
                         "default": false,
                         "x-surface": {
                             "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
+                            "dependsOn": []
                         }
                     },
                     "ignore_active_trail": {
@@ -3067,9 +2701,7 @@
                         ],
                         "x-surface": {
                             "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
+                            "dependsOn": []
                         }
                     }
                 },
@@ -3085,9 +2717,7 @@
                         "default": 1,
                         "x-surface": {
                             "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
+                            "dependsOn": []
                         }
                     },
                     "depth": {
@@ -3098,9 +2728,7 @@
                         ],
                         "x-surface": {
                             "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
+                            "dependsOn": []
                         }
                     },
                     "expand_all_items": {
@@ -3109,9 +2737,7 @@
                         "default": false,
                         "x-surface": {
                             "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
+                            "dependsOn": []
                         }
                     },
                     "ignore_active_trail": {
@@ -3122,9 +2748,7 @@
                         ],
                         "x-surface": {
                             "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
+                            "dependsOn": []
                         }
                     }
                 },
@@ -3140,9 +2764,7 @@
                         "default": 1,
                         "x-surface": {
                             "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
+                            "dependsOn": []
                         }
                     },
                     "depth": {
@@ -3153,9 +2775,7 @@
                         ],
                         "x-surface": {
                             "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
+                            "dependsOn": []
                         }
                     },
                     "expand_all_items": {
@@ -3164,9 +2784,7 @@
                         "default": false,
                         "x-surface": {
                             "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
+                            "dependsOn": []
                         }
                     },
                     "ignore_active_trail": {
@@ -3177,9 +2795,7 @@
                         ],
                         "x-surface": {
                             "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
+                            "dependsOn": []
                         }
                     }
                 },
@@ -3215,9 +2831,7 @@
                         ],
                         "x-surface": {
                             "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
+                            "dependsOn": []
                         }
                     }
                 },
@@ -3249,21 +2863,13 @@
                             ],
                             "x-surface": {
                                 "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false,
-                                "emptyOption": {
-                                    "show": true,
-                                    "label": "- None -"
-                                }
+                                "dependsOn": []
                             }
                         },
                         "default": [],
                         "x-surface": {
                             "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
+                            "dependsOn": []
                         }
                     }
                 },
@@ -3281,17 +2887,13 @@
                             "type": "string",
                             "x-surface": {
                                 "locked": false,
-                                "dependsOn": [],
-                                "refined": false,
-                                "stale": false
+                                "dependsOn": []
                             }
                         },
                         "default": [],
                         "x-surface": {
                             "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
+                            "dependsOn": []
                         }
                     },
                     "context_mapping": {
@@ -3314,22 +2916,14 @@
                                 "default": "@user.current_user_context:current_user",
                                 "x-surface": {
                                     "locked": false,
-                                    "dependsOn": [],
-                                    "refined": false,
-                                    "stale": false,
-                                    "emptyOption": {
-                                        "show": false,
-                                        "label": "- Select -"
-                                    }
+                                    "dependsOn": []
                                 }
                             }
                         },
                         "additionalProperties": false,
                         "x-surface": {
                             "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
+                            "dependsOn": []
                         }
                     }
                 },
@@ -3359,13 +2953,7 @@
                         ],
                         "x-surface": {
                             "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false,
-                            "emptyOption": {
-                                "show": true,
-                                "label": "- Select -"
-                            }
+                            "dependsOn": []
                         }
                     },
                     "negate": {
@@ -3378,9 +2966,7 @@
                         "default": false,
                         "x-surface": {
                             "locked": false,
-                            "dependsOn": [],
-                            "refined": false,
-                            "stale": false
+                            "dependsOn": []
                         }
                     },
                     "settings": {
@@ -3405,15 +2991,12 @@
                             "dependsOn": [
                                 "id"
                             ],
-                            "refined": false,
-                            "stale": false,
                             "by": "id",
                             "variants": {
                                 "request_path": "#/$defs/block.placement.condition.settings.request_path",
                                 "response_status": "#/$defs/block.placement.condition.settings.response_status",
                                 "user_role": "#/$defs/block.placement.condition.settings.user_role"
-                            },
-                            "chosen": null
+                            }
                         }
                     }
                 },
@@ -3488,34 +3071,5 @@
                 ]
             }
         }
-    },
-    "values": {
-        "label": "Spotlight",
-        "id": "spotlight",
-        "label_display": true,
-        "plugin": "data_surface_component",
-        "settings": {
-            "component": "data_surface_examples:card",
-            "props": {
-                "heading": "Doors open at half past six",
-                "tone": "plain",
-                "link": {
-                    "url": null,
-                    "label": null
-                }
-            },
-            "slots": {
-                "body": {
-                    "kind": "text",
-                    "text": null
-                }
-            }
-        },
-        "theme": "stark",
-        "region": "content",
-        "weight": 0,
-        "status": true,
-        "visibility": []
-    },
-    "stale": []
+    }
 }

@@ -81,8 +81,8 @@ drush pm:install data_surface_tool
 Derives one [Tool](https://www.drupal.org/project/tool) API tool,
 `data_surface:<id>:<operation>`, for every operation that can be
 asked on its own. Among them are the field tools,
-`data_surface:field.instance:add`, `:reuse` and `:edit` and
-`data_surface:field.storage:edit`, whose settings are derived from the
+`data_surface:field.instance:create`, `:reuse` and `:update` and
+`data_surface:field.storage:update`, whose settings are derived from the
 field type's own settings class, or from its config schema when it has
 none, so an agent is offered typed, labeled, bounded settings instead of
 a free-form map.
@@ -105,7 +105,7 @@ of them is meant to replace core's own forms on a production site.
 | `data_surface_address` | A contributed field type adopting a resource without being forked. Needs Address. |
 | `data_surface_tool` | The same resources serving a non-form caller. Needs Tool. |
 | `data_surface_entity` | A resource derived for every content entity bundle with a form display, one structure per field, and a basic page added and edited through it at `/surface-entity`. Needs `node` and Tool; see [Content entities](entities.md). |
-| `data_surface_demo_node_type_tool` | A content type add tool whose input is the content type resource, compared with Tool Belt's bundle tool once another module has extended content types. Needs Tool. |
+| `data_surface_demo_node_type_tool` | A content type create tool whose input is the content type resource, compared with Tool Belt's bundle tool once another module has extended content types. Needs Tool. |
 | `data_surface_examples` | One resource that grows, one idea per example, each example a form beside the contract it emits, at `/surface-examples`: declaring, refining, parts, and the same contract as a tool. Needs Tool. |
 | `data_surface_examples_compliance` | Example 4: a compliance structure, and one alter that attaches it to example 3's resource, and nothing else. |
 | `data_surface_examples_workflow` | Example 10, extended: two alters that answer access for the program and its fees, with no change to the program, and nothing else. |

@@ -2686,7 +2686,7 @@ saved ([A plugin host cannot overlay a full
 submission](../../docs/decisions.md#a-plugin-host-cannot-overlay-a-full-submission)).
 
 With all three modules on, whichever came last places two blocks
-through the placement resource's add operation, with the values of the
+through the placement resource's create operation, with the values of the
 first two calls below, each in the default theme's content region and
 shown on `/surface-examples/13` alone, below what the page says:
 Spotlight, `data_surface_examples_spotlight`, the card as example 12
@@ -2715,27 +2715,27 @@ create whose caller names the thing is refused for the name it took. The
 fourth is refused naming the one component the slot expects.
 
 ```bash
-drush tool:run data_surface:block.placement:add --uid=1 --input='{"values":{"label":"Spotlight","id":"data_surface_examples_spotlight","label_display":true,"plugin":"data_surface_component","settings":{"component":"data_surface_examples:card","props":{"heading":"Doors open at half past six","tone":"highlight","link":{"url":"https://example.com/tickets","label":"Find your ticket"}},"slots":{"body":{"kind":"text","text":"Bring your ticket, on your phone or printed."}}},"theme":"stark","region":"content","weight":100,"visibility":[{"id":"request_path","settings":{"pages":"/surface-examples/13"}}]}}' --input=dry_run=true
+drush tool:run data_surface:block.placement:create --uid=1 --input='{"values":{"label":"Spotlight","id":"data_surface_examples_spotlight","label_display":true,"plugin":"data_surface_component","settings":{"component":"data_surface_examples:card","props":{"heading":"Doors open at half past six","tone":"highlight","link":{"url":"https://example.com/tickets","label":"Find your ticket"}},"slots":{"body":{"kind":"text","text":"Bring your ticket, on your phone or printed."}}},"theme":"stark","region":"content","weight":100,"visibility":[{"id":"request_path","settings":{"pages":"/surface-examples/13"}}]}}' --input=dry_run=true
 ```
 
 ```
-1. The Spotlight block placed through add, made again: refused for the machine name it took
+1. The Spotlight block placed through create, made again: refused for the machine name it took
 Failed: The values were refused:
 /id: The machine name data_surface_examples_spotlight is already in use: choose another.
 ```
 
 ```bash
-drush tool:run data_surface:block.placement:add --uid=1 --input='{"values":{"label":"Tonight","id":"data_surface_examples_section","label_display":false,"plugin":"data_surface_component","settings":{"component":"data_surface_examples:section","props":{"heading":"Tonight"},"slots":{"content":{"kind":"component","component":{"component":"data_surface_examples:card","props":{"heading":"Talks start at seven"},"slots":{"body":{"kind":"text","text":"In the main hall, first floor."}}}}}},"theme":"stark","region":"content","weight":101,"visibility":[{"id":"request_path","settings":{"pages":"/surface-examples/13"}}]}}' --input=dry_run=true
+drush tool:run data_surface:block.placement:create --uid=1 --input='{"values":{"label":"Tonight","id":"data_surface_examples_section","label_display":false,"plugin":"data_surface_component","settings":{"component":"data_surface_examples:section","props":{"heading":"Tonight"},"slots":{"content":{"kind":"component","component":{"component":"data_surface_examples:card","props":{"heading":"Talks start at seven"},"slots":{"body":{"kind":"text","text":"In the main hall, first floor."}}}}}},"theme":"stark","region":"content","weight":101,"visibility":[{"id":"request_path","settings":{"pages":"/surface-examples/13"}}]}}' --input=dry_run=true
 ```
 
 ```
-2. The Tonight block, a section holding a card, placed through add, made again: refused for the machine name it took
+2. The Tonight block, a section holding a card, placed through create, made again: refused for the machine name it took
 Failed: The values were refused:
 /id: The machine name data_surface_examples_section is already in use: choose another.
 ```
 
 ```bash
-drush tool:run data_surface:block.placement:edit --uid=1 --input='{"id":"data_surface_examples_spotlight","values":{"settings":{"component":"data_surface_examples:hero","props":{"title":"Doors open at half past six","align":"start"}}}}' --input=dry_run=true
+drush tool:run data_surface:block.placement:update --uid=1 --input='{"id":"data_surface_examples_spotlight","values":{"settings":{"component":"data_surface_examples:hero","props":{"title":"Doors open at half past six","align":"start"}}}}' --input=dry_run=true
 ```
 
 ```
@@ -2745,7 +2745,7 @@ Success: Dry run of Edit a placed block: the values were accepted and prepared, 
 ```
 
 ```bash
-drush tool:run data_surface:block.placement:edit --uid=1 --input='{"id":"data_surface_examples_spotlight","values":{"settings":{"component":"data_surface_examples:hero","props":{"title":"Doors open at half past six"},"slots":{"actions":{"kind":"component","component":{"component":"data_surface_examples:hero","props":{"title":"Find your ticket"}}}}}}}' --input=dry_run=true
+drush tool:run data_surface:block.placement:update --uid=1 --input='{"id":"data_surface_examples_spotlight","values":{"settings":{"component":"data_surface_examples:hero","props":{"title":"Doors open at half past six"},"slots":{"actions":{"kind":"component","component":{"component":"data_surface_examples:hero","props":{"title":"Find your ticket"}}}}}}}' --input=dry_run=true
 ```
 
 ```
@@ -2755,7 +2755,7 @@ Failed: The values were refused:
 ```
 
 ```bash
-drush tool:run data_surface:block.placement:remove --uid=1 --input='{"id":"data_surface_examples_spotlight"}' --input=dry_run=true
+drush tool:run data_surface:block.placement:delete --uid=1 --input='{"id":"data_surface_examples_spotlight"}' --input=dry_run=true
 ```
 
 ```
@@ -3327,14 +3327,14 @@ of code, counted without blank lines or comments:
 ## Example 15: a config entity of your own
 
 `/surface-examples/15`, with the forms at `/surface-examples/15/add`,
-`/surface-examples/15/venue/{id}` and `/surface-examples/15/venue/{id}/remove`
+`/surface-examples/15/venue/{id}` and `/surface-examples/15/venue/{id}/delete`
 
 A module that declares its own config entity type puts a resource over
 it from the start. The venue is a config entity,
 `data_surface_examples.event_venue.<id>`, declared with core's
 `#[ConfigEntityType]` attribute and `config_export`, with no form
-classes, no list builder and no links: the resource's operations add,
-edit and remove a venue at every door, and its routes are the forms.
+classes, no list builder and no links: the resource's operations create,
+update and delete a venue at every door, and its routes are the forms.
 
 <!-- code: src/Entity/EventVenue.php -->
 
@@ -3429,7 +3429,7 @@ final class EventVenue extends ConfigEntityBase {
 ```
 
 The resource is the venue by its machine name, on a `VenueStorage`, a
-`ConfigEntityStorage`. Add, edit and remove are about one venue. Listing
+`ConfigEntityStorage`. Create, update and delete are about one venue. Listing
 and reordering are about the venues together, so they name none: each
 takes the keys of a structure of its own, which `values:` on its
 `#[Operation]` names. The listing is read only; the reorder is an update
@@ -3443,7 +3443,7 @@ over the collection. Neither is a new kind of operation.
   storage: VenueStorage::class,
   access: VenueAccess::class,
 )]
-#[Operation('add',
+#[Operation('create',
   label: new TranslatableMarkup('Add a venue'),
   description: new TranslatableMarkup('Adds a venue under a machine name the caller chooses, with its capacity, address and rooms; a machine name already in use is refused.'),
   permission: self::ADMINISTER,
@@ -3478,26 +3478,26 @@ final class VenueResource implements ResourceInterface {
   /**
    * Edits a venue, named by its machine name, which stays as it is.
    */
-  #[Operation('edit',
+  #[Operation('update',
     label: new TranslatableMarkup('Edit a venue'),
     description: new TranslatableMarkup('Changes a venue, named by its machine name, which stays as it is: its name, capacity, address, rooms, weight and status.'),
     permission: self::ADMINISTER,
   )]
-  public static function edit(EventVenue $id): OperationContext {
+  public static function update(EventVenue $id): OperationContext {
     return new OperationContext(known: ['id' => (string) $id->id()]);
   }
 
   /**
    * Removes a venue, named by its machine name.
    */
-  #[Operation('remove',
+  #[Operation('delete',
     label: new TranslatableMarkup('Remove a venue'),
     description: new TranslatableMarkup('Removes a venue, named by its machine name, with its rooms.'),
     permission: self::ADMINISTER,
     destructive: TRUE,
     deletes: TRUE,
   )]
-  public static function remove(EventVenue $id): OperationContext {
+  public static function delete(EventVenue $id): OperationContext {
     return new OperationContext(known: ['id' => (string) $id->id()]);
   }
 
@@ -3824,7 +3824,7 @@ final class VenueStorage extends ConfigEntityStorage {
    * Rehearses one venue, its rooms held to ids no other venue has.
    *
    * @param \Drupal\data_surface\Resource\OperationContext $context
-   *   The add or the edit.
+   *   The create or the update.
    * @param array $values
    *   The accepted values.
    *
@@ -4024,17 +4024,17 @@ its path, and the method the operation. `GET` on the collection answers
 the listing, since the resource declares one: its query string the
 listing's values, its answer the outputs. A resource with no listing
 answers its create's envelope there, which is the create's custom
-method here, `GET /surface-api/event.venue:add`. The reorder is a custom
+method here, `GET /surface-api/event.venue:create`. The reorder is a custom
 method run with `PATCH`, the method an update takes.
 
 | Method | Path | Operation | Answers |
 | --- | --- | --- | --- |
 | `GET` | `/surface-api/event.venue?limit=2` | `list` | the listing: its outputs, a page of venues and the total |
-| `POST` | `/surface-api/event.venue` | `add` | 201 with the new venue's Location |
-| `GET` | `/surface-api/event.venue:add` | `add` | the envelope a create starts from |
-| `GET` | `/surface-api/event.venue/riverside` | `edit` | the envelope: what is stored, its schema and its ETag |
-| `PATCH` | `/surface-api/event.venue/riverside` | `edit` | the update, held by If-Match |
-| `DELETE` | `/surface-api/event.venue/riverside` | `remove` | the removal, no body |
+| `POST` | `/surface-api/event.venue` | `create` | 201 with the new venue's Location |
+| `GET` | `/surface-api/event.venue:create` | `create` | the envelope a create starts from |
+| `GET` | `/surface-api/event.venue/riverside` | `update` | the envelope: what is stored, its schema and its ETag |
+| `PATCH` | `/surface-api/event.venue/riverside` | `update` | the update, held by If-Match |
+| `DELETE` | `/surface-api/event.venue/riverside` | `delete` | the removal, no body |
 | `PATCH` | `/surface-api/event.venue:reorder` | `reorder` | the reorder, a custom method on the collection |
 | `GET` | `/surface-api/event.venue/schema` | `list` | the listing's full schema, its inputs and its outputs |
 
@@ -4044,8 +4044,8 @@ GET /surface-api/event.venue?limit=2
 {"items":[{"id":"riverside","label":"Riverside Hall","capacity":520,"weight":0},{"id":"library","label":"Old Library","capacity":90,"weight":1}],"total":3}
 ```
 
-The React pages are `/surface-react/event.venue/add` and
-`/surface-react/event.venue/edit?id=riverside`.
+The React pages are `/surface-react/event.venue/create` and
+`/surface-react/event.venue/update?id=riverside`.
 
 ### The calls
 
@@ -4072,7 +4072,7 @@ Success: List the venues changes nothing: the values were accepted and prepared,
 ```
 
 ```bash
-drush tool:run data_surface:event.venue:add --uid=1 --input='{"values":{"label":"Town Hall","id":"town_hall","capacity":300,"address":"1 Market Square","rooms":[{"id":"town_hall_council","label":"Council chamber","seats":120},{"id":"town_hall_foyer","label":"Foyer","seats":80}],"weight":3}}' --input=dry_run=true
+drush tool:run data_surface:event.venue:create --uid=1 --input='{"values":{"label":"Town Hall","id":"town_hall","capacity":300,"address":"1 Market Square","rooms":[{"id":"town_hall_council","label":"Council chamber","seats":120},{"id":"town_hall_foyer","label":"Foyer","seats":80}],"weight":3}}' --input=dry_run=true
 ```
 
 ```
@@ -4082,7 +4082,7 @@ Success: Dry run of Add a venue: the values were accepted and prepared, and noth
 ```
 
 ```bash
-drush tool:run data_surface:event.venue:add --uid=1 --input='{"values":{"label":"Town Hall","id":"town_hall","capacity":300,"address":"1 Market Square","rooms":[{"id":"town_hall_council","label":"Council chamber","seats":120},{"id":"town_hall_foyer","label":"Foyer","seats":80}],"weight":3}}'
+drush tool:run data_surface:event.venue:create --uid=1 --input='{"values":{"label":"Town Hall","id":"town_hall","capacity":300,"address":"1 Market Square","rooms":[{"id":"town_hall_council","label":"Council chamber","seats":120},{"id":"town_hall_foyer","label":"Foyer","seats":80}],"weight":3}}'
 ```
 
 ```
@@ -4091,7 +4091,7 @@ Success: Add a venue: the values were accepted and written.
 ```
 
 ```bash
-drush tool:run data_surface:event.venue:edit --uid=1 --input='{"id":"town_hall","values":{"capacity":350}}'
+drush tool:run data_surface:event.venue:update --uid=1 --input='{"id":"town_hall","values":{"capacity":350}}'
 ```
 
 ```
@@ -4121,7 +4121,7 @@ Failed: The values were refused:
 ```
 
 ```bash
-drush tool:run data_surface:event.venue:remove --uid=1 --input='{"id":"town_hall"}' --input=dry_run=true
+drush tool:run data_surface:event.venue:delete --uid=1 --input='{"id":"town_hall"}' --input=dry_run=true
 ```
 
 ```
@@ -4131,7 +4131,7 @@ Success: Dry run of Remove a venue: the removal was rehearsed, and nothing was r
 ```
 
 ```bash
-drush tool:run data_surface:event.venue:remove --uid=1 --input='{"id":"town_hall"}'
+drush tool:run data_surface:event.venue:delete --uid=1 --input='{"id":"town_hall"}'
 ```
 
 ```
@@ -4160,9 +4160,9 @@ of code, counted without blank lines or comments:
 | [`modules/data_surface_examples/config/install/data_surface_examples.event_venue.riverside.yml`](config/install/data_surface_examples.event_venue.riverside.yml) | Riverside Hall, shipped | 17 |
 | [`modules/data_surface_examples/config/install/data_surface_examples.event_venue.library.yml`](config/install/data_surface_examples.event_venue.library.yml) | the Old Library, shipped | 17 |
 | [`modules/data_surface_examples/config/install/data_surface_examples.event_venue.harbour.yml`](config/install/data_surface_examples.event_venue.harbour.yml) | the Harbour Centre, shipped | 17 |
-| [`modules/data_surface_examples/data_surface_examples.routing.yml`](data_surface_examples.routing.yml), entry `data_surface_examples.step15_add` | the add form: the generic operation form | 10 |
-| [`modules/data_surface_examples/data_surface_examples.routing.yml`](data_surface_examples.routing.yml), entry `data_surface_examples.step15_edit` | the edit form, its {id} the venue | 14 |
-| [`modules/data_surface_examples/data_surface_examples.routing.yml`](data_surface_examples.routing.yml), entry `data_surface_examples.step15_remove` | the remove form: a confirmation, since a delete takes no values | 14 |
+| [`modules/data_surface_examples/data_surface_examples.routing.yml`](data_surface_examples.routing.yml), entry `data_surface_examples.step15_create` | the add form: the generic operation form | 10 |
+| [`modules/data_surface_examples/data_surface_examples.routing.yml`](data_surface_examples.routing.yml), entry `data_surface_examples.step15_update` | the edit form, its {id} the venue | 14 |
+| [`modules/data_surface_examples/data_surface_examples.routing.yml`](data_surface_examples.routing.yml), entry `data_surface_examples.step15_delete` | the remove form: a confirmation, since a delete takes no values | 14 |
 | [`modules/data_surface_examples/src/Form/VenueFormCosmetics.php`](src/Form/VenueFormCosmetics.php) | what the three forms say once they wrote, and the page they go back to | 20 |
 
 ## Example 16: references, three ways
@@ -4370,11 +4370,11 @@ Drush commands are checked against `ExampleCalls`.
 | `Functional\ServedContractEndpointsTest` | In React: the landing page's links, and example 2's contract, refine and validate over HTTP. |
 | `Functional\ServedSubmitEndpointTest` | In React: example 2 saved over HTTP, refused, and refused after someone else saved. |
 | `Kernel\ExamplesResetTest` | Reset to defaults puts every example, and what another module stored on example 3, back to the shipped files, puts example 15's venues back as shipped, a venue removed made again and one added removed, and opens every room example 4 closed. |
-| `Kernel\ExamplesConceptsTest` | Examples 7 to 12 and 14: each form builds and saves; example 7's rules in the full schema as declared, the send day gone for a monthly bulletin and kept in storage; example 8's one def at two sites with each wiring, the mixed-in keys flat, the shape at two keys, the volunteers' collection; example 9's keys from the configuration, a type added without a cache rebuild, the locked type in both documents and on the form; example 10's fees for two accounts, locked once published, and both operations' facts and tools; example 11's widgets, the always held badges and the notes that clear; example 12's four components read as four variants at the props and again at the slots, the card's props as keys with their constraints, its text a slot, both documents stating them, the form swapped to the hero and saved with its slot, a hero too dark refused; the panel above each, and none above examples 1 to 3; each class stays screen sized; example 13's page with its modules off, saying how to enable both, then with the block alone on, its parts and no call, then with the placement resource on too, the Spotlight and Tonight blocks placed through the add operation, the three lines side by side, the block's contract cut to the four components, the hero's actions narrowed, the four placement tools and the five calls' answers, nothing written.; example 14's panel with its module off, then on: how to enable it, the one source and then two in the contract excerpt, the webhook's rule, the gap, the lock not shipped, and the calls each state allows. |
+| `Kernel\ExamplesConceptsTest` | Examples 7 to 12 and 14: each form builds and saves; example 7's rules in the full schema as declared, the send day gone for a monthly bulletin and kept in storage; example 8's one def at two sites with each wiring, the mixed-in keys flat, the shape at two keys, the volunteers' collection; example 9's keys from the configuration, a type added without a cache rebuild, the locked type in both documents and on the form; example 10's fees for two accounts, locked once published, and both operations' facts and tools; example 11's widgets, the always held badges and the notes that clear; example 12's four components read as four variants at the props and again at the slots, the card's props as keys with their constraints, its text a slot, both documents stating them, the form swapped to the hero and saved with its slot, a hero too dark refused; the panel above each, and none above examples 1 to 3; each class stays screen sized; example 13's page with its modules off, saying how to enable both, then with the block alone on, its parts and no call, then with the placement resource on too, the Spotlight and Tonight blocks placed through the create operation, the three lines side by side, the block's contract cut to the four components, the hero's actions narrowed, the four placement tools and the five calls' answers, nothing written.; example 14's panel with its module off, then on: how to enable it, the one source and then two in the contract excerpt, the webhook's rule, the gap, the lock not shipped, and the calls each state allows. |
 | `Kernel\ExamplesWorkflowTest` | Example 10 with the workflow module: the fees left out of the full schema, the tool listing and the read tool for an account without "see event fees" and kept for one with it; the program locked whole once the workflow state is published, settled at call time and left unmarked in the full schema; checking still answers; the panel's paragraph, with the module and without it. |
 | `Kernel\ExamplesConceptsToolTest` | Examples 7 to 16: every call `ConceptCalls` writes down, its answer, nothing left written, the two blocks and the venues included, and this page quoting each command and answer. |
-| `Kernel\VenueResourceTest` | Example 15: the entity type installs with its three venues and holds to its generated schema; the resource builds for each operation; both documents of add, edit, list and reorder; the listing's outputs schema; the tools, the listing paged and filtered and an account that only views left without the disabled venue; the reorder written in one commit, and refused for an unknown venue and one named twice; example 2 offering a venue added, with no cache rebuild. |
-| `Functional\VenueApiTest` | Example 15 over HTTP and through its forms: `GET` on the collection answering the listing, a refused query, `POST` 201 with `Location`, the venue's `PATCH` and `DELETE`, the reorder's `PATCH` and its 405 for `POST`; the add and edit forms saving, the remove form's confirmation removing; the page and its calls. |
+| `Kernel\VenueResourceTest` | Example 15: the entity type installs with its three venues and holds to its generated schema; the resource builds for each operation; both documents of create, update, list and reorder; the listing's outputs schema; the tools, the listing paged and filtered and an account that only views left without the disabled venue; the reorder written in one commit, and refused for an unknown venue and one named twice; example 2 offering a venue added, with no cache rebuild. |
+| `Functional\VenueApiTest` | Example 15 over HTTP and through its forms: `GET` on the collection answering the listing, a refused query, `POST` 201 with `Location`, the venue's `PATCH` and `DELETE`, the reorder's `PATCH` and its 405 for `POST`; the create and update forms saving, the delete form's confirmation removing; the page and its calls. |
 | `Kernel\ReferenceKeysTest` | Example 16: the three spellings and what each builds; both documents of the sponsorship pinned whole under the limit and past it, under `tests/fixtures/references/`; the candidates the account's, cached by what they read; the refusals, in one message; the lookup and what it leaves out; the tool listing's enum and the sentence naming the lookup; the OpenAPI document's lookup; the page's panel. |
 | `Functional\ReferenceKeysFormTest` | Example 16 without JavaScript: a select up to the limit, core's entity autocomplete past it, the id saved either way and refused in the constraint's words; the lookup answering, refusing an account without the permission and leaving the draft out for one that may not see it; the React page told where the lookup is, and the full schema stating a bare key's id per entity type. |
 | `Functional\ExamplesConceptsRoutesTest` | Every route of examples 7 to 12 and 14 answers an administrator and refuses anonymous; the landing page lists them; each page shows its panel and its Files panel and saves through its form; example 10's check writes nothing. Example 13 refuses anonymous, says to enable its two modules, then, with them on, shows its parts and the calls' answers, and draws the Spotlight card and the Tonight section below on its page alone; its Files panel, the modules on or off. |

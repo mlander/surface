@@ -194,7 +194,7 @@ final class OperationContext {
    * called directly builds one:
    *
    * @code
-   * ->withChild('storage', FieldStorageResource::edit($storage))
+   * ->withChild('storage', FieldStorageResource::update($storage))
    * @endcode
    *
    * or name one of the child's own operations, which the build invokes

@@ -477,7 +477,7 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
     $this->actAsLarderKeeper();
     $rack = self::CELLAR['racks'][0];
     $blank = ['shelf' => NULL, 'spices' => NULL, 'label' => ''];
-    $this->assertTable('resource_test.cellar', $this->build(CellarResource::class, 'edit', ['larder' => 'main']), self::CELLAR, [
+    $this->assertTable('resource_test.cellar', $this->build(CellarResource::class, 'update', ['larder' => 'main']), self::CELLAR, [
       'as stored' => [self::CELLAR, TRUE],
       'four racks and a blank row' => [['racks' => [$rack, $rack, $rack, $rack, $blank]], TRUE],
       'the racks as JSON' => [['racks' => (string) json_encode([$rack])], TRUE],
@@ -867,7 +867,7 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
     $holding = static fn (array $held): array => [
       'settings' => ['slots' => ['actions' => ['kind' => 'component', 'component' => $held]]] + $hero['settings'],
     ] + $hero;
-    $this->assertTable('block.placement', $this->build('block.placement', 'add'), [], [
+    $this->assertTable('block.placement', $this->build('block.placement', 'create'), [], [
       'a branding block in the header' => [$branding, TRUE],
       'the branding block, its slogan off' => [['settings' => ['use_site_slogan' => FALSE]] + $branding, TRUE],
       'a hero in the left sidebar' => [$hero, TRUE],
@@ -901,7 +901,7 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
     $town = ['label' => 'Town Hall', 'id' => 'town_hall', 'capacity' => 300];
     $council = ['id' => 'council', 'label' => 'Council chamber', 'seats' => 120];
     $harbour = ['id' => 'harbour', 'weight' => -1];
-    $this->assertTable('event.venue', $this->build('event.venue', 'add'), [], [
+    $this->assertTable('event.venue', $this->build('event.venue', 'create'), [], [
       'a venue' => [$town, TRUE],
       'a venue with a room' => [$town + ['rooms' => [$council]], TRUE],
       'no capacity' => [array_diff_key($town, ['capacity' => TRUE]), FALSE],
@@ -1165,7 +1165,7 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
    */
   public function testLockedCollectionItemsCarryNoConst(): void {
     $this->actAsLarderKeeper('inspect spice rack');
-    $cellar = $this->build(CellarResource::class, 'edit', ['larder' => 'main']);
+    $cellar = $this->build(CellarResource::class, 'update', ['larder' => 'main']);
     $this->assertTrue($cellar->isLocked('racks'));
     $document = $this->decoded($this->container->get('data_surface.contract_emitter')->emit($cellar, array_replace($cellar->getDefaultValues(), self::CELLAR), 'resource_test.cellar')->document);
     $racks = $document['schema']['properties']['racks'];
@@ -1391,7 +1391,7 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
       'aisles' => [$aisle('North', [['unit' => $unit, 'height' => $height]])],
     ];
     $three = array_fill(0, 3, ['unit' => 'cm', 'height' => 10]);
-    $this->assertTable('resource_test.storeroom', $this->build('resource_test.storeroom', 'edit'), $stored, [
+    $this->assertTable('resource_test.storeroom', $this->build('resource_test.storeroom', 'update'), $stored, [
       'as stored' => [[], TRUE],
       'a tall shelf in centimeters' => [$shelf('cm', 150), TRUE],
       'as tall in inches' => [$shelf('in', 150), FALSE],

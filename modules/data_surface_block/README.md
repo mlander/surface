@@ -49,9 +49,9 @@ $inputs->attachList('visibility', VisibilityConditionStructure::class)
   condition the same way (`Variants\ConditionPluginStructures`), with a
   `context_mapping` for a condition that reads a context, its default
   the context the block layout assigns.
-- **Three operations.** `add` places a block under a machine name the
-  caller types, refused when it is in use; `edit` changes one, its theme
-  held to the one it is in; `remove` deletes it, taking no values
+- **Three operations.** `create` places a block under a machine name the
+  caller types, refused when it is in use; `update` changes one, its theme
+  held to the one it is in; `delete` removes it, taking no values
   (`#[Operation(deletes: TRUE, destructive: TRUE)]`). Each asks
   "administer blocks".
 
@@ -71,41 +71,41 @@ resource](../../docs/decisions.md#a-placed-block-is-a-resource).
 
 | Door | Where |
 | --- | --- |
-| Tools | `data_surface:block.placement:add` (`values`, `dry_run`), `:edit` (`id`, `values`, `dry_run`), `:edit:read` (`id`), `:remove` (`id`, `dry_run`), with `data_surface_tool` |
+| Tools | `data_surface:block.placement:create` (`values`, `dry_run`), `:update` (`id`, `values`, `dry_run`), `:update:read` (`id`), `:delete` (`id`, `dry_run`), with `data_surface_tool` |
 | HTTP | `POST /surface-api/block.placement` (201, `Location`), `GET` and `PATCH /surface-api/block.placement/{id}`, `DELETE /surface-api/block.placement/{id}`, with `data_surface_react` |
-| Forms | `/admin/structure/block/surface/add`, `/admin/structure/block/surface/{id}`, and `/admin/structure/block/surface/{id}/remove`, a confirmation |
-| React | `/surface-react/block.placement/add`, `/surface-react/block.placement/edit?id={id}` |
+| Forms | `/admin/structure/block/surface/add`, `/admin/structure/block/surface/{id}`, and `/admin/structure/block/surface/{id}/delete`, a confirmation |
+| React | `/surface-react/block.placement/create`, `/surface-react/block.placement/update?id={id}` |
 
 Place a hero in Olivero's sidebar, rehearsed first:
 
 ```bash
-drush tool:run data_surface:block.placement:add --uid=1 --input='{"values":{"label":"Doors","id":"doors_hero","plugin":"data_surface_component","settings":{"component":"data_surface_examples:hero","props":{"title":"Doors open at half past six","align":"start"}},"theme":"olivero","region":"sidebar"}}' --input=dry_run=true
+drush tool:run data_surface:block.placement:create --uid=1 --input='{"values":{"label":"Doors","id":"doors_hero","plugin":"data_surface_component","settings":{"component":"data_surface_examples:hero","props":{"title":"Doors open at half past six","align":"start"}},"theme":"olivero","region":"sidebar"}}' --input=dry_run=true
 ```
 
 A region the theme lacks is refused by name ("The olivero theme has no
 region named header_nope."), props of another component by their path
 (`/settings/props/heading`), and a machine name in use by its key
 (`/id`, code `taken`). Remove it with
-`drush tool:run data_surface:block.placement:remove --uid=1 --input='{"id":"doors_hero"}'`.
+`drush tool:run data_surface:block.placement:delete --uid=1 --input='{"id":"doors_hero"}'`.
 
 ## How to try it
 
 | Where | What to look at |
 | --- | --- |
 | `/admin/structure/block/surface/add` | Choose a plugin and its settings are drawn; choose a theme and its regions are offered. |
-| `/surface-examples/13`, with `data_surface_examples` and `data_surface_component_block` | The Spotlight block, placed through `add`, and the calls that place, change and remove it. |
+| `/surface-examples/13`, with `data_surface_examples` and `data_surface_component_block` | The Spotlight block, placed through `create`, and the calls that place, change and remove it. |
 | `/surface-api/docs`, with `data_surface_openapi` | The placement's paths, `DELETE` among them. |
 
 ## Tests
 
 | Test | Covers |
 | --- | --- |
-| `Kernel\BlockPlacementResourceTest` | The keys and what each offers; the plugins less those reading a context; the region narrowed by the theme, with its cacheability; the settings variants, declared and read from a config schema; the visibility conditions with their context mapping; the theme held on edit; both documents pinned whole and in part. |
-| `Kernel\BlockPlacementToolsTest` | The four tools, their inputs and kinds; add as a dry run and for real, a taken machine name; a region of another theme, props of another component and a condition twice refused; edit and read; remove as a dry run and for real. |
+| `Kernel\BlockPlacementResourceTest` | The keys and what each offers; the plugins less those reading a context; the region narrowed by the theme, with its cacheability; the settings variants, declared and read from a config schema; the visibility conditions with their context mapping; the theme held on an update; both documents pinned whole and in part. |
+| `Kernel\BlockPlacementToolsTest` | The four tools, their inputs and kinds; create as a dry run and for real, a taken machine name; a region of another theme, props of another component and a condition twice refused; update and read; delete as a dry run and for real. |
 | `Kernel\ConfigEntityStorageTest`, `Unit\ConfigEntityStorageTest` | The storage it extends. |
 | `Functional\BlockPlacementApiTest` | POST 201 with `Location`, GET with `ETag`, PATCH and a stale `If-Match`, a refusal as problem details, DELETE rehearsed and done, a body refused, 404 once gone, 405 on the collection, the session's token. |
 | `Functional\BlockPlacementFormTest` | A block placed through the form and seen rendered, a region of another theme refused, edited, removed after a confirmation. |
-| `FunctionalJavascript\BlockPlacementReactTest` | The React page: a plugin's settings and a theme's regions drawn as they are chosen, a block placed, the page moved to its edit, a change saved. |
+| `FunctionalJavascript\BlockPlacementReactTest` | The React page: a plugin's settings and a theme's regions drawn as they are chosen, a block placed, the page moved to its update, a change saved. |
 | `Kernel\ContractBaselineTest` | Both declarations' full schemas against their baselines. |
 | `Kernel\Matrix\AdvertisedSchemaAcceptanceTest` | Documents the pipeline accepts and refuses, against both schemas. |
 | `Kernel\OpenApiDocumentTest` | The placement's `DELETE`, with no body, and its facts. |

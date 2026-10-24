@@ -463,10 +463,10 @@ final class ExamplesController extends ControllerBase {
     $section = $this->entityTypeManager()->getStorage('block')->load(SpotlightBlockHooks::SECTION);
     $build['placed'] = [
       '#markup' => '<p>' . ($placed !== NULL
-        ? $this->t('Below, the Spotlight block, @block, placed through the add operation in the content region of @theme when the modules were enabled, and shown on this page alone: the card, drawn with the props its settings hold and a line of text in its slot. Change it at @path.', [
+        ? $this->t('Below, the Spotlight block, @block, placed through the create operation in the content region of @theme when the modules were enabled, and shown on this page alone: the card, drawn with the props its settings hold and a line of text in its slot. Change it at @path.', [
           '@block' => SpotlightBlockHooks::BLOCK,
           '@theme' => (string) $placed->get('theme'),
-          '@path' => Url::fromRoute('data_surface_block.edit', ['id' => SpotlightBlockHooks::BLOCK])->toString(),
+          '@path' => Url::fromRoute('data_surface_block.update', ['id' => SpotlightBlockHooks::BLOCK])->toString(),
         ])
         : $this->t('No Spotlight block is placed on this site: the default theme has no content region, or the block was taken away.')) . '</p>',
     ];
@@ -474,7 +474,7 @@ final class ExamplesController extends ControllerBase {
       $build['section'] = [
         '#markup' => '<p>' . $this->t('Below it, the Tonight block, @block, placed the same way: a section whose slot holds a card, whose own slot holds a line of text. Change it at @path.', [
           '@block' => SpotlightBlockHooks::SECTION,
-          '@path' => Url::fromRoute('data_surface_block.edit', ['id' => SpotlightBlockHooks::SECTION])->toString(),
+          '@path' => Url::fromRoute('data_surface_block.update', ['id' => SpotlightBlockHooks::SECTION])->toString(),
         ]) . '</p>',
       ];
     }
@@ -494,13 +494,13 @@ final class ExamplesController extends ControllerBase {
     uasort($venues, static fn (EventVenue $a, EventVenue $b): int => EventVenue::sort($a, $b));
     foreach ($venues as $id => $venue) {
       $links = [
-        Link::fromTextAndUrl($this->t('Edit'), Url::fromRoute('data_surface_examples.step15_edit', ['id' => $id]))->toRenderable(),
+        Link::fromTextAndUrl($this->t('Edit'), Url::fromRoute('data_surface_examples.step15_update', ['id' => $id]))->toRenderable(),
         ['#markup' => ' '],
-        Link::fromTextAndUrl($this->t('Remove'), Url::fromRoute('data_surface_examples.step15_remove', ['id' => $id]))->toRenderable(),
+        Link::fromTextAndUrl($this->t('Remove'), Url::fromRoute('data_surface_examples.step15_delete', ['id' => $id]))->toRenderable(),
       ];
       if ($react) {
         $links[] = ['#markup' => ' '];
-        $react_edit = Url::fromRoute('data_surface_react.page', ['resource' => 'event.venue', 'operation' => 'edit'], [
+        $react_edit = Url::fromRoute('data_surface_react.page', ['resource' => 'event.venue', 'operation' => 'update'], [
           'query' => ['id' => $id],
         ]);
         $links[] = Link::fromTextAndUrl($this->t('Edit in React'), $react_edit)->toRenderable();
@@ -515,13 +515,13 @@ final class ExamplesController extends ControllerBase {
         ['data' => $links],
       ];
     }
-    $add = [$this->route('data_surface_examples.step15_add')];
+    $add = [$this->route('data_surface_examples.step15_create')];
     if ($react) {
-      $react_add = Url::fromRoute('data_surface_react.page', ['resource' => 'event.venue', 'operation' => 'add']);
+      $react_add = Url::fromRoute('data_surface_react.page', ['resource' => 'event.venue', 'operation' => 'create']);
       $add[] = Link::fromTextAndUrl($this->t('Add in React: @path', ['@path' => $react_add->toString()]), $react_add)->toRenderable();
     }
     else {
-      $add[] = $this->t('In React at /surface-react/event.venue/add and /surface-react/event.venue/edit?id=riverside, once @module is enabled.', ['@module' => self::REACT]);
+      $add[] = $this->t('In React at /surface-react/event.venue/create and /surface-react/event.venue/update?id=riverside, once @module is enabled.', ['@module' => self::REACT]);
     }
     $add[] = $this->route('data_surface_examples.step2');
     return [
@@ -714,7 +714,7 @@ final class ExamplesController extends ControllerBase {
         'sentence' => $this->t('A config entity type the module declares, a venue, and a resource over it from the start: add, edit and remove one venue; list a page of them, a read only operation with outputs that GET on the collection answers; and reorder them, an update over the collection written in one commit. Its config schema is written from the resource, and example 2 chooses its venue and room from these venues.'),
         'items' => [
           $this->route('data_surface_examples.step15'),
-          $this->route('data_surface_examples.step15_add'),
+          $this->route('data_surface_examples.step15_create'),
           $this->t('The entity type, the resource, its three structures and its storage: @lines lines of code.', ['@lines' => $this->venueLines()]),
         ],
       ],

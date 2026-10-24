@@ -34,7 +34,7 @@ use Symfony\Component\HttpFoundation\Request;
  * to core's own content type form through a form alter. Neither tool
  * compared here was written with those settings in mind. The resource
  * driven tool picks them up because its input is the resource; the
- * classic one, Tool Belt's bundle add tool, is what an agent has without
+ * classic one, Tool Belt's bundle create tool, is what an agent has without
  * Data Surface, and this test records exactly what it offers and what it
  * does, including what it lets through that the form would not.
  *
@@ -57,7 +57,7 @@ class NodeTypeToolComparisonTest extends DataSurfaceKernelTestBase {
   /**
    * The resource driven tool.
    */
-  protected const SURFACE_TOOL = 'data_surface:node.type:add';
+  protected const SURFACE_TOOL = 'data_surface:node.type:create';
 
   /**
    * The tool an agent has for creating a content type without Data Surface.
@@ -192,7 +192,7 @@ class NodeTypeToolComparisonTest extends DataSurfaceKernelTestBase {
       (new \ReflectionClass(ResourceOperationToolDeriver::class))->getFileName(),
       (new \ReflectionClass(OperationInputs::class))->getFileName(),
     ];
-    $surface = $this->container->get('data_surface.resources')->buildOperation(NodeTypeResource::class, 'add');
+    $surface = $this->container->get('data_surface.resources')->buildOperation(NodeTypeResource::class, 'create');
     $keys = array_merge(
       $surface->getDefinitions()->names(),
       [self::EXTRAS, NodeTypeReviewSettings::DEADLINE, NodeTypeReviewSettings::TAGS],
@@ -262,7 +262,7 @@ class NodeTypeToolComparisonTest extends DataSurfaceKernelTestBase {
 
     // The same through the pipeline alone, and in weeks.
     $resources = $this->container->get('data_surface.resources');
-    $add = $resources->operation(NodeTypeResource::class, 'add');
+    $add = $resources->operation(NodeTypeResource::class, 'create');
     $surface = $resources->build(NodeTypeResource::class, $add);
     $pipeline_result = $this->pipeline()->submit(
       $surface,
@@ -653,7 +653,7 @@ class NodeTypeToolComparisonTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Reads a content type back through the resource's edit operation.
+   * Reads a content type back through the resource's update operation.
    *
    * @param string $type
    *   The machine name.
@@ -663,7 +663,7 @@ class NodeTypeToolComparisonTest extends DataSurfaceKernelTestBase {
    */
   protected function loadThroughTheResource(string $type): array {
     $resources = $this->container->get('data_surface.resources');
-    $context = $resources->operation(NodeTypeResource::class, 'edit', ['type' => $type]);
+    $context = $resources->operation(NodeTypeResource::class, 'update', ['type' => $type]);
     $surface = $resources->build(NodeTypeResource::class, $context);
     return $resources->storage(NodeTypeResource::class, $context, $surface)->load($surface);
   }
@@ -793,10 +793,10 @@ class NodeTypeToolComparisonTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Puts the resource driven add route on the request stack.
+   * Puts the resource driven create route on the request stack.
    */
   protected function serveResourceAddRoute(): void {
-    $route_name = 'data_surface_demo_node_type.add';
+    $route_name = 'data_surface_demo_node_type.create';
     $route = $this->container->get('router.route_provider')->getRouteByName($route_name);
     $stack = $this->container->get('request_stack');
     $request = Request::create($route->getPath());

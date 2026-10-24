@@ -147,12 +147,12 @@ class ExamplesConceptsRoutesTest extends BrowserTestBase {
     $assert->pageTextContains('Both are enabled on this site now.');
     $assert->pageTextContains("The same three lines: example 12's resource and the block's structure");
     $assert->pageTextContains("The hero's actions slot, narrowed to what it expects");
-    $assert->pageTextContains('data_surface:block.placement:edit:read');
+    $assert->pageTextContains('data_surface:block.placement:update:read');
     $assert->pageTextContains('Ask the tool');
     $assert->pageTextContains('Success: Dry run of Edit a placed block');
     $assert->pageTextContains('Success: Dry run of Remove a placed block');
     $assert->linkByHrefExists('/admin/structure/block/add/data_surface_component/stark');
-    // The Spotlight and Tonight blocks, placed through the add operation
+    // The Spotlight and Tonight blocks, placed through the create operation
     // when the modules were enabled, below.
     $card = $assert->elementExists('css', 'article.data-surface-card.data-surface-card--highlight');
     $this->assertSame('Doors open at half past six', $card->find('css', 'h3')?->getText());

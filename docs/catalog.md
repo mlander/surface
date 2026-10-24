@@ -31,7 +31,7 @@ and changes a thing that exists, neither creating nor read only, is
 | [`block.data_surface_demo`](#blockdata_surface_demo) | `DemoBlockStructure` | none | none |
 | [`block.data_surface_demo.presentation.grid`](#blockdata_surface_demopresentationgrid) | `GridPresentationStructure` | none | none |
 | [`block.data_surface_demo.presentation.list`](#blockdata_surface_demopresentationlist) | `ListPresentationStructure` | none | none |
-| [`block.placement`](#blockplacement) | `BlockPlacementResource` | `id` | `add`, `edit`, `remove` |
+| [`block.placement`](#blockplacement) | `BlockPlacementResource` | `id` | `create`, `update`, `delete` |
 | [`block.placement.condition`](#blockplacementcondition) | `VisibilityConditionStructure` | none | none |
 | [`event.bulletin`](#eventbulletin) | `BulletinResource` | none | `configure` |
 | [`event.desk`](#eventdesk) | `InfoDeskResource` | none | `configure` |
@@ -47,19 +47,19 @@ and changes a thing that exists, neither creating nor read only, is
 | [`event.sales`](#eventsales) | `TicketSalesResource` | none | `configure` |
 | [`event.spotlight`](#eventspotlight) | `SpotlightResource` | none | `configure` |
 | [`event.ticket_limit`](#eventticket_limit) | `TicketLimitStructure` | none | none |
-| [`event.venue`](#eventvenue) | `VenueResource` | `id` | `add`, `list`, `reorder`, `edit`, `remove` |
+| [`event.venue`](#eventvenue) | `VenueResource` | `id` | `create`, `list`, `reorder`, `update`, `delete` |
 | [`event.venue.listing`](#eventvenuelisting) | `VenueListingStructure` | none | none |
 | [`event.venue.order`](#eventvenueorder) | `VenueOrderStructure` | none | none |
 | [`event.venue.reorder`](#eventvenuereorder) | `VenueReorderStructure` | none | none |
 | [`event.venue.room`](#eventvenueroom) | `VenueRoomStructure` | none | none |
 | [`event.webhook`](#eventwebhook) | `WebhookResource` | none | `configure` |
-| [`field.instance`](#fieldinstance) | `FieldInstanceResource` | `entity_type_id`, `bundle`, `field_name`, `field_type` | `add`, `reuse`, `edit` |
+| [`field.instance`](#fieldinstance) | `FieldInstanceResource` | `entity_type_id`, `bundle`, `field_name`, `field_type` | `create`, `reuse`, `update` |
 | [`field.settings.address`](#fieldsettingsaddress) | `AddressFieldSettingsResource` | none | none |
-| [`field.storage`](#fieldstorage) | `FieldStorageResource` | `field_type` | `add`, `edit` |
+| [`field.storage`](#fieldstorage) | `FieldStorageResource` | `field_type` | `create`, `update` |
 | [`field_formatter:data_surface_demo_string`](#field_formatterdata_surface_demo_string) | `DataSurfaceDemoFormatter` | none | none |
 | [`first.newsletter`](#firstnewsletter) | `NewsletterResource` | none | `configure` |
 | [`first.store`](#firststore) | `StoreResource` | none | `configure` |
-| [`node.type`](#nodetype) | `NodeTypeResource` | `type` | `add`, `edit` |
+| [`node.type`](#nodetype) | `NodeTypeResource` | `type` | `create`, `update` |
 | [`registration.compliance`](#registrationcompliance) | `ComplianceStructure` | none | none |
 | [`registration.contact`](#registrationcontact) | `ContactStructure` | none | none |
 | [`registration.step1`](#registrationstep1) | `RegistrationStep1Resource` | none | `configure` |
@@ -121,9 +121,9 @@ and changes a thing that exists, neither creating nor read only, is
 
 | Operation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `add` | Place a block | nothing | yes | `administer blocks` | yes | no: it creates | `#[Operation] on BlockPlacementResource` (`data_surface_block`) |
-| `edit` | Edit a placed block | `BlockInterface $id` | no | `administer blocks` | yes | yes | `BlockPlacementResource::edit()` (`data_surface_block`) |
-| `remove` | Remove a placed block | `BlockInterface $id` | no | `administer blocks` | yes | no: it deletes | `BlockPlacementResource::remove()` (`data_surface_block`) |
+| `create` | Place a block | nothing | yes | `administer blocks` | yes | no: it creates | `#[Operation] on BlockPlacementResource` (`data_surface_block`) |
+| `update` | Edit a placed block | `BlockInterface $id` | no | `administer blocks` | yes | yes | `BlockPlacementResource::update()` (`data_surface_block`) |
+| `delete` | Remove a placed block | `BlockInterface $id` | no | `administer blocks` | yes | no: it deletes | `BlockPlacementResource::delete()` (`data_surface_block`) |
 
 ## block.placement.condition
 
@@ -308,11 +308,11 @@ and changes a thing that exists, neither creating nor read only, is
 
 | Operation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `add` | Add a venue | nothing | yes | `administer event venues` | yes | no: it creates | `#[Operation] on VenueResource` (`data_surface_examples`) |
+| `create` | Add a venue | nothing | yes | `administer event venues` | yes | no: it creates | `#[Operation] on VenueResource` (`data_surface_examples`) |
 | `list` | List the venues | nothing | no | `view event venues` | yes | no: it changes nothing | `#[Operation] on VenueResource` (`data_surface_examples`) |
 | `reorder` | Reorder the venues | nothing | no | `administer event venues` | yes | yes | `#[Operation] on VenueResource` (`data_surface_examples`) |
-| `edit` | Edit a venue | `EventVenue $id` | no | `administer event venues` | yes | yes | `VenueResource::edit()` (`data_surface_examples`) |
-| `remove` | Remove a venue | `EventVenue $id` | no | `administer event venues` | yes | no: it deletes | `VenueResource::remove()` (`data_surface_examples`) |
+| `update` | Edit a venue | `EventVenue $id` | no | `administer event venues` | yes | yes | `VenueResource::update()` (`data_surface_examples`) |
+| `delete` | Remove a venue | `EventVenue $id` | no | `administer event venues` | yes | no: it deletes | `VenueResource::delete()` (`data_surface_examples`) |
 
 ## event.venue.listing
 
@@ -374,9 +374,9 @@ and changes a thing that exists, neither creating nor read only, is
 
 | Operation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `add` | Add a field to a bundle | `string $entity_type_id`, `string $bundle` | yes | `administer %entity_type_id fields` | yes | no: it creates | `FieldInstanceResource::add()` (`data_surface_tool`) |
+| `create` | Add a field to a bundle | `string $entity_type_id`, `string $bundle` | yes | `administer %entity_type_id fields` | yes | no: it creates | `FieldInstanceResource::create()` (`data_surface_tool`) |
 | `reuse` | Add an existing field to another bundle | `FieldStorageConfigInterface $storage`, `string $bundle` | yes | `administer %entity_type_id fields` | yes | no: it creates | `FieldInstanceResource::reuse()` (`data_surface_tool`) |
-| `edit` | Edit a field | `FieldConfigInterface $field` | no | `administer %entity_type_id fields` | yes | yes | `FieldInstanceResource::edit()` (`data_surface_tool`) |
+| `update` | Edit a field | `FieldConfigInterface $field` | no | `administer %entity_type_id fields` | yes | yes | `FieldInstanceResource::update()` (`data_surface_tool`) |
 
 - Variants at `settings`: `address` → `Drupal\data_surface_address\Resource\AddressFieldSettingsResource`.
 
@@ -403,8 +403,8 @@ and changes a thing that exists, neither creating nor read only, is
 
 | Operation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `add` | New field storage | nothing | yes | `administer %entity_type_id fields` | no: nothing supplies `%entity_type_id` | no: not on its own | `FieldStorageResource::add()` (`data_surface_tool`) |
-| `edit` | Edit a field storage | `FieldStorageConfigInterface $storage` | no | `administer %entity_type_id fields` | yes | yes | `FieldStorageResource::edit()` (`data_surface_tool`) |
+| `create` | New field storage | nothing | yes | `administer %entity_type_id fields` | no: nothing supplies `%entity_type_id` | no: not on its own | `FieldStorageResource::create()` (`data_surface_tool`) |
+| `update` | Edit a field storage | `FieldStorageConfigInterface $storage` | no | `administer %entity_type_id fields` | yes | yes | `FieldStorageResource::update()` (`data_surface_tool`) |
 
 - Variants at `settings`, for every other value: derived from the config schema `field.storage_settings.<field type>`, for every field type offered in the UI.
 
@@ -457,8 +457,8 @@ and changes a thing that exists, neither creating nor read only, is
 
 | Operation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `add` | Add a content type | nothing | yes | `administer data surface node type demo` | yes | no: it creates | `NodeTypeResource::add()` (`data_surface_demo_node_type`) |
-| `edit` | Edit a content type | `NodeTypeInterface $type` | no | `administer data surface node type demo` | yes | yes | `NodeTypeResource::edit()` (`data_surface_demo_node_type`) |
+| `create` | Add a content type | nothing | yes | `administer data surface node type demo` | yes | no: it creates | `NodeTypeResource::create()` (`data_surface_demo_node_type`) |
+| `update` | Edit a content type | `NodeTypeInterface $type` | no | `administer data surface node type demo` | yes | yes | `NodeTypeResource::update()` (`data_surface_demo_node_type`) |
 
 - Altered by `Drupal\data_surface_demo_extras\Alter\NodeTypeAlter` (`data_surface_demo_extras`), in every operation.
 

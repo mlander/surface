@@ -16,7 +16,8 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * `/schema`; a custom method, `:{operation}`, on a singleton (example
  * 10's check, a read) and its schema; a path, a method, an operation or
  * an id that names nothing; and every contract 2 path, gone (410) with
- * its replacement named.
+ * its replacement named, under the operation id it carried then (`create`,
+ * `update`) as under the one it carries now.
  */
 #[Group('data_surface')]
 #[RunTestsInSeparateProcesses]
@@ -101,9 +102,9 @@ class ServedPathsTest extends BrowserTestBase {
   public function testIdentifiedPaths(): void {
     // The collection: GET is the create's envelope, POST the create.
     $collection = $this->decoded($this->send('GET', 'surface-api/node.type'));
-    $this->assertSame('add', $collection['operation']);
+    $this->assertSame('create', $collection['operation']);
     $this->assertStringEndsWith('/surface-api/node.type', $collection['schema']['$id']);
-    $this->assertSame('add', $this->decoded($this->send('GET', 'surface-api/node.type/schema'), 200, 'application/schema+json')['x-surface']['operation']['id']);
+    $this->assertSame('create', $this->decoded($this->send('GET', 'surface-api/node.type/schema'), 200, 'application/schema+json')['x-surface']['operation']['id']);
     $patch = $this->send('PATCH', 'surface-api/node.type', ['name' => 'X']);
     $this->problem($patch, 405);
     $this->assertSame('GET, POST, HEAD', $patch->getHeaderLine('Allow'));
@@ -111,7 +112,7 @@ class ServedPathsTest extends BrowserTestBase {
     // The item: its identity is the path.
     $item = $this->send('GET', 'surface-api/node.type/article');
     $envelope = $this->decoded($item);
-    $this->assertSame('edit', $envelope['operation']);
+    $this->assertSame('update', $envelope['operation']);
     $this->assertSame('article', $envelope['values']['type']);
     $this->assertNotSame('', $item->getHeaderLine('ETag'));
     $full = $this->decoded($this->send('GET', 'surface-api/node.type/article/schema'), 200, 'application/schema+json');
@@ -132,7 +133,7 @@ class ServedPathsTest extends BrowserTestBase {
     $this->problem($this->send('GET', 'surface-api/registration.step2/main'), 404);
     // A create named on an identity is no path; nor is a method the route
     // has none of.
-    $this->problem($this->send('POST', 'surface-api/node.type/article:add', []), 404);
+    $this->problem($this->send('POST', 'surface-api/node.type/article:create', []), 404);
     $delete = $this->send('DELETE', 'surface-api/node.type/article');
     $this->problem($delete, 405);
   }
@@ -165,6 +166,8 @@ class ServedPathsTest extends BrowserTestBase {
         '/surface-api/node.type/article?dryRun=true',
       ],
       ['POST', 'surface-api/node.type/edit/submit', 'PATCH', '/surface-api/node.type/{type}'],
+      // Under the id the operation carries now, as under the one it did.
+      ['GET', 'surface-api/node.type/update?type=article', 'GET', '/surface-api/node.type/article'],
     ];
     foreach ($gone as [$method, $path, $moved, $href]) {
       $problem = $this->problem($this->send($method, $path, $method === 'POST' ? [] : NULL), 410);

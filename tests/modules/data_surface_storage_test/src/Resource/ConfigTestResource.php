@@ -20,7 +20,7 @@ use Drupal\data_surface_storage_test\Storage\ConfigTestStorage;
   identity: ['id'],
   storage: ConfigTestStorage::class,
 )]
-#[Operation('add',
+#[Operation('create',
   label: new TranslatableMarkup('Add a test entity'),
   permission: 'administer site configuration',
   creates: TRUE,
@@ -31,24 +31,24 @@ final class ConfigTestResource implements ResourceInterface {
   /**
    * Edits a test entity, named by its id.
    */
-  #[Operation('edit',
+  #[Operation('update',
     label: new TranslatableMarkup('Edit a test entity'),
     permission: 'administer site configuration',
   )]
-  public static function edit(ConfigEntityInterface $id): OperationContext {
+  public static function update(ConfigEntityInterface $id): OperationContext {
     return new OperationContext(known: ['id' => (string) $id->id()]);
   }
 
   /**
    * Removes a test entity, named by its id.
    */
-  #[Operation('remove',
+  #[Operation('delete',
     label: new TranslatableMarkup('Remove a test entity'),
     permission: 'administer site configuration',
     destructive: TRUE,
     deletes: TRUE,
   )]
-  public static function remove(ConfigEntityInterface $id): OperationContext {
+  public static function delete(ConfigEntityInterface $id): OperationContext {
     return new OperationContext(known: ['id' => (string) $id->id()]);
   }
 

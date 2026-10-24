@@ -5,11 +5,11 @@ A resource-driven alternative to core's content type add and edit form.
 ## What it shows
 
 One resource, `Resource\NodeTypeResource` (`node.type`), with two
-operations: `add()` knows nothing, so the machine name is open and
+operations: `create()` knows nothing, so the machine name is open and
 carries a service-backed uniqueness constraint the operation adds;
-`edit(NodeTypeInterface $type)` knows the machine name, so it is
-locked: still advertised, narrowed to the one value it has. Add and
-edit are not two resources: they are how much is known.
+`update(NodeTypeInterface $type)` knows the machine name, so it is
+locked: still advertised, narrowed to the one value it has. Create and
+update are not two resources: they are how much is known.
 
 `Storage\NodeTypeStorage` loads by the machine name the context knows and
 creates or updates by whether it creates. It writes the node type
@@ -22,15 +22,15 @@ operation's permission cannot say: the node type entity's own answer.
 
 There is no form class in this module, and no tool. Both routes name
 `Drupal\data_surface\Form\DataSurfaceOperationForm` with the resource
-class and an operation; the edit route's `{type}` is the edit
+class and an operation; the update route's `{type}` is the update
 operation's `$type`. The resource declares which keys sit in which of
 its three groups (`Arrangement`), so every door draws them alike. What
 is left of a form here is `NodeTypeResourceFormCosmetics`: core's
 vertical tabs borrowed to hold those groups, the machine name's
 mirror-while-typing, the message and the redirect, which is the part
 that should stay bespoke. With `data_surface_tool` enabled, both
-operations are tools, `data_surface:node.type:add` and
-`data_surface:node.type:edit`, generated from the resource.
+operations are tools, `data_surface:node.type:create` and
+`data_surface:node.type:update`, generated from the resource.
 
 ## How to try it
 
@@ -56,8 +56,8 @@ reviewer of core's own content type form has not already reviewed.
 
 | Route, link or tool | Entity access (the access class) | Module permission (the operation's) |
 | --- | --- | --- |
-| `data_surface_demo_node_type.add`, `data_surface:node.type:add` | node type create access | `administer data surface node type demo` |
-| `data_surface_demo_node_type.edit`, `data_surface:node.type:edit` | `$node_type->access('update')` | `administer data surface node type demo` |
+| `data_surface_demo_node_type.create`, `data_surface:node.type:create` | node type create access | `administer data surface node type demo` |
+| `data_surface_demo_node_type.update`, `data_surface:node.type:update` | `$node_type->access('update')` | `administer data surface node type demo` |
 | The "Edit (resource)" operation link | `$node_type->access('update')` | `administer data surface node type demo` |
 
 All of them ask one question, the content type resource's access for

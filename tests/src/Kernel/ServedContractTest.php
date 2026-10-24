@@ -1005,7 +1005,7 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
 
     // A child whose unit defaults to `cm` is not described for `cm`.
     $this->enableModules(['data_surface_resource_test']);
-    $pantry = $this->container->get('data_surface.resources')->build(PantryResource::class, PantryResource::add());
+    $pantry = $this->container->get('data_surface.resources')->build(PantryResource::class, PantryResource::create());
     $emitter = $this->container->get('data_surface.contract_emitter');
     $document = json_decode((string) json_encode($emitter->emitFull($pantry, 'resource_test.pantry')->document['schema']), TRUE);
     $shelf = SchemaResolver::inline($document['properties']['shelf'], $document);
@@ -1228,7 +1228,7 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
    */
   public function testOneDefPerChildClass(): void {
     $this->enableModules(['data_surface_resource_test']);
-    $context = (new OperationContext('edit'))->withChild('left', new OperationContext('edit', known: ['bin' => 'left']));
+    $context = (new OperationContext('update'))->withChild('left', new OperationContext('update', known: ['bin' => 'left']));
     $cupboard = $this->container->get('data_surface.resources')->build(CupboardStructure::class, $context);
     $emitter = $this->container->get('data_surface.contract_emitter');
     $full = json_decode((string) json_encode($emitter->emitFull($cupboard, 'resource_test.cupboard')->document['schema']), TRUE);
@@ -1367,7 +1367,7 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
    */
   public function testNodeType(): void {
     NodeType::create(['type' => 'article', 'name' => 'Article'])->save();
-    $edit = $this->contract('node.type', 'edit', ['type' => 'article']);
+    $edit = $this->contract('node.type', 'update', ['type' => 'article']);
     $schema = $edit['schema'];
     $type = $schema['properties']['type'];
     $this->assertTrue($type['x-surface']['locked']);
@@ -1382,7 +1382,7 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
     $this->assertSame([0, 1, 2], array_column(array_filter($preview['oneOf'], fn (array $choice): bool => isset($choice['title'])), 'const'));
     $this->assertSame('integer', $preview['type']);
 
-    $add = $this->contract('node.type', 'add');
+    $add = $this->contract('node.type', 'create');
     $type = $add['schema']['properties']['type'];
     $this->assertFalse($type['x-surface']['locked']);
     $this->assertArrayNotHasKey('readOnly', $type);
@@ -1542,12 +1542,12 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
   #[IgnoreDeprecations]
   public function testSchemasWithLengthsValidate(): void {
     NodeType::create(['type' => 'article', 'name' => 'Article'])->save();
-    $edit = $this->contract('node.type', 'edit', ['type' => 'article']);
+    $edit = $this->contract('node.type', 'update', ['type' => 'article']);
     $this->assertWellFormed($edit['schema']);
     $this->assertTrue($this->validates($edit['schema'], $edit['values']));
     $this->assertFalse($this->validates($edit['schema'], ['type' => 'page'] + $edit['values']), 'The locked machine name holds one value.');
     $this->assertFalse($this->validates($edit['schema'], ['name' => str_repeat('a', 256)] + $edit['values']));
-    $this->assertWellFormed($this->contract('node.type', 'add')['schema']);
+    $this->assertWellFormed($this->contract('node.type', 'create')['schema']);
 
     $surface = $this->container->get('data_surface.resources')->build(DemoBlockStructure::class, new OperationContext('configure'));
     $document = $this->container->get('data_surface.contract_emitter')

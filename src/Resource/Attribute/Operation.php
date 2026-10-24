@@ -32,7 +32,7 @@ namespace Drupal\data_surface\Resource\Attribute;
  *
  * With this, an operation can be listed, addressed and generated from:
  *   - a discovery document lists every resource with its operations;
- *   - a tool exists per operation, `field.instance:edit`, its inputs
+ *   - a tool exists per operation, `field.instance:update`, its inputs
  *     being the method's parameters plus the resource's open keys, its
  *     description this one's;
  *   - a route maps its parameters onto one operation;

@@ -133,9 +133,9 @@ class ResourceCatalogTest extends DataSurfaceKernelTestBase {
     $this->assertSame(NodeTypeAccess::class, $node_type['access']);
     $this->assertSame([
       [
-        'id' => 'add',
+        'id' => 'create',
         'label' => 'Add a content type',
-        'provider' => NodeTypeResource::class . '::add()',
+        'provider' => NodeTypeResource::class . '::create()',
         'module' => 'data_surface_demo_node_type',
         'parameters' => [],
         'creates' => TRUE,
@@ -146,9 +146,9 @@ class ResourceCatalogTest extends DataSurfaceKernelTestBase {
         'reads' => FALSE,
       ],
       [
-        'id' => 'edit',
+        'id' => 'update',
         'label' => 'Edit a content type',
-        'provider' => NodeTypeResource::class . '::edit()',
+        'provider' => NodeTypeResource::class . '::update()',
         'module' => 'data_surface_demo_node_type',
         'parameters' => ['NodeTypeInterface $type'],
         'creates' => FALSE,
@@ -187,7 +187,7 @@ class ResourceCatalogTest extends DataSurfaceKernelTestBase {
     ], $catalog['registration.step3']['alters'][0]['refines']);
 
     $field = $catalog['field.instance'];
-    $this->assertSame(['add', 'reuse', 'edit'], array_column($field['operations'], 'id'));
+    $this->assertSame(['create', 'reuse', 'update'], array_column($field['operations'], 'id'));
     $this->assertSame(['FieldStorageConfigInterface $storage', 'string $bundle'], $field['operations'][1]['parameters']);
     $this->assertSame(['settings' => ['address' => AddressFieldSettingsResource::class]], $field['variants']);
     $this->assertSame(FieldInstanceResource::class, $field['class']);
@@ -205,9 +205,9 @@ class ResourceCatalogTest extends DataSurfaceKernelTestBase {
   public function testTheCatalogueSaysWhatCanBeAskedOnItsOwn(): void {
     $catalog = $this->catalog();
     $storage = array_column($catalog['field.storage']['operations'], NULL, 'id');
-    $this->assertSame(['entity_type_id'], $storage['add']['unresolvable']);
-    $this->assertFalse($storage['add']['standalone']);
-    $this->assertTrue($storage['edit']['standalone']);
+    $this->assertSame(['entity_type_id'], $storage['create']['unresolvable']);
+    $this->assertFalse($storage['create']['standalone']);
+    $this->assertTrue($storage['update']['standalone']);
 
     $this->assertSame(['block:data_surface_demo'], $catalog['block.data_surface_demo']['plugins']);
     // A plugin that is its own structure is used by itself.
@@ -228,9 +228,9 @@ class ResourceCatalogTest extends DataSurfaceKernelTestBase {
   public function testTheCatalogueSaysWhatCanBeRead(): void {
     $catalog = $this->catalog();
     $reads = static fn (string $surface): array => array_column($catalog[$surface]['operations'], 'reads', 'id');
-    $this->assertSame(['add' => FALSE, 'edit' => TRUE], $reads('node.type'));
-    $this->assertSame(['add' => FALSE, 'reuse' => FALSE, 'edit' => TRUE], $reads('field.instance'));
-    $this->assertSame(['add' => FALSE, 'edit' => TRUE], $reads('field.storage'));
+    $this->assertSame(['create' => FALSE, 'update' => TRUE], $reads('node.type'));
+    $this->assertSame(['create' => FALSE, 'reuse' => FALSE, 'update' => TRUE], $reads('field.instance'));
+    $this->assertSame(['create' => FALSE, 'update' => TRUE], $reads('field.storage'));
     foreach (['registration.step1', 'registration.step2', 'registration.step3'] as $surface) {
       $this->assertSame(['configure' => TRUE], $reads($surface), $surface);
     }

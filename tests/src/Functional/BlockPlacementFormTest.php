@@ -106,7 +106,7 @@ class BlockPlacementFormTest extends BrowserTestBase {
     $assert->pageTextContains('Powered by Drupal');
 
     // Removed after a confirmation.
-    $this->drupalGet('admin/structure/block/surface/made_with/remove');
+    $this->drupalGet('admin/structure/block/surface/made_with/delete');
     $assert->pageTextContains('made_with is removed, and this cannot be undone.');
     $this->submitForm([], 'Remove a placed block');
     $assert->pageTextContains('The block Built with Drupal has been removed.');

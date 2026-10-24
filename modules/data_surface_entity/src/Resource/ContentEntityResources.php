@@ -28,8 +28,8 @@ use Drupal\data_surface_entity\Storage\ContentEntityStorage;
  * `entity.content:<entity type>.<bundle>`, `entity.content:node.page`: a
  * content entity's create and update form, said as a resource. Its
  * identity is the entity type, the bundle and the entity's id; its two
- * operations are `add`, which knows the entity type and the bundle (and
- * that there is no id yet), and `edit`, which takes the entity as `id`.
+ * operations are `create`, which knows the entity type and the bundle (and
+ * that there is no id yet), and `update`, which takes the entity as `id`.
  * Its keys are one child per field the bundle's default form display
  * shows, in the display's order, each the field's item structure
  * (FieldItemStructures), invoked through the item's operation of the same
@@ -82,9 +82,9 @@ final class ContentEntityResources implements ResourceDeriverInterface, KnowsDer
           identity: ['entity_type', 'bundle', 'id'],
           operations: [
             new DerivedOperation(
-              'add',
+              'create',
               $this->t('Add @bundle', ['@bundle' => $bundle_label]),
-              new ResourceCallable(self::class, 'add', $bound),
+              new ResourceCallable(self::class, 'create', $bound),
               creates: TRUE,
               description: $this->t('Creates a new @bundle item (@entity_type); the site gives it its id.', [
                 '@bundle' => $bundle_label,
@@ -92,9 +92,9 @@ final class ContentEntityResources implements ResourceDeriverInterface, KnowsDer
               ]),
             ),
             new DerivedOperation(
-              'edit',
+              'update',
               $this->t('Edit @bundle', ['@bundle' => $bundle_label]),
-              new ResourceCallable(self::class, 'edit', [...$bound, $this->derivation->idType($entity_type_id)]),
+              new ResourceCallable(self::class, 'update', [...$bound, $this->derivation->idType($entity_type_id)]),
               ['id' => 'entity:' . $entity_type_id],
               description: $this->t('Changes an existing @bundle item (@entity_type), named by its id.', [
                 '@bundle' => $bundle_label,
@@ -188,8 +188,8 @@ final class ContentEntityResources implements ResourceDeriverInterface, KnowsDer
    * @return \Drupal\data_surface\Resource\OperationContext
    *   A context that creates.
    */
-  public static function add(array $arguments, string $entity_type_id, string $bundle): OperationContext {
-    return new OperationContext('add', creates: TRUE, known: [
+  public static function create(array $arguments, string $entity_type_id, string $bundle): OperationContext {
+    return new OperationContext('create', creates: TRUE, known: [
       'entity_type' => $entity_type_id,
       'bundle' => $bundle,
       // Storage gives the id; knowing there is none locks it empty.
@@ -215,18 +215,18 @@ final class ContentEntityResources implements ResourceDeriverInterface, KnowsDer
    * @throws \InvalidArgumentException
    *   When the entity is not one of the bundle.
    */
-  public static function edit(array $arguments, string $entity_type_id, string $bundle, string $id_type = 'string'): OperationContext {
+  public static function update(array $arguments, string $entity_type_id, string $bundle, string $id_type = 'string'): OperationContext {
     $entity = $arguments['id'];
     if (!$entity instanceof ContentEntityInterface || $entity->getEntityTypeId() !== $entity_type_id || $entity->bundle() !== $bundle) {
       throw new \InvalidArgumentException(sprintf(
-        'The edit operation of entity.content:%s.%s takes a %s of the %s bundle.',
+        'The update operation of entity.content:%s.%s takes a %s of the %s bundle.',
         $entity_type_id,
         $bundle,
         $entity_type_id,
         $bundle,
       ));
     }
-    return new OperationContext('edit', known: [
+    return new OperationContext('update', known: [
       'entity_type' => $entity_type_id,
       'bundle' => $bundle,
       'id' => $id_type === 'integer' ? (int) $entity->id() : (string) $entity->id(),

@@ -247,7 +247,7 @@ final class BaseFieldOverrideStorage implements DataSurfaceStorageInterface {
    * Writes a plan onto the bundle as it now exists.
    *
    * The bundle's field definitions are resolved afresh, because on an
-   * add operation the bundle only came into being a moment ago, and each
+   * create operation the bundle only came into being a moment ago, and each
    * planned override's label and default value are set on the override
    * the bundle answers with.
    *
@@ -382,7 +382,7 @@ final class BaseFieldOverrideStorage implements DataSurfaceStorageInterface {
    * A bundle that does not exist yet has nothing of its own to say, and
    * the entity field manager answers for it with the entity type's base
    * fields, which is exactly what a new bundle inherits. Resolution is
-   * lazy and dropped on commit so an add operation reads the bundle it
+   * lazy and dropped on commit so a create operation reads the bundle it
    * has just created rather than the emptiness it started from.
    *
    * @return array<string, \Drupal\Core\Field\FieldDefinitionInterface>

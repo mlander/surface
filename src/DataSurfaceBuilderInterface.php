@@ -100,7 +100,7 @@ interface DataSurfaceBuilderInterface {
   /**
    * Locks a key: its value is fixed to the declared default.
    *
-   * Locking is build-time context (an edit operation locking an
+   * Locking is build-time context (an update operation locking an
    * identifier, say): the degenerate refinement, narrowing the value
    * space to exactly one value. Locked keys stay advertised: consumers
    * see the key and its value, rendered disabled in generated forms,

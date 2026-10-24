@@ -37,7 +37,7 @@ use Drupal\data_surface_block\Variants\BlockPluginStructures;
   identity: ['id'],
   storage: BlockPlacementStorage::class,
 )]
-#[Operation('add',
+#[Operation('create',
   label: new TranslatableMarkup('Place a block'),
   description: new TranslatableMarkup('Places a block under a machine name the caller chooses, in a region of a theme, with the settings its plugin takes; a machine name already in use is refused.'),
   permission: self::PERMISSION,
@@ -57,12 +57,12 @@ final class BlockPlacementResource implements ResourceInterface {
    * Moving a block to another theme is not offered: the theme is held to
    * the one it is in.
    */
-  #[Operation('edit',
+  #[Operation('update',
     label: new TranslatableMarkup('Edit a placed block'),
     description: new TranslatableMarkup('Changes a placed block, named by its machine name: its label, region, weight, status, plugin settings and visibility. Its theme stays as it is.'),
     permission: self::PERMISSION,
   )]
-  public static function edit(BlockInterface $id): OperationContext {
+  public static function update(BlockInterface $id): OperationContext {
     return (new OperationContext(known: ['id' => (string) $id->id()]))
       ->withConstraint('theme', 'Choice', ['choices' => [$id->getTheme()]]);
   }
@@ -70,14 +70,14 @@ final class BlockPlacementResource implements ResourceInterface {
   /**
    * Removes a placed block, named by its machine name.
    */
-  #[Operation('remove',
+  #[Operation('delete',
     label: new TranslatableMarkup('Remove a placed block'),
     description: new TranslatableMarkup('Removes a placed block, named by its machine name, from its region.'),
     permission: self::PERMISSION,
     destructive: TRUE,
     deletes: TRUE,
   )]
-  public static function remove(BlockInterface $id): OperationContext {
+  public static function delete(BlockInterface $id): OperationContext {
     return new OperationContext(known: ['id' => (string) $id->id()]);
   }
 

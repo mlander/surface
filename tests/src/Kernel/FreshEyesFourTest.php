@@ -139,7 +139,7 @@ class FreshEyesFourTest extends DataSurfaceKernelTestBase {
     foreach (['headline', 'sessions', 'published'] as $key) {
       $this->assertStringNotContainsString(self::OWN, $read['properties'][OperationInputs::VALUES]['properties'][$key]['description'] ?? '', 'Nor does the read tool say it on ' . $key);
     }
-    $this->assertStringNotContainsString(self::ONCE, (string) $tools->getDefinition('data_surface:tool_test.cabinet:edit')->getDescription(), 'A static answer at the top marks nothing.');
+    $this->assertStringNotContainsString(self::ONCE, (string) $tools->getDefinition('data_surface:tool_test.cabinet:update')->getDescription(), 'A static answer at the top marks nothing.');
 
     $check = $tools->createInstance('data_surface:event.program:check')->getInputDefinition(OperationInputs::VALUES);
     $this->assertStringContainsString(self::OWN, (string) $check->getPropertyDefinition('fees')->getDescription(), 'A mark that is the key\'s own stays on the key.');

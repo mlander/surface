@@ -202,7 +202,7 @@ final class Resources implements ResourcesInterface {
    * The static access answers asked lately, by class, context and account kind.
    *
    * Keyed by what the context knows, since an answer may read its
-   * identity, and so bounded: an edit context per entity would otherwise
+   * identity, and so bounded: an update context per entity would otherwise
    * add one entry per entity for the life of a worker. The most recently
    * asked last.
    *

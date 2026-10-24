@@ -101,13 +101,13 @@ class BlockPlacementApiTest extends BrowserTestBase {
     $this->assertSame([...ResultDocument::KEYS, 'outputs', 'contract', 'created'], array_keys($placed));
     $location = $response->getHeaderLine('Location');
     $this->assertStringEndsWith('/surface-api/block.placement/doors_hero', $location);
-    $this->assertSame(['resource' => 'block.placement', 'operation' => 'edit', 'parameters' => ['id' => 'doors_hero']], $placed['created']);
+    $this->assertSame(['resource' => 'block.placement', 'operation' => 'update', 'parameters' => ['id' => 'doors_hero']], $placed['created']);
     $this->assertSame('sidebar_first', $this->block('doors_hero')->getRegion());
 
     // Read where it lives.
     $read = $this->send('GET', self::COLLECTION . '/doors_hero');
     $envelope = $this->decoded($read);
-    $this->assertSame('edit', $envelope['operation']);
+    $this->assertSame('update', $envelope['operation']);
     $this->assertSame('data_surface_examples:hero', $envelope['values']['settings']['component']);
     $tag = $read->getHeaderLine('ETag');
     $this->assertNotSame('', $tag);

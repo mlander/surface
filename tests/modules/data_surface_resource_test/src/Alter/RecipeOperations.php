@@ -18,7 +18,7 @@ final class RecipeOperations {
    */
   #[Operation('clone', label: 'Clone a recipe', of: RecipeResource::class, permission: 'cook in %kitchen', creates: TRUE)]
   public static function clone(string $kitchen, string $course, string $dish): OperationContext {
-    return RecipeResource::add($kitchen)
+    return RecipeResource::create($kitchen)
       ->withId('clone')
       ->withDefaults(['course' => $course, 'dish' => $dish]);
   }
@@ -28,7 +28,7 @@ final class RecipeOperations {
    */
   #[Operation('mislabeled', label: 'Mislabeled', of: RecipeResource::class)]
   public static function mislabeled(string $kitchen): OperationContext {
-    return RecipeResource::add($kitchen);
+    return RecipeResource::create($kitchen);
   }
 
 }

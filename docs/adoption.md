@@ -149,8 +149,8 @@ Storage settings are described but have no Field UI host.
 field type the UI offers, from `field.storage_settings.<type>` through
 `FieldStorageSettingsSchemaVariants`, so the field tools set and edit
 them: a string's `max_length` is `storage.settings.max_length` on
-`data_surface:field.instance:add`. `$has_data` is read where it bites:
-`FieldStorageResource`'s edit operation keeps cardinality from
+`data_surface:field.instance:create`. `$has_data` is read where it bites:
+`FieldStorageResource`'s update operation keeps cardinality from
 shrinking, and `FieldStorageStorage` refuses at prepare a settings change
 that alters the columns of a field with data. What is untouched is the
 field type's own `storageSettingsForm()`; address has no storage settings.
@@ -192,8 +192,8 @@ that deletes. Two resources use it. `data_surface_block` makes a placed
 block one, `block.placement`, its plugin choosing its settings
 ([A placed block is a resource](decisions.md#a-placed-block-is-a-resource)).
 `data_surface_demo_node_type` is the other: one resource,
-`NodeTypeResource`, with an add and an edit operation, the machine name
-locked on edit because the edit operation knows it, and its storage,
+`NodeTypeResource`, with a create and an update operation, the machine
+name locked on an update because the update operation knows it, and its storage,
 `NodeTypeStorage`, writing the node type entity plus its base field
 overrides (through the engine's `BaseFieldOverrideStorage`); two routes
 serve it through `DataSurfaceOperationForm`, with no form class.
@@ -287,7 +287,7 @@ prepare and commit is the callers that never render anything.
 
 `data_surface_tool` is the recorded experiment. Its field tools are
 generated from the field instance resource's operations
-(`data_surface:field.instance:add`, `:reuse` and `:edit`), and
+(`data_surface:field.instance:create`, `:reuse` and `:update`), and
 `data_surface:field.instance:reuse` answers the question Tool Belt's
 `field_add` answers, adding an existing storage's field to a bundle; the
 difference is the answer to "what may the settings be?". A field type
@@ -318,8 +318,8 @@ knew about. `data_surface_demo_node_type_tool` compares what happens to
 settings nobody told the tool about. `data_surface_demo_extras` adds two
 review settings to every content type, once through an alter of the
 content type resource and once through an ordinary form alter on core's
-content type form. `data_surface:node.type:add`, a tool generated from
-the content type resource's add operation that names no key of a content
+content type form. `data_surface:node.type:create`, a tool generated from
+the content type resource's create operation that names no key of a content
 type at all, advertises both (the deadline as the amount and unit a
 person says, the tags with their pattern) and holds every caller to
 them. The classic side is given the most a schema can say: the

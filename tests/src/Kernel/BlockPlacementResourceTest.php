@@ -152,7 +152,7 @@ class BlockPlacementResourceTest extends DataSurfaceKernelTestBase {
    * @return \Drupal\data_surface\DataSurfaceInterface
    *   The resource, built.
    */
-  protected function built(string $operation = 'add', array $parameters = []) {
+  protected function built(string $operation = 'create', array $parameters = []) {
     $resources = $this->container->get('data_surface.resources');
     return $resources->build(BlockPlacementResource::class, $resources->operation(BlockPlacementResource::class, $operation, $parameters));
   }
@@ -256,7 +256,7 @@ class BlockPlacementResourceTest extends DataSurfaceKernelTestBase {
   public function testEditHoldsTheTheme(): void {
     $block = Block::create(['settings' => ['label' => 'Branding']] + self::BRANDING);
     $block->save();
-    $built = $this->built('edit', ['id' => $block]);
+    $built = $this->built('update', ['id' => $block]);
     $this->assertSame(['stark' => 'Stark'], array_map('strval', $this->options()->resolve($built->getDefinition('theme'))->options));
     $values = $this->pipeline()->accept($built, ['theme' => 'claro', 'region' => 'pre_content'], self::BRANDING);
     $this->assertContains('theme', $this->pipeline()->validate($built, $values)->keys());
@@ -273,8 +273,8 @@ class BlockPlacementResourceTest extends DataSurfaceKernelTestBase {
     $resources = $this->container->get('data_surface.resources');
     $emitter = $this->container->get('data_surface.contract_emitter');
     $operations = $this->container->get('data_surface.resource_registry')->getOperations(BlockPlacementResource::class);
-    $context = $resources->operation(BlockPlacementResource::class, 'add');
-    $full = $emitter->emitFull($resources->buildStatic(BlockPlacementResource::class, $context), 'block.placement', 'add', $operations['add']->label, operation: $operations['add']->facts())->document;
+    $context = $resources->operation(BlockPlacementResource::class, 'create');
+    $full = $emitter->emitFull($resources->buildStatic(BlockPlacementResource::class, $context), 'block.placement', 'create', $operations['create']->label, operation: $operations['create']->facts())->document;
 
     $block = Block::create([
       'id' => 'spotlight',
@@ -288,12 +288,12 @@ class BlockPlacementResourceTest extends DataSurfaceKernelTestBase {
       ],
     ]);
     $block->save();
-    $edit = $resources->operation(BlockPlacementResource::class, 'edit', ['id' => $block]);
+    $edit = $resources->operation(BlockPlacementResource::class, 'update', ['id' => $block]);
     $built = $resources->build(BlockPlacementResource::class, $edit);
     $values = array_replace($built->getDefaultValues(), $resources->storage(BlockPlacementResource::class, $edit, $built)->load($built));
-    $now = $emitter->emit($built, $values, 'block.placement', 'edit', $operations['edit']->label, operation: $operations['edit']->facts())->document;
+    $now = $emitter->emit($built, $values, 'block.placement', 'update', $operations['update']->label, operation: $operations['update']->facts())->document;
 
-    foreach (['block.placement.add.full.json' => $full, 'block.placement.edit.now.json' => $now] as $file => $document) {
+    foreach (['block.placement.create.full.json' => $full, 'block.placement.update.now.json' => $now] as $file => $document) {
       if (getenv('DATA_SURFACE_CONTRACT_WRITE')) {
         @mkdir(self::FIXTURES, 0777, TRUE);
         file_put_contents(self::FIXTURES . $file, self::encode($document) . "\n");
@@ -305,7 +305,7 @@ class BlockPlacementResourceTest extends DataSurfaceKernelTestBase {
     $schema = json_decode(self::encode($full), TRUE)['schema'];
     $now = json_decode(self::encode($now), TRUE);
     $this->assertSame([
-      'id' => 'add',
+      'id' => 'create',
       'label' => 'Place a block',
       'description' => 'Places a block under a machine name the caller chooses, in a region of a theme, with the settings its plugin takes; a machine name already in use is refused.',
       'kind' => 'create',

@@ -278,7 +278,7 @@ trait DataSurfaceFieldTypeTrait {
    * The field being edited is found on the form object first. Field UI's
    * field settings form is an entity form over the field config, so the
    * object it is editing is the field itself — including the unsaved one
-   * an add operation is holding, which no id can load. Only when there
+   * a create operation is holding, which no id can load. Only when there
    * is no such form object, which is a programmatic caller rather than
    * Field UI, is the stored id loaded.
    *

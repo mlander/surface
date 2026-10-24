@@ -647,7 +647,7 @@ describe('the contract panel', () => {
   it('lists a collection, its bounds, and its item keys once, under a star', () => {
     render(
       <ContractPanel
-        contract={{ resource: 'cellar', operation: 'edit', label: null, stale: [], values: {}, schema: object({}) }}
+        contract={{ resource: 'cellar', operation: 'update', label: null, stale: [], values: {}, schema: object({}) }}
         schema={object({
           racks: {
             title: 'Spice racks',

@@ -32,7 +32,7 @@ use Drupal\data_surface_examples\Structure\VenueRoomStructure;
   storage: VenueStorage::class,
   access: VenueAccess::class,
 )]
-#[Operation('add',
+#[Operation('create',
   label: new TranslatableMarkup('Add a venue'),
   description: new TranslatableMarkup('Adds a venue under a machine name the caller chooses, with its capacity, address and rooms; a machine name already in use is refused.'),
   permission: self::ADMINISTER,
@@ -67,26 +67,26 @@ final class VenueResource implements ResourceInterface {
   /**
    * Edits a venue, named by its machine name, which stays as it is.
    */
-  #[Operation('edit',
+  #[Operation('update',
     label: new TranslatableMarkup('Edit a venue'),
     description: new TranslatableMarkup('Changes a venue, named by its machine name, which stays as it is: its name, capacity, address, rooms, weight and status.'),
     permission: self::ADMINISTER,
   )]
-  public static function edit(EventVenue $id): OperationContext {
+  public static function update(EventVenue $id): OperationContext {
     return new OperationContext(known: ['id' => (string) $id->id()]);
   }
 
   /**
    * Removes a venue, named by its machine name.
    */
-  #[Operation('remove',
+  #[Operation('delete',
     label: new TranslatableMarkup('Remove a venue'),
     description: new TranslatableMarkup('Removes a venue, named by its machine name, with its rooms.'),
     permission: self::ADMINISTER,
     destructive: TRUE,
     deletes: TRUE,
   )]
-  public static function remove(EventVenue $id): OperationContext {
+  public static function delete(EventVenue $id): OperationContext {
     return new OperationContext(known: ['id' => (string) $id->id()]);
   }
 

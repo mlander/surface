@@ -21,7 +21,7 @@ use Drupal\data_surface_resource_test\Storage\CellarStorage;
  * - racks: a list of spice racks, one to four, fewer in a small cellar.
  *   The rack has operations and an access class, so every item is
  *   invoked through the rack's operation for the cellar's operation (its
- *   `edit`, which takes the larder, when the cellar is edited; its
+ *   `update`, which takes the larder, when the cellar is edited; its
  *   default `browse`, ten spices at most, when one is added), and its
  *   access answers once for the whole list.
  * - shelves: a list of shelves, at most three, each with the shelf's own
@@ -35,17 +35,17 @@ final class CellarResource implements ResourceInterface {
   /**
    * A new cellar.
    */
-  #[Operation('add', label: 'Add a cellar', permission: 'keep a larder', creates: TRUE)]
-  public static function add(): OperationContext {
-    return new OperationContext('add', creates: TRUE);
+  #[Operation('create', label: 'Add a cellar', permission: 'keep a larder', creates: TRUE)]
+  public static function create(): OperationContext {
+    return new OperationContext('create', creates: TRUE);
   }
 
   /**
    * An existing cellar.
    */
-  #[Operation('edit', label: 'Edit a cellar', permission: 'keep a larder')]
-  public static function edit(string $larder): OperationContext {
-    return new OperationContext('edit', known: ['larder' => $larder]);
+  #[Operation('update', label: 'Edit a cellar', permission: 'keep a larder')]
+  public static function update(string $larder): OperationContext {
+    return new OperationContext('update', known: ['larder' => $larder]);
   }
 
   /**

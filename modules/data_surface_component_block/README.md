@@ -117,14 +117,14 @@ component or out of their bounds, and a component a slot does not
 expect, naming the ones it does:
 
 ```bash
-drush tool:run data_surface:block.placement:edit:read --uid=1 --input='{"id":"data_surface_examples_spotlight"}'
+drush tool:run data_surface:block.placement:update:read --uid=1 --input='{"id":"data_surface_examples_spotlight"}'
 ```
 
 This module needs no resource of its own for it, and does not depend on
 `data_surface_block`: until 2026-10-23 it declared a stop-gap,
 `block.placed_component`, which the general resource replaced.
 
-What was decided, and what is open (the add form without JavaScript, a
+What was decided, and what is open (the create form without JavaScript, a
 list of components on the block form): [A block embeds a component
 through its
 structure](../../docs/decisions.md#a-block-embeds-a-component-through-its-structure),
@@ -146,7 +146,7 @@ resource](../../docs/decisions.md#a-placed-block-is-a-resource).
 | --- | --- |
 | `Kernel\ComponentBlockTest` | The structure: three keys, no component required, one variant per component the site has at the props and again at the slots; both documents pinned whole for the four components the examples ship, and the hero's narrowed slot pinned exactly; the plugin's structure is no tool; the render array, the props that hold nothing left out, nothing for no component or one the site lacks; each slot rendered, text escaped, one component, a list, a section holding a card, the slots that hold nothing left out; the dependency on every embedded component's module. |
 | `Kernel\ComponentSlotsTest` | What a slot expects, read back from the metadata by id, by tag, empty and absent; the kinds that follow; the depth cap, built and in the full schema; each expectation a refusal: a component outside the list, a tag mismatch, too many items, a list where one at most is allowed. |
-| `Kernel\BlockPlacementToolsTest` | A component block placed, its props changed, read and removed through the placement resource's tools, props of another component refused by path; a section holding a card placed through add, and a hero in the hero's actions refused naming the call to action. |
+| `Kernel\BlockPlacementToolsTest` | A component block placed, its props changed, read and removed through the placement resource's tools, props of another component refused by path; a section holding a card placed through create, and a hero in the hero's actions refused naming the call to action. |
 | `Kernel\ContractBaselineTest` | The structure's full schema against its baseline. |
 | `Functional\ComponentBlockPlacementTest` | The block form without JavaScript: the components offered, a block with no component placed and rendering nothing, a component chosen and saved at once refused for the props it requires, and a placed block's form drawing its component's props, saving a change, refusing an out of bounds one and rendering. |
 | `FunctionalJavascript\ComponentBlockAjaxTest` | The block form in a browser: choosing a component draws its props over AJAX, another swaps them, and the block saved renders the card with the props and slot it holds; a section's slot switched to one component draws it, a nested hero swapped for a card swaps their props, and the section saved renders the card inside it. |

@@ -103,7 +103,7 @@ build(FieldInstanceResource::class, $context):
      the child's access class then make it open, locked (the parent's
      key locked) or omitted (the key left out):
        attach('storage', FieldStorageResource::class)
-         -> build(FieldStorageResource::class, <its add operation, by id>)
+         -> build(FieldStorageResource::class, <its create operation, by id>)
        attach('compliance', ComplianceStructure::class, reads: ['capacity' => 'seats'])
          -> its ports checked against the parent's keys (assertWiring)
          -> what reads a port recorded at its path, on the parent's key
@@ -153,23 +153,23 @@ pipeline.
 
 ## One request: editing an existing field
 
-The derived tool `data_surface:field.instance:edit`, given
+The derived tool `data_surface:field.instance:update`, given
 `field: node.article.field_address`:
 
 ```
 ResourceOperationTool
-  $context = $resources->operation(FieldInstanceResource::class, 'edit',
+  $context = $resources->operation(FieldInstanceResource::class, 'update',
                                   ['field' => 'node.article.field_address']);
       OperationArguments loads the FieldConfig: FieldConfigInterface is
       satisfied by one entity type's class
-      FieldInstanceResource::edit($field) returns
-        id         edit, creates FALSE
+      FieldInstanceResource::update($field) returns
+        id         update, creates FALSE
         known      entity_type_id=node, bundle=article,
                    field_name=field_address, field_type=address
-        children   storage  => FieldStorageResource::edit($storage)
+        children   storage  => FieldStorageResource::update($storage)
                                  known entity_type_id, field_name, field_type
                                  cardinality => Range(min: current), if it has data
-                   settings => edit, knowing entity_type_id, bundle, field_name
+                   settings => update, knowing entity_type_id, bundle, field_name
 
   $access = $resources->access(FieldInstanceResource::class, $context);
       'administer node fields', then FieldInstanceAccess (a locked
@@ -182,7 +182,7 @@ Step 1   FieldInstanceResource::defineInputs(), static
            attach storage; attachVariants settings on field_type
 Step 2   no alter in this repository names the field resource
 Step 4   all four identity keys are known -> locked
-           (on the add tool only two are known -> two stay open)
+           (on the create tool only two are known -> two stay open)
 Step 5   bundleOfEntityType() watches entity_type_id -> an edge
 Step 6   storage built with ITS context: field_type locked to address,
            cardinality narrowed right there if the field has data; its
@@ -206,10 +206,10 @@ Step 6   storage built with ITS context: field_type locked to address,
       commit   the storage first, then the field, then the settings
 ```
 
-## The same resource from the add tool
+## The same resource from the create tool
 
 ```
-$context = FieldInstanceResource::add('node', 'article');   knows two keys
+$context = FieldInstanceResource::create('node', 'article');   knows two keys
 $built = $resources->build(FieldInstanceResource::class, $context);
 ```
 

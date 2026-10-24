@@ -1,13 +1,13 @@
-# The larder's edit operation as a route, served by the generic form, so
+# The larder's update operation as a route, served by the generic form, so
 # a test reads what the form draws for a child its access locked or left
 # out.
-data_surface_resource_test.larder.edit:
+data_surface_resource_test.larder.update:
   path: '/surface-test/larder/{larder}'
   defaults:
     _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
     _title: 'Edit a larder'
     _data_surface_resource: 'Drupal\data_surface_resource_test\Resource\Larder\LarderResource'
-    _data_surface_operation: 'edit'
+    _data_surface_operation: 'update'
   requirements:
     _data_surface_operation_access: 'TRUE'
 
@@ -22,15 +22,15 @@ data_surface_resource_test.larder.stock:
   requirements:
     _data_surface_operation_access: 'TRUE'
 
-# The cellar's edit operation, served by the generic form: two
+# The cellar's update operation, served by the generic form: two
 # collections, each with Add another and Remove, over AJAX.
-data_surface_resource_test.cellar.edit:
+data_surface_resource_test.cellar.update:
   path: '/surface-test/cellar/{larder}'
   defaults:
     _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
     _title: 'Edit a cellar'
     _data_surface_resource: 'Drupal\data_surface_resource_test\Resource\Cellar\CellarResource'
-    _data_surface_operation: 'edit'
+    _data_surface_operation: 'update'
   requirements:
     _data_surface_operation_access: 'TRUE'
 
@@ -142,15 +142,15 @@ data_surface_resource_test.opening_hours:
   requirements:
     _data_surface_operation_access: 'TRUE'
 
-# The storeroom's edit operation, served by the generic form: a list of
+# The storeroom's update operation, served by the generic form: a list of
 # aisles, each with a list of shelves of its own.
-data_surface_resource_test.storeroom.edit:
+data_surface_resource_test.storeroom.update:
   path: '/surface-test/storeroom'
   defaults:
     _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
     _title: 'Edit the storeroom'
     _data_surface_resource: 'Drupal\data_surface_resource_test\Resource\Storeroom\StoreroomResource'
-    _data_surface_operation: 'edit'
+    _data_surface_operation: 'update'
   requirements:
     _data_surface_operation_access: 'TRUE'
 

@@ -1,32 +1,32 @@
 # Each route is one operation of the placement resource, served by the
 # generic operation form, whose route parameters are the operation's: the
-# edit and remove routes' {id} is upcast to the block the operations take.
+# update and delete routes' {id} is upcast to the block the operations take.
 #
 # One requirement, the operation's: its permission, "administer blocks",
 # the block layout's own. The form, the tool and the API read the same
-# answer. The remove route draws a confirmation, since a delete takes no
+# answer. The delete route draws a confirmation, since a delete takes no
 # values. What stays this module's is the cosmetic layer: the message,
 # and the block layout of the block's theme to return to.
 #
 # Decision: see docs/decisions.md#a-placed-block-is-a-resource.
-data_surface_block.add:
+data_surface_block.create:
   path: '/admin/structure/block/surface/add'
   defaults:
     _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
     _title: 'Place a block (resource)'
     _data_surface_resource: 'Drupal\data_surface_block\Resource\BlockPlacementResource'
-    _data_surface_operation: 'add'
+    _data_surface_operation: 'create'
     _data_surface_cosmetics: 'data_surface_block.form_cosmetics'
   requirements:
     _data_surface_operation_access: 'TRUE'
 
-data_surface_block.edit:
+data_surface_block.update:
   path: '/admin/structure/block/surface/{id}'
   defaults:
     _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
     _title: 'Edit a placed block (resource)'
     _data_surface_resource: 'Drupal\data_surface_block\Resource\BlockPlacementResource'
-    _data_surface_operation: 'edit'
+    _data_surface_operation: 'update'
     _data_surface_cosmetics: 'data_surface_block.form_cosmetics'
   requirements:
     _data_surface_operation_access: 'TRUE'
@@ -35,13 +35,13 @@ data_surface_block.edit:
       id:
         type: 'entity:block'
 
-data_surface_block.remove:
-  path: '/admin/structure/block/surface/{id}/remove'
+data_surface_block.delete:
+  path: '/admin/structure/block/surface/{id}/delete'
   defaults:
     _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
     _title: 'Remove a placed block (resource)'
     _data_surface_resource: 'Drupal\data_surface_block\Resource\BlockPlacementResource'
-    _data_surface_operation: 'remove'
+    _data_surface_operation: 'delete'
     _data_surface_cosmetics: 'data_surface_block.form_cosmetics'
   requirements:
     _data_surface_operation_access: 'TRUE'

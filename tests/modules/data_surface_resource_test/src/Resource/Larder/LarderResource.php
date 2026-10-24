@@ -18,10 +18,10 @@ use Drupal\data_surface_resource_test\Storage\LarderStorage;
  * operations of its own. Which one each rack is invoked through is the
  * resolution order the build step applies:
  * - editing the larder, the rack at `rack` is invoked through the rack's
- *   own `edit`, by operation, and the one at `spare_rack` through
- *   `restock`, which the larder's edit operation names, handing it a
+ *   own `update`, by operation, and the one at `spare_rack` through
+ *   `restock`, which the larder's update operation names, handing it a
  *   shelf;
- * - adding a larder, neither is named and the rack has no `add`, so both
+ * - adding a larder, neither is named and the rack has no `create`, so both
  *   are invoked through the rack's default, `browse`;
  * - stocking a larder, the larder hands both racks a context whole, built
  *   by calling the rack's own operations: no operation of the rack's is
@@ -36,9 +36,9 @@ final class LarderResource implements ResourceInterface {
   /**
    * A new larder.
    */
-  #[Operation('add', label: 'Add a larder', permission: 'keep a larder', creates: TRUE)]
-  public static function add(): OperationContext {
-    return new OperationContext('add', creates: TRUE);
+  #[Operation('create', label: 'Add a larder', permission: 'keep a larder', creates: TRUE)]
+  public static function create(): OperationContext {
+    return new OperationContext('create', creates: TRUE);
   }
 
   /**
@@ -47,9 +47,9 @@ final class LarderResource implements ResourceInterface {
    * The shelf is handed in capitals, and the rack's restock operation
    * knows it in lower case: the child's own known identity wins.
    */
-  #[Operation('edit', label: 'Edit a larder', permission: 'keep a larder')]
-  public static function edit(string $larder): OperationContext {
-    return (new OperationContext('edit', known: ['larder' => $larder]))
+  #[Operation('update', label: 'Edit a larder', permission: 'keep a larder')]
+  public static function update(string $larder): OperationContext {
+    return (new OperationContext('update', known: ['larder' => $larder]))
       ->withChild('spare_rack', operation: 'restock', known: ['shelf' => 'TOP']);
   }
 

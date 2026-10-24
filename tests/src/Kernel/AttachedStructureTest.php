@@ -70,13 +70,13 @@ class AttachedStructureTest extends DataSurfaceKernelTestBase {
    * Builds the pantry.
    *
    * @param \Drupal\data_surface\Resource\OperationContext|null $context
-   *   The context, or NULL for the add operation.
+   *   The context, or NULL for the create operation.
    *
    * @return \Drupal\data_surface\DataSurfaceInterface
    *   The pantry.
    */
   protected function pantry(?OperationContext $context = NULL): DataSurfaceInterface {
-    return $this->resources()->build(PantryResource::class, $context ?? PantryResource::add());
+    return $this->resources()->build(PantryResource::class, $context ?? PantryResource::create());
   }
 
   /**
@@ -467,7 +467,7 @@ class AttachedStructureTest extends DataSurfaceKernelTestBase {
     ]);
     $state->set(PantryStorage::key('larder', PantryLabelStorage::PART), ['values' => ['text' => 'Larder']]);
 
-    $context = PantryResource::edit('larder');
+    $context = PantryResource::update('larder');
     $surface = $this->pantry($context);
     $storage = $this->resources()->storage(PantryResource::class, $context, $surface);
     $loaded = $storage->load($surface);
@@ -511,7 +511,7 @@ class AttachedStructureTest extends DataSurfaceKernelTestBase {
    * context when it is committed, after the pantry.
    */
   public function testChildLearnsCreatedParentsIdentity(): void {
-    $context = PantryResource::add();
+    $context = PantryResource::create();
     $surface = $this->pantry($context);
     $storage = $this->resources()->storage(PantryResource::class, $context, $surface);
     $this->assertSame([], $storage->load($surface));

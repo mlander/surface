@@ -1,19 +1,19 @@
 {
     "resource": "event.venue",
-    "operation": "edit",
-    "label": "Edit a venue",
+    "operation": "create",
+    "label": "Add a venue",
     "schema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
-        "title": "Edit a venue",
-        "description": "Changes a venue, named by its machine name, which stays as it is: its name, capacity, address, rooms, weight and status.",
+        "title": "Add a venue",
+        "description": "Adds a venue under a machine name the caller chooses, with its capacity, address and rooms; a machine name already in use is refused.",
         "x-surface": {
             "contract": 3,
             "operation": {
-                "id": "edit",
-                "label": "Edit a venue",
-                "description": "Changes a venue, named by its machine name, which stays as it is: its name, capacity, address, rooms, weight and status.",
-                "kind": "update",
-                "creates": false,
+                "id": "create",
+                "label": "Add a venue",
+                "description": "Adds a venue under a machine name the caller chooses, with its capacity, address and rooms; a machine name already in use is refused.",
+                "kind": "create",
+                "creates": true,
                 "destructive": false,
                 "idempotent": true
             },
@@ -36,11 +36,8 @@
                 "type": "string",
                 "pattern": "^[a-z0-9_]+$",
                 "maxLength": 32,
-                "default": "library",
-                "readOnly": true,
-                "const": "library",
                 "x-surface": {
-                    "locked": true,
+                    "locked": false,
                     "dependsOn": [],
                     "patternMessage": "The machine name may hold only lowercase letters, numbers and underscores."
                 }

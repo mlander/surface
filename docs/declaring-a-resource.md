@@ -324,7 +324,7 @@ whatever a plugin uses is never generated as a tool of its own.
 
 ## Operations and identity
 
-A context's **id** is either an operation id (`add`, `edit`, `reuse`)
+A context's **id** is either an operation id (`create`, `update`, `reuse`)
 or a host's own verb (`configure`, `field_settings`). It **never
 carries identity**. An id that names the thing it acts on is a
 vocabulary nobody can enumerate, and a discovery document cannot
@@ -335,7 +335,7 @@ which of them it knows. An identity key the context knows is locked to
 that value; one it does not know stays open. That is the whole
 difference between add and edit, and it is why an operation, a route and
 a tool address a resource the same way: by its id and an operation id,
-`data_surface:node.type:edit`, with the operation's parameters saying
+`data_surface:node.type:update`, with the operation's parameters saying
 which content type.
 
 ## Names
@@ -498,8 +498,8 @@ move the value. `DataSurfaceInterface::isLocked()` answers it.
 
 Locking is context rather than an intrinsic property of a definition,
 which is why it lives on the data surface rather than on the
-definition: the same machine name key is locked in the edit operation
-and open in the add operation, and one class declares both.
+definition: the same machine name key is locked in the update operation
+and open in the create operation, and one class declares both.
 
 ## Secrets
 

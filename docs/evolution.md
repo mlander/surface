@@ -291,7 +291,7 @@ never more lenient than it can show. A required key added with no
 default is judged by the kind of operation the document describes
 (`x-surface.operation.kind`): a note in an update or a read, breaking in
 a create and in a structure described alone, so one declaration can be a
-note on its `configure` and breaking on its `add`, each reported on its
+note on its `configure` and breaking on its `create`, each reported on its
 own document. A change to a key's union of its
 variants is a note, since the conditionals that state each variant are
 judged themselves, and so is one to `$id`, `rules` or `within`, which

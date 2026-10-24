@@ -4,7 +4,7 @@ Tools generated from resources: one per operation of every resource that
 can be asked on its own, `data_surface:<resource>:<operation>`, and a
 read tool beside each that changes a thing that exists,
 `data_surface:<resource>:<operation>:read`. For a
-field that is `data_surface:field.instance:add`, `:reuse` and `:edit`,
+field that is `data_surface:field.instance:create`, `:reuse` and `:update`,
 whose `settings` are the field type's own settings variant where it has
 one, so the A/B against the free-form Tool Belt tools is a fair one: the
 same question, "what may the settings be?", answered from a contract
@@ -21,8 +21,8 @@ document. What a caller sends moved:
 | Was | Is | Inputs |
 | --- | --- | --- |
 | `data_surface:field_add` (an existing storage) | `data_surface:field.instance:reuse` | `storage` (`<entity type>.<field name>`), `bundle`, `values` |
-| — (a new storage) | `data_surface:field.instance:add` | `entity_type_id`, `bundle`, `values` (with `field_type`, `field_name`, `storage`) |
-| `data_surface:field_update` | `data_surface:field.instance:edit` | `field` (`<entity type>.<bundle>.<field name>`), `values` |
+| — (a new storage) | `data_surface:field.instance:create` | `entity_type_id`, `bundle`, `values` (with `field_type`, `field_name`, `storage`) |
+| `data_surface:field_update` | `data_surface:field.instance:update` | `field` (`<entity type>.<bundle>.<field name>`), `values` |
 
 `values` holds what used to be top-level inputs (`label`,
 `description`, `required`, `settings`) beside `storage` (cardinality,
@@ -42,7 +42,7 @@ default settings where their type fits, and nothing more. The storage
 settings are the same kind of variants on the storage, described by
 `field.storage_settings.<field type>` through
 `FieldStorageSettingsSchemaVariants`. The tools place a new field on the
-bundle's default form and view displays, as the old add tool did.
+bundle's default form and view displays, as the old field add tool did.
 
 ## What it shows
 
@@ -64,15 +64,15 @@ what the retired ones did.
 Five pieces:
 
 - `Resource\FieldInstanceResource`: a field on a bundle, in the new
-  spelling, with `add`, `reuse` and `edit` operations, a storage class
+  spelling, with `create`, `reuse` and `update` operations, a storage class
   and an access class. It attaches `Resource\FieldStorageResource` at
   `storage` (its field type, cardinality, translatability and storage
   settings, with storage of its own, committed before the field), and its
   `settings` are variants chosen by `field_type`: the settings class a
   field type's module marks with `#[Variant]` (the address module's, and
   the test module's gated one), and for every other field type the one
-  `FieldSettingsSchemaVariants` derives. `reuse($storage, $bundle)` is an add for the
-  field and an edit for its storage; the storage's edit operation knows
+  `FieldSettingsSchemaVariants` derives. `reuse($storage, $bundle)` is a create for the
+  field and an update for its storage; the storage's update operation knows
   the field type, which locks its settings to that type's, and refuses
   shrinking its cardinality once the field has data. Adding a field
   leaves the type open on the storage as on the field: a caller setting
@@ -87,21 +87,21 @@ Five pieces:
   one, its settings.
 - The generated tools: `Plugin\Derivative\ResourceOperationToolDeriver`
   and `Plugin\tool\Tool\ResourceOperationTool`, with `OperationInputs`
-  describing them. Here that is `data_surface:field.instance:add`,
-  `:reuse` and `:edit` and `data_surface:field.storage:edit`; the node
-  type demo adds `data_surface:node.type:add` and `:edit`, and
-  `data_surface_entity` one `add` and one `edit` per content entity
-  bundle with a form display, `data_surface:entity.content:node.page:add`. The inputs
+  describing them. Here that is `data_surface:field.instance:create`,
+  `:reuse` and `:update` and `data_surface:field.storage:update`; the node
+  type demo adds `data_surface:node.type:create` and `:update`, and
+  `data_surface_entity` one `create` and one `update` per content entity
+  bundle with a form display, `data_surface:entity.content:node.page:create`. The inputs
   are the operation's parameters (an entity parameter as its id; a
   scalar one named for a resource key described as that key), the
   resource's keys the operation does not know as `values`, and
   `dry_run`; see `docs/resources.md`, Tools. Two rules leave an operation
-  out: `field.storage`'s `add` asks `administer %entity_type_id fields`
+  out: `field.storage`'s `create` asks `administer %entity_type_id fields`
   and no parameter supplies the entity type, so it could never be
   allowed and is only ever a field's; and a structure a plugin names
   with `#[UsesStructure]` is configured through the plugin's host. Only
   a resource that names its storage is a tool. Beside the
-  edit tools is a read tool, `Plugin\tool\Tool\ResourceOperationReadTool`
+  update tools is a read tool, `Plugin\tool\Tool\ResourceOperationReadTool`
   (below).
 - `FieldSettingsSchemaVariants`: a service tagged
   `data_surface.derived_variants` that adds the field instance
@@ -132,14 +132,14 @@ before merging them over the stored ones, so a setting can be set but
 never cleared. Here the pipeline merges the payload over what storage
 loads, key by key and at every depth, and a null is a value like any
 other. Sending `{"label": "Address", "settings": {"field_overrides":
-{"organization": null}}}` to the edit tool removes that one override and
+{"organization": null}}}` to the update tool removes that one override and
 leaves the rest alone, which is what a caller correcting one mistake
 actually wants to say. A key left out keeps what is stored; a null
 clears it ([decision](../../docs/decisions.md#absent-keeps-null-clears)).
 A secret is the one exception: it is optional, a null or a key left out
 keeps the stored secret, and only the clear marker
 (`@data_surface:clear-secret`) empties it. The label could be left out
-too: the edit tool requires no key, and a required one left out keeps
+too: the update tool requires no key, and a required one left out keeps
 what is stored, which the pipeline judges (below).
 
 ## What a tool answers
@@ -230,7 +230,7 @@ that names its kind (`Create:`, `Update:`, `Read only:` or `Delete:`). A tool fo
 key in `values` exactly when the resource requires it, and lists the
 declared defaults. One for an operation that changes what exists, such
 as `data_surface:registration.step3:configure` or
-`data_surface:field.instance:edit`, requires no key and lists no
+`data_surface:field.instance:update`, requires no key and lists no
 default at all, because a listing is cached by its clients and a key
 left out keeps its current value: each key the resource requires says
 "Required; a value already stored stands when left out.", and the
@@ -276,16 +276,16 @@ base plugin id:
 
 | Read tool | Inputs |
 | --- | --- |
-| `data_surface:node.type:edit:read` | `type` |
-| `data_surface:field.instance:edit:read` | `field` |
-| `data_surface:field.storage:edit:read` | `storage` |
+| `data_surface:node.type:update:read` | `type` |
+| `data_surface:field.instance:update:read` | `field` |
+| `data_surface:field.storage:update:read` | `storage` |
 | `data_surface:registration.step1:configure:read`, `step2`, `step3` | nothing |
-| `data_surface:entity.content:<entity type>.<bundle>:edit:read`, with `data_surface_entity` | `id` |
+| `data_surface:entity.content:<entity type>.<bundle>:update:read`, with `data_surface_entity` | `id` |
 
 - **Which operations.** One that needs nothing and whose context does
   not create, and one that needs a subject and whose parameters name one
   thing whole: a single entity, or a scalar for every identity key.
-  `node.type:add`, `field.instance:add` and `field.instance:reuse`
+  `node.type:create`, `field.instance:create` and `field.instance:reuse`
   create, and have none. `ResourceCatalog::reads()` decides, and the
   catalog lists it ("Read on its own"); a context that turns out to
   create is refused when the read runs.
@@ -323,7 +323,7 @@ base plugin id:
 ```bash
 drush tool:info data_surface:registration.step3:configure:read
 drush tool:run data_surface:registration.step3:configure:read --uid=1
-drush tool:run data_surface:node.type:edit:read --uid=1 --input=type=page
+drush tool:run data_surface:node.type:update:read --uid=1 --input=type=page
 ```
 
 `tool:info` lists the `values` output without its properties; Drush
@@ -354,7 +354,7 @@ The routes of `data_surface_examples` name it.
 
 | Test | Covers |
 | --- | --- |
-| `Kernel\FieldToolsTest` | The three field tools end to end: add, reuse, edit, dry run, the schema refusing at prepare, a `string` field added and edited through settings derived from its schema, its storage's `max_length` set on add and changed by `data_surface:field.storage:edit`, a storage type other than the field's refused, cardinality and columns kept once the field has data, access. |
+| `Kernel\FieldToolsTest` | The three field tools end to end: add, reuse, edit, dry run, the schema refusing at prepare, a `string` field added and edited through settings derived from its schema, its storage's `max_length` set on add and changed by `data_surface:field.storage:update`, a storage type other than the field's refused, cardinality and columns kept once the field has data, access. |
 | `Kernel\FieldToolsAccessTest` | The field type's own access class refusing both the tools and its Field UI host. |
 | `Kernel\FieldToolsComparisonTest` | The two JSON Schema documents in `COMPARISON.md`, against what the code emits, and parity with the retired tools. |
 | `Kernel\FieldInstanceResourceTest` | The three operations, the storage child (its keys, its locked type) and its has-data constraint, the settings variants, starting values. |
@@ -380,11 +380,11 @@ reads both as the tool's annotations. None of this module's own
 operations says either, so every write tool here is a `Write` that
 destroys nothing, and the access answer has to be the real one, and a
 read tool asks the same question. A delete, such as
-`data_surface:block.placement:remove` from `data_surface_block`, is a
+`data_surface:block.placement:delete` from `data_surface_block`, is a
 destructive `Write` whose inputs are its parameters and `dry_run`, with
 no `values` and no read tool beside it. It is the operation's permission, `administer %entity_type_id
 fields`, named from the identity the operation's context knows (the
-entity type the add tool is given, or the one the storage or field it
+entity type the create tool is given, or the one the storage or field it
 names is on), then `FieldInstanceAccess`, which refuses a locked
 storage, then the access class of the settings variant the field type
 chose, which may refuse (the gated test field type does). A tool asks a
@@ -404,7 +404,7 @@ id ...", not as access denied, which reads as final.
 The operation's permission is also the tool's declared permission
 (`ToolDefinition::getPermission()`), so `tool:info` prints it and the
 Tool API checks it before reading any input, when it is one permission
-as written: `data_surface:node.type:add` declares the node type demo's
+as written: `data_surface:node.type:create` declares the node type demo's
 permission. A permission with a `%key` placeholder, as the field tools'
 `administer %entity_type_id fields`, names a different permission for
 each call, and the Tool API has no place for one that depends on the

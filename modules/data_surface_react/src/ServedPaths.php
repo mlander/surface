@@ -37,10 +37,11 @@ use Symfony\Component\HttpFoundation\Request;
  * - `GET .../schema` the full schema of the operation `GET` serves, and
  *   `POST .../schema` the schema for the values sent, a query.
  *
- * The default of a kind at a path is the operation named for it (`add`
- * for a create; `configure` or `edit` for an update; `read` or `list` for
- * a read; `remove` or `delete` for a delete),
- * or else the only operation of that kind there; a read is a default only
+ * The default of a kind at a path is the operation whose id is the kind's
+ * standard one (`create`, `update`, `read` or `list`, `delete`), or
+ * `configure` for an update on a singleton
+ * (OperationDefinition::defaultIds()), or else the only operation of
+ * that kind there; a read is a default only
  * where no update is. Any other operation is a custom method on the path
  * of what it addresses: `GET .../{x}:{operation}` its envelope, a run of
  * it `PATCH .../{x}:{operation}` for an update and `POST` for any other,
@@ -94,15 +95,6 @@ final class ServedPaths {
    */
   public const ITEM = 'item';
 
-  /**
-   * The operation ids that are a kind's default by their name.
-   */
-  public const NAMED = [
-    OperationDefinition::CREATE => ['add'],
-    OperationDefinition::UPDATE => ['configure', 'edit'],
-    OperationDefinition::READ => ['read', 'list'],
-    OperationDefinition::DELETE => ['remove', 'delete'],
-  ];
 
   /**
    * The custom read method every resource path answers: a reference's lookup.
@@ -115,6 +107,18 @@ final class ServedPaths {
    * docs/decisions.md#a-reference-is-an-id-with-a-list-the-site-decides-listed-or-looked-up.
    */
   public const LOOKUP = 'lookup';
+
+  /**
+   * The operation ids contract 2's paths carried, by the id now theirs.
+   *
+   * Decision: see
+   * docs/decisions.md#the-ids-are-the-standard-five-the-labels-are-drupals.
+   */
+  public const CONTRACT_2_IDS = [
+    'add' => 'create',
+    'edit' => 'update',
+    'remove' => 'delete',
+  ];
 
   /**
    * The suffixes of a contract 2 path after `{resource}/{operation}`.
@@ -180,8 +184,14 @@ final class ServedPaths {
       $segments[] = $last;
     }
     $operations = $this->registry->getOperations($definition->name());
-    if ($named === NULL && $segments !== [] && isset($operations[$segments[0]])) {
-      throw $this->gone($request, $definition, $operations[$segments[0]], $segments, $schema);
+    // Contract 2 named an operation by its id then, which may be one the
+    // module retired since: `.../node.type/edit` is gone as `update`'s.
+    $gone = NULL;
+    if ($named === NULL && $segments !== []) {
+      $gone = $operations[$segments[0]] ?? $operations[self::CONTRACT_2_IDS[$segments[0]] ?? ''] ?? NULL;
+    }
+    if ($gone !== NULL) {
+      throw $this->gone($request, $definition, $gone, $segments, $schema);
     }
     if ($segments !== [] && $definition->identity === []) {
       throw $this->notFound($this->t('The @resource resource is a singleton: its path carries no identity.', ['@resource' => $definition->id]));
@@ -403,9 +413,9 @@ final class ServedPaths {
     }
     $defaults = [];
     foreach ($placed as $placement => $kinds) {
-      foreach (array_keys(self::NAMED) as $kind) {
+      foreach (array_keys(OperationDefinition::STANDARD_IDS) as $kind) {
         $candidates = $kinds[$kind] ?? [];
-        $named = array_values(array_intersect($candidates, self::NAMED[$kind]));
+        $named = array_values(array_intersect($candidates, OperationDefinition::defaultIds($kind, $definition->identity === [])));
         $default = match (TRUE) {
           count($named) === 1 => $named[0],
           $named === [] && count($candidates) === 1 => $candidates[0],

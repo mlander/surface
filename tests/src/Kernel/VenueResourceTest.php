@@ -164,19 +164,19 @@ class VenueResourceTest extends DataSurfaceKernelTestBase {
     $resources = $this->container->get('data_surface.resources');
     $keys = static fn (string $operation, array $arguments = []): array => $resources->build(VenueResource::class, $resources->operation(VenueResource::class, $operation, $arguments))->getDefinitions()->names();
     $outputs = static fn (string $operation): array => $resources->build(VenueResource::class, $resources->operation(VenueResource::class, $operation))->getOutputDefinitions()->names();
-    $this->assertSame(['label', 'id', 'capacity', 'address', 'rooms', 'weight', 'status'], $keys('add'));
-    $this->assertSame(['label', 'id', 'capacity', 'address', 'rooms', 'weight', 'status'], $keys('edit', ['id' => 'riverside']));
+    $this->assertSame(['label', 'id', 'capacity', 'address', 'rooms', 'weight', 'status'], $keys('create'));
+    $this->assertSame(['label', 'id', 'capacity', 'address', 'rooms', 'weight', 'status'], $keys('update', ['id' => 'riverside']));
     $this->assertSame(['offset', 'limit', 'status'], $keys('list'));
     $this->assertSame(['venues'], $keys('reorder'));
-    $this->assertSame([], $outputs('add'));
+    $this->assertSame([], $outputs('create'));
     $this->assertSame(['items', 'total'], $outputs('list'));
     $this->assertTrue($resources->build(VenueResource::class, $resources->operation(VenueResource::class, 'list'))->changesNothing());
-    $edit = $resources->build(VenueResource::class, $resources->operation(VenueResource::class, 'edit', ['id' => 'riverside']));
+    $edit = $resources->build(VenueResource::class, $resources->operation(VenueResource::class, 'update', ['id' => 'riverside']));
     $this->assertTrue($edit->isLocked('id'), 'Edit knows the venue.');
 
     $registry = $this->container->get('data_surface.resource_registry');
     $this->assertSame(['create', 'read', 'update', 'update', 'delete'], array_map(static fn ($operation): string => $operation->kind(), array_values($registry->getOperations(VenueResource::class))));
-    $this->assertSame(['add', 'list', 'reorder', 'edit', 'remove'], array_keys($registry->getOperations(VenueResource::class)));
+    $this->assertSame(['create', 'list', 'reorder', 'update', 'delete'], array_keys($registry->getOperations(VenueResource::class)));
   }
 
   /**
@@ -186,7 +186,7 @@ class VenueResourceTest extends DataSurfaceKernelTestBase {
     $resources = $this->container->get('data_surface.resources');
     $emitter = $this->container->get('data_surface.contract_emitter');
     $registry = $this->container->get('data_surface.resource_registry');
-    $asked = ['add' => [], 'edit' => ['id' => 'library'], 'list' => [], 'reorder' => []];
+    $asked = ['create' => [], 'update' => ['id' => 'library'], 'list' => [], 'reorder' => []];
     foreach ($asked as $id => $arguments) {
       $operation = $registry->getOperation(VenueResource::class, $id);
       $context = $resources->operation(VenueResource::class, $id, $arguments);
@@ -216,7 +216,7 @@ class VenueResourceTest extends DataSurfaceKernelTestBase {
     // What the documents say of each: the edit's machine name locked to
     // the venue, its values what is stored; the listing's values its
     // defaults; the reorder's values every venue's id and weight.
-    $edit = json_decode((string) file_get_contents(self::FIXTURES . 'edit.emit.json'), TRUE);
+    $edit = json_decode((string) file_get_contents(self::FIXTURES . 'update.emit.json'), TRUE);
     $this->assertTrue($edit['schema']['properties']['id']['x-surface']['locked']);
     $stored = array_intersect_key($edit['values'], ['label' => TRUE, 'id' => TRUE, 'capacity' => TRUE]);
     $this->assertSame(['label' => 'Old Library', 'id' => 'library', 'capacity' => 90], $stored);
@@ -272,13 +272,13 @@ class VenueResourceTest extends DataSurfaceKernelTestBase {
   public function testTheToolsPageFilterAndLeaveOutWhatMayNotBeRead(): void {
     $tools = $this->container->get('plugin.manager.tool');
     $expected = [
-      'add' => [ToolOperation::Write, FALSE, [OperationInputs::VALUES, OperationInputs::DRY_RUN]],
+      'create' => [ToolOperation::Write, FALSE, [OperationInputs::VALUES, OperationInputs::DRY_RUN]],
       'list' => [ToolOperation::Read, FALSE, [OperationInputs::VALUES]],
       'reorder' => [ToolOperation::Write, FALSE, [OperationInputs::VALUES, OperationInputs::DRY_RUN]],
       'reorder:read' => [ToolOperation::Read, FALSE, []],
-      'edit' => [ToolOperation::Write, FALSE, ['id', OperationInputs::VALUES, OperationInputs::DRY_RUN]],
-      'edit:read' => [ToolOperation::Read, FALSE, ['id']],
-      'remove' => [ToolOperation::Write, TRUE, ['id', OperationInputs::DRY_RUN]],
+      'update' => [ToolOperation::Write, FALSE, ['id', OperationInputs::VALUES, OperationInputs::DRY_RUN]],
+      'update:read' => [ToolOperation::Read, FALSE, ['id']],
+      'delete' => [ToolOperation::Write, TRUE, ['id', OperationInputs::DRY_RUN]],
     ];
     foreach ($expected as $operation => [$kind, $destructive, $inputs]) {
       $definition = $tools->getDefinition(self::TOOL . $operation);
@@ -352,10 +352,10 @@ class VenueResourceTest extends DataSurfaceKernelTestBase {
    * Tests add, edit and remove, and a room id held once across the venues.
    */
   public function testAddEditAndRemoveOneVenue(): void {
-    $added = $this->call('add', ['values' => self::TOWN_HALL]);
+    $added = $this->call('create', ['values' => self::TOWN_HALL]);
     $this->assertTrue($added['success'], $added['message']);
     $this->assertSame(['riverside', 'town_hall', 'library', 'harbour'], $this->order(), 'Weight 0, after Riverside Hall by name.');
-    $again = $this->call('add', ['values' => self::TOWN_HALL]);
+    $again = $this->call('create', ['values' => self::TOWN_HALL]);
     $taken = [
       'path' => '/id',
       'code' => 'taken',
@@ -363,17 +363,17 @@ class VenueResourceTest extends DataSurfaceKernelTestBase {
     ];
     $this->assertSame([$taken], $again['violations']);
     $main = ['id' => 'riverside_main', 'label' => 'Main hall', 'seats' => 10];
-    $room = $this->call('edit', ['id' => 'town_hall', 'values' => ['rooms' => [$main]]]);
+    $room = $this->call('update', ['id' => 'town_hall', 'values' => ['rooms' => [$main]]]);
     $held = [
       'path' => '/rooms/0/id',
       'code' => 'taken',
       'message' => 'The room id riverside_main is held already, by riverside: a room id is held once across the venues.',
     ];
     $this->assertSame([$held], $room['violations']);
-    $edited = $this->call('edit', ['id' => 'town_hall', 'values' => ['capacity' => 350]]);
+    $edited = $this->call('update', ['id' => 'town_hall', 'values' => ['capacity' => 350]]);
     $this->assertTrue($edited['success'], $edited['message']);
     $this->assertSame(350, EventVenue::load('town_hall')->get('capacity'));
-    $removed = $this->call('remove', ['id' => 'town_hall']);
+    $removed = $this->call('delete', ['id' => 'town_hall']);
     $this->assertTrue($removed['success'], $removed['message']);
     $this->assertNull(EventVenue::load('town_hall'));
   }
@@ -408,7 +408,7 @@ class VenueResourceTest extends DataSurfaceKernelTestBase {
       'harbour_deck',
     ];
     $this->assertSame([['riverside', 'library', 'harbour'], $rooms], $this->offered());
-    $this->assertTrue($this->call('add', ['values' => ['weight' => 5] + self::TOWN_HALL])['success']);
+    $this->assertTrue($this->call('create', ['values' => ['weight' => 5] + self::TOWN_HALL])['success']);
     [$venue, $room] = $this->offered();
     $this->assertSame(['riverside', 'library', 'harbour', 'town_hall'], $venue, 'Offered at the next build, read under the venues\' list tag.');
     $this->assertContains('town_hall_council', $room);

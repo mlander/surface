@@ -17,7 +17,7 @@ use Drupal\data_surface_examples\ConceptCalls;
  * The component block lives in data_surface_component_block and the
  * placement resource in data_surface_block, neither of which the examples
  * depend on. When both are on with this module, whichever came last, two
- * blocks are placed through the resource's add operation, with the values
+ * blocks are placed through the resource's create operation, with the values
  * example 13's first two calls send: Spotlight, the card this module
  * ships with a line of text in its slot, and Tonight, a section holding a
  * card, each in the default theme's content region, shown on example 13's
@@ -65,7 +65,7 @@ final class SpotlightBlockHooks {
    * @param \Drupal\Core\Extension\ModuleHandlerInterface $moduleHandler
    *   The module handler.
    * @param \Drupal\data_surface\ResourceBuild\ResourcesInterface $resources
-   *   The resources, which build the placement's add operation.
+   *   The resources, which build the placement's create operation.
    * @param \Drupal\data_surface\Pipeline\DataSurfacePipelineInterface $pipeline
    *   The pipeline the values are submitted through.
    */
@@ -101,7 +101,7 @@ final class SpotlightBlockHooks {
       if ($this->entityTypeManager->getStorage('block')->load($block) !== NULL) {
         continue;
       }
-      $context = $this->resources->operation('block.placement', 'add');
+      $context = $this->resources->operation('block.placement', 'create');
       $built = $this->resources->build('block.placement', $context);
       $result = $this->pipeline->submit($built, ConceptCalls::values('block.placement', $call) ?? [], $this->resources->storage('block.placement', $context, $built));
       $placed = $result->committed || $placed;

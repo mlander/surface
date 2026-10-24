@@ -22,8 +22,8 @@ use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
  * Tests the generic form against the node type demo's routes.
  *
  * The demo has no form class. Its two routes name the content type
- * resource, an operation and a cosmetic layer; the edit route's {type}
- * parameter is the edit operation's $type. Everything else (the
+ * resource, an operation and a cosmetic layer; the update route's {type}
+ * parameter is the update operation's $type. Everything else (the
  * context, the access answer, the built resource, the storage, the three
  * pipeline stages, the message and the redirect) is
  * DataSurfaceOperationForm, which knows nothing about content types.
@@ -79,7 +79,7 @@ class DataSurfaceOperationFormTest extends DataSurfaceKernelTestBase {
    * @param string $route_name
    *   The route to serve.
    * @param string|null $type
-   *   The raw value of the edit route's type parameter.
+   *   The raw value of the update route's type parameter.
    */
   protected function serveRoute(string $route_name, ?string $type = NULL): void {
     $route = $this->container->get('router.route_provider')->getRouteByName($route_name);
@@ -144,10 +144,10 @@ class DataSurfaceOperationFormTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests the add route end to end, cosmetics and all.
+   * Tests the create route end to end, cosmetics and all.
    */
   public function testTheAddRouteStoresEveryDestination(): void {
-    $this->serveRoute('data_surface_demo_node_type.add');
+    $this->serveRoute('data_surface_demo_node_type.create');
 
     $form = $this->buildTheForm();
     // Every declared key is on the page, at the value path the generic
@@ -214,14 +214,14 @@ class DataSurfaceOperationFormTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests the edit route, including the lock against a tampered value.
+   * Tests the update route, including the lock against a tampered value.
    */
   public function testTheEditRouteUpdatesAndKeepsTheMachineName(): void {
     NodeType::create(['type' => 'recipe', 'name' => 'Recipe'])->save();
-    $this->serveRoute('data_surface_demo_node_type.edit', 'recipe');
+    $this->serveRoute('data_surface_demo_node_type.update', 'recipe');
 
     $form = $this->buildTheForm();
-    // The route's type parameter reached the edit operation as the
+    // The route's type parameter reached the update operation as the
     // content type, so the machine name is known: still advertised, its
     // value shown, and fixed.
     $this->assertSame('recipe', $form[DataSurfaceOperationForm::SURFACE_KEY]['type']['#default_value']);
@@ -257,7 +257,7 @@ class DataSurfaceOperationFormTest extends DataSurfaceKernelTestBase {
    */
   public function testViolationsAreFlaggedOnTheirOwnElements(): void {
     NodeType::create(['type' => 'recipe', 'name' => 'Recipe'])->save();
-    $this->serveRoute('data_surface_demo_node_type.add');
+    $this->serveRoute('data_surface_demo_node_type.create');
 
     $form_state = $this->submitTheForm([
       'name' => 'Second recipe',
@@ -285,7 +285,7 @@ class DataSurfaceOperationFormTest extends DataSurfaceKernelTestBase {
    * is about the caller that arrived some other way.
    */
   public function testRefusedOperationRefusesTheForm(): void {
-    $this->serveRoute('data_surface_demo_node_type.add');
+    $this->serveRoute('data_surface_demo_node_type.create');
     $stranger = $this->createUser();
     $this->container->get('current_user')->setAccount($stranger);
 

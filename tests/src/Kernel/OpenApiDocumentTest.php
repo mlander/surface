@@ -411,7 +411,7 @@ class OpenApiDocumentTest extends DataSurfaceKernelTestBase {
     $this->assertSame(['get', 'patch', 'delete'], array_keys($paths[$item]), 'edit, the default update, and remove, the default delete.');
     $this->assertSame(['get', 'post'], array_keys($paths['/surface-api/block.placement']), 'add, the only create, on the collection.');
     $delete = $paths[$item]['delete'];
-    $this->assertSame('block.placement:remove:write', $delete['operationId']);
+    $this->assertSame('block.placement:delete:write', $delete['operationId']);
     $this->assertSame('delete', $delete['x-surface-kind']);
     $this->assertSame([TRUE, TRUE, FALSE], $this->facts($delete), 'Idempotent and destructive, creating nothing.');
     $this->assertSame('Remove a placed block', $delete['summary']);
@@ -429,8 +429,8 @@ class OpenApiDocumentTest extends DataSurfaceKernelTestBase {
     ])), $delete['parameters']));
     $this->assertSame(['200', '412', '422', '400', '415', '403', '404'], array_map('strval', array_keys($delete['responses'])));
     $this->assertArrayNotHasKey('ETag', $delete['responses']['200']['headers']);
-    $this->assertSame(['get'], array_keys($paths[$item . ':remove']), 'Its envelope, as a custom method\'s; its run is DELETE.');
-    $this->assertSame(['get', 'post'], array_keys($paths[$item . ':remove/schema']));
+    $this->assertSame(['get'], array_keys($paths[$item . ':delete']), 'Its envelope, as a custom method\'s; its run is DELETE.');
+    $this->assertSame(['get', 'post'], array_keys($paths[$item . ':delete/schema']));
   }
 
   /**
@@ -472,7 +472,7 @@ class OpenApiDocumentTest extends DataSurfaceKernelTestBase {
     $this->assertSame(['get', 'post'], array_keys($paths[$collection . ':list']), 'Its envelope, and a run of it, as a custom method\'s.');
     $this->assertSame(['get', 'post'], array_keys($paths[$collection . '/schema']), "The collection's schema is the listing's.");
     $this->assertSame('event.venue:list:schema', $paths[$collection . '/schema']['get']['operationId']);
-    $this->assertSame(['get'], array_keys($paths[$collection . ':add']), "The create's envelope is its custom method's.");
+    $this->assertSame(['get'], array_keys($paths[$collection . ':create']), "The create's envelope is its custom method's.");
 
     $this->assertSame(['get', 'patch'], array_keys($paths[$collection . ':reorder']));
     $reorder = $paths[$collection . ':reorder']['patch'];
@@ -625,18 +625,18 @@ class OpenApiDocumentTest extends DataSurfaceKernelTestBase {
     $description = $this->description();
     $document = $this->decoded($description);
     $this->assertSame([], $document['x-surface']['unavailable']);
-    $page = $description->operations['entity.content:node.page:add'] ?? NULL;
+    $page = $description->operations['entity.content:node.page:create'] ?? NULL;
     $this->assertNotNull($page);
-    $this->assertSame('entity.content_node.page.add.outputs', $page['outputs']);
+    $this->assertSame('entity.content_node.page.create.outputs', $page['outputs']);
     $outputs = $document['components']['schemas'][$page['outputs']];
     $this->assertSame(['id'], array_keys($outputs['properties']));
 
     $registry = $this->container->get('data_surface.resource_registry');
     $resources = $this->container->get('data_surface.resources');
     $name = $registry->getDefinition('entity.content:node.page')->name();
-    $operation = $registry->getOperation($name, 'add');
-    $built = $resources->buildDeclared($name, $resources->operation($name, 'add'));
-    $full = $this->container->get('data_surface.contract_emitter')->emitFull($built, 'entity.content:node.page', 'add', $operation->label, operation: $operation->facts())->document;
+    $operation = $registry->getOperation($name, 'create');
+    $built = $resources->buildDeclared($name, $resources->operation($name, 'create'));
+    $full = $this->container->get('data_surface.contract_emitter')->emitFull($built, 'entity.content:node.page', 'create', $operation->label, operation: $operation->facts())->document;
     $this->assertSame(json_encode($full['outputs']), json_encode($outputs), 'The outputs, byte for byte.');
 
     $paths = $document['paths'];
@@ -677,7 +677,7 @@ class OpenApiDocumentTest extends DataSurfaceKernelTestBase {
     $description = $this->description();
     $document = $this->decoded($description);
     $this->assertSame([], $document['x-surface']['unavailable']);
-    $this->assertArrayHasKey('entity.content:node.page:edit', $description->operations);
+    $this->assertArrayHasKey('entity.content:node.page:update', $description->operations);
     $item = $document['paths']['/surface-api/entity.content:node.page/{id}'] ?? NULL;
     $this->assertNotNull($item);
     $this->assertSame(['get', 'patch'], array_keys($item));
@@ -686,7 +686,7 @@ class OpenApiDocumentTest extends DataSurfaceKernelTestBase {
       $this->assertCount(1, $id);
       $this->assertSame(['path', TRUE], [$id[0]['in'], $id[0]['required']]);
     }
-    $this->assertSame('entity.content:node.page:edit:write', $item['patch']['operationId']);
+    $this->assertSame('entity.content:node.page:update:write', $item['patch']['operationId']);
     $this->assertSame(['get', 'post'], array_keys($document['paths']['/surface-api/entity.content:node.page/{id}/schema']));
     $this->assertSame(['get', 'post'], array_keys($document['paths']['/surface-api/entity.content:node.page']), 'The collection: the create\'s envelope and the create.');
     // Every operation that can be asked on its own is described.

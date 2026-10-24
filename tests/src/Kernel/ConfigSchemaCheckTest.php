@@ -104,9 +104,9 @@ class ConfigSchemaCheckTest extends DataSurfaceKernelTestBase {
    */
   public function testTheNodeTypeIsHeldToCoresSchema(): void {
     $resources = $this->container->get('data_surface.resources');
-    $add = $resources->build('node.type', $resources->operation('node.type', 'add'));
+    $add = $resources->build('node.type', $resources->operation('node.type', 'create'));
     NodeType::create(['type' => 'page', 'name' => 'Basic page'])->save();
-    $edit = $resources->build('node.type', $resources->operation('node.type', 'edit', ['type' => NodeType::load('page')]));
+    $edit = $resources->build('node.type', $resources->operation('node.type', 'update', ['type' => NodeType::load('page')]));
     foreach ([$add, $edit] as $built) {
       $this->assertTrue(DefinitionMetadata::isAlwaysHeld($built->getDefinition('new_revision')), 'Not nullable in core\'s schema: always held.');
       $this->assertTrue(DefinitionMetadata::isAlwaysHeld($built->getDefinition('display_submitted')));

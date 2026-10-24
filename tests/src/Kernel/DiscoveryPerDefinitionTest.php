@@ -212,7 +212,7 @@ class DiscoveryPerDefinitionTest extends DataSurfaceKernelTestBase {
       $this->assertTrue($this->cached($name), $name . ' is still cached.');
     }
     // What this request built from the storage sees the new setting.
-    $item = $this->container->get('data_surface.resources')->build('field.item:node.kitchen.field_shared', $this->container->get('data_surface.resources')->operation('field.item:node.kitchen.field_shared', 'add'));
+    $item = $this->container->get('data_surface.resources')->build('field.item:node.kitchen.field_shared', $this->container->get('data_surface.resources')->operation('field.item:node.kitchen.field_shared', 'create'));
     $this->assertSame(30, $item->getDefinition('value')?->getConstraint('Length')['max'] ?? NULL);
   }
 

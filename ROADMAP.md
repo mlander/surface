@@ -757,7 +757,7 @@ renames sit in A because they are cheapest before new code exists.
    `docs/decisions.md#required-is-the-resources-and-an-update-tool-requires-nothing-at-its-door`): a tool listing is
    cached by clients and is a discovery channel, so it stops carrying
    current stored values as `default`. A create operation lists the
-   declared defaults; an edit operation lists none and says in its
+   declared defaults; an update operation lists none and says in its
    description that a key left out keeps its current value and that the
    read tool returns current values. The schema for these answers keeps
    current values in `values` (per request, never cached) and the full

@@ -98,22 +98,22 @@ class OperationToolsTest extends DataSurfaceKernelTestBase {
     ));
     sort($ids);
     $this->assertSame([
-      'data_surface:field.instance:add',
-      'data_surface:field.instance:edit',
+      'data_surface:field.instance:create',
       'data_surface:field.instance:reuse',
-      'data_surface:field.storage:edit',
-      'data_surface:node.type:add',
-      'data_surface:node.type:edit',
+      'data_surface:field.instance:update',
+      'data_surface:field.storage:update',
+      'data_surface:node.type:create',
+      'data_surface:node.type:update',
     ], $ids);
     // The address settings name storage and have no operation of their
     // own: they are only ever a field's.
-    $this->assertArrayNotHasKey('data_surface:field.settings.address:add', $this->container->get('plugin.manager.tool')->getDefinitions());
+    $this->assertArrayNotHasKey('data_surface:field.settings.address:create', $this->container->get('plugin.manager.tool')->getDefinitions());
   }
 
   /**
    * Tests the first derivation rule: a permission nothing can name.
    *
-   * The field storage's add operation needs nothing, and its permission
+   * The field storage's create operation needs nothing, and its permission
    * names %entity_type_id, which no parameter supplies: nothing a caller
    * sends could name the permission, so it could never be allowed, and
    * it is no tool. Its edit takes the storage, an entity whose operation
@@ -121,12 +121,12 @@ class OperationToolsTest extends DataSurfaceKernelTestBase {
    */
   public function testUnnameablePermissionIsNoTool(): void {
     $registry = $this->container->get('data_surface.resource_registry');
-    $this->assertSame(['entity_type_id'], $registry->getOperation('field.storage', 'add')->unresolvablePlaceholders());
-    $this->assertSame([], $registry->getOperation('field.storage', 'edit')->unresolvablePlaceholders());
-    $this->assertSame([], $registry->getOperation('field.instance', 'add')->unresolvablePlaceholders());
+    $this->assertSame(['entity_type_id'], $registry->getOperation('field.storage', 'create')->unresolvablePlaceholders());
+    $this->assertSame([], $registry->getOperation('field.storage', 'update')->unresolvablePlaceholders());
+    $this->assertSame([], $registry->getOperation('field.instance', 'create')->unresolvablePlaceholders());
     $definitions = $this->container->get('plugin.manager.tool')->getDefinitions();
-    $this->assertArrayNotHasKey('data_surface:field.storage:add', $definitions);
-    $this->assertArrayHasKey('data_surface:field.storage:edit', $definitions);
+    $this->assertArrayNotHasKey('data_surface:field.storage:create', $definitions);
+    $this->assertArrayHasKey('data_surface:field.storage:update', $definitions);
   }
 
   /**
@@ -143,7 +143,7 @@ class OperationToolsTest extends DataSurfaceKernelTestBase {
     $definitions = $this->container->get('plugin.manager.tool')->getDefinitions();
     $this->assertSame(['block:data_surface_resource_test_pinned_note'], $this->container->get('data_surface.resource_plugins')->usedBy(PinnedNoteResource::class));
     $this->assertArrayNotHasKey('data_surface:test.pinned_note:pin', $definitions);
-    $this->assertArrayHasKey('data_surface:resource_test.pantry:add', $definitions);
+    $this->assertArrayHasKey('data_surface:resource_test.pantry:create', $definitions);
   }
 
   /**
@@ -154,7 +154,7 @@ class OperationToolsTest extends DataSurfaceKernelTestBase {
 
     // Adding a content type needs nothing, so the values input is the
     // whole resource, machine name included and unique.
-    $add = $manager->getDefinition('data_surface:node.type:add');
+    $add = $manager->getDefinition('data_surface:node.type:create');
     $this->assertSame('Add a content type', (string) $add->getLabel());
     $this->assertSame([OperationInputs::VALUES, OperationInputs::DRY_RUN], array_keys($add->getInputDefinitions()));
     $values = $add->getInputDefinition(OperationInputs::VALUES);
@@ -168,7 +168,7 @@ class OperationToolsTest extends DataSurfaceKernelTestBase {
     // known, so it is no input. Editing changes what exists, so no key is
     // required: what the resource requires is said in words, and a key
     // left out keeps what is stored.
-    $edit = $manager->getDefinition('data_surface:node.type:edit');
+    $edit = $manager->getDefinition('data_surface:node.type:update');
     $this->assertSame(['type', OperationInputs::VALUES, OperationInputs::DRY_RUN], array_keys($edit->getInputDefinitions()));
     $this->assertSame('string', $edit->getInputDefinition('type')->getDataType());
     $this->assertTrue($edit->getInputDefinition('type')->isRequired());
@@ -197,7 +197,7 @@ class OperationToolsTest extends DataSurfaceKernelTestBase {
 
     // A field: add takes the entity type and bundle, reuse a storage and
     // a bundle, edit the field, and each leaves out what it knows.
-    $field_add = $manager->getDefinition('data_surface:field.instance:add');
+    $field_add = $manager->getDefinition('data_surface:field.instance:create');
     $this->assertSame(['entity_type_id', 'bundle', OperationInputs::VALUES, OperationInputs::DRY_RUN], array_keys($field_add->getInputDefinitions()));
     $this->assertSame(
       ['field_type', 'field_name', 'label', 'description', 'required', 'storage', 'settings'],
@@ -209,7 +209,7 @@ class OperationToolsTest extends DataSurfaceKernelTestBase {
       ['label', 'description', 'required', 'storage', 'settings'],
       array_keys($reuse->getInputDefinition(OperationInputs::VALUES)->getPropertyDefinitions()),
     );
-    $field_edit = $manager->getDefinition('data_surface:field.instance:edit');
+    $field_edit = $manager->getDefinition('data_surface:field.instance:update');
     $this->assertSame(['field', OperationInputs::VALUES, OperationInputs::DRY_RUN], array_keys($field_edit->getInputDefinitions()));
   }
 
@@ -227,7 +227,7 @@ class OperationToolsTest extends DataSurfaceKernelTestBase {
       'bundle' => 'entity_test',
       'label' => 'Address',
     ])->save();
-    $tool = $this->tool('data_surface:field.instance:edit');
+    $tool = $this->tool('data_surface:field.instance:update');
     $tool->setInputValue('field', 'entity_test.entity_test.field_address');
     $values = $tool->getInputDefinition(OperationInputs::VALUES);
     $this->assertInstanceOf(MapInputDefinition::class, $values);
@@ -240,7 +240,7 @@ class OperationToolsTest extends DataSurfaceKernelTestBase {
    * Tests adding a content type, then editing it, through the tools.
    */
   public function testNodeTypeToolsCreateThenUpdate(): void {
-    $tool = $this->tool('data_surface:node.type:add');
+    $tool = $this->tool('data_surface:node.type:create');
     $tool->setInputValue(OperationInputs::VALUES, [
       'name' => 'Recipe',
       'type' => 'recipe',
@@ -257,7 +257,7 @@ class OperationToolsTest extends DataSurfaceKernelTestBase {
     // each key defaulting to what the content type stores now, and, as the
     // listing and the door say, none required: what the resource requires
     // is said in words.
-    $tool = $this->tool('data_surface:node.type:edit');
+    $tool = $this->tool('data_surface:node.type:update');
     $tool->setInputValue('type', 'recipe');
     $values = $tool->getInputDefinition(OperationInputs::VALUES);
     $this->assertInstanceOf(MapInputDefinition::class, $values);
@@ -280,7 +280,7 @@ class OperationToolsTest extends DataSurfaceKernelTestBase {
 
     // The name sent empty is refused in its own words, and nothing is
     // written.
-    $tool = $this->tool('data_surface:node.type:edit');
+    $tool = $this->tool('data_surface:node.type:update');
     $tool->setInputValue('type', 'recipe');
     $tool->setInputValue(OperationInputs::VALUES, ['name' => '', 'description' => 'Plates']);
     $tool->execute();
@@ -292,7 +292,7 @@ class OperationToolsTest extends DataSurfaceKernelTestBase {
     // A required key left out keeps what is stored, as an optional one
     // does: the call reaches the pipeline, which judges the merged
     // document.
-    $tool = $this->tool('data_surface:node.type:edit');
+    $tool = $this->tool('data_surface:node.type:update');
     $tool->setInputValue('type', 'recipe');
     $tool->setInputValue(OperationInputs::VALUES, ['name' => 'Recipes', 'description' => 'Food']);
     $tool->execute();
@@ -305,7 +305,7 @@ class OperationToolsTest extends DataSurfaceKernelTestBase {
     $this->assertSame('Food', NodeType::load('recipe')->getDescription());
 
     // A content type that is not there is the caller's to correct.
-    $tool = $this->tool('data_surface:node.type:edit');
+    $tool = $this->tool('data_surface:node.type:update');
     $tool->setInputValue('type', 'ghost');
     $tool->setInputValue(OperationInputs::VALUES, ['name' => 'Ghost'] + self::NODE_TYPE_REQUIRED);
     $tool->execute();
@@ -317,7 +317,7 @@ class OperationToolsTest extends DataSurfaceKernelTestBase {
    * Tests a dry run, which is judged and writes nothing.
    */
   public function testDryRunWritesNothing(): void {
-    $tool = $this->tool('data_surface:node.type:add');
+    $tool = $this->tool('data_surface:node.type:create');
     $tool->setInputValue(OperationInputs::VALUES, ['name' => 'Rehearsal', 'type' => 'rehearsal'] + self::NODE_TYPE_REQUIRED);
     $tool->setInputValue(OperationInputs::DRY_RUN, TRUE);
     $tool->execute();
@@ -332,7 +332,7 @@ class OperationToolsTest extends DataSurfaceKernelTestBase {
 
     // A dry run is refused for what storage would refuse, which the
     // resource states as core's schema does.
-    $tool = $this->tool('data_surface:node.type:add');
+    $tool = $this->tool('data_surface:node.type:create');
     $tool->setInputValue(OperationInputs::VALUES, ['name' => "Two\nlines", 'type' => 'two_lines'] + self::NODE_TYPE_REQUIRED);
     $tool->setInputValue(OperationInputs::DRY_RUN, TRUE);
     $tool->execute();
@@ -345,7 +345,7 @@ class OperationToolsTest extends DataSurfaceKernelTestBase {
    */
   public function testAccessIsTheOperations(): void {
     $this->setUpCurrentUser([], ['administer content types']);
-    $tool = $this->tool('data_surface:node.type:add');
+    $tool = $this->tool('data_surface:node.type:create');
     $tool->setInputValue(OperationInputs::VALUES, ['name' => 'Refused', 'type' => 'refused'] + self::NODE_TYPE_REQUIRED);
     $this->assertFalse($tool->access());
     $tool->execute();
@@ -353,7 +353,7 @@ class OperationToolsTest extends DataSurfaceKernelTestBase {
     $this->assertNull(NodeType::load('refused'));
 
     $this->setUpCurrentUser([], ['administer content types', 'administer data surface node type demo']);
-    $tool = $this->tool('data_surface:node.type:add');
+    $tool = $this->tool('data_surface:node.type:create');
     $tool->setInputValue(OperationInputs::VALUES, ['name' => 'Allowed', 'type' => 'allowed'] + self::NODE_TYPE_REQUIRED);
     $this->assertTrue($tool->access());
   }
@@ -362,7 +362,7 @@ class OperationToolsTest extends DataSurfaceKernelTestBase {
    * Tests reusing a storage, and editing it with its storage child.
    *
    * The reuse tool knows the storage, so it adds the field without being
-   * told its name or type; the edit tool changes the storage's
+   * told its name or type; the update tool changes the storage's
    * cardinality through the field, and refuses shrinking it once the
    * field holds data.
    */
@@ -383,12 +383,12 @@ class OperationToolsTest extends DataSurfaceKernelTestBase {
         ['country_code' => 'CA', 'locality' => 'Toronto'],
       ],
     ])->save();
-    $tool = $this->tool('data_surface:field.instance:edit');
+    $tool = $this->tool('data_surface:field.instance:update');
     $tool->setInputValue('field', 'entity_test.entity_test.field_address');
     $tool->setInputValue(OperationInputs::VALUES, ['label' => 'Address', 'storage' => ['cardinality' => 2]]);
     $tool->execute();
     // Refused when the tool runs: the pipeline holds the values to the
-    // has-data constraint the storage's edit operation added.
+    // has-data constraint the storage's update operation added.
     $this->assertFalse($tool->getResult()->isSuccess());
     $this->assertStringContainsString('/storage/cardinality: This value should be 3 or more.', (string) $tool->getResult()->getMessage());
     $this->assertSame(3, FieldStorageConfig::loadByName('entity_test', 'field_address')->getCardinality());

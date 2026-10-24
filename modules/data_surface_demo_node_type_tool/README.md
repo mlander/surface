@@ -1,7 +1,7 @@
 # Data Surface Demo - Node type tool
 
-The recorded comparison between `data_surface:node.type:add`, the tool
-generated from the content type resource's add operation, and the tool an
+The recorded comparison between `data_surface:node.type:create`, the tool
+generated from the content type resource's create operation, and the tool an
 agent has for the same job without Data Surface.
 
 The tool is derived by `data_surface_tool` for every operation that can
@@ -43,15 +43,15 @@ the test asserts on every run that it has not drifted.
 ## How the tool is built
 
 It is not written. `ResourceOperationToolDeriver` in `data_surface_tool`
-reads the content type resource's `add` operation and derives
-`data_surface:node.type:add`; `ResourceOperationTool` runs it:
+reads the content type resource's `create` operation and derives
+`data_surface:node.type:create`; `ResourceOperationTool` runs it:
 
-- **Inputs.** The operation's parameters (`add()` has none), then one
-  `values` map, the resource as built in the add operation, converted by
+- **Inputs.** The operation's parameters (`create()` has none), then one
+  `values` map, the resource as built in the create operation, converted by
   `InputDefinitions`, and an optional `dry_run` boolean that
   stops the pipeline after prepare, where the content type is built and
   held to its config schema, and answers with what would be stored as
-  `prepared`. Because the add operation needs
+  `prepared`. Because the create operation needs
   nothing, that map is the exact contract in the static plugin
   definition: every consumer, `drush tool:info` and the AI connector's
   deriver included, sees the extras module's settings.
@@ -72,7 +72,7 @@ replace a named input but never add one.
 ```bash
 composer require drupal/tool
 drush pm:install data_surface_demo_node_type_tool data_surface_demo_extras
-drush tool:info data_surface:node.type:add --format=json
+drush tool:info data_surface:node.type:create --format=json
 ```
 
 The `values` input in the JSON schema carries

@@ -194,7 +194,7 @@ The module uses these twenty-three words in exactly one sense each.
   holds with `#[UsesStructure]`, or is the structure itself when the
   attribute names none, and supplies the context and the storage,
   because only it holds the instance.
-- **Operation**: one way a resource is asked for: add, edit, reuse.
+- **Operation**: one way a resource is asked for: create, update, reuse.
   `#[Operation]` states its id, label, description, the permission that
   gates it and whether it creates. On the class when asking needs
   nothing more (a settings object's `configure`); on a static method
@@ -282,7 +282,7 @@ their configuration may change without a deprecation path.
   the same two settings added to core's own form the classic way, so the
   two can be compared.
 - **Data Surface Demo - Node type** (`data_surface_demo_node_type`): one
-  resource serving an add form and an edit form through two operations,
+  resource serving a create form and an update form through two operations,
   with storage of its own, and two routes that name the generic
   operation form rather than a form class. Adds its own permission; see its README.
 - **Data Surface - Address field settings** (`data_surface_address`): a
@@ -302,7 +302,7 @@ their configuration may change without a deprecation path.
   and `data_surface_tool`; see `docs/entities.md`.
 - **Data Surface Demo - Node type tool**
   (`data_surface_demo_node_type_tool`): no code of its own, only the
-  generated comparison between `data_surface:node.type:add`, the tool
+  generated comparison between `data_surface:node.type:create`, the tool
   derived from the content type resource, and Tool Belt's bundle tool and
   core's form, once another module has extended content types.
 - **Data Surface - Your first resource** (`data_surface_first`): the

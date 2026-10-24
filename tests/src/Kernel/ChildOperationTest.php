@@ -36,7 +36,7 @@ use Symfony\Component\HttpFoundation\Request;
  * Tests a child invoked through an operation of its own, and its access.
  *
  * The larder attaches the same spice rack twice. Editing it, the rack at
- * `rack` is invoked through the rack's own `edit`, by the context's id,
+ * `rack` is invoked through the rack's own `update`, by the context's id,
  * and the one at `spare_rack` through `restock`, which the larder's
  * operation names; adding one, both fall to the rack's default, `browse`;
  * stocking one, the larder hands both a context whole, built by calling
@@ -59,14 +59,14 @@ class ChildOperationTest extends DataSurfaceKernelTestBase {
   use UserCreationTrait;
 
   /**
-   * The write tool for the larder's edit operation.
+   * The write tool for the larder's update operation.
    */
-  protected const TOOL = 'data_surface:resource_test.larder:edit';
+  protected const TOOL = 'data_surface:resource_test.larder:update';
 
   /**
    * The read tool beside it.
    */
-  protected const READ_TOOL = 'data_surface:resource_test.larder:edit:read';
+  protected const READ_TOOL = 'data_surface:resource_test.larder:update:read';
 
   /**
    * What the larder holds before each test.
@@ -135,7 +135,7 @@ class ChildOperationTest extends DataSurfaceKernelTestBase {
    *   The larder.
    */
   protected function edit(): DataSurfaceInterface {
-    return $this->resources()->buildOperation(LarderResource::class, 'edit', ['larder' => 'main']);
+    return $this->resources()->buildOperation(LarderResource::class, 'update', ['larder' => 'main']);
   }
 
   /**
@@ -178,7 +178,7 @@ class ChildOperationTest extends DataSurfaceKernelTestBase {
    * @return \Drupal\data_surface\Contract\ServedContract
    *   The contract.
    */
-  protected function contract(DataSurfaceInterface $surface, bool $full = FALSE, string $operation = 'edit'): mixed {
+  protected function contract(DataSurfaceInterface $surface, bool $full = FALSE, string $operation = 'update'): mixed {
     $emitter = $this->container->get('data_surface.contract_emitter');
     if ($full) {
       return $emitter->emitFull($surface, 'resource_test.larder', $operation);
@@ -197,11 +197,11 @@ class ChildOperationTest extends DataSurfaceKernelTestBase {
    * @return array
    *   The resource's part of the built form.
    */
-  protected function form(string $operation = 'edit'): array {
+  protected function form(string $operation = 'update'): array {
     $name = 'data_surface_resource_test.larder.' . $operation;
     $route = $this->container->get('router.route_provider')->getRouteByName($name);
     $stack = $this->container->get('request_stack');
-    $request = Request::create($operation === 'edit' ? '/surface-test/larder/main' : '/surface-test/larder/main/' . $operation);
+    $request = Request::create($operation === 'update' ? '/surface-test/larder/main' : '/surface-test/larder/main/' . $operation);
     $request->setSession($stack->getSession());
     $request->attributes->set(RouteObjectInterface::ROUTE_NAME, $name);
     $request->attributes->set(RouteObjectInterface::ROUTE_OBJECT, $route);
@@ -291,7 +291,7 @@ class ChildOperationTest extends DataSurfaceKernelTestBase {
     $this->assertSame(['min' => 0, 'max' => 40], $spare->getDefinition('spices')->getConstraints()['Range']);
 
     // The default: adding a larder names nothing, and the rack has no add.
-    $add = $this->resources()->buildOperation(LarderResource::class, 'add');
+    $add = $this->resources()->buildOperation(LarderResource::class, 'create');
     foreach (['rack', 'spare_rack'] as $key) {
       $child = self::child($add, $key);
       $this->assertSame(['shelf', 'spices', 'label'], $child->getDefinitions()->names(), $key);
@@ -300,7 +300,7 @@ class ChildOperationTest extends DataSurfaceKernelTestBase {
 
     // A context that knows no larder cannot invoke the rack's edit, which
     // needs one: the hint is passed over for the default.
-    $bare = $this->resources()->build(LarderResource::class, new OperationContext('edit'));
+    $bare = $this->resources()->build(LarderResource::class, new OperationContext('update'));
     foreach (['rack', 'spare_rack'] as $key) {
       $this->assertSame(['min' => 0, 'max' => 10], self::child($bare, $key)->getDefinition('spices')->getConstraints()['Range'], $key);
     }
@@ -319,7 +319,7 @@ class ChildOperationTest extends DataSurfaceKernelTestBase {
    */
   public function testChildWithoutOperationsInherits(): void {
     $emitter = $this->container->get('data_surface.contract_emitter');
-    $context = PantryResource::edit('cellar');
+    $context = PantryResource::update('cellar');
     $pantry = $this->resources()->build(PantryResource::class, $context);
     foreach (['shelf' => ShelfStructure::class, 'label' => LabelResource::class] as $key => $class) {
       $direct = $this->resources()->build($class, Resources::childContext($context, $key));
@@ -440,7 +440,7 @@ class ChildOperationTest extends DataSurfaceKernelTestBase {
     $this->assertSame(['larder', 'note'], $edit->getDefinitions()->names());
 
     // The parent is still open to the account; only the children went.
-    $context = $this->resources()->operation(LarderResource::class, 'edit', ['larder' => 'main']);
+    $context = $this->resources()->operation(LarderResource::class, 'update', ['larder' => 'main']);
     $this->assertTrue($this->resources()->access(LarderResource::class, $context)->isAllowed());
 
     foreach ([FALSE, TRUE] as $full) {
@@ -596,7 +596,7 @@ class ChildOperationTest extends DataSurfaceKernelTestBase {
     }
 
     $this->expectException(\LogicException::class);
-    $this->expectExceptionMessage('resource_test.broken.misnaming_larder, in its "clean" context, names the "dust" operation for its "rack" child, which resource_test.larder.rack does not declare; it declares edit, browse, restock.');
+    $this->expectExceptionMessage('resource_test.broken.misnaming_larder, in its "clean" context, names the "dust" operation for its "rack" child, which resource_test.larder.rack does not declare; it declares update, browse, restock.');
     $this->resources()->buildOperation(MisnamingLarderStructure::class, 'clean');
   }
 

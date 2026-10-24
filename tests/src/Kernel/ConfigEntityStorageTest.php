@@ -95,14 +95,14 @@ class ConfigEntityStorageTest extends DataSurfaceKernelTestBase {
     $storage = $this->container->get('class_resolver')->getInstanceFromDefinition(ConfigTestStorage::class);
     $this->assertSame('id', $storage->idKey());
     $this->assertSame('config_test.dynamic.*', $storage->configSchemaType());
-    $this->assertNull($storage->mayClear(new OperationContext('edit'), 'label'), 'The test entity is not fully validatable, so the storage does not know.');
+    $this->assertNull($storage->mayClear(new OperationContext('update'), 'label'), 'The test entity is not fully validatable, so the storage does not know.');
   }
 
   /**
    * Tests adding, then editing, then a second add under the same id.
    */
   public function testAddEditAndTakenId(): void {
-    $added = $this->submit('add', [
+    $added = $this->submit('create', [
       'id' => 'one',
       'label' => 'First',
       'weight' => 3,
@@ -118,13 +118,13 @@ class ConfigEntityStorageTest extends DataSurfaceKernelTestBase {
     $this->assertSame('set', $entity->get('protected_property'), 'Set through the entity\'s own setter.');
     $this->assertSame($entity->uuid(), $added->prepared->artifact['uuid'], 'What was rehearsed is what is stored, uuid included.');
 
-    $edited = $this->submit('edit', ['weight' => 9], ['id' => $entity]);
+    $edited = $this->submit('update', ['weight' => 9], ['id' => $entity]);
     $this->assertTrue($edited->committed);
     $entity = $this->stored('one');
     $this->assertSame(9, $entity->get('weight'));
     $this->assertSame('First', $entity->label(), 'A key left out keeps what it holds.');
 
-    $again = $this->submit('add', ['id' => 'one', 'label' => 'Again'], dry_run: TRUE);
+    $again = $this->submit('create', ['id' => 'one', 'label' => 'Again'], dry_run: TRUE);
     $this->assertFalse($again->isValid());
     $this->assertSame('id', $again->violations->keys()[0]);
     $this->assertSame(Violation::TAKEN, $again->violations->byKey('id')[0]->code);
@@ -137,10 +137,10 @@ class ConfigEntityStorageTest extends DataSurfaceKernelTestBase {
   public function testTheSchemaRefusesUnderTheKey(): void {
     // The resource states the schema's rule too, so the pipeline refuses
     // first; storage is asked directly for what it holds the entity to.
-    $this->assertSame(['label'], $this->submit('add', ['id' => 'two', 'label' => "Two\nlines"])->violations->keys());
+    $this->assertSame(['label'], $this->submit('create', ['id' => 'two', 'label' => "Two\nlines"])->violations->keys());
     $storage = $this->container->get('class_resolver')->getInstanceFromDefinition(ConfigTestStorage::class);
     try {
-      $storage->prepare(new OperationContext('add', TRUE), ['id' => 'two', 'label' => "Two\nlines"]);
+      $storage->prepare(new OperationContext('create', TRUE), ['id' => 'two', 'label' => "Two\nlines"]);
       $this->fail('The schema refuses a label on two lines.');
     }
     catch (StorageViolationsException $e) {
@@ -154,9 +154,9 @@ class ConfigEntityStorageTest extends DataSurfaceKernelTestBase {
    * Tests a dry run leaves the stored entity, and the caller's, alone.
    */
   public function testDryRunWritesNothing(): void {
-    $this->submit('add', ['id' => 'three', 'label' => 'Kept', 'weight' => 7]);
+    $this->submit('create', ['id' => 'three', 'label' => 'Kept', 'weight' => 7]);
     $held = $this->container->get('entity_type.manager')->getStorage('config_test')->load('three');
-    $result = $this->submit('edit', ['label' => 'Rehearsed', 'weight' => 42], ['id' => $held], TRUE);
+    $result = $this->submit('update', ['label' => 'Rehearsed', 'weight' => 42], ['id' => $held], TRUE);
     $this->assertTrue($result->isValid());
     $this->assertFalse($result->committed);
     $this->assertSame('Rehearsed', $result->prepared->artifact['label']);
@@ -168,9 +168,9 @@ class ConfigEntityStorageTest extends DataSurfaceKernelTestBase {
    * Tests the third party settings are written and read where core keeps them.
    */
   public function testThirdPartySettings(): void {
-    $this->submit('add', ['id' => 'four', 'label' => 'Mounted']);
+    $this->submit('create', ['id' => 'four', 'label' => 'Mounted']);
     $storage = $this->container->get('class_resolver')->getInstanceFromDefinition(ConfigTestStorage::class);
-    $context = new OperationContext('edit', known: ['id' => 'four']);
+    $context = new OperationContext('update', known: ['id' => 'four']);
     $prepared = $storage->prepare($context, [
       'label' => 'Mounted',
       'third_party_settings' => ['data_surface_storage_test' => ['note' => 'Written by a third party']],
@@ -195,28 +195,28 @@ class ConfigEntityStorageTest extends DataSurfaceKernelTestBase {
    * Tests removing: rehearsed, then done, then nothing to remove.
    */
   public function testRemove(): void {
-    $this->submit('add', ['id' => 'five', 'label' => 'Going']);
+    $this->submit('create', ['id' => 'five', 'label' => 'Going']);
     $entity = $this->stored('five');
-    $rehearsed = $this->submit('remove', [], ['id' => $entity], TRUE);
+    $rehearsed = $this->submit('delete', [], ['id' => $entity], TRUE);
     $this->assertTrue($rehearsed->isValid());
     $this->assertFalse($rehearsed->committed);
     $this->assertSame([''], $rehearsed->changes, 'The whole thing goes: the empty pointer.');
     $this->assertSame('Going', $rehearsed->values['label'], 'The values it holds are answered.');
     $this->assertNotNull($this->stored('five'));
 
-    $sent = $this->submit('remove', ['label' => 'Ignored'], ['id' => $entity]);
+    $sent = $this->submit('delete', ['label' => 'Ignored'], ['id' => $entity]);
     $this->assertFalse($sent->isValid(), 'A delete takes no values.');
     $this->assertSame(Violation::UNKNOWN_KEY, $sent->violations->byKey('label')[0]->code);
     $this->assertNotNull($this->stored('five'));
 
-    $removed = $this->submit('remove', [], ['id' => $entity]);
+    $removed = $this->submit('delete', [], ['id' => $entity]);
     $this->assertTrue($removed->committed);
     $this->assertTrue($removed->changed());
     $this->assertNull($this->stored('five'));
 
     $storage = $this->container->get('class_resolver')->getInstanceFromDefinition(ConfigTestStorage::class);
     try {
-      $storage->prepareDelete(new OperationContext('remove', known: ['id' => 'five']));
+      $storage->prepareDelete(new OperationContext('delete', known: ['id' => 'five']));
       $this->fail('Nothing stored is nothing to remove.');
     }
     catch (StorageViolationsException $e) {

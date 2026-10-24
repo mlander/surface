@@ -14,7 +14,7 @@ use Drupal\data_surface_resource_test\Access\SpiceRackAccess;
 /**
  * A spice rack: a child with three operations and an access class.
  *
- * - `edit` matches the larder's operation, and takes the larder from the
+ * - `update` matches the larder's operation, and takes the larder from the
  *   identity the larder knows;
  * - `browse` is the default, for a larder whose operation it has none for,
  *   and holds no more than ten spices, which is how a test tells it apart;
@@ -34,9 +34,9 @@ final class SpiceRackResource implements ResourceInterface {
    * as a tool's static definition is built in, cannot give it: there the
    * rack is passed on to its default.
    */
-  #[Operation('edit', label: 'Edit a spice rack')]
-  public static function edit(string $larder): OperationContext {
-    return new OperationContext('edit', known: ['larder' => $larder]);
+  #[Operation('update', label: 'Edit a spice rack')]
+  public static function update(string $larder): OperationContext {
+    return new OperationContext('update', known: ['larder' => $larder]);
   }
 
   /**

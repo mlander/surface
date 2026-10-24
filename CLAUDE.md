@@ -51,13 +51,18 @@ the record of the rework that brought the module to the pattern.
   from whether it creates unless declared (a create whose caller names
   the thing declares it), and its kind, `create`, `update`, `read` or
   `delete` (`deletes:`, which takes no values), always derived from the
-  attribute, and, for one about the things together, the structure whose
-  keys it takes in place of the resource's, `values:` (a listing's page,
-  a reorder's list; `docs/resources.md#an-operation-that-takes-keys-of-its-own`): a create's tool
-  requires what the resource requires, an update's requires nothing at
-  its door
+  attribute. The default operation of a kind has the kind's name as its
+  id (`create`, `update`, `read` or `list`, `delete`; `configure` for an
+  update on a singleton), its label Drupal's word ("Add a venue"); an
+  id `add`, `edit`, `remove` or `get` is refused at discovery
+  (`docs/decisions.md#the-ids-are-the-standard-five-the-labels-are-drupals`).
+  One about the things together names the structure whose keys it
+  takes in place of the resource's, `values:` (a listing's page, a
+  reorder's list; `docs/resources.md#an-operation-that-takes-keys-of-its-own`).
+  A create's tool requires what the resource requires, an update's
+  requires nothing at its door
   (`docs/decisions.md#required-is-the-resources-and-an-update-tool-requires-nothing-at-its-door`); a tool
-  carries them to the Tool API and both documents state them under
+  carries the facts to the Tool API and both documents state them under
   `x-surface.operation`
   (`docs/decisions.md#an-operation-states-how-it-behaves`).
 - **Blueprint**: what a resource or structure declares its members
@@ -253,7 +258,7 @@ is the operation's label (with its resource added where labels are
 shared; the read tool's is "Current values:" and that), and its
 description the operation's description and one line of call rules
 for its kind (`OperationInputs::description()`). The field
-tools are `data_surface:field.instance:add` / `:reuse` / `:edit`; the
+tools are `data_surface:field.instance:create` / `:reuse` / `:update`; the
 hand-written `field_add` / `field_update` are gone.
 `data_surface.resource_catalog` lists the static layer; `docs/catalog.md`
 is generated from it by `scripts/generate-catalog.php`.
@@ -366,7 +371,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 The full lane's phpunit line reads, as of this writing:
 
 ```
-phpunit: Tests: 1477, Assertions: 30910, Errors: 0, Failures: 0, Skipped: 0. Classes: 199 of 199, 8 at a time, browser classes 4.
+phpunit: Tests: 1494, Assertions: 30974, Errors: 0, Failures: 0, Skipped: 0. Classes: 200 of 200, 8 at a time, browser classes 4.
 ```
 
 the same counts a plain phpunit run of the tree gives. `run-tests.sh`
@@ -583,7 +588,7 @@ so the rule is this sentence. `npm test` is not part of
   lands on the line that replaces it.
 - The catalog lists a plugin as `<host type>:<plugin id>` —
   `block:my_teaser`, `field_type:address`.
-- A context's id is an operation id (`add`, `edit`, `reuse`) or a
+- A context's id is an operation id (`create`, `update`, `reuse`) or a
   host's own verb (`configure`, `field_settings`) and never carries
   identity. Identity is the `#[Resource(identity:)]` keys the context
   knows.

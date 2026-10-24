@@ -125,11 +125,11 @@ final class ConceptPanel {
    */
   public const VENUE_PATHS = [
     ['GET', '/surface-api/event.venue?limit=2', 'list', 'the listing: its outputs, a page of venues and the total'],
-    ['POST', '/surface-api/event.venue', 'add', "201 with the new venue's Location"],
-    ['GET', '/surface-api/event.venue:add', 'add', 'the envelope a create starts from'],
-    ['GET', '/surface-api/event.venue/riverside', 'edit', 'the envelope: what is stored, its schema and its ETag'],
-    ['PATCH', '/surface-api/event.venue/riverside', 'edit', 'the update, held by If-Match'],
-    ['DELETE', '/surface-api/event.venue/riverside', 'remove', 'the removal, no body'],
+    ['POST', '/surface-api/event.venue', 'create', "201 with the new venue's Location"],
+    ['GET', '/surface-api/event.venue:create', 'create', 'the envelope a create starts from'],
+    ['GET', '/surface-api/event.venue/riverside', 'update', 'the envelope: what is stored, its schema and its ETag'],
+    ['PATCH', '/surface-api/event.venue/riverside', 'update', 'the update, held by If-Match'],
+    ['DELETE', '/surface-api/event.venue/riverside', 'delete', 'the removal, no body'],
     ['PATCH', '/surface-api/event.venue:reorder', 'reorder', 'the reorder, a custom method on the collection'],
     ['GET', '/surface-api/event.venue/schema', 'list', "the listing's full schema, its inputs and its outputs"],
   ];
@@ -892,7 +892,7 @@ final class ConceptPanel {
       $actions[$def] = $full['$defs'][$def] ?? NULL;
     }
     $tools = [];
-    foreach (['add', 'edit', 'edit:read', 'remove'] as $suffix) {
+    foreach (['create', 'update', 'update:read', 'delete'] as $suffix) {
       $tool_id = 'data_surface:block.placement:' . $suffix;
       $tool = $this->toolManager->hasDefinition($tool_id) ? $this->toolManager->getDefinition($tool_id) : NULL;
       if ($tool instanceof ToolDefinition) {
@@ -970,7 +970,7 @@ final class ConceptPanel {
       $rows[] = [$method, ['data' => ['#markup' => '<code>' . $path . '</code>']], $operation, $what];
     }
     $tools = [];
-    foreach (['add', 'list', 'reorder', 'reorder:read', 'edit', 'edit:read', 'remove'] as $suffix) {
+    foreach (['create', 'list', 'reorder', 'reorder:read', 'update', 'update:read', 'delete'] as $suffix) {
       $tool_id = 'data_surface:event.venue:' . $suffix;
       $tool = $this->toolManager->hasDefinition($tool_id) ? $this->toolManager->getDefinition($tool_id) : NULL;
       if ($tool instanceof ToolDefinition) {

@@ -476,7 +476,7 @@ class StaticRuntimeAccessTest extends DataSurfaceKernelTestBase {
       $this->assertSame('keep an exhibit', $tools->getDefinition($id)->getPermission(), $id);
     }
     // A placeholder names the subject's permission: never declared.
-    $field = $this->container->get('data_surface.resource_registry')->getOperation('field.instance', 'add');
+    $field = $this->container->get('data_surface.resource_registry')->getOperation('field.instance', 'create');
     $this->assertNull($field->staticPermission());
   }
 

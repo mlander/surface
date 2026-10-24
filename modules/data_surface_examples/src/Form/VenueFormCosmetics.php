@@ -45,8 +45,8 @@ final class VenueFormCosmetics implements DataSurfaceFormCosmeticsInterface {
   public function surfaceFormMessage(DataSurfaceResult $result, string $operation, ?string $subject): \Stringable {
     $label = (string) ($result->values['label'] ?? $subject ?? '');
     return match ($operation) {
-      'add' => $this->t('The venue %label has been added.', ['%label' => $label]),
-      'remove' => $this->t('The venue %label has been removed.', ['%label' => $label]),
+      'create' => $this->t('The venue %label has been added.', ['%label' => $label]),
+      'delete' => $this->t('The venue %label has been removed.', ['%label' => $label]),
       default => $this->t('The venue %label has been saved.', ['%label' => $label]),
     };
   }

@@ -68,7 +68,7 @@ type's machine name, a field's entity type, bundle and name. Its storage
 is where its values live, and a resource may live anywhere: in a config
 object, a config entity, State, a plugin's settings or a content entity.
 Only its storage knows which; nothing else about the resource changes
-with it. Its operations are the ways it is asked for (add, edit, reuse),
+with it. Its operations are the ways it is asked for (create, update, reuse),
 each saying how much of its identity is already known. The form, the
 tool and the schema are not written beside it; they are derived from it.
 
@@ -78,7 +78,7 @@ one operation, `configure`. It names no identity keys, because there is
 only one of it: a resource with no identifiers, such as a settings
 object, is a *singleton* resource. A content type is a resource with an
 identity key, `type`, stored as a config entity, and asked for through
-`add` and `edit`. A basic page is the same shape applied to content: the
+`create` and `update`. A basic page is the same shape applied to content: the
 derived resource `entity.content:node.page`, whose identity is the
 entity type, the bundle and the id, and whose storage is the content
 entity.
@@ -130,7 +130,7 @@ it](https://www.drupal.org/project/drupal/issues/3622144).
 | **Definition map** | Everything a data surface advertises, as one ordered, validated collection: one entry per key, in declaration order. | `DefinitionMap` of `Entry` |
 | **Definition** | One core `DataDefinitionInterface`: type, label, description, constraints, required, plus the interim default and example metadata. | core, plus `DefinitionMetadata` |
 | **Refinement** | A narrower definition for one key, given the values of the siblings it watches. Checked narrower on every run. | rules declared with `narrow('key')`, `#[RefinesInput('key')]` methods |
-| **Operation** | One way a resource is asked for (add, edit, reuse), returning a context that says what is already known. The context's id is the operation's. Routes and tools are generated from them. | `#[Operation]` static methods, `Resource\OperationContext` |
+| **Operation** | One way a resource is asked for (create, update, reuse), returning a context that says what is already known. The context's id is the operation's. Routes and tools are generated from them. | `#[Operation]` static methods, `Resource\OperationContext` |
 | **Alter** | Another module's class that adds keys to a resource or structure, rewords a label, offers more values on a fixed list, and narrows with its own refinements. Never removes. | `#[Alters]` on a class in `src/Alter/` |
 | **Attached structure** | A child at a key, its own class with its own keys: `attach()` for a fixed child, `attachVariants()` for variants a sibling key chooses between. A child may be a resource with storage of its own (a field's storage). | `Resource\BlueprintInterface`, `Attachment`, `Variants` |
 | **Collection** | A list of child instances at a key, `attachList()`: the list and its Count the parent's, each item the child's. | `Resource\BlueprintInterface`, `Collection` |
