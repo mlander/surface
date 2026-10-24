@@ -43,10 +43,13 @@ JSON Schema read into a structure: a component's props. Example 13 is
 those two lines as a block's settings, with the block in a submodule of
 its own. Example 14 is an optional extension: a credential pasted as a
 secret, or a key the site manages once a module that manages keys is
-on, built once by the owner and once by another module's alter.
+on, built once by the owner and once by another module's alter. Example
+15 is a config entity type of the module's own, a venue, with a resource
+over it from the start: one venue added, edited and removed, the venues
+listed a page at a time and reordered in one write.
 
 Read in this order: [Your first resource](first-resource.md), then the
-examples 1 to 14 in order, with [Concepts](concepts.md) as the map. The
+examples 1 to 15 in order, with [Concepts](concepts.md) as the map. The
 examples index, `/surface-examples`, lists each example's concept, docs
 page, decision and files, and each example's page lists its files.
 

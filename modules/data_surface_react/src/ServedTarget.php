@@ -36,9 +36,16 @@ final class ServedTarget {
   public const NARROW = 'narrow';
 
   /**
-   * A run of the operation: PATCH, POST, or POST .../{x}:{operation}.
+   * A run of the operation: PATCH, POST, DELETE, or a custom method's run.
    */
   public const WRITE = 'write';
+
+  /**
+   * A listing's answer: GET on a collection that has a listing.
+   *
+   * Its query string is the values, and its outputs the answer.
+   */
+  public const LIST = 'list';
 
   /**
    * Constructs a ServedTarget.
@@ -51,7 +58,7 @@ final class ServedTarget {
    *   The operation's parameters by name, as raw values: those the path's
    *   identity segments carry, then those the query string does.
    * @param string $action
-   *   What is asked: READ, SCHEMA, NARROW or WRITE.
+   *   What is asked: READ, SCHEMA, NARROW, WRITE or LIST.
    * @param bool $custom
    *   Whether the path names the operation, `:{operation}`, rather than
    *   the method implying it.

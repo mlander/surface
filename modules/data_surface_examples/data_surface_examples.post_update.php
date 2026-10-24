@@ -48,3 +48,12 @@ function data_surface_examples_post_update_install_spotlight(): void {
 function data_surface_examples_post_update_install_mailer_and_webhook(): void {
   data_surface_install_missing_config('data_surface_examples');
 }
+
+/**
+ * Creates example 15's three venues on a site that had the module.
+ *
+ * A venue the site already has is left as it is.
+ */
+function data_surface_examples_post_update_install_venues(): void {
+  data_surface_install_missing_config('data_surface_examples');
+}

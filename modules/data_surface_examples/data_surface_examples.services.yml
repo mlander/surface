@@ -25,3 +25,13 @@ services:
   data_surface_examples.concept_panel:
     class: Drupal\data_surface_examples\ConceptPanel
     arguments: ['@data_surface.contract_emitter', '@data_surface.resource_registry', '@data_surface.resources', '@plugin.manager.tool', '@account_switcher', '@class_resolver', '@string_translation', '@module_handler', '@state', '@plugin.manager.sdc', '@data_surface.schema_reader']
+  # Example 15: what its three forms say once they wrote, and where they
+  # go back to.
+  data_surface_examples.venue_form_cosmetics:
+    class: Drupal\data_surface_examples\Form\VenueFormCosmetics
+    arguments: ['@string_translation']
+  # The venues and rooms an event may be held in, example 15's entities,
+  # which example 2's venue and room are chosen from.
+  data_surface_examples.venue_choices:
+    class: Drupal\data_surface_examples\VenueChoices
+    arguments: ['@entity_type.manager']

@@ -303,7 +303,8 @@ class OpenApiDocumentTest extends DataSurfaceKernelTestBase {
    * The path is the resource and the method the operation: the logbook's
    * default update is its PATCH and its one create its POST; its other
    * updates and its read are custom methods, each a path item of its own,
-   * GET its envelope and POST a run of it, with a schema path item beside.
+   * GET its envelope and a run of it, PATCH for an update and POST for the
+   * read, with a schema path item beside.
    */
   public function testTheFactsMapToHttp(): void {
     $document = $this->decoded();
@@ -314,8 +315,8 @@ class OpenApiDocumentTest extends DataSurfaceKernelTestBase {
     $calls = [
       'configure' => [$base, 'patch'],
       'start' => [$base, 'post'],
-      'append' => [$base . ':append', 'post'],
-      'clear' => [$base . ':clear', 'post'],
+      'append' => [$base . ':append', 'patch'],
+      'clear' => [$base . ':clear', 'patch'],
       'inspect' => [$base . ':inspect', 'post'],
     ];
     foreach (self::LOGBOOK as $id => [$kind, $idempotent, $destructive, $creates]) {
@@ -340,7 +341,7 @@ class OpenApiDocumentTest extends DataSurfaceKernelTestBase {
       $this->assertSame($kind !== 'create', in_array('#/components/parameters/IfMatch', $parameters, TRUE), $id);
       if ($path !== $base) {
         // A custom method: its envelope and its schema beside it.
-        $this->assertSame(['get', 'post'], array_keys($paths[$path]), $id);
+        $this->assertSame(['get', $method], array_keys($paths[$path]), $id);
         $this->assertSame('tool_test.logbook:' . $id . ':read', $paths[$path]['get']['operationId']);
         $this->assertSame(['get', 'post'], array_keys($paths[$path . '/schema']), $id);
         $this->assertSame('tool_test.logbook:' . $id . ':narrow', $paths[$path . '/schema']['post']['operationId']);
@@ -430,6 +431,56 @@ class OpenApiDocumentTest extends DataSurfaceKernelTestBase {
     $this->assertArrayNotHasKey('ETag', $delete['responses']['200']['headers']);
     $this->assertSame(['get'], array_keys($paths[$item . ':remove']), 'Its envelope, as a custom method\'s; its run is DELETE.');
     $this->assertSame(['get', 'post'], array_keys($paths[$item . ':remove/schema']));
+  }
+
+  /**
+   * Tests a listing is GET on the collection, and a reorder a PATCH.
+   *
+   * Example 15's venues: GET on the collection is the listing, its values
+   * query parameters with their schemas, its answer the outputs'
+   * component; its envelope and the create's are custom methods'; the
+   * reorder, an update over the collection, is a custom method run with
+   * PATCH, and the collection has no PATCH.
+   *
+   * @see docs/decisions.md#a-listing-is-a-read-only-operation-with-outputs-a-reorder-is-an-update-over-the-collection
+   */
+  public function testTheListingIsGetOnTheCollectionAndTheReorderIsPatch(): void {
+    $this->enableModules(['field', 'serialization', 'tool', 'data_surface_tool', 'data_surface_examples']);
+    $this->installConfig(['data_surface_examples']);
+    $this->container->get('router.builder')->rebuild();
+    $paths = $this->decoded()['paths'];
+    $collection = '/surface-api/event.venue';
+    $this->assertSame(['post', 'get'], array_keys($paths[$collection]), 'add, the only create, and the listing; no PATCH.');
+    $listing = $paths[$collection]['get'];
+    $this->assertSame('event.venue:list:list', $listing['operationId']);
+    $this->assertSame('read', $listing['x-surface-kind']);
+    $this->assertSame('view event venues', $listing['x-drupal-permission']);
+    $this->assertSame(['offset', 'limit', 'status'], array_column($listing['parameters'], 'name'));
+    $this->assertSame(['query', 'query', 'query'], array_column($listing['parameters'], 'in'));
+    $this->assertSame([
+      'title' => 'Limit',
+      'description' => 'How many venues to answer at most.',
+      'type' => ['integer', 'null'],
+      'minimum' => 1,
+      'maximum' => 50,
+      'default' => 20,
+    ], $listing['parameters'][1]['schema']);
+    $this->assertSame(['200', '422', '403', '404'], array_map('strval', array_keys($listing['responses'])));
+    $this->assertSame(SchemaComponents::POINTER . 'event.venue.list.outputs', $listing['responses']['200']['content']['application/json']['schema']['$ref']);
+    $outputs = $this->decoded()['components']['schemas']['event.venue.list.outputs'];
+    $this->assertSame(['items', 'total'], array_keys($outputs['properties']));
+    $this->assertSame(['get', 'post'], array_keys($paths[$collection . ':list']), 'Its envelope, and a run of it, as a custom method\'s.');
+    $this->assertSame(['get', 'post'], array_keys($paths[$collection . '/schema']), "The collection's schema is the listing's.");
+    $this->assertSame('event.venue:list:schema', $paths[$collection . '/schema']['get']['operationId']);
+    $this->assertSame(['get'], array_keys($paths[$collection . ':add']), "The create's envelope is its custom method's.");
+
+    $this->assertSame(['get', 'patch'], array_keys($paths[$collection . ':reorder']));
+    $reorder = $paths[$collection . ':reorder']['patch'];
+    $this->assertSame('event.venue:reorder:write', $reorder['operationId']);
+    $this->assertSame('update', $reorder['x-surface-kind']);
+    $this->assertSame(['application/merge-patch+json', 'application/json'], array_keys($reorder['requestBody']['content']));
+    $this->assertSame(SchemaComponents::POINTER . 'event.venue.reorder' . SchemaComponents::PATCH, $reorder['requestBody']['content']['application/json']['schema']['$ref']);
+    $this->assertSame(['get', 'patch', 'delete'], array_keys($paths[$collection . '/{id}']), 'edit and remove, on one venue.');
   }
 
   /**

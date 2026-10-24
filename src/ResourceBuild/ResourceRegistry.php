@@ -1288,6 +1288,7 @@ final class ResourceRegistry {
       creates: $operation->creates,
       description: $description,
       deletes: $operation->deletes,
+      values: $operation->values,
     );
   }
 

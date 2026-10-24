@@ -52,6 +52,7 @@ class OperationKindsTest extends DataSurfaceKernelTestBase {
     'create' => 'Create: a key left out takes its default, and every key marked required must be sent.',
     'update' => 'Update: send only the keys to change; a key left out keeps its value, null clears it, and values {} changes nothing. The read tool returns the current values.',
     'read' => 'Read only: nothing is written; a key left out is checked at its current value.',
+    'delete' => 'Delete: send only what names it; the values it held are answered, and a dry run removes nothing.',
   ];
 
   /**
@@ -112,6 +113,12 @@ class OperationKindsTest extends DataSurfaceKernelTestBase {
       if ($operation->needsNothing()) {
         $this->assertSame($operation->creates, $context->creates, $id . ': the context says what the attribute says.');
       }
+      if ($kind === OperationDefinition::DELETE) {
+        // A delete takes no values: the parameters name what it removes.
+        $this->assertArrayNotHasKey(OperationInputs::VALUES, $definition->getInputDefinitions(), $id);
+        $this->assertFalse($manager->hasDefinition($id . ResourceOperationReadTool::SUFFIX), $id . ': nothing is left to read after a delete.');
+        continue;
+      }
       $values = $definition->getInputDefinition(OperationInputs::VALUES);
       $this->assertInstanceOf(MapInputDefinition::class, $values, $id);
       $built = $resources->buildStatic($resource->name(), $context);
@@ -160,6 +167,11 @@ class OperationKindsTest extends DataSurfaceKernelTestBase {
       'data_surface:event.program:configure' => 'update',
       'data_surface:event.sales:configure' => 'update',
       'data_surface:event.spotlight:configure' => 'update',
+      'data_surface:event.venue:add' => 'create',
+      'data_surface:event.venue:edit' => 'update',
+      'data_surface:event.venue:list' => 'read',
+      'data_surface:event.venue:remove' => 'delete',
+      'data_surface:event.venue:reorder' => 'update',
       'data_surface:event.webhook:configure' => 'update',
       'data_surface:field.instance:add' => 'create',
       'data_surface:field.instance:edit' => 'update',

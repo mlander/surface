@@ -26,8 +26,11 @@ use Symfony\Component\HttpFoundation\Request;
  *
  * - `GET` the path's default update, else its default read, else, on a
  *   collection, its default create: the envelope, what is stored and the
- *   schema for it (a create's: the declared defaults);
- * - `PATCH` the path's default update;
+ *   schema for it (a create's: the declared defaults). On the collection
+ *   of a resource with identity, a default read is a listing: `GET` runs
+ *   it, its query string the values, and answers its outputs;
+ * - `PATCH` the path's default update; the collection of a resource with
+ *   identity has none, since no operation there changes every thing;
  * - `POST` the collection's default create;
  * - `DELETE` the path's default delete: an operation that removes the
  *   thing, its body empty;
@@ -35,14 +38,15 @@ use Symfony\Component\HttpFoundation\Request;
  *   `POST .../schema` the schema for the values sent, a query.
  *
  * The default of a kind at a path is the operation named for it (`add`
- * for a create; `configure` or `edit` for an update; `read` for a read;
- * `remove` or `delete` for a delete),
+ * for a create; `configure` or `edit` for an update; `read` or `list` for
+ * a read; `remove` or `delete` for a delete),
  * or else the only operation of that kind there; a read is a default only
  * where no update is. Any other operation is a custom method on the path
- * of what it addresses: `GET .../{x}:{operation}` its envelope, `POST
- * .../{x}:{operation}` a run of it, and `.../{x}:{operation}/schema` its
- * schema. A path of contract 2, `/surface-api/{resource}/{operation}`
- * and its four suffixes, is gone (410), naming its replacement.
+ * of what it addresses: `GET .../{x}:{operation}` its envelope, a run of
+ * it `PATCH .../{x}:{operation}` for an update and `POST` for any other,
+ * and `.../{x}:{operation}/schema` its schema. A path of contract 2,
+ * `/surface-api/{resource}/{operation}` and its four suffixes, is gone
+ * (410), naming its replacement.
  *
  * Decision: see docs/decisions.md#contract-3-the-operation-is-the-method.
  */
@@ -96,7 +100,7 @@ final class ServedPaths {
   public const NAMED = [
     OperationDefinition::CREATE => ['add'],
     OperationDefinition::UPDATE => ['configure', 'edit'],
-    OperationDefinition::READ => ['read'],
+    OperationDefinition::READ => ['read', 'list'],
     OperationDefinition::DELETE => ['remove', 'delete'],
   ];
 
@@ -179,12 +183,15 @@ final class ServedPaths {
           ? $this->t('The @operation operation of @resource does not address one thing: name it on the collection, /surface-api/@resource:@operation.', $named_args)
           : $this->t("The @operation operation of @resource addresses one thing: name it on that thing's path, after its identity.", $named_args));
       }
+      // The method says the kind: a run of an update is a PATCH, as the
+      // default update's is, and of any other operation a POST.
+      [$run] = $this->writes($definition, $operation);
       $action = match (TRUE) {
         $schema && $method === 'GET' => ServedTarget::SCHEMA,
         $schema && $method === 'POST' => ServedTarget::NARROW,
         !$schema && $method === 'GET' => ServedTarget::READ,
-        !$schema && $method === 'POST' => ServedTarget::WRITE,
-        default => throw $this->notAllowed($method, ['GET', 'POST']),
+        !$schema && $method === $run => ServedTarget::WRITE,
+        default => throw $this->notAllowed($method, $schema ? ['GET', 'POST'] : ['GET', $run]),
       };
     }
     else {
@@ -196,9 +203,16 @@ final class ServedPaths {
         'POST' => $placement === self::COLLECTION ? $defaults[OperationDefinition::CREATE] : NULL,
         'DELETE' => $defaults[OperationDefinition::DELETE],
       ]));
+      $listing = $this->listing($definition);
       [$id, $action] = match (TRUE) {
         $schema && $method === 'GET' => [$read, ServedTarget::SCHEMA],
         $schema && $method === 'POST' => [$read, ServedTarget::NARROW],
+        // Decision: see
+        // docs/decisions.md#a-listing-is-a-read-only-operation-with-outputs-a-reorder-is-an-update-over-the-collection.
+        !$schema && $method === 'GET' && $placement === self::COLLECTION && $listing !== NULL => [
+          $listing,
+          ServedTarget::LIST,
+        ],
         !$schema && $method === 'GET' => [$read, ServedTarget::READ],
         !$schema && $method === 'PATCH' => [$defaults[OperationDefinition::UPDATE], ServedTarget::WRITE],
         // Decision: see docs/decisions.md#a-placed-block-is-a-resource.
@@ -345,10 +359,43 @@ final class ServedPaths {
         if ($kind === OperationDefinition::READ && ($defaults[$placement][OperationDefinition::UPDATE] ?? NULL) !== NULL) {
           $default = NULL;
         }
+        // PATCH on the collection of things with identity would change
+        // every thing, which no operation there means: an update over the
+        // collection is a custom method.
+        // Decision: see
+        // docs/decisions.md#a-listing-is-a-read-only-operation-with-outputs-a-reorder-is-an-update-over-the-collection.
+        if ($kind === OperationDefinition::UPDATE && $placement === self::COLLECTION && $definition->identity !== []) {
+          $default = NULL;
+        }
         $defaults[$placement][$kind] = $default;
       }
     }
     return $defaults;
+  }
+
+  /**
+   * Names a resource's listing, the read `GET` on its collection runs.
+   *
+   * A resource with identity whose collection has a default read, a read
+   * only operation that names no thing: `GET` on the collection runs it
+   * with the query string as its values and answers its outputs, where a
+   * resource with none answers its default create's envelope.
+   *
+   * Decision: see
+   * docs/decisions.md#a-listing-is-a-read-only-operation-with-outputs-a-reorder-is-an-update-over-the-collection.
+   *
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   *   The resource.
+   *
+   * @return string|null
+   *   The listing's operation id, or NULL when the resource has none.
+   */
+  public function listing(ResourceDefinition $definition): ?string {
+    if ($definition->identity === []) {
+      return NULL;
+    }
+    $defaults = $this->defaults($definition)[self::COLLECTION];
+    return $defaults[OperationDefinition::UPDATE] === NULL ? $defaults[OperationDefinition::READ] : NULL;
   }
 
   /**
@@ -414,8 +461,8 @@ final class ServedPaths {
    * @return array{0: string, 1: bool}
    *   `PATCH` on the plain path for the default update, `DELETE` on it for
    *   the default delete, `POST` on the collection for the default create,
-   *   and `POST` on the custom method for any other; and whether the path
-   *   names the operation.
+   *   and on the custom method `PATCH` for any other update and `POST` for
+   *   any other operation; and whether the path names the operation.
    */
   public function writes(ResourceDefinition $definition, OperationDefinition $operation): array {
     $placement = $this->placement($definition, $operation);
@@ -429,7 +476,7 @@ final class ServedPaths {
     if ($placement === self::COLLECTION && $defaults[OperationDefinition::CREATE] === $operation->id) {
       return ['POST', FALSE];
     }
-    return ['POST', TRUE];
+    return [$operation->kind() === OperationDefinition::UPDATE ? 'PATCH' : 'POST', TRUE];
   }
 
   /**

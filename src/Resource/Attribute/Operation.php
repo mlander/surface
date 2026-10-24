@@ -106,6 +106,14 @@ final class Operation {
    *   an operation says destructive: TRUE too, and neither creates nor is
    *   read only; the facts are refused at discovery otherwise. Its tool
    *   takes the parameters and a dry run, and HTTP serves it as DELETE.
+   * @param class-string<\Drupal\data_surface\Resource\StructureInterface>|null $values
+   *   The structure whose keys a call takes, when they are not the
+   *   resource's own: a listing's paging and filter, a reorder's list of
+   *   ids and weights. Its inputs are what the operation takes and its
+   *   outputs what it answers; the resource's storage, identity, access
+   *   and permission stay the resource's. NULL, the default, takes the
+   *   resource's keys. Refused on an operation that creates or deletes,
+   *   which is about the thing's own keys.
    */
   public function __construct(
     public readonly string $id,
@@ -119,6 +127,7 @@ final class Operation {
     public readonly bool $creates = FALSE,
     public readonly string|\Stringable|null $description = NULL,
     public readonly bool $deletes = FALSE,
+    public readonly ?string $values = NULL,
   ) {}
 
 }

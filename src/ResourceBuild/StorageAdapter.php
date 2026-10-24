@@ -312,22 +312,35 @@ final class StorageAdapter implements CreatingStorageInterface, DeletingStorageI
    * The values of the declared outputs that the storage's load()
    * hands back, in the context the values were committed in: this
    * context plus the identity the values accepted, so a thing just
-   * created is found by the identity it was given.
+   * created is found by the identity it was given. An operation that
+   * changes nothing is never committed: its outputs are what its
+   * storage's prepare() answered under an output's name, prepare being
+   * the last stage it runs, and one with no side effects.
+   *
+   * Decision: see docs/decisions.md#who-produces-outputs.
    *
    * @param \Drupal\data_surface\DataSurfaceInterface $surface
    *   The data surface, whose output definitions say which keys are
    *   outputs.
    * @param array $values
    *   The accepted values.
+   * @param \Drupal\data_surface\Pipeline\PreparedValues|null $prepared
+   *   What prepare() returned, for an operation that changes nothing;
+   *   NULL for one that was committed.
    *
    * @return array
    *   The outputs the storage could say, keyed by output name; empty for
    *   a data surface that declares none.
    */
-  public function outputs(DataSurfaceInterface $surface, array $values): array {
+  public function outputs(DataSurfaceInterface $surface, array $values, ?PreparedValues $prepared = NULL): array {
     $outputs = $surface->getOutputDefinitions()->toArray();
     if ($outputs === []) {
       return [];
+    }
+    if ($surface->changesNothing()) {
+      $answered = $prepared === NULL ? NULL : $this->preview($prepared);
+      $answered = $this->routes === [] ? $answered : ($answered['own'] ?? NULL);
+      return is_array($answered) ? array_intersect_key($answered, $outputs) : [];
     }
     $known = $this->knownWith($values);
     return array_intersect_key($this->storage->load($this->context->withKnown($known)->withId($this->context->id, FALSE)), $outputs);

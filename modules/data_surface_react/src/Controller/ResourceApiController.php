@@ -163,6 +163,7 @@ final class ResourceApiController implements ContainerInjectionInterface {
       ServedTarget::SCHEMA => $this->schema($target),
       ServedTarget::NARROW => $this->narrow($request, $target),
       ServedTarget::WRITE => $this->write($request, $target),
+      ServedTarget::LIST => $this->listing($request, $target),
       default => $this->read($target),
     };
   }
@@ -183,6 +184,50 @@ final class ResourceApiController implements ContainerInjectionInterface {
     $served = $this->served($target);
     $response = $this->respond($this->envelope($this->emit($served, $this->servedOperations->current($served))));
     $this->tag($response, $served);
+    $response->headers->set('Link', sprintf('<%s>; rel="describedby"', $this->location($served, TRUE)->getGeneratedUrl()));
+    return $response;
+  }
+
+  /**
+   * Answers a listing: GET on a collection with a read that names no thing.
+   *
+   * The query string is the listing's values, each read by the coercion
+   * table as a form's text is, the operation's parameters and `dryRun`
+   * aside; the run is the pipeline's, which accepts and validates them and
+   * stops after prepare, and the answer is the listing's outputs, as its
+   * storage's prepare() answered them. A value it refuses is problem
+   * details (422), as a write's.
+   *
+   * Decision: see
+   * docs/decisions.md#a-listing-is-a-read-only-operation-with-outputs-a-reorder-is-an-update-over-the-collection.
+   *
+   * @param \Symfony\Component\HttpFoundation\Request $request
+   *   The request, its query string the values.
+   * @param \Drupal\data_surface_react\ServedTarget $target
+   *   What the path named.
+   *
+   * @return \Symfony\Component\HttpFoundation\JsonResponse
+   *   The listing's outputs, and a `Link` to its full schema,
+   *   `rel="describedby"`.
+   *
+   * @throws \Drupal\data_surface_react\ProblemException
+   *   422 for a value refused, 403 for a refusal by access.
+   */
+  public function listing(Request $request, ServedTarget $target): JsonResponse {
+    $served = $this->served($target);
+    if ($served->storage === NULL) {
+      $detail = (string) $this->t('The @resource resource names no storage, so there is nothing to list.', ['@resource' => $served->definition->id]);
+      throw new ProblemException(404, $detail);
+    }
+    $values = array_diff_key($request->query->all(), $target->parameters, [ServedPaths::DRY_RUN => TRUE]);
+    $result = $this->pipeline->submit($served->surface, $values, $served->storage, access: $this->servedOperations->access($served));
+    if (!$result->isValid()) {
+      throw $this->refused($result->document($this->values($served, $result->held()), machine: FALSE));
+    }
+    $outputs = $served->storage instanceof StorageAdapter && $result->prepared !== NULL
+      ? $served->storage->outputs($served->surface, $result->values, $result->prepared)
+      : [];
+    $response = $this->respond($outputs);
     $response->headers->set('Link', sprintf('<%s>; rel="describedby"', $this->location($served, TRUE)->getGeneratedUrl()));
     return $response;
   }
@@ -328,6 +373,11 @@ final class ResourceApiController implements ContainerInjectionInterface {
     $answer += ['outputs' => new \stdClass(), 'contract' => NULL, 'created' => NULL];
     if ($dry) {
       return $this->respond($answer + [self::DRY_RUN => TRUE]);
+    }
+    if ($served->surface->changesNothing() && $served->storage instanceof StorageAdapter && $result->prepared !== NULL) {
+      // A read answers what its prepare answered.
+      // Decision: see docs/decisions.md#who-produces-outputs.
+      $answer['outputs'] = (object) $served->storage->outputs($served->surface, $result->values, $result->prepared);
     }
     if (!$result->committed || $deletes) {
       // An operation that writes nothing, a read, answers the run; so does

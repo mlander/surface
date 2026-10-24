@@ -11,7 +11,7 @@ use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
 /**
- * Tests the tool calls of examples 7 to 14, and the README quoting them.
+ * Tests the tool calls of examples 7 to 15, and the README quoting them.
  *
  * Makes every call ConceptCalls writes down, on the settings the module
  * ships, the way each example's panel makes it, with example 10's
@@ -20,7 +20,8 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * placed, and example 14's module that manages keys on: what each
  * answers is
  * pinned here for the rule it shows, the README must quote every command
- * and every answer as made, and none of the calls writes anything.
+ * and every answer as made, and nothing is left written: example 15's
+ * calls write a fourth venue and remove it again with the last.
  */
 #[Group('data_surface')]
 #[RunTestsInSeparateProcesses]
@@ -91,7 +92,7 @@ class ExamplesConceptsToolTest extends DataSurfaceKernelTestBase {
         $answers[$resource][$name] = $panel->answer($resource, $name);
       }
     }
-    $this->assertSame($before, $this->everything(), 'No call wrote anything.');
+    $this->assertSame($before, $this->everything(), 'No call left anything written.');
 
     // The answer's first line and, after a refusal, its first violation.
     $first = static fn (string $answer): string => implode("\n", array_slice(explode("\n", $answer), 0, str_starts_with($answer, 'Failed: ') ? 2 : 1));
@@ -128,6 +129,13 @@ class ExamplesConceptsToolTest extends DataSurfaceKernelTestBase {
     $this->assertSame('Success: Configure the mailer: the stored values were read, and nothing was written.', $first($answers['event.mailer']['read']));
     $this->assertStringContainsString('"credential":{"key_id":"webhook_signing"}', str_replace('"third_party_settings":{"data_surface_examples_keys":', '"credential":', $answers['event.webhook']['managed']));
     $this->assertSame("Failed: The values were refused:\n" . '/api_key: API key does not apply when third_party_settings.data_surface_examples_keys.key_id is set.', $first($answers['event.webhook']['pasted_beside_managed']), 'Refused, naming the key it depends on.');
+    $this->assertStringContainsString("\n  items: [{\"id\":\"riverside\",\"label\":\"Riverside Hall\",\"capacity\":520,\"weight\":0},{\"id\":\"library\",\"label\":\"Old Library\",\"capacity\":90,\"weight\":1}]\n  total: 3", $answers['event.venue']['list'], 'The listing answers its page and its total beside the result.');
+    $this->assertSame('Success: Add a venue: the values were accepted and written.', $first($answers['event.venue']['add']), 'Town Hall written, so the next calls find it.');
+    $this->assertSame('Success: Edit a venue: the values were accepted and written.', $first($answers['event.venue']['edit']));
+    $this->assertSame('Success: Dry run of Reorder the venues: the values were accepted and prepared, and nothing was written.', $first($answers['event.venue']['reorder']));
+    $this->assertSame("Failed: The values were refused:\n/venues/0/id: No venue is named concert_hall.\n/venues/2/id: The library venue is named already, at position 1: a reorder names each venue once.", $answers['event.venue']['reorder_unknown'], 'Refused by the storage, at each place.');
+    $this->assertStringContainsString('"capacity":350', $answers['event.venue']['remove_rehearsed'], 'The removal rehearsed answers what Town Hall holds, its capacity changed.');
+    $this->assertSame('Success: Remove a venue: removed. The values it held are answered.', $answers['event.venue']['remove'], 'The last call removes Town Hall, so the three venues shipped are what is left.');
 
     // The examples' README quotes every command, and every answer under
     // its call's label.

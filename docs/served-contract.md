@@ -376,7 +376,7 @@ under `$defs`, and referred to ([reusable subschemas](#reusable-subschemas)).
 | a key under a runtime access answer, in the full schema | there and writable, as the static answers leave it, with `x-surface.access: "live"`: it may be locked or left out once the subject is known; the schema for these answers says which, and marks nothing ([Static and runtime access](resources.md#static-and-runtime-access)) |
 | a secret | `writeOnly: true`, its declared type, never in `required` (left out or `null`, the stored secret stands), no default, `null` in `values` ([decision](decisions.md#a-secret-is-optional-never-nullable)) |
 | a key a refiner answers [does not apply](refinement.md#when-a-key-does-not-apply) for these values | no property, not in `required`, not in `values`; the frame's own `x-surface.doesNotApply` names it with what it depends on. In the full schema, `false` under each conditional that rules it out, and `required` under each where it applies and is required ([decision](decisions.md#a-key-that-does-not-apply)) |
-| any other constraint | named in `x-surface.checkedOnServer` with what it checks: the schema is not the whole story, ask with `?dryRun=true` |
+| any other constraint | named in `x-surface.checkedOnServer` with what it checks: the schema is not the whole story, ask with `?dryRun=true`; not one whose resolver says its list is the whole of it (`exact: TRUE`), which is the `oneOf` ([Options](options.md#writing-a-resolver)) |
 
 ### `x-surface`
 
@@ -1054,8 +1054,8 @@ route, `data_surface_react.api`, answers every path below;
 
 | Method and path | What it does |
 | --- | --- |
-| `GET /surface-api/{resource}` | A singleton's envelope: what is stored and the schema for it. On a collection, the default create's envelope: its declared defaults and the schema a `POST` takes. |
-| `PATCH /surface-api/{resource}` | A singleton's default update. |
+| `GET /surface-api/{resource}` | A singleton's envelope: what is stored and the schema for it. On a collection, the listing where the resource declares one, a read only operation that names no thing: its query string the values, its outputs the answer ([a listing](#a-listing)). Else the default create's envelope: its declared defaults and the schema a `POST` takes. |
+| `PATCH /surface-api/{resource}` | A singleton's default update. A collection has none. |
 | `POST /surface-api/{resource}` | The default create, on the collection of a resource with identity. |
 | `GET /surface-api/{resource}/{id}` | One thing's envelope, its default update's (or default read's). |
 | `PATCH /surface-api/{resource}/{id}` | One thing's default update. |
@@ -1063,7 +1063,8 @@ route, `data_surface_react.api`, answers every path below;
 | `GET .../schema` | The full schema of the operation `GET` serves at that path, `application/schema+json`. |
 | `POST .../schema` | The envelope narrowed for the values the body sends: the schema, given these values. A query. |
 | `GET .../{x}:{operation}` | A custom method's envelope: any operation that is not a default. |
-| `POST .../{x}:{operation}` | A run of that operation: a create, an update, or a read that checks and writes nothing. |
+| `PATCH .../{x}:{operation}` | A run of that operation when it is an update: example 15's reorder, `PATCH /surface-api/event.venue:reorder`. |
+| `POST .../{x}:{operation}` | A run of any other: a create, or a read that checks and writes nothing. |
 | `GET` and `POST .../{x}:{operation}/schema` | Its full schema, and its schema for values. |
 
 `{id}` is the identity: the parameters of the operation that addresses
@@ -1081,19 +1082,26 @@ string: `POST /surface-api/field.instance?entity_type_id=node&bundle=article`.
 
 **Which operation is the default.** At each path, of each kind: the
 operation named for it (`add` for a create; `configure` or `edit` for
-an update; `read` for a read; `remove` or `delete` for a delete), or
-else the only operation of that kind at the path; two of a kind with
-neither named so leaves the kind with no default. A read is a default
-only where no update is. `GET` serves the default update, else the
-default read, else, on a collection, the default create; `PATCH` is the
-default update; `POST` on the collection is the default create;
-`DELETE` is the default delete. Every other operation is a custom method,
-`:{operation}` after the last segment of the path it addresses:
-example 10's `check`, read-only beside the program's `configure`, is
-`/surface-api/event.program:check`; the field instance's `reuse`, a
-second create beside `add`, is `/surface-api/field.instance:reuse`. A
-resource id with a colon of its own, `entity.content:node.page`, is read
-whole first. A default may be named the same way.
+an update; `read` or `list` for a read; `remove` or `delete` for a
+delete), or else the only operation of that kind at the path; two of a
+kind with neither named so leaves the kind with no default. A read is a
+default only where no update is, and the collection of a resource with
+identity has no default update: `PATCH` there would change every thing,
+which no operation means, so an update over the collection, example
+15's reorder, is a custom method. `GET` serves the default update, else
+the default read, else, on a collection, the default create; on the
+collection of a resource with identity, a default read is its listing,
+which `GET` runs. `PATCH` is the default update; `POST` on the
+collection is the default create; `DELETE` is the default delete. Every
+other operation is a custom method, `:{operation}` after the last
+segment of the path it addresses, run with `PATCH` when it is an update
+and `POST` otherwise: example 10's `check`, read-only beside the
+program's `configure`, is `POST /surface-api/event.program:check`; the
+field instance's `reuse`, a second create beside `add`, is `POST
+/surface-api/field.instance:reuse`; example 15's `reorder` is `PATCH
+/surface-api/event.venue:reorder`. A resource id with a colon of its own,
+`entity.content:node.page`, is read whole first. A default may be named
+the same way.
 
 Every path is gated by `_data_surface_react_access`: the operation's
 permission, then the access class the resource or structure names,
@@ -1115,6 +1123,35 @@ format its documents are written in ([Contract 3](#contract-3)), as
 `x-surface.contract` says inside them; an error too. A client reads it
 before the body and refuses a version it does not know; the React app
 does, by the header or by the document.
+
+### A listing
+
+A resource with identity whose collection has a read only operation
+that names no thing, its default read there, is listed by `GET` on the
+collection ([decision](decisions.md#a-listing-is-a-read-only-operation-with-outputs-a-reorder-is-an-update-over-the-collection)).
+The query string is the listing's values, read by
+[the coercion table](semantics.md#the-coercion-table) as a form's text
+is, the operation's parameters and `dryRun` aside; the pipeline accepts
+and validates them and stops after prepare, as for any read, and the
+answer is the listing's outputs as its storage's prepare() answered
+them, not an envelope. A value refused is 422 problem details. Example
+15's:
+
+```
+GET /surface-api/event.venue?limit=2
+
+200 Contract-Version: 3
+Link: <https://example.com/surface-api/event.venue/schema>; rel="describedby"
+
+{"items":[{"id":"riverside","label":"Riverside Hall","capacity":520,"weight":0},{"id":"library","label":"Old Library","capacity":90,"weight":1}],"total":3}
+```
+
+Its envelope is its custom method's, `GET /surface-api/event.venue:list`,
+and its full schema the collection's, `GET /surface-api/event.venue/schema`:
+the paging and the filter, and under `outputs` the page and the total.
+The create's envelope moves to its custom method too,
+`GET /surface-api/event.venue:add`. A resource with no listing answers
+`GET` on its collection with its create's envelope, as before.
 
 ### The read
 
@@ -1468,7 +1505,13 @@ is open.
   default delete is `delete` on the thing's path item,
   `/surface-api/block.placement/{id}` with `get`, `patch` and `delete`,
   with no request body and no `ETag` in its answer; its envelope is its
-  custom method's, `/surface-api/block.placement/{id}:remove`, `get`. An
+  custom method's, `/surface-api/block.placement/{id}:remove`, `get`. A
+  listing is `get` on the collection's path item, `/surface-api/event.venue`,
+  its values query parameters, each with its schema, and its answer the
+  outputs' component; its envelope is its custom method's,
+  `/surface-api/event.venue:list`, `get` and `post`. An update over the
+  collection is a custom method run with `patch`,
+  `/surface-api/event.venue:reorder`. An
   identity is a path parameter, an operation's other parameters query
   parameters. Each call is tagged with the resource's id. The summary
   is the operation's label and the description its description; how it

@@ -217,3 +217,57 @@ data_surface_examples.step14_webhook:
     _data_surface_panel: 'data_surface_examples.panels'
   requirements:
     _data_surface_operation_access: 'TRUE'
+
+data_surface_examples.step15:
+  path: '/surface-examples/15'
+  defaults:
+    _controller: '\Drupal\data_surface_examples\Controller\ExamplesController::step15'
+    _title: 'Example 15: a config entity of your own'
+  requirements:
+    _permission: 'administer event venues'
+
+# Example 15's three forms, each one operation of the venue resource,
+# served by the generic operation form: the edit and remove routes' {id}
+# is upcast to the venue the operations take. The remove route draws a
+# confirmation, since a delete takes no values; the cosmetic layer says
+# what was done and goes back to the example's page.
+data_surface_examples.step15_add:
+  path: '/surface-examples/15/add'
+  defaults:
+    _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
+    _title: 'Example 15, add a venue'
+    _data_surface_resource: 'Drupal\data_surface_examples\Resource\VenueResource'
+    _data_surface_operation: 'add'
+    _data_surface_cosmetics: 'data_surface_examples.venue_form_cosmetics'
+  requirements:
+    _data_surface_operation_access: 'TRUE'
+
+data_surface_examples.step15_edit:
+  path: '/surface-examples/15/venue/{id}'
+  defaults:
+    _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
+    _title: 'Example 15, edit a venue'
+    _data_surface_resource: 'Drupal\data_surface_examples\Resource\VenueResource'
+    _data_surface_operation: 'edit'
+    _data_surface_cosmetics: 'data_surface_examples.venue_form_cosmetics'
+  requirements:
+    _data_surface_operation_access: 'TRUE'
+  options:
+    parameters:
+      id:
+        type: 'entity:event_venue'
+
+data_surface_examples.step15_remove:
+  path: '/surface-examples/15/venue/{id}/remove'
+  defaults:
+    _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
+    _title: 'Example 15, remove a venue'
+    _data_surface_resource: 'Drupal\data_surface_examples\Resource\VenueResource'
+    _data_surface_operation: 'remove'
+    _data_surface_cosmetics: 'data_surface_examples.venue_form_cosmetics'
+  requirements:
+    _data_surface_operation_access: 'TRUE'
+  options:
+    parameters:
+      id:
+        type: 'entity:event_venue'

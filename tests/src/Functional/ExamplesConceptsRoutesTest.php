@@ -81,10 +81,11 @@ class ExamplesConceptsRoutesTest extends BrowserTestBase {
       'Example 11: the stock widgets, and what nothing means',
       'Example 12: a schema read into a structure',
       'Example 14: an optional extension',
+      'Example 15: a config entity of your own',
     ] as $title) {
       $assert->pageTextContains($title);
     }
-    foreach (array_keys(self::PAGES) as $path) {
+    foreach ([...array_keys(self::PAGES), 'surface-examples/15'] as $path) {
       $assert->linkByHrefExists('/' . $path);
     }
     $assert->pageTextContains('In React at /surface-react/event.doors/configure, once data_surface_react is enabled.');

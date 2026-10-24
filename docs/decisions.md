@@ -1818,6 +1818,16 @@ format core is asked to replace with data definitions
   the architecture review found restating core's schema less strictly,
   states core's control-character patterns now, and `NodeTypeStorage`
   says from the schema that its two booleans always hold a value.
+- **An entity type a module declares** (added 2026-10-23, example 15). A
+  resource whose `ConfigEntityStorage` names an entity type its own
+  module declares gets that type's entry, `<module>.<config prefix>.*`,
+  a fully validatable `config_entity` whose mapping is each key the
+  storage maps to a property, by the property's name, by the same rules;
+  `ALWAYS_HELD` on the storage says which optional keys are never null.
+  No install file is written: what a module ships of an entity type is
+  things, which no resource describes. An entity type of core or of
+  another module keeps the schema its owner writes, held to as above
+  ([A listing is a read-only operation with outputs](#a-listing-is-a-read-only-operation-with-outputs-a-reorder-is-an-update-over-the-collection)).
 
 (`Storage\ConfigSchemaGenerator`, `Drush\Commands\ConfigSchemaCommand`,
 `ResourceBuild\AutowiringClassResolver`,
@@ -1843,7 +1853,13 @@ developer's to fix, before any person sees the form.
 A resource's outputs are what its storage's `load()` hands back under
 an output's name, once the values are committed. The storage class
 already knows how to read the thing it wrote; a second verb would say
-the same twice.
+the same twice. *Added 2026-10-23:* a read only operation is never
+committed, so its outputs are what its storage's `prepare()` answered
+under an output's name: prepare is the last stage a read runs, and one
+with no side effects, so the storage reads there, and a listing's page
+is that answer
+([A listing is a read-only operation with outputs](#a-listing-is-a-read-only-operation-with-outputs-a-reorder-is-an-update-over-the-collection)).
+A dry run of any other operation still answers none.
 (`StorageAdapter::outputs()`)
 
 ## Access
@@ -4182,6 +4198,121 @@ chosen. (`BlockPlacementResource`, `BlockPlacementStorage`,
 `BlockPlacementFormTest`, `BlockPlacementReactTest`,
 `ConfigEntityStorageTest`)
 
+### A listing is a read-only operation with outputs; a reorder is an update over the collection
+
+Decided 2026-10-23, with example 15, the first module of the series to
+declare a config entity type of its own, a venue, and put a resource
+over it from the start (`event.venue`). Two points the placement unit
+left open are settled on it: how the things a resource holds are
+listed, and how they are put in order.
+
+- **No new kind.** A listing is `readOnly: TRUE`, a read; a reorder is
+  neither, so it is an update. Both name no thing: they need no
+  parameter, and they are addressed at the collection. A `list` or
+  `search` kind was weighed and turned down: what a client needs to
+  know of a call is still whether it changes anything, may destroy
+  what is there, or creates, and a listing's answer is what its outputs
+  declare, which a kind would not add to.
+- **An operation may take keys of its own.** `#[Operation(values:
+  Structure::class)]` names the structure whose inputs a call takes and
+  whose outputs it answers, in place of the resource's keys: the
+  listing's `offset` (0 to 10000), `limit` (1 to 50, 20 by default) and
+  `status`, and its `items`, a list of `{id, label, capacity, weight}`,
+  and `total`; the reorder's `venues`, a collection of `{id, weight}`.
+  Why: a venue's keys (its name, its rooms) are not what a page or an
+  order is made of, and declaring the paging on the resource would put
+  it on every form and in the entity's config schema. The resource's
+  permission, access class and storage stay its own; the structure has
+  no identity and no storage, and one that has is refused when the
+  operation is built. The keys are no keys the storage holds, so none is
+  marked always held and the build does not hold them to the config
+  schema the storage writes to. Refused on a create and a delete, which
+  are about the thing's own keys.
+- **A read answers its outputs from prepare.** A read only operation is
+  never committed, so its outputs are what its storage's `prepare()`
+  answered under an output's name ([Who produces
+  outputs](#who-produces-outputs)): prepare is the last stage a read
+  runs, and one with no side effects. `VenueStorage` reads the venues
+  there, lighter first, and answers the page and the total. The tool
+  answers them beside the one result shape.
+- **`GET` on a collection picks the listing when one is declared.** The
+  default read of a collection is a listing where the resource has
+  identity: the read only operation named `list` or `read`, or the only
+  read there. `GET` runs it with the query string as its values, read
+  by the coercion table, and answers its outputs, `{items, total}`, with
+  a `Link` to its full schema, the collection's `.../schema`; a value
+  refused is 422. A resource with no listing answers `GET` on its
+  collection with its create's envelope, as before; with one, the
+  create's envelope is its custom method's, `GET .../{resource}:add`,
+  and the listing's envelope `GET .../{resource}:list`. Why the outputs
+  and not an envelope: the listing's answer is the thing a client asked
+  for, and it carries stored values, so it is never stored either, as
+  an envelope is not ([A served contract is never
+  stored](#a-served-contract-is-never-stored)); the reason contract 3
+  gave for no listing, that a listing carries stored values a client
+  caches, holds of a tool listing, which is a discovery channel, and not
+  of a `no-store` answer read when it is wanted.
+- **Items are filtered by access.** The operation's permission gates the
+  call (`view event venues`). Each venue is then asked the resource's
+  access answer in the listing's own context, knowing that venue's id:
+  the listing's permission, then the access class for that venue
+  (`Resources::access()`), and a venue whose answer is not allowed is
+  left out of the page and of the total. `VenueAccess` refuses a
+  disabled venue to an account without `administer event venues`,
+  which only the venue can say. Asking the edit's answer, the read
+  tool's rule ([Reading asks what writing
+  asks](#reading-asks-what-writing-asks)), was weighed and turned down:
+  an account that may list the venues need not edit them.
+- **A reorder is an update over the collection, in one commit.** Its
+  storage loads every venue's id and weight; its `prepare()` refuses an
+  id that names no venue (`not_found`) and one named twice (`taken`),
+  each by its place in the list, and rehearses each named venue with its
+  new weight, held to its config schema; `commit()` saves them, all in
+  that one write. A venue left out keeps its weight. Its read tool
+  answers the current order. Why storage and not a `Choice` on the id:
+  the refusal names the venue and the position, and the full schema does
+  not list the venues, which change.
+- **On HTTP, an update over the collection is a custom method run with
+  `PATCH`.** The collection of a resource with identity has no default
+  update: `PATCH /surface-api/event.venue` would change every venue,
+  which no operation means. So the reorder is `PATCH
+  /surface-api/event.venue:reorder`, and every custom method of an
+  update is run with `PATCH`, as the default update is: the method says
+  the kind. A custom method of any other kind stays `POST`. The tool
+  test module's `append` and `clear`, the only custom updates before,
+  moved from `POST` to `PATCH` with it.
+- **The entity type's config schema is written from the resource.**
+  `drush data_surface:config-schema --write` writes
+  `data_surface_examples.event_venue.*` from `event.venue`, as it writes
+  a config object's: the rule [A config object is described by its
+  resource](#a-config-object-is-described-by-its-resource) applied to an
+  entity type a module declares. The entity class has no form classes,
+  no list builder and no links: the resource's routes add, edit and
+  remove a venue.
+- **Example 2 chooses from the venues.** Its venue and room are the
+  venue entities' (`EventVenue`, `EventVenueRoom` and, added by the
+  room's refiner, `RoomOfEventVenue`, read by one resolver under the
+  venues' list tag), so a venue added through example 15 is offered at
+  the next request with no cache rebuild. The shipped venues are the
+  hand-written list's, so example 2's documents are as they were, byte
+  for byte. A resolver may say its list is the whole of its constraint
+  (`#[DataSurfaceOptionsResolver(exact: TRUE)]`), as a `Choice`'s is,
+  and the emitter then names that constraint under no `checkedOnServer`.
+  *Open:* the capacity's cap per room still reads `Venues::seats()`: a
+  static refiner reads only what it watches and cannot say what site
+  state it read, so a room example 15 adds is offered with no cap on the
+  capacity until a refiner can read a site's list as a resolver does.
+
+*Open:* the placement resource may gain `list` the same way, a page of
+the placed blocks of a theme; a listing's next page as a link rather
+than an offset; a `sort` input. (`Operation::$values`,
+`OperationDefinition::$values`, `Resources::shapeOf()`,
+`StorageAdapter::outputs()`, `ServedPaths::listing()`,
+`ServedPaths::defaults()`, `ResourceApiController::listing()`,
+`OpenApiDocument::listed()`, `ConfigSchemaGenerator::describeEntityType()`,
+`DataSurfaceOptions::isStatedByList()`, `VenueResource`, `VenueStorage`,
+`VenueAccess`, `EventVenue`, `VenueResourceTest`, `VenueApiTest`)
+
 ## Examples
 
 ### What the examples are made of
@@ -4971,6 +5102,13 @@ door spells a path. The endpoint table is in
   defaults and the schema a `POST` takes: there is no listing, since a
   listing would carry stored values a client caches
   ([Required is the resource's](#required-is-the-resources-and-an-update-tool-requires-nothing-at-its-door)).
+  *Changed 2026-10-23:* where a resource with identity declares a read
+  only operation that names no thing, `GET` on its collection answers
+  that listing's outputs, its query string the values; else the default
+  create's envelope as before. The collection of a resource with
+  identity has no default update, and a custom method of an update is
+  run with `PATCH`
+  ([A listing is a read-only operation with outputs](#a-listing-is-a-read-only-operation-with-outputs-a-reorder-is-an-update-over-the-collection)).
   *Added 2026-10-23:* `DELETE` on a path is its default delete, the
   operation named `remove` or `delete`, or else the only delete there:
   it takes no body, answers 200 with the result, and leaves no envelope

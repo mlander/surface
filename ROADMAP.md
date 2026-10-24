@@ -1245,7 +1245,9 @@ renames sit in A because they are cheapest before new code exists.
     placed component block is a resource, `block.placed_component`,
     named by its machine name, with a write tool and a read tool.
     Example 13 at `/surface-examples/13`. Open: listing the placed
-    blocks; the add form without JavaScript (After the rework, item 7).
+    blocks (how a resource lists its things is settled by item 19; the
+    placement resource gains `list` that way when it is wanted); the add
+    form without JavaScript (After the rework, item 7).
     Closed 2026-10-23: a placed block of any plugin as one resource,
     `block.placement` (item 11), which replaced
     `block.placed_component`; placing, moving within a theme and
@@ -1305,6 +1307,25 @@ renames sit in A because they are cheapest before new code exists.
       read "does not apply" as "holds nothing".
     - Until then, an owner that needs a managed key's value integrates
       the key module itself, as the mailer does.
+
+19. **A listing and a reorder.** DONE 2026-10-23
+    (`docs/decisions.md#a-listing-is-a-read-only-operation-with-outputs-a-reorder-is-an-update-over-the-collection`).
+    Example 15 at `/surface-examples/15`: a config entity type the
+    examples module declares, `event_venue`, with a resource over it from
+    the start, `event.venue`, on a `VenueStorage`. Closes the listing gap
+    the placement unit left (item 16): an operation may take the keys of
+    a structure of its own (`#[Operation(values:)]`); a listing is a read
+    only operation with outputs, answered from its storage's prepare,
+    each thing filtered by the resource's access answer for it, and
+    `GET` on a collection answers it where a resource declares one; a
+    reorder is an update over the collection, written in one commit, a
+    custom method run with `PATCH`. The config schema command writes an
+    entity type's schema from its resource. Example 2 chooses its venue
+    and room from the venues, through a resolver whose list is the whole
+    of its constraint (`exact: TRUE`). Open: `list` on the placement
+    resource, a page of a theme's placed blocks; a next page as a link; a
+    `sort` input; example 2's capacity cap still read from `Venues`,
+    until a refiner can read a site's list as a resolver does.
 
 ## Maintenance
 

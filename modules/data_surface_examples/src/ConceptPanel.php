@@ -18,14 +18,17 @@ use Drupal\data_surface\Contract\SchemaReader;
 use Drupal\data_surface\Contract\SchemaResolver;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\Resource\OperationContext;
+use Drupal\data_surface\Pipeline\ResultDocument;
 use Drupal\data_surface\ResourceBuild\OperationRoute;
 use Drupal\data_surface\ResourceBuild\ResourceRegistry;
 use Drupal\data_surface\ResourceBuild\ResourcesInterface;
 use Drupal\data_surface\Variants\ComponentProps;
 use Drupal\data_surface_component_block\Structure\ComponentBlockStructure;
 use Drupal\data_surface_examples\Access\FeesAccess;
+use Drupal\data_surface_examples\Entity\EventVenue;
 use Drupal\data_surface_examples\Keys\TicketTypes;
 use Drupal\data_surface_examples\Resource\SpotlightResource;
+use Drupal\data_surface_examples\Resource\VenueResource;
 use Drupal\data_surface_tool\OperationInputs;
 use Drupal\tool\Tool\ToolDefinition;
 use Drupal\tool\Tool\ToolManager;
@@ -92,6 +95,30 @@ final class ConceptPanel {
     ],
     'event.mailer' => self::EXTENSION_DOCS,
     'event.webhook' => self::EXTENSION_DOCS,
+    'event.venue' => [
+      'docs/storage.md#a-config-entity',
+      'docs/resources.md#an-operation-that-takes-keys-of-its-own',
+      'docs/outputs.md',
+      'docs/served-contract.md#the-api',
+      'docs/decisions.md#a-listing-is-a-read-only-operation-with-outputs-a-reorder-is-an-update-over-the-collection',
+    ],
+  ];
+
+  /**
+   * Example 15: each path of the venues and what it is, as served.
+   *
+   * Method, path, operation and what it answers; ExamplesVenueApiTest holds
+   * each to what the API answers.
+   */
+  public const VENUE_PATHS = [
+    ['GET', '/surface-api/event.venue?limit=2', 'list', 'the listing: its outputs, a page of venues and the total'],
+    ['POST', '/surface-api/event.venue', 'add', "201 with the new venue's Location"],
+    ['GET', '/surface-api/event.venue:add', 'add', 'the envelope a create starts from'],
+    ['GET', '/surface-api/event.venue/riverside', 'edit', 'the envelope: what is stored, its schema and its ETag'],
+    ['PATCH', '/surface-api/event.venue/riverside', 'edit', 'the update, held by If-Match'],
+    ['DELETE', '/surface-api/event.venue/riverside', 'remove', 'the removal, no body'],
+    ['PATCH', '/surface-api/event.venue:reorder', 'reorder', 'the reorder, a custom method on the collection'],
+    ['GET', '/surface-api/event.venue/schema', 'list', "the listing's full schema, its inputs and its outputs"],
   ];
 
   /**
@@ -249,6 +276,7 @@ final class ConceptPanel {
       'event.program' => $this->t('Access says whether keys may be changed, seen, or neither, and its kind is read from its cacheability, never declared. The access class of the fees locks them for an account without "set event fees", which the account alone decides, so the full schema states the lock for that account. For any other account the program decides: once it is published, the fees are fixed, which only what is stored can say, so the full schema marks the fees <code>access: live</code> and the schema for these answers settles it. Each operation also states how a call behaves: configuring changes what exists and may be repeated, and checking, at /surface-examples/10/check, changes nothing, so its tool is a read and has no read tool beside it.'),
       'event.doors' => $this->t('Every stock widget, each chosen by what its key declares: a time input for a string that asks for one, checkboxes for a short list of choices, radios for one choice that asks for them, a text area for a multiline string, and rows with "Add another" for a list of free values. The config schema is fully validatable, so the storage knows which keys may hold nothing. A key a call leaves out keeps what is stored, null clears it, and a value replaces it; the badges, which the storage always holds, refuse null and name their default. The four dry runs below show each.'),
       'event.spotlight' => $this->t("A JSON Schema the site already has is read into a structure, keyword by keyword: each single-directory component says what props it takes, and that schema is a variant at <code>props</code>, chosen by the component. The class names no component and no prop: a provider lists the components, with their schemas, and the reader turns each schema into keys with their types, labels, defaults, lists of values, bounds and required keys, and a nested object into a map. Choose another component and the props below it are that component's, over AJAX, and in React with no request. Both documents state the components as variants, <code>anyOf</code> of each component's def and one conditional per component, and the full schema of a component read back from them is the same document again. What the reader cannot say is kept, as a JsonSchema constraint the server checks, and noted. A tool that sends one component's props for another is refused, naming the component they belong to. Beside the props, the component's slots are a second key the same component chooses, read from its metadata: each slot holds text, one component or a list of them, narrowed to what the slot expects, three deep at most."),
+      'event.venue' => $this->t("A module that declares its own config entity type puts a resource over it from the start: the venue entity, with no form classes, no list builder and no links, and the resource <code>event.venue</code> naming it through a ConfigEntityStorage. Its config schema, <code>data_surface_examples.event_venue.*</code>, is written from the resource by <code>drush data_surface:config-schema --write</code>, as a config object's is. Add, edit and remove are about one venue. Listing and reordering are about the venues together, so they name none: each takes the keys of a structure of its own, a page and a filter, or a list of ids and weights, which <code>values:</code> on its <code>#[Operation]</code> names. The listing is read only and declares outputs, the page and the total, each venue in it one the account may read; on HTTP it is what <code>GET</code> on the collection answers. The reorder is an update over the collection, written in one commit, served as a custom method, <code>PATCH /surface-api/event.venue:reorder</code>. Example 2 chooses its venue and room from these venues: add one here and example 2 offers it at the next request."),
       'event.mailer', 'event.webhook' => $this->t("Two resources call a service with a credential: a key pasted here, a secret, or a key the site manages, once a module that manages keys is on. @module stands in for the Key module. The mailer, at /surface-examples/14, is the owner's way: it declares both sources, each a structure of its own, and a provider lists them, the pasted one always and the managed one while the module is on. With one source to choose, the source is drawn as that source and stated as <code>const</code>. A pasted key stored is kept when the managed key is chosen, and taken up again when the pasted source is chosen back. The webhook, at /surface-examples/14/webhook, is the alter's way: it declares a pasted key and knows nothing of managed keys, and the module's alter mounts a managed key beside it and rules the pasted key out once one is chosen. Install the module and reload: the second source and the managed key are there at the next request, with no cache rebuild.", ['@module' => self::KEYS]),
       default => $this->t('Not an example of this series.'),
     };
@@ -698,6 +726,61 @@ final class ConceptPanel {
   }
 
   /**
+   * Example 15: answers whether the site has a venue of a name.
+   *
+   * @param string $id
+   *   The machine name.
+   *
+   * @return bool
+   *   TRUE when a venue holds it.
+   */
+  protected function venueExists(string $id): bool {
+    return $this->registry->hasDefinition(VenueResource::class) && EventVenue::load($id) !== NULL;
+  }
+
+  /**
+   * Example 15: the paths of the venues, and their tools.
+   *
+   * @return array
+   *   The blocks.
+   */
+  public function venues(): array {
+    $rows = [];
+    foreach (self::VENUE_PATHS as [$method, $path, $operation, $what]) {
+      $rows[] = [$method, ['data' => ['#markup' => '<code>' . $path . '</code>']], $operation, $what];
+    }
+    $tools = [];
+    foreach (['add', 'list', 'reorder', 'reorder:read', 'edit', 'edit:read', 'remove'] as $suffix) {
+      $tool_id = 'data_surface:event.venue:' . $suffix;
+      $tool = $this->toolManager->hasDefinition($tool_id) ? $this->toolManager->getDefinition($tool_id) : NULL;
+      if ($tool instanceof ToolDefinition) {
+        $tools[] = [
+          $tool_id,
+          (string) $tool->getLabel(),
+          $tool->getOperation()->value,
+          implode(', ', array_keys($tool->getInputDefinitions())),
+        ];
+      }
+    }
+    return [
+      'paths' => [
+        '#type' => 'table',
+        '#caption' => $this->t("The paths of the venues, with data_surface_react on: the collection is the resource, one venue its path, and the method the operation. GET on the collection answers the listing, since the resource declares one; a resource with none answers its create's envelope there."),
+        '#header' => [$this->t('Method'), $this->t('Path'), $this->t('Operation'), $this->t('Answers')],
+        '#rows' => $rows,
+        '#attributes' => ['class' => ['data-surface-concept-paths']],
+      ],
+      'tools' => [
+        '#type' => 'table',
+        '#caption' => $this->t('The tools of the venues: one per operation, and a read tool beside each update. The listing is a read, with no dry run; its tool answers the page and the total beside the one result shape.'),
+        '#header' => [$this->t('Tool'), $this->t('Title'), $this->t('Tool API kind'), $this->t('Inputs')],
+        '#rows' => $tools,
+        '#attributes' => ['class' => ['data-surface-concept-tools']],
+      ],
+    ];
+  }
+
+  /**
    * Cuts a key holding variants to the components shown.
    *
    * @param array $key
@@ -731,18 +814,27 @@ final class ConceptPanel {
       'event.mailer', 'event.webhook' => ['event.mailer', 'event.webhook'],
       default => [$id],
     };
+    // Example 15's calls write a fourth venue and remove it again, unless
+    // the site has one of that name already, which they never touch: then
+    // each is a dry run, and the page says so.
+    $rehearsed = $id === 'event.venue' && $this->venueExists((string) ConceptCalls::TOWN_HALL['id']);
+    $note = match (TRUE) {
+      $rehearsed => $this->t('This site has a venue named @id, so each call below is made now as a dry run, and nothing is written: the add is refused for the name it took, and the edit, the reorder and the removals rehearse what they would do to it. Remove that venue and the calls write and remove their own again. The command asks the same from Drush.', ['@id' => ConceptCalls::TOWN_HALL['id']]),
+      $id === 'event.venue' => $this->t('Each call made now, as this page was drawn, in order: the second add writes Town Hall, so the edit, the reorder and the removals find it, and the last call removes it again, so the three venues the module ships are what is left. A dry run accepts, validates and prepares the values and stops, and the listing changes nothing, so it stops there by itself. The command asks the same from Drush.'),
+      default => $this->t('Each call made now, as this page was drawn, and none writes anything: a dry run accepts, validates and prepares the values and stops, and an operation that changes nothing stops there by itself. The command asks the same from Drush.'),
+    };
     $calls = [
       '#type' => 'details',
       '#open' => FALSE,
       '#title' => $this->t('Ask the tool'),
-      'note' => ['#markup' => '<p>' . $this->t('Each call made now, as this page was drawn, and none writes anything: a dry run accepts, validates and prepares the values and stops, and an operation that changes nothing stops there by itself. The command asks the same from Drush.') . '</p>'],
+      'note' => ['#markup' => '<p>' . $note . '</p>'],
     ];
     foreach ($ids as $resource) {
       foreach (ConceptCalls::of($resource, array_keys($this->moduleHandler->getModuleList())) as $name => $call) {
         $calls[$resource . ':' . $name] = [
           'label' => ['#markup' => '<h3>' . htmlspecialchars($call['label']) . '</h3>'],
           'command' => $this->pre(ConceptCalls::drush($resource, $name)),
-          'answer' => $this->pre($this->answer($resource, $name)),
+          'answer' => $this->pre($this->answer($resource, $name, $rehearsed)),
         ];
       }
     }
@@ -756,12 +848,14 @@ final class ConceptPanel {
    *   The resource id.
    * @param string $name
    *   The call's name.
+   * @param bool $rehearsed
+   *   TRUE to make a call that writes as a dry run instead.
    *
    * @return string
    *   The answer, as tool:run prints it: the message, and the values a
    *   call accepted and did not write, as the read tool would answer them.
    */
-  public function answer(string $resource, string $name): string {
+  public function answer(string $resource, string $name, bool $rehearsed = FALSE): string {
     $tool_id = ConceptCalls::tool($resource, $name);
     if (!$this->toolManager->hasDefinition($tool_id)) {
       return (string) $this->t('There is no tool @tool on this site.', ['@tool' => $tool_id]);
@@ -782,7 +876,7 @@ final class ConceptPanel {
       }
       // A read only operation's tool takes no dry run: it writes nothing.
       if (isset($tool->getInputDefinitions()[OperationInputs::DRY_RUN])) {
-        $tool->setInputValue(OperationInputs::DRY_RUN, ConceptCalls::CALLS[$resource][$name]['dry_run'] ?? TRUE);
+        $tool->setInputValue(OperationInputs::DRY_RUN, $rehearsed || (ConceptCalls::CALLS[$resource][$name]['dry_run'] ?? TRUE));
       }
       $tool->execute();
       $result = $tool->getResult();
@@ -795,6 +889,11 @@ final class ConceptPanel {
     foreach ($result->getContextValues() as $output => $value) {
       if ($result->isSuccess() && $output === OperationInputs::VALUES && is_array($value) && !($result->getContextValues()[OperationInputs::COMMITTED] ?? FALSE)) {
         $lines[] = '  values: ' . json_encode($value, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION);
+      }
+      // The resource's own outputs, after the one result shape: a
+      // listing's page and its total.
+      if ($result->isSuccess() && !in_array($output, ResultDocument::KEYS, TRUE)) {
+        $lines[] = '  ' . $output . ': ' . json_encode($value, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION);
       }
     }
     return implode("\n", $lines);

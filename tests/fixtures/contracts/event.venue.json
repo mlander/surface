@@ -1,0 +1,361 @@
+{
+    "resource": "event.venue",
+    "module": "data_surface_examples",
+    "contract": 3,
+    "documents": [
+        {
+            "resource": "event.venue",
+            "operation": "add",
+            "label": "Add a venue",
+            "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "title": "Add a venue",
+                "description": "Adds a venue under a machine name the caller chooses, with its capacity, address and rooms; a machine name already in use is refused.",
+                "x-surface": {
+                    "contract": 3,
+                    "operation": {
+                        "id": "add",
+                        "label": "Add a venue",
+                        "description": "Adds a venue under a machine name the caller chooses, with its capacity, address and rooms; a machine name already in use is refused.",
+                        "kind": "create",
+                        "creates": true,
+                        "destructive": false,
+                        "idempotent": true
+                    },
+                    "version": 1
+                },
+                "type": "object",
+                "properties": {
+                    "label": {
+                        "title": "Name",
+                        "type": "string",
+                        "maxLength": 128,
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": []
+                        }
+                    },
+                    "id": {
+                        "title": "Machine name",
+                        "description": "A unique name for the venue: lowercase letters, numbers and underscores.",
+                        "type": "string",
+                        "pattern": "^[a-z0-9_]+$",
+                        "maxLength": 32,
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": [],
+                            "patternMessage": "The machine name may hold only lowercase letters, numbers and underscores."
+                        }
+                    },
+                    "capacity": {
+                        "title": "Capacity",
+                        "description": "How many people the venue holds.",
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 100000,
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": []
+                        }
+                    },
+                    "address": {
+                        "title": "Address",
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 255,
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": []
+                        }
+                    },
+                    "rooms": {
+                        "title": "Rooms",
+                        "description": "The rooms an event at the venue may be held in.",
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "maxItems": 20,
+                        "items": {
+                            "$ref": "#/$defs/event.venue.room"
+                        },
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": [],
+                            "list": true
+                        }
+                    },
+                    "weight": {
+                        "title": "Weight",
+                        "description": "Its place among the venues: lighter first.",
+                        "type": "integer",
+                        "minimum": -1000,
+                        "maximum": 1000,
+                        "default": 0,
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": []
+                        }
+                    },
+                    "status": {
+                        "title": "Enabled",
+                        "description": "Whether events may be held there; a disabled venue is listed only for an account that administers the venues.",
+                        "type": "boolean",
+                        "default": true,
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": []
+                        }
+                    }
+                },
+                "additionalProperties": false,
+                "required": [
+                    "label",
+                    "id",
+                    "capacity"
+                ],
+                "$defs": {
+                    "event.venue.room": {
+                        "title": "event.venue.room",
+                        "type": "object",
+                        "properties": {
+                            "id": {
+                                "title": "Room id",
+                                "type": "string",
+                                "pattern": "^[a-z0-9_]+$",
+                                "maxLength": 64,
+                                "x-surface": {
+                                    "locked": false,
+                                    "dependsOn": [],
+                                    "patternMessage": "A room id holds only lowercase letters, numbers and underscores."
+                                }
+                            },
+                            "label": {
+                                "title": "Room name",
+                                "type": "string",
+                                "maxLength": 128,
+                                "x-surface": {
+                                    "locked": false,
+                                    "dependsOn": []
+                                }
+                            },
+                            "seats": {
+                                "title": "Seats",
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 10000,
+                                "x-surface": {
+                                    "locked": false,
+                                    "dependsOn": []
+                                }
+                            }
+                        },
+                        "additionalProperties": false,
+                        "required": [
+                            "id",
+                            "label",
+                            "seats"
+                        ]
+                    }
+                }
+            }
+        },
+        {
+            "resource": "event.venue",
+            "operation": "list",
+            "label": "List the venues",
+            "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "title": "List the venues",
+                "description": "Answers a page of the venues, lighter first, each one the account may read, and how many the filter matched.",
+                "x-surface": {
+                    "contract": 3,
+                    "operation": {
+                        "id": "list",
+                        "label": "List the venues",
+                        "description": "Answers a page of the venues, lighter first, each one the account may read, and how many the filter matched.",
+                        "kind": "read",
+                        "creates": false,
+                        "destructive": false,
+                        "idempotent": true
+                    },
+                    "version": 1
+                },
+                "type": "object",
+                "properties": {
+                    "offset": {
+                        "title": "Offset",
+                        "description": "How many venues to skip, in order of weight.",
+                        "type": [
+                            "integer",
+                            "null"
+                        ],
+                        "minimum": 0,
+                        "maximum": 10000,
+                        "default": 0,
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": []
+                        }
+                    },
+                    "limit": {
+                        "title": "Limit",
+                        "description": "How many venues to answer at most.",
+                        "type": [
+                            "integer",
+                            "null"
+                        ],
+                        "minimum": 1,
+                        "maximum": 50,
+                        "default": 20,
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": []
+                        }
+                    },
+                    "status": {
+                        "title": "Enabled",
+                        "description": "Only the venues enabled, or only those disabled; left out, every venue.",
+                        "type": [
+                            "boolean",
+                            "null"
+                        ],
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": []
+                        }
+                    }
+                },
+                "additionalProperties": false
+            },
+            "outputs": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                    "items": {
+                        "title": "Venues",
+                        "description": "The page of venues, lighter first, each one the account may read.",
+                        "type": "array",
+                        "items": {
+                            "title": "Venue",
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "title": "Machine name",
+                                    "type": "string"
+                                },
+                                "label": {
+                                    "title": "Name",
+                                    "type": "string"
+                                },
+                                "capacity": {
+                                    "title": "Capacity",
+                                    "type": "integer"
+                                },
+                                "weight": {
+                                    "title": "Weight",
+                                    "type": "integer"
+                                }
+                            },
+                            "additionalProperties": false,
+                            "required": [
+                                "id",
+                                "label",
+                                "capacity",
+                                "weight"
+                            ]
+                        }
+                    },
+                    "total": {
+                        "title": "Total",
+                        "description": "How many venues the filter matched that the account may read, on every page.",
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "items",
+                    "total"
+                ]
+            }
+        },
+        {
+            "resource": "event.venue",
+            "operation": "reorder",
+            "label": "Reorder the venues",
+            "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "title": "Reorder the venues",
+                "description": "Gives each venue named its new weight, all in one write; a venue left out keeps its own, and an unknown or repeated venue is refused.",
+                "x-surface": {
+                    "contract": 3,
+                    "operation": {
+                        "id": "reorder",
+                        "label": "Reorder the venues",
+                        "description": "Gives each venue named its new weight, all in one write; a venue left out keeps its own, and an unknown or repeated venue is refused.",
+                        "kind": "update",
+                        "creates": false,
+                        "destructive": false,
+                        "idempotent": true
+                    },
+                    "version": 1
+                },
+                "type": "object",
+                "properties": {
+                    "venues": {
+                        "title": "Venues",
+                        "description": "Each venue to move, once, with its new weight; a venue left out keeps its own.",
+                        "type": "array",
+                        "minItems": 1,
+                        "items": {
+                            "$ref": "#/$defs/event.venue.order"
+                        },
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": [],
+                            "list": true
+                        }
+                    }
+                },
+                "additionalProperties": false,
+                "required": [
+                    "venues"
+                ],
+                "$defs": {
+                    "event.venue.order": {
+                        "title": "event.venue.order",
+                        "type": "object",
+                        "properties": {
+                            "id": {
+                                "title": "Venue",
+                                "description": "The machine name of a venue the site has.",
+                                "type": "string",
+                                "x-surface": {
+                                    "locked": false,
+                                    "dependsOn": []
+                                }
+                            },
+                            "weight": {
+                                "title": "Weight",
+                                "description": "Its place among the venues: lighter first.",
+                                "type": "integer",
+                                "minimum": -1000,
+                                "maximum": 1000,
+                                "x-surface": {
+                                    "locked": false,
+                                    "dependsOn": []
+                                }
+                            }
+                        },
+                        "additionalProperties": false,
+                        "required": [
+                            "id",
+                            "weight"
+                        ]
+                    }
+                }
+            }
+        }
+    ]
+}

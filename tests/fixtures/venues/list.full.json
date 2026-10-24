@@ -1,0 +1,118 @@
+{
+    "resource": "event.venue",
+    "operation": "list",
+    "label": "List the venues",
+    "schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "List the venues",
+        "description": "Answers a page of the venues, lighter first, each one the account may read, and how many the filter matched.",
+        "x-surface": {
+            "contract": 3,
+            "operation": {
+                "id": "list",
+                "label": "List the venues",
+                "description": "Answers a page of the venues, lighter first, each one the account may read, and how many the filter matched.",
+                "kind": "read",
+                "creates": false,
+                "destructive": false,
+                "idempotent": true
+            },
+            "version": 1
+        },
+        "type": "object",
+        "properties": {
+            "offset": {
+                "title": "Offset",
+                "description": "How many venues to skip, in order of weight.",
+                "type": [
+                    "integer",
+                    "null"
+                ],
+                "minimum": 0,
+                "maximum": 10000,
+                "default": 0,
+                "x-surface": {
+                    "locked": false,
+                    "dependsOn": []
+                }
+            },
+            "limit": {
+                "title": "Limit",
+                "description": "How many venues to answer at most.",
+                "type": [
+                    "integer",
+                    "null"
+                ],
+                "minimum": 1,
+                "maximum": 50,
+                "default": 20,
+                "x-surface": {
+                    "locked": false,
+                    "dependsOn": []
+                }
+            },
+            "status": {
+                "title": "Enabled",
+                "description": "Only the venues enabled, or only those disabled; left out, every venue.",
+                "type": [
+                    "boolean",
+                    "null"
+                ],
+                "x-surface": {
+                    "locked": false,
+                    "dependsOn": []
+                }
+            }
+        },
+        "additionalProperties": false
+    },
+    "outputs": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+            "items": {
+                "title": "Venues",
+                "description": "The page of venues, lighter first, each one the account may read.",
+                "type": "array",
+                "items": {
+                    "title": "Venue",
+                    "type": "object",
+                    "properties": {
+                        "id": {
+                            "title": "Machine name",
+                            "type": "string"
+                        },
+                        "label": {
+                            "title": "Name",
+                            "type": "string"
+                        },
+                        "capacity": {
+                            "title": "Capacity",
+                            "type": "integer"
+                        },
+                        "weight": {
+                            "title": "Weight",
+                            "type": "integer"
+                        }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                        "id",
+                        "label",
+                        "capacity",
+                        "weight"
+                    ]
+                }
+            },
+            "total": {
+                "title": "Total",
+                "description": "How many venues the filter matched that the account may read, on every page.",
+                "type": "integer"
+            }
+        },
+        "required": [
+            "items",
+            "total"
+        ]
+    }
+}

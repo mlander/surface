@@ -61,6 +61,8 @@ class ExamplesEntryPortsTest extends ExamplesWebDriverTestBase {
     $page->uncheckField('surface[on_sale][student]');
     $assert->assertWaitOnAjaxRequest();
     $page->pressButton('Save');
+    // The press returns before the saved page has loaded: wait for it.
+    $this->assertNotNull($assert->waitForText('The changes have been saved.'));
     $assert->elementNotExists('css', '.error');
     $stored = $this->config('data_surface_examples.sales')->get();
     $this->assertFalse($stored['on_sale']['student']);

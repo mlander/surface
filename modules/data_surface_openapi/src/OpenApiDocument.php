@@ -479,6 +479,15 @@ final class OpenApiDocument {
       [$readNamed, TRUE, $schemaItem],
       [$named, FALSE, $run],
     ];
+    // A listing: GET on the collection runs it, its query the values, and
+    // answers its outputs; its envelope is its custom method's.
+    // Decision: see
+    // docs/decisions.md#a-listing-is-a-read-only-operation-with-outputs-a-reorder-is-an-update-over-the-collection.
+    if ($this->paths->listing($definition) === $operation->id && $outputs !== NULL) {
+      $items[0] = [TRUE, FALSE, $read];
+      $listed = $this->listed($id, $label, $description, $common, $components->get($schema), $outputs, $problems, $denied);
+      $items[] = [FALSE, FALSE, $listed];
+    }
     $paths = [];
     foreach ($items as [$custom, $isSchema, $calls]) {
       [$path, $names, $url] = $this->paths->template($definition, $operation, $custom, $isSchema);
@@ -499,6 +508,62 @@ final class OpenApiDocument {
       'outputs' => $outputs,
     ];
     return [$paths, $entry];
+  }
+
+  /**
+   * Describes a listing: GET on a collection, its query the values.
+   *
+   * @param string $id
+   *   The operation's `<resource>:<operation>`.
+   * @param string $label
+   *   Its label.
+   * @param string $description
+   *   Its description, or empty.
+   * @param array $common
+   *   What every call of it says: tags, security, permission and kind.
+   * @param array $schema
+   *   Its full schema, built for no account, whose properties are the
+   *   query's.
+   * @param string $outputs
+   *   The component of its outputs, which it answers.
+   * @param callable $problems
+   *   Writes problem details answers by status.
+   * @param array $denied
+   *   The 403 and 404 answers.
+   *
+   * @return array
+   *   The path item's one call, `get`.
+   */
+  protected function listed(string $id, string $label, string $description, array $common, array $schema, string $outputs, callable $problems, array $denied): array {
+    $query = [];
+    foreach (is_array($schema['properties'] ?? NULL) ? $schema['properties'] : [] as $name => $property) {
+      $property = is_array($property) ? array_diff_key($property, [ContractEmitter::EXTENSION => TRUE]) : [];
+      $query[] = [
+        'name' => (string) $name,
+        'in' => 'query',
+        'required' => FALSE,
+      ] + (isset($property['description']) ? ['description' => $property['description']] : []) + [
+        'schema' => $property,
+      ];
+    }
+    return [
+      'get' => $common + [
+        'operationId' => $id . ':list',
+        'summary' => $label,
+        'description' => $this->joined($description, (string) $this->t('The listing: the query string is its values, checked as a write checks them, and the answer is its outputs. Nothing is written. A refusal is 422.')),
+        'parameters' => $query,
+        'responses' => [
+          '200' => [
+            'description' => (string) $this->t('The outputs.'),
+            'headers' => [
+              ResourceApiController::VERSION_HEADER => ['$ref' => '#/components/headers/ContractVersion'],
+              'Link' => ['$ref' => '#/components/headers/Link'],
+            ],
+            'content' => ['application/json' => ['schema' => ['$ref' => SchemaComponents::POINTER . $outputs]]],
+          ],
+        ] + $problems(['422' => (string) $this->t('A value of the query was refused: each error a JSON Pointer, a code and a message.')]) + $denied,
+      ],
+    ];
   }
 
   /**

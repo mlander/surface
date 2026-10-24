@@ -12,6 +12,7 @@ use Drupal\Core\Url;
 use Drupal\data_surface_examples\CodeLines;
 use Drupal\data_surface_examples\ConceptPanel;
 use Drupal\data_surface_examples\ConfigSchemaPanel;
+use Drupal\data_surface_examples\Entity\EventVenue;
 use Drupal\data_surface_examples\ExampleCalls;
 use Drupal\data_surface_examples\FilesPanel;
 use Drupal\data_surface_examples\Form\RegistrationStep1ClassicForm;
@@ -26,6 +27,7 @@ use Drupal\data_surface_examples\Resource\RegistrationStep2Resource;
 use Drupal\data_surface_examples\Resource\RegistrationStep3Resource;
 use Drupal\data_surface_examples\Resource\SpotlightResource;
 use Drupal\data_surface_examples\Resource\TicketSalesResource;
+use Drupal\data_surface_examples\Resource\VenueResource;
 use Drupal\data_surface_examples\Resource\WebhookResource;
 use Drupal\data_surface_examples\Series;
 use Drupal\data_surface_examples\Shape\PhoneNumber;
@@ -33,11 +35,16 @@ use Drupal\data_surface_examples\Storage\RegistrationStep1Storage;
 use Drupal\data_surface_examples\Storage\RegistrationStep2Storage;
 use Drupal\data_surface_examples\Storage\MailerStorage;
 use Drupal\data_surface_examples\Storage\SpotlightStorage;
+use Drupal\data_surface_examples\Storage\VenueStorage;
 use Drupal\data_surface_examples\Storage\WebhookStorage;
 use Drupal\data_surface_examples\Structure\ManagedCredentialStructure;
 use Drupal\data_surface_examples\Structure\PastedCredentialStructure;
 use Drupal\data_surface_examples\Structure\PersonStructure;
 use Drupal\data_surface_examples\Structure\ReviewStructure;
+use Drupal\data_surface_examples\Structure\VenueListingStructure;
+use Drupal\data_surface_examples\Structure\VenueOrderStructure;
+use Drupal\data_surface_examples\Structure\VenueReorderStructure;
+use Drupal\data_surface_examples\Structure\VenueRoomStructure;
 use Drupal\data_surface_examples\Variants\CredentialSources;
 use Drupal\data_surface\Variants\ComponentProps;
 use Drupal\data_surface\Variants\ComponentSlots;
@@ -167,6 +174,11 @@ final class ExamplesController extends ControllerBase {
   public function index(): array {
     $steps = [];
     foreach ($this->steps() as $number => $step) {
+      if ($number === 15) {
+        $steps['entity'] = [
+          '#markup' => '<h2>' . $this->t('A config entity of your own') . '</h2><p>' . $this->t("Example 15 is a module's own config entity type with a resource over it from the start: one venue added, edited and removed, the venues listed a page at a time and reordered in one write. Example 2's venues and rooms are these venues.") . '</p>',
+        ];
+      }
       if ($number === 14) {
         $steps['extension'] = [
           '#markup' => '<h2>' . $this->t('An optional extension') . '</h2><p>' . $this->t("Example 14 is the Key module's pattern: a credential pasted as a secret, or a key the site manages once a module that manages keys is on, which a submodule of the examples stands in for. Its page says how to enable that module, and shows the two ways to reach the same form, the owner declaring both sources or another module's alter, with the module off and on.") . '</p>',
@@ -448,6 +460,91 @@ final class ExamplesController extends ControllerBase {
   }
 
   /**
+   * Shows example 15: a config entity of the module's own, and its resource.
+   *
+   * @return array
+   *   A render array.
+   */
+  public function step15(): array {
+    $react = $this->moduleHandler()->moduleExists(self::REACT);
+    $rows = [];
+    $venues = array_filter($this->entityTypeManager()->getStorage('event_venue')->loadMultiple(), static fn ($venue): bool => $venue instanceof EventVenue);
+    uasort($venues, static fn (EventVenue $a, EventVenue $b): int => EventVenue::sort($a, $b));
+    foreach ($venues as $id => $venue) {
+      $links = [
+        Link::fromTextAndUrl($this->t('Edit'), Url::fromRoute('data_surface_examples.step15_edit', ['id' => $id]))->toRenderable(),
+        ['#markup' => ' '],
+        Link::fromTextAndUrl($this->t('Remove'), Url::fromRoute('data_surface_examples.step15_remove', ['id' => $id]))->toRenderable(),
+      ];
+      if ($react) {
+        $links[] = ['#markup' => ' '];
+        $react_edit = Url::fromRoute('data_surface_react.page', ['resource' => 'event.venue', 'operation' => 'edit'], [
+          'query' => ['id' => $id],
+        ]);
+        $links[] = Link::fromTextAndUrl($this->t('Edit in React'), $react_edit)->toRenderable();
+      }
+      $rows[] = [
+        (string) $venue->label(),
+        (string) $id,
+        (string) $venue->get('capacity'),
+        implode(', ', array_map(static fn (array $room): string => sprintf('%s (%d)', $room['label'], $room['seats']), $venue->rooms())),
+        (string) $venue->weight(),
+        $venue->status() ? $this->t('Enabled') : $this->t('Disabled'),
+        ['data' => $links],
+      ];
+    }
+    $add = [$this->route('data_surface_examples.step15_add')];
+    if ($react) {
+      $react_add = Url::fromRoute('data_surface_react.page', ['resource' => 'event.venue', 'operation' => 'add']);
+      $add[] = Link::fromTextAndUrl($this->t('Add in React: @path', ['@path' => $react_add->toString()]), $react_add)->toRenderable();
+    }
+    else {
+      $add[] = $this->t('In React at /surface-react/event.venue/add and /surface-react/event.venue/edit?id=riverside, once @module is enabled.', ['@module' => self::REACT]);
+    }
+    $add[] = $this->route('data_surface_examples.step2');
+    return [
+      // The calls are made as the page is drawn, and the venues read now.
+      '#cache' => ['max-age' => 0],
+      'what' => [
+        '#type' => 'details',
+        '#open' => TRUE,
+        '#title' => $this->t('What this example shows'),
+        '#attributes' => ['class' => ['data-surface-contract-panel', 'data-surface-concept-panel']],
+        '#attached' => ['library' => ['data_surface_tool/contract_panel']],
+        'what' => ['#markup' => '<p>' . $this->conceptPanel->paragraph('event.venue') . '</p>'],
+        'docs' => [
+          '#theme' => 'item_list',
+          '#title' => $this->t('Where the docs explain it'),
+          '#items' => array_map(static fn (string $page): array => ['#markup' => '<code>' . $page . '</code>'], ConceptPanel::DOCS['event.venue']),
+        ],
+      ],
+      'venues' => [
+        '#type' => 'table',
+        '#caption' => $this->t('The venues on this site now, lighter first: the three the module ships, and any added since.'),
+        '#header' => [
+          $this->t('Name'),
+          $this->t('Machine name'),
+          $this->t('Capacity'),
+          $this->t('Rooms'),
+          $this->t('Weight'),
+          $this->t('Status'),
+          $this->t('Operations'),
+        ],
+        '#rows' => $rows,
+        '#attributes' => ['class' => ['data-surface-venues']],
+      ],
+      'forms' => [
+        '#theme' => 'item_list',
+        '#title' => $this->t('Add one, and see it in example 2'),
+        '#items' => $add,
+      ],
+      'files' => $this->filesPanel->build(15),
+      'served' => $this->conceptPanel->venues(),
+      'calls' => $this->conceptPanel->calls('event.venue'),
+    ];
+  }
+
+  /**
    * Describes the examples, with where each is and what it cost.
    *
    * @return array<int, array{title: \Stringable, sentence: \Drupal\Core\StringTranslation\TranslatableMarkup, items: array}>
@@ -590,7 +687,35 @@ final class ExamplesController extends ControllerBase {
           $this->t("The mailer, its provider, its two sources and its storage: @mailer lines of code; the webhook and its storage: @webhook; the keys module's list, constraint, validator, resolver and alter: @keys.", $this->extensionLines()),
         ],
       ],
+      15 => [
+        'title' => $series[15]['title'],
+        'sentence' => $this->t('A config entity type the module declares, a venue, and a resource over it from the start: add, edit and remove one venue; list a page of them, a read only operation with outputs that GET on the collection answers; and reorder them, an update over the collection written in one commit. Its config schema is written from the resource, and example 2 chooses its venue and room from these venues.'),
+        'items' => [
+          $this->route('data_surface_examples.step15'),
+          $this->route('data_surface_examples.step15_add'),
+          $this->t('The entity type, the resource, its three structures and its storage: @lines lines of code.', ['@lines' => $this->venueLines()]),
+        ],
+      ],
     ];
+  }
+
+  /**
+   * Counts the lines of example 15's entity type, resource and storage.
+   *
+   * @return int
+   *   The lines of code of the entity type, the resource, the room, the
+   *   listing, the reorder and its item, and the storage.
+   */
+  protected function venueLines(): int {
+    return array_sum(array_map(fn (string $class): int => CodeLines::count($this->file($class)), [
+      EventVenue::class,
+      VenueResource::class,
+      VenueRoomStructure::class,
+      VenueListingStructure::class,
+      VenueReorderStructure::class,
+      VenueOrderStructure::class,
+      VenueStorage::class,
+    ]));
   }
 
   /**

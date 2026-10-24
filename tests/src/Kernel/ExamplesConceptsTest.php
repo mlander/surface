@@ -15,6 +15,7 @@ use Drupal\data_surface\Form\DataSurfaceOperationForm;
 use Drupal\data_surface_examples\CodeLines;
 use Drupal\data_surface_examples\ConceptPanel;
 use Drupal\data_surface_examples\Controller\ExamplesController;
+use Drupal\data_surface_examples\Entity\EventVenue;
 use Drupal\data_surface_examples\ExamplePanels;
 use Drupal\data_surface_examples\ConceptCalls;
 use Drupal\data_surface_examples\Hook\SpotlightBlockHooks;
@@ -723,6 +724,48 @@ class ExamplesConceptsTest extends DataSurfaceKernelTestBase {
     $this->assertStringStartsWith('Success: Dry run of Configure the mailer', $answer('event.mailer:managed'));
     $this->assertStringStartsWith("Failed: The values were refused:\n/credential/api_key: credential.api_key belongs to the pasted variant", $answer('event.mailer:pasted_while_managed'));
     $this->assertStringStartsWith("Failed: The values were refused:\n/api_key: API key does not apply", $answer('event.webhook:pasted_beside_managed'));
+  }
+
+  /**
+   * Tests example 15's page: the venues, the paths, the tools, the calls.
+   */
+  public function testFifteenShowsTheVenuesAndMakesItsCalls(): void {
+    $controller = $this->container->get('class_resolver')->getInstanceFromDefinition(ExamplesController::class);
+    $index = $controller->index();
+    $this->assertSame('Example 15: a config entity of your own', strip_tags((string) $index[15]['title']['#markup']));
+    $this->assertArrayHasKey('entity', $index);
+
+    $page = $controller->step15();
+    $this->assertSame(0, $page['#cache']['max-age'], 'Its calls are made as it is drawn.');
+    $this->assertStringStartsWith('A module that declares its own config entity type puts a resource over it from the start', strip_tags((string) $page['what']['what']['#markup']));
+    $this->assertSame(['Riverside Hall', 'Old Library', 'Harbour Centre'], array_column($page['venues']['#rows'], 0));
+    $this->assertSame('Main hall (400), East room (120)', $page['venues']['#rows'][0][3]);
+    $this->assertCount(count(ConceptPanel::VENUE_PATHS), $page['served']['paths']['#rows']);
+    $this->assertSame([
+      'data_surface:event.venue:add',
+      'data_surface:event.venue:list',
+      'data_surface:event.venue:reorder',
+      'data_surface:event.venue:reorder:read',
+      'data_surface:event.venue:edit',
+      'data_surface:event.venue:edit:read',
+      'data_surface:event.venue:remove',
+    ], array_column($page['served']['tools']['#rows'], 0));
+    $answer = static fn (array $page, string $call): string => htmlspecialchars_decode((string) $page['calls']['event.venue:' . $call]['answer']['#value']);
+    $this->assertStringContainsString('  total: 3', $answer($page, 'list'));
+    $this->assertSame('Success: Add a venue: the values were accepted and written.', $answer($page, 'add'));
+    $this->assertStringStartsWith('Success: Remove a venue: removed.', $answer($page, 'remove'));
+    $this->assertNull(EventVenue::load('town_hall'), 'The last call removed the fourth venue again.');
+
+    // A venue of that name on the site: every call is a dry run, and the
+    // page says so.
+    $ours = ['id' => 'town_hall', 'label' => 'Our town hall', 'capacity' => 10];
+    $this->container->get('entity_type.manager')->getStorage('event_venue')->create($ours)->save();
+    $page = $controller->step15();
+    $this->assertStringContainsString('This site has a venue named town_hall', (string) $page['calls']['note']['#markup']);
+    $this->assertSame("Failed: The values were refused:\n/id: The machine name town_hall is already in use: choose another.", $answer($page, 'add'));
+    $this->assertStringStartsWith('Success: Dry run of Remove a venue', $answer($page, 'remove'));
+    $kept = $this->container->get('entity_type.manager')->getStorage('event_venue')->loadUnchanged('town_hall');
+    $this->assertSame('Our town hall', $kept?->label(), 'Left as it was.');
   }
 
   /**

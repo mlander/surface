@@ -1,0 +1,162 @@
+{
+    "resource": "event.venue",
+    "operation": "edit",
+    "label": "Edit a venue",
+    "schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "Edit a venue",
+        "description": "Changes a venue, named by its machine name, which stays as it is: its name, capacity, address, rooms, weight and status.",
+        "x-surface": {
+            "contract": 3,
+            "operation": {
+                "id": "edit",
+                "label": "Edit a venue",
+                "description": "Changes a venue, named by its machine name, which stays as it is: its name, capacity, address, rooms, weight and status.",
+                "kind": "update",
+                "creates": false,
+                "destructive": false,
+                "idempotent": true
+            },
+            "version": 1
+        },
+        "type": "object",
+        "properties": {
+            "label": {
+                "title": "Name",
+                "type": "string",
+                "maxLength": 128,
+                "x-surface": {
+                    "locked": false,
+                    "dependsOn": []
+                }
+            },
+            "id": {
+                "title": "Machine name",
+                "description": "A unique name for the venue: lowercase letters, numbers and underscores.",
+                "type": "string",
+                "pattern": "^[a-z0-9_]+$",
+                "maxLength": 32,
+                "default": "library",
+                "readOnly": true,
+                "const": "library",
+                "x-surface": {
+                    "locked": true,
+                    "dependsOn": [],
+                    "patternMessage": "The machine name may hold only lowercase letters, numbers and underscores."
+                }
+            },
+            "capacity": {
+                "title": "Capacity",
+                "description": "How many people the venue holds.",
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100000,
+                "x-surface": {
+                    "locked": false,
+                    "dependsOn": []
+                }
+            },
+            "address": {
+                "title": "Address",
+                "type": [
+                    "string",
+                    "null"
+                ],
+                "maxLength": 255,
+                "x-surface": {
+                    "locked": false,
+                    "dependsOn": []
+                }
+            },
+            "rooms": {
+                "title": "Rooms",
+                "description": "The rooms an event at the venue may be held in.",
+                "type": [
+                    "array",
+                    "null"
+                ],
+                "maxItems": 20,
+                "items": {
+                    "$ref": "#/$defs/event.venue.room"
+                },
+                "x-surface": {
+                    "locked": false,
+                    "dependsOn": [],
+                    "list": true
+                }
+            },
+            "weight": {
+                "title": "Weight",
+                "description": "Its place among the venues: lighter first.",
+                "type": "integer",
+                "minimum": -1000,
+                "maximum": 1000,
+                "default": 0,
+                "x-surface": {
+                    "locked": false,
+                    "dependsOn": []
+                }
+            },
+            "status": {
+                "title": "Enabled",
+                "description": "Whether events may be held there; a disabled venue is listed only for an account that administers the venues.",
+                "type": "boolean",
+                "default": true,
+                "x-surface": {
+                    "locked": false,
+                    "dependsOn": []
+                }
+            }
+        },
+        "additionalProperties": false,
+        "required": [
+            "label",
+            "id",
+            "capacity"
+        ],
+        "$defs": {
+            "event.venue.room": {
+                "title": "event.venue.room",
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "title": "Room id",
+                        "type": "string",
+                        "pattern": "^[a-z0-9_]+$",
+                        "maxLength": 64,
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": [],
+                            "patternMessage": "A room id holds only lowercase letters, numbers and underscores."
+                        }
+                    },
+                    "label": {
+                        "title": "Room name",
+                        "type": "string",
+                        "maxLength": 128,
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": []
+                        }
+                    },
+                    "seats": {
+                        "title": "Seats",
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 10000,
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": []
+                        }
+                    }
+                },
+                "additionalProperties": false,
+                "required": [
+                    "id",
+                    "label",
+                    "seats"
+                ]
+            }
+        }
+    }
+}

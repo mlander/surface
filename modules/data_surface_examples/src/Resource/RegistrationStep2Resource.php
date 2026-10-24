@@ -22,7 +22,10 @@ use Drupal\data_surface_examples\Venues;
  * depends on the venue, and how many people fit depends on the room:
  * one #[RefinesInput] method each, whose signature names what it reads.
  * Declaration order is form order, so the capacity comes after the room
- * that decides it, and its description names that room's limit.
+ * that decides it, and its description names that room's limit. The
+ * venues and their rooms are example 15's venue entities, which the two
+ * constraints name and a resolver lists; the seats are Venues', since a
+ * static refiner reads only what it watches.
  */
 #[Resource('registration.step2', storage: RegistrationStep2Storage::class)]
 #[Operation('configure',
@@ -41,10 +44,10 @@ final class RegistrationStep2Resource implements ResourceInterface {
     $inputs->add('open', 'boolean', t('Registration open'), default: TRUE);
     $inputs->add('venue', 'string', t('Venue'))
       ->setRequired(TRUE)
-      ->addConstraint('LabeledChoice', ['choices' => Venues::VENUES]);
+      ->addConstraint('EventVenue');
     $inputs->add('room', 'string', t('Room'))
       ->setRequired(TRUE)
-      ->addConstraint('LabeledChoice', ['choices' => Venues::rooms()]);
+      ->addConstraint('EventVenueRoom');
     $inputs->add('capacity', 'integer', t('Capacity'), default: 50)
       ->addConstraint('Range', ['min' => 1]);
   }
@@ -54,7 +57,7 @@ final class RegistrationStep2Resource implements ResourceInterface {
    */
   #[RefinesInput('room')]
   public static function roomInVenue(DataDefinitionInterface $room, string $venue): DataDefinitionInterface {
-    return $room->addConstraint('LabeledChoice', ['choices' => Venues::rooms($venue)]);
+    return $room->addConstraint('RoomOfEventVenue', ['venue' => $venue]);
   }
 
   /**

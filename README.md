@@ -321,7 +321,9 @@ their configuration may change without a deprecation path.
   example 13, a block that embeds a component, which says to enable
   `data_surface_component_block` and `data_surface_block`; and example
   14, a credential pasted or a key the site manages, which says to
-  enable `data_surface_examples_keys`. Needs
+  enable `data_surface_examples_keys`; and example 15, a config entity
+  type of its own, the venues example 2 chooses from, with a resource
+  that adds, edits, lists, reorders and removes them. Needs
   [Tool](https://www.drupal.org/project/tool).
 - **Data Surface Examples - Compliance**
   (`data_surface_examples_compliance`): example 4, a compliance

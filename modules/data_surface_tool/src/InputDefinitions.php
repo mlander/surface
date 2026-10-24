@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\data_surface_tool;
 
+use Drupal\Core\Cache\Cache;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\StringTranslation\TranslationInterface;
@@ -99,6 +100,13 @@ final class InputDefinitions {
   protected const CHOICE = 'Choice';
 
   /**
+   * The tags of the option lists read since they were last taken.
+   *
+   * @var string[]
+   */
+  protected array $listTags = [];
+
+  /**
    * Constructs a InputDefinitions converter.
    *
    * @param \Drupal\data_surface\Options\DataSurfaceOptions $options
@@ -113,6 +121,22 @@ final class InputDefinitions {
     TranslationInterface $string_translation,
   ) {
     $this->stringTranslation = $string_translation;
+  }
+
+  /**
+   * Takes the tags of the option lists read since they were last taken.
+   *
+   * A value list read from the site, as the venues example 2 chooses from,
+   * is copied into a tool's definition as its enum, so the definition
+   * holds until a tag the list was read under is invalidated.
+   *
+   * @return string[]
+   *   The tags, which are then forgotten here.
+   */
+  public function takeListTags(): array {
+    $tags = $this->listTags;
+    $this->listTags = [];
+    return $tags;
   }
 
   /**
@@ -1010,6 +1034,9 @@ final class InputDefinitions {
       $set = $this->options->resolve($definition);
       if ($set !== NULL && $set->options !== []) {
         $constraints[self::CHOICE] = ['choices' => array_keys($set->options)];
+        // A list read from the site is in the definition until a tag it
+        // was read under is invalidated.
+        $this->listTags = Cache::mergeTags($this->listTags, $set->getCacheTags());
       }
     }
     foreach ($constraints as $name => $options) {

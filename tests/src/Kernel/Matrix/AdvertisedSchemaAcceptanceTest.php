@@ -47,7 +47,8 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * gallery, keys that come from the site on the workshop, variants chosen
  * by a plugin and a region by a theme on a placed block, and on example
  * 14 a source with one value and then two, a secret in a variant, and an
- * alter's key ruling the owner's out),
+ * alter's key ruling the owner's out, and on example 15 a venue added, a
+ * listing's query and a reorder's list),
  * a table of documents the pipeline accepts and documents it refuses.
  * Each row is asserted three times: against the pipeline (accept(), then
  * validate() over what is stored), against the full
@@ -875,6 +876,50 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
       'no title' => [array_diff_key($branding, ['label' => TRUE]), FALSE],
       'a condition the layout does not offer' => [['visibility' => [['id' => 'current_theme']]] + $branding, FALSE],
       'a machine name with a capital, checked on the server' => [['id' => 'Branding'] + $branding, FALSE, TRUE, TRUE],
+    ]);
+  }
+
+  /**
+   * Example 15's venues: a venue added, a listing's query, a reorder.
+   *
+   * The machine name and a room's id are patterns both engines read alike,
+   * so both documents refuse a capital; a room is a collection item, sent
+   * whole. The listing's query is its own structure's keys, bounded; the
+   * reorder's list asks for one venue at least. That a venue named exists
+   * and is named once is the storage's to say, after validation: both
+   * documents accept a list naming one twice, as the pipeline does.
+   */
+  public function testVenues(): void {
+    $town = ['label' => 'Town Hall', 'id' => 'town_hall', 'capacity' => 300];
+    $council = ['id' => 'council', 'label' => 'Council chamber', 'seats' => 120];
+    $harbour = ['id' => 'harbour', 'weight' => -1];
+    $this->assertTable('event.venue', $this->build('event.venue', 'add'), [], [
+      'a venue' => [$town, TRUE],
+      'a venue with a room' => [$town + ['rooms' => [$council]], TRUE],
+      'no capacity' => [array_diff_key($town, ['capacity' => TRUE]), FALSE],
+      'a capacity of none' => [['capacity' => 0] + $town, FALSE],
+      'a machine name with a capital' => [['id' => 'Town'] + $town, FALSE],
+      'a room with no seats' => [$town + ['rooms' => [['id' => 'council', 'label' => 'Council chamber']]], FALSE],
+      'a room id with a space' => [$town + ['rooms' => [['id' => 'council room'] + $council]], FALSE],
+    ]);
+    $this->assertTable('event.venue', $this->build('event.venue', 'list'), [], [
+      'nothing: every venue, from the first' => [[], TRUE],
+      'a page' => [['offset' => 2, 'limit' => 1], TRUE],
+      'the disabled ones' => [['status' => FALSE], TRUE],
+      'a limit too high' => [['limit' => 51], FALSE],
+      'an offset below none' => [['offset' => -1], FALSE],
+      'a key the venue has, which the listing does not take' => [['capacity' => 3], FALSE],
+    ]);
+    $resources = $this->container->get('data_surface.resources');
+    $context = $resources->operation('event.venue', 'reorder');
+    $surface = $resources->build('event.venue', $context);
+    $this->assertTable('event.venue', $surface, $resources->storage('event.venue', $context, $surface)->load($surface), [
+      'as stored' => [[], TRUE],
+      'one venue moved' => [['venues' => [$harbour]], TRUE],
+      'one venue named twice, which storage refuses' => [['venues' => [$harbour, ['weight' => 3] + $harbour]], TRUE],
+      'no venue' => [['venues' => []], FALSE],
+      'a weight too light' => [['venues' => [['id' => 'harbour', 'weight' => -5000]]], FALSE],
+      'a venue with no weight' => [['venues' => [['id' => 'harbour']]], FALSE],
     ]);
   }
 

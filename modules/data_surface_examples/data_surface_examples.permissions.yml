@@ -2,3 +2,10 @@
 set event fees:
   title: 'Set the fees of the examples'' event program'
   restrict access: true
+# Example 15: adds, edits, reorders and removes the venues.
+administer event venues:
+  title: 'Administer the venues of the examples'' event'
+  restrict access: true
+# Example 15: lists the venues; a disabled one only with the permission above.
+view event venues:
+  title: 'View the venues of the examples'' event'

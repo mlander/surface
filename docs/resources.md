@@ -324,6 +324,60 @@ $storage = $resources->storage(NodeTypeResource::class, $context, $surface);
 A generic caller passes an empty context: every identity key stays
 open, and it is still the same resource.
 
+### An operation that takes keys of its own
+
+Most operations take the resource's keys: an add sends them, an edit
+changes some. An operation about the things together takes other keys:
+a listing's page and filter, a reorder's ids and weights. It names the
+structure they are with `values:` on its `#[Operation]`, and that
+structure's inputs are what it takes and its outputs what it answers
+([decision](decisions.md#a-listing-is-a-read-only-operation-with-outputs-a-reorder-is-an-update-over-the-collection)):
+
+```php
+#[Operation('list',
+  label: new TranslatableMarkup('List the venues'),
+  description: new TranslatableMarkup('Answers a page of the venues, lighter first, each one the account may read, and how many the filter matched.'),
+  permission: self::VIEW,
+  readOnly: TRUE,
+  values: VenueListingStructure::class,
+)]
+#[Operation('reorder',
+  label: new TranslatableMarkup('Reorder the venues'),
+  description: new TranslatableMarkup('Gives each venue named its new weight, all in one write; a venue left out keeps its own, and an unknown or repeated venue is refused.'),
+  permission: self::ADMINISTER,
+  values: VenueReorderStructure::class,
+)]
+```
+
+- **What stays the resource's.** Its permission, its access class, its
+  storage and how the operation behaves are the resource's: the build
+  writes the structure's keys, refiners, rules and children where the
+  resource's would be, and nothing else changes. The structure is a
+  `#[Structure]` with no identity and no storage; one that is not is
+  refused when the operation is first built.
+- **No subject.** Such an operation names no thing, so it needs no
+  parameter and is addressed at the collection; its storage reads the
+  context's id to know which it is. Its keys are no keys the storage
+  holds, so none is marked always held, and the build does not hold
+  them to the config schema the storage writes to.
+- **A read answers its outputs.** A read only operation is never
+  committed, so its outputs are what its storage's `prepare()` answered
+  under an output's name ([Who produces
+  outputs](decisions.md#who-produces-outputs)): `VenueStorage` reads the
+  venues there and answers the page and the total. Its tool answers them
+  beside the one result shape; on HTTP, `GET` on the collection runs it
+  and answers them alone ([a listing](served-contract.md#a-listing)).
+- **An update writes what it names.** The reorder is an update over
+  the collection: its storage loads every venue's id and weight, and
+  its `prepare()` refuses an id that names no venue (`not_found`) or is
+  named twice (`taken`), by its place in the list, and rehearses the rest;
+  `commit()` saves them. Its read tool answers the current order, and on
+  HTTP it is a custom method, `PATCH /surface-api/event.venue:reorder`.
+- **Refused** on an operation that creates or deletes, which is about
+  the thing's own keys.
+
+Each class's `use` line: [Namespaces](concepts.md#namespaces).
+
 ### Routes from operations
 
 A route names a resource class and an operation, and its parameters are

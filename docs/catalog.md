@@ -47,6 +47,11 @@ and changes a thing that exists, neither creating nor read only, is
 | [`event.sales`](#eventsales) | `TicketSalesResource` | none | `configure` |
 | [`event.spotlight`](#eventspotlight) | `SpotlightResource` | none | `configure` |
 | [`event.ticket_limit`](#eventticket_limit) | `TicketLimitStructure` | none | none |
+| [`event.venue`](#eventvenue) | `VenueResource` | `id` | `add`, `list`, `reorder`, `edit`, `remove` |
+| [`event.venue.listing`](#eventvenuelisting) | `VenueListingStructure` | none | none |
+| [`event.venue.order`](#eventvenueorder) | `VenueOrderStructure` | none | none |
+| [`event.venue.reorder`](#eventvenuereorder) | `VenueReorderStructure` | none | none |
+| [`event.venue.room`](#eventvenueroom) | `VenueRoomStructure` | none | none |
 | [`event.webhook`](#eventwebhook) | `WebhookResource` | none | `configure` |
 | [`field.instance`](#fieldinstance) | `FieldInstanceResource` | `entity_type_id`, `bundle`, `field_name`, `field_type` | `add`, `reuse`, `edit` |
 | [`field.settings.address`](#fieldsettingsaddress) | `AddressFieldSettingsResource` | none | none |
@@ -286,6 +291,59 @@ and changes a thing that exists, neither creating nor read only, is
 ## event.ticket_limit
 
 `Drupal\data_surface_examples\Structure\TicketLimitStructure`, in `data_surface_examples`.
+
+- Kind: structure
+- Identity: none
+- Storage: none; its host or its parent stores it
+- Access: the operation's permission alone
+
+## event.venue
+
+`Drupal\data_surface_examples\Resource\VenueResource`, in `data_surface_examples`.
+
+- Kind: resource
+- Identity: `id`
+- Storage: `Drupal\data_surface_examples\Storage\VenueStorage`
+- Access: `Drupal\data_surface_examples\Access\VenueAccess`
+
+| Operation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `add` | Add a venue | nothing | yes | `administer event venues` | yes | no: it creates | `#[Operation] on VenueResource` (`data_surface_examples`) |
+| `list` | List the venues | nothing | no | `view event venues` | yes | no: it changes nothing | `#[Operation] on VenueResource` (`data_surface_examples`) |
+| `reorder` | Reorder the venues | nothing | no | `administer event venues` | yes | yes | `#[Operation] on VenueResource` (`data_surface_examples`) |
+| `edit` | Edit a venue | `EventVenue $id` | no | `administer event venues` | yes | yes | `VenueResource::edit()` (`data_surface_examples`) |
+| `remove` | Remove a venue | `EventVenue $id` | no | `administer event venues` | yes | no: it deletes | `VenueResource::remove()` (`data_surface_examples`) |
+
+## event.venue.listing
+
+`Drupal\data_surface_examples\Structure\VenueListingStructure`, in `data_surface_examples`.
+
+- Kind: structure
+- Identity: none
+- Storage: none; its host or its parent stores it
+- Access: the operation's permission alone
+
+## event.venue.order
+
+`Drupal\data_surface_examples\Structure\VenueOrderStructure`, in `data_surface_examples`.
+
+- Kind: structure
+- Identity: none
+- Storage: none; its host or its parent stores it
+- Access: the operation's permission alone
+
+## event.venue.reorder
+
+`Drupal\data_surface_examples\Structure\VenueReorderStructure`, in `data_surface_examples`.
+
+- Kind: structure
+- Identity: none
+- Storage: none; its host or its parent stores it
+- Access: the operation's permission alone
+
+## event.venue.room
+
+`Drupal\data_surface_examples\Structure\VenueRoomStructure`, in `data_surface_examples`.
 
 - Kind: structure
 - Identity: none

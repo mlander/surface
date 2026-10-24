@@ -7,7 +7,9 @@ namespace Drupal\data_surface\Storage;
 use Drupal\Component\Serialization\Yaml as DrupalYaml;
 use Composer\Autoload\ClassLoader;
 use Drupal\Core\Cache\NullBackend;
+use Drupal\Core\Config\Entity\ConfigEntityTypeInterface;
 use Drupal\Core\DependencyInjection\ClassResolverInterface;
+use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Extension\ModuleExtensionList;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
@@ -65,6 +67,15 @@ use Symfony\Component\Yaml\Yaml;
  *   a site starts from and may differ from the default; its declared
  *   default, for a key the file does not give; nothing for one with
  *   neither (an empty list for a list).
+ *
+ * For every resource whose storage is a ConfigEntityStorage over an
+ * entity type the resource's own module declares, the entity type's entry,
+ * `<module>.<config prefix>.*`, a `config_entity` that is fully
+ * validatable, its mapping each key the storage maps to a property, by the
+ * property's name, written by the same rules; its install files
+ * are the things a module ships, which no resource describes, so none is
+ * written. An entity type of core or of another module has a schema of
+ * its own.
  *
  * A file's entries the resource does not describe are kept as they are,
  * and so are the comments above an entry; each written entry says it was
@@ -127,6 +138,9 @@ final class ConfigSchemaGenerator {
    *   The class resolver.
    * @param \Drupal\data_surface\ResourceBuild\ResourcePlugins|null $plugins
    *   The plugins that are their own structure.
+   * @param \Drupal\Core\Entity\EntityTypeManagerInterface|null $entityTypeManager
+   *   The entity type manager, for the config entity types an installed
+   *   module declares; NULL writes no entity type's entry.
    */
   public function __construct(
     protected readonly ResourceRegistry $registry,
@@ -137,6 +151,7 @@ final class ConfigSchemaGenerator {
     protected readonly ?ContainerInterface $container = NULL,
     protected readonly ?ClassResolverInterface $classResolver = NULL,
     protected readonly ?ResourcePlugins $plugins = NULL,
+    protected readonly ?EntityTypeManagerInterface $entityTypeManager = NULL,
   ) {}
 
   /**
@@ -190,23 +205,46 @@ final class ConfigSchemaGenerator {
     $loader->register();
     $resolver = new AutowiringClassResolver($this->classResolver, $this->container);
     $registry = new ResourceRegistry(ResourceCollectorPass::discover($scanned, $this->root . '/'), new NullBackend('data_surface_config_schema'), $this->plugins, $resolver);
-    return new static($registry, $this->resources->withRegistry($registry, $resolver), $this->moduleList, $this->root, $scanned);
+    return new static($registry, $this->resources->withRegistry($registry, $resolver), $this->moduleList, $this->root, $scanned, entityTypeManager: $this->entityTypeManager);
   }
 
   /**
    * Lists the resources whose config schema this writes.
    *
    * @return array<string, \Drupal\data_surface\ResourceBuild\ResourceDefinition>
-   *   Each resource stored in a simple config object, by name.
+   *   Each resource stored in a simple config object, or in a config
+   *   entity whose type its own module declares, by name.
    */
   public function resources(): array {
     $found = [];
     foreach ($this->registry->getDefinitions() as $name => $definition) {
-      if (!$definition->isDerived() && $definition->storage !== NULL && is_subclass_of($definition->storage, ConfigObjectStorage::class)) {
+      if ($definition->isDerived() || $definition->storage === NULL) {
+        continue;
+      }
+      if (is_subclass_of($definition->storage, ConfigObjectStorage::class) || $this->entityType($definition) !== NULL) {
         $found[(string) $name] = $definition;
       }
     }
     return $found;
+  }
+
+  /**
+   * Gives the config entity type a resource is stored in, if its module's.
+   *
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   *   The resource.
+   *
+   * @return \Drupal\Core\Config\Entity\ConfigEntityTypeInterface|null
+   *   The entity type its ConfigEntityStorage names, when the resource's
+   *   module declares it; NULL for any other storage, and for an entity
+   *   type of core or of another module, which has a schema of its own.
+   */
+  protected function entityType(ResourceDefinition $definition): ?ConfigEntityTypeInterface {
+    if ($this->entityTypeManager === NULL || !is_subclass_of((string) $definition->storage, ConfigEntityStorage::class)) {
+      return NULL;
+    }
+    $type = $this->entityTypeManager->getDefinition((string) constant($definition->storage . '::ENTITY_TYPE_ID'), FALSE);
+    return $type instanceof ConfigEntityTypeInterface && $type->getProvider() === $definition->module ? $type : NULL;
   }
 
   /**
@@ -246,7 +284,7 @@ final class ConfigSchemaGenerator {
           $schemas[$entry['module']][$entry['name']] = $entry;
         }
       }
-      if (in_array($definition->module, $modules, TRUE)) {
+      if (in_array($definition->module, $modules, TRUE) && $described['install'] !== NULL) {
         $installs[$this->path($definition->module, 'config/install/' . $described['config'] . '.yml')] = $described['install'];
       }
     }
@@ -268,11 +306,16 @@ final class ConfigSchemaGenerator {
    * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
    *   The resource.
    *
-   * @return array{config: string, entries: list<array{module: string, name: string, resource: string, schema: array}>, install: array}
+   * @return array{config: string, entries: list<array{module: string, name: string, resource: string, schema: array}>, install: array|null}
    *   The object's name, each schema entry with the module it is written
-   *   in, and the values it is installed with.
+   *   in, and the values it is installed with; for a config entity type,
+   *   the name of its entry and no install values.
    */
   public function describe(ResourceDefinition $definition): array {
+    $type = $this->entityType($definition);
+    if ($type !== NULL) {
+      return $this->describeEntityType($definition, $type);
+    }
     $config = (string) constant($definition->storage . '::CONFIG');
     $built = $this->resources->declaration($definition->name(), $this->context($definition));
     $existing = $this->existing($definition->module, $config);
@@ -299,17 +342,67 @@ final class ConfigSchemaGenerator {
   }
 
   /**
+   * Describes a config entity type a resource is stored in.
+   *
+   * Decision: see
+   * docs/decisions.md#a-listing-is-a-read-only-operation-with-outputs-a-reorder-is-an-update-over-the-collection.
+   *
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   *   The resource.
+   * @param \Drupal\Core\Config\Entity\ConfigEntityTypeInterface $type
+   *   The entity type its storage names, which its module declares.
+   *
+   * @return array{config: string, entries: list<array{module: string, name: string, resource: string, schema: array}>, install: null}
+   *   The entry's name, `<config prefix>.*`, each schema entry with the
+   *   module it is written in, and no install values.
+   */
+  protected function describeEntityType(ResourceDefinition $definition, ConfigEntityTypeInterface $type): array {
+    $config = $type->getConfigPrefix() . '.*';
+    $built = $this->resources->declaration($definition->name(), $this->context($definition));
+    $existing = $this->existing($definition->module, $config);
+    $this->alwaysHeld = array_map('strval', (array) constant($definition->storage . '::ALWAYS_HELD'));
+    $storage = (string) $definition->storage;
+    assert(is_subclass_of($storage, ConfigEntityStorage::class));
+    $properties = array_filter($storage::properties(), 'is_string');
+    $entries = [];
+    $written = $this->mapping($built->getDefinitions(), $type->getConfigPrefix(), $definition, $entries, $existing['schema']);
+    $mapping = [];
+    foreach ($properties as $key => $property) {
+      if (isset($written[$key])) {
+        $mapping[$property] = $written[$key];
+      }
+    }
+    array_unshift($entries, [
+      'module' => $definition->module,
+      'name' => $config,
+      'resource' => $definition->id,
+      'schema' => [
+        'type' => 'config_entity',
+        'label' => $existing['schema'][$config]['label'] ?? (string) $type->getLabel(),
+        'constraints' => ['FullyValidatable' => NULL],
+        'mapping' => $mapping,
+      ],
+    ]);
+    return [
+      'config' => $config,
+      'entries' => $entries,
+      'install' => NULL,
+    ];
+  }
+
+  /**
    * Gives the context a resource is described in.
    *
    * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
    *   The resource.
    *
    * @return \Drupal\data_surface\Resource\OperationContext
-   *   Its first operation that needs nothing, or the plugin host's verb.
+   *   Its first operation that needs nothing and takes the resource's own
+   *   keys, or the plugin host's verb.
    */
   protected function context(ResourceDefinition $definition): OperationContext {
     foreach ($this->registry->getOperations($definition->name()) as $operation) {
-      if ($operation->needsNothing()) {
+      if ($operation->needsNothing() && $operation->values === NULL) {
         return $this->resources->operation($definition->name(), $operation->id);
       }
     }

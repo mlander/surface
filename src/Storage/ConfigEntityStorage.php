@@ -87,6 +87,19 @@ abstract class ConfigEntityStorage implements DeletableStorageInterface, KnowsCl
   public const PROPERTIES = [];
 
   /**
+   * The optional keys the entity always holds a value for.
+   *
+   * For an entity type whose config schema is written from the resource
+   * (drush data_surface:config-schema --write): its generated schema
+   * leaves `nullable: true` off these, and mayClear() then answers that
+   * they may not be cleared. Every other optional key may. An entity type
+   * whose schema is written by hand says it there.
+   *
+   * @see docs/decisions.md#a-key-its-storage-always-holds
+   */
+  public const ALWAYS_HELD = [];
+
+  /**
    * The map key naming an entity method rather than a property.
    */
   public const METHOD = 'method';

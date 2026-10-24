@@ -570,7 +570,9 @@ final class Resources implements ResourcesInterface {
     }
     $definition = $this->registry->getDefinition($resource);
     $memo = $definition->name() . ' ' . $context->id;
-    if ($definition->storage === NULL || isset($this->heldToSchema[$memo])) {
+    // An operation's own values are not what the config schema describes:
+    // they are a query or a list over the things, which storage reads.
+    if ($definition->storage === NULL || isset($this->heldToSchema[$memo]) || $this->shapeOf($definition, $context) !== $definition) {
       return;
     }
     $storage = $this->instance($definition->storage, ResourceStorageInterface::class);
@@ -591,6 +593,46 @@ final class Resources implements ResourcesInterface {
       }
     }
     $this->heldToSchema[$memo] = TRUE;
+  }
+
+  /**
+   * Gives what declares an operation's keys: the resource, or a structure.
+   *
+   * An operation that names `values:` takes the keys of that structure in
+   * place of the resource's: a listing's paging and filter, a reorder's
+   * list. The structure has no identity and no storage of its own; the
+   * resource's storage stores what it takes.
+   *
+   * Decision: see
+   * docs/decisions.md#a-listing-is-a-read-only-operation-with-outputs-a-reorder-is-an-update-over-the-collection.
+   *
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   *   The resource.
+   * @param \Drupal\data_surface\Resource\OperationContext $context
+   *   The operation it is asked for in.
+   *
+   * @return \Drupal\data_surface\ResourceBuild\ResourceDefinition
+   *   The structure the operation names, or the resource itself.
+   *
+   * @throws \LogicException
+   *   When the operation names a class that is no structure, or one with
+   *   identity or storage.
+   */
+  public function shapeOf(ResourceDefinition $definition, OperationContext $context): ResourceDefinition {
+    $values = $this->registry->getOperations($definition->name())[$context->id]->values ?? NULL;
+    if ($values === NULL) {
+      return $definition;
+    }
+    $shape = $this->registry->hasDefinition($values) ? $this->registry->getDefinition($values) : NULL;
+    if ($shape === NULL || $shape->isResource() || $shape->identity !== [] || $shape->storage !== NULL) {
+      throw new \LogicException(sprintf(
+        'The "%s" operation of %s takes the values of %s, which is no structure: an operation\'s own values are a #[Structure] class, with no identity and no storage, which the resource\'s storage stores.',
+        $context->id,
+        $definition->id,
+        $values,
+      ));
+    }
+    return $shape;
   }
 
   /**
@@ -619,6 +661,15 @@ final class Resources implements ResourcesInterface {
     $definition = $this->registry->getDefinition($resource);
     // Refuses two providers of one operation id, whichever is asked for.
     $this->registry->getOperations($definition->name());
+    // The resource the operation is asked of: its permission, its storage,
+    // its access and how its operation behaves stay its own when the
+    // operation takes the keys of a structure in place of the resource's.
+    // Decision: see
+    // docs/decisions.md#a-listing-is-a-read-only-operation-with-outputs-a-reorder-is-an-update-over-the-collection.
+    $own = $definition;
+    if ($top) {
+      $definition = $this->shapeOf($definition, $context);
+    }
 
     $builder = (new DataSurfaceBuilder())->setWatchedValueCheck($this->watchedValueCheck);
     $inputs = $this->blueprint($builder, $definition);
@@ -690,13 +741,14 @@ final class Resources implements ResourcesInterface {
     $this->applyContext($builder, $definition, $context, $input_keys, $attached, $lists);
     $ports = $inputs->ports();
     $frame = ['class' => $definition->name(), 'id' => $definition->id, 'key' => '', 'inputs' => $input_keys];
-    $permission = $this->registry->getOperations($definition->name())[$context->id]->permission ?? NULL;
+    $permission = $this->registry->getOperations($own->name())[$context->id]->permission ?? NULL;
     $frame['permission'] = $permission === NULL ? NULL : static::resolvePermission($permission, $context);
     // Which keys the storage always holds, asked of the storage that
     // stores them: this resource's own, or its parent's, under the key
     // the parent stores it at.
     // Decision: see docs/decisions.md#a-key-its-storage-always-holds.
-    $frame['held'] = $this->heldBy($definition, $context, $ancestry);
+    // An operation's own values are no keys the storage holds.
+    $frame['held'] = $definition === $own ? $this->heldBy($definition, $context, $ancestry) : NULL;
     $this->markAlwaysHeld($builder, $input_keys, $frame['held']);
     // Each structure mixed in, built by itself for its def and its access,
     // which locks its members or takes them back out; then nothing of the
@@ -885,11 +937,11 @@ final class Resources implements ResourcesInterface {
     // Decision: see docs/decisions.md#a-resource-evolves-in-the-open.
     $builder->setVersion($definition->version);
     // Decision: see docs/decisions.md#an-operation-states-how-it-behaves.
-    if ($top && ($this->registry->getOperations($definition->name())[$context->id]->readOnly ?? FALSE)) {
+    if ($top && ($this->registry->getOperations($own->name())[$context->id]->readOnly ?? FALSE)) {
       $builder->markChangesNothing();
     }
     // Decision: see docs/decisions.md#locked-at-the-top.
-    $locked ??= $top ? $this->lockedAtTheTop($builder, $definition, $context) : NULL;
+    $locked ??= $top ? $this->lockedAtTheTop($builder, $own, $context) : NULL;
     if ($locked !== NULL) {
       $builder->lockWhole($locked);
     }
@@ -3106,7 +3158,7 @@ final class Resources implements ResourcesInterface {
       $context,
       $routes,
       $definition->identity,
-      $this->omittedKeys($definition, $built),
+      $this->omittedKeys($this->shapeOf($definition, $context), $built),
       $operation?->kind() === OperationDefinition::DELETE,
     );
   }

@@ -83,6 +83,9 @@ final class OperationDefinition {
    *   NULL for none.
    * @param bool $deletes
    *   Whether a call removes the thing it names, taking no values.
+   * @param string|null $values
+   *   The structure whose keys a call takes in place of the resource's,
+   *   or NULL for the resource's own.
    *
    * @throws \LogicException
    *   When the facts contradict each other: a read only operation that
@@ -106,7 +109,19 @@ final class OperationDefinition {
     public readonly bool $creates = FALSE,
     public readonly string|\Stringable|null $description = NULL,
     public readonly bool $deletes = FALSE,
+    public readonly ?string $values = NULL,
   ) {
+    // Decision: see
+    // docs/decisions.md#a-listing-is-a-read-only-operation-with-outputs-a-reorder-is-an-update-over-the-collection.
+    if ($values !== NULL && ($creates || $deletes)) {
+      throw new \LogicException(sprintf(
+        'The "%s" operation, %s, takes the values of %s and %s. An operation that creates or deletes is about the thing\'s own keys, so it takes the resource\'s.',
+        $id,
+        $this->describe(),
+        $values,
+        $creates ? 'creates' : 'deletes',
+      ));
+    }
     // Decision: see docs/decisions.md#a-placed-block-is-a-resource.
     if ($deletes && (!$destructive || $creates || $readOnly)) {
       throw new \LogicException(sprintf(

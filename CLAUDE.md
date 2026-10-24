@@ -51,7 +51,9 @@ the record of the rework that brought the module to the pattern.
   from whether it creates unless declared (a create whose caller names
   the thing declares it), and its kind, `create`, `update`, `read` or
   `delete` (`deletes:`, which takes no values), always derived from the
-  attribute: a create's tool
+  attribute, and, for one about the things together, the structure whose
+  keys it takes in place of the resource's, `values:` (a listing's page,
+  a reorder's list; `docs/resources.md#an-operation-that-takes-keys-of-its-own`): a create's tool
   requires what the resource requires, an update's requires nothing at
   its door
   (`docs/decisions.md#required-is-the-resources-and-an-update-tool-requires-nothing-at-its-door`); a tool
@@ -353,7 +355,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 The full lane's phpunit line reads, as of this writing:
 
 ```
-phpunit: Tests: 1450, Assertions: 29328, Errors: 0, Failures: 0, Skipped: 0. Classes: 195 of 195, 8 at a time, browser classes 4.
+phpunit: Tests: 1464, Assertions: 30385, Errors: 0, Failures: 0, Skipped: 0. Classes: 197 of 197, 8 at a time, browser classes 4.
 ```
 
 the same counts a plain phpunit run of the tree gives. `run-tests.sh`
@@ -394,7 +396,10 @@ constraint). On a site where this module is a checkout and not a
 Composer package, require both at the site root. Without them those
 tests error; they do not skip.
 
-There are no open findings. The two that stood here
+There are no open findings. The flaky
+`ExamplesEntryPortsTest::testTheFormFollowsEachType` (a race between the
+save and the config read) waits for the saved page now, as
+`ExamplesSpotlightAjaxTest` does. The two that stood here
 (`NodeTypeResourceFormTest::testAddStoresTheTypeAndItsOverrides` and
 `NodeTypeResourceFormTest::testDuplicateMachineNameIsRefusedOnTheTypeElement`)
 are fixed: the cosmetic layer no longer lets core's machine name
@@ -542,9 +547,13 @@ so the rule is this sentence. `npm test` is not part of
   `scripts/generate-catalog.php`, and the contract baselines under
   `tests/fixtures/contracts/` by `drush data_surface:contract-diff
   --write`, and the config schema and install files of every resource
-  stored in a `ConfigObjectStorage` by `drush data_surface:config-schema
-  --write` (the test modules' through `ConfigSchemaDriftTest` with
-  `DATA_SURFACE_CONFIG_SCHEMA_WRITE=1`). Never edit any of them by hand.
+  stored in a `ConfigObjectStorage`, and the schema of a config entity
+  type a module declares and stores a resource in, by `drush
+  data_surface:config-schema --write` (the test modules' through
+  `ConfigSchemaDriftTest` with `DATA_SURFACE_CONFIG_SCHEMA_WRITE=1`), and
+  example 15's documents under `tests/fixtures/venues/` by
+  `VenueResourceTest` with `DATA_SURFACE_VENUE_WRITE=1`. Never edit any
+  of them by hand.
 - Commit messages are one line.
 
 ## Naming

@@ -85,7 +85,7 @@ services:
   # config object, written from the resource (drush data_surface:config-schema).
   data_surface.config_schema:
     class: Drupal\data_surface\Storage\ConfigSchemaGenerator
-    arguments: ['@data_surface.resource_registry', '@data_surface.resources', '@extension.list.module', '%app.root%', '%container.modules%', '@service_container', '@class_resolver', '@data_surface.resource_plugins']
+    arguments: ['@data_surface.resource_registry', '@data_surface.resources', '@extension.list.module', '%app.root%', '%container.modules%', '@service_container', '@class_resolver', '@data_surface.resource_plugins', '@entity_type.manager']
   # Creates the config objects a module's config/install ships that the
   # site does not have, for a post-update hook (data_surface_install_missing_config()).
   data_surface.missing_config_installer:

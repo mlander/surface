@@ -1,0 +1,77 @@
+{
+    "resource": "event.venue",
+    "operation": "reorder",
+    "label": "Reorder the venues",
+    "schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "Reorder the venues",
+        "description": "Gives each venue named its new weight, all in one write; a venue left out keeps its own, and an unknown or repeated venue is refused.",
+        "x-surface": {
+            "contract": 3,
+            "operation": {
+                "id": "reorder",
+                "label": "Reorder the venues",
+                "description": "Gives each venue named its new weight, all in one write; a venue left out keeps its own, and an unknown or repeated venue is refused.",
+                "kind": "update",
+                "creates": false,
+                "destructive": false,
+                "idempotent": true
+            },
+            "version": 1
+        },
+        "type": "object",
+        "properties": {
+            "venues": {
+                "title": "Venues",
+                "description": "Each venue to move, once, with its new weight; a venue left out keeps its own.",
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                    "$ref": "#/$defs/event.venue.order"
+                },
+                "x-surface": {
+                    "locked": false,
+                    "dependsOn": [],
+                    "list": true
+                }
+            }
+        },
+        "additionalProperties": false,
+        "required": [
+            "venues"
+        ],
+        "$defs": {
+            "event.venue.order": {
+                "title": "event.venue.order",
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "title": "Venue",
+                        "description": "The machine name of a venue the site has.",
+                        "type": "string",
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": []
+                        }
+                    },
+                    "weight": {
+                        "title": "Weight",
+                        "description": "Its place among the venues: lighter first.",
+                        "type": "integer",
+                        "minimum": -1000,
+                        "maximum": 1000,
+                        "x-surface": {
+                            "locked": false,
+                            "dependsOn": []
+                        }
+                    }
+                },
+                "additionalProperties": false,
+                "required": [
+                    "id",
+                    "weight"
+                ]
+            }
+        }
+    }
+}

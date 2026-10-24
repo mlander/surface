@@ -420,6 +420,52 @@ field overrides beside it.
 
 Each class's `use` line: [Namespaces](concepts.md#namespaces).
 
+**An entity type of your own** (example 15). A module that declares a
+config entity type puts a resource over it from the start: the entity
+class carries `#[ConfigEntityType]` with its keys and `config_export`,
+and no form classes, no list builder and no links, since the resource's
+operations are what add, edit and remove one, at every door. Its config
+schema is written from the resource by `drush data_surface:config-schema
+--write`, as a config object's is: for a resource whose
+`ConfigEntityStorage` names an entity type its own module declares, the
+command writes the entry `<module>.<config prefix>.*`, a `config_entity`
+that is fully validatable, its mapping each key the storage maps to a
+property, by the property's name, by the rules a config object's keys
+follow, so nothing generated is translatable, the label included.
+The storage class's `ALWAYS_HELD` names the optional keys written as
+never null, as `ConfigObjectStorage`'s does. No install file is written:
+the things a module ships are config of their own, which no resource
+describes. An entity type of core or of another module (the block, the
+content type) has a schema of its own and is left alone. Example 15's:
+
+```yaml
+# Generated from the event.venue resource by drush data_surface:config-schema.
+data_surface_examples.event_venue.*:
+  type: config_entity
+  label: 'Venue'
+  constraints:
+    FullyValidatable: ~
+  mapping:
+    id:
+      type: string
+      label: 'Machine name'
+      constraints:
+        Regex:
+          pattern: '/^[a-z0-9_]+$/D'
+        Length:
+          max: 32
+    label:
+      type: string
+      label: 'Name'
+      # ...
+```
+
+The storage may read and write more than one thing for an operation
+that names no thing: `VenueStorage` answers a listing from every venue
+in its `prepare()` and writes a reorder's weights to each venue it names
+in one `commit()`
+([decision](decisions.md#a-listing-is-a-read-only-operation-with-outputs-a-reorder-is-an-update-over-the-collection)).
+
 ### Keys a mixed-in structure brings
 
 A structure [mixed in](resources.md#mixins) stores nothing itself

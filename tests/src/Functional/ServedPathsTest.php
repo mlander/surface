@@ -85,7 +85,8 @@ class ServedPathsTest extends BrowserTestBase {
     $this->container->get('config.factory')->reset();
     $this->assertSame($before, $this->config('data_surface_examples.program')->get());
 
-    // A custom method is GET and POST, never PATCH.
+    // A custom method of an operation that is no update is GET and POST,
+    // never PATCH.
     $patch = $this->send('PATCH', 'surface-api/event.program:check', ['sessions' => 4]);
     $this->problem($patch, 405);
     $this->assertSame('GET, POST, HEAD', $patch->getHeaderLine('Allow'));

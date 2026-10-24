@@ -670,6 +670,7 @@ final class OperationInputs {
       $this->t('The values, as the @resource resource describes them: every key it takes that the operation does not already know, including those other modules add, with its label, its meaning and the values it allows.', ['@resource' => $resource->id]),
       runtimeAccessSaidOnce: $operation !== NULL && $this->runtimeAccessWhole($resource, $operation),
     );
+    $this->listedTags = Cache::mergeTags($this->listedTags, $this->inputDefinitions->takeListTags());
     $properties = array_diff_key($map->getPropertyDefinitions(), array_flip($known));
     $map->setPropertyDefinitions($properties);
     $map->setRequired(array_filter($properties, static fn (DataDefinitionInterface $property): bool => $property->isRequired()) !== []);
@@ -740,7 +741,11 @@ final class OperationInputs {
         TRUE,
       ),
     ];
-    if (!$resource->hasOutputs()) {
+    // An operation that takes the keys of a structure answers that
+    // structure's outputs.
+    // Decision: see
+    // docs/decisions.md#a-listing-is-a-read-only-operation-with-outputs-a-reorder-is-an-update-over-the-collection.
+    if (!$resource->hasOutputs() && $operation->values === NULL) {
       return $outputs;
     }
     $built = $this->listed($resource, new OperationContext($operation->id), TRUE);

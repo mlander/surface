@@ -246,7 +246,9 @@ final class ContractEmitter {
    * are the data type's own, which `type` states; the three list
    * constraints are `oneOf`. Anything not here and not stated by a
    * keyword is named under `x-surface.checkedOnServer`, so a client knows
-   * the schema is not the whole story for that key.
+   * the schema is not the whole story for that key, unless the resolver
+   * reading it says its list is the whole of it, which is its `oneOf`
+   * (DataSurfaceOptions::isStatedByList()).
    */
   protected const STATED = [
     'NotNull',
@@ -3708,7 +3710,9 @@ final class ContractEmitter {
           break;
 
         default:
-          if (!in_array($name, self::STATED, TRUE)) {
+          // A constraint whose resolver says it is its list is the `oneOf`
+          // the list is written as.
+          if (!in_array($name, self::STATED, TRUE) && !$this->options->isStatedByList((string) $name)) {
             $unstated[] = $this->checked((string) $name, $options);
           }
       }

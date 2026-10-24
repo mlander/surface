@@ -272,6 +272,21 @@ between tags, which travel into a shared cache, and contexts, which mean
 "this answer was for one request", is in
 [Refinement](refinement.md#site-state-versus-per-request).
 
+**A list that is the whole constraint.** Both documents state a
+resolved list as `oneOf`, and name the constraint under
+`x-surface.checkedOnServer` besides, since the schema cannot know the
+constraint checks nothing more. A resolver whose list is every value its
+constraint accepts and nothing else, as a `Choice`'s is, says so with
+`exact: TRUE` on its attribute, and the constraint, and every subclass of
+it the resolver reads, is then named under no `checkedOnServer`. Example
+2's venue and room do: their constraints are `Choice`s whose list is the
+venues the site has, read by `EventVenueOptions`
+([decision](decisions.md#a-listing-is-a-read-only-operation-with-outputs-a-reorder-is-an-update-over-the-collection)).
+A memoized answer is dropped when a tag it was read under is
+invalidated, so a definition kept for the rest of a request is answered
+afresh, and a tool's definition carrying the list as its enum is cleared
+with the tag.
+
 To take a resolver out of circulation site-wide, or point it at a
 different source:
 

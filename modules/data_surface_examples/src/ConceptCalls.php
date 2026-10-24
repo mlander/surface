@@ -5,12 +5,15 @@ declare(strict_types=1);
 namespace Drupal\data_surface_examples;
 
 /**
- * The tool calls examples 7 to 14 show, written down once.
+ * The tool calls examples 7 to 15 show, written down once.
  *
- * None writes anything: every call is a dry run, which accepts, validates
- * and prepares the values, answers with what would be stored and stops,
- * except a call to an operation that changes nothing, which stops there
- * by itself and is sent as it would be for real. So each
+ * None leaves anything written: every call is a dry run, which accepts,
+ * validates and prepares the values, answers with what would be stored
+ * and stops, except a call to an operation that changes nothing, which
+ * stops there by itself and is sent as it would be for real, and
+ * example 15's, which adds a fourth venue, changes it and removes it
+ * again with its last call, so the three venues the module ships are
+ * what is left. So each
  * example's panel can make its calls whenever it is drawn and show what
  * the tool answered, ExamplesConceptsToolTest makes them on the shipped
  * settings and holds the README to their answers, and the README and the
@@ -20,6 +23,21 @@ namespace Drupal\data_surface_examples;
  * key its resource requires, which the Tool API asks for on every call.
  */
 final class ConceptCalls {
+
+  /**
+   * Example 15: the fourth venue its calls add and remove again.
+   */
+  public const TOWN_HALL = [
+    'label' => 'Town Hall',
+    'id' => 'town_hall',
+    'capacity' => 300,
+    'address' => '1 Market Square',
+    'rooms' => [
+      ['id' => 'town_hall_council', 'label' => 'Council chamber', 'seats' => 120],
+      ['id' => 'town_hall_foyer', 'label' => 'Foyer', 'seats' => 80],
+    ],
+    'weight' => 3,
+  ];
 
   /**
    * A value that stands for the site's default theme, read when it is sent.
@@ -184,6 +202,59 @@ final class ConceptCalls {
           'api_key' => 'wh-example-02c4d8',
           'third_party_settings' => ['data_surface_examples_keys' => ['key_id' => 'webhook_signing']],
         ],
+      ],
+    ],
+    'event.venue' => [
+      'list' => [
+        'label' => 'The venues listed, two to a page',
+        'operation' => 'list',
+        'values' => ['limit' => 2],
+        'dry_run' => FALSE,
+      ],
+      'add_rehearsed' => [
+        'label' => 'A fourth venue, Town Hall, added: rehearsed',
+        'operation' => 'add',
+        'values' => self::TOWN_HALL,
+      ],
+      'add' => [
+        'label' => 'Town Hall added: written, so the next calls find it',
+        'operation' => 'add',
+        'values' => self::TOWN_HALL,
+        'dry_run' => FALSE,
+      ],
+      'edit' => [
+        'label' => "Town Hall's capacity changed: written",
+        'operation' => 'edit',
+        'parameters' => ['id' => 'town_hall'],
+        'values' => ['capacity' => 350],
+        'dry_run' => FALSE,
+      ],
+      'reorder' => [
+        'label' => 'Town Hall moved first and Riverside Hall last, in one write: rehearsed',
+        'operation' => 'reorder',
+        'values' => ['venues' => [['id' => 'town_hall', 'weight' => -1], ['id' => 'riverside', 'weight' => 4]]],
+      ],
+      'reorder_unknown' => [
+        'label' => 'A reorder naming a venue the site does not have, and one twice: refused',
+        'operation' => 'reorder',
+        'values' => [
+          'venues' => [
+            ['id' => 'concert_hall', 'weight' => 0],
+            ['id' => 'library', 'weight' => 1],
+            ['id' => 'library', 'weight' => 2],
+          ],
+        ],
+      ],
+      'remove_rehearsed' => [
+        'label' => 'Town Hall removed: rehearsed',
+        'operation' => 'remove',
+        'parameters' => ['id' => 'town_hall'],
+      ],
+      'remove' => [
+        'label' => 'Town Hall removed: written, so the three venues shipped are what is left',
+        'operation' => 'remove',
+        'parameters' => ['id' => 'town_hall'],
+        'dry_run' => FALSE,
       ],
     ],
     'block.placement' => [
@@ -360,11 +431,11 @@ final class ConceptCalls {
    *
    * Run as user 1, because tool:run runs as anonymous unless told
    * otherwise, and every operation here asks for "administer site
-   * configuration" or "administer blocks". The parameters go in the same
-   * JSON as the values, before them. The dry run is a second input, which
-   * tool:run reads as name=value and decodes as JSON, so `true` is a
-   * boolean. A call made in a State of its own sets it first and deletes it
-   * after.
+   * configuration", "administer blocks" or a permission of the venues.
+   * The parameters go in the same JSON as the values, before them. The dry
+   * run is a second input, which tool:run reads as name=value and decodes
+   * as JSON, so `true` is a boolean. A call made in a State of its own sets
+   * it first and deletes it after.
    *
    * @param string $resource
    *   The resource id.

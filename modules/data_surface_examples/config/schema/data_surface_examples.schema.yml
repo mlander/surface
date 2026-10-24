@@ -478,3 +478,80 @@ data_surface_examples.mailer.credential.managed:
       type: string
       label: 'API key'
       requiredKey: false
+
+# Generated from the event.venue resource by drush data_surface:config-schema.
+data_surface_examples.event_venue.*:
+  type: config_entity
+  label: 'Venue'
+  constraints:
+    FullyValidatable: ~
+  mapping:
+    id:
+      type: string
+      label: 'Machine name'
+      constraints:
+        Regex:
+          pattern: '/^[a-z0-9_]+$/D'
+        Length:
+          max: 32
+    label:
+      type: string
+      label: 'Name'
+      constraints:
+        Length:
+          max: 128
+    capacity:
+      type: integer
+      label: 'Capacity'
+      constraints:
+        Range:
+          min: 1
+          max: 100000
+    address:
+      type: string
+      label: 'Address'
+      nullable: true
+      constraints:
+        Length:
+          max: 255
+    rooms:
+      type: sequence
+      label: 'Rooms'
+      constraints:
+        Count:
+          max: 20
+      sequence:
+        type: mapping
+        label: 'Rooms'
+        mapping:
+          id:
+            type: string
+            label: 'Room id'
+            constraints:
+              Regex:
+                pattern: '/^[a-z0-9_]+$/D'
+              Length:
+                max: 64
+          label:
+            type: string
+            label: 'Room name'
+            constraints:
+              Length:
+                max: 128
+          seats:
+            type: integer
+            label: 'Seats'
+            constraints:
+              Range:
+                min: 1
+                max: 10000
+    weight:
+      type: integer
+      label: 'Weight'
+      constraints:
+        Range:
+          min: -1000
+          max: 1000
+    status:
+      type: boolean
+      label: 'Enabled'

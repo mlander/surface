@@ -20,16 +20,21 @@ own, placed through the general placement resource of another
 optional extension: a credential pasted as a secret, or a key the site
 manages once a submodule standing in for the Key module is on, built
 once by the owner and once by that submodule's alter
-([below](#example-14-an-optional-extension)).
+([below](#example-14-an-optional-extension)). Example 15 is a config
+entity type of the module's own, a venue, with a resource over it from
+the start: one venue added, edited and removed, the venues listed a
+page at a time and reordered in one write
+([below](#example-15-a-config-entity-of-your-own)).
 
 ```bash
 drush pm:install data_surface_examples
 ```
 
 Then visit `/surface-examples` as an administrator. Every page asks for
-"administer site configuration". Nothing else is needed: the venues and
-rooms are fixed lists inside the module, and each example keeps its
-settings in a config object of its own
+"administer site configuration", and example 15's for "administer event
+venues". Nothing else is needed: the venues and rooms are the three
+venues the module ships, example 15's config entities, and each example
+keeps its settings in a config object of its own
 (`data_surface_examples.registration_step1` to `_step3`, then
 `data_surface_examples.bulletin`, `.press`, `.desk`, `.sales`,
 `.program`, `.doors`, `.spotlight`, `.mailer` and `.webhook`), so the examples never write over
@@ -38,7 +43,8 @@ each other.
 To take the examples again from the start, follow **Reset to defaults**
 on the landing page (`/surface-examples/reset`). It puts every config
 object back to the files the module ships in `config/install`, the
-ticket types example 9 reads among them,
+ticket types example 9 reads among them, puts example 15's three venues
+back as shipped and removes any venue added since,
 including anything another module stored on them, such as the event
 license example 4's module adds under example 3, and it opens again
 every room example 4 lets a site close and clears example 10's workflow
@@ -307,10 +313,10 @@ final class RegistrationStep2Resource implements ResourceInterface {
     $inputs->add('open', 'boolean', t('Registration open'), default: TRUE);
     $inputs->add('venue', 'string', t('Venue'))
       ->setRequired(TRUE)
-      ->addConstraint('LabeledChoice', ['choices' => Venues::VENUES]);
+      ->addConstraint('EventVenue');
     $inputs->add('room', 'string', t('Room'))
       ->setRequired(TRUE)
-      ->addConstraint('LabeledChoice', ['choices' => Venues::rooms()]);
+      ->addConstraint('EventVenueRoom');
     $inputs->add('capacity', 'integer', t('Capacity'), default: 50)
       ->addConstraint('Range', ['min' => 1]);
   }
@@ -320,7 +326,7 @@ final class RegistrationStep2Resource implements ResourceInterface {
    */
   #[RefinesInput('room')]
   public static function roomInVenue(DataDefinitionInterface $room, string $venue): DataDefinitionInterface {
-    return $room->addConstraint('LabeledChoice', ['choices' => Venues::rooms($venue)]);
+    return $room->addConstraint('RoomOfEventVenue', ['venue' => $venue]);
   }
 
   /**
@@ -344,6 +350,23 @@ final class RegistrationStep2Resource implements ResourceInterface {
 
 }
 ```
+
+The venues and their rooms are example 15's venue entities: the venue
+declares `EventVenue` and the room `EventVenueRoom`, two constraints
+whose list is the site's, and the room's refiner adds
+`RoomOfEventVenue` for the venue chosen, a pure function of it. One
+resolver, `EventVenueOptions`, reads all three as the enabled venues or
+their rooms, under the venues' list tag, so a venue added through
+example 15 is offered here at the next request, with no cache rebuild,
+and a venue disabled is not. The resolver says its list is the whole of
+the constraint (`exact: TRUE`), as a `Choice`'s is, so both documents
+state the venues and rooms as the `oneOf` they always did and name
+nothing under `checkedOnServer`: the three venues shipped are the list
+the class held before, so example 2's documents are as they were, byte
+for byte. The seats the capacity reads are still `Venues::seats()`: a
+static refiner reads only what it watches, and cannot say what site
+state it read, so a room example 15 adds is offered with no cap on the
+capacity.
 
 The example ships at Riverside Hall's main hall, so the text under the
 capacity says "Up to 400 for the Main hall." Change the venue to the Old
@@ -372,7 +395,9 @@ over `#ajax`; `buildForm()` reads the submitted venue and room from the
 form state, and on a new venue drops the old venue's room from the input
 and falls back to the stored room; `validateForm()` refuses a room of
 another venue and a capacity outside 1 and the room's seats, in the words
-the resource uses. It edits the same config object.
+the resource uses. It edits the same config object. It chooses from
+`Venues`' fixed lists, so a venue example 15 adds is offered by example
+2 and not by its twin.
 
 Its page says what the two forms share and counts both, from the files,
 the way the landing page counts every class: without the namespace, the
@@ -541,7 +566,13 @@ of code, counted without blank lines or comments:
 | File | What it is | Lines |
 | --- | --- | --- |
 | [`modules/data_surface_examples/src/Resource/RegistrationStep2Resource.php`](src/Resource/RegistrationStep2Resource.php) | the resource: five keys and two refiners, the rooms by the venue and the capacity by the room | 37 |
-| [`modules/data_surface_examples/src/Venues.php`](src/Venues.php) | the venues, their rooms and the seats of each: two fixed lists | 27 |
+| [`modules/data_surface_examples/src/Plugin/Validation/Constraint/EventVenueConstraint.php`](src/Plugin/Validation/Constraint/EventVenueConstraint.php) | the venue's constraint: a venue an event may be held in, a Choice whose list is the site's | 10 |
+| [`modules/data_surface_examples/src/Plugin/Validation/Constraint/EventVenueRoomConstraint.php`](src/Plugin/Validation/Constraint/EventVenueRoomConstraint.php) | the room's constraint: a room of any of those venues | 14 |
+| [`modules/data_surface_examples/src/Plugin/Validation/Constraint/RoomOfEventVenueConstraint.php`](src/Plugin/Validation/Constraint/RoomOfEventVenueConstraint.php) | the constraint the room refiner adds: a room of the chosen venue | 6 |
+| [`modules/data_surface_examples/src/Plugin/Validation/Constraint/VenueChoiceValidator.php`](src/Plugin/Validation/Constraint/VenueChoiceValidator.php) | their validator: reads the list, then holds the value to it as Choice does | 14 |
+| [`modules/data_surface_examples/src/Plugin/DataSurfaceOptionsResolver/EventVenueOptions.php`](src/Plugin/DataSurfaceOptionsResolver/EventVenueOptions.php) | the resolver that reads the three constraints as the venues or their rooms, an exact list | 30 |
+| [`modules/data_surface_examples/src/VenueChoices.php`](src/VenueChoices.php) | the venues and rooms an event may be held in: example 15's venue entities, read under their list tag | 28 |
+| [`modules/data_surface_examples/src/Venues.php`](src/Venues.php) | the seats of each room, which the capacity reads, beside the fixed lists of venues and rooms example 3 and the classic twin choose from | 27 |
 | [`modules/data_surface_examples/src/Storage/RegistrationStep2Storage.php`](src/Storage/RegistrationStep2Storage.php) | the storage: names the config object | 3 |
 | [`modules/data_surface_examples/data_surface_examples.routing.yml`](data_surface_examples.routing.yml), entry `data_surface_examples.step2` | the route | 10 |
 | [`modules/data_surface_examples/config/schema/data_surface_examples.schema.yml`](config/schema/data_surface_examples.schema.yml), entry `data_surface_examples.registration_step2` | the config schema, generated from the class | 26 |
@@ -3289,6 +3320,847 @@ of code, counted without blank lines or comments:
 | [`modules/data_surface_examples_keys/config/schema/data_surface_examples_keys.schema.yml`](../data_surface_examples_keys/config/schema/data_surface_examples_keys.schema.yml), entry `data_surface_examples.webhook.third_party.data_surface_examples_keys` | the config schema of what it stores on the webhook | 11 |
 | [`modules/data_surface_examples_keys/config/install/data_surface_examples_keys.keys.yml`](../data_surface_examples_keys/config/install/data_surface_examples_keys.keys.yml) | the two keys it ships | 7 |
 
+## Example 15: a config entity of your own
+
+`/surface-examples/15`, with the forms at `/surface-examples/15/add`,
+`/surface-examples/15/venue/{id}` and `/surface-examples/15/venue/{id}/remove`
+
+A module that declares its own config entity type puts a resource over
+it from the start. The venue is a config entity,
+`data_surface_examples.event_venue.<id>`, declared with core's
+`#[ConfigEntityType]` attribute and `config_export`, with no form
+classes, no list builder and no links: the resource's operations add,
+edit and remove a venue at every door, and its routes are the forms.
+
+<!-- code: src/Entity/EventVenue.php -->
+
+```php
+#[ConfigEntityType(
+  id: 'event_venue',
+  label: new TranslatableMarkup('Venue'),
+  label_collection: new TranslatableMarkup('Venues'),
+  label_singular: new TranslatableMarkup('venue'),
+  label_plural: new TranslatableMarkup('venues'),
+  config_prefix: 'event_venue',
+  entity_keys: [
+    'id' => 'id',
+    'label' => 'label',
+    'weight' => 'weight',
+    'status' => 'status',
+  ],
+  admin_permission: 'administer event venues',
+  label_count: [
+    'singular' => '@count venue',
+    'plural' => '@count venues',
+  ],
+  config_export: [
+    'id',
+    'label',
+    'capacity',
+    'address',
+    'rooms',
+    'weight',
+  ],
+)]
+final class EventVenue extends ConfigEntityBase {
+
+  /**
+   * The names every venue's config object starts with, before its id.
+   */
+  public const PREFIX = 'data_surface_examples.event_venue';
+
+  /**
+   * The machine name.
+   */
+  protected ?string $id = NULL;
+
+  /**
+   * The name people read.
+   */
+  protected ?string $label = NULL;
+
+  /**
+   * How many people the venue holds.
+   */
+  protected ?int $capacity = NULL;
+
+  /**
+   * Where it is.
+   */
+  protected ?string $address = NULL;
+
+  /**
+   * Its rooms, each an id, a name and its seats.
+   *
+   * @var array<int, array{id: string, label: string, seats: int}>|null
+   */
+  protected ?array $rooms = [];
+
+  /**
+   * Its place among the venues: lighter first.
+   */
+  protected ?int $weight = 0;
+
+  /**
+   * Gets the rooms.
+   *
+   * @return array<int, array{id: string, label: string, seats: int}>
+   *   Each room, in the order the venue lists them.
+   */
+  public function rooms(): array {
+    return $this->rooms ?? [];
+  }
+
+  /**
+   * Gets the weight.
+   *
+   * @return int
+   *   Its place among the venues.
+   */
+  public function weight(): int {
+    return (int) $this->weight;
+  }
+
+}
+```
+
+The resource is the venue by its machine name, on a `VenueStorage`, a
+`ConfigEntityStorage`. Add, edit and remove are about one venue. Listing
+and reordering are about the venues together, so they name none: each
+takes the keys of a structure of its own, which `values:` on its
+`#[Operation]` names. The listing is read only; the reorder is an update
+over the collection. Neither is a new kind of operation.
+
+<!-- code: src/Resource/VenueResource.php -->
+
+```php
+#[Resource('event.venue',
+  identity: ['id'],
+  storage: VenueStorage::class,
+  access: VenueAccess::class,
+)]
+#[Operation('add',
+  label: new TranslatableMarkup('Add a venue'),
+  description: new TranslatableMarkup('Adds a venue under a machine name the caller chooses, with its capacity, address and rooms; a machine name already in use is refused.'),
+  permission: self::ADMINISTER,
+  creates: TRUE,
+  idempotent: TRUE,
+)]
+#[Operation('list',
+  label: new TranslatableMarkup('List the venues'),
+  description: new TranslatableMarkup('Answers a page of the venues, lighter first, each one the account may read, and how many the filter matched.'),
+  permission: self::VIEW,
+  readOnly: TRUE,
+  values: VenueListingStructure::class,
+)]
+#[Operation('reorder',
+  label: new TranslatableMarkup('Reorder the venues'),
+  description: new TranslatableMarkup('Gives each venue named its new weight, all in one write; a venue left out keeps its own, and an unknown or repeated venue is refused.'),
+  permission: self::ADMINISTER,
+  values: VenueReorderStructure::class,
+)]
+final class VenueResource implements ResourceInterface {
+
+  /**
+   * The permission that adds, edits, reorders and removes the venues.
+   */
+  public const ADMINISTER = 'administer event venues';
+
+  /**
+   * The permission that lists them.
+   */
+  public const VIEW = 'view event venues';
+
+  /**
+   * Edits a venue, named by its machine name, which stays as it is.
+   */
+  #[Operation('edit',
+    label: new TranslatableMarkup('Edit a venue'),
+    description: new TranslatableMarkup('Changes a venue, named by its machine name, which stays as it is: its name, capacity, address, rooms, weight and status.'),
+    permission: self::ADMINISTER,
+  )]
+  public static function edit(EventVenue $id): OperationContext {
+    return new OperationContext(known: ['id' => (string) $id->id()]);
+  }
+
+  /**
+   * Removes a venue, named by its machine name.
+   */
+  #[Operation('remove',
+    label: new TranslatableMarkup('Remove a venue'),
+    description: new TranslatableMarkup('Removes a venue, named by its machine name, with its rooms.'),
+    permission: self::ADMINISTER,
+    destructive: TRUE,
+    deletes: TRUE,
+  )]
+  public static function remove(EventVenue $id): OperationContext {
+    return new OperationContext(known: ['id' => (string) $id->id()]);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function defineInputs(BlueprintInterface $inputs): void {
+    $inputs->add('label', 'string', t('Name'))
+      ->setRequired(TRUE)
+      ->addConstraint('Length', ['max' => 128]);
+    $inputs->add('id', 'string', t('Machine name'))
+      ->setDescription(t('A unique name for the venue: lowercase letters, numbers and underscores.'))
+      ->setRequired(TRUE)
+      ->addConstraint('Regex', [
+        'pattern' => '/^[a-z0-9_]+$/D',
+        'message' => t('The machine name may hold only lowercase letters, numbers and underscores.'),
+      ])
+      ->addConstraint('Length', ['max' => 32]);
+    $inputs->add('capacity', 'integer', t('Capacity'))
+      ->setDescription(t('How many people the venue holds.'))
+      ->setRequired(TRUE)
+      ->addConstraint('Range', ['min' => 1, 'max' => 100000]);
+    $inputs->add('address', 'string', t('Address'))
+      ->addConstraint('Length', ['max' => 255]);
+    $inputs->attachList('rooms', VenueRoomStructure::class, max: 20)
+      ->setLabel(t('Rooms'))
+      ->setDescription(t('The rooms an event at the venue may be held in.'));
+    $inputs->add('weight', 'integer', t('Weight'), default: 0)
+      ->setDescription(t('Its place among the venues: lighter first.'))
+      ->addConstraint('Range', ['min' => -1000, 'max' => 1000]);
+    $inputs->add('status', 'boolean', t('Enabled'), default: TRUE)
+      ->setDescription(t('Whether events may be held there; a disabled venue is listed only for an account that administers the venues.'));
+  }
+
+}
+```
+
+The listing takes a page and a filter, and declares what it answers,
+`defineOutputs()`: the page, a list of venues, and how many matched.
+Its tool is `data_surface:event.venue:list`, a read with no dry run.
+
+<!-- code: src/Structure/VenueListingStructure.php -->
+
+```php
+#[Structure('event.venue.listing')]
+final class VenueListingStructure implements StructureInterface, DefinesOutputsInterface {
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function defineInputs(BlueprintInterface $inputs): void {
+    $inputs->add('offset', 'integer', t('Offset'), default: 0)
+      ->setDescription(t('How many venues to skip, in order of weight.'))
+      ->addConstraint('Range', ['min' => 0, 'max' => 10000]);
+    $inputs->add('limit', 'integer', t('Limit'), default: 20)
+      ->setDescription(t('How many venues to answer at most.'))
+      ->addConstraint('Range', ['min' => 1, 'max' => 50]);
+    $inputs->add('status', 'boolean', t('Enabled'))
+      ->setDescription(t('Only the venues enabled, or only those disabled; left out, every venue.'));
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function defineOutputs(BlueprintInterface $outputs): void {
+    $item = MapDataDefinition::create()
+      ->setLabel(t('Venue'))
+      ->setPropertyDefinition('id', DataDefinition::create('string')->setLabel(t('Machine name'))->setRequired(TRUE))
+      ->setPropertyDefinition('label', DataDefinition::create('string')->setLabel(t('Name'))->setRequired(TRUE))
+      ->setPropertyDefinition('capacity', DataDefinition::create('integer')->setLabel(t('Capacity'))->setRequired(TRUE))
+      ->setPropertyDefinition('weight', DataDefinition::create('integer')->setLabel(t('Weight'))->setRequired(TRUE));
+    $outputs->addList('items', $item, t('Venues'))
+      ->setDescription(t('The page of venues, lighter first, each one the account may read.'))
+      ->setRequired(TRUE);
+    $outputs->add('total', 'integer', t('Total'))
+      ->setDescription(t('How many venues the filter matched that the account may read, on every page.'))
+      ->setRequired(TRUE);
+  }
+
+}
+```
+
+The reorder takes a collection of venues and their weights:
+
+<!-- code: src/Structure/VenueReorderStructure.php -->
+
+```php
+#[Structure('event.venue.reorder')]
+final class VenueReorderStructure implements StructureInterface {
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function defineInputs(BlueprintInterface $inputs): void {
+    $inputs->attachList('venues', VenueOrderStructure::class, min: 1)
+      ->setLabel(t('Venues'))
+      ->setDescription(t('Each venue to move, once, with its new weight; a venue left out keeps its own.'))
+      ->setRequired(TRUE);
+  }
+
+}
+```
+
+<!-- code: src/Structure/VenueOrderStructure.php -->
+
+```php
+#[Structure('event.venue.order')]
+final class VenueOrderStructure implements StructureInterface {
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function defineInputs(BlueprintInterface $inputs): void {
+    $inputs->add('id', 'string', t('Venue'))
+      ->setDescription(t('The machine name of a venue the site has.'))
+      ->setRequired(TRUE);
+    $inputs->add('weight', 'integer', t('Weight'))
+      ->setDescription(t('Its place among the venues: lighter first.'))
+      ->setRequired(TRUE)
+      ->addConstraint('Range', ['min' => -1000, 'max' => 1000]);
+  }
+
+}
+```
+
+The storage is where the venues are read and written together. A
+listing loads nothing, since a query has nothing stored, and its
+`prepare()` is its answer: prepare is the last stage a read runs, and
+one with no side effects, so the page and the total are what the tool
+answers beside the one result shape. Each venue is asked the resource's
+access answer in the listing's own context, knowing that venue, and one
+whose answer is not allowed is left out of the page and of the total. A
+reorder loads every venue's id and weight; its `prepare()` refuses an id
+that names no venue or is named twice, by its place in the list, and
+rehearses the rest; `commit()` saves them, in that one write.
+
+<!-- code: src/Storage/VenueStorage.php -->
+
+```php
+final class VenueStorage extends ConfigEntityStorage {
+
+  /**
+   * {@inheritdoc}
+   */
+  public const ENTITY_TYPE_ID = 'event_venue';
+
+  /**
+   * {@inheritdoc}
+   */
+  public const PROPERTIES = ['id', 'label', 'capacity', 'address', 'rooms', 'weight', 'status'];
+
+  /**
+   * {@inheritdoc}
+   */
+  public const ALWAYS_HELD = ['rooms', 'weight', 'status'];
+
+  /**
+   * The operation that lists the venues.
+   */
+  public const LIST = 'list';
+
+  /**
+   * The operation that reorders them.
+   */
+  public const REORDER = 'reorder';
+
+  /**
+   * Constructs a VenueStorage.
+   *
+   * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entityTypeManager
+   *   The entity type manager, autowired.
+   * @param \Drupal\Core\Config\TypedConfigManagerInterface $typedConfig
+   *   The typed config manager, autowired.
+   * @param \Drupal\Core\StringTranslation\TranslationInterface $string_translation
+   *   The string translation service, autowired.
+   * @param \Drupal\data_surface\ResourceBuild\ResourcesInterface $resources
+   *   The build step, autowired, which answers access for each venue.
+   * @param \Drupal\Core\Session\AccountProxyInterface $currentUser
+   *   The account a listing is answered for, autowired.
+   */
+  public function __construct(
+    EntityTypeManagerInterface $entityTypeManager,
+    TypedConfigManagerInterface $typedConfig,
+    TranslationInterface $string_translation,
+    protected readonly ResourcesInterface $resources,
+    protected readonly AccountProxyInterface $currentUser,
+  ) {
+    parent::__construct($entityTypeManager, $typedConfig, $string_translation);
+  }
+
+  /**
+   * {@inheritdoc}
+   *
+   * Nothing for a listing; every venue's id and weight for a reorder.
+   */
+  public function load(OperationContext $context): array {
+    return match ($context->id) {
+      self::LIST => [],
+      self::REORDER => [
+        'venues' => array_values(array_map(static fn (EventVenue $venue): array => [
+          'id' => (string) $venue->id(),
+          'weight' => $venue->weight(),
+        ], $this->venues())),
+      ],
+      default => parent::load($context),
+    };
+  }
+
+  /**
+   * {@inheritdoc}
+   *
+   * A listing's answer, a reorder's rehearsal, or a venue's, its rooms
+   * held to ids no other venue has.
+   */
+  public function prepare(OperationContext $context, array $values): array {
+    return match ($context->id) {
+      self::LIST => $this->listing($context, $values),
+      self::REORDER => $this->reordering($values),
+      default => $this->venue($context, $values),
+    };
+  }
+
+  /**
+   * {@inheritdoc}
+   *
+   * A reorder saves each venue it rehearsed with its new weight.
+   */
+  public function commit(OperationContext $context, array $prepared): void {
+    if ($context->id !== self::REORDER) {
+      parent::commit($context, $prepared);
+      return;
+    }
+    $storage = $this->storage();
+    foreach ($prepared['weights'] ?? [] as $id => $weight) {
+      $venue = $storage->load((string) $id);
+      if ($venue instanceof EventVenue) {
+        $venue->set('weight', (int) $weight)->save();
+      }
+    }
+  }
+
+  /**
+   * Reads a page of the venues the account may read.
+   *
+   * @param \Drupal\data_surface\Resource\OperationContext $context
+   *   The listing's context.
+   * @param array $values
+   *   The accepted offset, limit and status.
+   *
+   * @return array{items: list<array{id: string, label: string, capacity: int, weight: int}>, total: int}
+   *   The page and how many venues matched.
+   */
+  protected function listing(OperationContext $context, array $values): array {
+    $status = $values['status'] ?? NULL;
+    $matched = [];
+    foreach ($this->venues() as $venue) {
+      if (is_bool($status) && $venue->status() !== $status) {
+        continue;
+      }
+      // Decision: see
+      // docs/decisions.md#a-listing-is-a-read-only-operation-with-outputs-a-reorder-is-an-update-over-the-collection.
+      if (!$this->resources->access(VenueResource::class, $context->withKnown(['id' => (string) $venue->id()]), $this->currentUser)->isAllowed()) {
+        continue;
+      }
+      $matched[] = [
+        'id' => (string) $venue->id(),
+        'label' => (string) $venue->label(),
+        'capacity' => (int) $venue->get('capacity'),
+        'weight' => $venue->weight(),
+      ];
+    }
+    return [
+      'items' => array_slice($matched, (int) ($values['offset'] ?? 0), (int) ($values['limit'] ?? 20)),
+      'total' => count($matched),
+    ];
+  }
+
+  /**
+   * Rehearses a reorder: each venue named, once, with its new weight.
+   *
+   * @param array $values
+   *   The accepted list of venues and weights.
+   *
+   * @return array{weights: array<string, int>}
+   *   The weight each venue named takes, by its machine name.
+   *
+   * @throws \Drupal\data_surface\Pipeline\StorageViolationsException
+   *   When an id names no venue or is named twice, or a venue's config
+   *   schema refuses its new weight.
+   */
+  protected function reordering(array $values): array {
+    $venues = $this->venues();
+    $refused = [];
+    $weights = [];
+    $first = [];
+    foreach (array_values(is_array($values['venues'] ?? NULL) ? $values['venues'] : []) as $delta => $item) {
+      $id = is_array($item) && is_string($item['id'] ?? NULL) ? $item['id'] : '';
+      if (!isset($venues[$id])) {
+        $refused[] = new Violation('venues', $delta . '.id', $this->t('No venue is named @id.', ['@id' => $id]), Violation::NOT_FOUND);
+        continue;
+      }
+      if (isset($first[$id])) {
+        $refused[] = new Violation('venues', $delta . '.id', $this->t('The @id venue is named already, at position @first: a reorder names each venue once.', [
+          '@id' => $id,
+          '@first' => $first[$id],
+        ]), Violation::TAKEN);
+        continue;
+      }
+      $first[$id] = $delta;
+      $copy = $this->copy($venues[$id], []);
+      $copy->set('weight', (int) $item['weight']);
+      foreach ($this->validate($copy, $copy->toArray()) as $violation) {
+        $refused[] = new Violation('venues', $delta . '.weight', $violation->message, $violation->code);
+      }
+      $weights[$id] = (int) $item['weight'];
+    }
+    if ($refused !== []) {
+      throw new StorageViolationsException(new ViolationSet($refused));
+    }
+    return ['weights' => $weights];
+  }
+
+  /**
+   * Rehearses one venue, its rooms held to ids no other venue has.
+   *
+   * @param \Drupal\data_surface\Resource\OperationContext $context
+   *   The add or the edit.
+   * @param array $values
+   *   The accepted values.
+   *
+   * @return array
+   *   The venue's exported array.
+   *
+   * @throws \Drupal\data_surface\Pipeline\StorageViolationsException
+   *   When a room id is held twice, here or by another venue, or as
+   *   ConfigEntityStorage refuses.
+   */
+  protected function venue(OperationContext $context, array $values): array {
+    $own = $context->known['id'] ?? $values['id'] ?? NULL;
+    $elsewhere = [];
+    foreach ($this->venues() as $id => $venue) {
+      if ($id !== $own) {
+        foreach ($venue->rooms() as $room) {
+          $elsewhere[(string) $room['id']] = (string) $id;
+        }
+      }
+    }
+    $refused = [];
+    $seen = [];
+    foreach (array_values(is_array($values['rooms'] ?? NULL) ? $values['rooms'] : []) as $delta => $room) {
+      $id = is_array($room) && is_string($room['id'] ?? NULL) ? $room['id'] : NULL;
+      if ($id === NULL) {
+        continue;
+      }
+      if (isset($elsewhere[$id]) || isset($seen[$id])) {
+        $refused[] = new Violation('rooms', $delta . '.id', $this->t('The room id @id is held already, by @venue: a room id is held once across the venues.', [
+          '@id' => $id,
+          '@venue' => $elsewhere[$id] ?? $own,
+        ]), Violation::TAKEN);
+      }
+      $seen[$id] = TRUE;
+    }
+    try {
+      $record = parent::prepare($context, $values);
+    }
+    catch (StorageViolationsException $e) {
+      $refused = [...iterator_to_array($e->getViolations(), FALSE), ...$refused];
+    }
+    if ($refused !== []) {
+      throw new StorageViolationsException(new ViolationSet($refused));
+    }
+    assert(isset($record));
+    return $record;
+  }
+
+  /**
+   * Loads every venue, lighter first, then by name.
+   *
+   * @return array<string, \Drupal\data_surface_examples\Entity\EventVenue>
+   *   The venues, by machine name.
+   */
+  protected function venues(): array {
+    $venues = array_filter($this->storage()->loadMultiple(), static fn ($venue): bool => $venue instanceof EventVenue);
+    uasort($venues, [EventVenue::class, 'sort']);
+    return $venues;
+  }
+
+}
+```
+
+The access class is what the listing filters by: a disabled venue is
+only for an account that administers the venues, which only the venue
+can say, so an account that only views them lists the enabled ones.
+
+<!-- code: src/Access/VenueAccess.php -->
+
+```php
+final class VenueAccess implements OperationAccessInterface {
+
+  /**
+   * Constructs the access class, which the container builds as a service.
+   *
+   * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entityTypeManager
+   *   The entity type manager, for the venue the context names.
+   */
+  public function __construct(
+    protected readonly EntityTypeManagerInterface $entityTypeManager,
+  ) {}
+
+  /**
+   * {@inheritdoc}
+   */
+  public function access(OperationContext $context, AccountInterface $account): AccessResultInterface {
+    $id = $context->known['id'] ?? NULL;
+    if ($account->hasPermission(VenueResource::ADMINISTER) || !is_string($id) || $id === '') {
+      // Static: the account alone, or no venue to ask about.
+      return AccessResult::allowed()->cachePerPermissions();
+    }
+    $venue = $this->entityTypeManager->getStorage(VenueStorage::ENTITY_TYPE_ID)->load($id);
+    if (!$venue instanceof EventVenue) {
+      return AccessResult::allowed()->cachePerPermissions()->addCacheTags(['config:' . VenueStorage::ENTITY_TYPE_ID . '_list']);
+    }
+    // Runtime: what is stored, under the venue's own tag.
+    $answer = $venue->status() ? AccessResult::allowed() : AccessResult::forbidden('The venue is disabled, and only an account that administers the venues reads it.');
+    return $answer->cachePerPermissions()->addCacheableDependency($venue);
+  }
+
+}
+```
+
+### The config schema, written from the resource
+
+`drush data_surface:config-schema --write` writes the entity type's
+config schema from the resource, as it writes a config object's: a
+fully validatable `config_entity`, each key the storage maps to a
+property, by the rules a config object's keys follow. The three venues
+the module ships are config of their own, which no resource describes,
+so no install file is written.
+
+<!-- schema: data_surface_examples.event_venue.* -->
+
+```yaml
+data_surface_examples.event_venue.*:
+  type: config_entity
+  label: 'Venue'
+  constraints:
+    FullyValidatable: ~
+  mapping:
+    id:
+      type: string
+      label: 'Machine name'
+      constraints:
+        Regex:
+          pattern: '/^[a-z0-9_]+$/D'
+        Length:
+          max: 32
+    label:
+      type: string
+      label: 'Name'
+      constraints:
+        Length:
+          max: 128
+    capacity:
+      type: integer
+      label: 'Capacity'
+      constraints:
+        Range:
+          min: 1
+          max: 100000
+    address:
+      type: string
+      label: 'Address'
+      nullable: true
+      constraints:
+        Length:
+          max: 255
+    rooms:
+      type: sequence
+      label: 'Rooms'
+      constraints:
+        Count:
+          max: 20
+      sequence:
+        type: mapping
+        label: 'Rooms'
+        mapping:
+          id:
+            type: string
+            label: 'Room id'
+            constraints:
+              Regex:
+                pattern: '/^[a-z0-9_]+$/D'
+              Length:
+                max: 64
+          label:
+            type: string
+            label: 'Room name'
+            constraints:
+              Length:
+                max: 128
+          seats:
+            type: integer
+            label: 'Seats'
+            constraints:
+              Range:
+                min: 1
+                max: 10000
+    weight:
+      type: integer
+      label: 'Weight'
+      constraints:
+        Range:
+          min: -1000
+          max: 1000
+    status:
+      type: boolean
+      label: 'Enabled'
+```
+
+### On HTTP
+
+With `data_surface_react` on, the collection is the resource, one venue
+its path, and the method the operation. `GET` on the collection answers
+the listing, since the resource declares one: its query string the
+listing's values, its answer the outputs. A resource with no listing
+answers its create's envelope there, which is the create's custom
+method here, `GET /surface-api/event.venue:add`. The reorder is a custom
+method run with `PATCH`, the method an update takes.
+
+| Method | Path | Operation | Answers |
+| --- | --- | --- | --- |
+| `GET` | `/surface-api/event.venue?limit=2` | `list` | the listing: its outputs, a page of venues and the total |
+| `POST` | `/surface-api/event.venue` | `add` | 201 with the new venue's Location |
+| `GET` | `/surface-api/event.venue:add` | `add` | the envelope a create starts from |
+| `GET` | `/surface-api/event.venue/riverside` | `edit` | the envelope: what is stored, its schema and its ETag |
+| `PATCH` | `/surface-api/event.venue/riverside` | `edit` | the update, held by If-Match |
+| `DELETE` | `/surface-api/event.venue/riverside` | `remove` | the removal, no body |
+| `PATCH` | `/surface-api/event.venue:reorder` | `reorder` | the reorder, a custom method on the collection |
+| `GET` | `/surface-api/event.venue/schema` | `list` | the listing's full schema, its inputs and its outputs |
+
+```
+GET /surface-api/event.venue?limit=2
+
+{"items":[{"id":"riverside","label":"Riverside Hall","capacity":520,"weight":0},{"id":"library","label":"Old Library","capacity":90,"weight":1}],"total":3}
+```
+
+The React pages are `/surface-react/event.venue/add` and
+`/surface-react/event.venue/edit?id=riverside`.
+
+### The calls
+
+Made in order on the venues the module ships, as the page draws them:
+the listing, two to a page; Town Hall added as a dry run, then for
+real, so the next calls find it; its capacity changed; a reorder
+rehearsed, Town Hall first and Riverside Hall last; a reorder that
+names a venue the site does not have and one twice, refused by the
+storage at each place; Town Hall's removal rehearsed, then made, so the
+three venues shipped are what is left. The calls never touch a venue
+the site has: where one is named `town_hall` already, the page makes
+each call as a dry run, says so, and writes nothing.
+
+```bash
+drush tool:run data_surface:event.venue:list --uid=1 --input='{"values":{"limit":2}}'
+```
+
+```
+1. The venues listed, two to a page
+Success: List the venues changes nothing: the values were accepted and prepared, and nothing was written.
+  values: {"offset":0,"limit":2,"status":null}
+  items: [{"id":"riverside","label":"Riverside Hall","capacity":520,"weight":0},{"id":"library","label":"Old Library","capacity":90,"weight":1}]
+  total: 3
+```
+
+```bash
+drush tool:run data_surface:event.venue:add --uid=1 --input='{"values":{"label":"Town Hall","id":"town_hall","capacity":300,"address":"1 Market Square","rooms":[{"id":"town_hall_council","label":"Council chamber","seats":120},{"id":"town_hall_foyer","label":"Foyer","seats":80}],"weight":3}}' --input=dry_run=true
+```
+
+```
+2. A fourth venue, Town Hall, added: rehearsed
+Success: Dry run of Add a venue: the values were accepted and prepared, and nothing was written.
+  values: {"label":"Town Hall","id":"town_hall","capacity":300,"address":"1 Market Square","rooms":[{"id":"town_hall_council","label":"Council chamber","seats":120},{"id":"town_hall_foyer","label":"Foyer","seats":80}],"weight":3,"status":true}
+```
+
+```bash
+drush tool:run data_surface:event.venue:add --uid=1 --input='{"values":{"label":"Town Hall","id":"town_hall","capacity":300,"address":"1 Market Square","rooms":[{"id":"town_hall_council","label":"Council chamber","seats":120},{"id":"town_hall_foyer","label":"Foyer","seats":80}],"weight":3}}'
+```
+
+```
+3. Town Hall added: written, so the next calls find it
+Success: Add a venue: the values were accepted and written.
+```
+
+```bash
+drush tool:run data_surface:event.venue:edit --uid=1 --input='{"id":"town_hall","values":{"capacity":350}}'
+```
+
+```
+4. Town Hall's capacity changed: written
+Success: Edit a venue: the values were accepted and written.
+```
+
+```bash
+drush tool:run data_surface:event.venue:reorder --uid=1 --input='{"values":{"venues":[{"id":"town_hall","weight":-1},{"id":"riverside","weight":4}]}}' --input=dry_run=true
+```
+
+```
+5. Town Hall moved first and Riverside Hall last, in one write: rehearsed
+Success: Dry run of Reorder the venues: the values were accepted and prepared, and nothing was written.
+  values: {"venues":[{"id":"town_hall","weight":-1},{"id":"riverside","weight":4}]}
+```
+
+```bash
+drush tool:run data_surface:event.venue:reorder --uid=1 --input='{"values":{"venues":[{"id":"concert_hall","weight":0},{"id":"library","weight":1},{"id":"library","weight":2}]}}' --input=dry_run=true
+```
+
+```
+6. A reorder naming a venue the site does not have, and one twice: refused
+Failed: The values were refused:
+/venues/0/id: No venue is named concert_hall.
+/venues/2/id: The library venue is named already, at position 1: a reorder names each venue once.
+```
+
+```bash
+drush tool:run data_surface:event.venue:remove --uid=1 --input='{"id":"town_hall"}' --input=dry_run=true
+```
+
+```
+7. Town Hall removed: rehearsed
+Success: Dry run of Remove a venue: the removal was rehearsed, and nothing was removed. The values it holds are answered.
+  values: {"id":"town_hall","label":"Town Hall","capacity":350,"address":"1 Market Square","rooms":[{"id":"town_hall_council","label":"Council chamber","seats":120},{"id":"town_hall_foyer","label":"Foyer","seats":80}],"weight":3,"status":true}
+```
+
+```bash
+drush tool:run data_surface:event.venue:remove --uid=1 --input='{"id":"town_hall"}'
+```
+
+```
+8. Town Hall removed: written, so the three venues shipped are what is left
+Success: Remove a venue: removed. The values it held are answered.
+```
+
+### Files
+
+What example 15 is made of, as its page lists them, each with its lines
+of code, counted without blank lines or comments:
+
+<!-- files: 15 -->
+
+| File | What it is | Lines |
+| --- | --- | --- |
+| [`modules/data_surface_examples/src/Entity/EventVenue.php`](src/Entity/EventVenue.php) | the entity type: its declaration, its keys and the properties it exports, and no form, list builder or link | 42 |
+| [`modules/data_surface_examples/src/Resource/VenueResource.php`](src/Resource/VenueResource.php) | the resource: a venue by its machine name, added, edited and removed, and the venues listed and reordered | 74 |
+| [`modules/data_surface_examples/src/Structure/VenueRoomStructure.php`](src/Structure/VenueRoomStructure.php) | a room: an item of the venue's rooms | 18 |
+| [`modules/data_surface_examples/src/Structure/VenueListingStructure.php`](src/Structure/VenueListingStructure.php) | what the listing takes, a page and a filter, and what it answers, the page and the total | 27 |
+| [`modules/data_surface_examples/src/Structure/VenueReorderStructure.php`](src/Structure/VenueReorderStructure.php) | what the reorder takes: a list of venues and their weights | 9 |
+| [`modules/data_surface_examples/src/Structure/VenueOrderStructure.php`](src/Structure/VenueOrderStructure.php) | an item of that list: a venue and its new weight | 12 |
+| [`modules/data_surface_examples/src/Storage/VenueStorage.php`](src/Storage/VenueStorage.php) | the storage: a ConfigEntityStorage, which reads the listing and writes the reorder in one commit | 143 |
+| [`modules/data_surface_examples/src/Access/VenueAccess.php`](src/Access/VenueAccess.php) | the access class: a disabled venue is only for an account that administers the venues | 17 |
+| [`modules/data_surface_examples/config/schema/data_surface_examples.schema.yml`](config/schema/data_surface_examples.schema.yml), entry `data_surface_examples.event_venue.*` | the entity type's config schema, generated from the resource | 75 |
+| [`modules/data_surface_examples/config/install/data_surface_examples.event_venue.riverside.yml`](config/install/data_surface_examples.event_venue.riverside.yml) | Riverside Hall, shipped | 17 |
+| [`modules/data_surface_examples/config/install/data_surface_examples.event_venue.library.yml`](config/install/data_surface_examples.event_venue.library.yml) | the Old Library, shipped | 17 |
+| [`modules/data_surface_examples/config/install/data_surface_examples.event_venue.harbour.yml`](config/install/data_surface_examples.event_venue.harbour.yml) | the Harbour Centre, shipped | 17 |
+| [`modules/data_surface_examples/data_surface_examples.routing.yml`](data_surface_examples.routing.yml), entry `data_surface_examples.step15_add` | the add form: the generic operation form | 10 |
+| [`modules/data_surface_examples/data_surface_examples.routing.yml`](data_surface_examples.routing.yml), entry `data_surface_examples.step15_edit` | the edit form, its {id} the venue | 14 |
+| [`modules/data_surface_examples/data_surface_examples.routing.yml`](data_surface_examples.routing.yml), entry `data_surface_examples.step15_remove` | the remove form: a confirmation, since a delete takes no values | 14 |
+| [`modules/data_surface_examples/src/Form/VenueFormCosmetics.php`](src/Form/VenueFormCosmetics.php) | what the three forms say once they wrote, and the page they go back to | 20 |
+
 ## How this page is kept true
 
 Every code block above is the file it names, from its first attribute
@@ -3297,8 +4169,9 @@ when one drifts, and so does the component example 12 quotes. Each
 example's Files table is its list in `Series`, the one its page and the
 landing page's reading order are drawn from, and `ExampleFilesTest`
 fails when a table and the list differ, or the list and the module. The Drush
-commands and answers of examples 7 to 14 are asserted by
-`ExamplesConceptsToolTest`. The JSON of example 1's config schema is asserted by
+commands and answers of examples 7 to 15 are asserted by
+`ExamplesConceptsToolTest`, and example 15's config schema entry is the
+schema file's, which `ExamplesReadmeTest` checks. The JSON of example 1's config schema is asserted by
 `ConfigSchemaContractTest`, which also checks this page quotes it. The tool's three answers are asserted by
 `ExamplesToolTest`, which also checks this page quotes them, and the
 Drush commands are checked against `ExampleCalls`.
@@ -3320,10 +4193,12 @@ Drush commands are checked against `ExampleCalls`.
 | `FunctionalJavascript\ExamplesComplianceRefreshTest` | Example 4, in a browser: one fieldset titled "Compliance", the ceiling of 100 lifted to the main hall's 400 by `2048`, and the stewards at 1 for 50 and 3 for 150; a malformed license on blur is said once, under the license, with `aria-invalid` and nothing at the top, and caps the capacity at a hundred; corrected, the error goes and the room's limit comes back. A refused capacity left by a click on text keeps no focus, and left by Tab lands on the Compliance fieldset after it. The fieldset is drawn below the capacity and above the pricing, and stays there when `2048` and Tab lift the capacity, which, with the stewards, is all that is replaced. With the East room closed in State, choosing Riverside Hall offers the main hall alone and says why. |
 | `Functional\ServedContractEndpointsTest` | In React: the landing page's links, and example 2's contract, refine and validate over HTTP. |
 | `Functional\ServedSubmitEndpointTest` | In React: example 2 saved over HTTP, refused, and refused after someone else saved. |
-| `Kernel\ExamplesResetTest` | Reset to defaults puts every example, and what another module stored on example 3, back to the shipped files, and opens every room example 4 closed. |
+| `Kernel\ExamplesResetTest` | Reset to defaults puts every example, and what another module stored on example 3, back to the shipped files, puts example 15's venues back as shipped, a venue removed made again and one added removed, and opens every room example 4 closed. |
 | `Kernel\ExamplesConceptsTest` | Examples 7 to 12 and 14: each form builds and saves; example 7's rules in the full schema as declared, the send day gone for a monthly bulletin and kept in storage; example 8's one def at two sites with each wiring, the mixed-in keys flat, the shape at two keys, the volunteers' collection; example 9's keys from the configuration, a type added without a cache rebuild, the locked type in both documents and on the form; example 10's fees for two accounts, locked once published, and both operations' facts and tools; example 11's widgets, the always held badges and the notes that clear; example 12's four components read as four variants at the props and again at the slots, the card's props as keys with their constraints, its text a slot, both documents stating them, the form swapped to the hero and saved with its slot, a hero too dark refused; the panel above each, and none above examples 1 to 3; each class stays screen sized; example 13's page with its modules off, saying how to enable both, then with the block alone on, its parts and no call, then with the placement resource on too, the Spotlight and Tonight blocks placed through the add operation, the three lines side by side, the block's contract cut to the four components, the hero's actions narrowed, the four placement tools and the five calls' answers, nothing written.; example 14's panel with its module off, then on: how to enable it, the one source and then two in the contract excerpt, the webhook's rule, the gap, the lock not shipped, and the calls each state allows. |
 | `Kernel\ExamplesWorkflowTest` | Example 10 with the workflow module: the fees left out of the full schema, the tool listing and the read tool for an account without "see event fees" and kept for one with it; the program locked whole once the workflow state is published, settled at call time and left unmarked in the full schema; checking still answers; the panel's paragraph, with the module and without it. |
-| `Kernel\ExamplesConceptsToolTest` | Examples 7 to 14: every call `ConceptCalls` writes down, its answer, nothing written, the two blocks included, and this page quoting each command and answer. |
+| `Kernel\ExamplesConceptsToolTest` | Examples 7 to 15: every call `ConceptCalls` writes down, its answer, nothing left written, the two blocks and the venues included, and this page quoting each command and answer. |
+| `Kernel\VenueResourceTest` | Example 15: the entity type installs with its three venues and holds to its generated schema; the resource builds for each operation; both documents of add, edit, list and reorder; the listing's outputs schema; the tools, the listing paged and filtered and an account that only views left without the disabled venue; the reorder written in one commit, and refused for an unknown venue and one named twice; example 2 offering a venue added, with no cache rebuild. |
+| `Functional\VenueApiTest` | Example 15 over HTTP and through its forms: `GET` on the collection answering the listing, a refused query, `POST` 201 with `Location`, the venue's `PATCH` and `DELETE`, the reorder's `PATCH` and its 405 for `POST`; the add and edit forms saving, the remove form's confirmation removing; the page and its calls. |
 | `Functional\ExamplesConceptsRoutesTest` | Every route of examples 7 to 12 and 14 answers an administrator and refuses anonymous; the landing page lists them; each page shows its panel and its Files panel and saves through its form; example 10's check writes nothing. Example 13 refuses anonymous, says to enable its two modules, then, with them on, shows its parts and the calls' answers, and draws the Spotlight card and the Tonight section below on its page alone; its Files panel, the modules on or off. |
 | `Kernel\ExamplesExtensionTest` | Example 14 with the module that manages keys off, then on: both resources' full schemas, whole; the one source stated as `const` and drawn fixed, then two; the second source and the managed key there with no cache rebuild, in the documents and the tool; a pasted key kept across a switch to the managed key and back, and the config schema each source's stored value holds to; the read tool leaving the pasted key out and naming the managed key; the refusals, a pasted key sent while the managed source is chosen, a pasted key beside a managed key on the webhook, a key the site does not manage; the webhook's pasted key back with its value once the module is off; and this page quoting the documents, the gap and the lock it does not ship. |
 | `Functional\ExamplesExtensionFormTest` | Example 14 through its forms without JavaScript: the one source drawn as its label and no select, then a select of two; the mailer's pasted key saved, the managed key chosen and the pasted source chosen back with nothing typed, the key kept; the webhook's pasted box gone once a managed key is saved, and back when the module is off. |

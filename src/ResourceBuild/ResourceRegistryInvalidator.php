@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Drupal\data_surface\ResourceBuild;
 
 use Drupal\Core\Cache\CacheTagsInvalidatorInterface;
+use Drupal\data_surface\Options\DataSurfaceOptions;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -49,6 +50,14 @@ final class ResourceRegistryInvalidator implements CacheTagsInvalidatorInterface
       $resources = $this->container->get('data_surface.resources');
       if ($resources instanceof Resources) {
         $read_again ? $resources->forgetBuilds() : $resources->invalidateTags($tags);
+      }
+    }
+    // The option lists read from what changed, which a build kept for the
+    // request would otherwise be answered again.
+    if ($this->container->initialized('data_surface.options')) {
+      $options = $this->container->get('data_surface.options');
+      if ($options instanceof DataSurfaceOptions) {
+        $options->invalidateTags($tags);
       }
     }
   }
