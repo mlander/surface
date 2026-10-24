@@ -22,6 +22,9 @@ host says it emits is a typed map of definitions; what it actually
 emits is a plain PHP array, exactly like the values flowing the other
 way.
 
+For how this fits with the other kinds of transformation, see
+[Transformations](transformations.md).
+
 ## Declaring outputs
 
 Beside the inputs, in the same class, on `DefinesOutputsInterface`:

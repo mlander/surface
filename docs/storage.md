@@ -766,6 +766,9 @@ An implementation must be pure layout: no services, no current user, no
 site state. The two halves are expected to round-trip, and where they
 cannot the implementation says so in its own documentation.
 
+For how this fits with the other kinds of transformation, see
+[Transformations](transformations.md).
+
 ### A layout for settings another module mounted
 
 An alter that adds keys may ask for a value in one layout and store it

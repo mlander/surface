@@ -1344,6 +1344,63 @@ renames sit in A because they are cheapest before new code exists.
     lookup tool for an agent with no HTTP; a custom method's own lookup;
     a stored id the account may no longer reference.
 
+21. **A key computed from others.** Designed, not built; for a decision
+    of its own. Found while writing `docs/transformations.md`
+    (2026-10-23), which puts every kind of transformation in its place
+    and finds one with none: a value nobody types that callers read, a
+    slug from a title, a changed timestamp. An output is not stored and
+    no read answers it; a storage's `prepare()` may derive a value (the
+    language code `ConfigObjectStorage` adds), but no contract states it
+    and no read answers it.
+    - **The design.** `$inputs->derive('slug', 'string', from:
+      ['title'], Slug::class)`: a key of the resource, typed and labeled
+      as any other, whose value a class computes from the accepted
+      values of the keys `from` names. The pipeline computes it at the
+      prepare stage, after validate and before the storage prepares, so
+      storage's own checks (the config schema) judge it and storage
+      writes it as any key. The class runs under the static guard a
+      static refiner runs under (`Refinement\StaticRefinerContainer`),
+      so it is a pure function of `from`. It is never accepted: a value
+      sent for it is refused, at every door, with a code of its own. It
+      is stored, loaded and answered by the read like any key. Both
+      documents state it `readOnly: true` with `x-surface.computed:
+      {from: ['title']}`; the write tool's `values` input leaves it out.
+    - **Why it needs a decision of its own.** It is the first value the
+      pipeline writes that no caller sent. Coercion changes a spelling
+      and a layout a shape; this produces a value. It does not turn a
+      sent value into a different one, which the pipeline never does,
+      because a sent value is refused, not replaced.
+    - **What to weigh.** Cacheability: a pure deriver has none, but a
+      changed timestamp reads the clock, which the static guard refuses
+      (`\Drupal::time()`); either a deriver may declare itself runtime,
+      as a refiner does, and is then never run ahead by the served
+      contract's narrowing, or a timestamp stays a storage's job and the
+      design covers only pure derivations. The read tool: its output is
+      the write tool's `values` map said as an output
+      (`InputDefinitions::outputFromInput()`), and a computed key is in
+      the read and not in the write, so the two shapes stop being one;
+      the read's definition would have to be built from the resource,
+      not from the write's input. The contract mark: `readOnly` already
+      means locked (`readOnly` with `const` of what is stored); a
+      computed key has no `const` in the full schema, since its value
+      depends on `from`, so `x-surface.computed` is what tells a client
+      to show it and not offer it, and whether the narrowing (`POST
+      .../schema`) answers the value it would compute for the values in
+      progress, which a pure deriver allows. Refused or ignored when
+      sent: a locked key's value sent is ignored with a note
+      (`DataSurfaceResult::$notes`); refusing a computed key breaks a
+      client that writes back the document it read, so a value equal to
+      what would be computed may be better ignored with a note, and only
+      a different one refused. On an edit, when the source changes: a
+      slug that follows its title breaks every link to the old one, and
+      a slug set once is stale when the title changes; the declaration
+      needs to say which (computed on create, or on every write that
+      changes a key in `from`), and a write that does not touch `from`
+      leaves the stored value as it is. Validation of the computed
+      value: its own constraints (a slug's pattern) and runtime rules
+      (uniqueness) judge it, and a refusal of a value nobody sent must
+      name the source key the caller can change.
+
 ## Maintenance
 
 - **Functional tests convert to kernel tests as units touch them**, by

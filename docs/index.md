@@ -187,8 +187,10 @@ hand.
 The pages fall in the same groups as the README's documentation table.
 
 - **Start here**: [Your first resource](first-resource.md), [Your
-  second resource](second-resource.md), [Concepts](concepts.md),
-  [Common settings recipes](recipes.md), and [the
+  second resource](second-resource.md), [Concepts](concepts.md) and
+  [Transformations](transformations.md) (a value asked one way and
+  stored another, what runs because something was saved, a value nobody
+  types), [Common settings recipes](recipes.md), and [the
   examples](../modules/data_surface_examples/README.md) at
   `/surface-examples`.
 - **Writing a resource**: [Declaring a resource](declaring-a-resource.md)
