@@ -17,8 +17,6 @@ data_surface_block.create:
     _data_surface_resource: 'Drupal\data_surface_block\Resource\BlockPlacementResource'
     _data_surface_operation: 'create'
     _data_surface_cosmetics: 'data_surface_block.form_cosmetics'
-  requirements:
-    _data_surface_operation_access: 'TRUE'
 
 data_surface_block.update:
   path: '/admin/structure/block/surface/{id}'
@@ -28,8 +26,6 @@ data_surface_block.update:
     _data_surface_resource: 'Drupal\data_surface_block\Resource\BlockPlacementResource'
     _data_surface_operation: 'update'
     _data_surface_cosmetics: 'data_surface_block.form_cosmetics'
-  requirements:
-    _data_surface_operation_access: 'TRUE'
   options:
     parameters:
       id:
@@ -43,8 +39,6 @@ data_surface_block.delete:
     _data_surface_resource: 'Drupal\data_surface_block\Resource\BlockPlacementResource'
     _data_surface_operation: 'delete'
     _data_surface_cosmetics: 'data_surface_block.form_cosmetics'
-  requirements:
-    _data_surface_operation_access: 'TRUE'
   options:
     parameters:
       id:

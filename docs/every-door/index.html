@@ -532,9 +532,9 @@ $inputs->addEach('on_sale', 'boolean', from: TicketTypes::class, default: FALSE)
   ->setDescription(t('Which ticket types can be bought.'));
 
 // TicketTypes, the provider
-public function keys(): KeyedList {
+public function list(): SiteList {
   $config = $this->configFactory->get(self::CONFIG);
-  $keys = (new KeyedList())->addCacheableDependency($config);
+  $keys = (new SiteList())->addCacheableDependency($config);
   foreach ($config->get('types') ?? [] as $id => $type) {
     $keys->add((string) $id, (string) $type['label'], locked: (bool) ($type['locked'] ?? FALSE));
   }
@@ -1339,7 +1339,7 @@ public function access(OperationContext $context, AccountInterface $account): Ac
   drum(KX - 7.0, 2.2, KU);
   label('Config: ticket_types', scene, KX - 7.0, 0.1, 3.8, KU, 'major', { c: 'ink-2' });
   var prov = box(1.7, 0.8, 0.9, 'store', KU); prov.position.set(KX - 7.0, 2.9, -1.4); scene.add(prov); edges(prov, KU);
-  label('TicketTypes::keys()', scene, KX - 7.0, 3.65, -1.4, KU, 'note');
+  label('TicketTypes::list()', scene, KX - 7.0, 3.65, -1.4, KU, 'note');
   label('cache tag: config:data_surface_examples.ticket_types', scene, KX - 5.6, 4.15, -1.4, KU, 'note');
   arrow(v(KX - 7.0, 1.25, 2.2), v(KX - 7.0, 2.45, -0.95), 0.6, KU, 'values');
   stack(KX, 0, 8.4, 4.4, 'owner', KU, 'Ticket sales: example 9');

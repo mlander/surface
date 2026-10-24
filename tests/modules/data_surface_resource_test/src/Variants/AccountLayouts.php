@@ -4,19 +4,19 @@ declare(strict_types=1);
 
 namespace Drupal\data_surface_resource_test\Variants;
 
-use Drupal\data_surface\Resource\VariantList;
-use Drupal\data_surface\Resource\VariantsFromSiteInterface;
+use Drupal\data_surface\Resource\SiteList;
+use Drupal\data_surface\Resource\SiteListInterface;
 
 /**
  * Lists variants that vary by the account: refused wherever asked for.
  */
-final class AccountLayouts implements VariantsFromSiteInterface {
+final class AccountLayouts implements SiteListInterface {
 
   /**
    * {@inheritdoc}
    */
-  public function variants(): VariantList {
-    return (new VariantList())->add('mine', 'Mine', ['type' => 'object', 'properties' => []])->addCacheContexts(['user.permissions']);
+  public function list(): SiteList {
+    return (new SiteList())->add('mine', 'Mine', schema: ['type' => 'object', 'properties' => []])->addCacheContexts(['user.permissions']);
   }
 
 }

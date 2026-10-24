@@ -409,13 +409,11 @@ last, under Refused. `docs/resources.md` says how each part works.
 | `reuse` | Add an existing field to another bundle | `FieldStorageConfigInterface $storage`, `string $bundle` | yes | `administer %entity_type_id fields` | yes | no: it creates | `FieldInstanceResource::reuse()` (`data_surface_tool`) |
 | `update` | Edit a field | `FieldConfigInterface $field` | no | `administer %entity_type_id fields` | yes | yes | `FieldInstanceResource::update()` (`data_surface_tool`) |
 
-- `create` reaches http `POST /surface-api/field.instance`, tool `data_surface:field.instance:create`, openapi `field.instance:create:write`, react `/surface-react/field.instance/create`.
-- `reuse` reaches http `POST /surface-api/field.instance:reuse`, tool `data_surface:field.instance:reuse`, openapi `field.instance:reuse:write`, react `/surface-react/field.instance/reuse`.
-- `update` reaches http `PATCH /surface-api/field.instance/{field}`, tool `data_surface:field.instance:update`, read tool `data_surface:field.instance:update:read`, openapi `field.instance:update:write`, react `/surface-react/field.instance/update`.
+- `create` reaches http `POST /surface-api/field.instance`, tool `data_surface:field.instance:create`, schema tool `data_surface:field.instance:create:schema`, openapi `field.instance:create:write`, react `/surface-react/field.instance/create`.
+- `reuse` reaches http `POST /surface-api/field.instance:reuse`, tool `data_surface:field.instance:reuse`, schema tool `data_surface:field.instance:reuse:schema`, openapi `field.instance:reuse:write`, react `/surface-react/field.instance/reuse`.
+- `update` reaches http `PATCH /surface-api/field.instance/{field}`, tool `data_surface:field.instance:update`, read tool `data_surface:field.instance:update:read`, schema tool `data_surface:field.instance:update:schema`, openapi `field.instance:update:write`, react `/surface-react/field.instance/update`.
 
 - Variants at `settings`: `address` → `Drupal\data_surface_address\Resource\AddressFieldSettingsResource`.
-
-- Variants at `settings`, for every other value: derived from the config schema `field.field_settings.<field type>`, for every field type offered in the UI.
 
 ## field.settings.address
 
@@ -441,9 +439,7 @@ last, under Refused. `docs/resources.md` says how each part works.
 | `create` | New field storage | nothing | yes | `administer %entity_type_id fields` | no: nothing supplies `%entity_type_id` | no: not on its own | `FieldStorageResource::create()` (`data_surface_tool`) |
 | `update` | Edit a field storage | `FieldStorageConfigInterface $storage` | no | `administer %entity_type_id fields` | yes | yes | `FieldStorageResource::update()` (`data_surface_tool`) |
 
-- `update` reaches http `PATCH /surface-api/field.storage/{storage}`, tool `data_surface:field.storage:update`, read tool `data_surface:field.storage:update:read`, openapi `field.storage:update:write`, react `/surface-react/field.storage/update`.
-
-- Variants at `settings`, for every other value: derived from the config schema `field.storage_settings.<field type>`, for every field type offered in the UI.
+- `update` reaches http `PATCH /surface-api/field.storage/{storage}`, tool `data_surface:field.storage:update`, read tool `data_surface:field.storage:update:read`, schema tool `data_surface:field.storage:update:schema`, openapi `field.storage:update:write`, react `/surface-react/field.storage/update`.
 
 ## field_formatter:data_surface_demo_string
 
@@ -626,6 +622,8 @@ operation here read, grouped by where they are read and counted;
 | `component.slots` | 4 | `data_surface_examples` |
 | `event.spotlight.props` | 4 | `data_surface_examples` |
 | `event.spotlight.slots` | 4 | `data_surface_examples` |
+| `field.instance.settings` | 21 | `data_surface_tool` |
+| `field.storage.settings` | 22 | `data_surface_tool` |
 
 ## Refused
 

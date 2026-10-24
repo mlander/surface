@@ -19,7 +19,7 @@ bundle. Each stores the id, as its entity type keeps it.
 
 The candidates are core's selection handler's for the account asking,
 listed while there are at most
-`data_surface.settings:reference_enum_limit` and looked up past that:
+`data_surface.settings:reference_list_limit` and looked up past that:
 on the form with core's entity autocomplete, over HTTP with the
 resource's lookup, `GET /surface-api/event.sponsorship:lookup?key=/venue&q=riv`
 ([A key that refers to an entity](../../docs/options.md#a-key-that-refers-to-an-entity),

@@ -8,8 +8,10 @@ use Drupal\Component\Render\PlainTextOutput;
 use Drupal\data_surface\DataSurfaceBuilder;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\DefinitionMetadata;
-use Drupal\data_surface\Resource\KeyedList;
+use Drupal\data_surface\Resource\SiteList;
 use Drupal\data_surface\ResourceBuild\ResourceBlueprint;
+use Drupal\data_surface_resource_test\Keys\Broken\DottedKeys;
+use Drupal\data_surface_resource_test\Keys\Broken\SchemaKeys;
 use Drupal\data_surface_resource_test\Keys\WorkshopBenches;
 use Drupal\data_surface_resource_test\Resource\Workshop\WorkshopResource;
 use Drupal\data_surface_resource_test\Shape\Sku;
@@ -404,7 +406,7 @@ class KeysFromSiteTest extends DataSurfaceKernelTestBase {
       ],
       'a provider that is none' => [
         static fn (ResourceBlueprint $inputs) => $inputs->addEach('rows', 'boolean', from: BenchStructure::class),
-        'addEach("rows") names Drupal\data_surface_resource_test\Structure\Workshop\BenchStructure as where its keys come from, which does not implement Drupal\data_surface\Resource\KeysFromSiteInterface',
+        'addEach("rows") names Drupal\data_surface_resource_test\Structure\Workshop\BenchStructure as where its keys come from, which does not implement Drupal\data_surface\Resource\SiteListInterface',
       ],
       'a key taken' => [
         static function (ResourceBlueprint $inputs) {
@@ -434,21 +436,47 @@ class KeysFromSiteTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests a list's ids become keys, so a dot, a colon or a repeat is refused.
+   * Tests a list refuses an empty id and a repeat.
+   *
+   * What a key cannot be, a dot or a colon, is refused where the keys are
+   * read (SiteListTest), since a variant's value may hold either.
    */
-  public function testKeyedListRefusesWhatCannotBeKey(): void {
-    foreach (['a.b', 'a:b', ''] as $id) {
-      try {
-        (new KeyedList())->add($id, 'Label');
-        $this->fail(sprintf('"%s" is refused.', $id));
-      }
-      catch (\InvalidArgumentException $e) {
-        $this->assertStringContainsString('cannot be the id of an entry', $e->getMessage());
-      }
+  public function testSiteListRefusesAnEmptyIdAndRepeats(): void {
+    try {
+      (new SiteList())->add('', 'Label');
+      $this->fail('An empty id is refused.');
+    }
+    catch (\InvalidArgumentException $e) {
+      $this->assertStringContainsString('An empty id cannot name an entry', $e->getMessage());
     }
     $this->expectException(\InvalidArgumentException::class);
     $this->expectExceptionMessage('The "a" entry was added to this list already');
-    KeyedList::fromLabels(['a' => 'A'])->add('a', 'Again');
+    SiteList::fromLabels(['a' => 'A'])->add('a', 'Again');
+  }
+
+  /**
+   * Tests what a key per thing does not read is refused when it is built.
+   *
+   * An entry's id becomes a key, so a dot or a colon is refused; a schema
+   * or a structure is a variant's, which a key per thing does not read.
+   */
+  public function testEntriesNoKeyCanBeAreRefused(): void {
+    $resources = $this->container->get('data_surface.resources');
+    $keysFrom = new \ReflectionMethod($resources, 'keysFrom');
+    $workshop = $this->container->get('data_surface.resource_registry')->getDefinition(WorkshopResource::class);
+    $refusals = [
+      DottedKeys::class => DottedKeys::class . ' lists "lathe.left" for the keys of "lights" on resource_test.workshop. "lathe.left" cannot be the id of an entry: it becomes a key, which is not empty and holds no dot or colon.',
+      SchemaKeys::class => SchemaKeys::class . ' lists "lathe" for the keys of "lights" on resource_test.workshop with a schema, which a key from the site does not read: each entry is the type or structure the blueprint names at "lights", with an id, a label, and optionally a start and a lock.',
+    ];
+    foreach ($refusals as $provider => $message) {
+      try {
+        $keysFrom->invoke($resources, $workshop, 'lights', $provider);
+        $this->fail($message);
+      }
+      catch (\LogicException $e) {
+        $this->assertSame($message, $e->getMessage());
+      }
+    }
   }
 
   /**

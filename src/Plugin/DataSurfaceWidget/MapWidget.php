@@ -33,8 +33,8 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * nothing, and answers an empty map.
  */
 #[DataSurfaceWidget(
-  id: 'map',
-  label: new TranslatableMarkup('Map'),
+  id: 'fieldset',
+  label: new TranslatableMarkup('Fieldset'),
   weight: 5,
 )]
 final class MapWidget extends DataSurfaceWidgetBase implements ContainerFactoryPluginInterface {

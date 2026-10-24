@@ -82,7 +82,7 @@ class ReferenceKeysFormTest extends BrowserTestBase {
     $this->assertSame($nodes['article'], $stored->get('page'), 'An article is stored as its id, an integer.');
 
     // Past the limit: core's entity autocomplete, read back as the id.
-    $this->config('data_surface.settings')->set('reference_enum_limit', 1)->save();
+    $this->config('data_surface.settings')->set('reference_list_limit', 1)->save();
     $this->drupalGet('surface-examples/16');
     $venue = $this->assertSession()->elementExists('css', 'input[name="surface[venue]"]');
     $this->assertStringContainsString('/entity_reference_autocomplete/event_venue/default/', (string) $venue->getAttribute('data-autocomplete-path'));

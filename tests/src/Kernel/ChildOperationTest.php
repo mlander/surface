@@ -14,7 +14,6 @@ use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface\ResourceBuild\Resources;
 use Drupal\data_surface\ResourceBuild\ResourcesInterface;
 use Drupal\data_surface_resource_test\Structure\Broken\MisnamingLarderStructure;
-use Drupal\data_surface_resource_test\Structure\Broken\TwoDefaultsStructure;
 use Drupal\data_surface_resource_test\Resource\Larder\LarderResource;
 use Drupal\data_surface_resource_test\Resource\Larder\SpiceRackResource;
 use Drupal\data_surface_resource_test\Resource\Pantry\LabelResource;
@@ -38,9 +37,11 @@ use Symfony\Component\HttpFoundation\Request;
  * The larder attaches the same spice rack twice. Editing it, the rack at
  * `rack` is invoked through the rack's own `update`, by the context's id,
  * and the one at `spare_rack` through `restock`, which the larder's
- * operation names; adding one, both fall to the rack's default, `browse`;
- * stocking one, the larder hands both a context whole, built by calling
- * the rack's own `browse` and `restock`. The rack's access class answers
+ * operation names; adding one, both are invoked through the rack's own
+ * `create`, by the context's id, and copying one through `create` again,
+ * the rack's operation of the parent's kind; stocking one, the larder
+ * hands both a context whole, built by calling the rack's own `browse`
+ * and `restock`. The rack's access class answers
  * open, locked or omitted from three permissions however the rack was
  * invoked, and `restock` asks a permission of its own where the build
  * resolves it.
@@ -268,8 +269,8 @@ class ChildOperationTest extends DataSurfaceKernelTestBase {
    * Tests the order a child's operation is resolved in.
    *
    * By name from the parent's operation, then by the parent context's id,
-   * then the child's default; an alter naming one child operation applies
-   * where that operation is invoked and nowhere else.
+   * then by the parent operation's kind; an alter naming one child
+   * operation applies where that operation is invoked and nowhere else.
    */
   public function testResolutionOrder(): void {
     $this->actAs('stock spice rack');
@@ -290,7 +291,8 @@ class ChildOperationTest extends DataSurfaceKernelTestBase {
     $this->assertSame('top', $spare->getDefault('shelf'));
     $this->assertSame(['min' => 0, 'max' => 40], $spare->getDefinition('spices')->getConstraints()['Range']);
 
-    // The default: adding a larder names nothing, and the rack has no add.
+    // By the context's id again: adding a larder names nothing, and the
+    // rack has its own create.
     $add = $this->resources()->buildOperation(LarderResource::class, 'create');
     foreach (['rack', 'spare_rack'] as $key) {
       $child = self::child($add, $key);
@@ -298,11 +300,19 @@ class ChildOperationTest extends DataSurfaceKernelTestBase {
       $this->assertSame(['min' => 0, 'max' => 10], $child->getDefinition('spices')->getConstraints()['Range'], $key);
     }
 
+    // By the parent's kind: copying a larder creates, the rack has no
+    // copy, so its create.
+    $copy = $this->resources()->buildOperation(LarderResource::class, 'copy');
+    foreach (['rack', 'spare_rack'] as $key) {
+      $this->assertSame(['min' => 0, 'max' => 10], self::child($copy, $key)->getDefinition('spices')->getConstraints()['Range'], $key);
+    }
+
     // A context that knows no larder cannot invoke the rack's edit, which
-    // needs one: the hint is passed over for the default.
+    // needs one, nor the rack's operation of an update's kind, the same
+    // edit: both are passed over, and the rack sees the larder's context.
     $bare = $this->resources()->build(LarderResource::class, new OperationContext('update'));
     foreach (['rack', 'spare_rack'] as $key) {
-      $this->assertSame(['min' => 0, 'max' => 10], self::child($bare, $key)->getDefinition('spices')->getConstraints()['Range'], $key);
+      $this->assertSame(['min' => 0, 'max' => 40], self::child($bare, $key)->getDefinition('spices')->getConstraints()['Range'], $key);
     }
 
     // The access answer of a child reaches the parent's cacheability.
@@ -584,19 +594,11 @@ class ChildOperationTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests the two refusals: two defaults, and an operation not declared.
+   * Tests the refusal of an operation the child does not declare.
    */
   public function testRefusals(): void {
-    try {
-      $this->resources()->build(TwoDefaultsStructure::class, new OperationContext('first'));
-      $this->fail('Two default operations were accepted.');
-    }
-    catch (\LogicException $e) {
-      $this->assertStringStartsWith('resource_test.broken.two_defaults marks two operations the default, "first" from ' . TwoDefaultsStructure::class . '::first() in data_surface_resource_test and "second" from ' . TwoDefaultsStructure::class . '::second()', $e->getMessage());
-    }
-
     $this->expectException(\LogicException::class);
-    $this->expectExceptionMessage('resource_test.broken.misnaming_larder, in its "clean" context, names the "dust" operation for its "rack" child, which resource_test.larder.rack does not declare; it declares update, browse, restock.');
+    $this->expectExceptionMessage('resource_test.broken.misnaming_larder, in its "clean" context, names the "dust" operation for its "rack" child, which resource_test.larder.rack does not declare; it declares update, create, browse, restock.');
     $this->resources()->buildOperation(MisnamingLarderStructure::class, 'clean');
   }
 

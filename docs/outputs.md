@@ -188,8 +188,6 @@ inputs get. What is lost, on top of the two the inputs already lose
 
 - **The `NotEmitted` marker itself**, which is a PHP marker and not a
   value. The statement it makes survives as `required`.
-- **Who contributed what.** A mounted third-party output arrives as an
-  ordinary property of the `third_party_outputs` map.
 
 The tools `data_surface_tool` derives from operations answer with the
 accepted `values`, as the read tool would answer them, `committed`, and
@@ -199,30 +197,19 @@ the resource's own outputs converted here; a dry run answers the same
 operation, which is never committed, answers what its storage's
 `prepare()` answered under an output's name
 ([decision](decisions.md#who-produces-outputs)). An operation that takes
-the keys of a structure of its own (`#[Operation(values:)]`) answers
+the keys of a structure of its own (`#[Operation(structure:)]`) answers
 that structure's outputs: example 15's listing declares `items`, a list
 of maps, and `total`
 ([An operation that takes keys of its own](resources.md#an-operation-that-takes-keys-of-its-own)). What prepare rehearsed, in storage layout, is
 never served ([decision](decisions.md#every-door-projects-what-the-read-tool-projects)).
 
-## Contributing an output
+## No alter adds an output
 
-A module that owns neither the host nor its execution can still add to
-what the host emits, at build time: its alter implements
-`AltersOutputsInterface` beside `AltersInputsInterface`.
-
-```php
-public function alterOutputs(BlueprintAdditionsInterface $outputs): void {
-  $outputs->add('badge', 'string', $this->t('Badge'));
-}
-```
-
-Each class's `use` line: [Namespaces](concepts.md#namespaces).
-
-What the alter adds is mounted under its module's name, so the value
-lands at `third_party_outputs.my_module.badge` (advertised,
-conformance checked, and machine-visible) and cannot collide with the
-owner's outputs or with another contributor's. The owner may not declare
-an output of that name; the key belongs to whoever mounts under it. An
-alter cannot offer more values on an output with `extendChoices()`:
-nobody sends one.
+What a call answers is its operation's: the owner declares it, and a
+consumer reading the owner's output schema reads all of it. Another
+module adds no output at build time; a reaction to a save (a message
+sent, a record written elsewhere) belongs to ECA. Until 2026-10-24 an
+alter could, through `AltersOutputsInterface` and a `third_party_outputs`
+mount; nothing shipped used it, and an alter that still implements it
+or keeps an `alterOutputs()` method is refused at discovery
+([decision](decisions.md#the-surface-was-counted-and-cut)).

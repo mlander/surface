@@ -14,6 +14,7 @@ use Drupal\data_surface\Resource\BlueprintInterface;
 use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface\Resource\ResourceInterface;
 use Drupal\data_surface_tool\Access\FieldInstanceAccess;
+use Drupal\data_surface_tool\FieldSettingsSchemaVariants;
 use Drupal\data_surface_tool\Storage\FieldInstanceStorage;
 use Drupal\field\Entity\FieldStorageConfig;
 use Drupal\field\FieldConfigInterface;
@@ -167,7 +168,7 @@ final class FieldInstanceResource implements ResourceInterface {
     $inputs->attach('storage', FieldStorageResource::class)
       ->setLabel(t('Field storage'))
       ->setDescription(t('What every bundle using this field shares.'));
-    $inputs->attachVariants('settings', by: 'field_type')
+    $inputs->attachVariants('settings', by: 'field_type', from: FieldSettingsSchemaVariants::class)
       ->setLabel(t('Field settings'))
       ->setDescription(t('Settings for this field on this bundle, described by the field type itself.'));
   }

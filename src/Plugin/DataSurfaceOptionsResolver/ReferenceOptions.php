@@ -21,7 +21,7 @@ use Symfony\Component\Validator\Constraint;
  * The selection handler for the key's entity type and bundles is asked,
  * for the account asking, so the list is what core's autocomplete would
  * offer that account. Up to the site's limit,
- * `data_surface.settings:reference_enum_limit`, the candidates are the
+ * `data_surface.settings:reference_list_limit`, the candidates are the
  * key's options, labeled; past it this resolver does not apply, so the key
  * takes any id and the constraint's validator decides.
  *

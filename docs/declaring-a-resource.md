@@ -95,9 +95,9 @@ declares; the test module's `TestBlockStructure`, a structure, uses two.
   value declared once for every key that asks for it ([Named
   shapes](#named-shapes)).
 - **A `#[RefinesInput]` method takes the key's definition first, then one
-  parameter per sibling it watches**, matched by name, or listed as
-  `watches:` when a renamed parameter should be refused rather than
-  silently stop watching. Its signature is its dependency declaration.
+  parameter per sibling it watches**, matched by name: a parameter that
+  names no declared key is refused, so a renamed one never silently
+  stops watching. Its signature is its dependency declaration.
   One rule per method, its docblock stating the rule.
 - **The class has no constructor and holds no service**, and is never
   instantiated: the build step calls its static methods on the class,
@@ -476,8 +476,7 @@ one: the data surface's `getDefault()` and
 `getDefaultValues()` read it, and `accept()` merges it under the stored
 values; an example is stated by both documents and drawn as no
 placeholder, which is the key's declared
-[arrangement](forms.md#arranging-the-keys). An operation that creates may give starting values with
-`withDefaults()`, which become the key's defaults in that context.
+[arrangement](forms.md#arranging-the-keys).
 
 Two consequences worth knowing before you declare one. A map's declared
 default merges *over* the defaults its properties declare rather than
@@ -567,30 +566,30 @@ It is worth being plain about the edges:
 ## Computed keys
 
 A key whose value follows other keys, and that nobody types, is declared
-with `derive()`: typed and labeled as `add()` declares a key, and
+with `compute()`: typed and labeled as `add()` declares a key, and
 computed by a class from the keys `from:` names. Example 15's venue
 computes its slug from its name:
 
 ```php
-$inputs->derive('slug', 'string', t('Slug'), from: ['label'], using: Slugify::class)
+$inputs->compute('slug', 'string', t('Slug'), from: ['label'], using: Slugify::class)
   ->addConstraint('Regex', ['pattern' => '/^[a-z0-9]+(-[a-z0-9]+)*$/D']);
 ```
 
 Each class's `use` line: [Namespaces](concepts.md#namespaces).
 
-The class implements `DeriverInterface`, whose one method is static,
-`derive(array $from): mixed`: handed the value of each key `from:`
+The class implements `ComputesValueInterface`, whose one method is static,
+`compute(array $from): mixed`: handed the value of each key `from:`
 names, it answers the value. It is a pure function of those values, held
 to it as a static refiner is: with assertions on it runs with the
-container guarded (`PipelineGuard::guardDeriver()`), and the
+container guarded (`PipelineGuard::guardCompute()`), and the
 module's PHPStan rule flags a `\Drupal::` call in it. A value that needs
 a service, the clock or the request, such as a changed time, is no
 computed key: a storage's `prepare()` adds it.
 
-- **When.** `when: Derive::ON_CREATE`, the default, computes it while
+- **When.** `when: Compute::ON_CREATE`, the default, computes it while
   storage holds nothing for it, which is when the thing is created, and
   keeps it after: renaming a venue leaves its slug, and every link to
-  it, as it was. `when: Derive::ON_CHANGE` computes it again on every
+  it, as it was. `when: Compute::ON_CHANGE` computes it again on every
   write that changes a key in `from`. A write that changes none of them
   keeps what is stored either way.
 - **Judged like any key.** The pipeline computes it once the other keys
@@ -609,7 +608,7 @@ computed key: a storage's `prepare()` adds it.
   other is refused with the same code
   ([decision](decisions.md#a-computed-key-is-a-pure-function-of-its-sources)).
 
-A computed key is a resource's own key, at its top: `derive()` is on the
+A computed key is a resource's own key, at its top: `compute()` is on the
 owner's blueprint only, and refused in a structure, a structure mixed in
 and outputs.
 

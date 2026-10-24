@@ -14,7 +14,12 @@ use Drupal\data_surface_demo_extras\Alter\DemoBlockAlter;
 use Drupal\data_surface_resource_test\Access\RecipeAccess;
 use Drupal\data_surface_resource_test\OutsideDiscovery\BothKindsClass;
 use Drupal\data_surface_resource_test\Shape\Sku;
+use Drupal\data_surface_resource_test\OutsideDiscovery\DefaultOperationStructure;
 use Drupal\data_surface_resource_test\OutsideDiscovery\HomelessResource;
+use Drupal\data_surface_resource_test\OutsideDiscovery\OperationAlter;
+use Drupal\data_surface_resource_test\OutsideDiscovery\OperationOfAlter;
+use Drupal\data_surface_resource_test\OutsideDiscovery\OutputsAlter;
+use Drupal\data_surface_resource_test\OutsideDiscovery\WatchesRefinerStructure;
 use Drupal\data_surface_resource_test\OutsideDiscovery\InstanceDefineInputsStructure;
 use Drupal\data_surface_resource_test\OutsideDiscovery\WrongKindStructure;
 use Drupal\data_surface_resource_test\Plugin\Block\StickyNoteBlock;
@@ -108,11 +113,11 @@ class ResourceDiscoveryTest extends DataSurfaceKernelTestBase {
     $this->assertSame(['course', 'vegetarian'], $definition->refiners[1]->watched());
     $this->assertSame(['course'], $definition->refiners[0]->watched());
 
-    // An operation from another class names its resource with `of`.
+    // Its operations stand on its own class.
     $operations = $this->registry()->getOperations(RecipeResource::class);
-    $this->assertSame(['create', 'update', 'clone', 'mislabeled'], array_keys($operations));
-    $this->assertSame('cook in %kitchen', $operations['clone']->permission);
-    $this->assertSame('Clone a recipe', (string) $operations['clone']->label);
+    $this->assertSame(['create', 'update', 'mislabeled'], array_keys($operations));
+    $this->assertSame('cook in %kitchen', $operations['create']->permission);
+    $this->assertSame('Add a recipe', (string) $operations['create']->label);
 
     $this->assertSame(
       [EditOnlyRecipeAlter::class, RecipeAlter::class],
@@ -196,6 +201,74 @@ class ResourceDiscoveryTest extends DataSurfaceKernelTestBase {
         $this->assertStringStartsWith($message, $e->getMessage());
       }
     }
+  }
+
+  /**
+   * Tests a removed attribute argument is refused, naming what replaced it.
+   *
+   * Removed on 2026-10-24: #[RefinesInput(watches:)], #[Operation(default:)]
+   * and #[Operation(of:)]; an operation on a class that is no resource or
+   * structure is refused too.
+   */
+  public function testRemovedArgumentsAreRefused(): void {
+    $module = 'data_surface_resource_test';
+    $recipe = [RecipeResource::class => $module];
+    $refusals = [
+      [
+        ['resources' => [WatchesRefinerStructure::class => $module]],
+        "#[RefinesInput('third')] on " . WatchesRefinerStructure::class . '::thirdOf() says watches:, which the attribute no longer takes: what a refiner watches is its parameters after the definition, each named for the key it is handed.',
+      ],
+      [
+        [
+          'resources' => [DefaultOperationStructure::class => $module],
+          'operations' => [DefaultOperationStructure::class => $module],
+        ],
+        "#[Operation('first')] on " . DefaultOperationStructure::class . "::first() says default:, which the attribute no longer takes: a child is invoked through the operation its parent's context names, else its operation with the parent context's id, else its operation with the standard id of the parent operation's kind (create, update or configure, read or list, delete).",
+      ],
+      [
+        ['resources' => $recipe, 'operations' => [OperationOfAlter::class => $module]],
+        "#[Operation('clone')] on " . OperationOfAlter::class . "::clone() says of:, which the attribute no longer takes: an operation stands on its resource's or structure's own class.",
+      ],
+      [
+        ['resources' => $recipe, 'operations' => [OperationAlter::class => $module]],
+        "#[Operation('taste')] on " . OperationAlter::class . "::taste() stands on a class that is no resource or structure. An operation stands on its resource's or structure's own class.",
+      ],
+    ];
+    foreach ($refusals as [$classes, $message]) {
+      try {
+        (new ResourceRegistry($classes, $this->container->get('cache.discovery')))->getDefinitions();
+        $this->fail($message);
+      }
+      catch (\LogicException $e) {
+        $this->assertSame($message, $e->getMessage());
+      }
+    }
+  }
+
+  /**
+   * Tests an alter that adds outputs is refused, saying what replaced it.
+   *
+   * Removed on 2026-10-24 with AltersOutputsInterface: one that still
+   * implements it cannot be loaded, and is refused by name where the
+   * scanned directories are read; one that keeps alterOutputs() is
+   * refused where the alters are read.
+   */
+  public function testAnAlterAddingOutputsIsRefused(): void {
+    $tail = " adds outputs (Drupal\\data_surface\\Resource\\AltersOutputsInterface, alterOutputs()), which an alter no longer may since 2026-10-24: what a call answers is its operation's outputs, declared by the resource or structure that owns it, and a reaction to a save belongs to ECA.";
+    try {
+      ResourceCollectorPass::reflect('Drupal\\data_surface_resource_test\\OutsideDiscovery\\OutputsInterfaceAlter');
+      $this->fail('An alter implementing the removed interface was read.');
+    }
+    catch (\LogicException $e) {
+      $this->assertSame('Drupal\\data_surface_resource_test\\OutsideDiscovery\\OutputsInterfaceAlter' . $tail, $e->getMessage());
+    }
+    $registry = new ResourceRegistry([
+      'resources' => [RecipeResource::class => 'data_surface_resource_test'],
+      'alters' => [OutputsAlter::class => 'data_surface_resource_test'],
+    ], $this->container->get('cache.discovery'));
+    $this->expectException(\LogicException::class);
+    $this->expectExceptionMessage(OutputsAlter::class . $tail);
+    $registry->getDefinitions();
   }
 
   /**

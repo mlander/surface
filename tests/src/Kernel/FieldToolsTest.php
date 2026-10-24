@@ -484,10 +484,10 @@ class FieldToolsTest extends DataSurfaceKernelTestBase {
    *
    * The field instance resource's settings variants are every field
    * type's declared settings, and, for every field type offered in the UI
-   * that has none, a variant derived from its config schema,
-   * `field.field_settings.<field type>`. The declared variant wins where
-   * there is one: the address field type's settings are still its own
-   * resource.
+   * that has none, a structure a provider lists, read from its config
+   * schema, `field.field_settings.<field type>`. The declared variant wins
+   * where there is one: the address field type's settings are still its
+   * own resource.
    */
   public function testFieldTypeWithoutDeclaredSettingsIsDerivedFromSchema(): void {
     $tool = $this->createTool(self::ADD);
@@ -502,7 +502,7 @@ class FieldToolsTest extends DataSurfaceKernelTestBase {
     $variants = $surface->getDefinitions()->entry('settings')?->variants;
     $this->assertNotNull($variants);
     $this->assertSame(AddressFieldSettingsResource::class, $variants->variant('address')->source);
-    $this->assertNull($variants->variant('string')->source);
+    $this->assertStringStartsWith('schema:field.instance.settings.string:', (string) $variants->variant('string')->source);
     $this->assertSame([], $variants->variant('string')->child->getDefinitions()->names());
     $this->assertSame(['min', 'max', 'prefix', 'suffix'], $variants->variant('integer')->child->getDefinitions()->names());
   }

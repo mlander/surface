@@ -7,8 +7,8 @@ namespace Drupal\Tests\data_surface\Unit;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\data_surface\Pipeline\PipelineGuard;
 use Drupal\data_surface\Resource\Attribute\RefinesInput;
-use Drupal\data_surface\Resource\KeyedList;
-use Drupal\data_surface\Resource\KeysFromSiteInterface;
+use Drupal\data_surface\Resource\SiteList;
+use Drupal\data_surface\Resource\SiteListInterface;
 use Drupal\Tests\data_surface\PHPStan\DoorSpecificRule;
 use PHPStan\Rules\Rule;
 use PHPStan\Testing\RuleTestCase;
@@ -38,8 +38,8 @@ final class DoorSpecificRuleTest extends RuleTestCase {
     // Loaded first: PHPStan's own source locator traps the file it reads,
     // which the test runner's debug class loader does not expect.
     class_exists(RefinesInput::class);
-    class_exists(KeyedList::class);
-    interface_exists(KeysFromSiteInterface::class);
+    class_exists(SiteList::class);
+    interface_exists(SiteListInterface::class);
     interface_exists(DataDefinitionInterface::class);
     $tail = ': a door-specific service makes the doors disagree, since the form, the HTTP API and the tool each hand it something else. ';
     $account = 'Use the account the operation hands in: an access class\'s $account, a storage verb\'s $account, a runtime refiner\'s parameter typed AccountInterface.';
@@ -70,7 +70,7 @@ final class DoorSpecificRuleTest extends RuleTestCase {
         29,
       ],
       [
-        "The provider $keys::keys() calls \\Drupal::routeMatch(), the service current_route_match, which is bound to the route a door is answering" . $tail . $context,
+        "The provider $keys::list() calls \\Drupal::routeMatch(), the service current_route_match, which is bound to the route a door is answering" . $tail . $context,
         37,
       ],
     ]);

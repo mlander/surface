@@ -8,8 +8,6 @@ data_surface_tool_test.cabinet.update:
     _title: 'Edit the cabinet'
     _data_surface_resource: 'Drupal\data_surface_tool_test\Resource\CabinetResource'
     _data_surface_operation: 'update'
-  requirements:
-    _data_surface_operation_access: 'TRUE'
 
 data_surface_tool_test.cabinet.count:
   path: '/surface-test/cabinet/count'
@@ -18,5 +16,3 @@ data_surface_tool_test.cabinet.count:
     _title: 'Count the drawers'
     _data_surface_resource: 'Drupal\data_surface_tool_test\Resource\CabinetResource'
     _data_surface_operation: 'count'
-  requirements:
-    _data_surface_operation_access: 'TRUE'

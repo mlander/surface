@@ -20,6 +20,13 @@ parameters:
       # What the module's own PHPStan rule is tested against: refiners
       # it must flag.
       - tests/fixtures/phpstan/*
+      # Fixtures that say what was removed on 2026-10-24, which discovery
+      # refuses by name: an argument the attributes no longer take, an
+      # interface that is gone.
+      - tests/modules/data_surface_resource_test/src/OutsideDiscovery/DefaultOperationStructure.php
+      - tests/modules/data_surface_resource_test/src/OutsideDiscovery/OperationOfAlter.php
+      - tests/modules/data_surface_resource_test/src/OutsideDiscovery/OutputsInterfaceAlter.php
+      - tests/modules/data_surface_resource_test/src/OutsideDiscovery/WatchesRefinerStructure.php
   fileExtensions:
     - php
     - module
@@ -35,12 +42,12 @@ parameters:
     - phpstan-bootstrap.php
   ignoreErrors:
     # The broken fixtures exist to be refused when they run; a static
-    # refiner, or a deriver, that reaches for the container is one of them.
+    # refiner, or a compute(), that reaches for the container is one of them.
     -
       identifier: dataSurface.staticRefiner
       path: tests/modules/*/src/*/Broken/*
     -
-      identifier: dataSurface.deriver
+      identifier: dataSurface.compute
       path: tests/modules/*/src/*/Broken/*
     -
       identifier: dataSurface.doorSpecific

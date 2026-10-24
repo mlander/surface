@@ -24,11 +24,12 @@ namespace Drupal\data_surface\Resource\Attribute;
  *   different id, or says otherwise about creating, is refused: at
  *   discovery when the method needs nothing, else when it is first asked.
  *
- * Found by attribute, like a hook method, on two kinds of class:
- *   - the resource's or structure's own class, with no `of`;
- *   - any class in src/Alter, with `of` naming that class.
- * So another module can add a way to ask for a resource it does not
- * own, usually by building on one of the owner's operations.
+ * Found by attribute, like a hook method, on the resource's or
+ * structure's own class only: one on any other class is refused at
+ * discovery. (`of:`, naming the resource from an alter, and `default:`,
+ * marking the operation a child is invoked through, were removed on
+ * 2026-10-24 and are refused at discovery; a child is invoked through the
+ * operation with the standard id of its parent operation's kind.)
  *
  * With this, an operation can be listed, addressed and generated from:
  *   - a discovery document lists every resource with its operations;
@@ -58,20 +59,11 @@ final class Operation {
    *   both.
    * @param string|\Stringable $label
    *   For people and for tool descriptions.
-   * @param class-string<\Drupal\data_surface\Resource\DefinesInputsInterface>|null $of
-   *   The resource or structure this is an operation of. Required
-   *   anywhere but on that class itself.
    * @param string|null $permission
    *   The static part of access: what an account needs regardless of
    *   subject. A `%key` placeholder is filled from the identity the
    *   context knows. Access that depends on the subject is answered at
    *   run time by the access class it names, not declared here.
-   * @param bool $default
-   *   Whether this is the operation a child is invoked through when it
-   *   is attached and neither its parent's context names one of its
-   *   operations nor one of them matches the parent context's id. At most
-   *   one operation of a class says so; two are refused when it is built.
-   *   Meaningless for a resource asked on its own.
    * @param bool $destructive
    *   Whether a call may destroy what is there: delete it, or overwrite
    *   it beyond what was sent. A client asks before it calls one. Not one
@@ -106,7 +98,7 @@ final class Operation {
    *   an operation says destructive: TRUE too, and neither creates nor is
    *   read only; the facts are refused at discovery otherwise. Its tool
    *   takes the parameters and a dry run, and HTTP serves it as DELETE.
-   * @param class-string<\Drupal\data_surface\Resource\StructureInterface>|null $values
+   * @param class-string<\Drupal\data_surface\Resource\StructureInterface>|null $structure
    *   The structure whose keys a call takes, when they are not the
    *   resource's own: a listing's paging and filter, a reorder's list of
    *   ids and weights. Its inputs are what the operation takes and its
@@ -118,16 +110,14 @@ final class Operation {
   public function __construct(
     public readonly string $id,
     public readonly string|\Stringable $label,
-    public readonly ?string $of = NULL,
     public readonly ?string $permission = NULL,
-    public readonly bool $default = FALSE,
     public readonly bool $destructive = FALSE,
     public readonly bool $readOnly = FALSE,
     public readonly ?bool $idempotent = NULL,
     public readonly bool $creates = FALSE,
     public readonly string|\Stringable|null $description = NULL,
     public readonly bool $deletes = FALSE,
-    public readonly ?string $values = NULL,
+    public readonly ?string $structure = NULL,
   ) {}
 
 }

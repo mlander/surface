@@ -25,9 +25,6 @@ final class RefinerDefinition {
    *   The method name.
    * @param string $key
    *   The input key the method tightens.
-   * @param string[]|null $watches
-   *   The sibling keys the attribute lists, or NULL when it lists none
-   *   and the parameter names say.
    * @param string[] $parameters
    *   The names of the parameters after the first, in order.
    * @param bool $takesDefinition
@@ -50,7 +47,6 @@ final class RefinerDefinition {
     public readonly string $class,
     public readonly string $method,
     public readonly string $key,
-    public readonly ?array $watches,
     public readonly array $parameters,
     public readonly bool $takesDefinition,
     public readonly bool $isStatic = FALSE,
@@ -66,7 +62,7 @@ final class RefinerDefinition {
    *   The watched keys.
    */
   public function watched(): array {
-    return $this->watches ?? $this->parameters;
+    return $this->parameters;
   }
 
   /**

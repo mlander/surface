@@ -24,8 +24,6 @@ data_surface_entity.node_page_create:
     _data_surface_resource: 'entity.content:node.page'
     _data_surface_operation: 'create'
     _data_surface_panel: 'data_surface_tool.contract_panel'
-  requirements:
-    _data_surface_operation_access: 'TRUE'
 
 data_surface_entity.node_page_update:
   path: '/surface-entity/node/{id}/edit'
@@ -36,7 +34,6 @@ data_surface_entity.node_page_update:
     _data_surface_operation: 'update'
     _data_surface_panel: 'data_surface_tool.contract_panel'
   requirements:
-    _data_surface_operation_access: 'TRUE'
     id: '\d+'
   options:
     parameters:

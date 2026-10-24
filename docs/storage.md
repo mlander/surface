@@ -169,7 +169,7 @@ resource the command writes:
   variant holds the value to its own keys before anything is written
   ([Variants from the site](resources.md#variants-from-the-site)); the
   check that a resource offers nothing its schema refuses reads `ignore`
-  as refusing nothing. A closed provider (`ClosedVariantsInterface`)
+  as refusing nothing. A closed provider (`ClosedSiteListInterface`)
   names every structure it may list, so its variants are written as a
   class's are, each a type of its own, whichever the site offers when
   the file is written (example 14's credential).

@@ -12,7 +12,7 @@ use Drupal\data_surface\Resource\StructureInterface;
  * Example 15: what a reorder takes, a list of venues and their weights.
  *
  * The keys of the venue resource's reorder operation, which names this
- * structure as its values: the venue's own keys are not what a reorder
+ * structure with `structure:`: the venue's own keys are not what a reorder
  * changes.
  */
 #[Structure('event.venue.reorder')]

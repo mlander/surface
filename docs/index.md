@@ -21,7 +21,7 @@ accept right now, on this site, for this thing) and get the same answer.
 | | Blueprint | Values |
 | --- | --- | --- |
 | **Owner**, a `#[Resource]` or `#[Structure]` class in `src/Resource/` or `src/Structure/`, or a plugin that is its own structure | `static defineInputs($inputs)`, optionally `static defineOutputs($outputs)` | rules declared with `$inputs->narrow('key')`, static `#[RefinesInput('key')]` methods |
-| **Another module**, an `#[Alters]` class in `src/Alter/` | `alterInputs($inputs)`, optionally `alterOutputs($outputs)` | rules declared with `$inputs->narrow('key')`, `#[RefinesInput('key')]` methods |
+| **Another module**, an `#[Alters]` class in `src/Alter/` | `alterInputs($inputs)` | rules declared with `$inputs->narrow('key')`, `#[RefinesInput('key')]` methods |
 
 **Start with [Your first resource](first-resource.md).** A settings page
 needs four things: a resource class, an operation on it, a storage class
@@ -136,7 +136,7 @@ it](https://www.drupal.org/project/drupal/issues/3622144).
 | **Collection** | A list of child instances at a key, `attachList()`: the list and its Count the parent's, each item the child's. | `Resource\BlueprintInterface`, `Collection` |
 | **Variants** | A tagged union whose tag is a sibling key: structures attached at one key, of which the sibling's value (the deciding key) chooses one. Always open: the parent names no variant, and any module may declare one. Until the deciding key holds a value, the key is an `any` placeholder; once it does, the key is the chosen variant's map. | `attachVariants($key, by: $sibling)`, `Variants` |
 | **Variant** | One structure among the variants at a key, for one value of its deciding key. | `#[Variant(of:, at:, for:)]` |
-| **Derived variants** | Variants for the values no variant class fills, read from a description that already exists, such as a field type's config schema. | `ResourceBuild\DerivedVariantsInterface`, tagged `data_surface.derived_variants` |
+| **Variants from the site** | Variants a provider lists, one per thing the site has, each read from its JSON Schema or a structure class, beside every `#[Variant]`: a component's props, a block plugin's or a field type's settings. | `attachVariants($key, by:, from:)`, `Resource\SiteListInterface`, `Resource\SiteList` |
 | **Derived resource** | A resource or structure whose keys are the site's, made at discovery by a deriver from facts a class cannot know: a resource per content entity bundle, a structure per field. It has no class; it is `<base>:<derivative>`. | `#[DerivesResources]` on a `Resource\ResourceDeriverInterface` in `src/Resource/`, returning `Resource\DerivedResource`; [Content entities](entities.md) |
 | **Output definitions** | The other half of the contract: what a host's execution emits, in the same vocabulary and the same collection type as the inputs, with an absent-rather-than-NULL rule. Never refined. | `defineOutputs()`, `DataSurfaceInterface::getOutputDefinitions()`, `Pipeline\NotEmitted` |
 | **Pipeline** | Access, accept, validate, prepare, commit: the one road from raw input to storage. | `Pipeline\DataSurfacePipelineInterface` |

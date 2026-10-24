@@ -46,7 +46,11 @@ the record of the rework that brought the module to the pattern.
   more (the default; no method); on a static method returning an
   `OperationContext` when it needs more, the attribute's id and
   `creates` stamped on it and a context saying otherwise refused
-  (`docs/decisions.md#an-operation-on-the-class`). It states how a call
+  (`docs/decisions.md#an-operation-on-the-class`); only ever on its
+  resource's or structure's own class. Its context adds `known`
+  identity, `withConstraint()` and `withChild()`; a child with operations
+  is invoked through the one its parent names, else the one with its
+  parent's id, else the one of its parent operation's kind. It states how a call
   behaves, `readOnly:` and `destructive:`, and idempotence, derived
   from whether it creates unless declared (a create whose caller names
   the thing declares it), and its kind, `create`, `update`, `read` or
@@ -57,7 +61,7 @@ the record of the rework that brought the module to the pattern.
   id `add`, `edit`, `remove` or `get` is refused at discovery
   (`docs/decisions.md#the-ids-are-the-standard-five-the-labels-are-drupals`).
   One about the things together names the structure whose keys it
-  takes in place of the resource's, `values:` (a listing's page, a
+  takes in place of the resource's, `structure:` (a listing's page, a
   reorder's list; `docs/resources.md#an-operation-that-takes-keys-of-its-own`).
   A create's tool requires what the resource requires, an update's
   requires nothing at its door
@@ -76,8 +80,11 @@ the record of the rework that brought the module to the pattern.
   one for its mount with `AltersStorageLayoutInterface::storageLayout()`.
 - **Alter**: another module's class that adds keys to a resource or
   structure and narrows it, `#[Alters]` in `src/Alter/`; one that
-  implements `AltersAccessInterface` answers access for it too, after
-  the owner, the stricter standing
+  implements `OperationAccessInterface`, the access class's interface,
+  answers access for it too, after the owner, the stricter standing (an
+  access class named on `access:` that carries `#[Alters]` is refused).
+  It adds no outputs: what a call answers is its operation's, and a
+  reaction to a save is ECA's; one with `alterOutputs()` is refused
   (`docs/decisions.md#an-alter-may-answer-access-and-the-stricter-stands`).
 - **Attach**: a fixed child at a key, `attach()`; an alter attaches only
   at its own mount, `third_party_settings.<module>`, as an adapter.
@@ -99,19 +106,23 @@ the record of the rework that brought the module to the pattern.
   value of the deciding key, `#[Variant(of:, at:, for:)]`.
 - **Variants from the site**: variants a provider lists rather than
   classes declare, `attachVariants($key, by: $sibling, from:
-  Provider::class)`; the provider implements `VariantsFromSiteInterface`,
-  whose `variants()` answers a `VariantList` (per value, its label and
-  the JSON Schema of what it chooses), asked at every build and refused
-  uncacheable or varying by the account. Each variant is a structure read
+  Provider::class)`; the provider is the one keys from the site name, a
+  `SiteListInterface`, whose `list()` answers a `SiteList` (per value,
+  its label and the JSON Schema of what it chooses, `schema:`, or a
+  structure class, `structure:`; a start or a lock refused), asked at
+  every build and refused uncacheable or varying by the account. Each variant is a structure read
   from its schema, id `<owner>.<key>.<value>`; a `#[Variant]` wins for a
   value both name; stored open (`type: ignore` in the config schema),
-  unless the provider is closed (`ClosedVariantsInterface`, a static
-  `structures()` naming every structure it may list), whose variants are
-  written as a class's. A deciding key whose variants offer one value is
+  unless the provider is closed (`ClosedSiteListInterface`, a static
+  `structures()` naming every structure it may list, its list naming
+  values and labels alone), whose variants are written as a class's. A
+  field type's settings are one (`data_surface_tool`'s
+  `FieldSettingsSchemaVariants`, each read from its config schema), and
+  count against the site list limit as any list the site decides. A deciding key whose variants offer one value is
   drawn as that value and stated `const`, its label under
   `x-surface.fixed`; a secret of a variant not chosen is kept as stored
   (example 14, `docs/decisions.md#an-extension-is-a-variant-the-site-adds-or-an-alter`).
-  Defs the entries share are listed once, `VariantList::addDefs()`, and
+  Defs the entries share are listed once, `SiteList::addDefs()`, and
   each read structure is built once per request and context, wherever it
   is attached (`Resources::buildRead()`), so variants nest: a component's
   slots, each holding a component with its own props and slots
@@ -120,8 +131,8 @@ the record of the rework that brought the module to the pattern.
 - **Reading a schema**: `Contract\SchemaReader`
   (`data_surface.schema_reader`), the emitter's mapping run backwards: a
   JSON Schema document (2020-12; draft-04 to -07 converted first,
-  `upconvert()`) read into a blueprint, `$inputs->fromSchema($document)`,
-  or registered as a structure, `structure($document, $id)`. A def is one
+  `upconvert()`) read into a blueprint, for a variant from the site, or
+  registered as a structure, `structure($document, $id)`. A def is one
   structure (a read structure, registered by
   `ResourceRegistry::defineRead()` as `schema:<id>:<hash>` and listed by
   nothing), a conditional of the vocabulary a declared rule. What no
@@ -137,9 +148,10 @@ the record of the rework that brought the module to the pattern.
   key, `addEach('forms', 'boolean', from: Provider::class)` (a value of
   a type or shape per thing) or `attachEach('rows', Row::class, from:
   ...)` (a structure per thing); the provider is a service implementing
-  `KeysFromSiteInterface`, whose `keys()` answers a `KeyedList` (id,
-  label, optional start and lock, and the cacheability of what it read),
-  asked at every build. Refused uncacheable or varying by the account; a
+  `SiteListInterface`, whose `list()` answers a `SiteList` (id, label,
+  optional start and lock, and the cacheability of what it read; an id
+  with a dot or a colon, a schema or a structure refused), asked at
+  every build. Refused uncacheable or varying by the account; a
   locked entry is held to what is stored; `attachEach(..., reads:
   ['selling' => 'on_sale'])` wires each entry's port to the entry of the
   same id in a sibling map from the same provider
@@ -150,18 +162,18 @@ the record of the rework that brought the module to the pattern.
   the key, `entity_type` and `id`, filtered by `DataSurfaceReferenceableType`
   written on the key); it stores the id. Its candidates are core's
   selection handler's for the account (`Reference\References`), listed
-  up to `data_surface.settings:reference_enum_limit` and looked up past
+  up to `data_surface.settings:reference_list_limit` and looked up past
   it, with core's entity autocomplete on the form and `GET
   .../{x}:lookup` over HTTP; `x-surface.reference` marks it in both
   documents (example 16, `docs/options.md#a-key-that-refers-to-an-entity`,
   `docs/decisions.md#a-reference-is-an-id-with-a-list-the-site-decides-listed-or-looked-up`).
 - **Computed key**: a key of a resource whose value nobody types,
-  `$inputs->derive('slug', 'string', t('Slug'), from: ['label'], using:
-  Slugify::class, when: Derive::ON_CREATE)`; the class implements
-  `DeriverInterface`, a static `derive(array $from)` run under the static
+  `$inputs->compute('slug', 'string', t('Slug'), from: ['label'], using:
+  Slugify::class, when: Compute::ON_CREATE)`; the class implements
+  `ComputesValueInterface`, a static `compute(array $from)` run under the static
   guard. Computed in `accept()` from the accepted sources while storage
   holds nothing for it (and on every write that changes a source with
-  `Derive::ON_CHANGE`), judged by its own constraints, a refusal naming
+  `Compute::ON_CHANGE`), judged by its own constraints, a refusal naming
   its sources; stored and read as any key; `readOnly` with
   `x-surface.computed` in both documents, left out of the write tool's
   `values`; a value sent equal to it noted, any other refused, code
@@ -265,7 +277,9 @@ that spot needs it.
 Operations are what routes and tools are generated from. A route names
 `_data_surface_resource` and `_data_surface_operation` and maps its
 parameters onto the operation's by name (`OperationRoute`), gated by
-`_data_surface_operation_access`; `DataSurfaceOperationForm` serves it.
+`_data_surface_operation_access`, which `OperationRouteSubscriber` adds
+to every such route (a routing file may still say it);
+`DataSurfaceOperationForm` serves it.
 `data_surface_tool` derives one tool per operation that can be asked
 on its own, `data_surface:<id>:<operation>`: its resource names storage,
 no plugin uses it, and every `%key` in its permission can be supplied by
@@ -311,10 +325,10 @@ open: every `#[Variant]` at the key is one, and the parent names none).
 Both return the map at the key, which the owner labels with the core
 setters; `describe()` is for an alter rewording a key it does not own.
 A child may be a resource with storage of its own, an attached resource
-(the field's storage, `FieldStorageResource`). A service implementing
-`ResourceBuild\DerivedVariantsInterface` adds variants for the values no
-variant class declares (`data_surface_tool` derives a field type's
-settings, and its storage settings, from its config schema). A child
+(the field's storage, `FieldStorageResource`). A provider named by
+`attachVariants(from:)` lists variants for the values no variant class
+declares (`data_surface_tool` lists a field type's settings, and its
+storage settings, from its config schema). A child
 whose keys cannot be listed at all is a `#[RefinesInput]` method on an
 `any` key returning a map. A structure reads a value of its container
 through a port it declares, `reads()`, which `attach(..., reads:)` wires
@@ -413,7 +427,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 The full lane's phpunit line reads, as of this writing:
 
 ```
-phpunit: Tests: 1584, Assertions: 37525, Errors: 0, Failures: 0, Skipped: 3. Classes: 214 of 214, 8 at a time, browser classes 4.
+phpunit: Tests: 1585, Assertions: 36678, Errors: 0, Failures: 0, Skipped: 3. Classes: 216 of 216, 8 at a time, browser classes 4.
 ```
 
 the same counts a plain phpunit run of the tree gives. The skipped

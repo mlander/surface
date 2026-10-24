@@ -5,7 +5,8 @@
 # parameters are the operation method's, by name, so the update route's
 # {type} is upcast to the node type that NodeTypeResource::update() takes.
 #
-# One requirement, and it is the operation's: its permission, this
+# One requirement, and it is the operation's, which a route naming a
+# resource and an operation has without saying it: its permission, this
 # module's own, then the resource's access class, which asks the node type
 # entity whether one may be created or this one updated. Both have to
 # allow. The entity answer is the one that decides whether these values
@@ -24,8 +25,6 @@ data_surface_demo_node_type.create:
     _data_surface_resource: 'Drupal\data_surface_demo_node_type\Resource\NodeTypeResource'
     _data_surface_operation: 'create'
     _data_surface_cosmetics: 'data_surface_demo_node_type.form_cosmetics'
-  requirements:
-    _data_surface_operation_access: 'TRUE'
 
 data_surface_demo_node_type.update:
   path: '/admin/structure/types/manage/{type}/surface-edit'
@@ -35,8 +34,6 @@ data_surface_demo_node_type.update:
     _data_surface_resource: 'Drupal\data_surface_demo_node_type\Resource\NodeTypeResource'
     _data_surface_operation: 'update'
     _data_surface_cosmetics: 'data_surface_demo_node_type.form_cosmetics'
-  requirements:
-    _data_surface_operation_access: 'TRUE'
   options:
     parameters:
       type:

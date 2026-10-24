@@ -7,12 +7,12 @@ namespace Drupal\data_surface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\data_surface\Pipeline\ValueState;
 use Drupal\data_surface\Pipeline\PipelineGuard;
-use Drupal\data_surface\Resource\Derive;
+use Drupal\data_surface\Resource\Compute;
 
 /**
  * What a computed key is computed from, by what, and when.
  *
- * Written on the key's definition by BlueprintInterface::derive() and read
+ * Written on the key's definition by BlueprintInterface::compute() and read
  * back with of(). A computed key is a key like any other (typed, labeled,
  * constrained, stored), whose value no caller types: the pipeline computes
  * it from the accepted values of the keys `from` names, the narrowing from
@@ -27,17 +27,17 @@ final class Computed {
    * Constructs what a computed key is computed from.
    *
    * @param string[] $from
-   *   The sibling keys it is computed from, in the order the deriver is
+   *   The sibling keys it is computed from, in the order $using is
    *   handed them.
-   * @param class-string<\Drupal\data_surface\Resource\DeriverInterface> $deriver
+   * @param class-string<\Drupal\data_surface\Resource\ComputesValueInterface> $using
    *   The class that computes it.
    * @param string $when
-   *   Derive::ON_CREATE or Derive::ON_CHANGE.
+   *   Compute::ON_CREATE or Compute::ON_CHANGE.
    */
   public function __construct(
     public readonly array $from,
-    public readonly string $deriver,
-    public readonly string $when = Derive::ON_CREATE,
+    public readonly string $using,
+    public readonly string $when = Compute::ON_CREATE,
   ) {
   }
 
@@ -75,7 +75,7 @@ final class Computed {
     if (!array_key_exists($key, $stored) || !ValueState::isConfigured($stored[$key])) {
       return TRUE;
     }
-    if ($this->when !== Derive::ON_CHANGE) {
+    if ($this->when !== Compute::ON_CHANGE) {
       return FALSE;
     }
     foreach ($this->from as $source) {
@@ -103,32 +103,32 @@ final class Computed {
    *   not computed again.
    */
   public function value(string $key, array $values, array $stored): mixed {
-    return $this->recomputes($key, $values, $stored) ? $this->derive($values) : $stored[$key];
+    return $this->recomputes($key, $values, $stored) ? $this->compute($values) : $stored[$key];
   }
 
   /**
    * Computes the value from the sources, with the container guarded.
    *
-   * With assertions on, the deriver runs with the global container
-   * replaced by one that refuses every service, as a static refiner does:
-   * a deriver that asks for one throws, naming it.
+   * With assertions on, the class computing it runs with the global
+   * container replaced by one that refuses every service, as a static
+   * refiner does: one that asks for a service throws, naming it.
    *
    * @param array $values
    *   The values of the key's level, sources included.
    *
    * @return mixed
-   *   What the deriver answers.
+   *   What the class computing it answers.
    */
-  public function derive(array $values): mixed {
+  public function compute(array $values): mixed {
     $from = [];
     foreach ($this->from as $source) {
       $from[$source] = $values[$source] ?? NULL;
     }
-    $deriver = $this->deriver;
-    $call = static fn (): mixed => $deriver::derive($from);
+    $using = $this->using;
+    $call = static fn (): mixed => $using::compute($from);
     $guarded = FALSE;
     assert(PipelineGuard::asserting($guarded));
-    return $guarded ? PipelineGuard::guardDeriver($deriver . '::derive()', $call) : $call();
+    return $guarded ? PipelineGuard::guardCompute($using . '::compute()', $call) : $call();
   }
 
   /**

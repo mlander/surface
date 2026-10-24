@@ -217,9 +217,13 @@ class OperationToolsTest extends DataSurfaceKernelTestBase {
    * Tests that the values input is refined once the subject is known.
    *
    * Statically, an existing field's settings could be any field type's;
-   * once the field is named, they are its type's.
+   * once the field is named, they are its type's. The field types are a
+   * list the site decides: this site offers more than the shipped limit,
+   * past which the settings are deferred, so the limit is raised here.
    */
   public function testValuesAreRefinedToTheSubject(): void {
+    $this->installConfig(['data_surface']);
+    $this->config('data_surface.settings')->set('site_list_limit', 100)->save();
     FieldStorageConfig::create(['field_name' => 'field_address', 'entity_type' => 'entity_test', 'type' => 'address'])->save();
     FieldConfig::create([
       'field_name' => 'field_address',

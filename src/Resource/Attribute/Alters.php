@@ -7,7 +7,7 @@ namespace Drupal\data_surface\Resource\Attribute;
 /**
  * On a class in src/Alter: which resource or structure it alters.
  *
- * Static, like #[Variant(of:)] and #[Operation(of:)], so a catalog can
+ * Static, like #[Variant(of:)], so a catalog can
  * say who alters what without running anything. An alter reaches both
  * kinds. The class is registered as an autowired service, the way a hook
  * class is, so it may hold services.

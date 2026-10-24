@@ -938,8 +938,6 @@ final class InputDefinitions {
    *   `required`, which is what `required` converts to, so the
    *   statement survives, but the NotEmitted sentinel itself does not
    *   travel, because it is a PHP marker and not a value.
-   * - Who contributed what. A mounted third-party output arrives as an
-   *   ordinary property of the third_party_outputs map.
    *
    * @param \Drupal\data_surface\DataSurfaceInterface $surface
    *   The data surface whose outputs to convert.

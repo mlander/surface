@@ -812,7 +812,7 @@ final class OperationInputs {
       ),
       self::COMMITTED => new OutputDefinition(
         data_type: 'boolean',
-        label: $this->t('Written'),
+        label: $this->t('Committed'),
         description: $this->t('Whether the values were written; false for a dry run, a refusal and an operation that writes nothing.'),
       ),
       self::CHANGED => new OutputDefinition(
@@ -852,7 +852,7 @@ final class OperationInputs {
     // structure's outputs.
     // Decision: see
     // docs/decisions.md#a-listing-is-a-read-only-operation-with-outputs-a-reorder-is-an-update-over-the-collection.
-    if (!$resource->hasOutputs() && $operation->values === NULL) {
+    if (!$resource->hasOutputs() && $operation->structure === NULL) {
       return $outputs;
     }
     $built = $this->listed($resource, new OperationContext($operation->id), TRUE);

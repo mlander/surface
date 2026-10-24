@@ -4,7 +4,7 @@ data_surface.settings:
   constraints:
     FullyValidatable: ~
   mapping:
-    reference_enum_limit:
+    reference_list_limit:
       type: integer
       label: 'Most targets a reference key lists as its options'
       constraints:

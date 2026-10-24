@@ -148,8 +148,8 @@ final class DefinitionMetadata {
   /**
    * The definition array key holding what a computed key is computed from.
    *
-   * Holds a Computed: the keys, the deriver and when. Set by
-   * BlueprintInterface::derive() alone.
+   * Holds a Computed: the keys, the class computing it and when. Set by
+   * BlueprintInterface::compute() alone.
    */
   protected const COMPUTED_KEY = 'data_surface_computed';
 

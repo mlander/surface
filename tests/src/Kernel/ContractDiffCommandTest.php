@@ -13,7 +13,8 @@ use Symfony\Component\Console\Tester\CommandTester;
 /**
  * Tests the contract diff command fails closed.
  *
- * Bug B25 of the reviews (2026-10-20): a mistyped `--dir` passed with
+ * Bug B25 of the reviews (2026-10-20): a mistyped `--dir` (now
+ * `--baselines`) passed with
  * "0 breaking", a declaration with no baseline passed as new, `--write`
  * with `--module` would remove the baselines of modules not named in a
  * directory they share, the verdicts were a table only, and the account
@@ -112,6 +113,8 @@ class ContractDiffCommandTest extends DataSurfaceKernelTestBase {
 
   /**
    * Tests the committed baselines pass, saying whom they were emitted for.
+   *
+   * Through --dir, the earlier name of --baselines, which is still read.
    */
   public function testCommittedBaselinesPass(): void {
     $this->copyCommitted();
@@ -125,7 +128,7 @@ class ContractDiffCommandTest extends DataSurfaceKernelTestBase {
    * Tests a directory that is not there fails, and compares nothing.
    */
   public function testMistypedDirectoryFails(): void {
-    [$status, $display] = $this->diff(['--module' => self::PINNED, '--dir' => $this->directory . '/typo']);
+    [$status, $display] = $this->diff(['--module' => self::PINNED, '--baselines' => $this->directory . '/typo']);
     $this->assertSame(1, $status);
     $this->assertStringContainsString('does not exist; nothing was compared', $display);
   }
@@ -136,7 +139,7 @@ class ContractDiffCommandTest extends DataSurfaceKernelTestBase {
   public function testMissingBaselineFailsUntilWritten(): void {
     [$status, $display] = $this->diff([
       '--module' => 'data_surface_first',
-      '--dir' => $this->directory,
+      '--baselines' => $this->directory,
       '--format' => 'json',
     ]);
     $this->assertSame(1, $status);
@@ -145,12 +148,12 @@ class ContractDiffCommandTest extends DataSurfaceKernelTestBase {
     $this->assertSame(2, $report['failing']);
     $this->assertSame(['no baseline yet: unpinned', 'no baseline yet: unpinned'], array_map(static fn (array $change): string => $change['change'] . ': ' . $change['status'], $report['changes']));
 
-    [$status] = $this->diff(['--module' => 'data_surface_first', '--dir' => $this->directory, '--write' => TRUE]);
+    [$status] = $this->diff(['--module' => 'data_surface_first', '--baselines' => $this->directory, '--write' => TRUE]);
     $this->assertSame(0, $status, 'Pinning a declaration asks no reason.');
     $written = json_decode((string) file_get_contents($this->directory . '/first.store.json'), TRUE);
     $this->assertSame(['resource', 'module', 'contract', 'documents'], array_keys($written));
     $this->assertSame('data_surface_first', $written['module']);
-    [$status] = $this->diff(['--module' => 'data_surface_first', '--dir' => $this->directory]);
+    [$status] = $this->diff(['--module' => 'data_surface_first', '--baselines' => $this->directory]);
     $this->assertSame(0, $status);
   }
 
@@ -174,16 +177,20 @@ class ContractDiffCommandTest extends DataSurfaceKernelTestBase {
       $old = ['surface' => $baseline['resource'], 'module' => $baseline['module'], 'documents' => $documents];
       file_put_contents($file, json_encode($old));
     }
-    [$status, $display] = $this->diff(['--module' => self::PINNED, '--dir' => $this->directory, '--format' => 'json']);
+    [$status, $display] = $this->diff([
+      '--module' => self::PINNED,
+      '--baselines' => $this->directory,
+      '--format' => 'json',
+    ]);
     $this->assertSame(1, $status);
     $report = json_decode($display, TRUE, 512, JSON_THROW_ON_ERROR);
     $this->assertSame(3, $report['contract']);
     $this->assertSame(['*: contract version 1 to 3 (contract)'], array_map(static fn (array $change): string => sprintf('%s: %s (%s)', $change['resource'], $change['change'], $change['status']), $report['changes']));
 
-    [$status, $display] = $this->diff(['--module' => self::PINNED, '--dir' => $this->directory, '--write' => TRUE]);
+    [$status, $display] = $this->diff(['--module' => self::PINNED, '--baselines' => $this->directory, '--write' => TRUE]);
     $this->assertSame(0, $status, 'Re-pinning asks no reason: ' . $display);
     $this->assertSame(3, json_decode((string) file_get_contents($this->directory . '/registration.step3.json'), TRUE)['contract']);
-    [$status] = $this->diff(['--module' => self::PINNED, '--dir' => $this->directory]);
+    [$status] = $this->diff(['--module' => self::PINNED, '--baselines' => $this->directory]);
     $this->assertSame(0, $status);
   }
 
@@ -206,7 +213,7 @@ class ContractDiffCommandTest extends DataSurfaceKernelTestBase {
 
     [$status, $display] = $this->diff([
       '--module' => 'data_surface_first',
-      '--dir' => $this->directory,
+      '--baselines' => $this->directory,
       '--format' => 'json',
     ]);
     $this->assertSame(1, $status);
@@ -216,7 +223,7 @@ class ContractDiffCommandTest extends DataSurfaceKernelTestBase {
 
     [$status, $display] = $this->diff([
       '--module' => 'data_surface_first',
-      '--dir' => $this->directory,
+      '--baselines' => $this->directory,
       '--write' => TRUE,
       '--allow' => 'The gone resource was never released.',
       '--format' => 'json',
@@ -241,7 +248,7 @@ class ContractDiffCommandTest extends DataSurfaceKernelTestBase {
     $account = $this->createUser([], 'contract_reader');
     [$status, $display] = $this->diff([
       '--module' => self::PINNED,
-      '--dir' => $this->directory,
+      '--baselines' => $this->directory,
       '--uid' => (string) $account->id(),
       '--format' => 'json',
     ]);
@@ -250,10 +257,14 @@ class ContractDiffCommandTest extends DataSurfaceKernelTestBase {
     $this->assertSame(1, $status);
     $this->assertContains('event.program configure#/properties/fees: key removed', array_map(static fn (array $change): string => sprintf('%s %s: %s', $change['resource'], $change['path'], $change['change']), $report['changes']));
 
-    [$status, $display] = $this->diff(['--module' => self::PINNED, '--dir' => $this->directory, '--uid' => '999']);
+    [$status, $display] = $this->diff(['--module' => self::PINNED, '--baselines' => $this->directory, '--uid' => '999']);
     $this->assertSame(1, $status);
     $this->assertStringContainsString('there is no account 999', $display);
-    [$status, $display] = $this->diff(['--module' => self::PINNED, '--dir' => $this->directory, '--format' => 'yaml']);
+    [$status, $display] = $this->diff([
+      '--module' => self::PINNED,
+      '--baselines' => $this->directory,
+      '--format' => 'yaml',
+    ]);
     $this->assertSame(1, $status);
     $this->assertStringContainsString('--format is table or json', $display);
   }

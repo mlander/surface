@@ -376,9 +376,9 @@ fills from storage, say. What they make is the honest spelling the easy
 one: a refiner that needs anything but its arguments is a runtime
 refiner, said on the method.
 
-A computed key's deriver is held to the same promise by the first two
-layers: its `derive()` is static, it runs with the container guarded
-(`PipelineGuard::guardDeriver()`), and the PHPStan rule flags
+The class that computes a computed key is held to the same promise by the first two
+layers: its `compute()` is static, it runs with the container guarded
+(`PipelineGuard::guardCompute()`), and the PHPStan rule flags
 `\Drupal::` in it ([Computed keys](declaring-a-resource.md#computed-keys)).
 
 A runtime refiner may read site state, and nothing a door has: with
@@ -570,7 +570,7 @@ enters it:
   says max-age 0: a data surface refined through it holds for the request
   that refined it.
 - **Option resolvers.** Each resolved option list carries its own
-  metadata on its `OptionSet`, which the options widget applies to the
+  metadata on its `OptionSet`, which the select widget applies to the
   element it builds.
 
 The form builder applies the refined data surface's metadata to its

@@ -10,12 +10,16 @@ use Drupal\data_surface\DataSurfaceBuilder;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Resource\OperationContext;
-use Drupal\data_surface\Resource\VariantList;
+use Drupal\data_surface\Resource\SiteList;
 use Drupal\data_surface\ResourceBuild\ResourceBlueprint;
 use Drupal\data_surface_resource_test\Resource\Poster\PosterResource;
 use Drupal\data_surface_resource_test\Structure\Broken\AccountVariantsStructure;
 use Drupal\data_surface_resource_test\Structure\Broken\UncacheableVariantsStructure;
 use Drupal\data_surface_resource_test\Structure\Poster\BannerPanelsStructure;
+use Drupal\data_surface_resource_test\Variants\Broken\BareLayouts;
+use Drupal\data_surface_resource_test\Variants\Broken\LockedLayouts;
+use Drupal\data_surface_resource_test\Variants\Broken\RestatingLayouts;
+use Drupal\data_surface_resource_test\Variants\Broken\UnnamedLayouts;
 use Drupal\data_surface_resource_test\Variants\PosterLayouts;
 use Drupal\data_surface_tool\OperationInputs;
 use Drupal\Tests\data_surface\Traits\ContractValidationTrait;
@@ -272,20 +276,49 @@ class VariantsFromSiteTest extends DataSurfaceKernelTestBase {
       $this->fail('A provider that is none is refused.');
     }
     catch (\LogicException $e) {
-      $this->assertSame('attachVariants("panels") names Drupal\data_surface_resource_test\Structure\Poster\BannerPanelsStructure as where its variants come from, which does not implement Drupal\data_surface\Resource\VariantsFromSiteInterface: a provider lists the site\'s variants, each with its schema, with variants().', $e->getMessage());
+      $this->assertSame('attachVariants("panels") names Drupal\data_surface_resource_test\Structure\Poster\BannerPanelsStructure as where its variants come from, which does not implement Drupal\data_surface\Resource\SiteListInterface: a provider lists the site\'s variants, each with its schema or structure, with list().', $e->getMessage());
     }
-    $list = new VariantList();
-    $list->add('one', 'One', ['type' => 'object']);
+    $list = new SiteList();
+    $list->add('one', 'One', schema: ['type' => 'object']);
     $refusals = [
-      '' => 'An empty value cannot choose a variant.',
-      'one' => 'The "one" variant was added to this list already: one variant per value.',
+      '' => 'An empty id cannot name an entry: it becomes a key, or the value that chooses a variant.',
+      'one' => 'The "one" entry was added to this list already: one entry per thing.',
     ];
     foreach ($refusals as $value => $message) {
       try {
-        $list->add((string) $value, 'Again', ['type' => 'object']);
+        $list->add((string) $value, 'Again', schema: ['type' => 'object']);
         $this->fail($message);
       }
       catch (\InvalidArgumentException $e) {
+        $this->assertSame($message, $e->getMessage());
+      }
+    }
+  }
+
+  /**
+   * Tests what a variant does not read is refused, as a closed list's own.
+   *
+   * One list type serves keys and variants from the site; a variant reads
+   * a value, a label, and a schema or a structure, and a closed provider's
+   * entry names the value and the label alone, its structure named once,
+   * in structures().
+   */
+  public function testWhatVariantsDoNotReadIsRefused(): void {
+    $resources = $this->container->get('data_surface.resources');
+    $variantsFrom = new \ReflectionMethod($resources, 'variantsFrom');
+    $poster = $this->container->get('data_surface.resource_registry')->getDefinition(PosterResource::class);
+    $refusals = [
+      LockedLayouts::class => LockedLayouts::class . ' lists "wide" for the variants at "panels" on resource_test.poster with a lock, which a variant does not read: each entry is a value of the deciding key, its label, and the schema or structure it chooses.',
+      BareLayouts::class => BareLayouts::class . ' lists "wide" for the variants at "panels" on resource_test.poster with no schema and no structure: each variant from the site is one of them, SiteList::add(..., schema: ...) or add(..., structure: ...).',
+      RestatingLayouts::class => RestatingLayouts::class . ' lists "banner" for the variants at "panels" on resource_test.poster with a structure of its own. A closed provider names each structure once, in its structures(); its list names a value and its label.',
+      UnnamedLayouts::class => UnnamedLayouts::class . ' lists "poster" for the variants at "panels" on resource_test.poster, which its structures() does not name. A closed provider lists only the structures it names.',
+    ];
+    foreach ($refusals as $provider => $message) {
+      try {
+        $variantsFrom->invoke($resources, $poster, 'panels', $provider);
+        $this->fail($message);
+      }
+      catch (\LogicException $e) {
         $this->assertSame($message, $e->getMessage());
       }
     }

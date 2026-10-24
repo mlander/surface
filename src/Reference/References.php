@@ -33,7 +33,7 @@ use Drupal\data_surface\DataSurfaceInterface;
  * out for an account without "bypass node access", and a user's leaves
  * blocked users out without "administer users".
  *
- * Up to the site's limit, `data_surface.settings:reference_enum_limit`,
+ * Up to the site's limit, `data_surface.settings:reference_list_limit`,
  * the candidates are the key's options; above it, the key takes an id and
  * the lookup finds one.
  *
@@ -50,7 +50,7 @@ final class References {
   /**
    * The setting: the most candidates a key lists as its options.
    */
-  public const LIMIT = 'reference_enum_limit';
+  public const LIMIT = 'reference_list_limit';
 
   /**
    * The limit when the setting is not there.

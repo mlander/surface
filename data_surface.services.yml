@@ -45,18 +45,13 @@ services:
       - { name: cache_tags_invalidator }
   data_surface.resources:
     class: Drupal\data_surface\ResourceBuild\Resources
-    arguments: ['@data_surface.resource_registry', '@typed_data_manager', '@class_resolver', '@current_user', '@data_surface.operation_arguments', '@data_surface.derived_variants', '@data_surface.watched_value_check', '@user_permissions_hash_generator']
+    arguments: ['@data_surface.resource_registry', '@typed_data_manager', '@class_resolver', '@current_user', '@data_surface.operation_arguments', '@data_surface.watched_value_check', '@user_permissions_hash_generator']
   Drupal\data_surface\ResourceBuild\ResourcesInterface: '@data_surface.resources'
   # Sealed into every data surface the build step makes: a watched value its
   # own definition refuses is handed to no refiner.
   data_surface.watched_value_check:
     class: Drupal\data_surface\Refinement\WatchedValueCheck
     arguments: ['@typed_data_manager']
-  # What adds variants for the values no #[Variant] declares:
-  # every service tagged data_surface.derived_variants.
-  data_surface.derived_variants:
-    class: Drupal\data_surface\ResourceBuild\DerivedVariants
-    arguments: [!tagged_iterator data_surface.derived_variants]
   # An operation's arguments from a route's parameters or a tool's inputs,
   # by name; an entity's id becomes the entity a parameter is typed with.
   data_surface.operation_arguments:
@@ -69,6 +64,12 @@ services:
     arguments: ['@data_surface.resources', '@data_surface.resource_registry', '@data_surface.operation_arguments']
     tags:
       - { name: access_check, applies_to: _data_surface_operation_access }
+  # Adds that access check to every route naming a resource and an
+  # operation, so a routing file need not.
+  data_surface.operation_route_subscriber:
+    class: Drupal\data_surface\Access\OperationRouteSubscriber
+    tags:
+      - { name: event_subscriber }
   # Turns a sealed data surface and its values into the served contract: JSON
   # Schema 2020-12 with the x-surface extension, values and stale paths;
   # widget hints only when a renderer asks for them.
@@ -83,7 +84,7 @@ services:
   Drupal\data_surface\Contract\SiteListBudget: '@data_surface.site_list_budget'
   # The emitter run backwards: a JSON Schema document read into the keys,
   # children and rules of a structure, what it cannot say kept as a
-  # JsonSchema constraint. A blueprint's fromSchema() reads with it; a
+  # JsonSchema constraint. A variant from the site is read with it; a
   # caller with a document of its own registers it here to build it.
   data_surface.schema_reader:
     class: Drupal\data_surface\Contract\SchemaReader
@@ -115,7 +116,7 @@ services:
   # variants, as one array: what docs/catalog.md is generated from.
   data_surface.resource_catalog:
     class: Drupal\data_surface\ResourceBuild\ResourceCatalog
-    arguments: ['@data_surface.resource_registry', '@data_surface.resource_plugins', '@data_surface.derived_variants']
+    arguments: ['@data_surface.resource_registry', '@data_surface.resource_plugins']
   # The live map of the site (drush surface:catalog): the static layer,
   # the doors each operation reaches as the modules tagged
   # data_surface.catalog_doors name them, and every build refusal.

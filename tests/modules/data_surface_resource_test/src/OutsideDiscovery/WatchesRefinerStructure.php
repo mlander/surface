@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface_resource_test\Structure\Broken;
+namespace Drupal\data_surface_resource_test\OutsideDiscovery;
 
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\data_surface\Resource\Attribute\RefinesInput;
@@ -11,25 +11,24 @@ use Drupal\data_surface\Resource\BlueprintInterface;
 use Drupal\data_surface\Resource\StructureInterface;
 
 /**
- * Has a watches list that does not match its parameters.
+ * Broken: a refiner that says watches:, which the attribute no longer takes.
  */
-#[Structure('resource_test.broken.watches_mismatch')]
-final class WatchesMismatchStructure implements StructureInterface {
+#[Structure('resource_test.broken.watches_refiner')]
+final class WatchesRefinerStructure implements StructureInterface {
 
   /**
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('first', 'string', 'First');
-    $inputs->add('second', 'string', 'Second');
     $inputs->add('third', 'string', 'Third');
   }
 
   /**
-   * Lists watches its parameters no longer match.
+   * Lists what it watches beside its parameters.
    */
-  #[RefinesInput('third', watches: ['first', 'second'])]
-  public static function thirdOf(DataDefinitionInterface $third, string $first, string $renamed): DataDefinitionInterface {
+  #[RefinesInput('third', watches: ['first'])]
+  public static function thirdOf(DataDefinitionInterface $third, string $first): DataDefinitionInterface {
     return $third;
   }
 

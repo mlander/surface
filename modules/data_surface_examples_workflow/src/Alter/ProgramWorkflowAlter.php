@@ -7,7 +7,7 @@ namespace Drupal\data_surface_examples_workflow\Alter;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\State\StateInterface;
 use Drupal\data_surface\Resource\AccessAnswer;
-use Drupal\data_surface\Resource\AltersAccessInterface;
+use Drupal\data_surface\Resource\OperationAccessInterface;
 use Drupal\data_surface\Resource\Attribute\Alters;
 use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface_examples\Resource\ProgramResource;
@@ -26,7 +26,7 @@ use Drupal\data_surface_examples\Resource\ProgramResource;
  * alone.
  */
 #[Alters(ProgramResource::class, operations: ['configure'])]
-final class ProgramWorkflowAlter implements AltersAccessInterface {
+final class ProgramWorkflowAlter implements OperationAccessInterface {
 
   /**
    * The State key holding the program's workflow state.

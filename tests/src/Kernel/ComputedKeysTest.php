@@ -11,8 +11,8 @@ use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\Pipeline\DataSurfaceResult;
 use Drupal\data_surface\Pipeline\Violation;
 use Drupal\data_surface\ResourceBuild\ResourceBlueprint;
-use Drupal\data_surface_resource_test\Deriver\BadgeCode;
-use Drupal\data_surface_resource_test\Deriver\Broken\ClockDeriver;
+use Drupal\data_surface_resource_test\Compute\BadgeCode;
+use Drupal\data_surface_resource_test\Compute\Broken\ClockStamp;
 use Drupal\data_surface_resource_test\Resource\Badge\BadgeResource;
 use Drupal\data_surface_resource_test\Storage\BadgeStorage;
 use Drupal\data_surface_resource_test\Structure\ThresholdStructure;
@@ -226,17 +226,17 @@ class ComputedKeysTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests the guard refuses a deriver that asks for a service.
+   * Tests the guard refuses a compute() that asks for a service.
    */
-  public function testTheGuardRefusesDeriverAskingForService(): void {
-    $this->assertSame('ADA', (new Computed(['first'], BadgeCode::class))->derive(['first' => 'Ada']));
+  public function testTheGuardRefusesComputeAskingForService(): void {
+    $this->assertSame('ADA', (new Computed(['first'], BadgeCode::class))->compute(['first' => 'Ada']));
     $this->expectException(\LogicException::class);
-    $this->expectExceptionMessage('The deriver ' . ClockDeriver::class . '::derive() asked for the service datetime.time. A computed key is a pure function of the keys it is computed from');
-    (new Computed(['first'], ClockDeriver::class))->derive(['first' => 'Ada']);
+    $this->expectExceptionMessage('The computed key\'s ' . ClockStamp::class . '::compute() asked for the service datetime.time. A computed key is a pure function of the keys it is computed from');
+    (new Computed(['first'], ClockStamp::class))->compute(['first' => 'Ada']);
   }
 
   /**
-   * Tests what derive() refuses where it is declared.
+   * Tests what compute() refuses where it is declared.
    */
   public function testTheBlueprintRefusesWhatIsNoComputedKey(): void {
     $typed = $this->container->get('typed_data_manager');
@@ -251,16 +251,16 @@ class ComputedKeysTest extends DataSurfaceKernelTestBase {
         $this->assertStringContainsString($message, $e->getMessage());
       }
     };
-    $refused(fn () => $blueprint(TRUE)->derive('code', 'string', 'Code', ['first'], BadgeCode::class), 'declares a computed output');
-    $refused(fn () => $blueprint(owner: ThresholdStructure::class)->derive('code', 'string', 'Code', ['first'], BadgeCode::class), 'is in a structure');
+    $refused(fn () => $blueprint(TRUE)->compute('code', 'string', 'Code', ['first'], BadgeCode::class), 'declares a computed output');
+    $refused(fn () => $blueprint(owner: ThresholdStructure::class)->compute('code', 'string', 'Code', ['first'], BadgeCode::class), 'is in a structure');
     $inputs = $blueprint();
     $inputs->add('first', 'string', 'First name');
-    $refused(fn () => $inputs->derive('code', 'string', 'Code', ['nickname'], BadgeCode::class), 'is computed from "nickname", which is no key declared before it');
-    $refused(fn () => $inputs->derive('code', 'string', 'Code', [], BadgeCode::class), 'names no key it is computed from');
-    $refused(fn () => $inputs->derive('code', 'string', 'Code', ['first'], DataDefinition::class), 'which implements no');
-    $refused(fn () => $inputs->derive('code', 'string', 'Code', ['first'], BadgeCode::class, 'always'), 'says when: "always"');
-    $refused(fn () => $inputs->derive('codes', 'map', 'Codes', ['first'], BadgeCode::class), 'is a map');
-    $definition = $inputs->derive('code', 'string', 'Code', ['first'], BadgeCode::class);
+    $refused(fn () => $inputs->compute('code', 'string', 'Code', ['nickname'], BadgeCode::class), 'is computed from "nickname", which is no key declared before it');
+    $refused(fn () => $inputs->compute('code', 'string', 'Code', [], BadgeCode::class), 'names no key it is computed from');
+    $refused(fn () => $inputs->compute('code', 'string', 'Code', ['first'], DataDefinition::class), 'which implements no');
+    $refused(fn () => $inputs->compute('code', 'string', 'Code', ['first'], BadgeCode::class, 'always'), 'says when: "always"');
+    $refused(fn () => $inputs->compute('codes', 'map', 'Codes', ['first'], BadgeCode::class), 'is a map');
+    $definition = $inputs->compute('code', 'string', 'Code', ['first'], BadgeCode::class);
     $this->assertEquals(new Computed(['first'], BadgeCode::class), Computed::of($definition));
   }
 

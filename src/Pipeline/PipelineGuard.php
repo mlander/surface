@@ -23,10 +23,10 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  *
  * Three rules, by what runs:
  *
- * - A static refiner and a computed key's deriver promise to be pure
- *   functions of the keys they read, so everything is refused but the
- *   typed data manager (ALLOWED), which core's own definitions ask the
- *   container for to read their type's default constraints. t() passes:
+ * - A static refiner and the class that computes a computed key promise
+ *   to be pure functions of the keys they read, so everything is refused
+ *   but the typed data manager (ALLOWED), which core's own definitions
+ *   ask the container for to read their type's default constraints. t() passes:
  *   it builds a lazy markup and resolves the translation service only
  *   when it is rendered.
  * - A static access answer, asked a second time (guardAccess()), promises
@@ -115,9 +115,9 @@ final class PipelineGuard implements DrupalContainerInterface {
   public const STATIC_REFINER = 'static refiner';
 
   /**
-   * A computed key's deriver.
+   * The class that computes a computed key.
    */
-  public const DERIVER = 'deriver';
+  public const COMPUTE = 'compute';
 
   /**
    * A runtime refiner.
@@ -143,11 +143,6 @@ final class PipelineGuard implements DrupalContainerInterface {
    * A provider of keys or variants from the site.
    */
   public const PROVIDER = 'provider';
-
-  /**
-   * A deriver of variants or of resources.
-   */
-  public const DERIVED = 'derivative provider';
 
   /**
    * An options resolver.
@@ -211,17 +206,17 @@ final class PipelineGuard implements DrupalContainerInterface {
   }
 
   /**
-   * Calls a computed key's deriver with the global container guarded.
+   * Calls the class that computes a key with the global container guarded.
    *
-   * A deriver is a pure function of the keys it is computed from, as a
+   * It is a pure function of the keys it is computed from, as a
    * static refiner is of the keys it watches, so it is held the same way:
    * everything but ALLOWED is refused.
    *
    * Decision: see
    * docs/decisions.md#a-computed-key-is-a-pure-function-of-its-sources.
    *
-   * @param string $deriver
-   *   The deriver, Class::derive(), for the message.
+   * @param string $computes
+   *   What computes it, Class::compute(), for the message.
    * @param callable $call
    *   The call to it.
    *
@@ -231,8 +226,8 @@ final class PipelineGuard implements DrupalContainerInterface {
    * @throws \LogicException
    *   When it asks the container for anything but ALLOWED.
    */
-  public static function guardDeriver(string $deriver, callable $call): mixed {
-    return static::run(fn (ContainerInterface $container): self => new self($container, $deriver, self::DERIVER, self::ALLOWED), $call);
+  public static function guardCompute(string $computes, callable $call): mixed {
+    return static::run(fn (ContainerInterface $container): self => new self($container, $computes, self::COMPUTE, self::ALLOWED), $call);
   }
 
   /**
@@ -497,9 +492,9 @@ final class PipelineGuard implements DrupalContainerInterface {
         $what,
       ));
     }
-    if ($this->kind === self::DERIVER) {
+    if ($this->kind === self::COMPUTE) {
       return new \LogicException(sprintf(
-        'The deriver %s asked for %s. A computed key is a pure function of the keys it is computed from: a value that needs a service, the clock or the request is a storage\'s to add in its prepare().',
+        'The computed key\'s %s asked for %s. A computed key is a pure function of the keys it is computed from: a value that needs a service, the clock or the request is a storage\'s to add in its prepare().',
         $this->what,
         $what,
       ));

@@ -61,6 +61,11 @@ use Symfony\Component\DependencyInjection\ContainerBuilder;
 final class ResourceCollectorPass implements CompilerPassInterface {
 
   /**
+   * The interface removed on 2026-10-24 through which an alter added outputs.
+   */
+  public const ALTERS_OUTPUTS = 'Drupal\\data_surface\\Resource\\AltersOutputsInterface';
+
+  /**
    * The container parameter the discovered class lists are written to.
    */
   public const PARAMETER = 'data_surface.resource_classes';
@@ -127,7 +132,7 @@ final class ResourceCollectorPass implements CompilerPassInterface {
       ));
       foreach ($lists as $list) {
         foreach ($list as $class => $declares) {
-          $reflection = new \ReflectionClass($class);
+          $reflection = self::reflect($class);
           self::collect($container, $reflection, (string) $module, $found);
           if ($declares) {
             $scanned[$class] = [(string) $module, $reflection];
@@ -145,6 +150,55 @@ final class ResourceCollectorPass implements CompilerPassInterface {
       }
     }
     return $found;
+  }
+
+  /**
+   * Reflects a class found in a scanned directory.
+   *
+   * An alter that still implements AltersOutputsInterface, removed on
+   * 2026-10-24, cannot be loaded at all: it is refused by name, with what
+   * replaced it, rather than with PHP's missing interface.
+   *
+   * Decision: see docs/decisions.md#the-surface-was-counted-and-cut.
+   *
+   * @param class-string $class
+   *   The class.
+   *
+   * @return \ReflectionClass
+   *   Its reflection.
+   *
+   * @throws \LogicException
+   *   When it implements the removed interface.
+   */
+  public static function reflect(string $class): \ReflectionClass {
+    try {
+      // Loading the class is what fails, before it can be reflected.
+      class_exists($class);
+    }
+    catch (\Error $e) {
+      if (str_contains($e->getMessage(), self::ALTERS_OUTPUTS)) {
+        throw self::outputsRefused($class);
+      }
+      throw $e;
+    }
+    return new \ReflectionClass($class);
+  }
+
+  /**
+   * Says why an alter that adds outputs is refused.
+   *
+   * @param string $class
+   *   The alter.
+   *
+   * @return \LogicException
+   *   The refusal.
+   */
+  public static function outputsRefused(string $class): \LogicException {
+    return new \LogicException(sprintf(
+      '%s adds outputs (%s, alterOutputs()), which an alter no longer may since 2026-10-24: what a call answers is its operation\'s outputs, declared by the resource or structure that owns it, and a reaction to a save belongs to ECA.',
+      $class,
+      self::ALTERS_OUTPUTS,
+    ));
   }
 
   /**

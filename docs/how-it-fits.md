@@ -63,7 +63,6 @@ build(FieldInstanceResource::class, $context):
   2. the alters #[Alters] names for this class, skipping one
      whose operations leave this context's id out:
        $alter->alterInputs(new ResourceBlueprintAdditions($builder, $module))
-       $alter->alterOutputs(...)                    <- if it has outputs
        $alter->storageLayout()                       <- if AltersStorageLayoutInterface
      ResourceBlueprintAdditions mounts what it adds at
      third_party_settings.<module>; a structure an alter attached there
@@ -108,10 +107,10 @@ build(FieldInstanceResource::class, $context):
          -> its ports checked against the parent's keys (assertWiring)
          -> what reads a port recorded at its path, on the parent's key
             (wirePorts); the child refines with the key's value, live
-       attachVariants('settings', by: 'field_type')
+       attachVariants('settings', by: 'field_type', from: FieldSettingsSchemaVariants::class)
          -> one child per #[Variant] for (FieldInstanceResource, settings)
-         -> one derived child per value a DerivedVariantsInterface service
-            fills and no variant class does
+         -> one read structure per value the provider lists and no
+            variant class fills
 
   7. seal: a DataSurfaceInterface, its children sealed into the parent's
      entries as Attachment / Variants

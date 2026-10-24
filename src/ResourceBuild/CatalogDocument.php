@@ -116,9 +116,6 @@ final class CatalogDocument {
         }
         $document .= implode(', ', $filled) . ".\n";
       }
-      foreach ($resource['derived'] as $key => $source) {
-        $document .= "\n- Variants at `" . $key . '`, for every other value: derived from ' . $source . ".\n";
-      }
     }
     if ($derivers !== []) {
       $document .= "\n## Derivers\n\n" . self::deriversIntro() . "\n";

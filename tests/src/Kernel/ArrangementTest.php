@@ -212,11 +212,11 @@ class ArrangementTest extends DataSurfaceKernelTestBase {
     $alter->describe('third_party_settings.first_module.badge', arrangement: new Arrangement(placeholder: ''));
 
     // Outputs are never drawn.
-    $outputs = new ResourceBlueprintAdditions($builder, $typed_data, 'first_module', TRUE);
+    $outputs = new ResourceBlueprint($builder, $typed_data, outputs: TRUE);
     $outputs->add('shown', 'string', 'Shown');
     $this->expectException(\LogicException::class);
     $this->expectExceptionMessage('outputs are never drawn, so they have nothing to arrange');
-    $outputs->describe('third_party_outputs.first_module.shown', arrangement: new Arrangement(weight: 1));
+    $outputs->describe('shown', arrangement: new Arrangement(weight: 1));
   }
 
   /**

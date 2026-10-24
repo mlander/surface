@@ -11,8 +11,8 @@ use Drupal\Core\Extension\ModuleHandlerInterface;
 use Drupal\Core\Plugin\Context\ContextDefinitionInterface;
 use Drupal\data_surface\Contract\ConfigSchemaDocument;
 use Drupal\data_surface\Resource\Attribute\UsesStructure;
-use Drupal\data_surface\Resource\VariantList;
-use Drupal\data_surface\Resource\VariantsFromSiteInterface;
+use Drupal\data_surface\Resource\SiteList;
+use Drupal\data_surface\Resource\SiteListInterface;
 
 /**
  * One variant per block plugin the block layout offers: its settings.
@@ -42,7 +42,7 @@ use Drupal\data_surface\Resource\VariantsFromSiteInterface;
  *
  * Decision: see docs/decisions.md#a-placed-block-is-a-resource.
  */
-final class BlockPluginStructures implements VariantsFromSiteInterface {
+final class BlockPluginStructures implements SiteListInterface {
 
   /**
    * The keys of a block's settings every block has, which no variant holds.
@@ -57,7 +57,7 @@ final class BlockPluginStructures implements VariantsFromSiteInterface {
   /**
    * The list, once read in this request.
    */
-  protected ?VariantList $list = NULL;
+  protected ?SiteList $list = NULL;
 
   /**
    * Constructs the provider.
@@ -78,11 +78,11 @@ final class BlockPluginStructures implements VariantsFromSiteInterface {
   /**
    * {@inheritdoc}
    */
-  public function variants(): VariantList {
+  public function list(): SiteList {
     if ($this->list !== NULL) {
       return $this->list;
     }
-    $list = (new VariantList())->addCacheTags(['config:core.extension']);
+    $list = (new SiteList())->addCacheTags(['config:core.extension']);
     if ($this->blocks instanceof CacheableDependencyInterface) {
       $list->addCacheableDependency($this->blocks);
     }
@@ -96,10 +96,10 @@ final class BlockPluginStructures implements VariantsFromSiteInterface {
       $label = $definition['admin_label'] ?? $id;
       $structure = $definition[UsesStructure::DEFINITION_KEY] ?? NULL;
       if (is_string($structure) && $structure !== '') {
-        $list->addStructure($id, $label, $structure);
+        $list->add($id, $label, structure: $structure);
         continue;
       }
-      $list->add($id, $label, $this->schemas->object('block.settings.' . $id, self::BASE, $this->defaults($id)));
+      $list->add($id, $label, schema: $this->schemas->object('block.settings.' . $id, self::BASE, $this->defaults($id)));
     }
     return $this->list = $list;
   }

@@ -30,7 +30,7 @@ use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Refinement\DoesNotApply;
 use Drupal\data_surface\Resource\ArrangementGroup;
-use Drupal\data_surface\Resource\Derive;
+use Drupal\data_surface\Resource\Compute;
 use Drupal\data_surface\Options\DataSurfaceOptions;
 use Drupal\data_surface\Pipeline\DataSurfacePipelineInterface;
 use Drupal\data_surface\Plugin\DataSurfaceWidget\OptionsWidget;
@@ -406,7 +406,7 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
    */
   protected static function computedItem(DataDefinitionInterface $definition, Computed $computed, DataSurfaceInterface $surface, mixed $value): array {
     $sources = implode(', ', array_map(static fn (string $source): string => (string) ($surface->getDefinition($source)?->getLabel() ?? $source), $computed->from));
-    $note = $computed->when === Derive::ON_CHANGE
+    $note = $computed->when === Compute::ON_CHANGE
       ? t('Computed from @sources, again whenever they change.', ['@sources' => $sources])
       : t('Computed from @sources when this is created, and kept as it is after.', ['@sources' => $sources]);
     $description = $definition->getDescription();

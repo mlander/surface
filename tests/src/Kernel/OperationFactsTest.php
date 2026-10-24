@@ -148,7 +148,7 @@ class OperationFactsTest extends DataSurfaceKernelTestBase {
       $context = $resources->operation(LogbookResource::class, $id);
       $this->assertSame($id, $context->id);
       $this->assertSame($creates, $context->creates, $id);
-      $this->assertSame([[], []], [$context->known, $context->constraints], $id . ': it knows nothing.');
+      $this->assertSame([[], []], [$context->known, $context->constraints()], $id . ': it knows nothing.');
     }
     $this->assertSame([], $registry->getOperation(LogbookResource::class, 'configure')->parameters);
   }

@@ -19,7 +19,6 @@ namespace Drupal\data_surface\Resource;
  * built:
  *   - each identity key it knows is locked to that value;
  *   - each constraint it carries narrows that key;
- *   - each starting value is the initial value, when it creates;
  *   - each child context goes to the structure attached at that key, and
  *     each child operation it names is the one that child is invoked
  *     through; a child named in neither is invoked through its own
@@ -43,6 +42,30 @@ final class OperationContext {
   public readonly bool $creates;
 
   /**
+   * Narrowing the operation imposes: key => constraint name => options.
+   *
+   * Core constraints only; checked narrower like any refinement. Added
+   * with withConstraint(), read by the build with constraints().
+   *
+   * @var array<string, array<string, array>>
+   */
+  private array $constraints = [];
+
+  /**
+   * A context for the child at a key, when it differs; withChild().
+   *
+   * @var array<string, \Drupal\data_surface\Resource\OperationContext>
+   */
+  private array $children = [];
+
+  /**
+   * The operation the child at a key is invoked through; withChild().
+   *
+   * @var array<string, array{operation: string, known: array<string, mixed>}>
+   */
+  private array $childOperations = [];
+
+  /**
    * The id as given, NULL when it is left to be stamped.
    */
   private readonly ?string $saidId;
@@ -55,6 +78,9 @@ final class OperationContext {
   /**
    * Constructs an OperationContext.
    *
+   * What else a context says (a constraint, a child) is added with the
+   * withers, each returning a copy.
+   *
    * @param string|null $id
    *   The operation id, or a host's own verb. NULL in an #[Operation]
    *   method: the attribute's is stamped on it.
@@ -64,31 +90,57 @@ final class OperationContext {
    *   FALSE anywhere else.
    * @param array<string, mixed> $known
    *   Identity the caller already has. Each becomes a lock.
-   * @param array<string, array<string, array>> $constraints
-   *   Narrowing the operation imposes: key => constraint name => options.
-   *   Core constraints only; checked narrower like any refinement.
-   * @param array<string, mixed> $defaults
-   *   Initial values for a creating operation: a clone starts from its
-   *   source. Not locks; the caller may change them.
-   * @param array<string, \Drupal\data_surface\Resource\OperationContext> $children
-   *   A context for the child at a key, when it differs.
-   * @param array<string, array{operation: string, known: array<string, mixed>}> $childOperations
-   *   The operation the child at a key is invoked through, by id, with
-   *   the identity handed to it.
    */
   public function __construct(
     ?string $id = NULL,
     ?bool $creates = NULL,
     public readonly array $known = [],
-    public readonly array $constraints = [],
-    public readonly array $defaults = [],
-    public readonly array $children = [],
-    public readonly array $childOperations = [],
   ) {
     $this->saidId = $id;
     $this->saidCreates = $creates;
     $this->id = $id ?? '';
     $this->creates = $creates ?? FALSE;
+  }
+
+  /**
+   * Makes a context saying all of this.
+   *
+   * @param string|null $id
+   *   The id as given.
+   * @param bool|null $creates
+   *   Whether it creates, as given.
+   * @param array<string, mixed> $known
+   *   The known identity.
+   * @param array<string, array<string, array>> $constraints
+   *   The constraints.
+   * @param array<string, \Drupal\data_surface\Resource\OperationContext> $children
+   *   The child contexts.
+   * @param array<string, array{operation: string, known: array<string, mixed>}> $childOperations
+   *   The child operations.
+   *
+   * @return self
+   *   The context.
+   */
+  private static function copy(?string $id, ?bool $creates, array $known, array $constraints, array $children, array $childOperations): self {
+    $context = new self($id, $creates, $known);
+    $context->constraints = $constraints;
+    $context->children = $children;
+    $context->childOperations = $childOperations;
+    return $context;
+  }
+
+  /**
+   * Gets the narrowing the operation imposes, for the build.
+   *
+   * @return array<string, array<string, array>>
+   *   Key => constraint name => options.
+   *
+   * @internal
+   *   Read by the build step; an operation adds to it with
+   *   withConstraint().
+   */
+  public function constraints(): array {
+    return $this->constraints;
   }
 
   /**
@@ -113,7 +165,7 @@ final class OperationContext {
     }
     // Not creating is what a context says by saying nothing, so it stays
     // unsaid: the copy is the context a host would have built.
-    return new self($this->saidId ?? $id, $this->saidCreates ?? ($creates ?: NULL), $this->known, $this->constraints, $this->defaults, $this->children, $this->childOperations);
+    return self::copy($this->saidId ?? $id, $this->saidCreates ?? ($creates ?: NULL), $this->known, $this->constraints, $this->children, $this->childOperations);
   }
 
   /**
@@ -139,7 +191,7 @@ final class OperationContext {
    *   The new context.
    */
   public function withId(string $id, ?bool $creates = NULL): self {
-    return new self($id, $creates ?? $this->saidCreates, $this->known, $this->constraints, $this->defaults, $this->children, $this->childOperations);
+    return self::copy($id, $creates ?? $this->saidCreates, $this->known, $this->constraints, $this->children, $this->childOperations);
   }
 
   /**
@@ -152,7 +204,7 @@ final class OperationContext {
    *   The new context.
    */
   public function withKnown(array $known): self {
-    return new self($this->saidId, $this->saidCreates, $known + $this->known, $this->constraints, $this->defaults, $this->children, $this->childOperations);
+    return self::copy($this->saidId, $this->saidCreates, $known + $this->known, $this->constraints, $this->children, $this->childOperations);
   }
 
   /**
@@ -171,20 +223,7 @@ final class OperationContext {
   public function withConstraint(string $key, string $constraint, array $options = []): self {
     $constraints = $this->constraints;
     $constraints[$key][$constraint] = $options;
-    return new self($this->saidId, $this->saidCreates, $this->known, $constraints, $this->defaults, $this->children, $this->childOperations);
-  }
-
-  /**
-   * Returns a copy with more defaults: the values a new thing starts from.
-   *
-   * @param array<string, mixed> $values
-   *   Defaults; these win over the ones already given.
-   *
-   * @return self
-   *   The new context.
-   */
-  public function withDefaults(array $values): self {
-    return new self($this->saidId, $this->saidCreates, $this->known, $this->constraints, $values + $this->defaults, $this->children, $this->childOperations);
+    return self::copy($this->saidId, $this->saidCreates, $this->known, $constraints, $this->children, $this->childOperations);
   }
 
   /**
@@ -246,7 +285,7 @@ final class OperationContext {
     else {
       $operations = [$key => ['operation' => (string) $operation, 'known' => $known]] + $operations;
     }
-    return new self($this->saidId, $this->saidCreates, $this->known, $this->constraints, $this->defaults, $children, $operations);
+    return self::copy($this->saidId, $this->saidCreates, $this->known, $this->constraints, $children, $operations);
   }
 
   /**

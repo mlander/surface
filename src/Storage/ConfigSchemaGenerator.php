@@ -26,7 +26,7 @@ use Drupal\data_surface\DefinitionMap;
 use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Entry;
 use Drupal\data_surface\Refinement\ChoiceSet;
-use Drupal\data_surface\Resource\ClosedVariantsInterface;
+use Drupal\data_surface\Resource\ClosedSiteListInterface;
 use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface\ResourceBuild\AutowiringClassResolver;
 use Drupal\data_surface\ResourceBuild\ResourceCollectorPass;
@@ -464,7 +464,7 @@ final class ConfigSchemaGenerator {
    */
   protected function context(ResourceDefinition $definition): OperationContext {
     foreach ($this->registry->getOperations($definition->name()) as $operation) {
-      if ($operation->needsNothing() && $operation->values === NULL) {
+      if ($operation->needsNothing() && $operation->structure === NULL) {
         return $this->resources->operation($definition->name(), $operation->id);
       }
     }
@@ -553,7 +553,7 @@ final class ConfigSchemaGenerator {
     $definition = $entry->definition;
     $label = static::label($definition, $entry->name);
     $from = $entry->variants === NULL ? NULL : DefinitionMetadata::variantsFrom($entry->variants->shell);
-    if ($from !== NULL && !is_subclass_of($from, ClosedVariantsInterface::class)) {
+    if ($from !== NULL && !is_subclass_of($from, ClosedSiteListInterface::class)) {
       // Variants from the site: which there are is the site's, not the
       // code's, so no schema written once can name them. The key is open
       // here, and the variant its deciding key chooses holds it to its own

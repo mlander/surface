@@ -4,22 +4,22 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\data_surface\Fixtures;
 
-use Drupal\data_surface\Resource\DeriverInterface;
+use Drupal\data_surface\Resource\ComputesValueInterface;
 
 /**
- * A deriver for StaticRefinerRuleTest that reads the clock: flagged.
+ * Computes a key for StaticRefinerRuleTest, reading the clock: flagged.
  */
-final class DeriverFixture implements DeriverInterface {
+final class ComputeFixture implements ComputesValueInterface {
 
   /**
    * {@inheritdoc}
    */
-  public static function derive(array $from): mixed {
+  public static function compute(array $from): mixed {
     return ($from['label'] ?? '') . \Drupal::time()->getRequestTime();
   }
 
   /**
-   * Static, and no deriver: not flagged.
+   * Static, and no compute(): not flagged.
    */
   public static function helper(): int {
     return \Drupal::time()->getRequestTime();

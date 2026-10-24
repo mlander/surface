@@ -181,7 +181,6 @@ final class SiteCatalog {
         'operations' => [],
         'alters' => [],
         'variants' => [],
-        'derived' => [],
       ];
     }
     return $this->described = $catalog;
@@ -541,7 +540,7 @@ final class SiteCatalog {
         'secret' => DefinitionMetadata::isSecret($definition),
         'computed' => $computed === NULL ? NULL : [
           'from' => $computed->from,
-          'by' => $computed->deriver,
+          'by' => $computed->using,
           'when' => $computed->when,
         ],
         'refiners' => $refiners[$name] ?? [],

@@ -208,6 +208,139 @@ Deferred:
   the fresh-eyes log, the never-stricter audit) keep the words of their
   day.
 
+### The surface was counted and cut
+
+Decided 2026-10-24, by the owner, from the API consolidation review
+([the decision list](reviews-2026-10-24/api-consolidation.md)), which
+counted every public name an author writes or a client reads and asked
+of each whether it is used, whether it says what it does, and whether
+another name already says it. Groups A (renames), B (merges) and C
+(drops) were approved and built; group D, the wire changes, is contract
+4, built apart. No emitted document of the examples moved but one
+label, the `committed` output's title, now "Committed" (A6).
+
+| Kind | Before | After |
+| --- | --- | --- |
+| Attributes | 11 | 11 |
+| Attribute arguments | 42 | 39 |
+| Blueprint methods | 17 | 15 |
+| Interfaces an author implements or names | 24 | 20 |
+| `OperationContext` public methods | 9 | 8, beside `constraints()`, the build's |
+| Settings | 2 | 2 |
+| `x-surface` keywords | 35 | 35 (contract 4 cuts them) |
+| Module result codes | 20 | 20 |
+| Rule methods and conditions | 17 | 17 |
+| Widget words | 18 | 15 |
+| Total | 195 | 182 |
+| Rows of [concepts](concepts.md) | 49 | 44 |
+
+`PublicSurfaceTest` pins what `src/Resource/` declares, so the count
+grows only with that test updated beside a reason: 9 attributes, 30
+attribute arguments (33 before), 15 blueprint methods (17), 20
+interfaces (23). It is the concept budget for the code, as
+[Your first resource](first-resource.md) is for the docs.
+
+What changed, old → new, to grep:
+
+<!-- cspell:disable -->
+- **A1, the docs say what the code does.** `Rule`'s docblock names
+  `because()`; the install file says a list past its limit is
+  `deferred`; the served contract's "Three markers" is "Markers", the
+  table's title; concept rows for a key that does not apply (led by the
+  declared rule), `describe()` and `extendChoices()` (no numbered
+  example calls the second), and Layout.
+- **A2.** `BlueprintInterface::derive()` → `compute()`; `DeriverInterface`
+  → `ComputesValueInterface`, its static `derive(array $from)` →
+  `compute(array $from)`; `Derive::ON_CREATE`, `ON_CHANGE` →
+  `Compute::ON_CREATE`, `ON_CHANGE`; `PipelineGuard::guardDeriver()` →
+  `guardCompute()`; `Computed::$deriver` → `$using`; the PHPStan
+  identifier `dataSurface.deriver` → `dataSurface.compute`. "Deriver"
+  names one thing, a class that makes resources at discovery. The wire
+  keyword `computed` and the result code `computed` stay.
+- **A3.** `#[Operation(values:)]`, `OperationDefinition::$values` →
+  `structure:`, `$structure`; the tool input `values` and the envelope
+  key stay.
+- **A4.** `data_surface.settings:reference_enum_limit` →
+  `reference_list_limit`, beside `site_list_limit`, the stored value
+  moved by `data_surface_post_update_reference_list_limit()`.
+- **A5.** The stock widget plugins `options`, `map`, `boolean` →
+  `select`, `fieldset`, `checkbox`, the words `x-surface.widget` and the
+  `widget` setting say; a `hook_data_surface_widget_info_alter()` keyed
+  by an old id finds nothing.
+- **A6.** The tool's `committed` output labeled "Written" → "Committed";
+  `drush data_surface:contract-diff --dir` → `--baselines`, `--dir` still
+  read.
+- **B1, one provider for a list the site decides.**
+  `KeysFromSiteInterface::keys(): KeyedList` and
+  `VariantsFromSiteInterface::variants(): VariantList` →
+  `SiteListInterface::list(): SiteList`; `ClosedVariantsInterface` →
+  `ClosedSiteListInterface`, its entries a value and a label, the
+  structure named once, in `structures()`; `VariantList::add($value,
+  $label, $schema)` → `SiteList::add($value, $label, schema: $schema)`,
+  `addStructure($value, $label, $class)` → `add($value, $label,
+  structure: $class)`. `addEach()`, `attachEach()` and
+  `attachVariants(from:)` each refuse an entry carrying what they do not
+  read.
+- **B2.** `DerivedVariantsInterface`, `DerivedVariants` and the
+  `data_surface.derived_variants` tag are gone: the field types'
+  settings come from `FieldSettingsSchemaVariants` and
+  `FieldStorageSettingsSchemaVariants`, providers the field resources
+  name, counted against `site_list_limit`
+  ([Derived variants](#derived-variants)). Held at first, for its
+  change of behavior, and approved the same day.
+- **B3.** `AltersAccessInterface` → `OperationAccessInterface`, the role
+  read from `#[Alters]`; an access class named on `access:` that carries
+  `#[Alters]` is refused
+  ([An alter may answer access](#an-alter-may-answer-access-and-the-stricter-stands)).
+- **B4.** The concept rows "Child operations" (into the operation
+  context row) and "Transformations" (a pointer in the page's opening).
+- **B5.** `_data_surface_operation_access: 'TRUE'` is implied: a route
+  whose defaults name `_data_surface_resource` and
+  `_data_surface_operation` gets it from `OperationRouteSubscriber`, and
+  one that says it is read the same. Every shipped routing file dropped
+  the line (42 entries; the resource test module's larder route keeps it,
+  to show it is still accepted), and the first page's quoted route with
+  them, two lines shorter, its concepts still four.
+- **C1.** `BlueprintAdditionsInterface::with()`, the deprecated alias of
+  `mixIn()`, removed.
+- **C2.** `BlueprintInterface::fromSchema()` removed; a document is read
+  through a variant from the site or registered with
+  `SchemaReader::structure()`.
+- **C3.** `#[RefinesInput(watches:)]` removed: the parameter names say
+  what a refiner watches.
+- **C4.** `#[Operation(default:)]` and `DerivedOperation::$default`
+  removed: a child is invoked through its operation of its parent
+  operation's kind ([One invocation model](#one-invocation-model-for-both-levels)).
+- **C5.** `OperationContext::withDefaults()` and the constructor's
+  `constraints:`, `defaults:`, `children:`, `childOperations:` removed;
+  the constructor takes `id`, `creates` and `known`, the rest the
+  withers, and starting values are gone
+  ([Starting values without creating](#starting-values-without-creating)).
+- **C6.** `#[Operation(of:)]` removed: an operation stands on its
+  resource's or structure's own class, and one on any other class is
+  refused.
+- **C7.** `AltersOutputsInterface` and the `third_party_outputs` mount
+  removed: what a call answers is its operation's, and a reaction to a
+  save belongs to ECA. Held at first, as a capability with no user, and
+  approved the same day.
+<!-- cspell:enable -->
+
+A removed attribute argument is refused at discovery with what replaced
+it, before the attribute is instantiated, so the message says more than
+PHP's unknown parameter: `watches:` (the parameter names), `default:`
+(the operation of the parent's kind), `of:` (an operation stands on its
+own class). An alter that still implements `AltersOutputsInterface`
+cannot be loaded, and is refused by name where the scanned directories
+are read; one that keeps `alterOutputs()` is refused where the alters
+are read. Each removal is additive to bring back, and no tag has carried
+any of them.
+
+Held: D5, `access: "live"` into `live`, until a client says whether it
+needs to tell "may vanish" from "may narrow". D1 to D4 are contract 4.
+(`PublicSurfaceTest`, `ResourceRegistry::REMOVED_ARGUMENTS`,
+`ResourceCollectorPass::reflect()`, `OperationRouteSubscriber`,
+`OperationRouteAccessTest`)
+
 ### The ids are the standard five, the labels are Drupal's
 
 Decided 2026-10-23, by the owner. An operation's id is what a program
@@ -286,8 +419,8 @@ hands it, which would need identity on a structure.
 
 ### Blueprints and layouts
 
-What `defineInputs()`, `defineOutputs()`, `alterInputs()` and
-`alterOutputs()` are handed is a **blueprint**: `BlueprintInterface` for
+What `defineInputs()`, `defineOutputs()` and `alterInputs()` are handed
+(and `alterOutputs()`, until 2026-10-24: [The surface was counted and cut](#the-surface-was-counted-and-cut)) is a **blueprint**: `BlueprintInterface` for
 the owner, `BlueprintAdditionsInterface`, add-only, for an alter. It is
 the thing a resource or structure declares its members into, as a
 migration declares a table's columns into the table's blueprint. It was
@@ -527,7 +660,8 @@ because their contexts know or narrow something.
   only when the context needs more".
 - **What stays on the attribute.** Everything static about an
   operation, wherever it stands: id, label, `description`, permission,
-  `creates`, `readOnly`, `destructive`, `idempotent`, `default`, `of`.
+  `creates`, `readOnly`, `destructive`, `idempotent`, `structure`
+  (`default` and `of` until 2026-10-24, [The surface was counted and cut](#the-surface-was-counted-and-cut)).
   The catalog, the tool listing and the kind read them without running
   anything ([Whether an operation creates](#whether-an-operation-creates)).
 - **A description.** `description:` says what a call does to what, for
@@ -599,7 +733,8 @@ already asked with the context alone.
 A child that invokes no operation of its own sees the context its
 parent's hands it with `withChild()`; otherwise it sees the parent's
 context id, `creates` and known identity, and not the parent's
-constraints, starting values or child contexts. Those three name the
+constraints or child contexts (or starting values, until they were
+removed on 2026-10-24). Those name the
 parent's keys, so handing them down would apply them to keys the child
 does not have. (`Resources::childContext()`)
 
@@ -614,12 +749,17 @@ see it, or neither. Which operation is decided when the parent is
 built, in this order: the one the parent's context names
 (`withChild($key, operation: 'enter', known: [...])`); else the child's
 operation whose id is the parent's context id;
-else the child's default (`#[Operation(default: TRUE)]`, at most one);
-else none, and the child inherits as it always did. The parent's
+else the child's operation with the standard id of the parent
+operation's kind (`create`, `update` or `configure`, `read` or `list`,
+`delete`); else none, and the child inherits as it always did.
+*Changed 2026-10-24:* the third step was the child's default,
+`#[Operation(default: TRUE)]`, at most one; the ids decision made the
+default of a kind a rule, no shipped child marked one, and `default:` is
+refused at discovery ([The surface was counted and cut](#the-surface-was-counted-and-cut)). The parent's
 context id is only a hint, because the parent's verbs are the parent's:
 a field's `reuse` means nothing to its storage, and a child may have no
 operation for a verb at all, so a match is used when there is one and
-never required; a match, or the default, that needs identity the parent
+never required; a match, by id or by kind, that needs identity the parent
 does not know is passed over for the next step, because a context that
 knows nothing yet is built on purpose (a tool's static definition). Naming comes first because it is the parent saying so
 in so many words, and a name the child does not declare is refused
@@ -631,11 +771,11 @@ handed whole (`withChild($key, $context)`) comes before all of these and
 is taken as it is, invoking no operation of the child's even when its
 id names one of them: the parent built it.
 
-However the child was invoked (named, matched, the default, inherited,
+However the child was invoked (named, matched by id or by kind, inherited,
 or handed whole), its access class answers, open, locked or omitted, in
 the context it was invoked in, and what that answer read reaches the
 parent's cacheability. The permission of an operation is asked only where
-the build resolved that operation (named, matched or the default).
+the build resolved that operation (named, or matched by id or by kind).
 Permission and access are two questions. A permission is about entering
 an operation, and a parent that built its child's context itself took
 responsibility for that entry, so the child's permission is not asked
@@ -670,24 +810,26 @@ there: ask for the operation through `operation()`.
 
 ### Constraints and starting values for an attached key
 
-A context constraint or starting value naming the key a child is
-attached at is refused, and the message points at `withChild()`. A
-child is narrowed and started by its own context, which is the one door
+A context constraint naming the key a child is attached at is refused,
+and the message points at `withChild()`. A child is narrowed by its own
+context, which is the one door
 through the wall
-between parent and child. (`Resources::applyContext()`)
+between parent and child. (`Resources::applyContext()`) *Changed
+2026-10-24:* starting values, `OperationContext::withDefaults()`, are
+gone, and so is this entry's half about them ([The surface was counted and cut](#the-surface-was-counted-and-cut)).
 
 ### Starting values without creating
 
-A context that carries starting values but does not create is refused
-rather than ignored. A thing that exists begins from what its storage
-loads; a silently dropped starting value would be a bug nobody sees.
-(`Resources::applyContext()`)
+*Withdrawn 2026-10-24:* a context carried starting values, refused on
+one that does not create, until `OperationContext::withDefaults()` and
+the constructor's `defaults:` were removed with no shipped use: no
+shipped operation starts a new thing from values (a clone). Bringing a
+clone back is additive ([The surface was counted and cut](#the-surface-was-counted-and-cut)).
 
 ### Starting values are defaults
 
-A starting value becomes the key's declared default for that build
-only. That is exactly what a starting value is to the engine: what the
-caller sees first and may replace. (`Resources::applyContext()`)
+*Withdrawn 2026-10-24* with starting values: a starting value was the
+key's declared default for that build only ([The surface was counted and cut](#the-surface-was-counted-and-cut)).
 
 ### Known keys that are not identity
 
@@ -1214,9 +1356,11 @@ of the roadmap (dependent effects as data) is this, but `locked`.
 
 ### Where an alter's keys live
 
-An alter's key is mounted at `third_party_settings.<module>.<key>`
-(outputs: `third_party_outputs.<module>.<key>`), not beside the
-owner's. The owner's storage and schema then never have to know a
+An alter's key is mounted at `third_party_settings.<module>.<key>`, not
+beside the owner's. (An alter's outputs were mounted at
+`third_party_outputs.<module>.<key>` until 2026-10-24, when alters
+stopped adding outputs: what a call answers is its operation's, and a
+reaction to a save belongs to ECA; [The surface was counted and cut](#the-surface-was-counted-and-cut).) The owner's storage and schema then never have to know a
 contributor's keys, which is how core keeps third-party settings.
 (`ResourceBlueprintAdditions`)
 
@@ -1367,13 +1511,16 @@ examples ship both, each for the case it fits.
   for the value of the second.
 - **A closed provider: storage knows both.** The two sources are
   structures the owner's code names, so the provider implements
-  `ClosedVariantsInterface` and names them in a static `structures()`.
+  `ClosedSiteListInterface` (`ClosedVariantsInterface` until 2026-10-24)
+  and names them in a static `structures()`, the only place each is
+  named: its list names a value and a label.
   The config schema written from the resource then gives each its own
   type, `credential.[%parent.source]`, as it does for `#[Variant]`
   classes, whichever the site offers when it is written; a provider
   whose variants are read from schemas leaves the key `type: ignore`.
   The build refuses a closed provider's list that offers a value
-  `structures()` does not name, or names it by a schema. Two spellings
+  `structures()` does not name, or names a schema or a structure of its
+  own. Two spellings
   were turned down. `#[Variant]` classes are always offered, and the
   managed source must be offered only while the key module is on. A
   variant's access answer could withhold it, but which sources a site
@@ -1439,7 +1586,7 @@ rule against pruning stored values says keep it; a value left by
 another variant has gone since variants were built); and a stored
 source the site no longer offers, which is kept and shown stale, while
 the credential it chose is not built until the source is offered again.
-(`ClosedVariantsInterface`, `CredentialSources`, `WebhookKeyAlter`)
+(`ClosedSiteListInterface`, `CredentialSources`, `WebhookKeyAlter`)
 
 ## Attached structures
 
@@ -1452,13 +1599,39 @@ whole parent would break it on every site without a variant module.
 
 ### Derived variants
 
-A value no `#[Variant]` class fills may get a variant derived
-from a description that already exists, through a
-`DerivedVariantsInterface` service: a field type's config schema fills
-the field's settings variants and the storage's. A derived
-variant is a child with no class, so no alter, refiner, storage or access
-class of its own, and a declared variant always wins.
-(`Resources::buildResource()`)
+A value no `#[Variant]` class fills may get a variant from a description
+that already exists: a field type's config schema fills the field's
+settings variants and the storage's. A declared variant always wins.
+
+*Changed 2026-10-24, by the owner:* these came through a second
+mechanism, a `DerivedVariantsInterface` service tagged
+`data_surface.derived_variants` that named the owner's class and key
+from outside and sealed plain definitions into a child, counted by no
+budget. They come through the one provider now: `FieldInstanceResource`
+attaches its `settings` with `attachVariants('settings', by:
+'field_type', from: FieldSettingsSchemaVariants::class)`, and
+`FieldStorageResource` from `FieldStorageSettingsSchemaVariants`, each a
+`SiteListInterface` listing one entry per field type offered in the UI,
+labeled with the field type's label, its schema the config schema
+written as JSON Schema (`ConfigSchemaDocument`), with the field type's
+own default settings where their type fits and are not the empty
+string. Each variant is a read structure, built as any read from a
+schema is, a key its storage always holds marked as such. The list
+carries the field type plugin manager's cacheability and
+`config:core.extension`, so a fetch of one variant past the limit
+caches honestly. It is a list the site decides, so it counts against
+`site_list_limit`: under it nothing moves but the deciding key's labels,
+now the field types' own; past it the field tools state `settings` open
+and `deferred`, with a fetch, and the narrowing tool answers it. The
+kernel test site the catalog is written from offers 21 field types to
+the field and 22 to the storage, so its `create`, `reuse` and `update`
+field tools are deferred and each has a narrowing tool beside it
+([catalog](catalog.md)); this module's development site offers 20 to
+each, at the limit, so its field tools state every field type's
+settings, as before. Why: one idea, a
+list the site decides, had two mechanisms, one named from outside its
+owner and outside the budget ([The surface was counted and cut](#the-surface-was-counted-and-cut)).
+(`FieldSettingsSchemaVariants`, `Resources::variantKeysOf()`)
 
 ### A parent watching a child
 
@@ -1675,7 +1848,7 @@ contracts and the tool state an object with no properties; a value left
 by another variant does not fit it and goes, as between any two
 variants, but a secret, which is kept
 ([An extension is a variant the site adds, or an alter](#an-extension-is-a-variant-the-site-adds-or-an-alter)).
-The map widget serves any complex definition and answers an
+The fieldset widget serves any complex definition and answers an
 empty one with `[]`: a map that declares nothing can hold nothing, and
 before this the form threw for want of a widget. A key that does not
 apply at all, rather than applying with nothing to say, is
@@ -2012,30 +2185,35 @@ A dry run of any other operation still answers none.
 
 Decided 2026-10-23, with example 15's slug: a key of the resource whose
 value nobody types, computed from other keys and read by callers. The
-spelling is `$inputs->derive('slug', 'string', t('Slug'), from:
-['label'], using: Slugify::class, when: Derive::ON_CREATE)` on the
+spelling is `$inputs->compute('slug', 'string', t('Slug'), from:
+['label'], using: Slugify::class, when: Compute::ON_CREATE)` on the
 owner's blueprint, returning the definition as `add()` does; the class
-implements `DeriverInterface`, whose `derive(array $from): mixed` is
+implements `ComputesValueInterface`, whose `compute(array $from): mixed` is
 static. The pipeline computes it in `accept()`, once every other key of
 its level is accepted, from their accepted values; `validate()` judges
 it by its own constraints and rules, `prepare()` and storage write it as
-any key, and the read answers it. Three choices settle it:
+any key, and the read answers it. *Renamed 2026-10-24:* the verb was
+`derive()`, the class `DeriverInterface` with a static `derive()`, the
+constants `Derive::ON_CREATE` and `ON_CHANGE`; "deriver" now names one
+thing, a class that makes resources at discovery
+([The surface was counted and cut](#the-surface-was-counted-and-cut)).
+Three choices settle it:
 
-- **Pure derivations only.** A deriver is handed the values of `from`
+- **Pure functions only.** The class is handed the values of `from`
   and nothing else. With assertions on it runs with the container
-  guarded (`PipelineGuard::guardDeriver()`, which refuses every
+  guarded (`PipelineGuard::guardCompute()`, which refuses every
   service), and the module's PHPStan rule flags `\Drupal::` in it. Why:
-  a pure deriver can run anywhere the values are, so `POST .../schema`
+  a pure function can run anywhere the values are, so `POST .../schema`
   and a form's rebuild answer the value a write of the values in
   progress would store, and the value stored is the value shown. A
-  runtime deriver could not be run ahead, and would need a mark of its
+  runtime one could not be run ahead, and would need a mark of its
   own in both documents for a value the client cannot predict. A changed
   time reads the clock: it stays a storage's to add in `prepare()`, as
   the language code `ConfigObjectStorage` adds is.
-- **When it runs, `when:`.** `Derive::ON_CREATE`, the default, computes
+- **When it runs, `when:`.** `Compute::ON_CREATE`, the default, computes
   it while storage holds nothing for it, which is how a thing being
   created starts, and keeps what is stored after: a slug a link points
-  at must not move when the name does. `Derive::ON_CHANGE` computes it
+  at must not move when the name does. `Compute::ON_CHANGE` computes it
   again on every write in which a key in `from` holds other than what is
   stored. A write that changes no source keeps what is stored either
   way. Why a declaration and not one rule: the two cases are both
@@ -2075,21 +2253,21 @@ the read's definition is still the write's, built with them
 nothing; the React page draws it disabled and leaves it out of a write
 (`withoutComputed()`). The generated config schema describes it as any
 key, since storage holds it. Read back from a document, it is a key
-nobody types that holds what is stored: the deriver is a class no
-document names.
+nobody types that holds what is stored: the class computing it is one
+no document names.
 
-*Open:* a deriver that may read the clock or a service, declared
+*Open:* a computed key whose class may read the clock or a service, declared
 runtime, never run ahead and marked in both documents; a computed key in
 a structure, or one an alter declares under its own mount from the
 owner's keys it may read (refused for now: what a structure's level is
 computed from would need the structure's own read and listing, and an
 alter's from the owner's keys crosses the wall the alter reads only at
 its mount); computing again on demand, an operation that recomputes a
-stored value its sources no longer give; the React page computing a
-deriver locally, which needs the deriver in a language the page runs.
-(`Computed`, `DeriverInterface`, `Derive`, `ResourceBlueprint::derive()`,
+stored value its sources no longer give; the React page computing the
+value locally, which needs the class in a language the page runs.
+(`Computed`, `ComputesValueInterface`, `Compute`, `ResourceBlueprint::compute()`,
 `DataSurfacePipeline::acceptComputed()`, `DataSurfacePipeline::notComputed()`,
-`DataSurfacePipeline::namingSources()`, `PipelineGuard::guardDeriver()`,
+`DataSurfacePipeline::namingSources()`, `PipelineGuard::guardCompute()`,
 `DataSurfaceFormBuilder::refinementOverlay()`, `Slugify`, `ComputedKeysTest`,
 `VenueResourceTest`)
 
@@ -2309,7 +2487,12 @@ entity, whose access class asks core's handlers. Decided 2026-10-20,
 closing that gap (found 2026-10-19), point by point.
 
 - **The spelling.** An `#[Alters]` class implements
-  `AltersAccessInterface`, whose `access(OperationContext $context,
+  `OperationAccessInterface`, the access class's own interface (*changed
+  2026-10-24:* it was `AltersAccessInterface`, the same method under a
+  second name; the role, owner or alter, is what `#[Alters]` on the class
+  says, and an access class named on `access:` that carries `#[Alters]`
+  is refused at discovery, since it would answer in both roles; [The surface was counted and cut](#the-surface-was-counted-and-cut)),
+  whose `access(OperationContext $context,
   AccountInterface $account): AccessAnswer|AccessResultInterface` is an
   access class's method, on the alter. One spelling, an instance method,
   as an access class has: an alter is an autowired service, so it may
@@ -2400,7 +2583,7 @@ own is a structure, as a field is; a structure at a mount that an
 alter answers locked or left out is refused, as one whose access class
 does ([An alter attaches at its own mount](#an-alter-attaches-at-its-own-mount));
 a reason an alter gives at a child is not shown, as no child's is.
-(`AltersAccessInterface`, `AlterDefinition::$answersAccess`,
+(`OperationAccessInterface`, `AlterDefinition::$answersAccess`, `ResourceRegistry::assertAccessClass()`,
 `ResourceDefinition::answersAccess()`, `Resources::answering()`,
 `Resources::answers()`, `Resources::alteredAtTheTop()`,
 `Resources::lockedAtTheTop()`)
@@ -3750,7 +3933,11 @@ free strings and a time picker):
   fit the definition (radios for a list, a word no widget answers to) is
   refused when the element is built, naming the widget that would draw
   it, rather than drawn as something it did not ask for. A widget of a
-  module's own answers to its plugin ID.
+  module's own answers to its plugin ID. *Changed 2026-10-24:* so does
+  every stock one, the select, fieldset and checkbox widgets renamed
+  from the plugins `options`, `map` and `boolean`, one word per element
+  across plugin ID, hint and setting
+  ([The surface was counted and cut](#the-surface-was-counted-and-cut)).
 
 The served contract's `x-surface.widget` mirrors each choice by asking
 the same rule (`CheckboxesWidget::drawsList()`,
@@ -4162,10 +4349,18 @@ $inputs->attachEach('benches', BenchStructure::class, from: WorkshopBenches::cla
   ->setLabel(t('Benches'));
 ```
 
-The `from:` class is a provider, `KeysFromSiteInterface::keys()`,
-answering a `KeyedList`: an id and a label per thing, optionally what it
-starts from and whether it is locked, and the cacheability of what it was
-read from. The build step asks it and declares one key per entry in a
+The `from:` class is a provider, `SiteListInterface::list()`, answering
+a `SiteList`: an id and a label per thing, optionally what it starts
+from and whether it is locked, and the cacheability of what it was read
+from. *Changed 2026-10-24:* it was `KeysFromSiteInterface::keys()`
+answering a `KeyedList`, beside `VariantsFromSiteInterface::variants()`
+answering a `VariantList`; the two had the same contract, so they are
+one interface and one list type, each verb reading what it needs of an
+entry (a key per thing its id, label, start and lock; a variant its
+value, label, and schema or structure) and refusing the rest when the
+resource is built, in the words each used; an id holding a dot or a
+colon, which no key can be, is refused there, since a variant's value
+may hold either ([The surface was counted and cut](#the-surface-was-counted-and-cut)). The build step asks it and declares one key per entry in a
 child sealed at the key, which the owner stores: of the type or shape for
 `addEach()`, holding the structure for `attachEach()`. Each choice, and
 why:
@@ -4276,7 +4471,7 @@ why:
 Open: a per-option lock in a plain list of choices; a rule of the
 owner's naming one entry by its id, which waits for a decision from the
 owner, since the code cannot list the ids. Closed: ports on an entry
-(above). (`KeysFromSiteInterface`, `KeyedList`,
+(above). (`SiteListInterface`, `SiteList`,
 `BlueprintInterface::addEach()`, `BlueprintInterface::attachEach()`,
 `Resources::buildEach()`, `Resources::keysFrom()`,
 `Resources::assertEachWiring()`, `Port::through()`,
@@ -4472,7 +4667,7 @@ how strictly to apply them to a display builder. Each choice, and why:
   level states each offered component's props and slots, so without a
   cap the schema would not end.
 - **Each shape is one def, built once.** The provider lists every
-  variant's defs once (`VariantList::addDefs()`):
+  variant's defs once (`SiteList::addDefs()`):
   `component.props.<id>`, `component.slots.<id>.<depth>`,
   `component.slot.<id>.<slot>.<depth>`, `component.slot.text`, and
   `component.nested.<expected>.<depth>` for the component a slot holds,
@@ -4509,7 +4704,7 @@ how strictly to apply them to a display builder. Each choice, and why:
 slot; a component that drops a prop a placed block still stores, whose
 edit is refused until the stored prop is removed; whether an empty
 `expected` is how a component should say it takes text; a slot's
-`examples`. (`Variants\ComponentSlots`, `VariantList::addDefs()`,
+`examples`. (`Variants\ComponentSlots`, `SiteList::addDefs()`,
 `Resources::buildRead()`, `ComponentBlock::filled()`,
 `ComponentSlotsTest`, `ComponentBlockTest`, `BlockPlacementToolsTest`,
 `ComponentBlockAjaxTest`, `ReactNarrowingTest`)
@@ -4546,7 +4741,7 @@ form, each validated as any resource is. Each choice, and why:
   context a placed block reads is open, so such plugins are not offered
   yet, and the `plugin` key's description says so. A plugin whose class
   carries `#[UsesStructure]` is its declared structure, built as
-  declared: `VariantList::addStructure()` names a structure class where
+  declared: `SiteList::add(..., structure:)` names a structure class where
   an entry otherwise carries a schema. Any other plugin is read with the
   schema reader from `block.settings.<plugin id>`, resolved as typed
   config resolves it (a wildcard type, and `block.settings.*` for a
@@ -4640,7 +4835,7 @@ chosen. (`BlockPlacementResource`, `BlockPlacementStorage`,
 `ThemeRegionOptions`, `AnyThemeRegionConstraint`, `ExtensionExistsOptions`,
 `Storage\ConfigEntityStorage`,
 `DeletableStorageInterface`, `DeletingStorageInterface`,
-`VariantList::addStructure()`, `BlockPlacementResourceTest`,
+`SiteList::add(..., structure:)`, `BlockPlacementResourceTest`,
 `BlockPlacementToolsTest`, `BlockPlacementApiTest`,
 `BlockPlacementFormTest`, `BlockPlacementReactTest`,
 `ConfigEntityStorageTest`)
@@ -4660,8 +4855,10 @@ listed, and how they are put in order.
   know of a call is still whether it changes anything, may destroy
   what is there, or creates, and a listing's answer is what its outputs
   declare, which a kind would not add to.
-- **An operation may take keys of its own.** `#[Operation(values:
-  Structure::class)]` names the structure whose inputs a call takes and
+- **An operation may take keys of its own.** `#[Operation(structure:
+  Structure::class)]` (*renamed 2026-10-24* from `values:`, the word the
+  tool's input and the envelope use: [The surface was counted and
+  cut](#the-surface-was-counted-and-cut)) names the structure whose inputs a call takes and
   whose outputs it answers, in place of the resource's keys: the
   listing's `offset` (0 to 10000), `limit` (1 to 50, 20 by default) and
   `status`, and its `items`, a list of `{id, label, capacity, weight}`,
@@ -4814,8 +5011,11 @@ Decided 2026-10-23, with example 16, the sponsorship
   cannot see exists. Rejected: a `Choice` filled at build, which needs
   services in a static class and cannot say "any id the handler
   accepts" past the limit.
-- **The threshold, `data_surface.settings:reference_enum_limit`.** Up to
-  it (50 as shipped) the key lists its candidates: a select, a `oneOf`
+- **The threshold, `data_surface.settings:reference_list_limit`.**
+  (*Renamed 2026-10-24* from `reference_enum_limit`, beside
+  `site_list_limit`, a post-update moving the stored value: a list of
+  candidates is a `oneOf`, never an `enum`; [The surface was counted
+  and cut](#the-surface-was-counted-and-cut).) Up to it (50 as shipped) the key lists its candidates: a select, a `oneOf`
   with labels in both documents, an enum in the tool listing, narrowed
   by a client locally. Past it the key is an id: core's
   `entity_autocomplete` on the form, `x-surface.widget: autocomplete`
@@ -5063,8 +5263,9 @@ Decided 2026-10-24, with examples 12 and 13 on the development site,
 whose themes provide 312 components. A list the site decides is spelled
 out in the full schema and the tool listing while it has at most
 `data_surface.settings:site_list_limit` entries, 20 as shipped: one
-setting beside `reference_enum_limit`, with the same schema and a
-post-update of its own. Two kinds of key take their list from the site:
+setting beside `reference_list_limit` (so named since 2026-10-24, one
+pattern for the two), with the same schema and a post-update of its
+own. Two kinds of key take their list from the site:
 variants from the site (`attachVariants(from:)`, and the variants inside
 a structure read from a schema, a component in a slot) and keys from the
 site (`addEach()`, `attachEach()`). Each key is counted at its own
@@ -5160,10 +5361,11 @@ The build is unchanged: it still reads every component's structure,
 since the form and the pipeline hold the chosen one to its keys.
 
 *Open:* a key `refine` for another reason (a watched number, too many
-combinations) has no narrowing tool; variants a class declares or a
-deriver derives are not counted (a field type's settings, a list the
-site's modules decide too); the build of a resource still reads every
-variant. (`Contract\SiteListBudget`, `ContractEmitter::variants()`,
+combinations) has no narrowing tool; variants a class declares are not
+counted; the build of a resource still reads every variant. *Closed
+2026-10-24:* a field type's settings, derived until then and not
+counted, come from a provider and are counted
+([Derived variants](#derived-variants)). (`Contract\SiteListBudget`, `ContractEmitter::variants()`,
 `InputDefinitions::tooMany()`, `OperationInputs::narrows()`,
 `ResourceOperationSchemaTool`, `SiteCatalog::keys()`,
 `SiteListBudgetTest`, `CatalogMemoryTest`,
@@ -6145,8 +6347,10 @@ Decided 2026-10-22. A JSON Schema document is read into a blueprint by
 `Contract\SchemaReader`: the emitter run backwards, each keyword read
 as the declaration the emitter writes it from
 ([Reading a schema](reading-a-schema.md) has the mapping). Two ways in:
-`$inputs->fromSchema($document)` in a class, and variants a provider
-lists from the site, each with its schema. Each choice, and why:
+variants a provider lists from the site, each with its schema, and a
+document registered on its own, `SchemaReader::structure()`. (A third,
+`$inputs->fromSchema($document)` in a class, had no caller and no test,
+and was removed on 2026-10-24; [The surface was counted and cut](#the-surface-was-counted-and-cut).) Each choice, and why:
 
 - **The emitter's own mapping, reversed.** A keyword is read as what
   the emitter writes it from, not by a vocabulary of the reader's own,
@@ -6216,22 +6420,26 @@ lists from the site, each with its schema. Each choice, and why:
   conversion applies whatever `$schema` says, since it reads a spelling
   2020-12 does not have.
 - **Variants from a provider.** `attachVariants($key, by:, from:
-  Provider::class)` names a service implementing
-  `VariantsFromSiteInterface`, whose `variants()` answers a `VariantList`:
-  per value of the deciding key, its label and the schema of the
-  structure it chooses. Asked at every build, as a keys provider is
+  Provider::class)` names a service implementing `SiteListInterface`,
+  whose `list()` answers a `SiteList`: per value of the deciding key, its
+  label and the schema of the structure it chooses. Asked at every
+  build, as a keys provider is
   ([Keys that come from the site](#keys-that-come-from-the-site)), and
   refused when it cannot be cached or varies by the account, for the
-  same reasons. `KeysFromSiteInterface` was weighed and turned down: its
-  entry is a key, with a starting value and a lock, where a variant is a
-  structure chosen by a value, so the default and the lock would mean
-  nothing and the schema would have no place. Derived variants were
-  turned down too: a derived variant is plain definitions with no rules,
+  same reasons. The keys provider's interface was weighed and turned
+  down at first: its entry is a key, with a starting value and a lock,
+  where a variant is a structure chosen by a value, so the default and
+  the lock would mean nothing and the schema would have no place.
+  *Changed 2026-10-24:* the two are one interface and one list type, the
+  type-level split a build refusal: a variant entry with a start or a
+  lock is refused, and a key entry with a schema or a structure ([The surface was counted and cut](#the-surface-was-counted-and-cut)).
+  Derived variants were turned down too: a derived variant is plain definitions with no rules,
   children or variants of its own, and a schema may say all three, so
   each listed variant is a structure read from its schema, built by the
   same build step as a class. A declared `#[Variant]` wins for a value
   both name. *Added 2026-10-23:* an entry may name a structure class in
-  place of a schema (`VariantList::addStructure()`), built as declared,
+  place of a schema (`SiteList::add(..., structure:)`, `addStructure()`
+  until 2026-10-24), built as declared,
   for a value whose structure the site's code declares: a block plugin
   naming its settings with `#[UsesStructure]`
   ([A placed block is a resource](#a-placed-block-is-a-resource)). The contract does not change: `anyOf` of each variant's
@@ -6261,8 +6469,8 @@ document states; what a site narrows of a child (a lock its context
 made); a per-entry wiring of keys from the site; a `format` beyond
 `date`, `time` and `uuid` with a constraint of its own; a schema stored
 in configuration a site edits, as a provider of variants.
-(`Contract\SchemaReader`, `Resource\VariantsFromSiteInterface`,
-`Resource\VariantList`, `Plugin\Validation\Constraint\JsonSchemaConstraint`,
+(`Contract\SchemaReader`, `Resource\SiteListInterface`,
+`Resource\SiteList`, `Plugin\Validation\Constraint\JsonSchemaConstraint`,
 `ResourceRegistry::defineRead()`, `DefinitionMap::frameConstraints()`,
 `SchemaReaderTest`, `SchemaRoundTripTest`, `VariantsFromSiteTest`)
 

@@ -95,9 +95,6 @@ final class OperationDefinition {
    * @param \Drupal\data_surface\ResourceBuild\OperationParameter[] $parameters
    *   The method's parameters, in order: what a route or a tool has to
    *   supply, by name.
-   * @param bool $default
-   *   Whether it is the operation a child is invoked through when nothing
-   *   else picks one.
    * @param \Drupal\data_surface\Resource\ResourceCallable|null $context
    *   For a derived resource's operation, the method and the arguments it
    *   is bound to, called with the resolved arguments by name first;
@@ -118,7 +115,7 @@ final class OperationDefinition {
    *   NULL for none.
    * @param bool $deletes
    *   Whether a call removes the thing it names, taking no values.
-   * @param string|null $values
+   * @param string|null $structure
    *   The structure whose keys a call takes in place of the resource's,
    *   or NULL for the resource's own.
    *
@@ -137,7 +134,6 @@ final class OperationDefinition {
     public readonly ?string $permission,
     public readonly string $module,
     public readonly array $parameters = [],
-    public readonly bool $default = FALSE,
     public readonly ?ResourceCallable $context = NULL,
     public readonly bool $destructive = FALSE,
     public readonly bool $readOnly = FALSE,
@@ -145,7 +141,7 @@ final class OperationDefinition {
     public readonly bool $creates = FALSE,
     public readonly string|\Stringable|null $description = NULL,
     public readonly bool $deletes = FALSE,
-    public readonly ?string $values = NULL,
+    public readonly ?string $structure = NULL,
   ) {
     // Decision: see
     // docs/decisions.md#the-ids-are-the-standard-five-the-labels-are-drupals.
@@ -159,12 +155,12 @@ final class OperationDefinition {
     }
     // Decision: see
     // docs/decisions.md#a-listing-is-a-read-only-operation-with-outputs-a-reorder-is-an-update-over-the-collection.
-    if ($values !== NULL && ($creates || $deletes)) {
+    if ($structure !== NULL && ($creates || $deletes)) {
       throw new \LogicException(sprintf(
-        'The "%s" operation, %s, takes the values of %s and %s. An operation that creates or deletes is about the thing\'s own keys, so it takes the resource\'s.',
+        'The "%s" operation, %s, takes the keys of %s and %s. An operation that creates or deletes is about the thing\'s own keys, so it takes the resource\'s.',
         $id,
         $this->describe(),
-        $values,
+        $structure,
         $creates ? 'creates' : 'deletes',
       ));
     }

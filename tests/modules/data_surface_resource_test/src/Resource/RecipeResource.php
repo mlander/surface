@@ -18,9 +18,9 @@ use Drupal\data_surface_resource_test\Storage\RecipeStorage;
 /**
  * A recipe in a kitchen: every part of a resource, in one.
  *
- * Two identity keys, two operations, storage, an access class, outputs,
- * and three refiners: one watching a sibling by name, one watching two
- * through `watches:`, and one watching nothing.
+ * Two identity keys, three operations (one returning a context that says
+ * another id), storage, an access class, outputs, and three refiners: one
+ * watching a sibling, one watching two, and one watching nothing.
  */
 #[Resource('resource_test.recipe',
   identity: ['kitchen', 'name'],
@@ -57,6 +57,14 @@ final class RecipeResource implements ResourceInterface, DefinesOutputsInterface
   }
 
   /**
+   * Forgets to say which operation it is.
+   */
+  #[Operation('mislabeled', label: 'Mislabeled')]
+  public static function mislabeled(string $kitchen): OperationContext {
+    return self::create($kitchen);
+  }
+
+  /**
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
@@ -89,9 +97,9 @@ final class RecipeResource implements ResourceInterface, DefinesOutputsInterface
   /**
    * Fewer servings of dessert, and two fewer again for a vegetarian dish.
    *
-   * Watches two siblings, listed so a renamed parameter is caught.
+   * Watches two siblings, by its parameter names.
    */
-  #[RefinesInput('servings', watches: ['course', 'vegetarian'])]
+  #[RefinesInput('servings')]
   public static function servingsFor(DataDefinitionInterface $servings, string $course, bool $vegetarian): DataDefinitionInterface {
     $max = ($course === 'dessert' ? 8 : 12) - ($vegetarian ? 2 : 0);
     // Only the maximum moves: an operation may have raised the minimum,

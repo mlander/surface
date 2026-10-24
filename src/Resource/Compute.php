@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace Drupal\data_surface\Resource;
 
 /**
- * When a computed key is computed: the `when:` of derive().
+ * When a computed key is computed: the `when:` of compute().
  *
  * Decision: see
  * docs/decisions.md#a-computed-key-is-a-pure-function-of-its-sources.
  */
-final class Derive {
+final class Compute {
 
   /**
    * Once, when the thing is created; kept as stored after, the default.

@@ -45,13 +45,13 @@ use Drupal\data_surface_examples\Structure\VenueRoomStructure;
   description: new TranslatableMarkup('Answers a page of the venues, lighter first, each one the account may read, and how many the filter matched.'),
   permission: self::VIEW,
   readOnly: TRUE,
-  values: VenueListingStructure::class,
+  structure: VenueListingStructure::class,
 )]
 #[Operation('reorder',
   label: new TranslatableMarkup('Reorder the venues'),
   description: new TranslatableMarkup('Gives each venue named its new weight, all in one write; a venue left out keeps its own, and an unknown or repeated venue is refused.'),
   permission: self::ADMINISTER,
-  values: VenueReorderStructure::class,
+  structure: VenueReorderStructure::class,
 )]
 final class VenueResource implements ResourceInterface {
 
@@ -106,7 +106,7 @@ final class VenueResource implements ResourceInterface {
         'message' => t('The machine name may hold only lowercase letters, numbers and underscores.'),
       ])
       ->addConstraint('Length', ['max' => 32]);
-    $inputs->derive('slug', 'string', t('Slug'), from: ['label'], using: Slugify::class)
+    $inputs->compute('slug', 'string', t('Slug'), from: ['label'], using: Slugify::class)
       ->setDescription(t('The name in a link: lowercase letters, numbers and dashes, set when the venue is added.'))
       ->addConstraint('Regex', [
         'pattern' => '/^[a-z0-9]+(-[a-z0-9]+)*$/D',

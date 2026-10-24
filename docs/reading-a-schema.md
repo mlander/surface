@@ -10,21 +10,10 @@ document may be one the emitter wrote, or one written anywhere else: a
 single-directory component's props, a tool's input schema, an OpenAPI
 component.
 
-There are three ways in.
-
-- **In a class.** `$inputs->fromSchema($document)` in `defineInputs()`
-  declares what the document describes, beside anything else the class
-  declares. It answers the notes ([below](#what-is-noted)).
-
-  ```php
-  public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->fromSchema([
-      'type' => 'object',
-      'properties' => ['heading' => ['type' => 'string', 'title' => 'Heading', 'maxLength' => 80]],
-      'required' => ['heading'],
-    ]);
-  }
-  ```
+There are two ways in. (A third, `$inputs->fromSchema($document)` in a
+class, had no caller and no test, and was removed on 2026-10-24: a class
+that has its document in hand registers it on its own, below, and
+attaches the structure.)
 
 - **From the site.** Variants whose values and schemas are the site's,
   `attachVariants($key, by: $sibling, from: Provider::class)`: one
@@ -160,9 +149,8 @@ a rule is checked on the server alone, and never stricter
 
 Reading answers notes, by the JSON pointer of what each is about: a
 keyword dropped, a keyword kept as a JsonSchema constraint, an object
-read closed, a `format` no constraint checks. `fromSchema()` answers
-those of the frame it reads; `notes($document)` reads every frame of
-the document and answers all of them, building nothing. Example 12's
+read closed, a `format` no constraint checks. `notes($document)` reads
+every frame of the document and answers all of them, building nothing. Example 12's
 card notes one: `/properties/link/additionalProperties`, "Read closed:
 a map holds the keys it declares, and a key the schema leaves open is
 refused."

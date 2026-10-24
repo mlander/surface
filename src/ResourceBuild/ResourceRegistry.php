@@ -23,8 +23,8 @@ use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface\Reference\EntityReferenceStructure;
 use Drupal\data_surface\Resource\ResourceCallable;
 use Drupal\data_surface\Resource\DefinesOutputsInterface;
-use Drupal\data_surface\Resource\AltersAccessInterface;
 use Drupal\data_surface\Resource\AltersInputsInterface;
+use Drupal\data_surface\Resource\OperationAccessInterface;
 use Drupal\data_surface\Resource\ResourceInterface;
 use Drupal\data_surface\Resource\ShapeInterface;
 use Drupal\data_surface\Resource\StructureInterface;
@@ -82,6 +82,21 @@ final class ResourceRegistry {
    * The cache id prefix in the discovery bin.
    */
   protected const CACHE_PREFIX = 'data_surface:resources:';
+
+  /**
+   * The attribute arguments removed on 2026-10-24, with what replaced each.
+   *
+   * Decision: see docs/decisions.md#the-surface-was-counted-and-cut.
+   */
+  protected const REMOVED_ARGUMENTS = [
+    RefinesInput::class => [
+      'watches' => 'what a refiner watches is its parameters after the definition, each named for the key it is handed.',
+    ],
+    Operation::class => [
+      'default' => 'a child is invoked through the operation its parent\'s context names, else its operation with the parent context\'s id, else its operation with the standard id of the parent operation\'s kind (create, update or configure, read or list, delete).',
+      'of' => 'an operation stands on its resource\'s or structure\'s own class.',
+    ],
+  ];
 
   /**
    * The index, once read: what there is, by name, and the shapes.
@@ -764,27 +779,12 @@ final class ResourceRegistry {
    *   The operations, keyed by id.
    *
    * @throws \LogicException
-   *   When two providers declare one operation id, or two operations are
-   *   marked the default.
+   *   When two providers declare one operation id.
    */
   public function getOperations(string $resource): array {
     $definition = $this->getDefinition($resource);
     $operations = [];
-    $default = NULL;
     foreach ($definition->operations as $operation) {
-      if ($operation->default) {
-        if ($default !== NULL) {
-          throw new \LogicException(sprintf(
-            '%s marks two operations the default, "%s" from %s and "%s" from %s. The default is the one operation a parent invokes when nothing else picks one, so there is at most one.',
-            $definition->id,
-            $default->id,
-            $default->describe(),
-            $operation->id,
-            $operation->describe(),
-          ));
-        }
-        $default = $operation;
-      }
       if (isset($operations[$operation->id])) {
         throw new \LogicException(sprintf(
           '%s has two operations with the id "%s", from %s and from %s. An operation id is unique within its resource or structure, because it is the id a context is addressed by.',
@@ -973,6 +973,7 @@ final class ResourceRegistry {
         ));
       }
       $ids[$id] = $class;
+      self::assertAccessClass($class, $attribute?->access);
       $resources[$class] = new ResourceDefinition(
         class: $class,
         id: $id,
@@ -1029,26 +1030,18 @@ final class ResourceRegistry {
       // attribute's id and answer and nothing else, so it has no method.
       // Decision: see docs/decisions.md#an-operation-on-the-class.
       foreach ($reflection->getAttributes(Operation::class) as $attribute) {
+        $where = sprintf('#[Operation(\'%s\')] on %s', self::idOf($attribute), $class);
+        self::assertNoRemovedArgument($attribute, $where);
         $operation = $attribute->newInstance();
-        $where = sprintf('#[Operation(\'%s\')] on %s', $operation->id, $class);
-        $of = $operation->of ?? (isset($resources[$class]) ? $class : throw new \LogicException(sprintf(
-          '%s names no resource or structure: `of` may be left out only on the class carrying #[Resource] or #[Structure] itself.',
-          $where,
-        )));
-        if (self::isUndiscovered($of, $resources, $where)) {
-          continue;
-        }
+        $of = self::operationOwner($class, $resources, $where);
         $operations[$of][] = self::operationDefinition($operation, $of, $class, '', $module, [], $operation->description);
       }
       foreach ($reflection->getMethods() as $method) {
         foreach ($method->getAttributes(Operation::class) as $attribute) {
+          $where = sprintf('#[Operation(\'%s\')] on %s::%s()', self::idOf($attribute), $class, $method->getName());
+          self::assertNoRemovedArgument($attribute, $where);
           $operation = $attribute->newInstance();
-          $of = $operation->of ?? (isset($resources[$class]) ? $class : throw new \LogicException(sprintf(
-            '#[Operation(\'%s\')] on %s::%s() names no resource or structure: `of` may be left out only on the class carrying #[Resource] or #[Structure] itself.',
-            $operation->id,
-            $class,
-            $method->getName(),
-          )));
+          $of = self::operationOwner($class, $resources, $where);
           if (!$method->isStatic()) {
             throw new \LogicException(sprintf(
               '#[Operation(\'%s\')] on %s::%s() is not static: an operation builds a context before anything is built to ask.',
@@ -1056,9 +1049,6 @@ final class ResourceRegistry {
               $class,
               $method->getName(),
             ));
-          }
-          if (self::isUndiscovered($of, $resources, sprintf('#[Operation(\'%s\')] on %s::%s()', $operation->id, $class, $method->getName()))) {
-            continue;
           }
           $definition = self::operationDefinition(
             $operation,
@@ -1079,6 +1069,9 @@ final class ResourceRegistry {
     $shape_alters = [];
     foreach ($this->classes['alters'] ?? [] as $class => $module) {
       $reflection = new \ReflectionClass($class);
+      if ($reflection->hasMethod('alterOutputs')) {
+        throw ResourceCollectorPass::outputsRefused($class);
+      }
       $attribute = $reflection->getAttributes(Alters::class)[0]->newInstance();
       if (isset($shapes[$attribute->of])) {
         self::assertShapeAlter($reflection, $attribute, $shapes[$attribute->of]);
@@ -1092,7 +1085,7 @@ final class ResourceRegistry {
         module: $module,
         operations: array_values($attribute->operations),
         refiners: self::refinersOf($reflection),
-        answersAccess: $reflection->implementsInterface(AltersAccessInterface::class),
+        answersAccess: $reflection->implementsInterface(OperationAccessInterface::class),
       );
       foreach ($named as $altered) {
         if (!isset($bases[$attribute->of]) && self::isUndiscovered($altered, $resources, sprintf('#[Alters] on %s', $class))) {
@@ -1155,6 +1148,101 @@ final class ResourceRegistry {
   }
 
   /**
+   * Reads the id an attribute names first, for a message.
+   *
+   * @param \ReflectionAttribute $attribute
+   *   An #[Operation] or a #[RefinesInput].
+   *
+   * @return string
+   *   Its first argument, by position or by name.
+   */
+  protected static function idOf(\ReflectionAttribute $attribute): string {
+    $arguments = $attribute->getArguments();
+    $first = $arguments[0] ?? $arguments['id'] ?? $arguments['key'] ?? '';
+    return is_string($first) ? $first : '';
+  }
+
+  /**
+   * Refuses an attribute argument the module no longer takes.
+   *
+   * Each is named with what replaced it, before the attribute is
+   * instantiated, so the message says more than PHP's unknown parameter.
+   *
+   * Decision: see docs/decisions.md#the-surface-was-counted-and-cut.
+   *
+   * @param \ReflectionAttribute $attribute
+   *   The attribute.
+   * @param string $where
+   *   It and the class or method it is on, for the message.
+   *
+   * @throws \LogicException
+   *   When it names an argument that was removed.
+   */
+  protected static function assertNoRemovedArgument(\ReflectionAttribute $attribute, string $where): void {
+    $removed = self::REMOVED_ARGUMENTS[$attribute->getName()] ?? [];
+    foreach (array_intersect_key($removed, $attribute->getArguments()) as $name => $instead) {
+      throw new \LogicException(sprintf('%s says %s:, which the attribute no longer takes: %s', $where, $name, $instead));
+    }
+  }
+
+  /**
+   * Gets the resource or structure an #[Operation] on a class belongs to.
+   *
+   * Decision: see docs/decisions.md#the-surface-was-counted-and-cut.
+   *
+   * @param string $class
+   *   The class carrying it.
+   * @param array<string, \Drupal\data_surface\ResourceBuild\ResourceDefinition> $resources
+   *   What discovery found.
+   * @param string $where
+   *   The attribute and where it is, for the message.
+   *
+   * @return string
+   *   The class itself.
+   *
+   * @throws \LogicException
+   *   When the class is no resource or structure.
+   */
+  protected static function operationOwner(string $class, array $resources, string $where): string {
+    if (!isset($resources[$class])) {
+      throw new \LogicException(sprintf(
+        '%s stands on a class that is no resource or structure. An operation stands on its resource\'s or structure\'s own class.',
+        $where,
+      ));
+    }
+    return $class;
+  }
+
+  /**
+   * Refuses an access class that is an alter.
+   *
+   * An alter that answers access implements OperationAccessInterface, as
+   * an access class does, and is read in its own role: after the owner's
+   * answer, its neutral open. Named on `access:` as well, it would answer
+   * twice, once in each role.
+   *
+   * Decision: see
+   * docs/decisions.md#an-alter-may-answer-access-and-the-stricter-stands.
+   *
+   * @param string $class
+   *   The resource or structure.
+   * @param string|null $access
+   *   The class its attribute names on `access:`.
+   *
+   * @throws \LogicException
+   *   When the access class carries #[Alters].
+   */
+  protected static function assertAccessClass(string $class, ?string $access): void {
+    if ($access !== NULL && class_exists($access) && (new \ReflectionClass($access))->getAttributes(Alters::class) !== []) {
+      throw new \LogicException(sprintf(
+        '%s names %s on access:, which carries #[Alters]. An alter that answers access is asked as an alter, after the owner\'s answer; an access class is the owner\'s own. Name a class that carries no #[Alters], or leave the alter to answer as one.',
+        $class,
+        $access,
+      ));
+    }
+  }
+
+  /**
    * Refuses a class carrying #[Shape] beside #[Resource] or #[Structure].
    *
    * @param \ReflectionClass $class
@@ -1200,7 +1288,7 @@ final class ResourceRegistry {
     $problem = match (TRUE) {
       $attribute->operations !== [] => 'names operations, and a shape is the same in every operation of every key that uses it',
       self::refinersOf($class) !== [] => 'declares a #[RefinesInput] method, and a shape has no siblings to watch: tighten it in alterInputs() with narrow()',
-      $class->implementsInterface(AltersAccessInterface::class) => sprintf('implements %s, and a shape is one value with no access of its own: answer for the resource or structure that asks for it', AltersAccessInterface::class),
+      $class->implementsInterface(OperationAccessInterface::class) => sprintf('implements %s, and a shape is one value with no access of its own: answer for the resource or structure that asks for it', OperationAccessInterface::class),
       !$class->implementsInterface(AltersInputsInterface::class) => sprintf('does not implement %s, whose alterInputs() is where a shape is tightened', AltersInputsInterface::class),
       default => NULL,
     };
@@ -1296,7 +1384,6 @@ final class ResourceRegistry {
                 array_keys($operation->parameters),
                 array_values($operation->parameters),
               ),
-              default: $operation->default,
               context: $operation->context,
               destructive: $operation->destructive,
               readOnly: $operation->readOnly,
@@ -1346,14 +1433,13 @@ final class ResourceRegistry {
       permission: $operation->permission,
       module: $module,
       parameters: $parameters,
-      default: $operation->default,
       destructive: $operation->destructive,
       readOnly: $operation->readOnly,
       idempotent: $operation->idempotent,
       creates: $operation->creates,
       description: $description,
       deletes: $operation->deletes,
-      values: $operation->values,
+      structure: $operation->structure,
     );
   }
 
@@ -1541,6 +1627,7 @@ final class ResourceRegistry {
     $refiners = [];
     foreach ($class->getMethods() as $method) {
       foreach ($method->getAttributes(RefinesInput::class) as $attribute) {
+        self::assertNoRemovedArgument($attribute, sprintf('#[RefinesInput(\'%s\')] on %s::%s()', self::idOf($attribute), $class->getName(), $method->getName()));
         $refines = $attribute->newInstance();
         $parameters = $method->getParameters();
         // The account the operation runs as is handed to a last parameter
@@ -1556,7 +1643,6 @@ final class ResourceRegistry {
           class: $class->getName(),
           method: $method->getName(),
           key: $refines->key,
-          watches: $refines->watches === NULL ? NULL : array_values($refines->watches),
           parameters: array_map(
             static fn (\ReflectionParameter $parameter): string => $parameter->getName(),
             array_slice($parameters, 1),

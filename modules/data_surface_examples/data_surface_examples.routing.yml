@@ -43,8 +43,6 @@ data_surface_examples.step1:
     _data_surface_resource: 'Drupal\data_surface_examples\Resource\RegistrationStep1Resource'
     _data_surface_operation: 'configure'
     _data_surface_panel: 'data_surface_examples.panels'
-  requirements:
-    _data_surface_operation_access: 'TRUE'
 
 data_surface_examples.step1_classic:
   path: '/surface-examples/1/classic'
@@ -62,8 +60,6 @@ data_surface_examples.step2:
     _data_surface_resource: 'Drupal\data_surface_examples\Resource\RegistrationStep2Resource'
     _data_surface_operation: 'configure'
     _data_surface_panel: 'data_surface_examples.panels'
-  requirements:
-    _data_surface_operation_access: 'TRUE'
 
 data_surface_examples.step2_classic:
   path: '/surface-examples/2/classic'
@@ -81,8 +77,6 @@ data_surface_examples.step3:
     _data_surface_resource: 'Drupal\data_surface_examples\Resource\RegistrationStep3Resource'
     _data_surface_operation: 'configure'
     _data_surface_panel: 'data_surface_examples.panels'
-  requirements:
-    _data_surface_operation_access: 'TRUE'
 
 data_surface_examples.step4:
   path: '/surface-examples/4'
@@ -108,8 +102,6 @@ data_surface_examples.step7:
     _data_surface_resource: 'Drupal\data_surface_examples\Resource\BulletinResource'
     _data_surface_operation: 'configure'
     _data_surface_panel: 'data_surface_examples.panels'
-  requirements:
-    _data_surface_operation_access: 'TRUE'
 
 data_surface_examples.step8:
   path: '/surface-examples/8'
@@ -119,8 +111,6 @@ data_surface_examples.step8:
     _data_surface_resource: 'Drupal\data_surface_examples\Resource\PressResource'
     _data_surface_operation: 'configure'
     _data_surface_panel: 'data_surface_examples.panels'
-  requirements:
-    _data_surface_operation_access: 'TRUE'
 
 data_surface_examples.step8_desk:
   path: '/surface-examples/8/desk'
@@ -130,8 +120,6 @@ data_surface_examples.step8_desk:
     _data_surface_resource: 'Drupal\data_surface_examples\Resource\InfoDeskResource'
     _data_surface_operation: 'configure'
     _data_surface_panel: 'data_surface_examples.panels'
-  requirements:
-    _data_surface_operation_access: 'TRUE'
 
 data_surface_examples.step9:
   path: '/surface-examples/9'
@@ -141,8 +129,6 @@ data_surface_examples.step9:
     _data_surface_resource: 'Drupal\data_surface_examples\Resource\TicketSalesResource'
     _data_surface_operation: 'configure'
     _data_surface_panel: 'data_surface_examples.panels'
-  requirements:
-    _data_surface_operation_access: 'TRUE'
 
 data_surface_examples.step10:
   path: '/surface-examples/10'
@@ -152,8 +138,6 @@ data_surface_examples.step10:
     _data_surface_resource: 'Drupal\data_surface_examples\Resource\ProgramResource'
     _data_surface_operation: 'configure'
     _data_surface_panel: 'data_surface_examples.panels'
-  requirements:
-    _data_surface_operation_access: 'TRUE'
 
 data_surface_examples.step10_check:
   path: '/surface-examples/10/check'
@@ -163,8 +147,6 @@ data_surface_examples.step10_check:
     _data_surface_resource: 'Drupal\data_surface_examples\Resource\ProgramResource'
     _data_surface_operation: 'check'
     _data_surface_panel: 'data_surface_examples.panels'
-  requirements:
-    _data_surface_operation_access: 'TRUE'
 
 data_surface_examples.step11:
   path: '/surface-examples/11'
@@ -174,8 +156,6 @@ data_surface_examples.step11:
     _data_surface_resource: 'Drupal\data_surface_examples\Resource\DoorsResource'
     _data_surface_operation: 'configure'
     _data_surface_panel: 'data_surface_examples.panels'
-  requirements:
-    _data_surface_operation_access: 'TRUE'
 
 data_surface_examples.step12:
   path: '/surface-examples/12'
@@ -185,8 +165,6 @@ data_surface_examples.step12:
     _data_surface_resource: 'Drupal\data_surface_examples\Resource\SpotlightResource'
     _data_surface_operation: 'configure'
     _data_surface_panel: 'data_surface_examples.panels'
-  requirements:
-    _data_surface_operation_access: 'TRUE'
 
 data_surface_examples.step13:
   path: '/surface-examples/13'
@@ -204,8 +182,6 @@ data_surface_examples.step14:
     _data_surface_resource: 'Drupal\data_surface_examples\Resource\MailerResource'
     _data_surface_operation: 'configure'
     _data_surface_panel: 'data_surface_examples.panels'
-  requirements:
-    _data_surface_operation_access: 'TRUE'
 
 data_surface_examples.step14_webhook:
   path: '/surface-examples/14/webhook'
@@ -215,8 +191,6 @@ data_surface_examples.step14_webhook:
     _data_surface_resource: 'Drupal\data_surface_examples\Resource\WebhookResource'
     _data_surface_operation: 'configure'
     _data_surface_panel: 'data_surface_examples.panels'
-  requirements:
-    _data_surface_operation_access: 'TRUE'
 
 data_surface_examples.step15:
   path: '/surface-examples/15'
@@ -239,8 +213,6 @@ data_surface_examples.step15_create:
     _data_surface_resource: 'Drupal\data_surface_examples\Resource\VenueResource'
     _data_surface_operation: 'create'
     _data_surface_cosmetics: 'data_surface_examples.venue_form_cosmetics'
-  requirements:
-    _data_surface_operation_access: 'TRUE'
 
 data_surface_examples.step15_update:
   path: '/surface-examples/15/venue/{id}'
@@ -250,8 +222,6 @@ data_surface_examples.step15_update:
     _data_surface_resource: 'Drupal\data_surface_examples\Resource\VenueResource'
     _data_surface_operation: 'update'
     _data_surface_cosmetics: 'data_surface_examples.venue_form_cosmetics'
-  requirements:
-    _data_surface_operation_access: 'TRUE'
   options:
     parameters:
       id:
@@ -265,8 +235,6 @@ data_surface_examples.step15_delete:
     _data_surface_resource: 'Drupal\data_surface_examples\Resource\VenueResource'
     _data_surface_operation: 'delete'
     _data_surface_cosmetics: 'data_surface_examples.venue_form_cosmetics'
-  requirements:
-    _data_surface_operation_access: 'TRUE'
   options:
     parameters:
       id:

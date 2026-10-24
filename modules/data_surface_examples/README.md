@@ -281,7 +281,7 @@ of code, counted without blank lines or comments:
 | --- | --- | --- |
 | [`modules/data_surface_examples/src/Resource/RegistrationStep1Resource.php`](src/Resource/RegistrationStep1Resource.php) | the resource: three keys, each with what it allows, and the operation that asks for them | 15 |
 | [`modules/data_surface_examples/src/Storage/RegistrationStep1Storage.php`](src/Storage/RegistrationStep1Storage.php) | the storage: names the config object | 3 |
-| [`modules/data_surface_examples/data_surface_examples.routing.yml`](data_surface_examples.routing.yml), entry `data_surface_examples.step1` | the route: the generic operation form, serving the resource | 10 |
+| [`modules/data_surface_examples/data_surface_examples.routing.yml`](data_surface_examples.routing.yml), entry `data_surface_examples.step1` | the route: the generic operation form, serving the resource | 8 |
 | [`modules/data_surface_examples/config/schema/data_surface_examples.schema.yml`](config/schema/data_surface_examples.schema.yml), entry `data_surface_examples.registration_step1` | the config schema, generated from the class | 21 |
 | [`modules/data_surface_examples/config/install/data_surface_examples.registration_step1.yml`](config/install/data_surface_examples.registration_step1.yml) | the settings the module ships with | 3 |
 | [`modules/data_surface_examples/src/Form/RegistrationStep1ClassicForm.php`](src/Form/RegistrationStep1ClassicForm.php) | the classic twin: the same settings written by hand as a config form | 30 |
@@ -578,7 +578,7 @@ of code, counted without blank lines or comments:
 | [`modules/data_surface_examples/src/VenueChoices.php`](src/VenueChoices.php) | the venues and rooms an event may be held in: example 15's venue entities, read under their list tag | 28 |
 | [`modules/data_surface_examples/src/Venues.php`](src/Venues.php) | the seats of each room, which the capacity reads, beside the fixed lists of venues and rooms example 3 and the classic twin choose from | 27 |
 | [`modules/data_surface_examples/src/Storage/RegistrationStep2Storage.php`](src/Storage/RegistrationStep2Storage.php) | the storage: names the config object | 3 |
-| [`modules/data_surface_examples/data_surface_examples.routing.yml`](data_surface_examples.routing.yml), entry `data_surface_examples.step2` | the route | 10 |
+| [`modules/data_surface_examples/data_surface_examples.routing.yml`](data_surface_examples.routing.yml), entry `data_surface_examples.step2` | the route | 8 |
 | [`modules/data_surface_examples/config/schema/data_surface_examples.schema.yml`](config/schema/data_surface_examples.schema.yml), entry `data_surface_examples.registration_step2` | the config schema, generated from the class | 26 |
 | [`modules/data_surface_examples/config/install/data_surface_examples.registration_step2.yml`](config/install/data_surface_examples.registration_step2.yml) | the settings the module ships with | 5 |
 | [`modules/data_surface_examples/src/Form/RegistrationStep2ClassicForm.php`](src/Form/RegistrationStep2ClassicForm.php) | the classic twin: the same five questions and both rules, written by hand | 94 |
@@ -741,7 +741,7 @@ of code, counted without blank lines or comments:
 | [`modules/data_surface_examples/src/Structure/PaidTicketStructure.php`](src/Structure/PaidTicketStructure.php) | the paid ticket: the variant for the pricing paid, a price and a currency | 12 |
 | [`modules/data_surface_examples/src/Structure/ContactStructure.php`](src/Structure/ContactStructure.php) | the contact: a structure of two keys, attached | 8 |
 | [`modules/data_surface_examples/src/Storage/RegistrationStep3Storage.php`](src/Storage/RegistrationStep3Storage.php) | the storage: names the config object | 3 |
-| [`modules/data_surface_examples/data_surface_examples.routing.yml`](data_surface_examples.routing.yml), entry `data_surface_examples.step3` | the route | 10 |
+| [`modules/data_surface_examples/data_surface_examples.routing.yml`](data_surface_examples.routing.yml), entry `data_surface_examples.step3` | the route | 8 |
 | [`modules/data_surface_examples/config/schema/data_surface_examples.schema.yml`](config/schema/data_surface_examples.schema.yml), entry `data_surface_examples.registration_step3` | the config schema, generated from the class | 49 |
 | [`modules/data_surface_examples/config/schema/data_surface_examples.schema.yml`](config/schema/data_surface_examples.schema.yml), entry `data_surface_examples.registration_step3.ticket.free` | the free ticket's config schema | 10 |
 | [`modules/data_surface_examples/config/schema/data_surface_examples.schema.yml`](config/schema/data_surface_examples.schema.yml), entry `data_surface_examples.registration_step3.ticket.paid` | the paid ticket's config schema | 15 |
@@ -1283,7 +1283,7 @@ of code, counted without blank lines or comments:
 | --- | --- | --- |
 | [`modules/data_surface_examples/src/Resource/BulletinResource.php`](src/Resource/BulletinResource.php) | the resource: three keys and two declared rules | 29 |
 | [`modules/data_surface_examples/src/Storage/BulletinStorage.php`](src/Storage/BulletinStorage.php) | the storage: names the config object | 3 |
-| [`modules/data_surface_examples/data_surface_examples.routing.yml`](data_surface_examples.routing.yml), entry `data_surface_examples.step7` | the route | 10 |
+| [`modules/data_surface_examples/data_surface_examples.routing.yml`](data_surface_examples.routing.yml), entry `data_surface_examples.step7` | the route | 8 |
 | [`modules/data_surface_examples/config/schema/data_surface_examples.schema.yml`](config/schema/data_surface_examples.schema.yml), entry `data_surface_examples.bulletin` | the config schema, generated from the class | 20 |
 | [`modules/data_surface_examples/config/install/data_surface_examples.bulletin.yml`](config/install/data_surface_examples.bulletin.yml) | the settings the module ships with | 3 |
 
@@ -1492,8 +1492,8 @@ of code, counted without blank lines or comments:
 | [`modules/data_surface_examples/src/Storage/PressStorage.php`](src/Storage/PressStorage.php) | its storage: names the config object | 3 |
 | [`modules/data_surface_examples/src/Resource/InfoDeskResource.php`](src/Resource/InfoDeskResource.php) | the information desk: the phone, the person attached, and a collection of up to four | 17 |
 | [`modules/data_surface_examples/src/Storage/InfoDeskStorage.php`](src/Storage/InfoDeskStorage.php) | its storage: names the config object | 3 |
-| [`modules/data_surface_examples/data_surface_examples.routing.yml`](data_surface_examples.routing.yml), entry `data_surface_examples.step8` | the press page's route | 10 |
-| [`modules/data_surface_examples/data_surface_examples.routing.yml`](data_surface_examples.routing.yml), entry `data_surface_examples.step8_desk` | the information desk's route | 10 |
+| [`modules/data_surface_examples/data_surface_examples.routing.yml`](data_surface_examples.routing.yml), entry `data_surface_examples.step8` | the press page's route | 8 |
+| [`modules/data_surface_examples/data_surface_examples.routing.yml`](data_surface_examples.routing.yml), entry `data_surface_examples.step8_desk` | the information desk's route | 8 |
 | [`modules/data_surface_examples/config/schema/data_surface_examples.schema.yml`](config/schema/data_surface_examples.schema.yml), entry `data_surface_examples.press` | the press page's config schema, generated from the class | 39 |
 | [`modules/data_surface_examples/config/schema/data_surface_examples.schema.yml`](config/schema/data_surface_examples.schema.yml), entry `data_surface_examples.desk` | the information desk's config schema, generated from the class | 59 |
 | [`modules/data_surface_examples/config/install/data_surface_examples.press.yml`](config/install/data_surface_examples.press.yml) | the press page's shipped settings | 7 |
@@ -1608,7 +1608,7 @@ into its limits:
 <!-- code: src/Keys/TicketTypes.php -->
 
 ```php
-final class TicketTypes implements KeysFromSiteInterface, ContainerInjectionInterface {
+final class TicketTypes implements SiteListInterface, ContainerInjectionInterface {
 
   /**
    * The configuration object the ticket types are listed in.
@@ -1635,9 +1635,9 @@ final class TicketTypes implements KeysFromSiteInterface, ContainerInjectionInte
   /**
    * {@inheritdoc}
    */
-  public function keys(): KeyedList {
+  public function list(): SiteList {
     $config = $this->configFactory->get(self::CONFIG);
-    $keys = (new KeyedList())->addCacheableDependency($config);
+    $keys = (new SiteList())->addCacheableDependency($config);
     foreach ($config->get('types') ?? [] as $id => $type) {
       $keys->add((string) $id, (string) $type['label'], locked: (bool) ($type['locked'] ?? FALSE));
     }
@@ -1696,7 +1696,7 @@ of code, counted without blank lines or comments:
 | [`modules/data_surface_examples/src/Structure/TicketLimitStructure.php`](src/Structure/TicketLimitStructure.php) | one type's limits: two keys that apply while it is on sale, read through a port | 11 |
 | [`modules/data_surface_examples/src/Keys/TicketTypes.php`](src/Keys/TicketTypes.php) | the provider: lists the ticket types from the site's configuration | 17 |
 | [`modules/data_surface_examples/src/Storage/TicketSalesStorage.php`](src/Storage/TicketSalesStorage.php) | the storage: names the config object | 3 |
-| [`modules/data_surface_examples/data_surface_examples.routing.yml`](data_surface_examples.routing.yml), entry `data_surface_examples.step9` | the route | 10 |
+| [`modules/data_surface_examples/data_surface_examples.routing.yml`](data_surface_examples.routing.yml), entry `data_surface_examples.step9` | the route | 8 |
 | [`modules/data_surface_examples/config/schema/data_surface_examples.schema.yml`](config/schema/data_surface_examples.schema.yml), entry `data_surface_examples.sales` | the config schema, generated from the class | 30 |
 | [`modules/data_surface_examples/config/schema/data_surface_examples.schema.yml`](config/schema/data_surface_examples.schema.yml), entry `data_surface_examples.ticket_types` | the ticket types' config schema, written by hand | 17 |
 | [`modules/data_surface_examples/config/install/data_surface_examples.sales.yml`](config/install/data_surface_examples.sales.yml) | the settings the module ships with | 14 |
@@ -1852,7 +1852,9 @@ drush pm:install data_surface_examples_workflow
 
 then reload example 10. A second module, which example 10 does not
 know, answers access for the program and its fees with two alters,
-each implementing `AltersAccessInterface`. Its answers are asked after
+each implementing `OperationAccessInterface`, the access class's
+interface, which `#[Alters]` on the class makes an alter's answer. Its
+answers are asked after
 the program's own (the operation's permission, then the fees' access
 class), and the stricter answer stands, so it can lock or leave out
 and can never open what the fees' own access locked
@@ -1874,7 +1876,7 @@ answer's kind is read from its cacheability, as any answer's is:
 
 ```php
 #[Alters(FeesStructure::class)]
-final class FeesWorkflowAlter implements AltersAccessInterface {
+final class FeesWorkflowAlter implements OperationAccessInterface {
 
   /**
    * The permission that may see the fees.
@@ -1915,7 +1917,7 @@ final class FeesWorkflowAlter implements AltersAccessInterface {
 
 ```php
 #[Alters(ProgramResource::class, operations: ['configure'])]
-final class ProgramWorkflowAlter implements AltersAccessInterface {
+final class ProgramWorkflowAlter implements OperationAccessInterface {
 
   /**
    * The State key holding the program's workflow state.
@@ -1983,8 +1985,8 @@ of code, counted without blank lines or comments:
 | [`modules/data_surface_examples/src/Structure/FeesStructure.php`](src/Structure/FeesStructure.php) | the fees: two keys, naming their access class | 9 |
 | [`modules/data_surface_examples/src/Access/FeesAccess.php`](src/Access/FeesAccess.php) | the access class: locks the fees by permission, then once the program is published | 18 |
 | [`modules/data_surface_examples/src/Storage/ProgramStorage.php`](src/Storage/ProgramStorage.php) | the storage: names the config object | 3 |
-| [`modules/data_surface_examples/data_surface_examples.routing.yml`](data_surface_examples.routing.yml), entry `data_surface_examples.step10` | the route that configures | 10 |
-| [`modules/data_surface_examples/data_surface_examples.routing.yml`](data_surface_examples.routing.yml), entry `data_surface_examples.step10_check` | the route that checks | 10 |
+| [`modules/data_surface_examples/data_surface_examples.routing.yml`](data_surface_examples.routing.yml), entry `data_surface_examples.step10` | the route that configures | 8 |
+| [`modules/data_surface_examples/data_surface_examples.routing.yml`](data_surface_examples.routing.yml), entry `data_surface_examples.step10_check` | the route that checks | 8 |
 | [`modules/data_surface_examples/config/schema/data_surface_examples.schema.yml`](config/schema/data_surface_examples.schema.yml), entry `data_surface_examples.program` | the config schema, generated from the class | 39 |
 | [`modules/data_surface_examples/config/install/data_surface_examples.program.yml`](config/install/data_surface_examples.program.yml) | the settings the module ships with | 6 |
 | [`modules/data_surface_examples_workflow/data_surface_examples_workflow.info.yml`](../data_surface_examples_workflow/data_surface_examples_workflow.info.yml) | the second module, which answers for the program and its fees | 9 |
@@ -2103,7 +2105,7 @@ of code, counted without blank lines or comments:
 | --- | --- | --- |
 | [`modules/data_surface_examples/src/Resource/DoorsResource.php`](src/Resource/DoorsResource.php) | the resource: five keys, each drawn by a stock widget | 32 |
 | [`modules/data_surface_examples/src/Storage/DoorsStorage.php`](src/Storage/DoorsStorage.php) | the storage: names the config object and the keys it always holds | 4 |
-| [`modules/data_surface_examples/data_surface_examples.routing.yml`](data_surface_examples.routing.yml), entry `data_surface_examples.step11` | the route | 10 |
+| [`modules/data_surface_examples/data_surface_examples.routing.yml`](data_surface_examples.routing.yml), entry `data_surface_examples.step11` | the route | 8 |
 | [`modules/data_surface_examples/config/schema/data_surface_examples.schema.yml`](config/schema/data_surface_examples.schema.yml), entry `data_surface_examples.doors` | the config schema, fully validatable, generated from the class | 31 |
 | [`modules/data_surface_examples/config/install/data_surface_examples.doors.yml`](config/install/data_surface_examples.doors.yml) | the settings the module ships with | 9 |
 
@@ -2158,7 +2160,7 @@ block reads the components through it too.
 <!-- code: ../../src/Variants/ComponentProps.php -->
 
 ```php
-final class ComponentProps implements VariantsFromSiteInterface, ContainerInjectionInterface {
+final class ComponentProps implements SiteListInterface, ContainerInjectionInterface {
 
   /**
    * The JSON Schema types; a component may also name a PHP class.
@@ -2185,12 +2187,12 @@ final class ComponentProps implements VariantsFromSiteInterface, ContainerInject
   /**
    * {@inheritdoc}
    */
-  public function variants(): VariantList {
-    $variants = (new VariantList())->addCacheTags(['config:core.extension']);
+  public function list(): SiteList {
+    $variants = (new SiteList())->addCacheTags(['config:core.extension']);
     $components = $this->components->getDefinitions();
     ksort($components);
     foreach ($components as $id => $component) {
-      $variants->add((string) $id, (string) ($component['name'] ?? $id), self::props($component['props'] ?? []));
+      $variants->add((string) $id, (string) ($component['name'] ?? $id), schema: self::props($component['props'] ?? []));
     }
     return $variants;
   }
@@ -2466,7 +2468,7 @@ of code, counted without blank lines or comments:
 | [`src/Variants/ComponentProps.php`](../../src/Variants/ComponentProps.php) | the provider of the props: one variant per component, read from its props schema; the main module's | 36 |
 | [`src/Variants/ComponentSlots.php`](../../src/Variants/ComponentSlots.php) | the provider of the slots: one variant per component, read from its metadata; the main module's | 198 |
 | [`modules/data_surface_examples/src/Storage/SpotlightStorage.php`](src/Storage/SpotlightStorage.php) | the storage: names the config object | 3 |
-| [`modules/data_surface_examples/data_surface_examples.routing.yml`](data_surface_examples.routing.yml), entry `data_surface_examples.step12` | the route | 10 |
+| [`modules/data_surface_examples/data_surface_examples.routing.yml`](data_surface_examples.routing.yml), entry `data_surface_examples.step12` | the route | 8 |
 | [`modules/data_surface_examples/config/schema/data_surface_examples.schema.yml`](config/schema/data_surface_examples.schema.yml), entry `data_surface_examples.spotlight` | the config schema, generated from the class | 15 |
 | [`modules/data_surface_examples/config/install/data_surface_examples.spotlight.yml`](config/install/data_surface_examples.spotlight.yml) | the settings the module ships with | 11 |
 | [`modules/data_surface_examples/components/card/card.component.yml`](components/card/card.component.yml) | the card: its props schema and its slot | 41 |
@@ -2889,7 +2891,7 @@ the module is on, cacheable by the list of modules and the keys'
 configuration, so the second source is there at the next request after
 the module is installed, with no cache rebuild. Both are structures of
 this module, named once in `structures()`: the provider is closed
-(`ClosedVariantsInterface`), so the config schema written from the
+(`ClosedSiteListInterface`), so the config schema written from the
 resource gives each its own type,
 `data_surface_examples.mailer.credential.[%parent.source]`, whichever
 the site offers when it is written, where example 12's components are an
@@ -2898,7 +2900,7 @@ open map.
 <!-- code: src/Variants/CredentialSources.php -->
 
 ```php
-final class CredentialSources implements ClosedVariantsInterface, ContainerInjectionInterface {
+final class CredentialSources implements ClosedSiteListInterface, ContainerInjectionInterface {
 
   use StringTranslationTrait;
 
@@ -2942,12 +2944,12 @@ final class CredentialSources implements ClosedVariantsInterface, ContainerInjec
   /**
    * {@inheritdoc}
    */
-  public function variants(): VariantList {
-    $sources = (new VariantList())
+  public function list(): SiteList {
+    $sources = (new SiteList())
       ->addCacheTags(['config:core.extension', 'config:' . self::KEYS . '.keys'])
-      ->addStructure('pasted', $this->t('Pasted here'), self::structures()['pasted']);
+      ->add('pasted', $this->t('Pasted here'));
     if ($this->moduleHandler->moduleExists(self::KEYS)) {
-      $sources->addStructure('managed', $this->t('A managed key'), self::structures()['managed']);
+      $sources->add('managed', $this->t('A managed key'));
     }
     return $sources;
   }
@@ -3349,14 +3351,14 @@ of code, counted without blank lines or comments:
 | [`modules/data_surface_examples/src/Structure/PastedCredentialStructure.php`](src/Structure/PastedCredentialStructure.php) | the pasted source: a key, a secret | 9 |
 | [`modules/data_surface_examples/src/Structure/ManagedCredentialStructure.php`](src/Structure/ManagedCredentialStructure.php) | the managed source: the name of a key the site manages | 9 |
 | [`modules/data_surface_examples/src/Storage/MailerStorage.php`](src/Storage/MailerStorage.php) | its storage: names the config object | 3 |
-| [`modules/data_surface_examples/data_surface_examples.routing.yml`](data_surface_examples.routing.yml), entry `data_surface_examples.step14` | the mailer's route | 10 |
+| [`modules/data_surface_examples/data_surface_examples.routing.yml`](data_surface_examples.routing.yml), entry `data_surface_examples.step14` | the mailer's route | 8 |
 | [`modules/data_surface_examples/config/schema/data_surface_examples.schema.yml`](config/schema/data_surface_examples.schema.yml), entry `data_surface_examples.mailer` | the mailer's config schema, generated from the class | 18 |
 | [`modules/data_surface_examples/config/schema/data_surface_examples.schema.yml`](config/schema/data_surface_examples.schema.yml), entry `data_surface_examples.mailer.credential.pasted` | the pasted source's config schema | 10 |
 | [`modules/data_surface_examples/config/schema/data_surface_examples.schema.yml`](config/schema/data_surface_examples.schema.yml), entry `data_surface_examples.mailer.credential.managed` | the managed source's config schema, with the pasted key it keeps | 13 |
 | [`modules/data_surface_examples/config/install/data_surface_examples.mailer.yml`](config/install/data_surface_examples.mailer.yml) | the mailer's shipped settings | 5 |
 | [`modules/data_surface_examples/src/Resource/WebhookResource.php`](src/Resource/WebhookResource.php) | the alter's way: an endpoint and a pasted key, and nothing of managed keys | 15 |
 | [`modules/data_surface_examples/src/Storage/WebhookStorage.php`](src/Storage/WebhookStorage.php) | its storage: names the config object | 3 |
-| [`modules/data_surface_examples/data_surface_examples.routing.yml`](data_surface_examples.routing.yml), entry `data_surface_examples.step14_webhook` | the webhook's route | 10 |
+| [`modules/data_surface_examples/data_surface_examples.routing.yml`](data_surface_examples.routing.yml), entry `data_surface_examples.step14_webhook` | the webhook's route | 8 |
 | [`modules/data_surface_examples/config/schema/data_surface_examples.schema.yml`](config/schema/data_surface_examples.schema.yml), entry `data_surface_examples.webhook` | the webhook's config schema, generated from the class | 19 |
 | [`modules/data_surface_examples/config/install/data_surface_examples.webhook.yml`](config/install/data_surface_examples.webhook.yml) | the webhook's shipped settings | 2 |
 | [`modules/data_surface_examples_keys/data_surface_examples_keys.info.yml`](../data_surface_examples_keys/data_surface_examples_keys.info.yml) | the module that manages keys, which the page tells you to enable | 9 |
@@ -3494,7 +3496,7 @@ final class EventVenue extends ConfigEntityBase {
 The resource is the venue by its machine name, on a `VenueStorage`, a
 `ConfigEntityStorage`. Create, update and delete are about one venue. Listing
 and reordering are about the venues together, so they name none: each
-takes the keys of a structure of its own, which `values:` on its
+takes the keys of a structure of its own, which `structure:` on its
 `#[Operation]` names. The listing is read only; the reorder is an update
 over the collection. Neither is a new kind of operation.
 
@@ -3518,13 +3520,13 @@ over the collection. Neither is a new kind of operation.
   description: new TranslatableMarkup('Answers a page of the venues, lighter first, each one the account may read, and how many the filter matched.'),
   permission: self::VIEW,
   readOnly: TRUE,
-  values: VenueListingStructure::class,
+  structure: VenueListingStructure::class,
 )]
 #[Operation('reorder',
   label: new TranslatableMarkup('Reorder the venues'),
   description: new TranslatableMarkup('Gives each venue named its new weight, all in one write; a venue left out keeps its own, and an unknown or repeated venue is refused.'),
   permission: self::ADMINISTER,
-  values: VenueReorderStructure::class,
+  structure: VenueReorderStructure::class,
 )]
 final class VenueResource implements ResourceInterface {
 
@@ -3579,7 +3581,7 @@ final class VenueResource implements ResourceInterface {
         'message' => t('The machine name may hold only lowercase letters, numbers and underscores.'),
       ])
       ->addConstraint('Length', ['max' => 32]);
-    $inputs->derive('slug', 'string', t('Slug'), from: ['label'], using: Slugify::class)
+    $inputs->compute('slug', 'string', t('Slug'), from: ['label'], using: Slugify::class)
       ->setDescription(t('The name in a link: lowercase letters, numbers and dashes, set when the venue is added.'))
       ->addConstraint('Regex', [
         'pattern' => '/^[a-z0-9]+(-[a-z0-9]+)*$/D',
@@ -3605,10 +3607,10 @@ final class VenueResource implements ResourceInterface {
 }
 ```
 
-The slug is a computed key, `derive()`: a key of the venue, stored and
+The slug is a computed key, `compute()`: a key of the venue, stored and
 read like any other, whose value nobody types. `Slugify` computes it
 from the name, once, when the venue is added (`when:` is
-`Derive::ON_CREATE` unless it says `Derive::ON_CHANGE`), so renaming a
+`Compute::ON_CREATE` unless it says `Compute::ON_CHANGE`), so renaming a
 venue leaves its links working. The pipeline computes it after it
 accepts the rest and judges it by its own pattern; the storage refuses
 a slug another venue holds, and the refusal names the name, the key a
@@ -3621,12 +3623,12 @@ taken; any other is refused.
 <!-- code: src/Slugify.php -->
 
 ```php
-final class Slugify implements DeriverInterface {
+final class Slugify implements ComputesValueInterface {
 
   /**
    * {@inheritdoc}
    */
-  public static function derive(array $from): mixed {
+  public static function compute(array $from): mixed {
     $slug = trim((string) preg_replace('/[^a-z0-9]+/', '-', mb_strtolower((string) ($from['label'] ?? ''))), '-');
     return $slug === '' ? NULL : $slug;
   }
@@ -4315,9 +4317,9 @@ of code, counted without blank lines or comments:
 | [`modules/data_surface_examples/config/install/data_surface_examples.event_venue.riverside.yml`](config/install/data_surface_examples.event_venue.riverside.yml) | Riverside Hall, shipped | 18 |
 | [`modules/data_surface_examples/config/install/data_surface_examples.event_venue.library.yml`](config/install/data_surface_examples.event_venue.library.yml) | the Old Library, shipped | 18 |
 | [`modules/data_surface_examples/config/install/data_surface_examples.event_venue.harbour.yml`](config/install/data_surface_examples.event_venue.harbour.yml) | the Harbour Centre, shipped | 18 |
-| [`modules/data_surface_examples/data_surface_examples.routing.yml`](data_surface_examples.routing.yml), entry `data_surface_examples.step15_create` | the add form: the generic operation form | 10 |
-| [`modules/data_surface_examples/data_surface_examples.routing.yml`](data_surface_examples.routing.yml), entry `data_surface_examples.step15_update` | the edit form, its {id} the venue | 14 |
-| [`modules/data_surface_examples/data_surface_examples.routing.yml`](data_surface_examples.routing.yml), entry `data_surface_examples.step15_delete` | the remove form: a confirmation, since a delete takes no values | 14 |
+| [`modules/data_surface_examples/data_surface_examples.routing.yml`](data_surface_examples.routing.yml), entry `data_surface_examples.step15_create` | the add form: the generic operation form | 8 |
+| [`modules/data_surface_examples/data_surface_examples.routing.yml`](data_surface_examples.routing.yml), entry `data_surface_examples.step15_update` | the edit form, its {id} the venue | 12 |
+| [`modules/data_surface_examples/data_surface_examples.routing.yml`](data_surface_examples.routing.yml), entry `data_surface_examples.step15_delete` | the remove form: a confirmation, since a delete takes no values | 12 |
 | [`modules/data_surface_examples/src/Form/VenueFormCosmetics.php`](src/Form/VenueFormCosmetics.php) | what the three forms say once they wrote, and the page they go back to | 20 |
 
 ## Example 16: references, three ways
@@ -4398,7 +4400,7 @@ out blocked users without "administer users". The list varies by what
 the handler read, `user.permissions` and, for a node, `user.node_grants:view`.
 
 While the site has at most 50 candidates, the setting
-`data_surface.settings:reference_enum_limit`, the key lists them: a
+`data_surface.settings:reference_list_limit`, the key lists them: a
 select on the form, a `oneOf` with their labels in both documents, an
 enum in the tool listing. Past it, the key is an id: core's
 `entity_autocomplete` element on the form, `x-surface.widget:
@@ -4411,7 +4413,7 @@ documents mark every reference key `x-surface.reference`, `{"entityType":
 "node", "bundles": ["article"]}`, or for a bare key's id `{"by":
 "entity_type"}`. The page shows the keys as the full schema states them
 now, and again with the limit held at 1 for its own request, as
-`ddev drush config:set data_surface.settings reference_enum_limit 1`
+`ddev drush config:set data_surface.settings reference_list_limit 1`
 would set it, without saving it.
 
 ### The calls
@@ -4475,7 +4477,7 @@ of code, counted without blank lines or comments:
 | [`modules/data_surface_examples_references/data_surface_examples_references.info.yml`](../data_surface_examples_references/data_surface_examples_references.info.yml) | the module: a second one, which needs node for the article the announcement is | 11 |
 | [`modules/data_surface_examples_references/src/Resource/SponsorshipResource.php`](../data_surface_examples_references/src/Resource/SponsorshipResource.php) | the resource: three keys declared by the data type string of what they refer to, and three of any entity type, each filtered | 31 |
 | [`modules/data_surface_examples_references/src/Storage/SponsorshipStorage.php`](../data_surface_examples_references/src/Storage/SponsorshipStorage.php) | the storage: names the config object | 3 |
-| [`modules/data_surface_examples_references/data_surface_examples_references.routing.yml`](../data_surface_examples_references/data_surface_examples_references.routing.yml), entry `data_surface_examples.step16` | the route: the generic operation form, with the examples' panels | 10 |
+| [`modules/data_surface_examples_references/data_surface_examples_references.routing.yml`](../data_surface_examples_references/data_surface_examples_references.routing.yml), entry `data_surface_examples.step16` | the route: the generic operation form, with the examples' panels | 8 |
 | [`modules/data_surface_examples_references/data_surface_examples_references.permissions.yml`](../data_surface_examples_references/data_surface_examples_references.permissions.yml) | its permission, to set the sponsorship | 3 |
 | [`modules/data_surface_examples_references/config/schema/data_surface_examples_references.schema.yml`](../data_surface_examples_references/config/schema/data_surface_examples_references.schema.yml), entry `data_surface_examples_references.sponsorship` | the config schema, generated from the class: each id an integer or a string, as its entity type keeps it | 53 |
 | [`modules/data_surface_examples_references/config/install/data_surface_examples_references.sponsorship.yml`](../data_surface_examples_references/config/install/data_surface_examples_references.sponsorship.yml) | the settings the module ships with | 12 |

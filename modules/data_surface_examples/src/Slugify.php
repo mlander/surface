@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\data_surface_examples;
 
-use Drupal\data_surface\Resource\DeriverInterface;
+use Drupal\data_surface\Resource\ComputesValueInterface;
 
 /**
  * Example 15: a venue's slug, computed from its name.
@@ -14,12 +14,12 @@ use Drupal\data_surface\Resource\DeriverInterface;
  * function of the name, so the narrowing shows the slug as the name is
  * typed, and the pipeline computes the same one when the venue is added.
  */
-final class Slugify implements DeriverInterface {
+final class Slugify implements ComputesValueInterface {
 
   /**
    * {@inheritdoc}
    */
-  public static function derive(array $from): mixed {
+  public static function compute(array $from): mixed {
     $slug = trim((string) preg_replace('/[^a-z0-9]+/', '-', mb_strtolower((string) ($from['label'] ?? ''))), '-');
     return $slug === '' ? NULL : $slug;
   }

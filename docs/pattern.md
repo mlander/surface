@@ -103,7 +103,7 @@ method.
 | | Blueprint | Values |
 | --- | --- | --- |
 | **Owner** | `static defineInputs($inputs)`, optionally `static defineOutputs($outputs)` | static `#[RefinesInput('key')]` methods |
-| **Another module** | `alterInputs($inputs)`, optionally `alterOutputs($outputs)` | `#[RefinesInput('key')]` methods |
+| **Another module** | `alterInputs($inputs)` | `#[RefinesInput('key')]` methods |
 
 - **`defineInputs()` and `alterInputs()` get a blueprint to fill, and nothing else**: no
   values, no context, no services. On a resource or structure they are
@@ -121,9 +121,8 @@ method.
   and outputs use the same two interfaces.
 - **A `#[RefinesInput('bundle')]` method takes the key's definition
   first, then one parameter per sibling it watches**, matched by name
-  to that sibling's key, or listed on the attribute as `watches:` when
-  a renamed parameter should fail at build rather than silently stop
-  watching. Its signature is its dependency declaration, the way an
+  to that sibling's key: one that names no declared key fails at build,
+  so a renamed parameter never silently stops watching. Its signature is its dependency declaration, the way an
   operation method's is. `DemoBlockStructure::fieldOfBundle()` watches
   the entity type and the bundle. It runs once every watched sibling has
   a value (a key its alter mounted is never waited for), and again when
@@ -266,11 +265,11 @@ final class AddressFieldSettingsResource implements ResourceInterface {
 Each class's `use` line: [Namespaces](concepts.md#namespaces).
 
 The deciding key's allowed values become exactly the values the
-variants are for. Variants may also come from a description that
-already exists: a service implementing `DerivedVariantsInterface` adds
-variants for the values no variant class declares.
-`FieldSettingsSchemaVariants` derives a plain `string` or `integer`
-field's settings from `field.field_settings.<field type>`, and
+variants are for. Variants may also come from the site: `from:` names a
+provider (`SiteListInterface`) listing one per thing, each read from a
+description that already exists. `FieldSettingsSchemaVariants` lists a
+plain `string` or `integer` field's settings from
+`field.field_settings.<field type>`, and
 `FieldStorageSettingsSchemaVariants` its storage settings from
 `field.storage_settings.<field type>`, so a string's `max_length` can be
 set when the field is added. A declared variant always wins.
@@ -311,11 +310,9 @@ not which keys there are. It is how much is already known.
   an `OperationContext` and knows more than the last; what it needs is
   its own signature. Whether it creates is on the attribute, stamped on
   the context, where the storage reads it.
-- **Another module can add one.** `#[Operation('clone', of:
-  FieldInstanceResource::class)]` on a static method of any class in its
-  `src/Alter/` is found the way a hook method is, no interface
-  needed, typically building on one of the owner's operations and
-  giving the context starting values with `withDefaults()`.
+- **On the owner's class only.** An operation stands on its
+  resource's or structure's own class, found the way a hook method is,
+  no interface needed; one on any other class is refused at discovery.
 
 That makes operations listable ([the catalog](catalog.md)),
 addressable (`field.instance:update`), and generatable: one route or one
@@ -413,7 +410,8 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
   owner's away (`DemoFormatterAlter`).
 - An alter that only tightens implements no interface: the attribute is
   what makes it an alter.
-- An alter may answer access, implementing `AltersAccessInterface`: it
+- An alter may answer access, implementing `OperationAccessInterface`,
+  the access class's interface, its role read from `#[Alters]`: it
   is asked after the owner's answer and the stricter stands, so it locks
   or leaves out and never opens
   ([decision](decisions.md#an-alter-may-answer-access-and-the-stricter-stands)).

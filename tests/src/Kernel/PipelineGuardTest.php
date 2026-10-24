@@ -143,7 +143,7 @@ class PipelineGuardTest extends DataSurfaceKernelTestBase {
    */
   public function testProviderIsRefusedTheTheme(): void {
     $this->assertRefused(fn () => $this->dry(ThemeReadingKeysResource::class), [
-      'The provider Drupal\data_surface_door_test\Keys\Broken\ThemeReadingKeys::keys() asked for the service theme.manager',
+      'The provider Drupal\data_surface_door_test\Keys\Broken\ThemeReadingKeys::list() asked for the service theme.manager',
       'the theme a page renders in',
     ]);
   }

@@ -20,12 +20,11 @@ use Drupal\data_surface\Reference\EntityReferenceStructure;
 use Drupal\data_surface\Resource\Arrangement;
 use Drupal\data_surface\Resource\BlueprintInterface;
 use Drupal\data_surface\Resource\DefinesInputsInterface;
-use Drupal\data_surface\Resource\Derive;
-use Drupal\data_surface\Resource\DeriverInterface;
+use Drupal\data_surface\Resource\Compute;
+use Drupal\data_surface\Resource\ComputesValueInterface;
 use Drupal\data_surface\Resource\DefinesOutputsInterface;
-use Drupal\data_surface\Resource\KeysFromSiteInterface;
 use Drupal\data_surface\Resource\ResourceCallable;
-use Drupal\data_surface\Resource\VariantsFromSiteInterface;
+use Drupal\data_surface\Resource\SiteListInterface;
 use Drupal\data_surface\Contract\SchemaReader;
 
 /**
@@ -59,7 +58,7 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
   /**
    * The provider of variants from the site at each key that names one.
    *
-   * @var array<string, class-string<\Drupal\data_surface\Resource\VariantsFromSiteInterface>>
+   * @var array<string, class-string<\Drupal\data_surface\Resource\SiteListInterface>>
    */
   protected array $variantsFrom = [];
 
@@ -76,7 +75,7 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
   /**
    * The maps of keys from the site declared through this blueprint, by key.
    *
-   * @var array<string, array{each: string, from: class-string<\Drupal\data_surface\Resource\KeysFromSiteInterface>, default: mixed, child: bool, reads: array<string, string>}>
+   * @var array<string, array{each: string, from: class-string<\Drupal\data_surface\Resource\SiteListInterface>, default: mixed, child: bool, reads: array<string, string>}>
    */
   protected array $fromSite = [];
 
@@ -394,8 +393,8 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
    */
   public function attachVariants(string $key, string $by, ?string $from = NULL): MapDataDefinition {
     $this->assertHoldsNoChild('attaches variants', $key);
-    if ($from !== NULL && !is_subclass_of($from, VariantsFromSiteInterface::class)) {
-      throw new \LogicException(sprintf('attachVariants("%s") names %s as where its variants come from, which does not implement %s: a provider lists the site\'s variants, each with its schema, with variants().', $key, $from, VariantsFromSiteInterface::class));
+    if ($from !== NULL && !is_subclass_of($from, SiteListInterface::class)) {
+      throw new \LogicException(sprintf('attachVariants("%s") names %s as where its variants come from, which does not implement %s: a provider lists the site\'s variants, each with its schema or structure, with list().', $key, $from, SiteListInterface::class));
     }
     $shell = $this->reserveChild('attachVariants', $key);
     $this->variants[$key] = $by;
@@ -411,23 +410,11 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
    *
    * Decision: see docs/decisions.md#a-schema-can-be-read-back-into-a-structure.
    *
-   * @return array<string, class-string<\Drupal\data_surface\Resource\VariantsFromSiteInterface>>
+   * @return array<string, class-string<\Drupal\data_surface\Resource\SiteListInterface>>
    *   The provider of each key that names one.
    */
   public function variantsFrom(): array {
     return $this->variantsFrom;
-  }
-
-  /**
-   * {@inheritdoc}
-   *
-   * Decision: see docs/decisions.md#a-schema-can-be-read-back-into-a-structure.
-   */
-  public function fromSchema(array $document): array {
-    if ($this->outputs) {
-      throw new \LogicException('fromSchema() was asked to declare outputs. A schema is read into what is sent; outputs are declared with add().');
-    }
-    return (new SchemaReader())->read($document, $this);
   }
 
   /**
@@ -666,8 +653,8 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
    *   When the provider is none.
    */
   protected function reserveEach(string $verb, string $key, string $each, string $from, mixed $default, bool $child, array $reads = []): MapDataDefinition {
-    if (!is_subclass_of($from, KeysFromSiteInterface::class)) {
-      throw new \LogicException(sprintf('%s("%s") names %s as where its keys come from, which does not implement %s: a provider lists the site\'s things with keys().', $verb, $key, $from, KeysFromSiteInterface::class));
+    if (!is_subclass_of($from, SiteListInterface::class)) {
+      throw new \LogicException(sprintf('%s("%s") names %s as where its keys come from, which does not implement %s: a provider lists the site\'s things with list().', $verb, $key, $from, SiteListInterface::class));
     }
     $shell = $this->reserveChild($verb, $key);
     $this->fromSite[$key] = [
@@ -683,7 +670,7 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
   /**
    * Gets the maps of keys from the site declared through this blueprint.
    *
-   * @return array<string, array{each: string, from: class-string<\Drupal\data_surface\Resource\KeysFromSiteInterface>, default: mixed, child: bool, reads: array<string, string>}>
+   * @return array<string, array{each: string, from: class-string<\Drupal\data_surface\Resource\SiteListInterface>, default: mixed, child: bool, reads: array<string, string>}>
    *   What each entry is, the provider, the default for every entry,
    *   whether each entry is a child, and the sibling map each of its ports
    *   reads per entry, by key, in declaration order.
@@ -791,8 +778,8 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
    * Decision: see
    * docs/decisions.md#a-computed-key-is-a-pure-function-of-its-sources.
    */
-  public function derive(string $key, string $type, string|\Stringable $label, array $from, string $using, string $when = Derive::ON_CREATE): DataDefinition {
-    $refuse = fn (string $why): \LogicException => new \LogicException(sprintf('derive("%s") on %s %s', $key, $this->name($this->owner), $why));
+  public function compute(string $key, string $type, string|\Stringable $label, array $from, string $using, string $when = Compute::ON_CREATE): DataDefinition {
+    $refuse = fn (string $why): \LogicException => new \LogicException(sprintf('compute("%s") on %s %s', $key, $this->name($this->owner), $why));
     if ($this->outputs) {
       throw $refuse('declares a computed output: an output is emitted, never stored, so it has nothing to compute; a computed key is an input the caller does not type.');
     }
@@ -802,11 +789,11 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
     if ($this->owner !== NULL && $this->registry?->hasDefinition($this->owner) && !$this->registry->getDefinition($this->owner)->isResource()) {
       throw $refuse('is in a structure: a computed key is a resource\'s own key, at its top, for now. Declare it on the resource that holds the structure.');
     }
-    if (!is_subclass_of($using, DeriverInterface::class)) {
-      throw $refuse(sprintf('names %s, which implements no %s: a deriver is a class with a static derive().', $using, DeriverInterface::class));
+    if (!is_subclass_of($using, ComputesValueInterface::class)) {
+      throw $refuse(sprintf('names %s, which implements no %s: the class it names has a static compute().', $using, ComputesValueInterface::class));
     }
-    if (!in_array($when, Derive::ALL, TRUE)) {
-      throw $refuse(sprintf('says when: "%s"; it is Derive::ON_CREATE or Derive::ON_CHANGE.', $when));
+    if (!in_array($when, Compute::ALL, TRUE)) {
+      throw $refuse(sprintf('says when: "%s"; it is Compute::ON_CREATE or Compute::ON_CHANGE.', $when));
     }
     if ($from === [] || !array_is_list($from)) {
       throw $refuse('names no key it is computed from: from: lists one or more keys.');

@@ -328,7 +328,7 @@ resource](testing-a-resource.md#the-baselines)).
 ```
 ddev drush data_surface:contract-diff \
   --module=data_surface_examples,data_surface_examples_compliance,data_surface_first \
-  --dir=modules/custom/data_surface/tests/fixtures/contracts
+  --baselines=modules/custom/data_surface/tests/fixtures/contracts
 ```
 
 prints every difference with its verdict, and a summary naming the
@@ -336,8 +336,8 @@ contract version and the account the documents were emitted for ("19
 resources and structures in contract 2, emitted for user 1 (admin):
 ..."), and exits non-zero on a failing one. It fails closed:
 
-- **`--dir`** is the directory the baselines are kept in, read from the
-  Drupal root, by default the first module's `tests/fixtures/contracts`,
+- **`--baselines`** is the directory the baselines are kept in, read
+  from the Drupal root (`--dir`, its earlier name, is still read), by default the first module's `tests/fixtures/contracts`,
   which is where an adopter keeps its own. One that does not exist fails
   ("nothing was compared"), unless `--write` makes it; a declaration
   with no baseline in it fails as unpinned.

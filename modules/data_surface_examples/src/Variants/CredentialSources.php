@@ -8,8 +8,8 @@ use Drupal\Core\DependencyInjection\ContainerInjectionInterface;
 use Drupal\Core\Extension\ModuleHandlerInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslationInterface;
-use Drupal\data_surface\Resource\ClosedVariantsInterface;
-use Drupal\data_surface\Resource\VariantList;
+use Drupal\data_surface\Resource\ClosedSiteListInterface;
+use Drupal\data_surface\Resource\SiteList;
 use Drupal\data_surface_examples\Structure\ManagedCredentialStructure;
 use Drupal\data_surface_examples\Structure\PastedCredentialStructure;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -24,7 +24,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * Both are structures of this module, named once in structures(), so the
  * config schema describes both whichever the site offers.
  */
-final class CredentialSources implements ClosedVariantsInterface, ContainerInjectionInterface {
+final class CredentialSources implements ClosedSiteListInterface, ContainerInjectionInterface {
 
   use StringTranslationTrait;
 
@@ -68,12 +68,12 @@ final class CredentialSources implements ClosedVariantsInterface, ContainerInjec
   /**
    * {@inheritdoc}
    */
-  public function variants(): VariantList {
-    $sources = (new VariantList())
+  public function list(): SiteList {
+    $sources = (new SiteList())
       ->addCacheTags(['config:core.extension', 'config:' . self::KEYS . '.keys'])
-      ->addStructure('pasted', $this->t('Pasted here'), self::structures()['pasted']);
+      ->add('pasted', $this->t('Pasted here'));
     if ($this->moduleHandler->moduleExists(self::KEYS)) {
-      $sources->addStructure('managed', $this->t('A managed key'), self::structures()['managed']);
+      $sources->add('managed', $this->t('A managed key'));
     }
     return $sources;
   }

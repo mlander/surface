@@ -257,13 +257,12 @@ data_surface_first.newsletter:
     _title: 'Newsletter settings'
     _data_surface_resource: 'Drupal\data_surface_first\Resource\NewsletterResource'
     _data_surface_operation: 'configure'
-  requirements:
-    _data_surface_operation_access: 'TRUE'
 ```
 
-`_data_surface_operation_access: 'TRUE'` asks the operation who may use
-it: its permission. A person without it gets a 403, and the tool refuses
-them the same way; the tool declares it, so `drush tool:info` prints it.
+A route that names a resource and an operation asks the operation who
+may use it: its permission. A person without it gets a 403, and the
+tool refuses them the same way; the tool declares it, so `drush
+tool:info` prints it.
 
 ## 7. Try it
 

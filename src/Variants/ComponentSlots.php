@@ -8,8 +8,8 @@ use Drupal\Core\DependencyInjection\ContainerInjectionInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslationInterface;
 use Drupal\Core\Theme\ComponentPluginManager;
-use Drupal\data_surface\Resource\VariantList;
-use Drupal\data_surface\Resource\VariantsFromSiteInterface;
+use Drupal\data_surface\Resource\SiteList;
+use Drupal\data_surface\Resource\SiteListInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -31,7 +31,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * depth holds text alone.
  *
  * Every variant refers to defs the list holds once for all of them
- * (VariantList::addDefs()), so a def several slots use is one structure:
+ * (SiteList::addDefs()), so a def several slots use is one structure:
  * `component.props.<id>`, `component.slots.<id>.<depth>`,
  * `component.slot.<id>.<slot>.<depth>`, `component.slot.text` for a slot
  * that holds text alone, and `component.nested.<expected>.<depth>` for
@@ -43,7 +43,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  *
  * @see \Drupal\data_surface\Variants\ComponentProps
  */
-final class ComponentSlots implements VariantsFromSiteInterface, ContainerInjectionInterface {
+final class ComponentSlots implements SiteListInterface, ContainerInjectionInterface {
 
   use StringTranslationTrait;
 
@@ -97,11 +97,11 @@ final class ComponentSlots implements VariantsFromSiteInterface, ContainerInject
   /**
    * {@inheritdoc}
    */
-  public function variants(): VariantList {
-    $variants = (new VariantList())->addCacheTags(['config:core.extension']);
+  public function list(): SiteList {
+    $variants = (new SiteList())->addCacheTags(['config:core.extension']);
     $defs = [];
     foreach ($this->definitions() as $id => $component) {
-      $variants->add($id, (string) ($component['name'] ?? $id), ['$ref' => '#/$defs/' . $this->slots($id, 1, $defs)]);
+      $variants->add($id, (string) ($component['name'] ?? $id), schema: ['$ref' => '#/$defs/' . $this->slots($id, 1, $defs)]);
     }
     ksort($defs);
     return $variants->addDefs($defs);

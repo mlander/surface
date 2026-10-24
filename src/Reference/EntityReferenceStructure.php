@@ -110,7 +110,7 @@ final class EntityReferenceStructure {
    *   The id, referring to that entity type and the bundles the key allows
    *   of it.
    */
-  #[RefinesInput('id', watches: ['entity_type'])]
+  #[RefinesInput('id')]
   public static function id(DataDefinitionInterface $id, string $entity_type): DataDefinitionInterface {
     $bundles = (array) ($id->getSetting(self::TARGETS)[$entity_type] ?? []);
     return $id->addConstraint(References::CONSTRAINT, array_filter([

@@ -4,15 +4,15 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\data_surface\Fixtures;
 
-use Drupal\data_surface\Resource\KeyedList;
-use Drupal\data_surface\Resource\KeysFromSiteInterface;
+use Drupal\data_surface\Resource\SiteList;
+use Drupal\data_surface\Resource\SiteListInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\RequestStack;
 
 /**
  * A provider of keys for DoorSpecificRuleTest, reading the request.
  */
-final class DoorSpecificKeysFixture implements KeysFromSiteInterface {
+final class DoorSpecificKeysFixture implements SiteListInterface {
 
   /**
    * Built with the request stack: flagged.
@@ -32,9 +32,9 @@ final class DoorSpecificKeysFixture implements KeysFromSiteInterface {
   /**
    * Reads the route: flagged; configuration: not flagged.
    */
-  public function keys(): KeyedList {
+  public function list(): SiteList {
     \Drupal::service('config.factory');
-    return KeyedList::fromLabels([(string) \Drupal::routeMatch()->getRouteName() => 'Route']);
+    return SiteList::fromLabels([(string) \Drupal::routeMatch()->getRouteName() => 'Route']);
   }
 
 }

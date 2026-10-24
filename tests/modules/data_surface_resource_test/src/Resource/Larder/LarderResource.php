@@ -21,8 +21,10 @@ use Drupal\data_surface_resource_test\Storage\LarderStorage;
  *   own `update`, by operation, and the one at `spare_rack` through
  *   `restock`, which the larder's update operation names, handing it a
  *   shelf;
- * - adding a larder, neither is named and the rack has no `create`, so both
- *   are invoked through the rack's default, `browse`;
+ * - adding a larder, neither is named, and both are invoked through the
+ *   rack's own `create`, by the context's id; copying one, the rack has
+ *   no `copy`, and both are invoked through its operation of the
+ *   parent's kind, `create` again;
  * - stocking a larder, the larder hands both racks a context whole, built
  *   by calling the rack's own operations: no operation of the rack's is
  *   invoked, so `restock`'s permission is not asked, and the rack's
@@ -39,6 +41,14 @@ final class LarderResource implements ResourceInterface {
   #[Operation('create', label: 'Add a larder', permission: 'keep a larder', creates: TRUE)]
   public static function create(): OperationContext {
     return new OperationContext('create', creates: TRUE);
+  }
+
+  /**
+   * A new larder, copied: an operation of the create kind the rack lacks.
+   */
+  #[Operation('copy', label: 'Copy a larder', permission: 'keep a larder', creates: TRUE)]
+  public static function copy(): OperationContext {
+    return new OperationContext();
   }
 
   /**

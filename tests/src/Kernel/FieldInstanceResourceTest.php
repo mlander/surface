@@ -6,6 +6,7 @@ namespace Drupal\Tests\data_surface\Kernel;
 
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\data_surface\DefinitionMetadata;
+use Drupal\data_surface\Refinement\ChoiceSet;
 use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface\ResourceBuild\ResourcesInterface;
 use Drupal\data_surface_address\Resource\AddressFieldSettingsResource;
@@ -130,9 +131,9 @@ class FieldInstanceResourceTest extends DataSurfaceKernelTestBase {
       $this->assertTrue($surface->isLocked($key), $key);
     }
     // The field type offers exactly the types the variants are for:
-    // the declared ones first, then every UI field type derived from its
-    // config schema.
-    $choices = $surface->getDefinition('field_type')->getConstraints()['Choice']['choices'];
+    // the declared ones first, then every UI field type the provider
+    // lists, each labeled.
+    $choices = ChoiceSet::of($surface->getDefinition('field_type'))->values;
     $this->assertSame('address', $choices[0]);
     $this->assertContains('string', $choices);
     $this->assertSame($surface->getDefinitions()->entry('settings')?->variants?->variantIds(), $choices);
@@ -334,14 +335,14 @@ class FieldInstanceResourceTest extends DataSurfaceKernelTestBase {
     $field = $this->createField();
     FieldStorageConfig::loadByName('entity_test', 'field_address')->setCardinality(3)->save();
     $context = FieldInstanceResource::update($field);
-    $this->assertSame([], $context->forChild('storage')->constraints);
+    $this->assertSame([], $context->forChild('storage')->constraints());
 
     $this->container->get('entity_type.manager')->getStorage('entity_test')->create([
       'field_address' => [['country_code' => 'US', 'locality' => 'Boston']],
     ])->save();
     $field = $this->reloadField();
     $context = FieldInstanceResource::update($field);
-    $this->assertSame(['cardinality' => ['Range' => ['min' => 3]]], $context->forChild('storage')->constraints);
+    $this->assertSame(['cardinality' => ['Range' => ['min' => 3]]], $context->forChild('storage')->constraints());
     $surface = $this->resources()->build(FieldInstanceResource::class, $context);
     $cardinality = $surface->getDefinitions()->entry('storage')->attachment->child->getDefinition('cardinality');
     $this->assertSame(['min' => 3], $cardinality->getConstraints()['Range']);
@@ -352,30 +353,6 @@ class FieldInstanceResourceTest extends DataSurfaceKernelTestBase {
     $result = $this->pipeline()->submit($surface, ['storage' => ['cardinality' => 5]], $resource_storage);
     $this->assertTrue($result->committed, implode(', ', $result->violations->keys()));
     $this->assertSame(5, FieldStorageConfig::loadByName('entity_test', 'field_address')->getCardinality());
-  }
-
-  /**
-   * Tests starting values on a creating operation.
-   *
-   * What a clone does: the context an operation returns starts the new
-   * thing from given values, which become the defaults a caller sees and
-   * may change, and only where the context creates.
-   */
-  public function testStartingValuesAreTheNewFieldsDefaults(): void {
-    $context = $this->addContext()->withDefaults(['label' => 'Postal address', 'required' => TRUE]);
-    $surface = $this->resources()->build(FieldInstanceResource::class, $context);
-    $this->assertSame('Postal address', $surface->getDefault('label'));
-    $this->assertTrue($surface->getDefault('required'));
-    $result = $this->pipeline()->submit($surface, [], $this->resources()->storage(FieldInstanceResource::class, $context, $surface));
-    $this->assertTrue($result->committed, implode(', ', $result->violations->keys()));
-    $field = $this->reloadField();
-    $this->assertNotNull($field);
-    $this->assertSame('Postal address', $field->getLabel());
-    $this->assertTrue($field->isRequired());
-
-    $this->expectException(\LogicException::class);
-    $this->expectExceptionMessage('does not create');
-    $this->resources()->build(FieldInstanceResource::class, FieldInstanceResource::update($field)->withDefaults(['label' => 'Nope']));
   }
 
 }

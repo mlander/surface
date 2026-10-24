@@ -84,7 +84,7 @@ The API is in `Drupal\data_surface\Resource`; the attributes in
 | | Blueprint | Values |
 | --- | --- | --- |
 | **Owner** | `static defineInputs($inputs)`, optionally `static defineOutputs($outputs)` | static `#[RefinesInput('key')]` methods |
-| **Another module** | `alterInputs($inputs)`, optionally `alterOutputs($outputs)` | `#[RefinesInput('key')]` methods |
+| **Another module** | `alterInputs($inputs)` | `#[RefinesInput('key')]` methods |
 
 The demo block's configuration, `DemoBlockStructure` in the demo module,
 is the first one written this way. It is a structure: the block holds
@@ -111,7 +111,7 @@ final class DemoBlockStructure implements StructureInterface {
     return $bundle->addConstraint('EntityBundleExists', ['entityTypeId' => $entity_type]);
   }
 
-  #[RefinesInput('field', watches: ['entity_type', 'bundle'])]
+  #[RefinesInput('field')]
   public static function fieldOfBundle(DataDefinitionInterface $field, string $entity_type, string $bundle): DataDefinitionInterface {
     return $field->addConstraint('DataSurfaceDemoBundleField', [
       'entityTypeId' => $entity_type,
@@ -142,9 +142,9 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
   to be injected into, and `t()` returns the same lazy
   `TranslatableMarkup`.
 - **A `#[RefinesInput('key')]` method takes the key's definition first,
-  then one parameter per sibling it watches**, matched by name, or
-  listed as `watches:` so that a renamed parameter is refused at build
-  rather than silently never watched. It runs once every watched
+  then one parameter per sibling it watches**, matched by name: a
+  parameter that names no declared key is refused at build, so a
+  renamed one is never silently left unwatched. It runs once every watched
   sibling has a value, and again when one changes. A method that
   watches nothing runs once, at build. The owner's refiner is static,
   and one that is not is refused at build; so is an alter's, unless it
@@ -211,16 +211,13 @@ already known, and that is a **context**, an `OperationContext`:
 - The context is `new OperationContext(known: [])`: the identity keys
   it knows, each with its value. The plugin hosts build their own,
   `new OperationContext('configure')`, under a verb that no operation
-  declares. `withConstraint()`, `withDefaults()` and `withChild()`
-  return a copy that says more.
-- Another module adds an operation with
-  `#[Operation('clone', of: SomeResource::class)]` on a class or a static
-  method in its `src/Alter/`. Two declarations of one id are refused,
-  naming both.
-- A context may also narrow a key (`withConstraint()`, checked narrower)
-  and, when it creates, give starting values (`withDefaults()`), which
-  become the key's defaults: values the caller sees first and may
-  change. It may hand a child a context of its own, or name the child's
+  declares. `withConstraint()` and `withChild()` return a copy that
+  says more.
+- An operation stands on its resource's or structure's own class; one
+  on any other class is refused at discovery. Two declarations of one
+  id are refused, naming both.
+- A context may also narrow a key (`withConstraint()`, checked
+  narrower). It may hand a child a context of its own, or name the child's
   own operation to invoke (`withChild()`, see [Child
   operations](#child-operations)). What depends on where you are is the
   operation's; what depends on what was entered is a refiner's.
@@ -329,7 +326,7 @@ open, and it is still the same resource.
 Most operations take the resource's keys: a create sends them, an update
 changes some. An operation about the things together takes other keys:
 a listing's page and filter, a reorder's ids and weights. It names the
-structure they are with `values:` on its `#[Operation]`, and that
+structure they are with `structure:` on its `#[Operation]`, and that
 structure's inputs are what it takes and its outputs what it answers
 ([decision](decisions.md#a-listing-is-a-read-only-operation-with-outputs-a-reorder-is-an-update-over-the-collection)):
 
@@ -339,13 +336,13 @@ structure's inputs are what it takes and its outputs what it answers
   description: new TranslatableMarkup('Answers a page of the venues, lighter first, each one the account may read, and how many the filter matched.'),
   permission: self::VIEW,
   readOnly: TRUE,
-  values: VenueListingStructure::class,
+  structure: VenueListingStructure::class,
 )]
 #[Operation('reorder',
   label: new TranslatableMarkup('Reorder the venues'),
   description: new TranslatableMarkup('Gives each venue named its new weight, all in one write; a venue left out keeps its own, and an unknown or repeated venue is refused.'),
   permission: self::ADMINISTER,
-  values: VenueReorderStructure::class,
+  structure: VenueReorderStructure::class,
 )]
 ```
 
@@ -385,7 +382,8 @@ the operation method's, by name; an upcast entity parameter arrives as
 the entity. `DataSurfaceOperationForm` builds the context with the
 operation, renders the data surface, loads current values from the
 composed storage and submits through the pipeline to it. The route's
-requirement is the operation's access:
+requirement is the operation's access, which a route naming a resource
+and an operation has without saying it:
 
 ```yaml
 data_surface_demo_node_type.update:
@@ -395,8 +393,6 @@ data_surface_demo_node_type.update:
     _data_surface_resource: 'Drupal\data_surface_demo_node_type\Resource\NodeTypeResource'
     _data_surface_operation: 'update'
     _data_surface_cosmetics: 'data_surface_demo_node_type.form_cosmetics'
-  requirements:
-    _data_surface_operation_access: 'TRUE'
   options:
     parameters:
       type:
@@ -425,7 +421,9 @@ Two tiers, and another module's alter may answer after both
   module declares, such as `administer site configuration`); an
   operation names it and declares nothing. A route serving the operation
   asks for this answer with the requirement
-  `_data_surface_operation_access: 'TRUE'`, and the tool asks the same.
+  `_data_surface_operation_access`, which every route naming
+  `_data_surface_resource` and `_data_surface_operation` has without
+  saying it (`OperationRouteSubscriber`), and the tool asks the same.
 - **The access class**, `access:` on `#[Resource]` or `#[Structure]`,
   an `OperationAccessInterface` that may hold services, asked only once
   the permission allows: what depends on the thing itself.
@@ -809,8 +807,7 @@ access class, the plugins whose configuration it is
 `data_surface.resource_plugins`), operations (id, label, parameters,
 whether it creates, permission, the placeholders nothing supplies,
 whether it can be asked on its own, and whether what it changes can be
-read on its own), alters, declared variants and, per key with variants, where
-derived variants come from, without building anything, whether an
+read on its own), alters and declared variants, without building anything, whether an
 operation creates included, since it is on the attribute.
 `ResourceCatalog::derivers()` lists the
 derivers, whose derivatives are the site's own.
@@ -949,10 +946,12 @@ block by its name. Its README, and example 13 at
 
 An alter says which resource or structure it applies to with `#[Alters]`
 on its class, optionally naming the operations it applies in. What it
-adds is mounted under its own module's name (at
-`third_party_settings.<module>.<key>` for an input,
-`third_party_outputs.<module>.<key>` for an output), so the owner's
-storage and schema never have to know a contributor's keys. Its
+adds is mounted under its own module's name, at
+`third_party_settings.<module>.<key>`, so the owner's storage and schema
+never have to know a contributor's keys. It adds no outputs: what a call
+answers is its operation's, declared by the owner, and a reaction to a
+save belongs to ECA; an alter that still has `alterOutputs()` is refused
+at discovery. Its
 `#[RefinesInput]` methods tighten the owner's keys, running after the
 owner's own, and may tighten the keys the alter itself added, named as
 the alter named them. They may watch the owner's keys and the keys the
@@ -1075,9 +1074,10 @@ key as a variant of its own ([decision](decisions.md#an-extension-is-a-variant-t
 
 ### An alter's answer
 
-An alter that implements `AltersAccessInterface` answers access for the
-resource or structure it names, with the access class's method on the
-alter itself, `access(OperationContext $context, AccountInterface
+An alter that implements `OperationAccessInterface`, the access class's
+interface, answers access for the resource or structure it names:
+`#[Alters]` on the class says it is an alter's answer, with the method
+on the alter itself, `access(OperationContext $context, AccountInterface
 $account)`, returning an `AccessAnswer` or core's result. It is asked
 after the owner's own answers (the operation's permission, then the
 access class), each alter in discovery order, and the stricter answer
@@ -1101,7 +1101,7 @@ fees, with no change to the program.
 
 ```php
 #[Alters(FeesStructure::class)]
-final class FeesWorkflowAlter implements AltersAccessInterface {
+final class FeesWorkflowAlter implements OperationAccessInterface {
 
   public function access(OperationContext $context, AccountInterface $account): AccessAnswer {
     $read = (new CacheableMetadata())->addCacheContexts(['user.permissions']);
@@ -1120,7 +1120,9 @@ final class FeesWorkflowAlter implements AltersAccessInterface {
 Each class's `use` line: [Namespaces](concepts.md#namespaces).
 
 An alter of a shape that implements it is refused at discovery: a shape
-is one value with no access of its own. An alter answers for a whole
+is one value with no access of its own. So is an access class, named on
+`access:`, that carries `#[Alters]`: it would answer twice, once in each
+role. An alter answers for a whole
 resource or structure, never for one key of it; a key that needs an
 answer of its own is a structure
 ([decision](decisions.md#an-alter-may-answer-access-and-the-stricter-stands)).
@@ -1304,20 +1306,21 @@ Each refusal names the class and method at fault:
 - a `#[RefinesInput]` naming a key the class does not declare, or an
   output key;
 - a watched sibling that is not a declared input;
-- a `watches:` list that does not match the parameters, in order;
+- a removed attribute argument, named with what replaced it:
+  `#[RefinesInput(watches:)]` (the parameter names),
+  `#[Operation(default:)]` (the operation of the parent's kind) and
+  `#[Operation(of:)]` (an operation stands on its own class), and an
+  operation on a class that is no resource or structure, at discovery;
 - two declarations of one operation id;
 - a context constraint, or a refiner that watches nothing, that widens;
-- starting values on a context that does not create;
 - a refiner that refines or watches a child's key, watches a
   collection, or a child's refiner that watches a key only its parent
   declares (a refiner of a collection that narrows inside its items is
   refused when the data surface is refined);
 - variants chosen by a key that is not a plain input, or a variant its
   deciding key does not allow;
-- a context constraint or starting value for a child's key, and a
-  starting value for a collection;
+- a context constraint for a child's key;
 - a class attached inside itself;
-- two operations of one class marked the default;
 - a parent context naming an operation its child does not declare, or
   naming one that needs an argument nothing hands it;
 - a port read under the name of a key, a refiner or rule narrowing a
@@ -1369,7 +1372,7 @@ What that means, end to end:
   ([Child operations](#child-operations)), and otherwise sees the
   context the parent's context hands it with `withChild()`, or the
   parent's operation, `creates` and known identity, never the parent's
-  constraints or starting values, which name the parent's keys.
+  constraints, which name the parent's keys.
 - **Its value is a map at the key**, advertised as a map whose
   properties are the child's keys. The child accepts, validates and
   refines it, in its own frame. Violations come back dotted under the
@@ -1712,9 +1715,14 @@ first of these that applies:
    still answers, below.
 2. **The child's operation with the parent's operation id.** Adding a
    field invokes its storage's own `create`.
-3. **The child's default**, the one operation it marks
-   `#[Operation(..., default: TRUE)]`. Two defaults on one class are
-   refused when it is built.
+3. **The child's operation of the parent's kind**, the one with the
+   standard id of the kind of the parent's operation: `create` for a
+   parent that creates, `update` (or `configure`, for a child with no
+   identity keys) for one that updates, `read` or `list` for one that
+   reads, `delete` for one that deletes. Copying a larder, a create
+   whose id the rack lacks, invokes the rack's own `create`. (A
+   `default:` on `#[Operation]` said this until 2026-10-24, and is
+   refused at discovery.)
 4. **Otherwise it inherits**, exactly as a child always did: the
    parent's operation, `creates` and known identity, and no operation
    of its own. Every child in the examples is this case.
@@ -1727,7 +1735,7 @@ too; on a clash **the child's own known keys win**. `creates` is the
 child's context's, as for a resource asked on its own. An operation the
 parent named that needs an argument nothing supplies is refused at
 build, with the `withChild()` call that would hand it; one found by the
-parent's operation id or as the default is passed over for the next
+parent's operation id or by its kind is passed over for the next
 step, since a context that knows nothing yet (what a tool's static
 definition and the catalog build in) cannot invoke a child operation
 that needs identity.
@@ -1736,14 +1744,14 @@ The child's access then decides its keys for the current account
 ([Three answers](#three-answers)), and two rules say what is asked:
 
 - **The child's access class always answers**, however the child was
-  invoked: named, matched, the default, inherited, or a context handed
+  invoked: named, matched, by the parent's kind, inherited, or a context handed
   whole. A module like field_permissions hides a single field through
   access, and a parent building its child's context itself must not be
   a way around that. What the answer read reaches the parent's
   cacheability, so both contracts and the form vary by it. An inherited
   child with no access class is asked nothing and stays open.
 - **An operation's permission gates only an operation the build
-  resolved** (named, matched or the default): its `%key` is filled from
+  resolved** (named, matched or by the parent's kind): its `%key` is filled from
   the child's context, and a permission the account lacks omits the
   child; one the context cannot name, or the very one the parent's own
   operation asks, says nothing, the parent's access having asked
@@ -1771,43 +1779,6 @@ open, locked or omitted by permission. Its `stock` operation hands both
 racks a context whole, where the access class answers the same and
 `restock`'s permission is not asked (`ChildOperationTest`).
 
-### Derived variants
-
-The deciding values of variants may come from somewhere no class
-answers for. Most field types declare no settings class, and yet each
-one's settings are described already, by its config schema. A service
-tagged `data_surface.derived_variants` implementing
-`ResourceBuild\DerivedVariantsInterface` adds variants at one key for
-the values no `#[Variant]` declares:
-
-- `variantsAt()` names the parent class and the variants' key;
-- `source()` says, in one phrase, where the variants come from, for the
-  catalog;
-- `variants(array $declared)` returns fresh core definitions keyed by
-  key, keyed by deciding value, leaving out the values a declared
-  variant already fills.
-
-The build step seals each value's definitions into a child beside the
-declared ones, and from there it is advertised, refined, accepted and
-emitted the same way. A derived variant is its definitions and nothing else: no
-class, no alters, no refiners, no storage and no access class, so it is
-stored by its parent under the variants' key. A declared variant always
-wins over a derived one for the same value.
-
-`data_surface_tool` ships two. `FieldSettingsSchemaVariants` adds
-`FieldInstanceResource`'s `settings` variants from
-`field.field_settings.<field type>` for every field type offered in the
-UI, and `FieldStorageSettingsSchemaVariants`, the same class pointed at
-another key, adds `FieldStorageResource`'s from
-`field.storage_settings.<field type>`. So the field tools offer a plain
-`string` or `integer` field as they offer an address field, with what
-the schema says and nothing more: its keys, their types and labels, and
-the field type's own default settings where their type fits. A string's
-`max_length` is `storage.settings.max_length` when the field is added,
-and `settings.max_length` on `data_surface:field.storage:update`. The
-catalog lists the declared variants per key, and says where the
-derived ones come from.
-
 ### Variants from the site
 
 Some variants are the site's, not the code's: one per component a
@@ -1815,7 +1786,10 @@ site's themes provide, one per layout its configuration lists. No class
 can be written for each, and each says what it holds already, in a
 JSON Schema. `attachVariants()` names a provider that lists them, each
 with its schema, and the reader writes each schema into a variant
-([Reading a schema](reading-a-schema.md)):
+([Reading a schema](reading-a-schema.md)). The provider is the one
+interface [keys from the site](#keys-that-come-from-the-site) name too,
+`SiteListInterface`, and its list the one list type, `SiteList`; each
+verb reads what it needs of an entry and refuses the rest:
 
 ```php
 // SpotlightResource, example 12
@@ -1825,14 +1799,14 @@ $inputs->attachVariants('props', by: 'component', from: ComponentProps::class)
   ->setLabel(t('Props'));
 
 // ComponentProps, the main module's, built by the class resolver
-final class ComponentProps implements VariantsFromSiteInterface {
+final class ComponentProps implements SiteListInterface {
 
-  public function variants(): VariantList {
-    $variants = (new VariantList())->addCacheTags(['config:core.extension']);
+  public function list(): SiteList {
+    $variants = (new SiteList())->addCacheTags(['config:core.extension']);
     $components = $this->components->getDefinitions();
     ksort($components);
     foreach ($components as $id => $component) {
-      $variants->add((string) $id, (string) ($component['name'] ?? $id), self::props($component['props'] ?? []));
+      $variants->add((string) $id, (string) ($component['name'] ?? $id), schema: self::props($component['props'] ?? []));
     }
     return $variants;
   }
@@ -1842,10 +1816,12 @@ final class ComponentProps implements VariantsFromSiteInterface {
 
 Each class's `use` line: [Namespaces](concepts.md#namespaces).
 
-- **The provider** implements `VariantsFromSiteInterface`: `variants()`
-  answers a `VariantList`, per value of the deciding key its label and
-  the schema of what it chooses, an object in JSON Schema 2020-12 or an
-  older draft. It is built by the class resolver, and asked at every
+- **The provider** implements `SiteListInterface`: `list()` answers a
+  `SiteList`, per value of the deciding key its label and the schema of
+  what it chooses, `add($value, $label, schema: $schema)`, an object in
+  JSON Schema 2020-12 or an older draft. An entry that says a start or a
+  lock, which only a key per thing reads, is refused, and so is one with
+  neither a schema nor a structure. It is built by the class resolver, and asked at every
   build, as a provider of [keys from the site](#keys-that-come-from-the-site)
   is, with the same rules for its cacheability: what it read is the
   built resource's, a list with max-age 0 is refused, and so is one that
@@ -1878,9 +1854,12 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
   resource (`type: ignore`): which variants a site has is not the
   code's, and the chosen variant holds the value to its own keys before
   anything is written. A provider whose every variant is a structure its
-  code names says so, `ClosedVariantsInterface` and a static
+  code names says so, `ClosedSiteListInterface` and a static
   `structures()`, and the key is then written as a class's variants are,
-  a type per value, whichever the site offers now.
+  a type per value, whichever the site offers now. Its list names each
+  value and its label alone, `add('pasted', $this->t('Pasted here'))`:
+  the structure is named once, in `structures()`, and an entry naming
+  one of its own, or a value `structures()` does not name, is refused.
 - **One value is fixed.** A deciding key whose variants offer one value,
   and which declares no list of its own, is drawn as that value, not as a
   select of one, and both documents state it as `const`, its label under
@@ -1899,14 +1878,30 @@ A placed block is the case at scale. `data_surface_block`'s
 BlockPluginStructures::class)`: one variant per block plugin the block
 layout offers. A plugin whose class names its settings with
 `#[UsesStructure]` is that structure, built as declared, which a
-provider says with `VariantList::addStructure($value, $label,
-$class)` in place of a schema; the component block's is one, its own
+provider says with `SiteList::add($value, $label, structure: $class)`
+in place of a schema; the component block's is one, its own
 variants, the components' props, inside it. Any other plugin is read
 from its config schema, `block.settings.<plugin id>`, written as JSON
 Schema for the reader. The keys every block has (its title, whether it
 shows, its theme, region, weight and status) are the resource's own, and
 its visibility a collection of conditions chosen the same way
 ([decision](decisions.md#a-placed-block-is-a-resource)).
+
+A field type's settings are the case again, in `data_surface_tool`.
+`FieldInstanceResource` attaches its `settings` with
+`attachVariants('settings', by: 'field_type', from:
+FieldSettingsSchemaVariants::class)`, and `FieldStorageResource` its own
+from `FieldStorageSettingsSchemaVariants`: one entry per field type
+offered in the UI, labeled with the field type's label, its schema
+`field.field_settings.<field type>` (or `field.storage_settings.<field
+type>`) written as JSON Schema, with the field type's own default
+settings where their type fits. The address module's settings resource
+is a `#[Variant]`, and wins for `address`. So the field tools offer a
+plain `string` or `integer` field as they offer an address field, with
+what the schema says and nothing more. The list counts against the site
+list limit as any other: on a site offering more field types than that,
+the field tools state `settings` open and `deferred`, fetched per field
+type ([decision](decisions.md#derived-variants)).
 
 Variants from the site nest. A schema a provider lists may hold
 variants of its own, a sibling's `const` choosing among objects, and
@@ -1915,7 +1910,7 @@ and slots are variants of the component it names, three deep
 (`ComponentSlots`, beside `ComponentProps` at `slots`;
 [decision](decisions.md#a-slot-holds-text-a-component-or-components)).
 The same shape stands at many places in such a tree, so a provider hands
-the defs its entries share once, `VariantList::addDefs($defs)`, and an
+the defs its entries share once, `SiteList::addDefs($defs)`, and an
 entry whose schema is a `$ref` into them is that def. Each def is one
 read structure, built once per request and context and held at every key
 it is attached at, so a site with hundreds of components builds a
@@ -1962,7 +1957,7 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
   child is built once for the list, invoked exactly as an attached
   child is ([Child operations](#child-operations)): the operation the
   parent's context names for the key, else the one with the parent's
-  operation id, else its default, otherwise the parent's operation and
+  operation id, else the one of the parent's kind, otherwise the parent's operation and
   known identity. Each item's context is that one with its `delta`
   added to what it knows (`Collection::contextFor()`); delta is
   position, and nothing stores it.
@@ -1975,8 +1970,8 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
   the list itself belong to the parent: a `#[RefinesInput]` method of
   the parent on the key may narrow them, and an operation may with
   `withConstraint()`. A refiner of the list that narrows inside its item
-  is refused when the data surface is refined, naming the key. Starting
-  values for a list are refused: a list starts empty.
+  is refused when the data surface is refined, naming the key. A list
+  starts empty.
 - **Access answers once for the list.** The child's operation access is
   asked once, since field access is per field and not per delta: open,
   locked (the list key is locked, every item with it, and the form's
@@ -2006,10 +2001,10 @@ $inputs->addEach('form_settings', 'boolean', from: ProtectedForms::class, defaul
   ->setLabel(t('Honeypot Enabled Forms'));
 
 // ProtectedForms, a service
-final class ProtectedForms implements KeysFromSiteInterface {
+final class ProtectedForms implements SiteListInterface {
 
-  public function keys(): KeyedList {
-    $keys = (new KeyedList())->addCacheTags(['config:node_type_list', 'config:comment_type_list']);
+  public function list(): SiteList {
+    $keys = (new SiteList())->addCacheTags(['config:node_type_list', 'config:comment_type_list']);
     foreach ($this->forms() as $form_id => $label) {
       $keys->add($form_id, $label);
     }
@@ -2027,10 +2022,13 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
   default or else `default:`. `attachEach($key, Structure::class, from:)`
   holds the structure at every thing, as `attach()` holds one. Both
   return the map at the key, for the owner to label and describe.
-- **The provider** implements `KeysFromSiteInterface`: `keys()` answers
-  a `KeyedList`, an id and a label per thing in order, and for each
-  optionally what it starts from and whether it is locked. An id becomes
-  a key, so it holds no dot or colon. The provider is built by the class
+- **The provider** implements `SiteListInterface`, the one interface
+  [variants from the site](#variants-from-the-site) name too: `list()`
+  answers a `SiteList`, an id and a label per thing in order, and for
+  each optionally what it starts from and whether it is locked. An id
+  becomes a key, so one holding a dot or a colon is refused when the
+  resource is built, and so is an entry naming a schema or a structure,
+  which only a variant reads. The provider is built by the class
   resolver, a service named by its class or a class implementing
   `ContainerInjectionInterface`, so it may hold the services it reads;
   the resource only names it, and stays static.
@@ -2075,7 +2073,8 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
   configuration lists, and a bench out of use has no hours, at each.
   A shape's alters and a structure's apply at every thing.
 - **Refused**, naming the provider or the key: a provider that implements
-  no `KeysFromSiteInterface`; a structure handed to `addEach()` or a shape
+  no `SiteListInterface`; an entry no key can be, or one with a schema or
+  a structure; a structure handed to `addEach()` or a shape
   to `attachEach()`; a list that cannot be cached or varies by the
   account; at the things, a structure that names storage or identity, or
   requires a port its owner leaves unwired, and a thing that says what a

@@ -23,7 +23,7 @@ use Symfony\Component\Validator\Constraint;
  *
  * The field's selection handler is asked, for the account asking: core's
  * autocomplete and select widgets ask it the same way. Up to the site's
- * limit, `data_surface.settings:reference_enum_limit`, the targets are the
+ * limit, `data_surface.settings:reference_list_limit`, the targets are the
  * key's options, labeled; past it this resolver does not apply, so the key
  * takes any id and the constraint's validator decides, which the contract
  * says is checked on the server. The limit is the one a reference key a

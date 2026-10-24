@@ -152,9 +152,9 @@ abstract class DataSurfaceWidgetBase extends PluginBase implements DataSurfaceWi
    * A definition asks for a stock widget by name, with core's own setting
    * spelling (`setSetting('widget', 'radios')`), and the manager refuses
    * a definition whose asked widget did not draw it, rather than draw it
-   * as something it did not ask for. The words are the ones the served
-   * contract's `x-surface.widget` says, so the stock select answers to
-   * `select`; a widget of a module's own answers to its plugin ID.
+   * as something it did not ask for. A widget answers to its plugin ID,
+   * which for the stock ones is the word the served contract's
+   * `x-surface.widget` says (`select`, `fieldset`, `checkbox`).
    *
    * Decision: see docs/decisions.md#a-widget-is-chosen-from-the-definition.
    *

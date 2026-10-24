@@ -204,10 +204,10 @@ class CollectionTest extends DataSurfaceKernelTestBase {
     // Each item's context knows its delta.
     $this->assertEquals(['larder' => 'main', 'delta' => 2], $racks->contextFor(2)->known);
     $this->assertSame(0, $racks->contextFor(0)->known['delta']);
-    // Added: the rack has no add, so its default, browse, ten at most.
+    // Added: the rack's own create, ten at most.
     $add = $this->resources()->buildOperation(CellarResource::class, 'create');
     $this->assertSame(['min' => 0, 'max' => 10], self::collection($add, 'racks')->child()->getDefinition('spices')->getConstraints()['Range']);
-    $this->assertSame('browse', self::collection($add, 'racks')->context->id);
+    $this->assertSame('create', self::collection($add, 'racks')->context->id);
     // The shelf declares no operation: it inherits, with no access of
     // its own asked.
     $this->assertSame('update', self::collection($edit, 'shelves')->context->id);

@@ -11,9 +11,10 @@ use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface\Resource\StructureInterface;
 
 /**
- * Has two providers of one operation id.
+ * Has two providers of one operation id: the class and a method.
  */
 #[Structure('resource_test.broken.clashing_operation')]
+#[Operation('open', label: 'Open again')]
 final class ClashingOperationStructure implements StructureInterface {
 
   /**

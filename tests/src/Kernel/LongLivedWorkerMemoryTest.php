@@ -157,9 +157,8 @@ class LongLivedWorkerMemoryTest extends DataSurfaceKernelTestBase {
     $memo = new \ReflectionProperty($resources, 'builds');
     $limit = (new \ReflectionClassConstant($resources, 'BUILDS_KEPT'))->getValue();
     $this->assertIsInt($limit);
-    $context = static fn (int $capacity): OperationContext => new OperationContext('configure', constraints: [
-      'capacity' => ['Range' => ['min' => 1, 'max' => $capacity]],
-    ]);
+    $context = static fn (int $capacity): OperationContext => (new OperationContext('configure'))
+      ->withConstraint('capacity', 'Range', ['min' => 1, 'max' => $capacity]);
     for ($capacity = 1; $capacity <= $limit + 300; $capacity++) {
       $resources->build(RegistrationStep3Resource::class, $context($capacity));
     }

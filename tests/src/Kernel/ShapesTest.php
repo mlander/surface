@@ -224,7 +224,7 @@ class ShapesTest extends DataSurfaceKernelTestBase {
       ],
       'an alter answering access' => [
         ['shapes' => [Sku::class => $module], 'alters' => [AccessShapeAlter::class => $module]],
-        AccessShapeAlter::class . ' alters the shape resource_test.sku and implements Drupal\data_surface\Resource\AltersAccessInterface, and a shape is one value with no access of its own: answer for the resource or structure that asks for it.',
+        AccessShapeAlter::class . ' alters the shape resource_test.sku and implements Drupal\data_surface\Resource\OperationAccessInterface, and a shape is one value with no access of its own: answer for the resource or structure that asks for it.',
       ],
     ] as $case => [$classes, $message]) {
       try {

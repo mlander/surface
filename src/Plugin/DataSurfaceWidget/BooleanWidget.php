@@ -13,8 +13,8 @@ use Drupal\data_surface\Widget\DataSurfaceWidgetBase;
  * Checkbox for boolean definitions.
  */
 #[DataSurfaceWidget(
-  id: 'boolean',
-  label: new TranslatableMarkup('Boolean'),
+  id: 'checkbox',
+  label: new TranslatableMarkup('Checkbox'),
   weight: 10,
 )]
 final class BooleanWidget extends DataSurfaceWidgetBase {

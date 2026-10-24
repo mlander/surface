@@ -22,7 +22,7 @@ use Drupal\data_surface_resource_test\Storage\CellarStorage;
  *   The rack has operations and an access class, so every item is
  *   invoked through the rack's operation for the cellar's operation (its
  *   `update`, which takes the larder, when the cellar is edited; its
- *   default `browse`, ten spices at most, when one is added), and its
+ *   `create`, ten spices at most, when one is added), and its
  *   access answers once for the whole list.
  * - shelves: a list of shelves, at most three, each with the shelf's own
  *   refiner, which holds a shelf's height to its own unit, item by item.

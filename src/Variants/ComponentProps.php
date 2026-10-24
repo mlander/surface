@@ -6,8 +6,8 @@ namespace Drupal\data_surface\Variants;
 
 use Drupal\Core\DependencyInjection\ContainerInjectionInterface;
 use Drupal\Core\Theme\ComponentPluginManager;
-use Drupal\data_surface\Resource\VariantList;
-use Drupal\data_surface\Resource\VariantsFromSiteInterface;
+use Drupal\data_surface\Resource\SiteList;
+use Drupal\data_surface\Resource\SiteListInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -20,7 +20,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * reads the props of its spotlight with it, and the component block of
  * data_surface_component_block the props of a placed block.
  */
-final class ComponentProps implements VariantsFromSiteInterface, ContainerInjectionInterface {
+final class ComponentProps implements SiteListInterface, ContainerInjectionInterface {
 
   /**
    * The JSON Schema types; a component may also name a PHP class.
@@ -47,12 +47,12 @@ final class ComponentProps implements VariantsFromSiteInterface, ContainerInject
   /**
    * {@inheritdoc}
    */
-  public function variants(): VariantList {
-    $variants = (new VariantList())->addCacheTags(['config:core.extension']);
+  public function list(): SiteList {
+    $variants = (new SiteList())->addCacheTags(['config:core.extension']);
     $components = $this->components->getDefinitions();
     ksort($components);
     foreach ($components as $id => $component) {
-      $variants->add((string) $id, (string) ($component['name'] ?? $id), self::props($component['props'] ?? []));
+      $variants->add((string) $id, (string) ($component['name'] ?? $id), schema: self::props($component['props'] ?? []));
     }
     return $variants;
   }

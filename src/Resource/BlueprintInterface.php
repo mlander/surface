@@ -38,11 +38,13 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
    * definition itself; no verb is needed for it.
    *
    * Variants from the site: `from:` names a provider implementing
-   * VariantsFromSiteInterface, asked at every build as a keys provider is,
+   * SiteListInterface, asked at every build as for keys from the site,
    * whose entries are one variant each, read from the JSON Schema each
-   * carries (SchemaReader), beside every #[Variant] at the key; a declared
-   * variant wins for a value both name. Each entry's label is what $by
-   * offers its value as.
+   * carries (SchemaReader) or built from the structure it names, beside
+   * every #[Variant] at the key; a declared variant wins for a value both
+   * name. Each entry's label is what $by offers its value as; an entry
+   * that says a start or a lock is refused, since a variant reads
+   * neither.
    *
    * @code
    * $inputs->attachVariants('props', by: 'component', from: ComponentProps::class)
@@ -63,48 +65,11 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
    *
    * @throws \LogicException
    *   When the key is already declared, for outputs, which do not attach
-   *   yet, or when the provider implements no VariantsFromSiteInterface.
+   *   yet, or when the provider implements no SiteListInterface.
    *
    * @see docs/resources.md#variants-from-the-site
    */
   public function attachVariants(string $key, string $by, ?string $from = NULL): MapDataDefinition;
-
-  /**
-   * Declares the keys a JSON Schema document describes.
-   *
-   * The document is read as SchemaReader reads it: JSON Schema 2020-12,
-   * or draft-04, -06 or -07 converted first; each property a key with
-   * its type, its label and description, its default and examples, and
-   * the constraints its keywords say; a nested object a map, or a
-   * structure attached at the key where it says more than a map can; a
-   * def it refers to one structure wherever it is used; an array a list
-   * or a collection; a `oneOf` of objects a sibling's `const` chooses
-   * between, variants; a conditional in the vocabulary of declared
-   * rules, a rule. What none of these can say is kept as a JsonSchema
-   * constraint, checked at runtime and named under `checkedOnServer`.
-   *
-   * @code
-   * $inputs->fromSchema([
-   *   'type' => 'object',
-   *   'properties' => ['heading' => ['type' => 'string', 'title' => 'Heading', 'maxLength' => 80]],
-   *   'required' => ['heading'],
-   * ]);
-   * @endcode
-   *
-   * @param array $document
-   *   The schema, decoded with objects as arrays: an object at its root.
-   *
-   * @return array<string, string>
-   *   What was read otherwise than as a key or a rule, or not at all, by
-   *   the JSON pointer of where it stands in the document: a keyword
-   *   dropped, kept as a foreign constraint, or read more narrowly.
-   *
-   * @throws \InvalidArgumentException
-   *   For a keyword the reader refuses, naming its pointer.
-   *
-   * @see docs/reading-a-schema.md
-   */
-  public function fromSchema(array $document): array;
 
   /**
    * A map with one value per thing the site has: keys from the site.
@@ -114,7 +79,9 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
    * entry becomes a key in the map at $key, declared as add() declares
    * one: of $type, labeled with the entry's label, starting from the
    * entry's default or else $default, held to what is stored when the
-   * entry is locked. The provider is asked when the resource is built,
+   * entry is locked; an entry that names a schema or a structure is
+   * refused, since a key per thing reads neither. The provider is asked
+   * when the resource is built,
    * never by the resource; what it read is the built resource's
    * cacheability, so the form, both schema documents and the tool listing
    * change when the site does.
@@ -132,7 +99,7 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
    * @param string $type
    *   What each entry is: a typed data type, or a shape's class.
    * @param string $from
-   *   The provider's class, implementing KeysFromSiteInterface.
+   *   The provider's class, implementing SiteListInterface.
    * @param mixed $default
    *   What every entry starts from unless it says otherwise; NULL for
    *   nothing.
@@ -142,7 +109,7 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
    *
    * @throws \LogicException
    *   When the key is taken, for outputs, inside a structure mixed in, or
-   *   when the provider implements no KeysFromSiteInterface.
+   *   when the provider implements no SiteListInterface.
    *
    * @see docs/resources.md#keys-that-come-from-the-site
    */
@@ -171,7 +138,7 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
    * @param string $structure
    *   The structure each entry is, by class, or a derived one's id.
    * @param string $from
-   *   The provider's class, implementing KeysFromSiteInterface.
+   *   The provider's class, implementing SiteListInterface.
    * @param array<string, string> $reads
    *   Each port of the structure, mapped to a sibling map from the same
    *   provider, whose entry of the same id it reads.
@@ -247,7 +214,7 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
    * refused, code `computed`, naming the keys it is computed from.
    *
    * @code
-   * $inputs->derive('slug', 'string', t('Slug'), from: ['label'], using: Slugify::class)
+   * $inputs->compute('slug', 'string', t('Slug'), from: ['label'], using: Slugify::class)
    *   ->addConstraint('Regex', ['pattern' => '/^[a-z0-9]+(-[a-z0-9]+)*$/D']);
    * @endcode
    *
@@ -262,10 +229,10 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
    *   it, at least one.
    * @param string $using
    *   The class that computes it, a pure function of $from: one that
-   *   implements DeriverInterface.
+   *   implements ComputesValueInterface.
    * @param string $when
-   *   Derive::ON_CREATE, the default, to compute it once, while storage
-   *   holds nothing for it; Derive::ON_CHANGE to compute it again on every
+   *   Compute::ON_CREATE, the default, to compute it once, while storage
+   *   holds nothing for it; Compute::ON_CHANGE to compute it again on every
    *   write that changes a key in $from. A write that changes none keeps
    *   what is stored, either way.
    *
@@ -276,11 +243,11 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
    *   For outputs, a structure (a computed key is a resource's own, in
    *   this cut), a structure mixed in, a key of a map or list type, a
    *   source that is not declared before it, a class that implements no
-   *   DeriverInterface, or a `when` that is neither.
+   *   ComputesValueInterface, or a `when` that is neither.
    *
    * @see docs/declaring-a-resource.md#computed-keys
    */
-  public function derive(string $key, string $type, string|\Stringable $label, array $from, string $using, string $when = Derive::ON_CREATE): DataDefinition;
+  public function compute(string $key, string $type, string|\Stringable $label, array $from, string $using, string $when = Compute::ON_CREATE): DataDefinition;
 
   /**
    * Says what the declared keys depend on, while the build is reused.

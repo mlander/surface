@@ -359,7 +359,7 @@ class AttachedStructureTest extends DataSurfaceKernelTestBase {
     $owner->add('capacity', 'integer', 'Capacity');
     $first = new ResourceBlueprintAdditions($builder, $typed_data, 'first_module');
     $second = new ResourceBlueprintAdditions($builder, $typed_data, 'second_module');
-    $outputs = new ResourceBlueprintAdditions($builder, $typed_data, 'first_module', TRUE);
+    $outputs = new ResourceBlueprint(new DataSurfaceBuilder(), $typed_data, outputs: TRUE);
     $first->add('badge', 'string', 'Badge');
     $second->add('ribbon', 'string', 'Ribbon');
     $outputs->add('shown', 'string', 'Shown');
@@ -386,9 +386,9 @@ class AttachedStructureTest extends DataSurfaceKernelTestBase {
       [$first, 'title', 'capacity', 'describe() was asked to place "title" after "capacity".'],
       // The owner orders its own keys.
       [$owner, 'title', 'capacity', 'an owner orders its own keys by declaring them in order.'],
-      // An output mount is never drawn.
+      // An output is never drawn.
       [
-        $outputs, 'third_party_outputs.first_module', 'title',
+        $outputs, 'shown', 'title',
         'outputs are never drawn, so they have nowhere to be placed.',
       ],
       // After nothing the owner declared, after the mounts themselves,

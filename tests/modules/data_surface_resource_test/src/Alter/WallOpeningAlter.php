@@ -6,7 +6,7 @@ namespace Drupal\data_surface_resource_test\Alter;
 
 use Drupal\Core\Session\AccountInterface;
 use Drupal\data_surface\Resource\AccessAnswer;
-use Drupal\data_surface\Resource\AltersAccessInterface;
+use Drupal\data_surface\Resource\OperationAccessInterface;
 use Drupal\data_surface\Resource\Attribute\Alters;
 use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface_resource_test\Access\WallAccess;
@@ -19,7 +19,7 @@ use Drupal\data_surface_resource_test\Structure\Gallery\WallStructure;
  * wall's access class or an earlier alter locked or left out.
  */
 #[Alters(WallStructure::class)]
-final class WallOpeningAlter implements AltersAccessInterface {
+final class WallOpeningAlter implements OperationAccessInterface {
 
   /**
    * {@inheritdoc}

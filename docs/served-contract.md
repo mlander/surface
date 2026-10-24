@@ -226,7 +226,7 @@ each refused one refused, both ways where the schema is exact and one
 way where it is `refine` or `live`, by a standard validator
 (`format` not asserted, no defaults filled).
 
-### Three markers
+### Markers
 
 A key a refiner narrows carries at most one of `enumerated` and
 `refine`, for its static refiners, and `live` besides when a runtime
@@ -385,14 +385,14 @@ under `$defs`, and referred to ([reusable subschemas](#reusable-subschemas)).
 | a map | a nested object |
 | an attached part | a reference to its def under `$defs`, beside its label ([reusable subschemas](#reusable-subschemas)) |
 | a key with variants | `anyOf` of a reference to each variant's def, and `{"type": "null"}` where it may be cleared, no `type` beside it; each variant stated exactly by a conditional on the parent ([below](#variants-are-conditionals)) |
-| a key that refers to an entity, `entity:<type>[:<bundle>]` | its id's type, `x-surface.reference`, the candidates as `oneOf` up to `data_surface.settings:reference_enum_limit`, and `DataSurfaceValidReference` under `checkedOnServer`; past the limit no `oneOf`, `x-surface.widget: autocomplete` ([Options](options.md#a-key-that-refers-to-an-entity)) |
+| a key that refers to an entity, `entity:<type>[:<bundle>]` | its id's type, `x-surface.reference`, the candidates as `oneOf` up to `data_surface.settings:reference_list_limit`, and `DataSurfaceValidReference` under `checkedOnServer`; past the limit no `oneOf`, `x-surface.widget: autocomplete` ([Options](options.md#a-key-that-refers-to-an-entity)) |
 | a key of any entity type, `entity` | a reference to its def, `{entity_type, id}`: the entity types as `oneOf`, the id a string marked `reference: {by: "entity_type"}`, `enumerated`, its candidates per entity type one conditional on the def |
 | a deciding key whose variants offer one value | `const` of that value, no `oneOf`, the value's label under `x-surface.fixed`; a list the key declares itself, or a stored value no longer offered, is stated as any list ([decision](decisions.md#an-extension-is-a-variant-the-site-adds-or-an-alter)) |
 | a structure mixed in, `mixIn()` | a reference to its def in the frame's `allOf`, beside the frame's own `properties` (each member in its place: `true`, what differs, or `false`), the frame closed with `unevaluatedProperties: false` ([below](#a-mixed-in-structure-is-composed)) |
 | a list | `type: array`, `items`, never null: an empty item is dropped before anything reads the list ([decision](decisions.md#an-item-is-never-null)) |
 | a collection | `type: array`, `items` a reference to the child's def, narrowed by composition only where every item differs from it (a key the child's operation locked, a locked list), `minItems` and `maxItems` from its Count as the parent's refiners left it, and `x-surface.list: true` ([below](#collections)) |
 | a locked key | `readOnly: true` and `const` of the value the operation knows |
-| a computed key, `derive()` | `readOnly: true` and `x-surface.computed`, no `const` (what it holds follows its sources), never in `required`; in `values` what it holds ([Declaring a resource](declaring-a-resource.md#computed-keys)) |
+| a computed key, `compute()` | `readOnly: true` and `x-surface.computed`, no `const` (what it holds follows its sources), never in `required`; in `values` what it holds ([Declaring a resource](declaring-a-resource.md#computed-keys)) |
 | a child its access locked | `readOnly: true` on the part, and on every key inside it with `const` of what is stored (none in the full schema); an omitted child is not there at all ([Three answers](resources.md#three-answers)) |
 | a key under a runtime access answer, in the full schema | there and writable, as the static answers leave it, with `x-surface.access: "live"`: it may be locked or left out once the subject is known; the schema for these answers says which, and marks nothing ([Static and runtime access](resources.md#static-and-runtime-access)) |
 | a secret | `writeOnly: true`, its declared type, never in `required` (left out or `null`, the stored secret stands), no default, `null` in `values` ([decision](decisions.md#a-secret-is-optional-never-nullable)) |
@@ -432,7 +432,7 @@ under `$defs`, and referred to ([reusable subschemas](#reusable-subschemas)).
 | `within` | On an object owning an applicator (a site, a frame, a def): what a schema below the applicator says under `x-surface`, as a map from its JSON pointer, relative to the object, to that `x-surface`. On the field instance's `storage` site, whose narrowing locks the field type: `{"/allOf/1/properties/field_type": {"locked": true, "dependsOn": []}}`. Nothing below an applicator carries `x-surface` ([Contract 2](#contract-2)); `SchemaResolver::restored()` and the app's `inlineSchema()` put each entry back where it points. |
 | `ports` | On an object, a def's or the top's, when the structure reads ports: each port's typed data `type`, whether it is `required`, and the `shape` it reads, when it reads one. A port is no property: its value is a key of the container, which the site names ([below](#a-port-is-stated-at-its-site)). |
 | `reads` | On a site, the property where a child that reads ports is used: each port, mapped to the key of the parent's frame it reads. On a map of keys from the site whose entries read ports, each port mapped to the sibling map whose entry of the same id it reads. |
-| `live` | Only when `true` (`runtime` in contract 1): a runtime refiner narrows the key too, by a rule no schema can state ([three markers](#three-markers)). Never in a conditional. In the full schema it is on the key, which keeps the width its static refiners give it; the schema for these answers is refined by it for its values. Written beside `enumerated` or `refine` when the key has static refiners as well. |
+| `live` | Only when `true` (`runtime` in contract 1): a runtime refiner narrows the key too, by a rule no schema can state ([markers](#markers)). Never in a conditional. In the full schema it is on the key, which keeps the width its static refiners give it; the schema for these answers is refined by it for its values. Written beside `enumerated` or `refine` when the key has static refiners as well. |
 | `operation` | At the top only, after `contract`: how the operation behaves, `{id, label, description?, kind, creates, destructive, idempotent}` ([above](#the-schema)). Contract 1 also carried `readOnly`, which `kind: "read"` says. |
 | `version` | At the top always, after `operation`; on a def only above 1, absent reading as 1: which version of its stored values the resource or structure describes, counting the breaking changes made to them. A compatible change never moves it; a client compares it before trusting a cached document ([Evolving a resource](evolution.md#the-version)). |
 | `doesNotApply` | On an object, the top or a child's frame, never on a property: the keys of it a refiner answered [do not apply](refinement.md#when-a-key-does-not-apply) to these values, each with the keys it depends on, `{"send_day": ["frequency"]}`. They are no properties of it; a client refines when one of those changes. |
@@ -467,7 +467,7 @@ key declared with it refers to.
 1. **One def per child.** Every attached child and every
    variant is written once, under the root's `$defs`, keyed by the id on
    its class's `#[Structure]` or `#[Resource]` (`registration.contact`).
-   A child with no class, a [derived variant](resources.md#derived-variants), is keyed
+   A child with no class, a [variant from the site](resources.md#variants-from-the-site), is keyed
    `<parent id>.<key>.<value>` (`field.storage.settings.string`), an
    attached one `<parent id>.<key>`. The same class at two keys, or in
    two frames, is one def. A def may refer to other defs (a child inside
@@ -1234,7 +1234,7 @@ The create's envelope moves to its custom method too,
 ### A lookup
 
 A key that refers to an entity lists its candidates while there are at
-most `data_surface.settings:reference_enum_limit`; past that it lists
+most `data_surface.settings:reference_list_limit`; past that it lists
 none, and a client finds an id with the lookup, a custom read every
 resource path answers
 ([decision](decisions.md#a-reference-is-an-id-with-a-list-the-site-decides-listed-or-looked-up)):

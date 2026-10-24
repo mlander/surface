@@ -8,5 +8,3 @@ data_surface_examples.step16:
     _data_surface_resource: 'Drupal\data_surface_examples_references\Resource\SponsorshipResource'
     _data_surface_operation: 'configure'
     _data_surface_panel: 'data_surface_examples.panels'
-  requirements:
-    _data_surface_operation_access: 'TRUE'

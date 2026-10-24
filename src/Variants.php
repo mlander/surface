@@ -24,9 +24,9 @@ use Drupal\data_surface\Pipeline\ValueState;
  * map.
  *
  * Through a blueprint the variants are always open: the parent names
- * none, and any module may declare one with #[Variant] or derive some
- * (DerivedVariantsInterface). This table is what the build sealed from
- * them.
+ * none, and any module may declare one with #[Variant], or a provider
+ * may list them from the site (SiteListInterface). This table is what the
+ * build sealed from them.
  *
  * Carried on the key's Entry for the whole life of the data surface,
  * refined or not, so an emitter can read the table off any data surface and

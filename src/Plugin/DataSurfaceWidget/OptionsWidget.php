@@ -29,8 +29,8 @@ use Drupal\data_surface\Widget\ChoiceWidgetBase;
  * @see \Drupal\data_surface\Options\DataSurfaceOptions
  */
 #[DataSurfaceWidget(
-  id: 'options',
-  label: new TranslatableMarkup('Options'),
+  id: 'select',
+  label: new TranslatableMarkup('Select'),
   weight: -10,
 )]
 final class OptionsWidget extends ChoiceWidgetBase {
@@ -247,13 +247,6 @@ final class OptionsWidget extends ChoiceWidgetBase {
    */
   public static function keepLabel(mixed $value): TranslatableMarkup {
     return t('- Keep @value (no longer offered) -', ['@value' => is_scalar($value) ? (string) $value : (string) json_encode($value)]);
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function answersTo(): array {
-    return ['select', $this->getPluginId()];
   }
 
 }

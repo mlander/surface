@@ -9,22 +9,17 @@ namespace Drupal\data_surface\Resource\Attribute;
  *
  * The first parameter is the key's definition (a clone). Every
  * parameter after it is a sibling input, in order, typed as that key's
- * value. Which siblings is said once, in one of two ways:
+ * value, and named for the key it is handed:
  *
- *   - by parameter name, when `watches` is omitted:
- *       #[RefinesInput('bundle')]
- *       public static function bundleOf(
- *         DataDefinitionInterface $bundle, string $entity_type)
+ *   #[RefinesInput('bundle')]
+ *   public static function bundleOf(
+ *     DataDefinitionInterface $bundle, string $entity_type)
  *
- *   - by `watches`, which then must match the parameters in order; a
- *     renamed parameter is a seal-time error rather than a refiner
- *     that silently never runs:
- *       #[RefinesInput('field', watches: ['entity_type', 'bundle'])]
- *       public static function fieldOf(DataDefinitionInterface $field,
- *         string $entity_type, string $bundle)
- *
- * Either way, sealing refuses a sibling that is not a declared input
- * key, and a method naming an output key.
+ * Sealing refuses a parameter that names no declared input key, so a
+ * renamed parameter is an error rather than a refiner that silently
+ * never runs, and a method naming an output key. (`watches:`, a list
+ * restating the parameter names, was removed on 2026-10-24 and is
+ * refused at discovery.)
  *
  * The method runs once every watched sibling has a value, and again
  * when any of them changes. A method with no sibling parameters runs
@@ -80,16 +75,12 @@ final class RefinesInput {
    *
    * @param string $key
    *   The input key this method tightens.
-   * @param string[]|null $watches
-   *   The sibling keys, in parameter order. NULL means read them from
-   *   the parameter names.
    * @param bool $runtime
    *   TRUE for a refiner whose answer no schema can state ahead of time:
    *   only the pipeline runs it, against the values it is handed.
    */
   public function __construct(
     public readonly string $key,
-    public readonly ?array $watches = NULL,
     public readonly bool $runtime = FALSE,
   ) {}
 

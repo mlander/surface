@@ -6,8 +6,8 @@ namespace Drupal\data_surface_examples\Keys;
 
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\DependencyInjection\ContainerInjectionInterface;
-use Drupal\data_surface\Resource\KeyedList;
-use Drupal\data_surface\Resource\KeysFromSiteInterface;
+use Drupal\data_surface\Resource\SiteList;
+use Drupal\data_surface\Resource\SiteListInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -18,7 +18,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * the next request with no cache rebuild. A type marked locked there is
  * shown and kept as stored.
  */
-final class TicketTypes implements KeysFromSiteInterface, ContainerInjectionInterface {
+final class TicketTypes implements SiteListInterface, ContainerInjectionInterface {
 
   /**
    * The configuration object the ticket types are listed in.
@@ -45,9 +45,9 @@ final class TicketTypes implements KeysFromSiteInterface, ContainerInjectionInte
   /**
    * {@inheritdoc}
    */
-  public function keys(): KeyedList {
+  public function list(): SiteList {
     $config = $this->configFactory->get(self::CONFIG);
-    $keys = (new KeyedList())->addCacheableDependency($config);
+    $keys = (new SiteList())->addCacheableDependency($config);
     foreach ($config->get('types') ?? [] as $id => $type) {
       $keys->add((string) $id, (string) $type['label'], locked: (bool) ($type['locked'] ?? FALSE));
     }

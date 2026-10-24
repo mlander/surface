@@ -10,6 +10,7 @@ use Drupal\data_surface\Resource\Attribute\Resource;
 use Drupal\data_surface\Resource\BlueprintInterface;
 use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface\Resource\ResourceInterface;
+use Drupal\data_surface_tool\FieldStorageSettingsSchemaVariants;
 use Drupal\data_surface_tool\Storage\FieldStorageStorage;
 use Drupal\field\Entity\FieldStorageConfig;
 use Drupal\field\FieldStorageConfigInterface;
@@ -111,7 +112,7 @@ final class FieldStorageResource implements ResourceInterface {
     $inputs->add('translatable', 'boolean', t('Translatable'), default: TRUE);
 
     // Its part.
-    $inputs->attachVariants('settings', by: 'field_type')
+    $inputs->attachVariants('settings', by: 'field_type', from: FieldStorageSettingsSchemaVariants::class)
       ->setLabel(t('Storage settings'))
       ->setDescription(t('Settings every bundle using this field shares, described by the field type itself.'));
   }

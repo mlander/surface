@@ -31,7 +31,7 @@ value tree is already in the definition's clean shape.
 ## Applicability is an instance method
 
 `isApplicable()` is deliberately not static. A widget may have to ask a
-collaborator before it can answer (the options widget asks the options
+collaborator before it can answer (the select widget asks the options
 service whether the definition's constraints name a list that is not
 empty), and a static answer would have to reach the container to do it.
 
@@ -55,7 +55,7 @@ weight rather than its class:
 
 ```php
 function my_module_data_surface_widget_info_alter(array &$definitions): void {
-  $definitions['options']['weight'] = 10;
+  $definitions['select']['weight'] = 10;
 }
 ```
 
@@ -65,20 +65,20 @@ function my_module_data_surface_widget_info_alter(array &$definitions): void {
 | --- | --- | --- | --- |
 | `checkboxes` | -15 | A list whose item resolves to a list of allowed values, while it offers at most twelve (`CheckboxesWidget::MAXIMUM_OPTIONS`), or that asks for checkboxes. | `checkboxes`, never `#required` |
 | `radios` | -15 | One value that resolves to a list of allowed values and asks for radios. | `radios`; `- None -` a radio only where the key may be cleared |
-| `options` | -10 | Any definition whose constraints resolve to a list of allowed values, an empty one included: one value, and a list the checkboxes leave (more than twelve, or asking for a select). See [Options and resolvers](options.md). | `select`; a list's `#multiple`, never `#required`; an `item` showing the one value a deciding key's variants offer |
-| `autocomplete` | -5 | A key that refers to one entity type, `entity:<type>[:<bundle>]` or a bare `entity` key's id once its entity type is chosen, whose candidates are not listed: more than `data_surface.settings:reference_enum_limit` ([Options](options.md#a-key-that-refers-to-an-entity)). | core's `entity_autocomplete`, its selection settings the key's; read back as the id in brackets, `Riverside Hall (riverside)` as `riverside`; core's own check of what was typed taken off |
-| `map` | 5 | A `ComplexDataDefinitionInterface`. One that declares no property, such as a variant for a choice with nothing more to say, renders as an empty container and answers an empty map. | `details` |
+| `select` | -10 | Any definition whose constraints resolve to a list of allowed values, an empty one included: one value, and a list the checkboxes leave (more than twelve, or asking for a select). See [Options and resolvers](options.md). | `select`; a list's `#multiple`, never `#required`; an `item` showing the one value a deciding key's variants offer |
+| `autocomplete` | -5 | A key that refers to one entity type, `entity:<type>[:<bundle>]` or a bare `entity` key's id once its entity type is chosen, whose candidates are not listed: more than `data_surface.settings:reference_list_limit` ([Options](options.md#a-key-that-refers-to-an-entity)). | core's `entity_autocomplete`, its selection settings the key's; read back as the id in brackets, `Riverside Hall (riverside)` as `riverside`; core's own check of what was typed taken off |
+| `fieldset` | 5 | A `ComplexDataDefinitionInterface`. One that declares no property, such as a variant for a choice with nothing more to say, renders as an empty container and answers an empty map. | `details` |
 | `list` | 8 | A list of single values with no list of allowed values, whose item a widget draws: keywords, a list of free strings or numbers. | a `fieldset` of rows, "Remove" beside each, "Add another" under them |
 | `time` | 9 | A `string` that asks for a time. | a time input |
 | `string` | 10 | `string`, `email`, `uri`. | `textfield`, `email`, `url`; `textarea` when multiline; `password` for a secret |
 | `number` | 10 | `integer`, `float`. | `number` |
-| `boolean` | 10 | `boolean`. | `checkbox`, never `#required` |
+| `checkbox` | 10 | `boolean`. | `checkbox`, never `#required` |
 
 The weights say the selection rule out loud: the checkboxes and radios
 are asked first, and each claims only what its rule gives it; the
-options widget next, so a string key carrying a `Choice` renders as a
+select widget next, so a string key carrying a `Choice` renders as a
 select rather than a text field; a reference with too many candidates
-to list next, so it is no number or text field; the map widget comes next, so a complex
+to list next, so it is no number or text field; the fieldset widget comes next, so a complex
 definition that also resolves to options is still a select; the list
 widget takes a list with no choices; and the per-type widgets are the
 fallback.
@@ -121,7 +121,12 @@ $inputs->add('opens', 'string', t('Opens at'))
 ```
 
 `checkboxes`, `radios`, `select` and `time` are the words the stock
-widgets answer to (`DataSurfaceWidgetBase::answersTo()`). A word the
+widgets answer to (`DataSurfaceWidgetBase::answersTo()`): each is the
+widget's plugin ID, as `fieldset` and `checkbox` are, and the word
+`x-surface.widget` says. *Renamed 2026-10-24:* the select, fieldset and
+checkbox widgets were the plugins `options`, `map` and `boolean`; a
+`hook_data_surface_widget_info_alter()` keyed by an old ID finds
+nothing. A word the
 widget that claims the definition does not answer to is refused when the
 element is built ("... asks for the radios widget, which does not draw a
 key of type list of string; the select widget does."), rather than drawn
@@ -129,7 +134,7 @@ as something it did not ask for. A widget of a module's own answers to
 its plugin ID, so `setSetting('widget', 'my_module_color')` asks for one
 whose `isApplicable()` reads that setting.
 
-The options widget claims a key whose list is **empty** too. A refiner
+The select widget claims a key whose list is **empty** too. A refiner
 that narrows a list to nothing (`'choices' => []`), or a resolver that
 finds nothing on a site, leaves a select offering its empty option and
 nothing else, and the constraint refuses any value: a list of nothing is

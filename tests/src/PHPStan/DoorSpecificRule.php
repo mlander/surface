@@ -35,7 +35,7 @@ use PHPStan\Rules\RuleErrorBuilder;
  * - in a class that implements one of the interfaces the pipeline runs
  *   (a storage, an access class, an alter answering access, a provider of
  *   keys or variants from the site, a deriver of variants or resources, an
- *   options resolver, a computed key's deriver), carries #[Resource],
+ *   options resolver, a computed key's class), carries #[Resource],
  *   #[Structure], #[Shape] or #[Alters], or declares a #[RefinesInput]
  *   method;
  * - a call to \Drupal::request(), ::routeMatch(), ::currentUser(),
@@ -113,13 +113,10 @@ final class DoorSpecificRule implements Rule {
   public const INTERFACES = [
     'Drupal\data_surface\Resource\ResourceStorageInterface' => 'storage',
     'Drupal\data_surface\Resource\OperationAccessInterface' => 'access class',
-    'Drupal\data_surface\Resource\AltersAccessInterface' => 'alter',
-    'Drupal\data_surface\Resource\KeysFromSiteInterface' => 'provider',
-    'Drupal\data_surface\Resource\VariantsFromSiteInterface' => 'provider',
-    'Drupal\data_surface\ResourceBuild\DerivedVariantsInterface' => 'derivative provider',
+    'Drupal\data_surface\Resource\SiteListInterface' => 'provider',
     'Drupal\data_surface\Resource\ResourceDeriverInterface' => 'derivative provider',
     'Drupal\data_surface\Options\DataSurfaceOptionsResolverInterface' => 'options resolver',
-    'Drupal\data_surface\Resource\DeriverInterface' => 'deriver',
+    'Drupal\data_surface\Resource\ComputesValueInterface' => 'computed key class',
   ];
 
   /**
@@ -188,6 +185,11 @@ final class DoorSpecificRule implements Rule {
    *   Its kind, for the message; NULL when the pipeline does not run it.
    */
   protected static function kindOf(ClassReflection $class): ?string {
+    // An alter answering access implements the access class's interface;
+    // #[Alters] says its role.
+    if ($class->getNativeReflection()->getAttributes('Drupal\data_surface\Resource\Attribute\Alters') !== []) {
+      return 'alter';
+    }
     foreach (self::INTERFACES as $interface => $kind) {
       if ($class->getName() !== $interface && $class->implementsInterface($interface)) {
         return $kind;

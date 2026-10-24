@@ -326,7 +326,7 @@ final class FieldItemDerivation {
       $notes['decimal'] = $this->t('A decimal travels as a float, so a value with more digits than a float holds loses them; its precision and scale are checked when the entity is validated.');
     }
     if ($field->getType() === 'entity_reference') {
-      $notes['target_id'] = $this->t("Its targets are its selection handler's, for the account asking: listed up to the site's limit, data_surface.settings:reference_enum_limit, otherwise any id is taken and the handler checks it.");
+      $notes['target_id'] = $this->t("Its targets are its selection handler's, for the account asking: listed up to the site's limit, data_surface.settings:reference_list_limit, otherwise any id is taken and the handler checks it.");
     }
     return $notes;
   }

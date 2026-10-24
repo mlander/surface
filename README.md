@@ -175,12 +175,17 @@ The module uses these twenty-three words in exactly one sense each.
   constraint into a value/label list with its cacheability, so the list
   that validates a value and the list that is offered as form options are
   the same list, derived rather than repeated.
-- **Keys from the site**: one key per thing the site has, such as a
-  checkbox per form, in a map at a key: `addEach($key, $type, from:)` for
-  a value per thing, `attachEach($key, Structure::class, from:)` for a
-  structure per thing. The provider is a service implementing
-  `KeysFromSiteInterface`, whose `keys()` answers a `KeyedList`, asked
-  at every build ([Keys that come from the site](docs/resources.md#keys-that-come-from-the-site)).
+- **Keys and variants from the site**: one key per thing the site has,
+  such as a checkbox per form, in a map at a key: `addEach($key, $type,
+  from:)` for a value per thing, `attachEach($key, Structure::class,
+  from:)` for a structure per thing; or one variant per thing, each read
+  from its JSON Schema or a structure class, `attachVariants($key, by:
+  $sibling, from:)`. The provider is one interface for both, a service
+  implementing `SiteListInterface`, whose `list()` answers a `SiteList`,
+  asked at every build; a closed one, `ClosedSiteListInterface`, names
+  every structure it may list
+  ([Keys that come from the site](docs/resources.md#keys-that-come-from-the-site),
+  [variants from the site](docs/resources.md#variants-from-the-site)).
 - **Storage**: where accepted values are written, and the place that
   knows the distance between how a resource asks for its values and
   how the store lays them out (a layout). A resource names its storage class, a
@@ -221,7 +226,7 @@ The module uses these twenty-three words in exactly one sense each.
 - **Context**: an `OperationContext`: where a resource or structure is
   being asked for. Its id (the operation id, or a host's own verb such
   as `configure`), whether it creates, which identity keys are known, and
-  any narrowing, starting values or child contexts the operation adds.
+  any narrowing or child contexts the operation adds.
   Built by an operation (or bare, by a plugin host), applied once by the
   build step, and never seen by a method that fills a blueprint or by a
   refiner.
@@ -230,10 +235,11 @@ The module uses these twenty-three words in exactly one sense each.
   `third_party_settings.<module>`), rewords a label with `describe()`,
   offers more values on a fixed list with `extendChoices()`, and narrows
   with `#[RefinesInput]` methods, on the owner's keys or its own, and
-  may answer access after the owner (`AltersAccessInterface`), locking
-  or leaving out and never opening. It never removes a key or a value
-  from the declaration, never retypes, and attaches a structure only at
-  its own mount.
+  may answer access after the owner (`OperationAccessInterface`, the
+  access class's interface), locking or leaving out and never opening.
+  It never removes a key or a value from the declaration, never retypes,
+  adds no output (what a call answers is its operation's), and attaches
+  a structure only at its own mount.
 - **Variants**: a tagged union whose tag is a sibling key, attached with
   `attachVariants($key, by: $sibling)`; each variant is a structure for
   one value of that key, `#[Variant(of:, at:, for:)]`

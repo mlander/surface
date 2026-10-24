@@ -103,18 +103,20 @@ Five pieces:
   a resource that names its storage is a tool. Beside the
   update tools is a read tool, `Plugin\tool\Tool\ResourceOperationReadTool`
   (below).
-- `FieldSettingsSchemaVariants`: a service tagged
-  `data_surface.derived_variants` that adds the field instance
-  resource's `settings` variants for every field type offered in the UI
-  that no `#[Variant]` declares, reading `field.field_settings.<field
-  type>` through typed config: a mapping becomes a map, a sequence a
-  list, a primitive its typed data type, and what the schema cannot
-  resolve without a value `any`. `FieldStorageSettingsSchemaVariants`
-  is the same class pointed at the storage resource's `settings`,
+- `FieldSettingsSchemaVariants`: the provider the field instance
+  resource's `attachVariants('settings', by: 'field_type', from: ...)`
+  names, a `SiteListInterface` listing one variant per field type offered
+  in the UI, labeled with the field type's label, its schema
+  `field.field_settings.<field type>` written as JSON Schema
+  (`ConfigSchemaDocument`) for the schema reader, with the field type's
+  own default settings where their type fits; a `#[Variant]` wins for
+  its value. `FieldStorageSettingsSchemaVariants` is the same class
+  pointed at the storage resource's `settings`,
   `field.storage_settings.<field type>` and the field type's default
-  storage settings. A derived variant has no storage of its own, so the
-  field, or the storage, stores it. The catalog says, per key with
-  variants, where derived variants come from.
+  storage settings. A variant from the site has no storage of its own,
+  so the field, or the storage, stores it. It is a list the site
+  decides: past `data_surface.settings:site_list_limit` field types the
+  tools state `settings` open and `deferred`, fetched per field type.
 - `InputDefinitions`: converts core data definitions into the
   Tool API's input definitions: type, label, description, required,
   default value and constraints, with maps and lists becoming the Tool

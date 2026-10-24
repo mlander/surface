@@ -21,9 +21,10 @@ use Drupal\data_surface\ResourceBuild\ResourcesInterface;
  * or structure names: exactly ResourcesInterface::access() for the
  * context the route's parameters build, so the route, the form it
  * serves, the operation link that points at it and the tool for the same
- * operation all read one answer. A route opts in with the requirement
- * `_data_surface_operation_access: 'TRUE'` beside the defaults that name
- * the resource and the operation.
+ * operation all read one answer. Every route whose defaults name the
+ * resource and the operation has it: OperationRouteSubscriber adds the
+ * requirement `_data_surface_operation_access: 'TRUE'`, which a routing
+ * file may still say itself.
  *
  * @see \Drupal\data_surface\ResourceBuild\OperationRoute
  */

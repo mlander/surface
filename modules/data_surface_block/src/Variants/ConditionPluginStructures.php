@@ -14,8 +14,8 @@ use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslationInterface;
 use Drupal\data_surface\Contract\ConfigSchemaDocument;
 use Drupal\data_surface\Resource\Attribute\UsesStructure;
-use Drupal\data_surface\Resource\VariantList;
-use Drupal\data_surface\Resource\VariantsFromSiteInterface;
+use Drupal\data_surface\Resource\SiteList;
+use Drupal\data_surface\Resource\SiteListInterface;
 
 /**
  * One variant per condition a placed block's visibility may hold.
@@ -35,7 +35,7 @@ use Drupal\data_surface\Resource\VariantsFromSiteInterface;
  *
  * Decision: see docs/decisions.md#a-placed-block-is-a-resource.
  */
-final class ConditionPluginStructures implements VariantsFromSiteInterface {
+final class ConditionPluginStructures implements SiteListInterface {
 
   use StringTranslationTrait;
 
@@ -52,7 +52,7 @@ final class ConditionPluginStructures implements VariantsFromSiteInterface {
   /**
    * The list, once read in this request.
    */
-  protected ?VariantList $list = NULL;
+  protected ?SiteList $list = NULL;
 
   /**
    * Constructs the provider.
@@ -84,11 +84,11 @@ final class ConditionPluginStructures implements VariantsFromSiteInterface {
   /**
    * {@inheritdoc}
    */
-  public function variants(): VariantList {
+  public function list(): SiteList {
     if ($this->list !== NULL) {
       return $this->list;
     }
-    $list = (new VariantList())->addCacheTags(['config:core.extension', 'config:configurable_language_list']);
+    $list = (new SiteList())->addCacheTags(['config:core.extension', 'config:configurable_language_list']);
     $list->addCacheableDependency($this->conditions);
     $available = $this->contextRepository->getAvailableContexts();
     $definitions = $this->conditions->getFilteredDefinitions('block_ui', $available);
@@ -101,7 +101,7 @@ final class ConditionPluginStructures implements VariantsFromSiteInterface {
       $label = $definition['label'] ?? $id;
       $structure = $definition[UsesStructure::DEFINITION_KEY] ?? NULL;
       if (is_string($structure) && $structure !== '') {
-        $list->addStructure($id, $label, $structure);
+        $list->add($id, $label, structure: $structure);
         continue;
       }
       $schema = $this->schemas->object('condition.plugin.' . $id, self::BASE, $this->defaults($id));
@@ -109,7 +109,7 @@ final class ConditionPluginStructures implements VariantsFromSiteInterface {
       if ($mapping !== NULL) {
         $schema['properties'] = (array) $schema['properties'] + ['context_mapping' => $mapping];
       }
-      $list->add($id, $label, $schema);
+      $list->add($id, $label, schema: $schema);
     }
     return $this->list = $list;
   }

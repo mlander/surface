@@ -899,6 +899,14 @@ renames sit in A because they are cheapest before new code exists.
       concept, the question that makes you need it, and the sentence to
       skip it. Smithy's recurring complaint is weight; this is the
       defense.
+    - **An API budget, pinned.** DONE 2026-10-24: the public surface
+      was counted and cut, 195 names to 182 and 49 concept rows to 44
+      (`docs/decisions.md#the-surface-was-counted-and-cut`), and the
+      count is pinned: `PublicSurfaceTest` counts the attributes, their
+      arguments, the blueprint methods and the interfaces under
+      `src/Resource/` (9, 30, 15, 20) and fails when the count moves
+      without the test updated beside a reason. It is the concept budget
+      for the API, as the first page is for the docs.
     - **Fresh eyes, twice.** First a reader with no context (an agent
       given only the docs and a task, none of this history) writes a
       resource with a structure, an alter and a runtime rule from the

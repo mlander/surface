@@ -71,8 +71,6 @@ data_surface_first.store:
     _title: 'Store location'
     _data_surface_resource: 'Drupal\data_surface_first\Resource\StoreResource'
     _data_surface_operation: 'configure'
-  requirements:
-    _data_surface_operation_access: 'TRUE'
 ```
 
 ## The resource, and its one rule

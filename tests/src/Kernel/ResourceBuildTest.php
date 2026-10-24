@@ -32,7 +32,6 @@ use Drupal\data_surface_resource_test\Structure\Broken\InstanceRefinerStructure;
 use Drupal\data_surface_resource_test\Structure\Broken\RefinesOutputStructure;
 use Drupal\data_surface_resource_test\Resource\Broken\UndeclaredIdentityResource;
 use Drupal\data_surface_resource_test\Structure\Broken\StrictMountWatcherStructure;
-use Drupal\data_surface_resource_test\Structure\Broken\WatchesMismatchStructure;
 use Drupal\data_surface_resource_test\Alter\InstanceRefinerAlter;
 use Drupal\data_surface_resource_test\Alter\StrictMountWatcherAlter;
 use Drupal\data_surface_resource_test\Structure\Broken\WatchesUndeclaredStructure;
@@ -52,9 +51,9 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * Tests the build step: a class and a context in, a data surface out.
  *
  * The demo block's structure is the plugin host case. The recipe fixture
- * covers the rest: identity, operations, constraints and starting values
- * from a context, refiner dispatch, alters, access and the storage. The
- * broken fixtures each fail one seal-time check, by name.
+ * covers the rest: identity, operations, constraints from a context,
+ * refiner dispatch, alters, access and the storage. The broken fixtures
+ * each fail one seal-time check, by name.
  */
 #[Group('data_surface')]
 #[RunTestsInSeparateProcesses]
@@ -201,25 +200,7 @@ class ResourceBuildTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests that starting values become the defaults of a creating context.
-   */
-  public function testStartingValuesAreDefaults(): void {
-    $context = $this->resources()->operation(RecipeResource::class, 'clone', ['main', 'dessert', 'cake']);
-    $this->assertSame('clone', $context->id);
-    $this->assertTrue($context->creates);
-    $surface = $this->resources()->build(RecipeResource::class, $context);
-    $this->assertSame('dessert', $surface->getDefault('course'));
-    $this->assertSame('cake', $surface->getDefault('dish'));
-    // Initial values, not locks.
-    $this->assertFalse($surface->isLocked('course'));
-
-    $this->expectException(\LogicException::class);
-    $this->expectExceptionMessage('The "update" context carries starting values for course but does not create.');
-    $this->resources()->build(RecipeResource::class, RecipeResource::update('main', 'stew')->withDefaults(['course' => 'starter']));
-  }
-
-  /**
-   * Tests refiner dispatch: by name, by watches, owner first, then alters.
+   * Tests refiner dispatch: by parameter name, owner first, then alters.
    */
   public function testRefinerDispatch(): void {
     $surface = $this->resources()->build(RecipeResource::class, RecipeResource::create('main'));
@@ -295,13 +276,9 @@ class ResourceBuildTest extends DataSurfaceKernelTestBase {
         StrictMountWatcherStructure::class,
         StrictMountWatcherAlter::class . '::sizeOfKind() watches "kind", a key its alter mounted on resource_test.broken.strict_mount_watcher, which is handed as it stands and is NULL until answered: declare $kind nullable.',
       ],
-      'watches out of step with the parameters' => [
-        WatchesMismatchStructure::class,
-        WatchesMismatchStructure::class . '::thirdOf() lists watches [first, second], but its parameters after the definition are ($first, $renamed).',
-      ],
       'two providers of one operation' => [
         ClashingOperationStructure::class,
-        'resource_test.broken.clashing_operation has two operations with the id "open", from ' . ClashingOperationStructure::class . '::open() in data_surface_resource_test and from Drupal\data_surface_resource_test\Alter\ClashingOperations::open() in data_surface_resource_test.',
+        'resource_test.broken.clashing_operation has two operations with the id "open", from #[Operation] on ' . ClashingOperationStructure::class . ' in data_surface_resource_test and from ' . ClashingOperationStructure::class . '::open() in data_surface_resource_test.',
       ],
       'a refiner that watches nothing widens' => [
         WideningRefinerStructure::class,
@@ -431,15 +408,14 @@ class ResourceBuildTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests that alters add inputs and outputs, in the operations they name.
+   * Tests that alters add inputs, in the operations they name.
    */
   public function testAltersApply(): void {
     $add = $this->resources()->buildOperation(RecipeResource::class, 'create', ['main']);
     $this->assertSame(['garnish'], array_keys($this->mounted($add->getDefinition('third_party_settings'))));
     $this->assertSame('parsley', $add->getDefaultValues()['third_party_settings']['data_surface_resource_test']['garnish']);
-    $outputs = $add->getOutputDefinitions()->toArray();
-    $this->assertSame(['id', 'third_party_outputs'], array_keys($outputs));
-    $this->assertSame(['plated'], array_keys($this->mounted($outputs['third_party_outputs'])));
+    // Outputs are the operation's: no alter adds to them.
+    $this->assertSame(['id'], array_keys($add->getOutputDefinitions()->toArray()));
 
     // The edit-only alter applies where it says, and nowhere else. Alters
     // apply in discovery order, which is class name order within a module.
@@ -452,8 +428,8 @@ class ResourceBuildTest extends DataSurfaceKernelTestBase {
    */
   public function testOperations(): void {
     $operations = $this->container->get('data_surface.resource_registry')->getOperations(RecipeResource::class);
-    $this->assertSame(['create', 'update', 'clone', 'mislabeled'], array_keys($operations));
-    $this->assertSame('data_surface_resource_test', $operations['clone']->module);
+    $this->assertSame(['create', 'update', 'mislabeled'], array_keys($operations));
+    $this->assertSame('data_surface_resource_test', $operations['mislabeled']->module);
 
     $this->expectException(\LogicException::class);
     $this->expectExceptionMessage('returned a context whose id is "create"');
@@ -517,7 +493,7 @@ class ResourceBuildTest extends DataSurfaceKernelTestBase {
    * Gets what the fixture module mounted in a third-party map.
    *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface|null $map
-   *   The third_party_settings or third_party_outputs definition.
+   *   The third_party_settings definition.
    *
    * @return array<string, \Drupal\Core\TypedData\DataDefinitionInterface>
    *   The mounted definitions, keyed by key.

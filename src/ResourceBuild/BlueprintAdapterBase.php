@@ -34,8 +34,6 @@ use Drupal\data_surface\Resource\DefinesInputsInterface;
  */
 abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
 
-  use DeprecatedWithTrait;
-
   /**
    * The keys added through this blueprint, in order.
    *
@@ -448,10 +446,10 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
     $definition = $this->find($key);
     if ($definition === NULL) {
       throw new \LogicException(sprintf(
-        'describe() was asked to reword the %1$s "%2$s", which nothing has declared. A key is described by its name when its owner declared it or this blueprint added it, and by its mounted path, %3$s.<module>.<key>, when another alter did; a module\'s mount is %3$s.<module>, once the module has added a key.',
-        $this->outputs ? 'output' : 'input',
+        $this->outputs
+          ? 'describe() was asked to reword the output "%s", which nothing has declared. An output is described by its name, as its owner declared it.'
+          : 'describe() was asked to reword the input "%s", which nothing has declared. A key is described by its name when its owner declared it or this blueprint added it, and by its mounted path, third_party_settings.<module>.<key>, when another alter did; a module\'s mount is third_party_settings.<module>, once the module has added a key.',
         $key,
-        $this->outputs ? DataSurfaceBuilderInterface::THIRD_PARTY_OUTPUTS : 'third_party_settings',
       ));
     }
     if (!$definition instanceof DataDefinition) {
@@ -620,18 +618,20 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
    *   The definition, or NULL when nothing answers to the name.
    */
   protected function find(string $key): ?DataDefinitionInterface {
-    $own = $this->outputs ? $this->builder->getOutputDefinition($key) : $this->builder->getDefinition($key);
+    if ($this->outputs) {
+      return $this->builder->getOutputDefinition($key);
+    }
+    $own = $this->builder->getDefinition($key);
     if ($own !== NULL) {
       return $own;
     }
     $parts = explode('.', $key, 3);
-    $mount = $this->outputs ? DataSurfaceBuilderInterface::THIRD_PARTY_OUTPUTS : 'third_party_settings';
-    if ($parts[0] !== $mount) {
+    if ($parts[0] !== 'third_party_settings') {
       return NULL;
     }
     return match (count($parts)) {
-      3 => $this->builder->getThirdPartyDefinition($parts[1], $parts[2], $this->outputs),
-      2 => $this->builder->getThirdPartyMount($parts[1], $this->outputs),
+      3 => $this->builder->getThirdPartyDefinition($parts[1], $parts[2]),
+      2 => $this->builder->getThirdPartyMount($parts[1]),
       default => NULL,
     };
   }

@@ -28,19 +28,16 @@ final class ResourceCatalog {
    *   What discovery found.
    * @param \Drupal\data_surface\ResourceBuild\ResourcePlugins $plugins
    *   Which plugins name which structure with #[UsesStructure].
-   * @param \Drupal\data_surface\ResourceBuild\DerivedVariants $derivedVariants
-   *   What derives variants for the values no declared variant covers.
    */
   public function __construct(
     protected readonly ResourceRegistry $registry,
     protected readonly ResourcePlugins $plugins,
-    protected readonly DerivedVariants $derivedVariants,
   ) {}
 
   /**
    * Describes every discovered resource and structure.
    *
-   * @return array<string, array{id: string, class: class-string|null, deriver: string|null, module: string, kind: string, identity: string[], storage: class-string|null, access: class-string|null, plugins: list<string>, operations: list<array{id: string, label: string, provider: string, module: string, parameters: string[], creates: bool, kind: string, permission: string|null, unresolvable: string[], standalone: bool, reads: bool}>, alters: list<array{class: class-string, module: string, operations: string[], refines: list<array{key: string, watches: string[]}>}>, variants: array<string, array<string, class-string>>, derived: array<string, string>}>
+   * @return array<string, array{id: string, class: class-string|null, deriver: string|null, module: string, kind: string, identity: string[], storage: class-string|null, access: class-string|null, plugins: list<string>, operations: list<array{id: string, label: string, provider: string, module: string, parameters: string[], creates: bool, kind: string, permission: string|null, unresolvable: string[], standalone: bool, reads: bool}>, alters: list<array{class: class-string, module: string, operations: string[], refines: list<array{key: string, watches: string[]}>}>, variants: array<string, array<string, class-string>>}>
    *   The entries, keyed and sorted by id. `kind` is resource or
    *   structure. `class` is NULL for a derived one, whose `deriver` is
    *   the base id it was derived under (NULL for every other). `plugins`
@@ -59,7 +56,7 @@ final class ResourceCatalog {
    *   alter's `refines` lists its #[RefinesInput] methods by the key each
    *   refines and the keys it watches, named as the alter names them: a
    *   key it mounted itself by that key's own name; its `access` says
-   *   whether it answers access too (AltersAccessInterface).
+   *   whether it answers access too (OperationAccessInterface).
    */
   public function describe(): array {
     $catalog = [];
@@ -100,7 +97,6 @@ final class ResourceCatalog {
           ], $alter->refiners),
         ], $definition->alters),
         'variants' => $definition->variants,
-        'derived' => $this->derivedVariants->sources($definition->name()),
       ];
     }
     ksort($catalog);

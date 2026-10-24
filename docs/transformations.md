@@ -431,13 +431,13 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
 ### A computed key: a value of the resource that follows others
 
 A key whose value is computed from other keys, and that callers read, is
-declared with `derive()` ([Declaring a resource](declaring-a-resource.md#computed-keys)).
+declared with `compute()` ([Declaring a resource](declaring-a-resource.md#computed-keys)).
 Example 15's venue computes its slug from its name:
 
 <!-- excerpt: modules/data_surface_examples/src/Resource/VenueResource.php -->
 
 ```php
-$inputs->derive('slug', 'string', t('Slug'), from: ['label'], using: Slugify::class)
+$inputs->compute('slug', 'string', t('Slug'), from: ['label'], using: Slugify::class)
   ->setDescription(t('The name in a link: lowercase letters, numbers and dashes, set when the venue is added.'))
   ->addConstraint('Regex', [
     'pattern' => '/^[a-z0-9]+(-[a-z0-9]+)*$/D',
@@ -451,7 +451,7 @@ The class is a pure function of the keys `from:` names:
 <!-- excerpt: modules/data_surface_examples/src/Slugify.php -->
 
 ```php
-public static function derive(array $from): mixed {
+public static function compute(array $from): mixed {
   $slug = trim((string) preg_replace('/[^a-z0-9]+/', '-', mb_strtolower((string) ($from['label'] ?? ''))), '-');
   return $slug === '' ? NULL : $slug;
 }
@@ -463,7 +463,7 @@ computed key is stored, loaded and answered by the read like any key,
 and both documents state it. Three choices settle it
 ([decision](decisions.md#a-computed-key-is-a-pure-function-of-its-sources)):
 
-- **Pure derivations only.** The deriver runs under the guard a static
+- **Pure functions only.** The class that computes it runs under the guard a static
   refiner runs under, and the PHPStan rule flags `\Drupal::` in it, so
   the narrowing (`POST .../schema`) can run it ahead of a write and
   answer the value it would compute for the values in progress. A
@@ -472,7 +472,7 @@ and both documents state it. Three choices settle it
 - **When it runs.** Once the other keys are accepted, from their
   accepted values: while storage holds nothing for it, which is when the
   thing is created, and again on every write that changes a key in
-  `from` only when it says `when: Derive::ON_CHANGE`. A write that
+  `from` only when it says `when: Compute::ON_CHANGE`. A write that
   changes no source keeps what is stored. The value is then judged by
   its own constraints and rules, as any key's is, and a refusal of it
   names the keys it is computed from, the ones a caller can change.

@@ -7,10 +7,10 @@ namespace Drupal\data_surface_resource_test\Resource\Badge;
 use Drupal\data_surface\Resource\Attribute\Operation;
 use Drupal\data_surface\Resource\Attribute\Resource;
 use Drupal\data_surface\Resource\BlueprintInterface;
-use Drupal\data_surface\Resource\Derive;
+use Drupal\data_surface\Resource\Compute;
 use Drupal\data_surface\Resource\ResourceInterface;
-use Drupal\data_surface_resource_test\Deriver\BadgeCode;
-use Drupal\data_surface_resource_test\Deriver\BadgeHandle;
+use Drupal\data_surface_resource_test\Compute\BadgeCode;
+use Drupal\data_surface_resource_test\Compute\BadgeHandle;
 use Drupal\data_surface_resource_test\Storage\BadgeStorage;
 
 /**
@@ -31,8 +31,8 @@ final class BadgeResource implements ResourceInterface {
     $inputs->add('first', 'string', t('First name'))->setRequired(TRUE)
       ->addConstraint('Length', ['max' => 10]);
     $inputs->add('last', 'string', t('Last name'));
-    $inputs->derive('code', 'string', t('Code'), from: ['first'], using: BadgeCode::class);
-    $inputs->derive('handle', 'string', t('Handle'), from: ['first', 'last'], using: BadgeHandle::class, when: Derive::ON_CHANGE)
+    $inputs->compute('code', 'string', t('Code'), from: ['first'], using: BadgeCode::class);
+    $inputs->compute('handle', 'string', t('Handle'), from: ['first', 'last'], using: BadgeHandle::class, when: Compute::ON_CHANGE)
       ->addConstraint('Length', ['max' => 12]);
     $inputs->add('color', 'string', t('Color'), default: 'blue');
   }

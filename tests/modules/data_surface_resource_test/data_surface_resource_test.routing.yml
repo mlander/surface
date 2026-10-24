@@ -1,6 +1,7 @@
 # The larder's update operation as a route, served by the generic form, so
 # a test reads what the form draws for a child its access locked or left
-# out.
+# out. It says the access requirement itself, which every route naming a
+# resource and an operation has without saying it: still accepted.
 data_surface_resource_test.larder.update:
   path: '/surface-test/larder/{larder}'
   defaults:
@@ -19,8 +20,6 @@ data_surface_resource_test.larder.stock:
     _title: 'Stock a larder'
     _data_surface_resource: 'Drupal\data_surface_resource_test\Resource\Larder\LarderResource'
     _data_surface_operation: 'stock'
-  requirements:
-    _data_surface_operation_access: 'TRUE'
 
 # The cellar's update operation, served by the generic form: two
 # collections, each with Add another and Remove, over AJAX.
@@ -31,8 +30,6 @@ data_surface_resource_test.cellar.update:
     _title: 'Edit a cellar'
     _data_surface_resource: 'Drupal\data_surface_resource_test\Resource\Cellar\CellarResource'
     _data_surface_operation: 'update'
-  requirements:
-    _data_surface_operation_access: 'TRUE'
 
 # The digest's one operation, served by the generic form: variants, two
 # of which declare no keys.
@@ -43,8 +40,6 @@ data_surface_resource_test.digest:
     _title: 'Configure the digest'
     _data_surface_resource: 'Drupal\data_surface_resource_test\Resource\Digest\DigestResource'
     _data_surface_operation: 'configure'
-  requirements:
-    _data_surface_operation_access: 'TRUE'
 
 # The bulletin's one operation, served by the generic form: a send day
 # that is drawn only while the bulletin goes out weekly.
@@ -55,8 +50,6 @@ data_surface_resource_test.bulletin:
     _title: 'Configure the bulletin'
     _data_surface_resource: 'Drupal\data_surface_resource_test\Resource\Bulletin\BulletinResource'
     _data_surface_operation: 'configure'
-  requirements:
-    _data_surface_operation_access: 'TRUE'
 
 # The parcel's one operation, served by the generic form: every rule
 # between its keys declared as data, rebuilt over AJAX.
@@ -67,8 +60,6 @@ data_surface_resource_test.parcel:
     _title: 'Configure the parcel'
     _data_surface_resource: 'Drupal\data_surface_resource_test\Resource\Parcel\ParcelResource'
     _data_surface_operation: 'configure'
-  requirements:
-    _data_surface_operation_access: 'TRUE'
 
 # The venue's one operation, served by the generic form: a structure whose
 # ports read the venue's layout and capacity.
@@ -79,8 +70,6 @@ data_surface_resource_test.venue:
     _title: 'Configure the venue'
     _data_surface_resource: 'Drupal\data_surface_resource_test\Resource\Venue\VenueResource'
     _data_surface_operation: 'configure'
-  requirements:
-    _data_surface_operation_access: 'TRUE'
 
 # The journal's one operation, served by the generic form: two structures
 # mixed in, their members drawn as the journal's own keys.
@@ -91,8 +80,6 @@ data_surface_resource_test.journal:
     _title: 'Configure the journal'
     _data_surface_resource: 'Drupal\data_surface_resource_test\Resource\Journal\JournalResource'
     _data_surface_operation: 'configure'
-  requirements:
-    _data_surface_operation_access: 'TRUE'
 
 # The depot's one operation, served by the generic form: one shape at two
 # keys, each narrowing it its own way.
@@ -103,8 +90,6 @@ data_surface_resource_test.depot:
     _title: 'Configure the depot'
     _data_surface_resource: 'Drupal\data_surface_resource_test\Resource\Depot\DepotResource'
     _data_surface_operation: 'configure'
-  requirements:
-    _data_surface_operation_access: 'TRUE'
 
 # The exhibit's one operation, served by the generic form: access of both
 # kinds on a mixed-in structure's members and on an attached child.
@@ -115,8 +100,6 @@ data_surface_resource_test.exhibit:
     _title: 'Configure the exhibit'
     _data_surface_resource: 'Drupal\data_surface_resource_test\Resource\Exhibit\ExhibitResource'
     _data_surface_operation: 'configure'
-  requirements:
-    _data_surface_operation_access: 'TRUE'
 
 # The gallery's one operation, served by the generic form: access answered
 # by alters, after the owner's.
@@ -127,8 +110,6 @@ data_surface_resource_test.gallery:
     _title: 'Configure the gallery'
     _data_surface_resource: 'Drupal\data_surface_resource_test\Resource\Gallery\GalleryResource'
     _data_surface_operation: 'configure'
-  requirements:
-    _data_surface_operation_access: 'TRUE'
 
 # The opening hours' one operation, served by the generic form: the
 # common settings recipes, drawn by the stock widgets (docs/recipes.md).
@@ -139,8 +120,6 @@ data_surface_resource_test.opening_hours:
     _title: 'Configure the opening hours'
     _data_surface_resource: 'Drupal\data_surface_resource_test\Resource\Library\OpeningHoursResource'
     _data_surface_operation: 'configure'
-  requirements:
-    _data_surface_operation_access: 'TRUE'
 
 # The storeroom's update operation, served by the generic form: a list of
 # aisles, each with a list of shelves of its own.
@@ -151,8 +130,6 @@ data_surface_resource_test.storeroom.update:
     _title: 'Edit the storeroom'
     _data_surface_resource: 'Drupal\data_surface_resource_test\Resource\Storeroom\StoreroomResource'
     _data_surface_operation: 'update'
-  requirements:
-    _data_surface_operation_access: 'TRUE'
 
 # The workshop's one operation, served by the generic form: one bench, one
 # light and one stock code per bench the site lists.
@@ -163,8 +140,6 @@ data_surface_resource_test.workshop:
     _title: 'Configure the workshop'
     _data_surface_resource: 'Drupal\data_surface_resource_test\Resource\Workshop\WorkshopResource'
     _data_surface_operation: 'configure'
-  requirements:
-    _data_surface_operation_access: 'TRUE'
 
 # The studio's one operation, served by the generic form: its keys
 # arranged in two groups, with weights, a placeholder, a prefix, a suffix
@@ -176,5 +151,3 @@ data_surface_resource_test.studio:
     _title: 'Configure the studio'
     _data_surface_resource: 'Drupal\data_surface_resource_test\Resource\Studio\StudioResource'
     _data_surface_operation: 'configure'
-  requirements:
-    _data_surface_operation_access: 'TRUE'

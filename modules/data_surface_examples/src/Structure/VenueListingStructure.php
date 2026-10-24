@@ -15,7 +15,7 @@ use Drupal\data_surface\Resource\StructureInterface;
  * Example 15: what a listing of the venues takes, and what it answers.
  *
  * The keys of the venue resource's list operation, which names this
- * structure as its values: a page of the venues, by their weight, and
+ * structure with `structure:`: a page of the venues, by their weight, and
  * which of them by their status. Its outputs are the page and how many
  * venues the filter matched.
  */

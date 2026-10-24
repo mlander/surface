@@ -267,9 +267,9 @@ tool listing change when the configuration does:
 <!-- excerpt: tests/modules/data_surface_resource_test/src/Keys/WorkshopBenches.php -->
 
 ```php
-public function keys(): KeyedList {
+public function list(): SiteList {
   $config = $this->configFactory->get(self::CONFIG);
-  $keys = (new KeyedList())->addCacheableDependency($config);
+  $keys = (new SiteList())->addCacheableDependency($config);
   foreach ($config->get('benches') ?? [] as $id => $bench) {
     $keys->add((string) $id, (string) $bench['label'], locked: (bool) ($bench['locked'] ?? FALSE));
   }

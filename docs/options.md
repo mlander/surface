@@ -202,7 +202,7 @@ still refuses invalid values when they are validated.
 | `entity_bundle_exists` | `EntityBundleExists` | bundle info for the constraint's `entityTypeId` | bundle labels | tag `entity_bundles` |
 | `language_exists` | `LanguageExists` | the language manager; locked languages only when `allowLocked` is set | language names | tag `config:configurable_language_list` |
 | `country` | `Country` (the address module's) | `address.country_repository`, narrowed to the constraint's `availableCountries` when it names any | localized country names | tag `countries`, context `languages:language_interface` |
-| `data_surface_reference` | `DataSurfaceValidReference` | core's selection handler for its `entityTypeId` and `bundles`, for the account asking, while there are at most `data_surface.settings:reference_enum_limit` ([below](#a-key-that-refers-to-an-entity)) | the entities' labels, sorted | the type's list tags, `References::CONTEXTS` for it, the settings' tag |
+| `data_surface_reference` | `DataSurfaceValidReference` | core's selection handler for its `entityTypeId` and `bundles`, for the account asking, while there are at most `data_surface.settings:reference_list_limit` ([below](#a-key-that-refers-to-an-entity)) | the entities' labels, sorted | the type's list tags, `References::CONTEXTS` for it, the settings' tag |
 | `data_surface_referenceable_type` | `DataSurfaceReferenceableType` | the entity types of its `interface` and its `targets` of which the account may reference one, `exact` | entity type labels | tag `entity_types`, each type's list tags and contexts |
 
 "Permanent" means the default `CacheableMetadata`: no tags, no contexts,
@@ -292,7 +292,7 @@ entity the account cannot see exists (core's own `ValidReference` tells
 the first apart).
 
 **The limit.** While the handler counts at most
-`data_surface.settings:reference_enum_limit` candidates (50 as
+`data_surface.settings:reference_list_limit` candidates (50 as
 shipped), the resolver lists them: the key's options, a select on the
 form, a `oneOf` in both documents and an enum in the tool listing. Past
 it, the resolver does not apply: the key takes an id, which the

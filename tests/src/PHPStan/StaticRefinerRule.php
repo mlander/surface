@@ -18,15 +18,15 @@ use PHPStan\Rules\Rule;
 use PHPStan\Rules\RuleErrorBuilder;
 
 /**
- * Flags a static refiner, or a deriver, whose body reaches for the container.
+ * Flags a static refiner, or a compute(), whose body reaches for the container.
  *
  * A `#[RefinesInput]` method that does not declare `runtime: TRUE` is a
  * pure function of the keys it watches, which the served contract runs
  * ahead of time; a call to `\Drupal::` reads site state or a service, so
  * the method is a runtime rule wearing the static kind. The build and
  * the guarded container catch it when it runs; this says so before it
- * runs at all. A computed key's deriver, the static derive() of a class
- * implementing DeriverInterface, is held to the same rule.
+ * runs at all. A computed key's class, the static compute() of a class
+ * implementing ComputesValueInterface, is held to the same rule.
  *
  * @implements \PHPStan\Rules\Rule<\PHPStan\Node\InClassMethodNode>
  *
@@ -40,9 +40,9 @@ final class StaticRefinerRule implements Rule {
   public const ATTRIBUTE = 'Drupal\data_surface\Resource\Attribute\RefinesInput';
 
   /**
-   * The interface whose static derive() is held to the same rule.
+   * The interface whose static compute() is held to the same rule.
    */
-  public const DERIVER = 'Drupal\data_surface\Resource\DeriverInterface';
+  public const COMPUTES = 'Drupal\data_surface\Resource\ComputesValueInterface';
 
   /**
    * {@inheritdoc}
@@ -59,8 +59,8 @@ final class StaticRefinerRule implements Rule {
     if (!$method->isStatic() || $method->stmts === NULL) {
       return [];
     }
-    if (static::isDeriver($method->name->toString(), $scope)) {
-      return static::errors($method, $scope, 'The deriver %s::%s() calls \\Drupal::%s(), which reads a service or site state. A computed key is a pure function of the keys it is computed from: a value that needs a service, the clock or the request is a storage\'s to add in its prepare().', 'dataSurface.deriver');
+    if (static::isCompute($method->name->toString(), $scope)) {
+      return static::errors($method, $scope, 'The computed key\'s %s::%s() calls \\Drupal::%s(), which reads a service or site state. A computed key is a pure function of the keys it is computed from: a value that needs a service, the clock or the request is a storage\'s to add in its prepare().', 'dataSurface.compute');
     }
     if (!static::isStaticRefiner($method->attrGroups)) {
       return [];
@@ -105,7 +105,7 @@ final class StaticRefinerRule implements Rule {
   }
 
   /**
-   * Answers whether a method is a computed key's deriver.
+   * Answers whether a method computes a computed key's value.
    *
    * @param string $name
    *   The method's name.
@@ -113,11 +113,11 @@ final class StaticRefinerRule implements Rule {
    *   Its scope.
    *
    * @return bool
-   *   TRUE for derive() on a class implementing DeriverInterface.
+   *   TRUE for compute() on a class implementing ComputesValueInterface.
    */
-  protected static function isDeriver(string $name, Scope $scope): bool {
+  protected static function isCompute(string $name, Scope $scope): bool {
     $class = $scope->getClassReflection();
-    return $name === 'derive' && $class !== NULL && $class->implementsInterface(self::DERIVER);
+    return $name === 'compute' && $class !== NULL && $class->implementsInterface(self::COMPUTES);
   }
 
   /**

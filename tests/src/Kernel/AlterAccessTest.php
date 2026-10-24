@@ -10,6 +10,7 @@ use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\Pipeline\PipelineGuard;
 use Drupal\data_surface\Resource\AccessAnswer;
 use Drupal\data_surface\Resource\OperationContext;
+use Drupal\data_surface\ResourceBuild\ResourceRegistry;
 use Drupal\data_surface_resource_test\Access\WallAccess;
 use Drupal\data_surface_resource_test\Alter\GalleryAlter;
 use Drupal\data_surface_resource_test\Alter\OilFinishAlter;
@@ -162,6 +163,23 @@ class AlterAccessTest extends DataSurfaceKernelTestBase {
   protected function full(string $operation = 'configure'): array {
     $served = $this->container->get('data_surface.contract_emitter')->emitFull($this->gallery(TRUE, $operation), 'resource_test.gallery', $operation);
     return SchemaResolver::inline(json_decode((string) json_encode($served->document['schema']), TRUE));
+  }
+
+  /**
+   * Tests an alter answers through the access class's interface, as one.
+   *
+   * One interface for both roles: #[Alters] on the class says it is an
+   * alter's answer, and an access class that carries #[Alters] is refused,
+   * since it would answer twice, once in each role.
+   */
+  public function testAnAlterAnswersThroughTheOneInterface(): void {
+    $gallery = $this->container->get('data_surface.resource_registry')->getDefinition(GalleryResource::class);
+    $this->assertSame([GalleryAlter::class], array_values(array_map(static fn ($alter): string => $alter->class, array_filter($gallery->alters, static fn ($alter): bool => $alter->answersAccess))));
+    $refuse = new \ReflectionMethod(ResourceRegistry::class, 'assertAccessClass');
+    $refuse->invoke(NULL, GalleryResource::class, WallAccess::class);
+    $this->expectException(\LogicException::class);
+    $this->expectExceptionMessage(GalleryResource::class . ' names ' . GalleryAlter::class . ' on access:, which carries #[Alters]. An alter that answers access is asked as an alter, after the owner\'s answer; an access class is the owner\'s own.');
+    $refuse->invoke(NULL, GalleryResource::class, GalleryAlter::class);
   }
 
   /**

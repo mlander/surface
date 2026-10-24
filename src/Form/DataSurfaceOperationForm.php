@@ -44,8 +44,6 @@ use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
  *     _data_surface_resource: 'Drupal\example\Resource\ExampleResource'
  *     _data_surface_operation: 'update'
  *     _data_surface_cosmetics: 'example.surface_form_cosmetics'
- *   requirements:
- *     _data_surface_operation_access: 'TRUE'
  *   options:
  *     parameters:
  *       example:

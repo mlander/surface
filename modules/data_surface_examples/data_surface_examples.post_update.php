@@ -82,7 +82,7 @@ function data_surface_examples_post_update_venue_slugs(): void {
     if (!$venue instanceof EventVenue || $venue->slug() !== NULL) {
       continue;
     }
-    $slug = Slugify::derive(['label' => $venue->label()]);
+    $slug = Slugify::compute(['label' => $venue->label()]);
     if (!is_string($slug) || isset($held[$slug])) {
       continue;
     }

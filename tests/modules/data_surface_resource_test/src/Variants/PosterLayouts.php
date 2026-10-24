@@ -6,8 +6,8 @@ namespace Drupal\data_surface_resource_test\Variants;
 
 use Drupal\Core\DependencyInjection\ContainerInjectionInterface;
 use Drupal\Core\State\StateInterface;
-use Drupal\data_surface\Resource\VariantList;
-use Drupal\data_surface\Resource\VariantsFromSiteInterface;
+use Drupal\data_surface\Resource\SiteList;
+use Drupal\data_surface\Resource\SiteListInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -16,7 +16,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * Three layouts are always listed; State may list more, cleared by the
  * cache tag this declares, as a site's configuration would be.
  */
-final class PosterLayouts implements VariantsFromSiteInterface, ContainerInjectionInterface {
+final class PosterLayouts implements SiteListInterface, ContainerInjectionInterface {
 
   /**
    * The cache tag of the list.
@@ -106,10 +106,10 @@ final class PosterLayouts implements VariantsFromSiteInterface, ContainerInjecti
   /**
    * {@inheritdoc}
    */
-  public function variants(): VariantList {
-    $list = (new VariantList())->addCacheTags([self::TAG]);
+  public function list(): SiteList {
+    $list = (new SiteList())->addCacheTags([self::TAG]);
     foreach (self::LAYOUTS + (array) $this->state->get(self::STATE, []) as $value => $layout) {
-      $list->add((string) $value, $layout['label'], $layout['schema']);
+      $list->add((string) $value, $layout['label'], schema: $layout['schema']);
     }
     return $list;
   }

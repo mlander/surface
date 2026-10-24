@@ -148,7 +148,7 @@ there (`kept()`), so it survives until it applies again.
 
 A computed key is accepted last, once every other key of its level is:
 its value is computed from what its sources were accepted as, while
-storage holds nothing for it or when it says `Derive::ON_CHANGE` and a
+storage holds nothing for it or when it says `Compute::ON_CHANGE` and a
 source moved, else it holds what is stored. A value sent for it equal to
 that is noted and not taken; any other stays, for `validate()` to
 refuse, code `computed`, naming the keys it is computed from. Either

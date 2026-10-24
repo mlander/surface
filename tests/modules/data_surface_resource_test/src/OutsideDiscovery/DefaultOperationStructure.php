@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface_resource_test\Structure\Broken;
+namespace Drupal\data_surface_resource_test\OutsideDiscovery;
 
 use Drupal\data_surface\Resource\Attribute\Operation;
 use Drupal\data_surface\Resource\Attribute\Structure;
@@ -11,25 +11,17 @@ use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface\Resource\StructureInterface;
 
 /**
- * Broken: two operations marked the default.
+ * Broken: an operation that says default:, which the attribute no longer takes.
  */
-#[Structure('resource_test.broken.two_defaults')]
-final class TwoDefaultsStructure implements StructureInterface {
+#[Structure('resource_test.broken.default_operation')]
+final class DefaultOperationStructure implements StructureInterface {
 
   /**
-   * One default.
+   * Marked the default.
    */
   #[Operation('first', label: 'First', default: TRUE)]
   public static function first(): OperationContext {
     return new OperationContext('first');
-  }
-
-  /**
-   * Another.
-   */
-  #[Operation('second', label: 'Second', default: TRUE)]
-  public static function second(): OperationContext {
-    return new OperationContext('second');
   }
 
   /**
