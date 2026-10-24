@@ -110,6 +110,25 @@ services:
   data_surface.resource_catalog:
     class: Drupal\data_surface\ResourceBuild\ResourceCatalog
     arguments: ['@data_surface.resource_registry', '@data_surface.resource_plugins', '@data_surface.derived_variants']
+  # The live map of the site (drush surface:catalog): the static layer,
+  # the doors each operation reaches as the modules tagged
+  # data_surface.catalog_doors name them, and every build refusal.
+  data_surface.site_catalog:
+    class: Drupal\data_surface\ResourceBuild\SiteCatalog
+    arguments:
+      - '@data_surface.resource_catalog'
+      - '@data_surface.resource_registry'
+      - '@data_surface.resources'
+      - '@data_surface.resource_plugins'
+      - '@account_switcher'
+      - !tagged_iterator data_surface.catalog_doors
+      - '%app.root%'
+  # The form routes a module declares for an operation.
+  data_surface.form_route_doors:
+    class: Drupal\data_surface\ResourceBuild\FormRouteDoors
+    arguments: ['@router.route_provider']
+    tags:
+      - { name: data_surface.catalog_doors, priority: 40 }
   # Which plugins name which structure with #[UsesStructure], read from the
   # definitions of every host that reads the attribute (the keys of
   # ResourcePluginHooks::HOSTS).

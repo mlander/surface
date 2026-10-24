@@ -227,7 +227,8 @@ which serves the real contract.
    being invisible to enumeration. On top of it, a **list tool**
    through the bridge (drush is broken on this site) giving a human
    the thirty-second answer: every surface, where it lives, who
-   provides it, which kind. And a **form debug annotation**: when a
+   provides it, which kind. (The thirty-second answer DONE 2026-10-24
+   as `drush surface:catalog`, item 23.) And a **form debug annotation**: when a
    debug setting is on, generated forms carry an HTML comment naming
    the host id and provider class, the Twig-debug move, bridging a
    misbehaving page to the right file with no convention knowledge.
@@ -933,7 +934,12 @@ renames sit in A because they are cheapest before new code exists.
       them together.
     - **The audit stays green.** the matrix tests (`AdvertisedSchemaAcceptanceTest`, `InputCoercionMatrixTest`) pin the
       invariant; a breach decided and fixed changes a test on purpose,
-      never silently. New doors and new kinds add cases to it.
+      never silently. New doors and new kinds add cases to it. An
+      adopter holds it the same way, with `ResourceTestBase`
+      (`docs/testing-a-resource.md`): never stricter, the round trip,
+      the static refiner and access agreement, every door agreeing and
+      the contract baseline, for its own resources, from its own
+      kernel test (DONE 2026-10-24, item 24).
     - **An evolution design before anyone depends on a resource.**
       DONE 2026-10-19 (`docs/evolution.md`,
       `docs/decisions.md#a-resource-evolves-in-the-open`): the
@@ -1374,6 +1380,26 @@ renames sit in A because they are cheapest before new code exists.
     Open: a resource with identity in a config entity type; a variant, a
     mixin or a port read from a schema written as code rather than as a
     comment.
+23. **The site's catalog.** DONE 2026-10-24
+    (`docs/decisions.md#the-catalog-is-the-sites-live-map`,
+    `docs/catalog-command.md`). `drush surface:catalog` lists every
+    resource and structure on the site with each operation's doors (the
+    form route, the HTTP path, the tool and the read tool, the OpenAPI
+    operation, the React page, each named by the module that opens it)
+    and every build refusal with its file; `--resource` shows one in
+    full, `--refused` only what did not build. `docs/catalog.md` is its
+    markdown for this repository's modules. Open: a door for a plugin's
+    host (the block or formatter form a structure is configured in).
+24. **An adopter's tests hold the invariants.** DONE 2026-10-24
+    (`docs/decisions.md#an-adopters-tests-hold-the-invariants`,
+    `docs/testing-a-resource.md`). `ResourceTestBase`: an adopter names
+    its modules, its resource ids and optionally rows of values, and
+    each resource is held never stricter, read back by kind, to its
+    static refiners and access, to one answer at every door and to its
+    contract baseline. `FirstResourceInvariantsTest` holds the first two
+    resources with it; run over the honeypot port it passes. Open: an
+    operation that needs a subject; a `uri` key sent a value of another
+    type crashes core's primitive type validator through the Tool API.
 
 ## Maintenance
 

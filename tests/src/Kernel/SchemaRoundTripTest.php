@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Drupal\Tests\data_surface\Kernel;
 
 use Drupal\data_surface\Contract\ContractBaselines;
-use Drupal\data_surface\Contract\ContractEmitter;
 use Drupal\data_surface\Resource\OperationContext;
+use Drupal\Tests\data_surface\Traits\SchemaRoundTripTrait;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -21,8 +21,11 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * a structure and built in the same context, emits that document again,
  * byte for byte. A declaration a runtime refiner narrows is left out: its
  * rule is a lookup no document states. What does not round-trip is listed
- * here, each with why, and held to differing only in that: the test
- * fails when one starts to round-trip, and when one differs otherwise.
+ * here, each by the kind of its reason (SchemaRoundTripTrait), and held to
+ * differing only in that: the test fails when one starts to round-trip,
+ * when one differs otherwise, and when the kind the trait names for it
+ * from the document is not the one listed, which is what holds an
+ * adopter's report of the kinds (ResourceTestBase) to this list.
  *
  * @see docs/reading-a-schema.md#the-round-trip
  * @see docs/decisions.md#a-schema-can-be-read-back-into-a-structure
@@ -31,6 +34,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 #[RunTestsInSeparateProcesses]
 class SchemaRoundTripTest extends DataSurfaceKernelTestBase {
 
+  use SchemaRoundTripTrait;
   use UserCreationTrait;
 
   /**
@@ -53,21 +57,6 @@ class SchemaRoundTripTest extends DataSurfaceKernelTestBase {
    * The modules whose declarations are read back.
    */
   protected const MODULES = ['data_surface_examples', 'data_surface_first', 'data_surface_resource_test'];
-
-  /**
-   * Why a document does not round-trip, by kind.
-   */
-  protected const KINDS = [
-    'coded' => 'A coded refiner: what it answers for each value it could be handed is read back as a declared rule, the same conditional with `declared` in place of `enumerated` and its index under the frame\'s `rules`; what it could not list (`refine`) is not read at all. The documents differ in those markers alone.',
-    'coded otherwise' => 'A coded refiner whose answers, read back as declared rules, are spelled otherwise: a rule ruling a key out guards the rules requiring it, a rule stated at a site moves into the child and is stated in the child\'s order, a refiner answering a whole child is no narrowing, and a refiner on a port read at a site leaves nothing to read.',
-    'port' => 'A rule on a port, of a structure emitted alone: it is stated where a container wires the port, and alone there is none, so only the key\'s markers say it.',
-    'rule' => 'A declared rule that narrows nothing the key does not already say: no conditional states it, only the key\'s markers.',
-    'access' => 'An access answer (a lock, a whole locked, a key marked `access: live`) is the access class\'s, not the structure\'s.',
-    'alter' => 'An alter\'s mount: its keys, the rules reading them and the structures it attaches there are the alter\'s; read back, the mount is a map or a child of the owner\'s, its rules a JsonSchema constraint on the frame.',
-    'site' => 'Keys from the site: the entries are a provider\'s, so an entry it locks, and the ports each entry reads, are not the document\'s to say; read back, the rules on those ports are a JsonSchema constraint on the frame.',
-    'server' => 'A constraint of a module that is not on, which only the server could check: the document names it under `checkedOnServer`, and a name is no constraint the reader can declare.',
-    'computed' => 'A computed key: what computes it is a class, which no document names, so read back it is a key nobody types that holds what is stored, `readOnly` and `x-surface.locked`, with no `x-surface.computed`.',
-  ];
 
   /**
    * What does not round-trip, by document, each by the kind of its reason.
@@ -191,86 +180,52 @@ class SchemaRoundTripTest extends DataSurfaceKernelTestBase {
    * Reads every document back, and emits what it built.
    */
   public function testEveryFullSchemaReadsBackToItself(): void {
-    $reader = $this->container->get('data_surface.schema_reader');
-    $resources = $this->container->get('data_surface.resources');
-    $emitter = $this->container->get('data_surface.contract_emitter');
+    $registry = $this->container->get('data_surface.resource_registry');
     $same = [];
     $differ = [];
     $runtime = [];
     $report = [];
+    $kinds = [];
     foreach ($this->documents() as $label => $emitted) {
       $original = $emitted['document']['schema'];
-      $encoded = json_encode($original, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION);
-      if (str_contains((string) json_encode($original), '"live":true')) {
+      $read = $this->readBack($original, $emitted['id'], $emitted['module'], $emitted['context'], $emitted['operation'], $emitted['label'], $emitted['facts']);
+      if ($read['verdict'] === 'live') {
         $runtime[] = $label;
         continue;
       }
-      try {
-        $read = $reader->structure($original, $emitted['id'], $emitted['module']);
-        $again = $emitter->emitFull($resources->buildStatic($read, new OperationContext($emitted['context'])), $emitted['id'], $emitted['operation'], $emitted['label'], operation: $emitted['facts'])->document['schema'];
-      }
-      catch (\Throwable $e) {
+      if ($read['verdict'] === 'error') {
         $differ[$label] = 'error';
-        $report[$label] = [
-          'error' => get_class($e) . ': ' . $e->getMessage() . ' @ ' . $e->getFile() . ':' . $e->getLine(),
-          'original' => $original,
-        ];
+        $report[$label] = ['error' => $read['error'], 'original' => $original];
         continue;
       }
-      $read_back = json_encode($again, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION);
-      if ($read_back === $encoded) {
+      if ($read['verdict'] === 'same') {
         $same[] = $label;
         continue;
       }
       $differ[$label] = 'differs';
-      $report[$label] = ['original' => $original, 'read back' => $again];
+      $report[$label] = ['original' => $original, 'read back' => $read['again']];
+      $kinds[$label] = static::kindOf($original, $read['again'], $registry->getDefinition($emitted['id']));
     }
     if (getenv('DATA_SURFACE_ROUND_TRIP_REPORT')) {
       // Every document read back, for a reader looking at what differs.
-      $written = ['same' => $same, 'runtime' => $runtime, 'differ' => $differ, 'report' => $report];
+      $written = ['same' => $same, 'runtime' => $runtime, 'differ' => $differ, 'kinds' => $kinds, 'report' => $report];
       file_put_contents((string) getenv('DATA_SURFACE_ROUND_TRIP_REPORT'), json_encode($written, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
     }
     $this->assertSame(self::RUNTIME, $runtime, 'The documents a runtime refiner narrows are the ones left out.');
     $this->assertSame([], array_filter($differ, static fn (string $what): bool => $what === 'error'), 'Every document is read back, and what it reads builds.');
     $this->assertSame(array_keys(self::DIFFERS), array_keys($differ), 'What does not round-trip is listed, and nothing listed round-trips.');
     $this->assertGreaterThanOrEqual(30, count($same), 'Most shipped declarations round-trip byte for byte.');
+    // The kind an adopter's test reports a document as
+    // (ResourceTestBase) is the one listed here for each.
+    $this->assertSame(self::DIFFERS, $kinds, 'Each document that differs is named the kind listed for it.');
     foreach (self::DIFFERS as $label => $kind) {
-      $this->assertArrayHasKey($kind, self::KINDS);
+      $this->assertArrayHasKey($kind, static::roundTripKinds());
       if ($kind === 'coded') {
         // Differing in the markers alone: the conditionals, the keys and
         // their words are the same.
         $this->assertSame(json_encode(static::withoutMarkers($report[$label]['original'])), json_encode(static::withoutMarkers($report[$label]['read back'])), $label . ' differs in the markers alone.');
       }
     }
-  }
-
-  /**
-   * Strips the markers a coded refiner's rules are told apart by.
-   *
-   * @param mixed $schema
-   *   A schema, or anything inside one.
-   *
-   * @return mixed
-   *   The same, without `enumerated`, `declared`, `refine` and `rules`
-   *   under any `x-surface`.
-   */
-  protected static function withoutMarkers(mixed $schema): mixed {
-    if (!is_array($schema)) {
-      return $schema;
-    }
-    foreach ($schema as $keyword => $value) {
-      if ($keyword === ContractEmitter::EXTENSION && is_array($value)) {
-        unset($value['enumerated'], $value['declared'], $value['refine'], $value['rules']);
-        if ($value === []) {
-          unset($schema[$keyword]);
-          continue;
-        }
-        $schema[$keyword] = $value;
-        continue;
-      }
-      $schema[$keyword] = static::withoutMarkers($value);
-    }
-    return $schema;
   }
 
 }

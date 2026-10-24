@@ -318,7 +318,10 @@ it with no reason asked.
 fails on a breaking change that is neither versioned nor allowed, and
 on a declaration with no baseline. Compatible changes pass; the
 baseline is the promise last made, and it is pinned again when a change
-is accepted.
+is accepted. An adopter gets the same test, per resource, from
+`ResourceTestBase`: `$baselines` names its directory, and
+`DATA_SURFACE_BASELINES_WRITE=1` pins today's ([Testing a
+resource](testing-a-resource.md#the-baselines)).
 
 **The command.**
 
@@ -369,6 +372,7 @@ an alter a site installs, which only that site's own baselines cover.
 ## See also
 
 - [Decisions: a resource evolves in the open](decisions.md#a-resource-evolves-in-the-open)
+- [Testing a resource](testing-a-resource.md), the contract baseline among an adopter's checks
 - [The served contract](served-contract.md), whose full schema the lint compares
 - [Value semantics](semantics.md), which says what a client asked for
 - [Storage](storage.md), which owns the layout and will own the ledger

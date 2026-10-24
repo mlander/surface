@@ -161,3 +161,10 @@ Place the demo block, or visit the standalone demo form at
 select. The bundle and field selects rebuild over AJAX from the structure's
 refinement map, which is the shortest proof that the whole chain is
 wired.
+
+`drush surface:catalog` lists every resource and structure the site's
+modules declare, with the doors each operation reaches, and `drush
+surface:catalog --refused` what did not build, with the file to open
+([The site's catalog](catalog-command.md)). To hold your own resources
+to the invariants from your module's tests, see [Testing a
+resource](testing-a-resource.md).

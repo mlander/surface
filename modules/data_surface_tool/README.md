@@ -223,6 +223,10 @@ drush pm:install data_surface_tool data_surface_address
 drush tool:list
 ```
 
+`drush surface:catalog` names, per operation, the tool and the read tool
+it reaches, read off the Tool API's own definitions, beside its other
+doors ([The site's catalog](../../docs/catalog-command.md)).
+
 `drush tool:info data_surface:field.instance:reuse` prints the input
 definitions. The title is the operation's label, and the description is
 the operation's own description followed by one line of call rules
@@ -359,7 +363,7 @@ The routes of `data_surface_examples` name it.
 | `Kernel\FieldToolsComparisonTest` | The two JSON Schema documents in `COMPARISON.md`, against what the code emits, and parity with the retired tools. |
 | `Kernel\FieldInstanceResourceTest` | The three operations, the storage child (its keys, its locked type) and its has-data constraint, the settings variants, starting values. |
 | `Kernel\OperationToolsTest` | The generated tools: which exist, the two derivation rules, what they advertise, refinement to the thing a parameter names, execution, dry run, access, the storage tool's has-data constraint. |
-| `Kernel\ResourceCatalogTest` | The catalog read from the static layer, and `docs/catalog.md` against it, where each key with derived variants is listed. |
+| `Kernel\ResourceCatalogTest` | The catalog read from the static layer, and `docs/catalog.md` against what `drush surface:catalog --format=markdown` writes, where each key with derived variants is listed and each operation's tool. |
 | `Kernel\ExamplesStepsTest` | The contract panel: its rows as the answers narrow them, the contract's variant conditionals, and the tool's schema below them. |
 | `Kernel\ExamplesToolTest` | `data_surface:registration.step3:configure`: the example calls, its definition (no key required and each the resource requires saying so, no default at any depth, the operation's description and the update's call rules as its description, and the same after a write), and a partial update that leaves a required key out, kept where it is stored and refused by the pipeline where it is not. |
 | `Kernel\OperationKindsTest` | Every shipped operation's kind, on the examples, the first module and the tool test modules: each tool's description is the operation's description and its kind's call rules, with no literal quotes; a create lists the resource's required keys, an update lists none and says why, a read only operation lists none, and a read tool takes only the parameters and is titled "Current values:" and the write tool's title; no two tools share a title, and where labels are shared each adds its resource. |
@@ -555,7 +559,10 @@ changing the Tool API.
   word of the type wanted. A caller cannot tell it from any other input
   refusal without parsing the sentence. Called through `execute()`, the
   tool answers it in its own shape, `code` and `path` included; a runner
-  never gives it the chance. A type mismatch that named the type wanted
+  never gives it the chance: the Tool API's position in the message
+  ("(property deposit)") is read back off its arguments onto the path,
+  and its primitive type refusal is `type_mismatch`, the pipeline's code.
+  A type mismatch that named the type wanted
   (core's `PrimitiveType` constraint has its type to hand), or a way for
   a runner to hand the refusal to the tool to answer, would close it.
   Found by the fourth fresh-eyes run (entry 19).

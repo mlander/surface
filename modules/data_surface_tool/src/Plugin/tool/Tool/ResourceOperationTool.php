@@ -7,6 +7,7 @@ namespace Drupal\data_surface_tool\Plugin\tool\Tool;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\TypedDataInterface;
+use Drupal\Core\Validation\Plugin\Validation\Constraint\PrimitiveTypeConstraint;
 use Drupal\data_surface\Pipeline\DataSurfacePipelineInterface;
 use Drupal\data_surface\Pipeline\ResultDocument;
 use Drupal\data_surface\Pipeline\Violation;
@@ -73,6 +74,11 @@ use Symfony\Component\Validator\ConstraintViolationListInterface;
 final class ResourceOperationTool extends ResourceOperationToolBase implements InputDefinitionRefinerInterface {
 
   use ResultReportingTrait;
+
+  /**
+   * The Tool API's messages that carry a position inside an input.
+   */
+  protected const POSITIONED = ['(property @position) @message', '(item @position) @message'];
 
   /**
    * The pipeline that accepts, validates, prepares and commits values.
@@ -222,10 +228,21 @@ final class ResourceOperationTool extends ResourceOperationToolBase implements I
     foreach ($result->getViolations() as $violation) {
       $path = (string) $violation->getPropertyPath();
       $message = $violation->getMessage();
+      // The Tool API names a map property's or a list item's position in
+      // the message, "(property room) ...", until #3583065 moves it onto
+      // the path: read it back off the message's own arguments.
+      while ($message instanceof TranslatableMarkup && in_array($message->getUntranslatedString(), self::POSITIONED, TRUE)) {
+        $arguments = $message->getArguments();
+        $path .= '.' . $arguments['@position'];
+        $message = $arguments['@message'];
+      }
       $constraint = $violation->getConstraint();
-      $code = $constraint === NULL && $message instanceof TranslatableMarkup && $message->getUntranslatedString() === 'This property is required.'
-        ? Violation::REQUIRED
-        : Violation::codeOf($violation);
+      $code = match (TRUE) {
+        $constraint === NULL && $message instanceof TranslatableMarkup && $message->getUntranslatedString() === 'This property is required.' => Violation::REQUIRED,
+        // A value of another type than the key's, as the pipeline names it.
+        $constraint === NULL && $violation->getMessageTemplate() === (new PrimitiveTypeConstraint())->message => Violation::TYPE_MISMATCH,
+        default => Violation::codeOf($violation),
+      };
       if ($path === OperationInputs::VALUES || str_starts_with($path, OperationInputs::VALUES . '.')) {
         [$key, $below] = array_pad(explode('.', substr($path, strlen(OperationInputs::VALUES) + 1), 2), 2, '');
         $refused[] = new Violation($key, $below, $message, $code);

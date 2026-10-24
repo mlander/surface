@@ -37,6 +37,7 @@ nav:
   - Resources and structures: resources.md
   - Reading a schema: reading-a-schema.md
   - Catalog: catalog.md
+  - "The site's catalog": catalog-command.md
   - Content entities: entities.md
   - Declaring a resource: declaring-a-resource.md
   - Decisions: decisions.md
@@ -51,6 +52,7 @@ nav:
       - Options and resolvers: options.md
       - The served contract: served-contract.md
       - Evolving a resource: evolution.md
+      - Testing a resource: testing-a-resource.md
       - 'Audit: never stricter': audit-never-stricter.md
   - Extending a resource or structure:
       - Refinement and contributions: refinement.md

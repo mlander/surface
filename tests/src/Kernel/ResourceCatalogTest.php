@@ -11,6 +11,7 @@ use Drupal\data_surface_demo_node_type\Storage\NodeTypeStorage;
 use Drupal\data_surface_address\Resource\AddressFieldSettingsResource;
 use Drupal\data_surface_demo\Plugin\Field\FieldFormatter\DataSurfaceDemoFormatter;
 use Drupal\data_surface_examples_workflow\Alter\ProgramWorkflowAlter;
+use Drupal\data_surface\ResourceBuild\CatalogDocument;
 use Drupal\data_surface_tool\Resource\FieldInstanceResource;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -20,8 +21,9 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  *
  * The first reader of the static layer: every resource and structure the
  * shipped modules declare, with what each operation needs, read without
- * building anything. The document is written by
- * scripts/generate-catalog.php.
+ * building anything. The document is what `drush surface:catalog
+ * --format=markdown` prints for these modules, written here through the
+ * same builder (SiteCatalog::markdown()).
  */
 #[Group('data_surface')]
 #[RunTestsInSeparateProcesses]
@@ -57,6 +59,8 @@ class ResourceCatalogTest extends DataSurfaceKernelTestBase {
     'data_surface_first',
     'data_surface_component_block',
     'data_surface_block',
+    'data_surface_react',
+    'data_surface_openapi',
   ];
 
   /**
@@ -64,7 +68,10 @@ class ResourceCatalogTest extends DataSurfaceKernelTestBase {
    */
   protected function setUp(): void {
     parent::setUp();
-    require_once dirname(__DIR__, 3) . '/scripts/DataSurfaceCatalogDocument.php';
+    // What a build reads: the accounts a key may refer to, the examples'
+    // settings.
+    $this->installEntitySchema('user');
+    $this->installConfig(['data_surface_examples', 'data_surface_first']);
   }
 
   /**
@@ -239,22 +246,22 @@ class ResourceCatalogTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests that the checked-in catalog still matches the generator.
+   * Tests that the checked-in catalog is what the command prints.
    *
    * Running with DATA_SURFACE_WRITE_CATALOGUE=1 writes the new document
    * first, which is what scripts/generate-catalog.php does.
    */
   public function testCatalogueHasNotDrifted(): void {
-    $document = \DataSurfaceCatalogDocument::render($this->catalog(), $this->container->get('data_surface.resource_catalog')->derivers());
-    $path = dirname(__DIR__, 3) . '/' . \DataSurfaceCatalogDocument::PATH;
-    if (getenv(\DataSurfaceCatalogDocument::WRITE_VARIABLE) === '1') {
+    $document = $this->container->get('data_surface.site_catalog')->markdown();
+    $path = dirname(__DIR__, 3) . '/' . CatalogDocument::PATH;
+    if (getenv(CatalogDocument::WRITE_VARIABLE) === '1') {
       file_put_contents($path, $document);
     }
     $this->assertFileExists($path);
     $this->assertSame(
       $document,
       (string) file_get_contents($path),
-      \DataSurfaceCatalogDocument::PATH . ' is out of date. Regenerate it with scripts/generate-catalog.php.',
+      CatalogDocument::PATH . ' is out of date. Regenerate it with scripts/generate-catalog.php.',
     );
   }
 

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\data_surface\Traits;
 
+use Drupal\data_surface\Computed;
 use Drupal\data_surface\Contract\ContractEmitter;
 use Drupal\data_surface\Contract\SchemaResolver;
 use Drupal\data_surface\DataSurfaceInterface;
@@ -99,7 +100,10 @@ trait StaticAccessAgreementTrait {
     foreach ($alone->getDefinitions()->entries() as $name => $entry) {
       $property = is_array($properties[$name]) ? $properties[$name] : [];
       $locked = $entry->locked || $frozen;
-      $this->assertSame($locked, ($property['readOnly'] ?? FALSE) === TRUE, sprintf('%s: "%s" is read only exactly where it is locked.', $label, $name));
+      // A computed key is read only too: nobody types it.
+      // Decision: see
+      // docs/decisions.md#a-computed-key-is-a-pure-function-of-its-sources.
+      $this->assertSame($locked || Computed::of($entry->definition) !== NULL, ($property['readOnly'] ?? FALSE) === TRUE, sprintf('%s: "%s" is read only exactly where it is locked or computed.', $label, $name));
       $this->assertSame($entry->runtimeAccess, ($property['x-surface']['access'] ?? NULL) === 'live', sprintf('%s: "%s" is marked live exactly where its answer was set aside.', $label, $name));
       $compared++;
       if ($entry->attachment !== NULL) {

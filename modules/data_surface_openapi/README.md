@@ -88,6 +88,11 @@ has why 3.1 and why its own route rather than the contributed `openapi`
 module; [Contract 3](../../docs/decisions.md#contract-3-the-operation-is-the-method)
 why the paths are what they are.
 
+`drush surface:catalog` names, per operation, the OpenAPI operation
+that runs it (`<resource>:<operation>:write`, a listing's `:list`),
+beside its other doors ([The site's
+catalog](../../docs/catalog-command.md)).
+
 ## Tests
 
 `OpenApiDocumentTest` (kernel: valid against the official OpenAPI 3.1

@@ -566,6 +566,27 @@ final class ResourceRegistry {
   }
 
   /**
+   * Gets the structures read from a schema document in this request.
+   *
+   * What the builds so far registered (defineRead()), which nothing else
+   * lists: the site catalog builds every operation first, then lists
+   * these, so a structure a provider or a document supplies is on the
+   * map too.
+   *
+   * @return array<string, \Drupal\data_surface\ResourceBuild\ResourceDefinition>
+   *   The definitions, by the name each is built by, `schema:<id>:<hash>`,
+   *   sorted.
+   *
+   * @internal
+   *   For the site catalog.
+   */
+  public function getReadDefinitions(): array {
+    $read = array_filter($this->read, static fn (ResourceDefinition $definition): bool => str_starts_with((string) $definition->readAs, 'schema:'));
+    ksort($read);
+    return $read;
+  }
+
+  /**
    * Registers a structure read from a schema document, to be built by name.
    *
    * A document's object at a key, a def it refers to, a variant it states

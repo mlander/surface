@@ -436,8 +436,10 @@ nothing on it is needed to build.
 | [The pattern](docs/pattern.md) | What an author writes, where it goes, and why it is shaped that way. |
 | [How it fits](docs/how-it-fits.md) | One build followed from the caller to a sealed data surface. |
 | [Decisions](docs/decisions.md) | The points the pattern left open, and how the module settled them. |
-| [Catalog](docs/catalog.md) | Every resource and structure the modules here declare, generated from the static layer. |
+| [Catalog](docs/catalog.md) | Every resource and structure the modules here declare, with each operation's doors: `drush surface:catalog --format=markdown` for this repository. |
+| [The site's catalog](docs/catalog-command.md) | `drush surface:catalog`: every resource and structure on a site, each operation's doors, one in full, and what did not build. |
 | [Evolving a resource](docs/evolution.md) | Which changes are compatible, the version, stored-value migrations as designed, and the contract diff that holds a module to its baselines. |
+| [Testing a resource](docs/testing-a-resource.md) | `ResourceTestBase`: the invariants (never stricter, the round trip, static agreement, every door, the baseline) held for your own resources from one kernel test. |
 | [Installation](docs/installation.md) | Install, integrations, submodules. |
 
 **Evidence**

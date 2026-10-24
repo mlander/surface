@@ -3804,6 +3804,54 @@ change the id shape.
 `ToolDefinitionsPerResourceTest`, `EmitMemoTest`,
 `PerformanceBudgetTest`)
 
+### The catalog is the site's live map
+
+Decided 2026-10-24. `drush surface:catalog` lists what discovery finds
+on the site the command runs on, from any module, derived resources and
+read-back structures included, not what a repository declares: a person
+reading it wants the thirty-second answer for this site, every
+resource, where it lives and how it is reached, and a check wants to
+know what fails to build before a caller finds it. Three choices, and
+why:
+
+- **Doors are named by the module that opens them.** Each module that
+  opens a door implements `CatalogDoorsInterface`, a service tagged
+  `data_surface.catalog_doors`: the main module names the form routes
+  (any route naming the operation in `_data_surface_resource`), the
+  tool bridge the tool and the read tool it derived, the React module
+  the HTTP path and the page, the OpenAPI module its operation. The
+  main module cannot know a submodule's paths, and a door listed where
+  its module is off would be a promise nothing keeps. The tool door is
+  read off the Tool API's definitions, so it lists the tools that
+  exist, not the ones the rule says should.
+- **Every operation is built, for no account.** A refusal that only a
+  build raises (an operation's context that does not match, a refiner
+  watching a key it never declares, a child that cannot be attached) is
+  per resource on purpose ([What is paid once and what per
+  request](#what-is-paid-once-and-what-per-request)), so listing it
+  means building: each operation as its tool listing is
+  (`buildDeclared()`, as the anonymous account), so the map is the same
+  whoever runs it. A refusal points at the first class its message
+  names, the file a reader opens; `--refused` exits 1 when it lists
+  anything.
+- **What a build reads from a schema is listed, grouped.** A structure
+  read from a schema document (a component's props and slots) is
+  registered only when a build reads it, so the catalog lists them
+  after building everything, by the name each is built by. A theme of
+  components gives thousands, so the table and the markdown count them
+  where they are read; the JSON lists every one.
+- **The repository's catalog is the command's markdown.**
+  `docs/catalog.md` is `--format=markdown` for a test site with this
+  repository's modules installed, written by `ResourceCatalogTest`
+  through `SiteCatalog::markdown()`, the call the command makes; one
+  renderer, so the document and the command cannot drift. The static
+  layer's own reading (`ResourceCatalog::describe()`) stays what the
+  rest of the module reads.
+
+(`ResourceBuild\SiteCatalog`, `ResourceBuild\CatalogDocument`,
+`ResourceBuild\CatalogDoorsInterface`, `Drush\Commands\CatalogCommand`,
+`CatalogCommandTest`, `ResourceCatalogTest`)
+
 ## Derived resources
 
 ### Derived definitions at discovery
@@ -6032,3 +6080,72 @@ baselines for operations that need a subject, which the lint leaves out.
 `Contract\ContractDiff`, `Contract\ContractBaselines`,
 `Drush\Commands\ContractDiffCommand`, `ContractBaselineTest`,
 `ContractDiffTest`)
+
+## Testing
+
+### An adopter's tests hold the invariants
+
+Decided 2026-10-24. The invariants are what make the pattern safe to
+adopt: a schema a caller reads is never stricter than the pipeline,
+every door gives one answer, a static refiner and a static access
+answer are what their kind claims, and a resource changes in the open.
+This module held them for its own fixtures only, so a module adopting
+the pattern had the promise without the proof. `ResourceTestBase`, a
+kernel test base in `tests/src/Kernel/`, holds them for any module's
+resources, found the way core's test base classes are (every module's
+`tests/src` autoloaded under `Drupal\Tests\<module>\` when tests
+run). Each choice, and why:
+
+- **One base class, three things to write.** An adopter lists its
+  modules, its resource ids and, if it wants, rows of values; the
+  documents every check runs over are generated from the declaration
+  (the declared defaults, each key sent null, each key sent a value of
+  another type), so a resource is held the day it is written. Each check
+  is a test with one data set per resource, so a failure names the
+  check and the resource. The checks are this module's own, moved into
+  traits its tests use too (`NeverStricterTrait`,
+  `SchemaRoundTripTrait`, `StaticRefinerAgreementTrait`,
+  `StaticAccessAgreementTrait`), so the two cannot drift.
+- **Skipped by kind, not failed.** A full schema that cannot read back
+  to itself for a known reason (a coded refiner, an access answer, an
+  alter's mount, keys from the site, a computed key, a constraint only
+  the server checks, a port, a runtime refiner) is how the pattern
+  works, not an adopter's mistake: it is reported skipped, naming the
+  kind and why. The kind is read from the document and the declaration
+  (`SchemaRoundTripTrait::kindOf()`), and `SchemaRoundTripTest` holds
+  it to the kind it lists by hand for each of the module's 51 such
+  documents, so the report an adopter reads is the one this module
+  checked. Any other difference fails.
+- **Exact unless the schema says otherwise.** A generated document the
+  pipeline refuses must be refused by both schemas, unless a refused
+  key carries a mark that the schema is wider there (`refine`, `live`,
+  `checkedOnServer`, a `format`, a secret's required, a stale value):
+  the marks are the contract's own statement of where it is not exact,
+  so the check reads them rather than a list an adopter would keep.
+- **The Tool API's own refusal is held to its shape.** Where the Tool
+  API refuses a value at its input, before the tool runs, it checks the
+  shape alone (types, the keys a create requires) while the pipeline
+  stops at the first value of another type, so the two may name other
+  keys: the check holds that both refuse and that the Tool API names
+  keys by pointer. The tool now reads the position the Tool API puts in
+  its message ("(property room) ...", until #3583065 moves it onto the
+  path) back off the message's arguments, and names a primitive type
+  refusal `type_mismatch`, as the pipeline does.
+- **Baselines are theirs.** The contract baseline check reads and
+  writes the directory the adopter names, `DATA_SURFACE_BASELINES_WRITE=1`
+  pinning today's, so a breaking change fails their build the way it
+  fails ours; nothing of this module's is compared.
+
+Open: an operation that needs a subject is built with none and left out
+of the checks that need values; a resource whose keys are typed `uri`
+fails the door check when a value of another type reaches core's
+`PrimitiveTypeConstraintValidator` through the Tool API's input
+validation, which calls `parse_url()` on an array (a `TypeError` the Tool
+API answers as a runtime failure): found by this base class over example
+14, not fixed here.
+
+(`Tests\data_surface\Kernel\ResourceTestBase`,
+`FirstResourceInvariantsTest`, `Traits\NeverStricterTrait`,
+`Traits\SchemaRoundTripTrait`, `SchemaRoundTripTest`,
+`ResourceOperationTool::execute()`, [Testing a
+resource](testing-a-resource.md))

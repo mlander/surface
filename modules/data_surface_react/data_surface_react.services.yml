@@ -21,3 +21,10 @@ services:
     class: Drupal\data_surface_react\EventSubscriber\ProblemDetailsSubscriber
     tags:
       - { name: event_subscriber }
+  # The HTTP path and the React page an operation reaches, for the site
+  # catalog.
+  data_surface_react.catalog_doors:
+    class: Drupal\data_surface_react\ServedDoors
+    arguments: ['@data_surface_react.served_paths']
+    tags:
+      - { name: data_surface.catalog_doors, priority: 30 }

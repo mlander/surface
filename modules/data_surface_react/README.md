@@ -144,6 +144,10 @@ Below the form, collapsed, the contract: the line on the last change, a
 row per key, as the PHP contract panel shows it, then the JSON of the
 last envelope served and of the full schema.
 
+`drush surface:catalog` lists, per operation, the method and path that
+run it and its React page, beside its other doors ([The site's
+catalog](../../docs/catalog-command.md)).
+
 ## The app
 
 The app is `app/`, a Vite + React 18 + TypeScript project. It builds

@@ -17,3 +17,9 @@ services:
       - '@account_switcher'
       - '@logger.channel.data_surface'
       - '@string_translation'
+  # The OpenAPI operation that runs an operation, for the site catalog.
+  data_surface_openapi.catalog_doors:
+    class: Drupal\data_surface_openapi\OpenApiDoors
+    arguments: ['@data_surface_react.served_paths']
+    tags:
+      - { name: data_surface.catalog_doors, priority: 10 }

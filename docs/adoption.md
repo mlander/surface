@@ -47,6 +47,10 @@ Every built group adopts the same way, in two files:
    the group's base class or using its trait. The host supplies the
    context and the storage, because only it holds the instance.
 
+An adopting module holds what it wrote to the pattern's invariants with
+one kernel test extending `ResourceTestBase`, naming its modules and its
+resource ids ([Testing a resource](testing-a-resource.md)).
+
 ```php
 use Drupal\Core\Condition\Attribute\Condition;
 use Drupal\Core\StringTranslation\TranslatableMarkup;

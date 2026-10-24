@@ -146,7 +146,7 @@ it](https://www.drupal.org/project/drupal/issues/3622144).
 | **Operation form** | The generic form that serves a resource in one of its operations from a route, with no form class of its own. | `Form\DataSurfaceOperationForm`, `Form\DataSurfaceFormCosmeticsInterface` |
 | **Widget** | Maps one definition to a form element and back. A plugin type. | `Widget\DataSurfaceWidgetInterface`, `Plugin/DataSurfaceWidget/*` |
 | **Options resolver** | Reads one validation constraint as the list of values it allows, with labels and cacheability. A plugin type. | `Options\DataSurfaceOptionsResolverInterface`, `Plugin/DataSurfaceOptionsResolver/*` |
-| **Catalog** | Every discovered resource and structure, with its kind, read from the static layer without building anything. | `data_surface.resource_catalog`, [catalog.md](catalog.md) |
+| **Catalog** | Every discovered resource and structure, with its kind, read from the static layer without building anything; on a site, with each operation's doors and every build refusal. | `data_surface.resource_catalog`, `data_surface.site_catalog`, `drush surface:catalog`, [The site's catalog](catalog-command.md), [catalog.md](catalog.md) |
 
 Read the architecture as three layers that never reach into each other.
 A data surface is pure data: it holds definitions and refiners, reaches
@@ -210,8 +210,11 @@ The pages fall in the same groups as the README's documentation table.
 - **The engine and the record**: [The pattern](pattern.md), [How it
   fits](how-it-fits.md), [Decisions](decisions.md) (the reasons behind
   each rule, for a reader who wants the why; nothing on it is needed to
-  build), the [Catalog](catalog.md), [Evolving a
-  resource](evolution.md) and [Installation](installation.md).
+  build), the [Catalog](catalog.md) and [the site's
+  catalog](catalog-command.md) (`drush surface:catalog`), [Evolving a
+  resource](evolution.md), [Testing a resource](testing-a-resource.md)
+  (the invariants, held for your own resources by one base class) and
+  [Installation](installation.md).
 - **Evidence**: the logs and the audit [below](#evidence).
 - **The proposal**: [Core gaps](core-gaps.md), then the [Adoption
   catalog](adoption.md).

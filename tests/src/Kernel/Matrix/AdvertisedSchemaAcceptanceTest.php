@@ -10,9 +10,7 @@ use Drupal\data_surface\Contract\SchemaResolver;
 use Drupal\data_surface\DataSurfaceBuilder;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\DefinitionMetadata;
-use Drupal\data_surface\Pipeline\TypeMismatchException;
 use Drupal\data_surface\Pipeline\UnknownKeysException;
-use Drupal\data_surface\Pipeline\VariantMismatchException;
 use Drupal\data_surface\Pipeline\Storage\StateStorage;
 use Drupal\data_surface_examples_compliance\Alter\RegistrationComplianceAlter;
 use Drupal\data_surface\Resource\OperationContext;
@@ -25,7 +23,7 @@ use Drupal\data_surface_resource_test\Resource\Gallery\GalleryResource;
 use Drupal\data_surface_resource_test\Storage\CellarStorage;
 use Drupal\data_surface_resource_test\Structure\Notice\NoticeStructure;
 use Drupal\Tests\data_surface\Kernel\DataSurfaceKernelTestBase;
-use Drupal\Tests\data_surface\Traits\ContractValidationTrait;
+use Drupal\Tests\data_surface\Traits\NeverStricterTrait;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\IgnoreDeprecations;
@@ -74,7 +72,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 #[IgnoreDeprecations]
 class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
 
-  use ContractValidationTrait;
+  use NeverStricterTrait;
   use UserCreationTrait;
 
   /**
@@ -153,92 +151,6 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
     $this->installEntitySchema('user');
     $this->installConfig(['data_surface_examples']);
     $this->setUpCurrentUser(admin: TRUE);
-  }
-
-  /**
-   * Holds one data surface to its table of documents.
-   *
-   * @param string $id
-   *   The resource's id, for the documents.
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
-   *   The data surface, built in its operation.
-   * @param array $stored
-   *   What storage holds.
-   * @param array<string, array{0: array, 1: bool, 2?: bool, 3?: bool}> $rows
-   *   By label: the input, whether the pipeline accepts it, and, for a
-   *   refused one, whether the full schema and the schema for these
-   *   answers accept its document anyway (both FALSE, exact, unless
-   *   given).
-   * @param \Drupal\data_surface\DataSurfaceInterface|null $declared
-   *   The data surface the full schema is emitted from, built for the
-   *   account alone, when access in it differs from $surface's; NULL for
-   *   $surface.
-   */
-  protected function assertTable(string $id, DataSurfaceInterface $surface, array $stored, array $rows, ?DataSurfaceInterface $declared = NULL): void {
-    $emitter = $this->container->get('data_surface.contract_emitter');
-    // As a client holds them: an empty object stays one.
-    $full = json_decode((string) json_encode($emitter->emitFull($declared ?? $surface, $id)->document['schema']));
-    foreach ($rows as $label => $row) {
-      [$input, $accepts] = $row;
-      try {
-        $accepted = $this->pipeline()->accept($surface, $input, $stored);
-        $violations = $this->pipeline()->validate($surface, $accepted, $stored);
-        $verdict = $violations->isEmpty();
-        // As the pipeline writes it: every map an object, an empty one too.
-        $document = $this->pipeline()->document($surface, $accepted);
-        $these = (array) json_decode((string) json_encode($emitter->emit($surface, $accepted, $id)->document));
-      }
-      catch (UnknownKeysException | TypeMismatchException | VariantMismatchException) {
-        $document = $input;
-        $verdict = FALSE;
-        $these = (array) json_decode((string) json_encode($emitter->emit($surface, $this->pipeline()->accept($surface, [], $stored), $id)->document));
-      }
-      $this->assertSame($accepts, $verdict, $label . ': the pipeline ' . ($accepts ? 'accepts' : 'refuses') . ' it.');
-      $wide_full = $accepts || ($row[2] ?? FALSE);
-      $wide_these = $accepts || ($row[3] ?? FALSE);
-      $this->assertSame($wide_full, $this->validates($full, $document), $label . ': the full schema ' . ($wide_full ? 'accepts' : 'refuses') . ' its document.');
-      $this->assertSame($wide_these, $this->validates($these['schema'], $document), $label . ': the schema for these answers ' . ($wide_these ? 'accepts' : 'refuses') . ' its document.');
-      if ($accepts) {
-        // A secret's value is masked as null there, which is read as the
-        // key left out (docs/decisions.md#a-secret-is-optional-never-nullable).
-        $values = $this->unmasked($surface, $these['values']);
-        $this->assertTrue($this->validates($these['schema'], $values), $label . ': the schema for these answers accepts its own values.');
-      }
-    }
-  }
-
-  /**
-   * Leaves out each secret a document's values mask as null.
-   *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
-   *   The data surface the values are of.
-   * @param mixed $values
-   *   The values, as the document carries them, decoded with objects.
-   *
-   * @return mixed
-   *   The same, a secret holding null left out, in a child or a chosen
-   *   variant too.
-   */
-  protected function unmasked(DataSurfaceInterface $surface, mixed $values): mixed {
-    if (!$values instanceof \stdClass) {
-      return $values;
-    }
-    $values = clone $values;
-    foreach ($surface->getDefinitions()->entries() as $name => $entry) {
-      $name = (string) $name;
-      if (!property_exists($values, $name)) {
-        continue;
-      }
-      if ($values->{$name} === NULL && DefinitionMetadata::isSecret($entry->definition)) {
-        unset($values->{$name});
-        continue;
-      }
-      $child = $entry->list === NULL ? $entry->childFor(json_decode((string) json_encode($values), TRUE)) : NULL;
-      if ($child !== NULL) {
-        $values->{$name} = $this->unmasked($child, $values->{$name});
-      }
-    }
-    return $values;
   }
 
   /**

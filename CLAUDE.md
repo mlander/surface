@@ -272,8 +272,18 @@ description the operation's description and one line of call rules
 for its kind (`OperationInputs::description()`). The field
 tools are `data_surface:field.instance:create` / `:reuse` / `:update`; the
 hand-written `field_add` / `field_update` are gone.
-`data_surface.resource_catalog` lists the static layer; `docs/catalog.md`
-is generated from it by `scripts/generate-catalog.php`.
+`data_surface.resource_catalog` lists the static layer;
+`data_surface.site_catalog` adds each operation's doors (each module
+that opens one names it, a `CatalogDoorsInterface` service tagged
+`data_surface.catalog_doors`) and every build refusal, which `drush
+surface:catalog` prints (`docs/catalog-command.md`); `docs/catalog.md`
+is its markdown for this repository's modules, written by
+`ResourceCatalogTest` through `SiteCatalog::markdown()`
+(`scripts/generate-catalog.php` runs it). An adopter holds its own
+resources to the invariants by extending `ResourceTestBase`
+(`docs/testing-a-resource.md`); its checks are this module's, in
+`NeverStricterTrait`, `SchemaRoundTripTrait` and the two agreement
+traits, which the module's own matrix and round trip tests use.
 
 Attached structures are `attach()` (a fixed child, by class) and
 `attachVariants()` (variants a sibling key chooses between, always
@@ -383,10 +393,13 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 The full lane's phpunit line reads, as of this writing:
 
 ```
-phpunit: Tests: 1516, Assertions: 31377, Errors: 0, Failures: 0, Skipped: 0. Classes: 203 of 203, 8 at a time, browser classes 4.
+phpunit: Tests: 1534, Assertions: 31916, Errors: 0, Failures: 0, Skipped: 1. Classes: 205 of 205, 8 at a time, browser classes 4.
 ```
 
-the same counts a plain phpunit run of the tree gives. `run-tests.sh`
+the same counts a plain phpunit run of the tree gives. The one skipped
+test is `FirstResourceInvariantsTest`'s round trip of the store
+location, reported by kind (a coded refiner), as `ResourceTestBase`
+reports a document that cannot read back to itself. `run-tests.sh`
 prints one line per class counting passed tests only, so `check.sh`
 reads the counts from the JUnit log each class's phpunit writes, and
 checks them against the classes `run-tests.sh` listed. A failure or an
@@ -399,8 +412,8 @@ fail the gate, in either lane: plain phpunit counts them (42 as of this
 writing) and passes, and the full lane passes `--suppress-deprecations`,
 without which `run-tests.sh` adds `--fail-on-deprecation` to every class.
 The fast lane's line sums phpunit's own lines, one per class:
-`Tests: 1374, Assertions: 27106, Deprecations: 95. Classes: 152, 8 at a
-time.`; its deprecation count is per process, so it is higher than one
+`Tests: 1430, Assertions: 28053, Deprecations: 102, Skipped: 1. Classes:
+158, 8 at a time.`; its deprecation count is per process, so it is higher than one
 run's.
 
 The test and assertion counts drift upward as work lands and are not the
@@ -572,7 +585,8 @@ so the rule is this sentence. `npm test` is not part of
 - `modules/data_surface_tool/COMPARISON.md` and
   `modules/data_surface_demo_node_type_tool/COMPARISON.md` are generated
   by `scripts/generate-comparison.php`, `docs/catalog.md` by
-  `scripts/generate-catalog.php`, and the contract baselines under
+  `scripts/generate-catalog.php` (the markdown of `drush surface:catalog`
+  for this repository's modules), and the contract baselines under
   `tests/fixtures/contracts/` by `drush data_surface:contract-diff
   --write`, and the config schema and install files of every resource
   stored in a `ConfigObjectStorage`, and the schema of a config entity
@@ -619,8 +633,9 @@ src/Hook/                #[UsesStructure] into plugin definitions.
 src/Pipeline/            Access, accept, validate, prepare, commit; results.
 src/Storage/             Where accepted values are written; settings layouts.
 src/Contract/            The served contract's emitter (JSON Schema); the contract diff.
-src/Drush/               Drush commands (the contract diff, the config schema) and
-                         the resource generator, drush generate surface:resource.
+src/Drush/               Drush commands (the site's catalog, the contract diff, the
+                         config schema) and the resource generator, drush
+                         generate surface:resource.
 src/Form/                Form builder, host traits, the operation form.
 src/Widget/ src/Plugin/  Definition to form element; resolvers, hosts, constraints.
 src/Options/             Option sets, the resolver plugin base and manager.

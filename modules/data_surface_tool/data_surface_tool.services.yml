@@ -34,3 +34,9 @@ services:
     arguments: ['@service_container']
     tags:
       - { name: cache_tags_invalidator }
+  # The tool and the read tool an operation reaches, for the site catalog.
+  data_surface_tool.catalog_doors:
+    class: Drupal\data_surface_tool\ToolDoors
+    arguments: ['@plugin.manager.tool']
+    tags:
+      - { name: data_surface.catalog_doors, priority: 20 }
