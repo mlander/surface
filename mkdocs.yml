@@ -41,6 +41,7 @@ nav:
   - Content entities: entities.md
   - Declaring a resource: declaring-a-resource.md
   - Decisions: decisions.md
+  - Performance: performance.md
   - Values:
       - The pipeline: pipeline.md
       - Value semantics: semantics.md

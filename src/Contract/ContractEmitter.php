@@ -1506,34 +1506,41 @@ final class ContractEmitter {
    *
    * @param \Drupal\data_surface\DataSurfaceInterface $surface
    *   The data surface.
+   * @param array<int, true> $seen
+   *   The frames walked, by object id.
    *
    * @return string[]
    *   Their ids: each one's def is written open in this document.
    */
-  protected function mixedIn(DataSurfaceInterface $surface): array {
-    // A sealed child never changes, and may be held at many keys.
-    static $asked = NULL;
-    $asked ??= new \WeakMap();
-    if (isset($asked[$surface])) {
-      return $asked[$surface];
+  protected function mixedIn(DataSurfaceInterface $surface, array &$seen = []): array {
+    // A sealed child may be held at many keys: each is walked once.
+    if (isset($seen[spl_object_id($surface)])) {
+      return [];
     }
+    $seen[spl_object_id($surface)] = TRUE;
     $ids = [];
     foreach ($surface->getDefinitions()->mixins() as $mixin) {
       $ids[] = (string) ($mixin->structure->id ?? $mixin->structure->source);
-      array_push($ids, ...$this->mixedIn($mixin->structure->child));
+      array_push($ids, ...$this->mixedIn($mixin->structure->child, $seen));
     }
     foreach ($surface->getDefinitions()->entries() as $entry) {
       $children = match (TRUE) {
+        // A list the site decides past its budget is stated by value, and
+        // a variant of it only where a door chose it, which walks it then
+        // (Subschemas::openAlso()): one not built yet is not built here.
+        // Decision: see
+        // docs/decisions.md#the-static-build-is-cached-the-rest-is-per-request.
+        $entry->variants !== NULL && $this->budget?->variantsOver($entry->variants) => array_filter($entry->variants->variants, static fn (Attachment $variant): bool => $variant->isSettled()),
         $entry->variants !== NULL => $entry->variants->variants,
         $entry->attachment !== NULL => [$entry->attachment],
         $entry->list !== NULL => [$entry->list->item],
         default => [],
       };
       foreach ([...$children, ...$entry->mounted] as $child) {
-        array_push($ids, ...$this->mixedIn($child->child));
+        array_push($ids, ...$this->mixedIn($child->child, $seen));
       }
     }
-    return $asked[$surface] = array_values(array_unique($ids));
+    return array_values(array_unique($ids));
   }
 
   /**
@@ -2810,6 +2817,11 @@ final class ContractEmitter {
     foreach ($listed as $id => $variant) {
       $id = (string) $id;
       $child = $variant->child;
+      if ($listed !== $variants->variants) {
+        // Chosen past the budget: built now, so what it mixes in is known
+        // now, before its def is written.
+        $subschemas->openAlso($this->mixedIn($child));
+      }
       $fallback = $owner . '.' . $entry->name . '.' . $id;
       $is_chosen = !$full && !$declaring && !$blank && $id === $chosen;
       // Below a variant, a key is reached through the choice of it.

@@ -108,27 +108,39 @@ final class Outbound {
    * collection's or a plain list's, the secrets of each item are under
    * EACH, so only they are left out of every item and the list stays.
    *
+   * A caller describing a document that states some keys' variants and
+   * not others (a tool listing, past the site's list budget) names the
+   * keys whose variants it states, `$walks`: a variant it never states
+   * holds no key of its document, so it is not built to be asked. What
+   * answers values (the pipeline, every door's projection) asks with
+   * none, and every variant is asked.
+   *
    * @param \Drupal\data_surface\DataSurfaceInterface $surface
    *   The data surface.
+   * @param \Closure(\Drupal\data_surface\Entry): bool|null $walks
+   *   Whether to ask the variants at a key; NULL asks every one.
    *
    * @return array<string, true|array>
    *   A tree keyed like the values: TRUE where a key is secret, an array
    *   where one below it is. Empty when nothing is.
    */
-  public static function secrets(DataSurfaceInterface $surface): array {
+  public static function secrets(DataSurfaceInterface $surface, ?\Closure $walks = NULL): array {
     // A sealed data surface never changes, and one child may be held at
     // many keys (a read structure, built once): each is asked once.
     static $asked = NULL;
     $asked ??= new \WeakMap();
-    if (isset($asked[$surface])) {
+    if ($walks === NULL && isset($asked[$surface])) {
       return $asked[$surface];
     }
     $secrets = [];
     foreach ($surface->getDefinitions()->entries() as $name => $entry) {
-      $found = static::secretsAt($entry);
+      $found = static::secretsAt($entry, $walks);
       if ($found !== []) {
         $secrets[(string) $name] = $found;
       }
+    }
+    if ($walks !== NULL) {
+      return $secrets;
     }
     return $asked[$surface] = $secrets;
   }
@@ -138,21 +150,23 @@ final class Outbound {
    *
    * @param \Drupal\data_surface\Entry $entry
    *   The key.
+   * @param \Closure(\Drupal\data_surface\Entry): bool|null $walks
+   *   Whether to ask the variants at a key, as secrets() takes it.
    *
    * @return true|array
    *   TRUE when the key is secret, the tree below it as secrets()
    *   answers, or empty when nothing at it is.
    */
-  public static function secretsAt(Entry $entry): true|array {
+  public static function secretsAt(Entry $entry, ?\Closure $walks = NULL): true|array {
     $found = static::secretsOf($entry->definition);
-    $children = $entry->variants === NULL ? [] : array_map(static fn ($variant): DataSurfaceInterface => $variant->child, $entry->variants->variants);
+    $children = $entry->variants === NULL || ($walks !== NULL && !$walks($entry)) ? [] : array_map(static fn ($variant): DataSurfaceInterface => $variant->child, $entry->variants->variants);
     if ($entry->attachment !== NULL) {
       $children[] = $entry->attachment->child;
     }
     foreach ($children as $child) {
-      $found = static::merge($found, static::secrets($child));
+      $found = static::merge($found, static::secrets($child, $walks));
     }
-    $item = $entry->list === NULL ? [] : static::secrets($entry->list->item->child);
+    $item = $entry->list === NULL ? [] : static::secrets($entry->list->item->child, $walks);
     if ($item !== []) {
       $found = static::merge($found, [self::EACH => $item]);
     }

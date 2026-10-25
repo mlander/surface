@@ -246,7 +246,7 @@ final class SiteCatalog {
         }
         if ($operations === []) {
           try {
-            $this->resources->buildDeclared($name, new OperationContext(ContractBaselines::ALONE));
+            static::settle($this->resources->buildDeclared($name, new OperationContext(ContractBaselines::ALONE)));
           }
           catch (\Throwable $e) {
             $refusals[] = $this->refusal($definition, NULL, self::BUILD, $e);
@@ -255,7 +255,7 @@ final class SiteCatalog {
         }
         foreach ($operations as $operation) {
           try {
-            $this->resources->buildDeclared($name, $this->context($name, $operation));
+            static::settle($this->resources->buildDeclared($name, $this->context($name, $operation)));
           }
           catch (\Throwable $e) {
             $refusals[] = $this->refusal($definition, $operation->id, self::BUILD, $e);
@@ -264,6 +264,43 @@ final class SiteCatalog {
       }
     });
     return $this->refusals = $refusals;
+  }
+
+  /**
+   * Builds every child a build left to be built when read, at any depth.
+   *
+   * A variant the site lists is built when a door reads it; the catalog
+   * reads every one, so a refusal inside one is listed under the
+   * operation that holds it, and every structure it reads from a schema
+   * is registered and listed, as when the build built them all.
+   *
+   * Decision: see
+   * docs/decisions.md#the-static-build-is-cached-the-rest-is-per-request.
+   *
+   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   *   The build.
+   * @param array<int, true> $seen
+   *   The frames read, by object id.
+   */
+  protected static function settle(DataSurfaceInterface $surface, array &$seen = []): void {
+    if (isset($seen[spl_object_id($surface)])) {
+      return;
+    }
+    $seen[spl_object_id($surface)] = TRUE;
+    foreach ($surface->getDefinitions()->entries() as $entry) {
+      $children = [
+        ...($entry->attachment === NULL ? [] : [$entry->attachment]),
+        ...array_values($entry->mounted),
+        ...array_values($entry->variants->variants ?? []),
+        ...($entry->list === NULL ? [] : [$entry->list->item]),
+      ];
+      foreach ($children as $attachment) {
+        static::settle($attachment->child, $seen);
+      }
+    }
+    foreach ($surface->getDefinitions()->mixins() as $mixin) {
+      static::settle($mixin->structure->child, $seen);
+    }
   }
 
   /**

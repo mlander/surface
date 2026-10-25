@@ -213,8 +213,9 @@ The pages fall in the same groups as the README's documentation table.
   build), the [Catalog](catalog.md) and [the site's
   catalog](catalog-command.md) (`drush surface:catalog`), [Evolving a
   resource](evolution.md), [Testing a resource](testing-a-resource.md)
-  (the invariants, held for your own resources by one base class) and
-  [Installation](installation.md).
+  (the invariants, held for your own resources by one base class),
+  [Performance](performance.md) (what is kept across requests, what each
+  door builds, and the numbers) and [Installation](installation.md).
 - **Evidence**: the logs and the audit [below](#evidence).
 - **The proposal**: [Core gaps](core-gaps.md), then the [Adoption
   catalog](adoption.md).

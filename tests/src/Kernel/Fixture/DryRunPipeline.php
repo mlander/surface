@@ -29,6 +29,11 @@ final class DryRunPipeline implements DataSurfacePipelineInterface {
   public ?array $last = NULL;
 
   /**
+   * The data surface the last dry run judged.
+   */
+  protected ?DataSurfaceInterface $surface = NULL;
+
+  /**
    * Constructs a DryRunPipeline.
    *
    * @param \Drupal\data_surface\Pipeline\DataSurfacePipelineInterface $inner
@@ -101,7 +106,19 @@ final class DryRunPipeline implements DataSurfacePipelineInterface {
   public function submit(DataSurfaceInterface $surface, array $input, DataSurfaceStorageInterface $storage, bool $dry_run = FALSE, ?AccessResultInterface $access = NULL): DataSurfaceResult {
     $result = $this->inner->submit($surface, $input, $storage, TRUE, $access);
     $this->last = [$result, $result->document($this->inner->outbound($surface, $result->held()))];
+    $this->surface = $surface;
     return $result;
+  }
+
+  /**
+   * {@inheritdoc}
+   *
+   * Dry still: the dry run is answered as it stands, nothing committed.
+   */
+  public function commitDryRun(DataSurfaceResult $dry, DataSurfaceStorageInterface $storage): DataSurfaceResult {
+    assert($this->surface !== NULL);
+    $this->last = [$dry, $dry->document($this->inner->outbound($this->surface, $dry->held()))];
+    return $dry;
   }
 
 }

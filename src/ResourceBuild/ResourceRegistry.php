@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\data_surface\ResourceBuild;
 
+use Drupal\data_surface\Contract\SchemaReader;
 use Drupal\Core\Cache\Cache;
 use Drupal\Core\Cache\CacheBackendInterface;
 use Drupal\Core\DependencyInjection\ClassResolverInterface;
@@ -641,6 +642,95 @@ final class ResourceRegistry {
       readAs: $name,
     );
     return $name;
+  }
+
+  /**
+   * Writes down structures read from a schema so a later request has them.
+   *
+   * A build the build cache answers names, at its keys, structures read
+   * from a schema document or made for a reference key, which a request
+   * registers only by building their owner: the cache stores them with
+   * the build (exportRead()) and registers them again when it answers it
+   * (rememberRead()), so every door can build and name them as if this
+   * request had built the owner. A document many structures are read
+   * from (a theme's components, each one a def of it) is written once.
+   *
+   * Decision: see
+   * docs/decisions.md#the-static-build-is-cached-the-rest-is-per-request.
+   *
+   * @param array<string, \Drupal\data_surface\ResourceBuild\ResourceDefinition> $definitions
+   *   The definitions, by the name each is built by.
+   *
+   * @return array{documents: array<string, array>, schema: array<string, array{0: string, 1: string, 2: string, 3: string}>, other: array<string, \Drupal\data_surface\ResourceBuild\ResourceDefinition>}
+   *   Each document once, by its hash; each structure read from one, as
+   *   its id, module, pointer and document hash; and the rest as they are.
+   *
+   * @internal
+   *   For the build step alone.
+   */
+  public function exportRead(array $definitions): array {
+    $export = ['documents' => [], 'schema' => [], 'other' => []];
+    foreach ($definitions as $name => $definition) {
+      $inputs = $definition->inputs;
+      [$root, $pointer, $hash] = ($inputs->arguments ?? []) + [NULL, NULL, NULL];
+      if ($inputs?->class === SchemaReader::class && $inputs->method === 'fill' && is_array($root) && is_string($pointer) && is_string($hash) && str_starts_with((string) $name, 'schema:')) {
+        $export['documents'][$hash] ??= $root;
+        $export['schema'][(string) $name] = [$definition->id, $definition->module, $pointer, $hash];
+        continue;
+      }
+      $export['other'][(string) $name] = $definition;
+    }
+    return $export;
+  }
+
+  /**
+   * Registers again what exportRead() wrote down.
+   *
+   * @param array{documents?: array<string, array>, schema?: array<string, array{0: string, 1: string, 2: string, 3: string}>, other?: array<string, \Drupal\data_surface\ResourceBuild\ResourceDefinition>} $export
+   *   What it answered.
+   *
+   * @internal
+   *   For the build step alone.
+   */
+  public function rememberRead(array $export): void {
+    foreach ($export['schema'] ?? [] as $name => [$id, $module, $pointer, $hash]) {
+      if (isset($this->read[$name]) || !isset($export['documents'][$hash])) {
+        continue;
+      }
+      $this->read[$name] = new ResourceDefinition(
+        class: NULL,
+        id: $id,
+        module: $module,
+        identity: [],
+        storage: NULL,
+        access: NULL,
+        refiners: [],
+        inputs: new ResourceCallable(SchemaReader::class, 'fill', [$export['documents'][$hash], $pointer, $hash]),
+        kind: ResourceDefinition::STRUCTURE,
+        readAs: $name,
+      );
+    }
+    foreach ($export['other'] ?? [] as $name => $definition) {
+      if ($definition->isRead()) {
+        $this->read[(string) $name] ??= $definition;
+      }
+    }
+  }
+
+  /**
+   * Gets a structure read from a schema, or made for a reference key.
+   *
+   * @param string $name
+   *   The name it is built by.
+   *
+   * @return \Drupal\data_surface\ResourceBuild\ResourceDefinition|null
+   *   Its definition, or NULL when this request registered none by it.
+   *
+   * @internal
+   *   For the build step alone.
+   */
+  public function readDefinition(string $name): ?ResourceDefinition {
+    return $this->read[$name] ?? NULL;
   }
 
   /**

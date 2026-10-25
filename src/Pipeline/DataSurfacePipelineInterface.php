@@ -332,4 +332,29 @@ interface DataSurfacePipelineInterface {
    */
   public function submit(DataSurfaceInterface $surface, array $input, DataSurfaceStorageInterface $storage, bool $dry_run = FALSE, ?AccessResultInterface $access = NULL): DataSurfaceResult;
 
+  /**
+   * Commits what a dry run prepared, without preparing it again.
+   *
+   * For a door that runs submit() dry to judge the values and then writes
+   * them in the same request, as a form validates and then submits: the
+   * dry run's prepared artifact is committed when the run would have
+   * written (DataSurfaceResult::$writes), and the result is the one the
+   * whole run would have answered. The caller holds the window between
+   * the two closed: what storage holds and the values sent are the ones
+   * the dry run read, which a fingerprint of each shows; otherwise it
+   * runs submit() again.
+   *
+   * @param \Drupal\data_surface\Pipeline\DataSurfaceResult $dry
+   *   The dry run, valid, which reached prepare.
+   * @param \Drupal\data_surface\Pipeline\DataSurfaceStorageInterface $storage
+   *   The storage the dry run prepared for.
+   *
+   * @return \Drupal\data_surface\Pipeline\DataSurfaceResult
+   *   The result, committed unless the operation changes nothing.
+   *
+   * @throws \LogicException
+   *   When the run was refused, stopped before prepare, or was written.
+   */
+  public function commitDryRun(DataSurfaceResult $dry, DataSurfaceStorageInterface $storage): DataSurfaceResult;
+
 }

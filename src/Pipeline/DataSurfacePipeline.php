@@ -2465,16 +2465,32 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
     // agent's dry run — learns what to re-choose.
     // An operation that changes nothing stops where a dry run does.
     // Decision: see docs/decisions.md#an-operation-states-how-it-behaves.
-    if ($dry_run || $surface->changesNothing()) {
-      return new DataSurfaceResult($values, $violations, $prepared, access: $access, notes: $notes, changes: $changes, written: $write);
-    }
     // A write that changes nothing on a thing that exists is not made:
     // it is committed, and nothing moved. One being created is written
     // whatever it holds.
-    if ($changes !== [] || $current === [] || $creates) {
+    $writes = !$surface->changesNothing() && ($changes !== [] || $current === [] || $creates);
+    if ($dry_run || $surface->changesNothing()) {
+      return new DataSurfaceResult($values, $violations, $prepared, access: $access, notes: $notes, changes: $changes, written: $write, writes: $writes);
+    }
+    if ($writes) {
       $this->commit($prepared, $storage);
     }
-    return new DataSurfaceResult($values, $violations, $prepared, TRUE, $access, $notes, $changes, $write);
+    return new DataSurfaceResult($values, $violations, $prepared, TRUE, $access, $notes, $changes, $write, $writes);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function commitDryRun(DataSurfaceResult $dry, DataSurfaceStorageInterface $storage): DataSurfaceResult {
+    if (!$dry->isValid() || $dry->prepared === NULL || $dry->committed) {
+      throw new \LogicException('Only a dry run that was valid and reached prepare can be committed: run the whole submit() instead.');
+    }
+    // Decision: see
+    // docs/decisions.md#the-static-build-is-cached-the-rest-is-per-request.
+    if ($dry->writes) {
+      $this->commit($dry->prepared, $storage);
+    }
+    return new DataSurfaceResult($dry->values, $dry->violations, $dry->prepared, !$dry->prepared->changesNothing, $dry->access, $dry->notes, $dry->changes, $dry->written, $dry->writes);
   }
 
   /**
@@ -2522,7 +2538,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
     if (!$dry_run) {
       $this->commit($prepared, $storage);
     }
-    return new DataSurfaceResult($current, new ViolationSet(), $prepared, !$dry_run, $access, changes: [''], written: $current);
+    return new DataSurfaceResult($current, new ViolationSet(), $prepared, !$dry_run, $access, changes: [''], written: $current, writes: TRUE);
   }
 
   /**

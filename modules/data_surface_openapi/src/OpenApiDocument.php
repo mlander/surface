@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace Drupal\data_surface_openapi;
 
+use Drupal\Core\Cache\Cache;
+use Drupal\Core\Cache\CacheBackendInterface;
 use Drupal\Core\Cache\CacheableMetadata;
+use Drupal\Core\Cache\Context\CacheContextsManager;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Extension\ModuleHandlerInterface;
 use Drupal\Core\Session\AccountSwitcherInterface;
@@ -114,6 +117,11 @@ final class OpenApiDocument {
   protected const ACCOUNT_CONTEXTS = '/^user(\.|$)/';
 
   /**
+   * What the document varies by, which the kept one is keyed by.
+   */
+  protected const KEYED_BY = ['url.site', 'languages:language_interface'];
+
+  /**
    * Constructs an OpenApiDocument.
    *
    * @param \Drupal\data_surface\ResourceBuild\ResourceRegistry $registry
@@ -140,6 +148,11 @@ final class OpenApiDocument {
    *   Where an operation that cannot be described is reported.
    * @param \Drupal\Core\StringTranslation\TranslationInterface $stringTranslation
    *   The string translation service.
+   * @param \Drupal\Core\Cache\CacheBackendInterface|null $cache
+   *   The bin the document is kept in, by what it varies by; NULL keeps
+   *   none.
+   * @param \Drupal\Core\Cache\Context\CacheContextsManager|null $cacheContexts
+   *   What reads the request's site and language into a cache key.
    */
   public function __construct(
     protected readonly ResourceRegistry $registry,
@@ -154,6 +167,8 @@ final class OpenApiDocument {
     protected readonly AccountSwitcherInterface $accountSwitcher,
     protected readonly LoggerInterface $logger,
     TranslationInterface $stringTranslation,
+    protected readonly ?CacheBackendInterface $cache = NULL,
+    protected readonly ?CacheContextsManager $cacheContexts = NULL,
   ) {
     $this->stringTranslation = $stringTranslation;
   }
@@ -169,14 +184,55 @@ final class OpenApiDocument {
    *   The document and what it was read from.
    */
   public function build(Request $request): OpenApiDescription {
+    // Kept by what it varies by and the contract it is written in, until
+    // a tag of what it was read from is invalidated.
+    // Decision: see
+    // docs/decisions.md#the-static-build-is-cached-the-rest-is-per-request.
+    $cid = $this->cacheId($request);
+    $hit = $cid === NULL ? FALSE : $this->cache?->get($cid);
+    if ($hit !== FALSE && $hit !== NULL && $hit->data instanceof OpenApiDescription) {
+      return $hit->data;
+    }
     // Decision: see docs/decisions.md#a-static-tool-definition-is-no-accounts.
     $this->accountSwitcher->switchTo(new AnonymousUserSession());
     try {
-      return $this->describe($request);
+      $described = $this->describe($request);
     }
     finally {
       $this->accountSwitcher->switchBack();
     }
+    $description = new OpenApiDescription(
+      $described->document,
+      $described->cacheability,
+      $described->operations,
+      hash('xxh128', (string) json_encode($described->document, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)),
+    );
+    if ($cid !== NULL && $description->getCacheMaxAge() === Cache::PERMANENT && array_diff($description->getCacheContexts(), self::KEYED_BY) === []) {
+      $this->cache?->set($cid, $description, Cache::PERMANENT, $description->getCacheTags());
+    }
+    return $description;
+  }
+
+  /**
+   * Names the document kept for a request in the cache bin.
+   *
+   * The contract version, the site and language the request reached
+   * (KEYED_BY), and the session cookie's name, which the security scheme
+   * names.
+   *
+   * @param \Symfony\Component\HttpFoundation\Request $request
+   *   The request.
+   *
+   * @return string|null
+   *   The cache id, or NULL when there is no bin.
+   */
+  protected function cacheId(Request $request): ?string {
+    if ($this->cache === NULL || $this->cacheContexts === NULL) {
+      return NULL;
+    }
+    $keys = $this->cacheContexts->convertTokensToKeys(self::KEYED_BY)->getKeys();
+    $session = $this->sessionConfiguration->getOptions($request)['name'] ?? '';
+    return 'openapi:' . ContractEmitter::CONTRACT . ':' . hash('xxh3', serialize([$keys, $session]));
   }
 
   /**

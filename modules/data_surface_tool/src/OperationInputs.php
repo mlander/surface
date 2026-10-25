@@ -14,6 +14,7 @@ use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\data_surface\Computed;
 use Drupal\data_surface\Contract\SiteListBudget;
 use Drupal\data_surface\DataSurfaceInterface;
+use Drupal\data_surface\SettledCacheability;
 use Drupal\data_surface\Pipeline\Outbound;
 use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface\ResourceBuild\OperationArguments;
@@ -741,6 +742,10 @@ final class OperationInputs {
     );
     $this->inputDefinitions->withLookups($map, $built, $operation === NULL ? NULL : $this->lookup($resource, $operation));
     $this->listedTags = Cache::mergeTags($this->listedTags, $this->inputDefinitions->takeListTags());
+    // What each variant built to be listed read, once it is listed.
+    // Decision: see
+    // docs/decisions.md#the-static-build-is-cached-the-rest-is-per-request.
+    $this->listedTags = Cache::mergeTags($this->listedTags, SettledCacheability::of($built)->getCacheTags());
     $properties = array_diff_key($map->getPropertyDefinitions(), array_flip($known));
     if (!$computed) {
       $properties = array_filter($properties, static fn (string $name): bool => Computed::of($built->getDefinition($name)) === NULL || $built->getDefinitions()->isLocked($name), ARRAY_FILTER_USE_KEY);

@@ -12,7 +12,6 @@ use Drupal\Core\Ajax\AppendCommand;
 use Drupal\Core\Ajax\PrependCommand;
 use Drupal\Core\Ajax\RemoveCommand;
 use Drupal\Core\Ajax\ReplaceCommand;
-use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\Extension\ModuleHandlerInterface;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Form\OptGroup;
@@ -29,6 +28,7 @@ use Drupal\data_surface\Computed;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Refinement\DoesNotApply;
+use Drupal\data_surface\SettledCacheability;
 use Drupal\data_surface\Resource\ArrangementGroup;
 use Drupal\data_surface\Resource\Compute;
 use Drupal\data_surface\Options\DataSurfaceOptions;
@@ -385,7 +385,8 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
     // applies each option set's own metadata to its element; this is the
     // other half, the data surface's, and without it a form holding a
     // state-dependent shape would be cached as though it were static.
-    CacheableMetadata::createFromObject($surface)->applyTo($container);
+    // A variant built to be drawn adds what it read.
+    SettledCacheability::of($surface)->applyTo($container);
     return $container;
   }
 

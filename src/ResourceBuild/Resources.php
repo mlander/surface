@@ -7,10 +7,13 @@ namespace Drupal\data_surface\ResourceBuild;
 use Drupal\Core\Access\AccessResult;
 use Drupal\Core\Access\AccessResultInterface;
 use Drupal\Core\Cache\Cache;
+use Drupal\Core\Cache\CacheBackendInterface;
+use Drupal\Core\Language\LanguageManagerInterface;
 use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\Cache\RefinableCacheableDependencyInterface;
 use Drupal\Core\DependencyInjection\ClassResolverInterface;
 use Drupal\Core\Session\AccountInterface;
+use Drupal\Core\Session\AccountProxyInterface;
 use Drupal\Core\Session\PermissionsHashGeneratorInterface;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
@@ -22,6 +25,7 @@ use Drupal\data_surface\DataSurfaceBuilder;
 use Drupal\data_surface\DataSurfaceBuilderInterface;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\DefinitionMetadata;
+use Drupal\data_surface\SettledCacheability;
 use Drupal\data_surface\Pipeline\DataSurfaceStorageInterface;
 use Drupal\data_surface\Reference\References;
 use Drupal\data_surface\Refinement\ChoiceSet;
@@ -118,10 +122,15 @@ use Drupal\data_surface\Port;
  *    aside and its keys marked, and only the static ones apply.
  * 8. The seal.
  *
- * The engine's builder is the whole state of a build. Nothing is cached
- * across requests, because a shape describes live site state; what that
- * state is, a shape or an alter says with addCacheableDependency(). Two
- * things are kept within one: a static access answer, an access class's
+ * A variant the site lists (a provider's, or one read from a schema) is
+ * not built in step 7: its access is asked, and it is sealed as what
+ * builds it (VariantToSettle), built the first time a door reads it.
+ *
+ * The engine's builder is the whole state of a build. A build for no
+ * account (buildDeclared()) is kept across requests in the build cache,
+ * under the tags of everything it was read from (keep()); what that state
+ * is, a shape or an alter says with addCacheableDependency(). Two things
+ * are kept within a request: a static access answer, an access class's
  * or an alter's, which by its own cacheability depends on nothing but the
  * account, asked once per context and account kind (the account's roles
  * and permissions) and reused; and each sealed build asked for at the top,
@@ -130,7 +139,8 @@ use Drupal\data_surface\Port;
  * than the account (memo()). Both are bounded, so a worker that outlives a
  * request keeps only the latest.
  *
- * Decision: see docs/decisions.md#a-build-is-not-cached-across-requests.
+ * Decision: see
+ * docs/decisions.md#the-static-build-is-cached-the-rest-is-per-request.
  */
 final class Resources implements ResourcesInterface {
 
@@ -157,6 +167,11 @@ final class Resources implements ResourcesInterface {
    *   answer is kept by; NULL keeps none.
    * @param \Drupal\data_surface\ResourceBuild\SiteDefaults|null $siteDefaults
    *   The defaults the site sets over the declared ones; NULL reads none.
+   * @param \Drupal\Core\Cache\CacheBackendInterface|null $buildCache
+   *   The bin a build for no account is kept in across requests; NULL
+   *   keeps none.
+   * @param \Drupal\Core\Language\LanguageManagerInterface|null $languageManager
+   *   What tells the language a kept build's labels were read in.
    */
   /**
    * What resolves a shape, with its alters, once asked for.
@@ -255,11 +270,45 @@ final class Resources implements ResourcesInterface {
   /**
    * How many builds were made and how many were answered from the memo.
    *
-   * With the builds made of each resource, by name.
+   * With how many were read from the cache bin, how many variants held
+   * unsettled were built when read, and the builds made of each
+   * resource, by name.
    *
-   * @var array{built: int, reused: int, resources: array<string, int>}
+   * @var array{built: int, reused: int, cached: int, settled: int, resources: array<string, int>}
    */
-  protected array $buildCounts = ['built' => 0, 'reused' => 0, 'resources' => []];
+  protected array $buildCounts = ['built' => 0, 'reused' => 0, 'cached' => 0, 'settled' => 0, 'resources' => []];
+
+  /**
+   * The account a variant held unsettled was built for, while it is built.
+   */
+  protected ?AccountInterface $settlingAs = NULL;
+
+  /**
+   * The resources and structures the build under way built, by name.
+   *
+   * What the build cache tags a kept build with, beside what the build
+   * read: each one's discovery entry.
+   *
+   * @var array<string, true>|null
+   */
+  protected ?array $visited = NULL;
+
+  /**
+   * The cache tags every kept build carries, whatever it read.
+   *
+   * Which modules are installed, the module's settings (the limits) and
+   * the site's defaults.
+   */
+  protected const KEPT_TAGS = ['config:core.extension', 'config:data_surface.settings', 'config:data_surface.defaults'];
+
+  /**
+   * The containers a kept build must not hold, which a whole service brings.
+   */
+  protected const CONTAINERS = [
+    'Drupal\\Component\\DependencyInjection\\Container',
+    'Drupal\\Core\\DependencyInjection\\Container',
+    'Symfony\\Component\\DependencyInjection\\Container',
+  ];
 
   /**
    * What each resource or structure holds, once declared.
@@ -284,6 +333,8 @@ final class Resources implements ResourcesInterface {
     protected readonly WatchedValueCheckInterface $watchedValueCheck,
     protected readonly ?PermissionsHashGeneratorInterface $permissionsHashGenerator = NULL,
     protected readonly ?SiteDefaults $siteDefaults = NULL,
+    protected readonly ?CacheBackendInterface $buildCache = NULL,
+    protected readonly ?LanguageManagerInterface $languageManager = NULL,
   ) {
   }
 
@@ -396,18 +447,36 @@ final class Resources implements ResourcesInterface {
       $this->buildCounts['reused']++;
       return $kept['surface'];
     }
-    [$was_alone, $was_declaring] = [$this->accountAlone, $this->declaring];
-    [$this->accountAlone, $this->declaring] = [$alone, $declaring];
-    try {
-      $built = $this->buildResource($resource, $context, [], top: TRUE);
-      $this->assertHeldToSchema($resource, $context, $built);
+    // A build for no account is the same in every request until a tag it
+    // was read from is invalidated: kept in the build cache.
+    // Decision: see
+    // docs/decisions.md#the-static-build-is-cached-the-rest-is-per-request.
+    $cid = $declaring && $key !== NULL ? $this->cacheId($resource, $key) : NULL;
+    $built = $cid === NULL ? NULL : $this->cached($cid);
+    if ($built !== NULL) {
+      $this->buildCounts['cached']++;
     }
-    finally {
-      [$this->accountAlone, $this->declaring] = [$was_alone, $was_declaring];
+    else {
+      [$was_alone, $was_declaring, $outer] = [$this->accountAlone, $this->declaring, $this->visited];
+      [$this->accountAlone, $this->declaring, $this->visited] = [$alone, $declaring, []];
+      try {
+        $built = $this->buildResource($resource, $context, [], top: TRUE);
+        $this->assertHeldToSchema($resource, $context, $built);
+        $visited = $this->visited;
+      }
+      finally {
+        $this->accountAlone = $was_alone;
+        $this->declaring = $was_declaring;
+        // What an inner build built, its outer one built too.
+        $this->visited = $outer === NULL ? NULL : $outer + ($this->visited ?? []);
+      }
+      $this->buildCounts['built']++;
+      $name = $this->registry->getDefinition($resource)->name();
+      $this->buildCounts['resources'][$name] = ($this->buildCounts['resources'][$name] ?? 0) + 1;
+      if ($cid !== NULL) {
+        $this->keep($cid, $resource, $context, $built, $visited);
+      }
     }
-    $this->buildCounts['built']++;
-    $name = $this->registry->getDefinition($resource)->name();
-    $this->buildCounts['resources'][$name] = ($this->buildCounts['resources'][$name] ?? 0) + 1;
     if ($key !== NULL && static::keepable($built)) {
       $this->builds[$key] = ['surface' => $built, 'tags' => $built->getCacheTags()];
       if (count($this->builds) > self::BUILDS_KEPT) {
@@ -496,6 +565,175 @@ final class Resources implements ResourcesInterface {
   }
 
   /**
+   * Names a build for no account in the build cache.
+   *
+   * The memo key, which says the resource, the context and its
+   * parameters, the kind of build and the reference limit, with the
+   * languages a label read from configuration is in.
+   *
+   * @param string $resource
+   *   The class, or its id.
+   * @param string $key
+   *   Its memo key.
+   *
+   * @return string|null
+   *   The cache id, or NULL when there is no bin, or the build is not the
+   *   container's (another registry's, for the config schema generator).
+   */
+  protected function cacheId(string $resource, string $key): ?string {
+    if ($this->buildCache === NULL || !$this->holdsToSchema) {
+      return NULL;
+    }
+    $languages = $this->languageManager === NULL ? [] : [
+      $this->languageManager->getCurrentLanguage()->getId(),
+      $this->languageManager->getConfigOverrideLanguage()->getId(),
+    ];
+    return 'declared:' . $this->registry->getDefinition($resource)->id . ':' . hash('xxh3', serialize([$key, $languages]));
+  }
+
+  /**
+   * Reads a build for no account from the build cache.
+   *
+   * @param string $cid
+   *   Its cache id.
+   *
+   * @return \Drupal\data_surface\DataSurfaceInterface|null
+   *   The sealed build, or NULL when none is kept.
+   */
+  protected function cached(string $cid): ?DataSurfaceInterface {
+    $hit = $this->buildCache?->get($cid);
+    if ($hit === FALSE || $hit === NULL || !is_string($hit->data)) {
+      return NULL;
+    }
+    // The module's own bin, written by keep() alone.
+    // phpcs:ignore DrupalPractice.FunctionCalls.InsecureUnserialize.InsecureUnserialize
+    $kept = unserialize($hit->data);
+    if (!is_array($kept) || !($kept['surface'] ?? NULL) instanceof DataSurfaceInterface) {
+      return NULL;
+    }
+    // What it names that only building it registers.
+    $this->registry->rememberRead($kept['read'] ?? []);
+    return $kept['surface'];
+  }
+
+  /**
+   * Collects the structures a build names that only building registers.
+   *
+   * Every child built at every depth, by the name it was built by; those
+   * read from a schema or made for a reference key are what a request
+   * that did not build their owner cannot name. Not a variant held
+   * unsettled: the request that builds it registers it again from its
+   * owner's list (settleVariant()), so the document the site's list read
+   * (a theme's components, every one a def of it) is not stored with
+   * every build that holds them.
+   *
+   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   *   The build.
+   * @param array<string, \Drupal\data_surface\ResourceBuild\ResourceDefinition> $read
+   *   Filled with those definitions, by name.
+   * @param array<int, true> $seen
+   *   The frames walked, by object id.
+   */
+  protected function readNamed(DataSurfaceInterface $surface, array &$read, array &$seen = []): void {
+    if (isset($seen[spl_object_id($surface)])) {
+      return;
+    }
+    $seen[spl_object_id($surface)] = TRUE;
+    foreach ($surface->getDefinitions()->entries() as $entry) {
+      $children = [
+        ...($entry->attachment === NULL ? [] : [$entry->attachment]),
+        ...array_values($entry->mounted),
+        ...array_values($entry->variants->variants ?? []),
+        ...($entry->list === NULL ? [] : [$entry->list->item]),
+      ];
+      foreach ($children as $attachment) {
+        if ($attachment->isDeferred() && !$attachment->isSettled()) {
+          continue;
+        }
+        if ($attachment->source !== NULL && !isset($read[$attachment->source])) {
+          $definition = $this->registry->readDefinition($attachment->source);
+          if ($definition !== NULL) {
+            $read[$attachment->source] = $definition;
+          }
+        }
+        $child = $attachment->settledChild();
+        if ($child !== NULL) {
+          $this->readNamed($child, $read, $seen);
+        }
+      }
+    }
+    foreach ($surface->getDefinitions()->mixins() as $mixin) {
+      $child = $mixin->structure->settledChild();
+      if ($mixin->structure->source !== NULL && ($definition = $this->registry->readDefinition($mixin->structure->source)) !== NULL) {
+        $read[$mixin->structure->source] = $definition;
+      }
+      if ($child !== NULL) {
+        $this->readNamed($child, $read, $seen);
+      }
+    }
+  }
+
+  /**
+   * Keeps a build for no account in the build cache, or refuses it.
+   *
+   * Only one that stays true until a tag of it is invalidated and varies
+   * by nothing: no expiry and no cache context. Tagged with what it read
+   * (each provider's list, the site's defaults), what discovery found for
+   * each resource and structure it built, discovery's index, and
+   * KEPT_TAGS.
+   *
+   * @param string $cid
+   *   Its cache id.
+   * @param string $resource
+   *   The class, or its id.
+   * @param \Drupal\data_surface\Resource\OperationContext $context
+   *   Its context.
+   * @param \Drupal\data_surface\DataSurfaceInterface $built
+   *   The build.
+   * @param array<string, true> $visited
+   *   What it built, by name.
+   *
+   * @throws \LogicException
+   *   When it holds what cannot be stored: a closure, or a service held as
+   *   an object rather than by its id.
+   */
+  protected function keep(string $cid, string $resource, OperationContext $context, DataSurfaceInterface $built, array $visited): void {
+    if ($built->getCacheMaxAge() !== Cache::PERMANENT || $built->getCacheContexts() !== []) {
+      return;
+    }
+    $tags = Cache::mergeTags($built->getCacheTags(), $this->registry->getIndexCacheTags(), self::KEPT_TAGS);
+    foreach (array_keys($visited) as $name) {
+      if ($this->registry->hasDefinition($name)) {
+        $tags = Cache::mergeTags($tags, $this->registry->getDefinition($name)->cacheTags);
+      }
+    }
+    $id = $this->registry->getDefinition($resource)->id;
+    $read = [];
+    $this->readNamed($built, $read);
+    try {
+      $serialized = serialize(['surface' => $built, 'read' => $this->registry->exportRead($read)]);
+    }
+    catch (\Throwable $e) {
+      throw new \LogicException(sprintf(
+        'The %s resource, built for its "%s" operation, cannot be kept in the build cache: %s. A sealed data surface holds definitions, class and method names, services by their id and plain data, never a closure or an object that cannot be stored; find what its declaration, an alter or a refiner put on it.',
+        $id,
+        $context->id,
+        $e->getMessage(),
+      ), 0, $e);
+    }
+    foreach (self::CONTAINERS as $container) {
+      if (str_contains($serialized, '"' . $container . '"')) {
+        throw new \LogicException(sprintf(
+          'The %s resource, built for its "%s" operation, cannot be kept in the build cache: it holds the service container, which a service held as an object rather than by its id brings with it. An alter, a refiner or a storage layout that holds services composes core\'s DependencySerializationTrait, or is a service the container built.',
+          $id,
+          $context->id,
+        ));
+      }
+    }
+    $this->buildCache?->set($cid, $serialized, Cache::PERMANENT, $tags);
+  }
+
+  /**
    * Forgets the builds that read what is being invalidated.
    *
    * ResourceRegistryInvalidator calls this for every invalidation, so a
@@ -508,14 +746,28 @@ final class Resources implements ResourcesInterface {
    * @internal
    */
   public function invalidateTags(array $tags): void {
+    // What a kept build read, with what each variant built since read.
+    // Decision: see
+    // docs/decisions.md#the-static-build-is-cached-the-rest-is-per-request.
     foreach ($this->builds as $key => $kept) {
-      if (array_intersect($tags, $kept['tags']) !== []) {
+      if (array_intersect($tags, SettledCacheability::of($kept['surface'])->getCacheTags()) !== []) {
         unset($this->builds[$key]);
       }
     }
+    // A read structure built since it was held is kept here by itself:
+    // only when one of them read a tag are those holding it asked.
+    $dropped = FALSE;
     foreach ($this->readBuilds as $key => $kept) {
       if (array_intersect($tags, $kept['tags']) !== []) {
         unset($this->readBuilds[$key]);
+        $dropped = TRUE;
+      }
+    }
+    if ($dropped) {
+      foreach ($this->readBuilds as $key => $kept) {
+        if (array_intersect($tags, SettledCacheability::of($kept['surface'])->getCacheTags()) !== []) {
+          unset($this->readBuilds[$key]);
+        }
       }
     }
   }
@@ -542,7 +794,7 @@ final class Resources implements ResourcesInterface {
    * For a performance budget, never for behavior: counts since the
    * service was made, and the builds made of each resource.
    *
-   * @return array{built: int, reused: int, resources: array<string, int>}
+   * @return array{built: int, reused: int, cached: int, settled: int, resources: array<string, int>}
    *   The counts.
    *
    * @internal
@@ -672,6 +924,9 @@ final class Resources implements ResourcesInterface {
    */
   protected function buildResource(string $resource, OperationContext $context, array $ancestry, string|\Stringable|null $locked = NULL, bool $top = FALSE, ?array $siteDefaults = NULL): DataSurfaceInterface {
     $definition = $this->registry->getDefinition($resource);
+    if ($this->visited !== NULL) {
+      $this->visited[$definition->name()] = TRUE;
+    }
     // Refuses two providers of one operation id, whichever is asked for.
     $this->registry->getOperations($definition->name());
     // The resource the operation is asked of: its permission, its storage,
@@ -682,6 +937,9 @@ final class Resources implements ResourcesInterface {
     $own = $definition;
     if ($top) {
       $definition = $this->shapeOf($definition, $context);
+      if ($this->visited !== NULL) {
+        $this->visited[$definition->name()] = TRUE;
+      }
     }
 
     $builder = (new DataSurfaceBuilder())->setWatchedValueCheck($this->watchedValueCheck);
@@ -882,14 +1140,23 @@ final class Resources implements ResourcesInterface {
         }
       }
     }
-    foreach ($variantKeys as $key => ['by' => $by, 'children' => $children]) {
+    foreach ($variantKeys as $key => ['by' => $by, 'children' => $children, 'site' => $site]) {
       $variants = [];
       $withheld = [];
       $runtime_variant = FALSE;
+      // What every variant the site lists at the key is built in when read.
+      $at = $site === [] ? NULL : new VariantsToSettle($this, [...$ancestry, array_replace($frame, ['key' => $key])], $key, $this->accountAlone, $this->declaring, $this->holdsToSchema, $this->declaring ? NULL : $this->underlyingAccount());
       foreach ($children as $value => $child) {
-        // Nothing wires a variant's ports yet.
-        $this->assertWiring($builder, $definition, NULL, $key, $child, [], $input_keys, $attached, $lists, 'variant');
-        [$attachment, $access, , $runtime] = $this->buildChild($child, $context, $key, $frame, $ancestry, TRUE);
+        // A variant the site lists is built when read, its wiring checked
+        // then; any other is built now.
+        // Decision: see
+        // docs/decisions.md#the-static-build-is-cached-the-rest-is-per-request.
+        $deferred = isset($site[(string) $value]) ? $at : NULL;
+        if ($deferred === NULL) {
+          // Nothing wires a variant's ports yet.
+          $this->assertWiring($builder, $definition, NULL, $key, $child, [], $input_keys, $attached, $lists, 'variant');
+        }
+        [$attachment, $access, , $runtime] = $this->buildChild($child, $context, $key, $frame, $ancestry, TRUE, deferred: $deferred);
         if ($access !== NULL) {
           $builder->addCacheableDependency($access);
         }
@@ -1047,7 +1314,7 @@ final class Resources implements ResourcesInterface {
     if ($definition->storage !== NULL) {
       $storage = $this->instance((string) $definition->storage, ResourceStorageInterface::class);
       return $storage instanceof KnowsClearableKeysInterface
-        ? ['storage' => $storage, 'context' => $context, 'prefix' => '']
+        ? ['storage' => $storage, 'class' => (string) $definition->storage, 'context' => $context, 'prefix' => '']
         : NULL;
     }
     $parent = $ancestry === [] ? NULL : $ancestry[count($ancestry) - 1];
@@ -1110,6 +1377,9 @@ final class Resources implements ResourcesInterface {
    * @param array{resource: string, at: string, values: array<string, mixed>}|null $siteDefaults
    *   The defaults the site sets on the child's keys, from its parent's;
    *   NULL for none. A child with some is built here, never reused.
+   * @param \Drupal\data_surface\ResourceBuild\VariantsToSettle|null $deferred
+   *   For a variant the site lists, what it is built in when a door reads
+   *   it, its access asked now; NULL to build the child now.
    *
    * @return array{0: \Drupal\data_surface\Attachment|null, 1: \Drupal\data_surface\Resource\AccessAnswer|null, 2: \Drupal\data_surface\Resource\OperationContext, 3: bool}
    *   The sealed child, or NULL when its access omits it; that access
@@ -1118,10 +1388,10 @@ final class Resources implements ResourcesInterface {
    *   context the child was invoked in; and whether, built for the account
    *   alone, a runtime answer was set aside, so the key is marked.
    */
-  protected function buildChild(string $child, OperationContext $context, string $key, array $frame, array $ancestry, bool $whole = FALSE, ?string $storedAt = NULL, ?array $siteDefaults = NULL): array {
+  protected function buildChild(string $child, OperationContext $context, string $key, array $frame, array $ancestry, bool $whole = FALSE, ?string $storedAt = NULL, ?array $siteDefaults = NULL, ?VariantsToSettle $deferred = NULL): array {
     $definition = $this->registry->getDefinition($child);
     [$child_context, $operation] = $this->invokeChild($definition, $context, $key, $frame['id']);
-    [$access, $runtime] = $this->childAccess($definition, $operation, $child_context, $this->currentUser, $frame['permission'] ?? NULL);
+    [$access, $runtime] = $this->childAccess($definition, $operation, $child_context, $this->account(), $frame['permission'] ?? NULL);
     if ($access !== NULL && $access->isOmitted()) {
       return [NULL, $access, $child_context, FALSE];
     }
@@ -1130,9 +1400,26 @@ final class Resources implements ResourcesInterface {
       $frame['storedAt'] = $storedAt;
     }
     $locked = $whole && $access?->isLocked() ? static::lockReason($access) : NULL;
+    $read = $definition->isRead() && $access === NULL && $locked === NULL && $siteDefaults === NULL;
+    if ($deferred !== NULL) {
+      // A variant the site lists is built when a door reads it, in the
+      // build this one is, for the account this one is for.
+      // Decision: see
+      // docs/decisions.md#the-static-build-is-cached-the-rest-is-per-request.
+      return [
+        new Attachment(
+          new VariantToSettle($deferred, $definition->name(), $deferred->shared($child_context), $locked === NULL ? NULL : (string) $locked, $read),
+          $definition->name(),
+          $definition->id,
+        ),
+        $access,
+        $child_context,
+        $runtime,
+      ];
+    }
     return [
       new Attachment(
-        $definition->isRead() && $access === NULL && $locked === NULL && $siteDefaults === NULL
+        $read
           ? $this->buildRead($definition->name(), $child_context, [...$ancestry, $frame])
           : $this->buildResource($definition->name(), $child_context, [...$ancestry, $frame], $locked, siteDefaults: $siteDefaults),
         $definition->name(),
@@ -1142,6 +1429,110 @@ final class Resources implements ResourcesInterface {
       $child_context,
       $runtime,
     ];
+  }
+
+  /**
+   * Builds a variant the build held unsettled, now that a door reads it.
+   *
+   * In the build it was held in: for no account, for the account alone
+   * or with every answer, for the account that build was for, and held to
+   * its config schema as that build was; what the variant's own build
+   * refuses is refused here, its wiring among it.
+   *
+   * Decision: see
+   * docs/decisions.md#the-static-build-is-cached-the-rest-is-per-request.
+   *
+   * @param \Drupal\data_surface\ResourceBuild\VariantsToSettle $at
+   *   Where the variant sits and the build it was held in.
+   * @param string $name
+   *   The variant, by name.
+   * @param \Drupal\data_surface\Resource\OperationContext $context
+   *   The context it is invoked in.
+   * @param string|null $locked
+   *   Why its access locked it whole, or NULL.
+   * @param bool $read
+   *   Whether it is a structure read from a schema, built through
+   *   buildRead().
+   *
+   * @return \Drupal\data_surface\DataSurfaceInterface
+   *   The sealed variant.
+   *
+   * @internal
+   */
+  public function settleVariant(VariantsToSettle $at, string $name, OperationContext $context, ?string $locked, bool $read): DataSurfaceInterface {
+    $ancestry = $at->ancestry;
+    // A storage a frame names is a service, kept by its class when the
+    // variants were stored.
+    foreach ($ancestry as $level => $frame) {
+      if (is_array($frame['held'] ?? NULL) && !isset($frame['held']['storage'])) {
+        $ancestry[$level]['held']['storage'] = $this->instance($frame['held']['class'], ResourceStorageInterface::class);
+      }
+    }
+    $parent = $ancestry[count($ancestry) - 1];
+    if (!$this->registry->hasDefinition($name)) {
+      // Kept with a build read from the build cache: a structure the
+      // owner's list reads from a schema is registered by listing it.
+      $this->registerVariantsOf($parent['class']);
+    }
+    $was = [$this->accountAlone, $this->declaring, $this->holdsToSchema, $this->settlingAs];
+    $this->accountAlone = $at->alone;
+    $this->declaring = $at->declaring;
+    $this->holdsToSchema = $at->holdsToSchema;
+    $this->settlingAs = $at->account;
+    try {
+      // Nothing wires a variant's ports yet.
+      $this->assertWiring(new DataSurfaceBuilder(), $this->registry->getDefinition($parent['class']), NULL, $at->key, $name, [], [], [], [], 'variant');
+      $built = $read
+        ? $this->buildRead($name, $context, $ancestry)
+        : $this->buildResource($name, $context, $ancestry, $locked);
+    }
+    finally {
+      [$this->accountAlone, $this->declaring, $this->holdsToSchema, $this->settlingAs] = $was;
+    }
+    $this->buildCounts['settled']++;
+    return $built;
+  }
+
+  /**
+   * Registers the structures an owner's variants are read from, by listing.
+   *
+   * What building the owner registers (variantKeysOf()), for a request
+   * that read the owner from the build cache and builds one of its
+   * variants now. The lists are the ones the kept build was made from:
+   * a change to one is a tag that dropped it.
+   *
+   * @param string $owner
+   *   The owner, by name.
+   */
+  protected function registerVariantsOf(string $owner): void {
+    $definition = $this->registry->getDefinition($owner);
+    $builder = (new DataSurfaceBuilder())->setWatchedValueCheck($this->watchedValueCheck);
+    $inputs = $this->blueprint($builder, $definition);
+    $this->fillBlueprints($definition, $inputs);
+    $this->variantKeysOf($definition, $inputs, $inputs->keys(), $builder);
+  }
+
+  /**
+   * Gets the account the build under way asks access for.
+   *
+   * @return \Drupal\Core\Session\AccountInterface
+   *   The account a variant being built when read was held for, or the
+   *   current user.
+   */
+  protected function account(): AccountInterface {
+    return $this->settlingAs ?? $this->currentUser;
+  }
+
+  /**
+   * Gets the account itself, not the proxy that follows the current user.
+   *
+   * @return \Drupal\Core\Session\AccountInterface
+   *   What a variant held unsettled is built for, whoever is the current
+   *   user when it is read.
+   */
+  protected function underlyingAccount(): AccountInterface {
+    $account = $this->account();
+    return $account instanceof AccountProxyInterface ? $account->getAccount() : $account;
   }
 
   /**
@@ -1512,7 +1903,7 @@ final class Resources implements ResourcesInterface {
       // By itself, as if on its own: what its def is written from, in the
       // context its owner's hands it, and what its access answers there.
       $child_context = static::childContext($context, $structure->id);
-      [$access, $runtime] = $this->childAccess($structure, NULL, $child_context, $this->currentUser, $frame['permission'] ?? NULL);
+      [$access, $runtime] = $this->childAccess($structure, NULL, $child_context, $this->account(), $frame['permission'] ?? NULL);
       if ($access !== NULL) {
         $builder->addCacheableDependency($access);
       }
@@ -2622,12 +3013,13 @@ final class Resources implements ResourcesInterface {
    * @param \Drupal\data_surface\DataSurfaceBuilderInterface $builder
    *   The owner's builder, which what a provider of variants read reaches.
    *
-   * @return array<string, array{by: string, children: array<string, string>, labels: array<string, string|\Stringable>}>
+   * @return array<string, array{by: string, children: array<string, string>, labels: array<string, string|\Stringable>, site: array<string, true>}>
    *   The variants at each key, filled from discovery's #[Variant]
    *   classes, then from what a schema read into the blueprint states and
    *   what a provider of variants from the site lists, each of those a
    *   read structure by name, with the label each of those gives its
-   *   value.
+   *   value, and the values whose variant the site's list names rather
+   *   than a class, which are built when read.
    *
    * @throws \LogicException
    *   When a deciding key is not a plain input of the owner, or a provider
@@ -2649,12 +3041,17 @@ final class Resources implements ResourcesInterface {
       // Decision: see docs/decisions.md#variants-nothing-declares.
       $children = $this->registry->getVariants($definition->name(), $key);
       $labels = [];
+      // The values whose variant the site's list names, not a class.
+      $site = [];
       // A variant a schema read into the blueprint states, or one a
       // provider lists from the site: a structure read from its schema,
       // beside the declared ones, which win for a value both name.
       // Decision: see
       // docs/decisions.md#a-schema-can-be-read-back-into-a-structure.
       foreach ($inputs->readVariants()[$key] ?? [] as $value => ['name' => $name, 'label' => $label]) {
+        if (!isset($children[(string) $value])) {
+          $site[(string) $value] = TRUE;
+        }
         $children[(string) $value] ??= $name;
         if ($label !== NULL) {
           $labels[(string) $value] = $label;
@@ -2685,12 +3082,14 @@ final class Resources implements ResourcesInterface {
             default => $inputs->readStructure($id, SchemaReader::prepared($schema + ($list->defs() === [] ? [] : ['$defs' => $list->defs()])), ''),
           };
           $labels[$value] = $entry['label'];
+          $site[$value] = TRUE;
         }
       }
       $variantKeys[$key] = [
         'by' => $by,
         'children' => $children,
         'labels' => $labels,
+        'site' => $site,
       ];
     }
     return $variantKeys;

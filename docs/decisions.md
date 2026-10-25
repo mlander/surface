@@ -701,6 +701,13 @@ cache keyed by context alone would serve a stale one; what that state
 is, a blueprint says with `addCacheableDependency()`, for a caller that
 caches.
 
+*Changed 2026-10-24:* a build for no account (`buildDeclared()`) is
+kept across requests, keyed by everything the context says and tagged
+with everything it was read from, so the staleness this entry rejected
+is the tags' to rule out; a build for an account is still built in each
+request ([The static build is cached, the rest is per
+request](#the-static-build-is-cached-the-rest-is-per-request)).
+
 Within one request a sealed build is kept (amended 2026-10-20, from the
 performance review; the entry was "A build is not cached"): by the
 resource, everything the context says, the kind of build (`build()`,
@@ -4197,7 +4204,10 @@ is kept for one account or one language; none holds a stored value.
 | One discovery entry per definition | once, and only the entries whose tags fired are written again | its own tags: a field item its field's and storage's configuration (a base field its override's, named before one exists), a bundle resource its bundle's, its form display's and its fields', a class none |
 | One tool entry per resource, every tool of it | once per resource, its operations built once for all its tools, under core's lock | that resource's tags: its discovery entry's and every build it was made from |
 | The Tool API's item, every tool | read on every listing | any tag a tool was read from; derived again from the tool entries |
+| A sealed build for no account | once, in the build cache | a tag it read, a discovery tag, `config:core.extension`, `config:data_surface.settings` or `config:data_surface.defaults` ([The static build is cached, the rest is per request](#the-static-build-is-cached-the-rest-is-per-request)) |
 | A sealed build | once per request, per kind and account kind | the end of the request, a tag it read, or 32 newer builds ([A build is not cached across requests](#a-build-is-not-cached-across-requests)) |
+| A variant the site lists | once per request, when a door reads it | as the build that holds it |
+| The OpenAPI document | once, in the build cache | a tag it read; by contract version, site and language |
 | A refined surface | once per combination in one document | the end of the document |
 | A static access answer | once per context and account kind | 256 newer answers |
 
@@ -4257,6 +4267,88 @@ change the id shape.
 `ContractEmitter::refinedFor()`, `DiscoveryPerDefinitionTest`,
 `ToolDefinitionsPerResourceTest`, `EmitMemoTest`,
 `PerformanceBudgetTest`)
+
+### The static build is cached, the rest is per request
+
+Decided 2026-10-24, measured on the development site (312 components,
+20 field types, 35 resources; `docs/performance.md` has the method and
+the numbers). Four choices, and why:
+
+- **A build for no account is kept across requests.** The declared
+  build (`buildDeclared()`) asks no access answer and reads no account,
+  so it is a pure function of the code, the site's structure and what
+  its providers list: the same for every request until one of those
+  changes. It is kept in its own bin, `cache.data_surface_build`, so a
+  site can give it a backend of its own and a development site that
+  turns the discovery bin off still keeps it. The key is the memo's:
+  the resource, everything the context says (its parameters among
+  them), the kind of build and the reference limit, with the current
+  and configuration override languages, since a label read from
+  configuration is in the language that loaded it. The tags are the
+  contract: what the build read (each provider's list, the site's
+  defaults), each discovery entry it built from, discovery's index, and
+  `config:core.extension`, `config:data_surface.settings` and
+  `config:data_surface.defaults`, which every build depends on. One
+  that expires or varies by a cache context is not kept. The request's
+  memo stays in front of it. A build for the account alone
+  (`buildStatic()`) or with every answer (`build()`) is not derived
+  from the kept one: its access answers lock or leave out keys while it
+  is built, which a sealed build cannot be given after the fact, so it
+  is built in each request, by the memo once.
+- **A sealed build stores as it is, or is refused.** Its definitions are
+  plain, a refiner is a class and a method or an alter by its service
+  id, an access answer carries its cacheability, a provider's list is
+  data. Core's map definitions drop the properties they were given when
+  serialized, so a data surface stores each map with its properties
+  beside it and gives them back when it wakes (`SerializedMaps`). A
+  structure read from a schema is registered by building its owner, so
+  a kept build stores the definitions of those it built, and a request
+  that reads it registers them again. One that holds what cannot be
+  stored (a closure, an object of an anonymous class, the container a
+  service held whole brings) is refused with a message naming the
+  resource, the operation and what could not be stored, and nothing is
+  kept.
+- **A variant the site lists is built when a door reads it.** Variants
+  from the site, listed by a provider or read from a schema, are sealed
+  by value, label and access answer, and each one is built the first
+  time something reads it, then kept (`VariantToSettle`). Kept with a
+  build for no account it is stored as what builds it, so the cache
+  holds what the documents state and not every component of a theme;
+  the structures its owner's list reads are registered again from that
+  list when one is built. What each door builds: the full schema and
+  the tool listing the variants they state (all of them within the
+  site's list limit, none past it); the schema for chosen values and
+  the form the chosen one; the pipeline every variant at a key it
+  judges, since a secret any variant declares is never returned under
+  that key; the catalog all of them, so a refusal inside one is listed
+  under the operation that holds it, as before. A variant a class
+  declares, an attached child, a collection's item and a structure
+  mixed in are built with their owner: they are the owner's own
+  definitions (an attached child's map is the parent's, a mixin's
+  members are the owner's keys), and a refusal in code is found by the
+  build. Lazy equals eager: the never-stricter, every-door and round
+  trip tests run on it unchanged, and every example's documents and
+  tool definitions, and the site's catalog, are byte for byte what the
+  build that built everything gave. What a variant built later read is
+  what a caller that cached something made from it asks for
+  (`SettledCacheability`), once it has made it: the form, the tool
+  listing, the memo when a tag is invalidated.
+- **One prepare per submit.** The operation form's validation runs the
+  whole pipeline dry, prepare included, so a refusal storage raises is
+  said on its element; the submit commits what that run prepared
+  (`DataSurfacePipelineInterface::commitDryRun()`) when the values are
+  the ones it judged and a fingerprint of what storage holds is the one
+  it was judged against, and runs the whole submit otherwise. The host
+  form trait validates without preparing, so it prepares once already.
+
+The OpenAPI document is kept the same way, by its tags, the contract
+version, the site and the language, and served with an `ETag` and 304.
+
+(`Resources::buildAs()`, `Resources::keep()`, `Resources::settleVariant()`,
+`VariantToSettle`, `SerializedMaps`, `SettledCacheability`,
+`ResourceRegistry::exportRead()`, `DataSurfaceOperationForm::submitForm()`,
+`OpenApiDocument::build()`, `BuildCacheTest`, `LazyVariantsTest`,
+`OnePreparePerSubmitTest`, `BuildBenchmarkTest`)
 
 ### The catalog is the site's live map
 

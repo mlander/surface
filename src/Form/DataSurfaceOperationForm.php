@@ -114,6 +114,11 @@ class DataSurfaceOperationForm extends FormBase {
   public const PANEL_KEY = 'data_surface_panel';
 
   /**
+   * The temporary form state value the validated dry run is kept under.
+   */
+  protected const DRY_RUN = 'data_surface_dry_run';
+
+  /**
    * Constructs a DataSurfaceOperationForm.
    *
    * @param \Drupal\Core\DependencyInjection\ClassResolverInterface $classResolver
@@ -236,8 +241,9 @@ class DataSurfaceOperationForm extends FormBase {
     $values = $deletes ? [] : $builder->extractSurfaceValues($surface, $form[static::SURFACE_KEY], $form_state, $this->storedSurfaceValues($surface, $storage));
     // The whole run, dry: access, the values, and what storage's own
     // prepare refuses, said here, on the elements, since a submit handler
-    // may no longer set an error. The submit runs it again and writes.
+    // may no longer set an error. The submit commits what it prepared.
     // Decision: see docs/decisions.md#one-result-at-every-door.
+    $stored = static::fingerprint($storage->load($surface));
     $result = $this->surfacePipeline()->submit(
       $surface,
       $values,
@@ -245,6 +251,18 @@ class DataSurfaceOperationForm extends FormBase {
       TRUE,
       DataSurfaceAccess::decisive($access, 'The resource this form configures may not be written by this account.'),
     );
+    if ($result->isValid() && $result->prepared !== NULL) {
+      // Kept for the submit in this request, with what it was judged
+      // against: the values sent and what storage held.
+      // Decision: see
+      // docs/decisions.md#the-static-build-is-cached-the-rest-is-per-request.
+      $form_state->setTemporaryValue(self::DRY_RUN, [
+        'result' => $result,
+        'values' => $values,
+        'stored' => $stored,
+        'storage' => $storage,
+      ]);
+    }
     if ($deletes) {
       foreach ($result->violations as $violation) {
         $form_state->setErrorByName('', $violation->message);
@@ -269,15 +287,22 @@ class DataSurfaceOperationForm extends FormBase {
       $form_state,
       $this->storedSurfaceValues($surface, $storage),
     );
-    // The operation is its own gate, so an answer with no opinion is
-    // a refusal here as it is on the route: the pipeline would read a
-    // neutral answer as nothing to say.
-    $result = $this->surfacePipeline()->submit(
-      $surface,
-      $values,
-      $storage,
-      access: DataSurfaceAccess::decisive($access, 'The resource this form configures may not be written by this account.'),
-    );
+    // What validation prepared is committed, once: the values are the
+    // ones it judged and storage holds what it held then. Otherwise the
+    // whole run again. The operation is its own gate, so an answer with
+    // no opinion is a refusal here as it is on the route: the pipeline
+    // would read a neutral answer as nothing to say.
+    // Decision: see
+    // docs/decisions.md#the-static-build-is-cached-the-rest-is-per-request.
+    $dry = $form_state->getTemporaryValue(self::DRY_RUN);
+    $result = is_array($dry) && $dry['values'] === $values && $dry['stored'] === static::fingerprint($storage->load($surface))
+      ? $this->surfacePipeline()->commitDryRun($dry['result'], $dry['storage'])
+      : $this->surfacePipeline()->submit(
+        $surface,
+        $values,
+        $storage,
+        access: DataSurfaceAccess::decisive($access, 'The resource this form configures may not be written by this account.'),
+      );
     if (!$result->isValid()) {
       // Refused since it was validated (what is stored moved in between):
       // validation is over, so the refusal is said as a message, and
@@ -369,6 +394,19 @@ class DataSurfaceOperationForm extends FormBase {
       $this->resources->storage($served->resource, $served->context, $surface),
       $this->resources->access($served->resource, $served->context),
     ];
+  }
+
+  /**
+   * Fingerprints what storage holds, for the submit to find it unmoved.
+   *
+   * @param array $stored
+   *   What the storage loads.
+   *
+   * @return string
+   *   A hash of it.
+   */
+  protected static function fingerprint(array $stored): string {
+    return hash('xxh128', serialize($stored));
   }
 
   /**

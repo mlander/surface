@@ -17,6 +17,8 @@ services:
       - '@account_switcher'
       - '@logger.channel.data_surface'
       - '@string_translation'
+      - '@cache.data_surface_build'
+      - '@cache_contexts_manager'
   # The OpenAPI operation that runs an operation, for the site catalog.
   data_surface_openapi.catalog_doors:
     class: Drupal\data_surface_openapi\OpenApiDoors

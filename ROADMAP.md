@@ -1426,6 +1426,22 @@ renames sit in A because they are cheapest before new code exists.
     hosts' forms say a refusal from their submit handler; core's
     selection handler reads the current user for a reference's options.
 
+26. **Performance that every host supports.** DONE 2026-10-24
+    (`docs/decisions.md#the-static-build-is-cached-the-rest-is-per-request`,
+    `docs/performance.md`). A build for no account is kept across
+    requests in `cache.data_surface_build`, keyed by the memo's key and
+    the languages and dropped by every tag it was read from; a sealed
+    surface stores and wakes equal (`SerializedMaps` keeps what core's
+    map definitions drop), or is refused by name. A variant the site
+    lists is built when a door reads it (`VariantToSettle`), so the
+    spotlight's kept build is 374 KB where every component built was
+    10.9 MB. The operation form commits what validation prepared; the
+    OpenAPI document is kept and served with an `ETag` and 304. Held by
+    `BuildCacheTest`, `LazyVariantsTest`, `OnePreparePerSubmitTest` and
+    `BuildBenchmarkTest`. Open: builds for an account are per request;
+    the catalog builds every variant; a theme of about 850 components
+    passes memcached's 1 MB item.
+
 ## Maintenance
 
 - **Functional tests convert to kernel tests as units touch them**, by

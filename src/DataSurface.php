@@ -30,7 +30,10 @@ use Drupal\data_surface\Storage\StorageLayoutInterface;
  * the typed data manager, is the pipeline's. The one question refinement
  * asks of a value (may a refiner see it?) goes to the watched value
  * check the data surface was sealed with, which serializes as a service id
- * the way an alter's refiner link does.
+ * the way an alter's refiner link does. A variant the site lists may be
+ * held unsettled (Attachment, SettlesChildInterface): reading it asks the
+ * build step to build it, the one other time a data surface reaches a
+ * service, and it is kept from then on.
  *
  * Everything the data surface knows about one key lives on that key's
  * Entry inside the DefinitionMap, so there are no parallel arrays
@@ -115,6 +118,33 @@ final class DataSurface implements DataSurfaceInterface {
     protected readonly array $withheld = [],
     protected readonly ?array $runtimeAccessOwn = NULL,
   ) {
+  }
+
+  /**
+   * Stores what it holds, with each map's properties core would drop.
+   *
+   * Decision: see
+   * docs/decisions.md#the-static-build-is-cached-the-rest-is-per-request.
+   *
+   * @return array
+   *   Its properties, and the maps it holds with their properties.
+   */
+  public function __serialize(): array {
+    $values = get_object_vars($this);
+    return ['values' => $values, 'maps' => SerializedMaps::export($values)];
+  }
+
+  /**
+   * Restores what it holds, each map with its properties.
+   *
+   * @param array $data
+   *   What __serialize() stored.
+   */
+  public function __unserialize(array $data): void {
+    foreach ($data['values'] as $name => $value) {
+      $this->{$name} = $value;
+    }
+    SerializedMaps::restore($data['maps']);
   }
 
   /**

@@ -524,8 +524,15 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
     $this->definitions[$key] = $this->shellFor($key);
     $this->variants[$key] = ['by' => $by, 'variants' => $variants];
     $this->refinements[$key] = array_values(array_unique(array_merge($this->refinements[$key] ?? [], [$by])));
+    // A variant held unsettled adds what it read once it is built: the
+    // data surface asks its settled children for theirs.
+    // Decision: see
+    // docs/decisions.md#the-static-build-is-cached-the-rest-is-per-request.
     foreach ($variants as $variant) {
-      $this->cacheability->addCacheableDependency($variant->child);
+      $settled = $variant->settledChild();
+      if ($settled !== NULL) {
+        $this->cacheability->addCacheableDependency($settled);
+      }
     }
     return $this;
   }

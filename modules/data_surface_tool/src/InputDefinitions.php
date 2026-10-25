@@ -412,7 +412,10 @@ final class InputDefinitions {
     foreach ($surface->getDefinitions()->entries() as $name => $entry) {
       $at = $prefix . $name;
       $shown_at = $shown?->getPropertyDefinition((string) $name);
-      $walked = $shown === NULL || $shown_at instanceof MapInputDefinition;
+      // A map the listing states with no key (one past the site's list
+      // budget) has nothing below it to name, so its children are not
+      // built to be asked.
+      $walked = $shown === NULL || ($shown_at instanceof MapInputDefinition && $shown_at->getPropertyDefinitions() !== []);
       $resolve = static fn (string $key): string => $ports[$key] ?? $prefix . $key;
       $children = [];
       if ($entry->attachment !== NULL) {
@@ -1198,7 +1201,11 @@ final class InputDefinitions {
    * @see \Drupal\data_surface\Pipeline\Outbound::secrets()
    */
   public function secrets(DataSurfaceInterface $surface): array {
-    return Outbound::secrets($surface);
+    // The listing states no key of a variant past the site's list budget,
+    // so a secret inside one is no key of it: those are not built to ask.
+    // Decision: see
+    // docs/decisions.md#the-static-build-is-cached-the-rest-is-per-request.
+    return Outbound::secrets($surface, fn (Entry $entry): bool => !$this->over($entry));
   }
 
   /**

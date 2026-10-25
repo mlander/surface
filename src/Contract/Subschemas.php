@@ -64,7 +64,7 @@ final class Subschemas {
   public function __construct(
     public readonly bool $full,
     public readonly array $transient,
-    public readonly array $open = [],
+    protected array $open = [],
   ) {
     $this->keys = new \SplObjectStorage();
     $this->writing = new \SplObjectStorage();
@@ -159,6 +159,23 @@ final class Subschemas {
    */
   public function isOpen(string $key): bool {
     return in_array(preg_replace('/@\d+$/', '', $key), $this->open, TRUE);
+  }
+
+  /**
+   * Adds structures the document mixes in, found where it states them.
+   *
+   * A variant of a list the site decides past its budget is built when
+   * the document states it, a door's choice, so what it mixes in is known
+   * then, before its def is written.
+   *
+   * Decision: see
+   * docs/decisions.md#the-static-build-is-cached-the-rest-is-per-request.
+   *
+   * @param string[] $ids
+   *   Their ids.
+   */
+  public function openAlso(array $ids): void {
+    $this->open = array_values(array_unique([...$this->open, ...$ids]));
   }
 
   /**
