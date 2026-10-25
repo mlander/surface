@@ -412,6 +412,7 @@ nothing on it is needed to build.
 | [Your second resource](docs/second-resource.md) | One key whose allowed values depend on another's, with one refiner. |
 | [Generating a resource](docs/generating.md) | `drush generate surface:resource`: the first page's files from an interview, a config schema entry or a JSON Schema document, and the comments it leaves for what it cannot write. |
 | [Concepts](docs/concepts.md) | Every concept, the question that makes you need it, when to skip it, and the page that shows it. |
+| [Visuals](docs/visuals/index.html) | Seven small drawings, one relationship each: resource, structure and shape; who may ask; the layers; the markers; six ways to compose; the doors; the pipeline. |
 | [Transformations](docs/transformations.md) | A value asked for one way and stored another (coercion, layouts, the doors' wire forms), what runs because something was saved, and a value nobody types. |
 | [Common settings recipes](docs/recipes.md) | A time of day, a multi-select, a text area and the other keys a settings page often asks for, one snippet each. |
 | [The examples](modules/data_surface_examples/README.md) | One registration form that grows an idea at a time, then a small resource per later concept, each at `/surface-examples`. |

@@ -187,8 +187,9 @@ hand.
 The pages fall in the same groups as the README's documentation table.
 
 - **Start here**: [Your first resource](first-resource.md), [Your
-  second resource](second-resource.md), [Concepts](concepts.md) and
-  [Transformations](transformations.md) (a value asked one way and
+  second resource](second-resource.md), [Concepts](concepts.md) (with
+  [seven small drawings](visuals/index.html), one relationship each)
+  and [Transformations](transformations.md) (a value asked one way and
   stored another, what runs because something was saved, a value nobody
   types), [Common settings recipes](recipes.md), and [the
   examples](../modules/data_surface_examples/README.md) at
