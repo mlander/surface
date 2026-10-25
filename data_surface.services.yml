@@ -45,8 +45,13 @@ services:
       - { name: cache_tags_invalidator }
   data_surface.resources:
     class: Drupal\data_surface\ResourceBuild\Resources
-    arguments: ['@data_surface.resource_registry', '@typed_data_manager', '@class_resolver', '@current_user', '@data_surface.operation_arguments', '@data_surface.watched_value_check', '@user_permissions_hash_generator']
+    arguments: ['@data_surface.resource_registry', '@typed_data_manager', '@class_resolver', '@current_user', '@data_surface.operation_arguments', '@data_surface.watched_value_check', '@user_permissions_hash_generator', '@data_surface.site_defaults']
   Drupal\data_surface\ResourceBuild\ResourcesInterface: '@data_surface.resources'
+  # The defaults a site sets over the declared ones, data_surface.defaults,
+  # which every build reads and carries the cache tag of.
+  data_surface.site_defaults:
+    class: Drupal\data_surface\ResourceBuild\SiteDefaults
+    arguments: ['@config.factory', '@typed_data_manager']
   # Sealed into every data surface the build step makes: a watched value its
   # own definition refuses is handed to no refiner.
   data_surface.watched_value_check:
@@ -75,7 +80,7 @@ services:
   # widget hints only when a renderer asks for them.
   data_surface.contract_emitter:
     class: Drupal\data_surface\Contract\ContractEmitter
-    arguments: ['@data_surface.options', '@string_translation', '@validation.constraint', '@data_surface.site_list_budget']
+    arguments: ['@data_surface.options', '@string_translation', '@validation.constraint', '@data_surface.site_list_budget', '@plugin.manager.data_surface_widget']
   # How many entries of a list the site decides (variants from the site,
   # keys from the site) the documents and the tool listing spell out.
   data_surface.site_list_budget:
@@ -131,6 +136,7 @@ services:
       - !tagged_iterator data_surface.catalog_doors
       - '%app.root%'
       - '@data_surface.site_list_budget'
+      - '@plugin.manager.data_surface_widget'
   # The form routes a module declares for an operation.
   data_surface.form_route_doors:
     class: Drupal\data_surface\ResourceBuild\FormRouteDoors

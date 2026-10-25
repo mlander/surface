@@ -1,0 +1,8 @@
+name: 'Data Surface widget test'
+type: module
+description: 'A widget that claims every string key whose format is color, and a structure with keys it serves and one whose owner asks for another.'
+package: Testing
+version: VERSION
+core_version_requirement: ^11.3 || ^12
+dependencies:
+  - data_surface:data_surface

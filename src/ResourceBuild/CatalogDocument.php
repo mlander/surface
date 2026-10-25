@@ -259,6 +259,7 @@ final class CatalogDocument {
   public static function notes(array $key): array {
     return array_values(array_filter([
       $key['label'] === '' ? NULL : 'label: ' . $key['label'],
+      ($key['widget'] ?? NULL) === NULL ? NULL : 'widget ' . $key['widget'],
       $key['locked'] ? 'locked' : NULL,
       $key['secret'] ? 'secret' : NULL,
       $key['computed'] === NULL ? NULL : 'computed from ' . implode(', ', $key['computed']['from']) . ' by ' . self::short($key['computed']['by']) . ', ' . $key['computed']['when'],

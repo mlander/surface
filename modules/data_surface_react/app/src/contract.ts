@@ -98,7 +98,12 @@ export interface Arrangement {
 }
 
 export interface Extension {
-  widget: Widget | null;
+  /**
+   * How the key is drawn: a stock word, or the word of a module's widget
+   * that claims the key, which this page draws as the stock field for the
+   * key's type (stockWidget()). Null when no widget draws the key.
+   */
+  widget: Widget | (string & {}) | null;
   /** With the widget hints: how the key is arranged where it is drawn. */
   arrangement?: Arrangement;
   /**

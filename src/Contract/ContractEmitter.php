@@ -42,6 +42,7 @@ use Drupal\data_surface\ResourceBuild\RefinesInputRefiner;
 use Drupal\data_surface\Entry;
 use Drupal\data_surface\Collection;
 use Drupal\data_surface\Pipeline\ResultDocument;
+use Drupal\data_surface\Widget\DataSurfaceWidgetManager;
 
 /**
  * Turns a sealed data surface and its values into the served contract.
@@ -123,7 +124,10 @@ use Drupal\data_surface\Pipeline\ResultDocument;
  * checkbox. A list of values is checkboxes or a multiple select, and one
  * value radios when it asks for them, by the widgets' own rule
  * (CheckboxesWidget::drawsList(), RadiosWidget::drawsOne()); a list with
- * no option list is `list`, rows to add and remove. One hint has no
+ * no option list is `list`, rows to add and remove. A key a module's
+ * widget claims (DataSurfaceWidgetManager::claimed()) is that widget's
+ * word, ahead of the stock rule, unless its owner asked for one with the
+ * `widget` setting. One hint has no
  * Form API counterpart here: `variants`, for a key with variants, whose
  * shape a sibling chooses.
  *
@@ -323,12 +327,16 @@ final class ContractEmitter {
    * @param \Drupal\data_surface\Contract\SiteListBudget|null $budget
    *   How many entries of a list the site decides are spelled out; without
    *   it, every one.
+   * @param \Drupal\data_surface\Widget\DataSurfaceWidgetManager|null $widgets
+   *   The widget manager, which says what a module's widget claims;
+   *   without it, the stock rule alone names the widget.
    */
   public function __construct(
     protected readonly DataSurfaceOptions $options,
     TranslationInterface $string_translation,
     protected readonly ?ConstraintManager $constraints = NULL,
     protected readonly ?SiteListBudget $budget = NULL,
+    protected readonly ?DataSurfaceWidgetManager $widgets = NULL,
   ) {
     $this->stringTranslation = $string_translation;
   }
@@ -3459,7 +3467,12 @@ final class ContractEmitter {
       // A reference with too many candidates to list is looked up.
       // Decision: see
       // docs/decisions.md#a-reference-is-an-id-with-a-list-the-site-decides-listed-or-looked-up.
+      // A module's widget that claims the key, unless its owner asked for
+      // one by name: the word it answers to.
+      // Decision: see docs/decisions.md#a-widget-is-chosen-from-the-definition.
+      $claimed = $this->widgets?->claimed($definition);
       $widget = match (TRUE) {
+        $claimed !== NULL => DataSurfaceWidgetManager::wordOf($claimed),
         $fixed => 'fixed',
         $listed => $radios ? 'radios' : 'select',
         // A bare reference's id is drawn once its entity type is chosen:

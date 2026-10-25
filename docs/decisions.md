@@ -237,6 +237,15 @@ label, the `committed` output's title, now "Committed" (A6).
 | Total | 195 | 182 |
 | Rows of [concepts](concepts.md) | 49 | 44 |
 
+*Grown 2026-10-24,* by the alter-pattern survey's three gaps: two
+attribute arguments, `#[DataSurfaceWidget(claims:, priority:)]`
+([A widget is chosen from the definition](#a-widget-is-chosen-from-the-definition)),
+one definition setting a claim reads, `format`, and one config object,
+`data_surface.defaults`
+([A site sets a default in configuration](#a-site-sets-a-default-in-configuration)).
+The widget attribute is in `src/Attribute/`, which `PublicSurfaceTest`
+does not count, so its pins are unchanged.
+
 `PublicSurfaceTest` pins what `src/Resource/` declares, so the count
 grows only with that test updated beside a reason: 9 attributes, 30
 attribute arguments (33 before), 15 blueprint methods (17), 20
@@ -834,6 +843,64 @@ clone back is additive ([The surface was counted and cut](#the-surface-was-count
 
 *Withdrawn 2026-10-24* with starting values: a starting value was the
 key's declared default for that build only ([The surface was counted and cut](#the-surface-was-counted-and-cut)).
+
+### A site sets a default in configuration
+
+Decided 2026-10-24, from the alter-pattern survey, which found contrib
+alters setting `#default_value` on forms throughout. Here an alter may
+not change an owner's default, and `withDefaults()` is gone, so a site
+that wants a key to start from another value had no way to say so. It
+says so in configuration: `data_surface.defaults`, a list of entries,
+each a resource id, a key path and a value.
+
+- **Configuration, not an alter.** Which value a key starts from on a
+  site is the site's, exported with its configuration and set with
+  `drush config:set`, not a module's code. The declared default stays
+  the module's: the build reads the entries of what it builds at the top
+  and writes each over the declared default, and the declaration a
+  config schema and an install file are written from
+  (`Resources::declaration()`) reads none, so a module's install file
+  never holds a site's value.
+- **A list, because a config key holds no dot.** A resource id
+  (`registration.step3`) and a key path (`contact.phone`) hold dots,
+  which core refuses in a config key, so both are values of an entry.
+- **The value is text, held to the key by the build.** No config schema
+  type says "what this resource's key holds" short of `type: ignore`,
+  which checks nothing. The value is a string, as a form posts it, read
+  through the coercion table (`40` an integer, `true` a boolean,
+  `["a","b"]` a list, a JSON object a map, empty for none) and held to
+  the key's definition with typed data, its constraints included. A
+  value the key does not accept, or a path that names no key, refuses
+  the build, naming the key, as any declaration the build cannot honor
+  does; the catalog lists the refusal. Checking each entry when it is
+  saved would build every resource it names from a config event, and a
+  module's update could still make a saved entry wrong later; the build
+  is where both are found.
+- **What it reaches.** A key the resource declares, a key inside a map
+  it declares, a key of a structure attached at a fixed key, and a key
+  an alter mounts. Not a key inside variants (each variant starts from
+  its own defaults), a collection's item, or a map of keys from the site
+  (its provider says what each entry starts from); not a whole attached
+  structure, a secret (both documents state a default, and a secret is
+  never read back), or a computed key. Each is refused saying why.
+- **Every build carries the config object's tag**,
+  `config:data_surface.defaults`, so a change reaches the form, both
+  documents and the tool listing at the next request, and the builds a
+  request keeps and the derived tools are cleared with it.
+- **A stored value stands.** A default is what a key with nothing stored
+  starts from: a site default changes a new thing and an unset key,
+  never a value already stored. The read tool answers what is stored,
+  so it shows none.
+- **A plugin's static defaults stay the declared ones.**
+  `ResourcesInterface::defaults()`, which a plugin host asks of the
+  class with no build (`defaultConfiguration()`, `defaultSettings()`),
+  carries no cacheability, and the providers that read it into a schema
+  (a block's settings, a field type's) would hold a site's value past
+  its change. *Open:* a new plugin's configuration therefore starts from
+  the declared default, while the documents of its settings state the
+  site's.
+
+(`SiteDefaults`, `Resources::writeSiteDefaults()`, `SiteDefaultsTest`)
 
 ### Known keys that are not identity
 
@@ -3965,6 +4032,29 @@ the same rule (`CheckboxesWidget::drawsList()`,
 only when asked for. (`DataSurfaceWidgetManager::asked()`,
 `DataSurfaceWidgetBase::answersTo()`, `DataSurfaceWidgetBase::checked()`,
 `ListWidget`, `StockWidgetsTest`)
+
+*Amended 2026-10-24,* from the alter-pattern survey: a module's widget
+may claim every key of a kind on the site,
+`#[DataSurfaceWidget(claims:, priority:)]`. A contrib module that ships
+a color picker serves every color key on a site; here only a key's
+owner could ask for a widget, by name. A claim is a data type
+(`['type' => 'string']`), a data type and the key's `format` setting
+(`['type' => 'string', 'format' => 'color']`), or a shape id
+(`['shape' => 'event.license']`): what a definition says its value is,
+so a claim needs nothing from the owner. A list or a map is drawn by
+what it holds, and a claim of one is refused at discovery. The manager
+asks the claims before the stock rule, the highest priority first, then
+by plugin ID; the first whose claim matches and whose `isApplicable()`
+says yes draws the key. A key whose `widget` setting names a widget is
+its owner's choice, and no claim is asked, so the owner wins. A widget
+that claims is asked for no key it does not claim, unless a key names
+it. `x-surface.widget` says the claimed widget's word in both documents
+(the OpenAPI document carries no widget hints); the React page draws a
+word it has no field for as the stock field for the key's JSON type
+(`stockWidget()`), and a key no widget draws stays not editable. The
+catalog's view of one resource names each key's widget. The `format`
+setting is read by claims alone: no document writes it, and no rule
+checks it. (`DataSurfaceWidgetManager::claimed()`, `WidgetClaimTest`)
 
 ### Arrangement is declared once
 

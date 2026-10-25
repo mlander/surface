@@ -39,7 +39,9 @@ The manager instantiates every widget once, in ascending weight order,
 and asks each in turn; the first that says yes wins. So a specialized
 widget undercuts a generic per-type one by declaring a **lower** weight.
 Widgets hold no per-definition state, so one instance serves every
-definition for the rest of the request.
+definition for the rest of the request. A widget that claims keys is
+asked before any of them, for the keys it claims alone
+([below](#a-module-serves-a-widget-to-every-key-of-a-kind)).
 
 ### How a widget declines
 
@@ -257,7 +259,8 @@ that is its own. `#required` draws the marker and the browser's
 `required` attribute and is never checked by core: the form builder
 keeps that check off, so a required key left empty is refused in the
 data surface's words ([decision](decisions.md#an-element-hints-and-the-rule-speaks)). The attribute takes `id`, `label`, `weight`, and
-optionally a `deriver`, as every core plugin attribute does.
+optionally a `deriver`, as every core plugin attribute does, and
+`claims` and `priority` ([below](#a-module-serves-a-widget-to-every-key-of-a-kind)).
 
 Three things to hold to:
 
@@ -269,3 +272,70 @@ Three things to hold to:
 3. **Read nothing but the definition.** If you find yourself wanting the
    data surface or the host, the thing you want is probably a constraint on
    the definition and a resolver that reads it.
+
+## A module serves a widget to every key of a kind
+
+The example above draws a key whose owner asked for it. A module that
+ships a color picker wants every color key on the site, on resources it
+did not write, and their owners cannot each ask. The widget claims them
+instead:
+
+```php
+#[DataSurfaceWidget(
+  id: 'my_module_color',
+  label: new TranslatableMarkup('Color'),
+  claims: [['type' => 'string', 'format' => 'color']],
+  priority: 10,
+)]
+final class ColorWidget extends DataSurfaceWidgetBase {
+
+  public function isApplicable(DataDefinitionInterface $definition): bool {
+    return !DefinitionMetadata::isSecret($definition);
+  }
+
+  // buildElement() as above.
+
+}
+```
+
+Each class's `use` line: [Namespaces](concepts.md#namespaces).
+
+A claim names what the definition says its value is, in one of three
+forms:
+
+| Claim | Serves |
+| --- | --- |
+| `['type' => 'string']` | every key of that data type |
+| `['type' => 'string', 'format' => 'color']` | every key of that type whose `format` setting is that word, `->setSetting('format', 'color')` |
+| `['shape' => 'event.license']` | every key of that [shape](declaring-a-resource.md#named-shapes) |
+
+A claim of a list or a map is refused when the plugins are discovered:
+a list is drawn item by item, each item by the widget that serves it,
+and a map is a fieldset of its keys.
+
+How the manager chooses (`DataSurfaceWidgetManager::claimed()`):
+
+1. **A key whose owner asks for a widget**, `setSetting('widget', ...)`,
+   is drawn by that widget, and no claim is asked. The owner wins.
+2. **The claims**, the highest `priority` first, then by plugin ID. The
+   first widget whose claim matches the key and whose `isApplicable()`
+   says yes draws it. A claimed widget may still decline a key, as the
+   one above declines a secret.
+3. **The stock rule**, by weight, as above. A widget that claims is not
+   asked here for a key it does not claim, unless the key names it, so
+   its `isApplicable()` answers for the keys it claims alone, and its
+   weight matters only when a key asks for it by name.
+
+`x-surface.widget` says the chosen widget's word, the first word it
+answers to (its plugin ID), in both documents, and the catalog's view
+of one resource (`drush surface:catalog --resource=<id>`) names each
+key's widget among its notes. The React page draws the stock widgets
+and nothing else, so a word it has no field for is drawn as the stock
+field for the key's JSON type: a list of choices a multiple select, a
+list rows, choices a select, an object a fieldset, a boolean a
+checkbox, a number a number input, an address an email input, any other
+string a text input (`stockWidget()` in the app). A key no widget draws,
+`widget: null`, stays "Not editable here". The OpenAPI document carries
+no widget hints. The `format` setting is read by claims alone: no
+document writes it as JSON Schema's `format`, and no rule checks it
+([decision](decisions.md#a-widget-is-chosen-from-the-definition)).

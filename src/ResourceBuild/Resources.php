@@ -78,11 +78,11 @@ use Drupal\data_surface\Port;
  *    glue reads its keys.
  * 3. The seal-time checks on the shape: every identity key is a declared
  *    input, and no operation id is provided twice.
- * 4. The context. Starting values become the declared defaults, when
- *    the context creates; each constraint is added to its key and held
- *    to the narrowing check; each identity key the context knows becomes
- *    that key's default and is locked, which is the engine's lock: the
- *    value fixed to the declared default.
+ * 4. The site's defaults, `data_surface.defaults`, written over the
+ *    declared ones (SiteDefaults). Then the context: each constraint is
+ *    added to its key and held to the narrowing check; each identity key
+ *    the context knows becomes that key's default and is locked, which is
+ *    the engine's lock: the value fixed to the declared default.
  * 5. Each structure mixed in (mixIn()): its ports' wiring checked, built
  *    by itself for its def and its access, which holds its members to
  *    what is stored or takes them back out; then what of the owner's names
@@ -155,6 +155,8 @@ final class Resources implements ResourcesInterface {
    * @param \Drupal\Core\Session\PermissionsHashGeneratorInterface|null $permissionsHashGenerator
    *   What tells two accounts' permissions apart, which a static access
    *   answer is kept by; NULL keeps none.
+   * @param \Drupal\data_surface\ResourceBuild\SiteDefaults|null $siteDefaults
+   *   The defaults the site sets over the declared ones; NULL reads none.
    */
   /**
    * What resolves a shape, with its alters, once asked for.
@@ -281,6 +283,7 @@ final class Resources implements ResourcesInterface {
     protected readonly OperationArguments $operationArguments,
     protected readonly WatchedValueCheckInterface $watchedValueCheck,
     protected readonly ?PermissionsHashGeneratorInterface $permissionsHashGenerator = NULL,
+    protected readonly ?SiteDefaults $siteDefaults = NULL,
   ) {
   }
 
@@ -304,7 +307,7 @@ final class Resources implements ResourcesInterface {
    * @see \Drupal\data_surface\Storage\ConfigSchemaGenerator::including()
    */
   public function withRegistry(ResourceRegistry $registry, ClassResolverInterface $classResolver): static {
-    return new static($registry, $this->typedDataManager, $classResolver, $this->currentUser, $this->operationArguments, $this->watchedValueCheck, $this->permissionsHashGenerator);
+    return new static($registry, $this->typedDataManager, $classResolver, $this->currentUser, $this->operationArguments, $this->watchedValueCheck, $this->permissionsHashGenerator, $this->siteDefaults);
   }
 
   /**
@@ -659,11 +662,15 @@ final class Resources implements ResourcesInterface {
    *   TRUE for the resource an operation is asked of on its own, which
    *   asks its own access class and states how its operation behaves;
    *   FALSE for a child, and for a structure mixed in, built by itself.
+   * @param array{resource: string, at: string, values: array<string, mixed>}|null $siteDefaults
+   *   For a child attached at a fixed key, the defaults the site sets on
+   *   its keys, from its parent's (SiteDefaults::write()); NULL reads the
+   *   site's for one built at the top, and none for any other.
    *
    * @return \Drupal\data_surface\DataSurfaceInterface
    *   The sealed data surface.
    */
-  protected function buildResource(string $resource, OperationContext $context, array $ancestry, string|\Stringable|null $locked = NULL, bool $top = FALSE): DataSurfaceInterface {
+  protected function buildResource(string $resource, OperationContext $context, array $ancestry, string|\Stringable|null $locked = NULL, bool $top = FALSE, ?array $siteDefaults = NULL): DataSurfaceInterface {
     $definition = $this->registry->getDefinition($resource);
     // Refuses two providers of one operation id, whichever is asked for.
     $this->registry->getOperations($definition->name());
@@ -740,6 +747,10 @@ final class Resources implements ResourcesInterface {
     }
     $variantKeys = $this->variantKeysOf($definition, $inputs, $input_keys, $builder);
 
+    // The site's defaults over the declared ones, before a known identity
+    // key is locked to what the context knows.
+    // Decision: see docs/decisions.md#a-site-sets-a-default-in-configuration.
+    $childDefaults = $this->writeSiteDefaults($builder, $definition, $inputs, $top, $siteDefaults);
     $this->applyContext($builder, $definition, $context, $input_keys, $attached, $lists);
     $ports = $inputs->ports();
     $frame = ['class' => $definition->name(), 'id' => $definition->id, 'key' => '', 'inputs' => $input_keys];
@@ -836,7 +847,7 @@ final class Resources implements ResourcesInterface {
       // Decision: see docs/decisions.md#a-port-is-a-live-sibling-value.
       $reads = $inputs->wiring((string) $key);
       $this->assertWiring($builder, $definition, NULL, (string) $key, (string) $child, $reads, $input_keys, $attached, $lists);
-      [$attachment, $access, , $runtime] = $this->buildChild((string) $child, $context, $key, $frame, $ancestry);
+      [$attachment, $access, , $runtime] = $this->buildChild((string) $child, $context, $key, $frame, $ancestry, siteDefaults: $childDefaults[(string) $key] ?? NULL);
       if ($access !== NULL) {
         // What the child's access answer read is what this data surface,
         // and everything emitted from it, varies by.
@@ -1096,6 +1107,9 @@ final class Resources implements ResourcesInterface {
    *   Where the parent's storage keeps the child's keys, by dotted path
    *   from the parent, when that is not the key: an entry of a map of keys
    *   from the site, `<key>.<entry>`. NULL for the key.
+   * @param array{resource: string, at: string, values: array<string, mixed>}|null $siteDefaults
+   *   The defaults the site sets on the child's keys, from its parent's;
+   *   NULL for none. A child with some is built here, never reused.
    *
    * @return array{0: \Drupal\data_surface\Attachment|null, 1: \Drupal\data_surface\Resource\AccessAnswer|null, 2: \Drupal\data_surface\Resource\OperationContext, 3: bool}
    *   The sealed child, or NULL when its access omits it; that access
@@ -1104,7 +1118,7 @@ final class Resources implements ResourcesInterface {
    *   context the child was invoked in; and whether, built for the account
    *   alone, a runtime answer was set aside, so the key is marked.
    */
-  protected function buildChild(string $child, OperationContext $context, string $key, array $frame, array $ancestry, bool $whole = FALSE, ?string $storedAt = NULL): array {
+  protected function buildChild(string $child, OperationContext $context, string $key, array $frame, array $ancestry, bool $whole = FALSE, ?string $storedAt = NULL, ?array $siteDefaults = NULL): array {
     $definition = $this->registry->getDefinition($child);
     [$child_context, $operation] = $this->invokeChild($definition, $context, $key, $frame['id']);
     [$access, $runtime] = $this->childAccess($definition, $operation, $child_context, $this->currentUser, $frame['permission'] ?? NULL);
@@ -1118,9 +1132,9 @@ final class Resources implements ResourcesInterface {
     $locked = $whole && $access?->isLocked() ? static::lockReason($access) : NULL;
     return [
       new Attachment(
-        $definition->isRead() && $access === NULL && $locked === NULL
+        $definition->isRead() && $access === NULL && $locked === NULL && $siteDefaults === NULL
           ? $this->buildRead($definition->name(), $child_context, [...$ancestry, $frame])
-          : $this->buildResource($definition->name(), $child_context, [...$ancestry, $frame], $locked),
+          : $this->buildResource($definition->name(), $child_context, [...$ancestry, $frame], $locked, siteDefaults: $siteDefaults),
         $definition->name(),
         $definition->id,
       ),
@@ -3298,6 +3312,47 @@ final class Resources implements ResourcesInterface {
       }
     }
     return $omitted;
+  }
+
+  /**
+   * Writes the defaults the site sets over a frame's declared ones.
+   *
+   * Every build carries the config object's cache tag, so a change to it
+   * reaches every door at the next request. Read for what is built at the
+   * top, by its id, or handed down by the parent for a child attached at a
+   * fixed key; never while a config schema is written from the resource,
+   * whose install file holds the module's defaults.
+   *
+   * Decision: see docs/decisions.md#a-site-sets-a-default-in-configuration.
+   *
+   * @param \Drupal\data_surface\DataSurfaceBuilderInterface $builder
+   *   The builder, its keys and its alters' declared.
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   *   What is being built.
+   * @param \Drupal\data_surface\ResourceBuild\ResourceBlueprint $inputs
+   *   Its blueprint, which says which keys hold no plain value.
+   * @param bool $top
+   *   Whether it is built at the top.
+   * @param array{resource: string, at: string, values: array<string, mixed>}|null $siteDefaults
+   *   What the parent handed down, or NULL.
+   *
+   * @return array<string, array{resource: string, at: string, values: array<string, mixed>}>
+   *   The defaults for each child attached at a fixed key, by its key.
+   */
+  protected function writeSiteDefaults(DataSurfaceBuilderInterface $builder, ResourceDefinition $definition, ResourceBlueprint $inputs, bool $top, ?array $siteDefaults): array {
+    if ($this->siteDefaults === NULL || !$this->holdsToSchema) {
+      return [];
+    }
+    $builder->addCacheableDependency($this->siteDefaults->cacheability());
+    $defaults = $siteDefaults ?? ($top ? $this->siteDefaults->of($definition->id) : NULL);
+    if ($defaults === NULL || $defaults['values'] === []) {
+      return [];
+    }
+    $kinds = array_fill_keys(array_map('strval', array_keys($inputs->attachments())), 'child')
+      + array_fill_keys(array_map('strval', array_keys($inputs->variants())), 'variants')
+      + array_fill_keys(array_map('strval', array_keys($inputs->lists())), 'collection')
+      + array_fill_keys(array_map('strval', array_keys($inputs->fromSite())), 'site');
+    return $this->siteDefaults->write($builder, $defaults, $kinds);
   }
 
   /**

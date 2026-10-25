@@ -484,6 +484,58 @@ replacing them, and a list key absent from a payload keeps the stored
 list rather than falling back to its default. Both rules, and why, are in
 [Value semantics](semantics.md).
 
+### A site's own defaults
+
+A declared default is the module's. A site that wants a key to start
+from another value sets it in configuration, `data_surface.defaults`,
+not in an alter: an alter may not change an owner's default. Each entry
+names the resource (or a plugin's structure, by the id the catalog
+lists), a key path from it, and the value as a form posts it:
+
+```
+drush config:set data_surface.defaults defaults.0 \
+  '{resource: registration.step3, key: capacity, value: "40"}' --input-format=yaml
+drush config:set data_surface.defaults defaults.1 \
+  '{resource: registration.step3, key: contact.phone, value: "+1 555 0100"}' --input-format=yaml
+drush config:delete data_surface.defaults defaults.1
+```
+
+The value is text. The build reads it through [the coercion
+table](semantics.md#the-coercion-table), as a form's values are read:
+`40` is an integer for an integer key, `true` or `false` a boolean, a
+JSON list `["a","b"]` a list, a JSON object a map, and an empty value
+none. Quote it in YAML, so `false` stays the word and not a boolean
+that config stores as the empty string. A path names a key the resource
+declares, a key inside a map it declares or a structure it attaches
+(`contact.phone`), or a key an alter mounts
+(`third_party_settings.<module>.<key>`).
+
+The build writes the site's value over the declared default of what it
+builds, so the form, both documents and the tool listing of a create
+start from it. A key that holds a stored value keeps it: a default is
+what a key with nothing stored starts from, and the read tool answers
+what is stored. The declaration a config schema and an install file are
+written from keeps the module's, so `drush data_surface:config-schema
+--write` never writes a site's value into a module, and so do a
+plugin's static defaults (`defaultConfiguration()`, `defaultSettings()`),
+which its host asks of the class with no build.
+
+An entry the resource cannot honor refuses the build, naming the key,
+and the catalog lists the refusal:
+
+- a path that names no key: "data_surface.defaults: registration.step3
+  has no key "contact.fax". ...";
+- a value the key does not accept, in the key's own rule: "data_surface.defaults
+  sets "venue" on registration.step3 to "nowhere", which the key does
+  not accept: The value you selected is not a valid choice.";
+- a key inside variants, a collection or a map of keys from the site,
+  each starting from its own defaults; a whole attached structure (set
+  each of its keys); a secret; and a computed key.
+
+Every build carries the config object's cache tag,
+`config:data_surface.defaults`, so a change reaches every door at the
+next request ([decision](decisions.md#a-site-sets-a-default-in-configuration)).
+
 ## Locking
 
 A locked key's value is fixed. It is the degenerate refinement: the

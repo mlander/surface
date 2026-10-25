@@ -1,4 +1,4 @@
-import type { Arrangement, ArrangementGroup, Schema, Values } from '../contract';
+import type { Arrangement, ArrangementGroup, Schema, Values, Widget } from '../contract';
 import { fieldId, isObject, jsonType, resolveVariants } from '../contract';
 import {
   AutocompleteField,
@@ -52,8 +52,50 @@ export function Field(props: FieldProps): JSX.Element | null {
       return <FixedField {...props} />;
     case 'autocomplete':
       return <AutocompleteField {...props} />;
+    default: {
+      // A module's widget claimed the key, and this page has no field of
+      // its own for it: the stock field for the key's type.
+      // Decision: see docs/decisions.md#a-widget-is-chosen-from-the-definition.
+      const stock = extension?.widget === null || extension?.widget === undefined ? null : stockWidget(props.schema);
+      if (stock === null) {
+        return <UnsupportedField {...props} />;
+      }
+      const multiple = stock === 'select' && jsonType(props.schema) === 'array';
+      return <Field {...props} schema={{ ...props.schema, 'x-surface': { ...extension, widget: stock, ...(multiple ? { multiple: true } : {}) } }} />;
+    }
+  }
+}
+
+/**
+ * The stock field for a key whose widget word this page draws nothing for.
+ *
+ * A module's widget that claims the key is named by its own word, which
+ * the Form API draws with that widget and this page cannot. The page reads
+ * the stock field off the schema, as the stock widgets read the
+ * definition: a list of choices a multiple select, a list rows, choices a
+ * select, an object a fieldset, a boolean a checkbox, a number a number
+ * input, an address an email input, any other string a text input.
+ */
+export function stockWidget(schema: Schema): Widget | null {
+  const type = jsonType(schema);
+  if (type === 'array') {
+    return schema.items?.oneOf !== undefined ? 'select' : 'list';
+  }
+  if (schema.oneOf !== undefined) {
+    return 'select';
+  }
+  switch (type) {
+    case 'object':
+      return 'fieldset';
+    case 'boolean':
+      return 'checkbox';
+    case 'integer':
+    case 'number':
+      return 'number';
+    case 'string':
+      return schema.format === 'idn-email' ? 'email' : 'text';
     default:
-      return <UnsupportedField {...props} />;
+      return null;
   }
 }
 

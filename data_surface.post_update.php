@@ -39,3 +39,10 @@ function data_surface_post_update_reference_list_limit(): void {
   // The keys in the order the schema lists them.
   $config->setData(['reference_list_limit' => $raw['reference_list_limit']] + $raw)->save();
 }
+
+/**
+ * Adds the config object the site's defaults are set in, empty.
+ */
+function data_surface_post_update_site_defaults(): void {
+  data_surface_install_missing_config('data_surface');
+}

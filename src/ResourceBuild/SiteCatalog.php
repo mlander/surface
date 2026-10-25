@@ -6,12 +6,14 @@ namespace Drupal\data_surface\ResourceBuild;
 
 use Drupal\Core\Session\AccountSwitcherInterface;
 use Drupal\Core\Session\AnonymousUserSession;
+use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\data_surface\Computed;
 use Drupal\data_surface\Contract\ContractBaselines;
 use Drupal\data_surface\Contract\SiteListBudget;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Resource\OperationContext;
+use Drupal\data_surface\Widget\DataSurfaceWidgetManager;
 
 /**
  * The live map of a site: what discovery found, its doors, its refusals.
@@ -123,6 +125,9 @@ final class SiteCatalog {
    * @param \Drupal\data_surface\Contract\SiteListBudget|null $budget
    *   How many variants of a list the site decides have their keys listed;
    *   without it, every one.
+   * @param \Drupal\data_surface\Widget\DataSurfaceWidgetManager|null $widgets
+   *   The widget manager, which names the widget each key is drawn by;
+   *   without it, none is named.
    */
   public function __construct(
     protected readonly ResourceCatalog $catalog,
@@ -133,6 +138,7 @@ final class SiteCatalog {
     protected readonly iterable $doors,
     protected readonly string $root,
     protected readonly ?SiteListBudget $budget = NULL,
+    protected readonly ?DataSurfaceWidgetManager $widgets = NULL,
   ) {}
 
   /**
@@ -555,6 +561,7 @@ final class SiteCatalog {
           'listed' => !$open,
         ],
         'items' => $entry->list === NULL ? NULL : ($entry->list->item->id ?? $entry->list->item->source),
+        'widget' => $entry->attachment === NULL && $entry->variants === NULL && $entry->list === NULL ? $this->widget($definition) : NULL,
       ];
       if ($entry->attachment !== NULL) {
         array_push($keys, ...$this->keys($entry->attachment->child, $entry->attachment->source, $path . '.', $within));
@@ -567,6 +574,32 @@ final class SiteCatalog {
       }
     }
     return $keys;
+  }
+
+  /**
+   * Names the widget a key is drawn by, as the form chooses it.
+   *
+   * A module's widget that claims the key is named as the stock ones are,
+   * by the word it answers to.
+   *
+   * Decision: see docs/decisions.md#a-widget-is-chosen-from-the-definition.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The key's definition, as built.
+   *
+   * @return string|null
+   *   The word, or NULL when no widget draws the key.
+   */
+  protected function widget(DataDefinitionInterface $definition): ?string {
+    if ($this->widgets === NULL) {
+      return NULL;
+    }
+    try {
+      return DataSurfaceWidgetManager::wordOf($this->widgets->getWidgetFor($definition));
+    }
+    catch (\InvalidArgumentException) {
+      return NULL;
+    }
   }
 
   /**

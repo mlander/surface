@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace Drupal\data_surface\Widget;
 
+use Drupal\Component\Plugin\PluginInspectionInterface;
 use Drupal\Core\Cache\CacheBackendInterface;
 use Drupal\Core\Extension\ModuleHandlerInterface;
 use Drupal\Core\Plugin\DefaultPluginManager;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\data_surface\Attribute\DataSurfaceWidget;
+use Drupal\data_surface\DefinitionMetadata;
 
 /**
  * Manages data surface widget plugins.
@@ -29,6 +31,18 @@ final class DataSurfaceWidgetManager extends DefaultPluginManager {
   protected array $widgets;
 
   /**
+   * The claims of every widget that makes any, in the order they are asked.
+   *
+   * @var array<string, list<array{type?: string, format?: string, shape?: string}>>
+   */
+  protected array $claimants;
+
+  /**
+   * What a claim may name.
+   */
+  protected const CLAIM_KEYS = ['type', 'format', 'shape'];
+
+  /**
    * Constructs a DataSurfaceWidgetManager.
    */
   public function __construct(\Traversable $namespaces, CacheBackendInterface $cache_backend, ModuleHandlerInterface $module_handler) {
@@ -44,13 +58,50 @@ final class DataSurfaceWidgetManager extends DefaultPluginManager {
   }
 
   /**
+   * {@inheritdoc}
+   *
+   * Refuses a claim that is not one of the three forms a claim takes.
+   *
+   * @param array $definition
+   *   The plugin definition.
+   * @param string $plugin_id
+   *   The plugin ID.
+   */
+  public function processDefinition(&$definition, $plugin_id): void {
+    parent::processDefinition($definition, $plugin_id);
+    foreach ($definition['claims'] ?? [] as $claim) {
+      $strings = is_array($claim) && array_filter($claim, static fn (mixed $part): bool => !is_string($part) || $part === '') === [];
+      $unknown = is_array($claim) ? array_diff(array_keys($claim), self::CLAIM_KEYS) : [];
+      $problem = match (TRUE) {
+        !is_array($claim) || !$strings => 'is not a map of non-empty strings',
+        $unknown !== [] => sprintf('names "%s"', implode('", "', $unknown)),
+        isset($claim['type']) === isset($claim['shape']) => 'names neither a type nor a shape, or both',
+        isset($claim['format']) && !isset($claim['type']) => 'names a format without a type',
+        in_array($claim['type'] ?? NULL, ['list', 'map'], TRUE) => 'claims a list or a map, which are drawn by what they hold: a claim names the type of one value',
+        default => NULL,
+      };
+      if ($problem !== NULL) {
+        throw new \LogicException(sprintf(
+          'The %s widget\'s claim %s %s. A claim is [\'type\' => <data type>], [\'type\' => <data type>, \'format\' => <format>] or [\'shape\' => <shape id>].',
+          $plugin_id,
+          json_encode($claim),
+          $problem,
+        ));
+      }
+    }
+  }
+
+  /**
    * Gets the widget serving a definition.
    *
-   * Widgets are instantiated in weight order (lower first) and each is
-   * asked whether it serves the definition; the first that says yes
-   * wins, so specialized widgets undercut the generic per-type ones.
-   * Instantiating before asking is what lets a widget consult its own
-   * collaborators before answering.
+   * A widget that claims the definition is asked first, the highest
+   * priority first (claimed()). Otherwise every other widget, instantiated
+   * in weight order (lower first), is asked whether it serves the
+   * definition; the first that says yes wins, so specialized widgets
+   * undercut the generic per-type ones. Instantiating before asking is
+   * what lets a widget consult its own collaborators before answering. A
+   * widget that makes claims is asked for no definition it does not claim,
+   * unless the definition asks for it by name.
    *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   The data definition.
@@ -62,12 +113,80 @@ final class DataSurfaceWidgetManager extends DefaultPluginManager {
    *   When no widget can serve the definition.
    */
   public function getWidgetFor(DataDefinitionInterface $definition): DataSurfaceWidgetInterface {
-    foreach ($this->widgets() as $widget) {
+    $claimed = $this->claimed($definition);
+    if ($claimed !== NULL) {
+      return $claimed;
+    }
+    $asked = $definition->getSetting('widget');
+    foreach ($this->widgets() as $plugin_id => $widget) {
+      if (isset($this->claimants()[$plugin_id]) && !in_array($asked, $widget instanceof DataSurfaceWidgetBase ? $widget->answersTo() : [$plugin_id], TRUE)) {
+        continue;
+      }
       if ($widget->isApplicable($definition)) {
         return $this->asked($definition, $widget);
       }
     }
     throw new \InvalidArgumentException(sprintf('No data surface widget serves the "%s" data type.', $definition->getDataType()));
+  }
+
+  /**
+   * Gets the widget that claims a definition, if any does.
+   *
+   * A module's widget may claim every key of a kind on the site
+   * (`#[DataSurfaceWidget(claims:)]`): a data type, a data type and the
+   * key's `format` setting, or a shape. The claims are asked by priority,
+   * the highest first, then by plugin ID; the first widget whose claim
+   * matches and whose isApplicable() says yes serves the key. A key whose
+   * `widget` setting asks for a widget is its owner's choice, and no claim
+   * is asked.
+   *
+   * Decision: see docs/decisions.md#a-widget-is-chosen-from-the-definition.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The definition.
+   *
+   * @return \Drupal\data_surface\Widget\DataSurfaceWidgetInterface|null
+   *   The widget, or NULL when none claims it.
+   */
+  public function claimed(DataDefinitionInterface $definition): ?DataSurfaceWidgetInterface {
+    if ($definition->getSetting('widget') !== NULL) {
+      return NULL;
+    }
+    foreach ($this->claimants() as $plugin_id => $claims) {
+      foreach ($claims as $claim) {
+        $matches = isset($claim['shape'])
+          ? DefinitionMetadata::shapeOf($definition) === $claim['shape']
+          : $definition->getDataType() === $claim['type'] && (!isset($claim['format']) || $definition->getSetting('format') === $claim['format']);
+        if ($matches) {
+          $widget = $this->widgets()[$plugin_id];
+          if ($widget->isApplicable($definition)) {
+            return $widget;
+          }
+          break;
+        }
+      }
+    }
+    return NULL;
+  }
+
+  /**
+   * Names a widget by the word it answers to.
+   *
+   * The word a definition's `widget` setting asks for it by, and the word
+   * `x-surface.widget` and the catalog name it by: the first
+   * DataSurfaceWidgetBase::answersTo() gives, its plugin ID otherwise.
+   *
+   * @param \Drupal\data_surface\Widget\DataSurfaceWidgetInterface $widget
+   *   The widget.
+   *
+   * @return string
+   *   The word.
+   */
+  public static function wordOf(DataSurfaceWidgetInterface $widget): string {
+    if ($widget instanceof DataSurfaceWidgetBase) {
+      return $widget->answersTo()[0] ?? $widget->getPluginId();
+    }
+    return $widget instanceof PluginInspectionInterface ? $widget->getPluginId() : get_class($widget);
   }
 
   /**
@@ -104,6 +223,23 @@ final class DataSurfaceWidgetManager extends DefaultPluginManager {
       $definition instanceof ListDataDefinitionInterface ? 'list of ' . $definition->getItemDefinition()->getDataType() : $definition->getDataType(),
       $widget->answersTo()[0] ?? $widget->getPluginId(),
     ));
+  }
+
+  /**
+   * Gets the claims of each widget that makes any, in the order asked.
+   *
+   * @return array<string, list<array{type?: string, format?: string, shape?: string}>>
+   *   The claims, keyed by plugin ID, the highest priority first, then by
+   *   plugin ID.
+   */
+  protected function claimants(): array {
+    if (!isset($this->claimants)) {
+      $claiming = array_filter($this->getDefinitions(), static fn (array $definition): bool => ($definition['claims'] ?? []) !== []);
+      $priority = static fn (string $id): int => (int) ($claiming[$id]['priority'] ?? 0);
+      uksort($claiming, static fn (string $a, string $b): int => $priority($b) <=> $priority($a) ?: strcmp($a, $b));
+      $this->claimants = array_map(static fn (array $definition): array => $definition['claims'], $claiming);
+    }
+    return $this->claimants;
   }
 
   /**

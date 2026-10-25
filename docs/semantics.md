@@ -18,6 +18,10 @@ caller gets that answer too. The unit test
 as a table of cases, and the kernel test `InputCoercionMatrixTest` holds
 the form and the tool to the same accepted value row by row; if this
 page and those files ever disagree, the files are the ones that run.
+The value every door reads and writes is the stored one: a
+`settings.php` override or config split changes what the site runs on,
+not what is stored, so a key overridden on a site reads here as stored
+([Storage](storage.md#config-overrides-change-what-the-site-runs-on)).
 
 ## Configured, or not
 

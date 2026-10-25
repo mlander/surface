@@ -482,6 +482,32 @@ repeats the members.
 A member the structure's access omits for the account writing is kept
 as stored, at the owner's level or inside a child the owner stores.
 
+### The site's defaults are not stored values
+
+A site's own defaults live in their own config object,
+`data_surface.defaults`, which the build reads and no storage writes
+([A site's own defaults](declaring-a-resource.md#a-sites-own-defaults)).
+A default is what a key with nothing stored starts from: changing one
+changes a new thing and a key no write has set, never a value already
+stored, and the install file written from the resource keeps the
+module's defaults. Set them with `drush config:set data_surface.defaults`;
+a config export carries them with the rest of the site's configuration.
+
+### Config overrides change what the site runs on
+
+A `settings.php` override (`$config['data_surface_first.newsletter']['frequency']
+= 'monthly';`) and config split change what the site runs on, not what
+is stored. The form, the read tool and both documents show the stored
+value, as core's own config forms do (they load the editable object,
+which no override reaches), and the pipeline writes the stored value
+and holds it to the schema. A key overridden on a site therefore reads
+here differently from what the site runs on; that is core's behavior,
+and on purpose: a form that showed the override would save it into
+storage on the next submit, and the override would stop being one. To
+see it, `drush config:get data_surface_first.newsletter --include-overridden`
+prints the value with overrides applied, beside the stored one plain
+`drush config:get` prints.
+
 ## What storage is
 
 Two interfaces with the same three verbs. A resource's own storage class

@@ -82,7 +82,11 @@ whether it is required, its default, its constraints (less the two its
 type and requiredness add), whether it is locked, secret or computed
 and from what, the refiners on it and what they watch, the keys its
 declared rules read, whether a runtime refiner narrows it, the module
-that added it, and the child, variants or items at it. Beside the keys,
+that added it, the child, variants or items at it, and the widget that
+draws a key holding one value, by the word it answers to (a module's
+widget that claims the key among them,
+[Widgets](widgets.md#a-module-serves-a-widget-to-every-key-of-a-kind)).
+Beside the keys,
 the operations with every door, and who answers access: the operation's
 permission alone, or the access class and the alters that answer, and
 whether the answer at the top is static or runtime.

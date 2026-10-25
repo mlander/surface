@@ -932,3 +932,30 @@ describe('a key that refers to an entity (x-surface.widget: autocomplete)', () =
     expect(asked[0]).toEqual(['thing.id', '5', 'node']);
   });
 });
+
+describe("a module's widget the page has no field for", () => {
+  it('draws the stock field for the key type, and leaves a key no widget claims not editable', async () => {
+    let seen: Values = {};
+    render(
+      <Form
+        schema={object({
+          accent: { title: 'Accent', type: ['string', 'null'], 'x-surface': x('widget_test_color') },
+          venue: { title: 'Venue', type: 'string', oneOf: venues, 'x-surface': x('my_module_map') },
+          open: { title: 'Open', type: 'boolean', 'x-surface': x('my_module_toggle') },
+          layout: { title: 'Layout', 'x-surface': x(null) },
+        })}
+        initial={{ accent: '#336699', venue: 'library', open: true, layout: null }}
+        onValues={(values) => (seen = values)}
+      />,
+    );
+    const accent = screen.getByLabelText('Accent');
+    expect(accent).toHaveAttribute('type', 'text');
+    expect(accent).toHaveValue('#336699');
+    await userEvent.clear(accent);
+    await userEvent.type(accent, '#000000');
+    expect(seen.accent).toBe('#000000');
+    expect(within(screen.getByLabelText('Venue')).getByRole('option', { name: 'Old Library' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Open')).toBeChecked();
+    expect(screen.getByText('Not editable here: no widget claims this key.')).toBeInTheDocument();
+  });
+});
