@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<meta name="description" content="What has identity, storage and operations, what is only ever attached, and what is one named value used at many keys, drawn as three boxes and the arrows between them.">
+<title>Resource, Structure, Shape</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root {
+  --bg: #E8EDF1; --bg-2: #D9E1E8; --panel: #F5F8FA; --ink: #12202C; --ink-2: #4B5C6B;
+  --line: #B7C4CF; --slab: #C3CED8; --owner: #0A6EB4; --part: #1B978F; --alter: #D48F12;
+  --refine: #C93A6E; --contract: #2C95E0; --shape: #6A55B8; --old: #7B8998; --code-bg: #E9EEF2;
+  --f-display: "Archivo", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --f-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0E151B; --bg-2: #16212B; --panel: #131C24; --ink: #E6EDF2; --ink-2: #9DB1C0;
+    --line: #2E3E4C; --slab: #25333F; --owner: #2F93DB; --part: #35BDB4; --alter: #EDB23C;
+    --refine: #EE5C8F; --contract: #7CC8FF; --shape: #A895F2; --old: #73869A; --code-bg: #0B1116; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0E151B; --bg-2: #16212B; --panel: #131C24; --ink: #E6EDF2; --ink-2: #9DB1C0;
+    --line: #2E3E4C; --slab: #25333F; --owner: #2F93DB; --part: #35BDB4; --alter: #EDB23C;
+    --refine: #EE5C8F; --contract: #7CC8FF; --shape: #A895F2; --old: #73869A; --code-bg: #0B1116; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 var(--f-body); }
+a { color: var(--owner); }
+a:focus-visible { outline: 2px solid var(--contract); outline-offset: 2px; }
+code { font: 400 0.92em var(--f-mono); }
+.page { max-width: 1010px; margin: 0 auto; padding: 22px 24px 26px; display: flex; flex-direction: column; gap: 14px; }
+.top { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.eyebrow { font: 500 11px/1 var(--f-mono); letter-spacing: .12em; text-transform: uppercase; color: var(--ink-2); margin: 0; }
+.eyebrow a { color: inherit; text-decoration: none; }
+.eyebrow a:hover { color: var(--ink); }
+.pager { font: 500 12px/1 var(--f-mono); display: flex; gap: 14px; }
+.pager a { text-decoration: none; }
+h1 { font: 750 30px/1.04 var(--f-display); font-stretch: 122%; letter-spacing: -.01em; margin: 6px 0 0; text-wrap: balance; }
+.plate { margin: 0; background: var(--panel); border: 1px solid var(--line); padding: 14px; display: flex; justify-content: center; }
+.plate svg { display: block; width: 100%; height: auto; }
+.plate svg.tall { display: none; max-width: 420px; }
+.caption { margin: 0; max-width: 78ch; font-size: 15.5px; }
+.caption strong { font-weight: 600; }
+.more { margin: 0; font-size: 13.5px; color: var(--ink-2); padding-left: 10px; border-left: 2px solid var(--line); max-width: 92ch; }
+.more b { font: 500 11px/1 var(--f-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--ink-2); margin-right: 4px; }
+.foot { margin: 4px 0 0; padding-top: 12px; border-top: 1px solid var(--line); font-size: 12.5px; color: var(--ink-2); }
+@media (max-width: 899px) {
+  .plate svg.wide { display: none; }
+  .plate svg.tall { display: block; }
+}
+@media (max-width: 600px) {
+  .page { padding: 16px 16px 22px; gap: 12px; }
+  h1 { font-size: 24px; }
+  .plate { padding: 10px 6px; }
+  .caption { font-size: 15px; }
+}
+/* The drawing */
+svg text { font-family: var(--f-body); fill: var(--ink); }
+svg .m { font-family: var(--f-mono); }
+svg .d { font-family: var(--f-display); font-weight: 700; font-stretch: 112%; }
+svg .b { font-weight: 600; }
+svg .k { fill: var(--ink-2); }
+svg .box { fill: var(--panel); stroke: var(--line); stroke-width: 1; }
+svg .card { fill: var(--bg); stroke: var(--line); stroke-width: 1; }
+svg .chip { fill: var(--panel); stroke: var(--line); stroke-width: 1; }
+svg .slab { fill: var(--slab); stroke: var(--line); stroke-width: 1; }
+svg .wire { fill: none; stroke: var(--ink-2); stroke-width: 1.5; }
+svg .wire.dash { stroke-dasharray: 5 4; }
+svg .ghost { fill: none; stroke: var(--ink-2); stroke-width: 1.2; stroke-dasharray: 4 3; }
+svg .hatch-bg { fill: var(--panel); }
+svg .hatch-line { stroke: var(--ink-2); stroke-width: 1.6; stroke-opacity: .45; }
+svg .none { fill: none; }
+.fill-ink { fill: var(--ink); } .stroke-ink { stroke: var(--ink); } .tint-ink { fill: var(--ink); fill-opacity: .1; stroke: var(--ink); stroke-width: 1.4; }
+.fill-ink-2 { fill: var(--ink-2); } .stroke-ink-2 { stroke: var(--ink-2); } .tint-ink-2 { fill: var(--ink-2); fill-opacity: .1; stroke: var(--ink-2); stroke-width: 1.4; }
+.fill-owner { fill: var(--owner); } .stroke-owner { stroke: var(--owner); } .tint-owner { fill: var(--owner); fill-opacity: .1; stroke: var(--owner); stroke-width: 1.4; }
+.fill-part { fill: var(--part); } .stroke-part { stroke: var(--part); } .tint-part { fill: var(--part); fill-opacity: .1; stroke: var(--part); stroke-width: 1.4; }
+.fill-shape { fill: var(--shape); } .stroke-shape { stroke: var(--shape); } .tint-shape { fill: var(--shape); fill-opacity: .1; stroke: var(--shape); stroke-width: 1.4; }
+.fill-alter { fill: var(--alter); } .stroke-alter { stroke: var(--alter); } .tint-alter { fill: var(--alter); fill-opacity: .1; stroke: var(--alter); stroke-width: 1.4; }
+.fill-refine { fill: var(--refine); } .stroke-refine { stroke: var(--refine); } .tint-refine { fill: var(--refine); fill-opacity: .1; stroke: var(--refine); stroke-width: 1.4; }
+.fill-contract { fill: var(--contract); } .stroke-contract { stroke: var(--contract); } .tint-contract { fill: var(--contract); fill-opacity: .1; stroke: var(--contract); stroke-width: 1.4; }
+.fill-line { fill: var(--line); } .stroke-line { stroke: var(--line); } .tint-line { fill: var(--line); fill-opacity: .1; stroke: var(--line); stroke-width: 1.4; }
+svg .wire.c-owner { stroke: var(--owner); } svg .wire.c-part { stroke: var(--part); } svg .wire.c-shape { stroke: var(--shape); }
+svg .wire.c-contract { stroke: var(--contract); } svg .wire.c-alter { stroke: var(--alter); } svg .wire.c-refine { stroke: var(--refine); }
+svg .t-owner { fill: var(--owner); } svg .t-part { fill: var(--part); } svg .t-shape { fill: var(--shape); } svg .t-contract { fill: var(--contract); }
+svg .t-alter { fill: var(--alter); } svg .t-refine { fill: var(--refine); }
+</style>
+</head>
+<body>
+<main class="page">
+  <header>
+    <div class="top">
+      <p class="eyebrow"><a href="index.html">Data Surface visuals</a> &middot; 1 of 7</p>
+      <nav class="pager" aria-label="Visuals"><a href="index.html">All</a> <a href="access.html" rel="next">Next</a></nav>
+    </div>
+    <h1>Resource, structure, shape</h1>
+  </header>
+  <figure class="plate">
+<svg class="wide" viewBox="0 0 960 500" role="img" aria-labelledby="w-title w-desc" xmlns="http://www.w3.org/2000/svg"><title id="w-title">Resource, structure and shape</title><desc id="w-desc">Three boxes. A resource attaches or mixes in structures and uses shapes at keys; a structure attaches structures and uses shapes; a shape stands alone.</desc><defs><marker id="w-a-ink" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0.8 L10,5 L0,9.2 z" class="fill-ink"/></marker><marker id="w-a-ink-2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0.8 L10,5 L0,9.2 z" class="fill-ink-2"/></marker><marker id="w-a-owner" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0.8 L10,5 L0,9.2 z" class="fill-owner"/></marker><marker id="w-a-part" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0.8 L10,5 L0,9.2 z" class="fill-part"/></marker><marker id="w-a-shape" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0.8 L10,5 L0,9.2 z" class="fill-shape"/></marker><marker id="w-a-alter" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0.8 L10,5 L0,9.2 z" class="fill-alter"/></marker><marker id="w-a-refine" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0.8 L10,5 L0,9.2 z" class="fill-refine"/></marker><marker id="w-a-contract" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0.8 L10,5 L0,9.2 z" class="fill-contract"/></marker><marker id="w-a-line" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0.8 L10,5 L0,9.2 z" class="fill-line"/></marker><pattern id="w-hatch" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="7" height="7" class="hatch-bg"/><line x1="0" y1="0" x2="0" y2="7" class="hatch-line"/></pattern></defs><path d="M142.0,74 C142.0,14 818.0,14 818.0,71" class="wire c-shape" marker-end="url(#w-a-shape)"/>
+<rect x="407.1" y="18.0" width="145.9" height="22.2" rx="2" class="chip" style="stroke: none"/>
+<text x="480.0" y="33.5" font-size="12.5" text-anchor="middle" class="t-shape">uses a shape at a key</text>
+<rect x="16.0" y="74.0" width="252.0" height="311.9" rx="3" class="box"/>
+<rect x="16.0" y="74.0" width="252.0" height="4.0" rx="0" class="fill-owner"/>
+<rect x="29.0" y="89.0" width="18.5" height="24.0" rx="1" class="none stroke-owner" stroke-width="1.6"/>
+<path d="M31.8,91.8 L42.8,93.6 L42.8,113.0 L31.8,111.2 Z" class="fill-owner" fill-opacity=".22" style="stroke: var(--owner); stroke-width: 1.2"/>
+<circle cx="40.5" cy="102.8" r="1.4" class="fill-owner"/>
+<text x="63.0" y="107.0" font-size="19" class="d t-owner">Resource</text>
+<text x="29.0" y="135.0" font-size="12" class="m k">#[Resource(id, identity:,</text>
+<text x="29.0" y="152.0" font-size="12" class="m k">  storage:, access:)]</text>
+<rect x="29.0" y="169.0" width="5" height="5" class="fill-owner"/>
+<text x="42.0" y="176.0" font-size="13">Identity: which one it is. With</text>
+<text x="42.0" y="193.9" font-size="13">none, a singleton.</text>
+<rect x="29.0" y="210.8" width="5" height="5" class="fill-owner"/>
+<text x="42.0" y="217.8" font-size="13">Storage: <tspan class="m">load()</tspan>, <tspan class="m">prepare()</tspan>,</text>
+<text x="42.0" y="235.7" font-size="13"><tspan class="m">commit()</tspan>.</text>
+<rect x="29.0" y="252.6" width="5" height="5" class="fill-owner"/>
+<text x="42.0" y="259.6" font-size="13">Operations: each a way in, gated</text>
+<text x="42.0" y="277.5" font-size="13">by its permission.</text>
+<rect x="29.0" y="294.4" width="5" height="5" class="fill-owner"/>
+<text x="42.0" y="301.4" font-size="13">An access class may answer per</text>
+<text x="42.0" y="319.3" font-size="13">key.</text>
+<line x1="29.0" y1="333.2" x2="255.0" y2="333.2" style="stroke: var(--line)"/>
+<text x="29.0" y="351.2" font-size="13" class="b">Reached on its own, through its</text>
+<text x="29.0" y="369.1" font-size="13" class="b">operations.</text>
+<rect x="354.0" y="74.0" width="252.0" height="311.9" rx="3" class="box"/>
+<rect x="354.0" y="74.0" width="252.0" height="4.0" rx="0" class="fill-part"/>
+<rect x="367.0" y="90.8" width="22.2" height="20.3" rx="2" class="none stroke-part" stroke-width="1.6"/>
+<rect x="370.7" y="94.5" width="14.8" height="3.1" rx="1" class="fill-part"/>
+<rect x="370.7" y="100.1" width="14.8" height="3.1" rx="1" class="fill-part"/>
+<rect x="370.7" y="105.6" width="14.8" height="3.1" rx="1" class="fill-part"/>
+<text x="401.0" y="107.0" font-size="19" class="d t-part">Structure</text>
+<text x="367.0" y="135.0" font-size="12" class="m k">#[Structure(id, access:)]</text>
+<rect x="367.0" y="152.0" width="5" height="5" class="fill-part"/>
+<text x="380.0" y="159.0" font-size="13">A group of keys, behind its own</text>
+<text x="380.0" y="176.9" font-size="13">wall.</text>
+<rect x="367.0" y="193.8" width="5" height="5" class="fill-part"/>
+<text x="380.0" y="200.8" font-size="13">Held by a parent, at a key with</text>
+<text x="380.0" y="218.7" font-size="13">variants, or by a plugin.</text>
+<rect x="367.0" y="235.6" width="5" height="5" class="fill-part"/>
+<text x="380.0" y="242.6" font-size="13">No identity, no storage, no</text>
+<text x="380.0" y="260.5" font-size="13">permission of its own.</text>
+<rect x="367.0" y="277.4" width="5" height="5" class="fill-part"/>
+<text x="380.0" y="284.4" font-size="13">An access class may answer for</text>
+<text x="380.0" y="302.3" font-size="13">its keys.</text>
+<line x1="367.0" y1="316.2" x2="593.0" y2="316.2" style="stroke: var(--line)"/>
+<text x="367.0" y="334.2" font-size="13" class="b">Reached only through what holds</text>
+<text x="367.0" y="352.1" font-size="13" class="b">it.</text>
+<rect x="692.0" y="74.0" width="252.0" height="311.9" rx="3" class="box"/>
+<rect x="692.0" y="74.0" width="252.0" height="4.0" rx="0" class="fill-shape"/>
+<path d="M716.1,89.9 L726.2,101.0 L716.1,112.1 L705.9,101.0 Z" class="fill-shape" fill-opacity=".22" style="stroke: var(--shape); stroke-width: 1.6"/>
+<circle cx="716.1" cy="101.0" r="2.4" class="fill-shape"/>
+<text x="739.0" y="107.0" font-size="19" class="d t-shape">Shape</text>
+<text x="705.0" y="135.0" font-size="12" class="m k">#[Shape(id)]</text>
+<text x="705.0" y="152.0" font-size="12" class="m k">define(): one definition</text>
+<rect x="705.0" y="169.0" width="5" height="5" class="fill-shape"/>
+<text x="718.0" y="176.0" font-size="13">One value: type, label,</text>
+<text x="718.0" y="193.9" font-size="13">constraints, examples.</text>
+<rect x="705.0" y="210.8" width="5" height="5" class="fill-shape"/>
+<text x="718.0" y="217.8" font-size="13">Used at many keys: <tspan class="m">add($key,</tspan></text>
+<text x="718.0" y="235.7" font-size="13"><tspan class="m">License::class)</tspan>.</text>
+<rect x="705.0" y="252.6" width="5" height="5" class="fill-shape"/>
+<text x="718.0" y="259.6" font-size="13">Each key may only narrow it; an</text>
+<text x="718.0" y="277.5" font-size="13">alter of it tightens every key.</text>
+<rect x="705.0" y="294.4" width="5" height="5" class="fill-shape"/>
+<text x="718.0" y="301.4" font-size="13">Written once in each document,</text>
+<text x="718.0" y="319.3" font-size="13">as a def.</text>
+<line x1="705.0" y1="333.2" x2="931.0" y2="333.2" style="stroke: var(--line)"/>
+<text x="705.0" y="351.2" font-size="13" class="b">Declared once, used at many keys.</text>
+<path d="M268,144 L351,144" class="wire c-part" marker-end="url(#w-a-part)"/>
+<rect x="276.3" y="98.0" width="69.4" height="38.5" rx="2" class="chip" style="stroke: none"/>
+<text x="311.0" y="113.5" font-size="12.5" text-anchor="middle" class="t-part">attaches,</text>
+<text x="311.0" y="129.8" font-size="12.5" text-anchor="middle" class="t-part">mixes in</text>
+<path d="M606,144 L689,144" class="wire c-shape" marker-end="url(#w-a-shape)"/>
+<rect x="623.9" y="98.0" width="50.2" height="38.5" rx="2" class="chip" style="stroke: none"/>
+<text x="649.0" y="113.5" font-size="12.5" text-anchor="middle" class="t-shape">uses a</text>
+<text x="649.0" y="129.8" font-size="12.5" text-anchor="middle" class="t-shape">shape</text>
+<path d="M546,385.95 C546,437.95 414,437.95 414,388.95" class="wire c-part" marker-end="url(#w-a-part)"/>
+<rect x="413.4" y="415.9" width="133.1" height="22.2" rx="2" class="chip" style="stroke: none"/>
+<text x="480.0" y="431.4" font-size="12.5" text-anchor="middle" class="t-part">attaches structures</text>
+<text x="818.0" y="415.9" font-size="12.5" text-anchor="middle" class="k">stands alone: names nothing else</text>
+<text x="480.0" y="488.0" font-size="12.5" text-anchor="middle" class="k">In Smithy&#x27;s sense all three are shapes; #[Shape] names the third kind, one scalar value.</text></svg>
+<svg class="tall" viewBox="0 0 340 1153" role="img" aria-labelledby="t-title t-desc" xmlns="http://www.w3.org/2000/svg"><title id="t-title">Resource, structure and shape</title><desc id="t-desc">A resource attaches or mixes in structures and uses shapes at keys; a structure attaches structures and uses shapes; a shape stands alone.</desc><defs><marker id="t-a-ink" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0.8 L10,5 L0,9.2 z" class="fill-ink"/></marker><marker id="t-a-ink-2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0.8 L10,5 L0,9.2 z" class="fill-ink-2"/></marker><marker id="t-a-owner" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0.8 L10,5 L0,9.2 z" class="fill-owner"/></marker><marker id="t-a-part" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0.8 L10,5 L0,9.2 z" class="fill-part"/></marker><marker id="t-a-shape" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0.8 L10,5 L0,9.2 z" class="fill-shape"/></marker><marker id="t-a-alter" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0.8 L10,5 L0,9.2 z" class="fill-alter"/></marker><marker id="t-a-refine" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0.8 L10,5 L0,9.2 z" class="fill-refine"/></marker><marker id="t-a-contract" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0.8 L10,5 L0,9.2 z" class="fill-contract"/></marker><marker id="t-a-line" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0.8 L10,5 L0,9.2 z" class="fill-line"/></marker><pattern id="t-hatch" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="7" height="7" class="hatch-bg"/><line x1="0" y1="0" x2="0" y2="7" class="hatch-line"/></pattern></defs><rect x="46.0" y="16.0" width="252.0" height="311.9" rx="3" class="box"/>
+<rect x="46.0" y="16.0" width="252.0" height="4.0" rx="0" class="fill-owner"/>
+<rect x="59.0" y="31.0" width="18.5" height="24.0" rx="1" class="none stroke-owner" stroke-width="1.6"/>
+<path d="M61.8,33.8 L72.8,35.6 L72.8,55.0 L61.8,53.2 Z" class="fill-owner" fill-opacity=".22" style="stroke: var(--owner); stroke-width: 1.2"/>
+<circle cx="70.5" cy="44.8" r="1.4" class="fill-owner"/>
+<text x="93.0" y="49.0" font-size="19" class="d t-owner">Resource</text>
+<text x="59.0" y="77.0" font-size="12" class="m k">#[Resource(id, identity:,</text>
+<text x="59.0" y="94.0" font-size="12" class="m k">  storage:, access:)]</text>
+<rect x="59.0" y="111.0" width="5" height="5" class="fill-owner"/>
+<text x="72.0" y="118.0" font-size="13">Identity: which one it is. With</text>
+<text x="72.0" y="135.9" font-size="13">none, a singleton.</text>
+<rect x="59.0" y="152.8" width="5" height="5" class="fill-owner"/>
+<text x="72.0" y="159.8" font-size="13">Storage: <tspan class="m">load()</tspan>, <tspan class="m">prepare()</tspan>,</text>
+<text x="72.0" y="177.7" font-size="13"><tspan class="m">commit()</tspan>.</text>
+<rect x="59.0" y="194.6" width="5" height="5" class="fill-owner"/>
+<text x="72.0" y="201.6" font-size="13">Operations: each a way in, gated</text>
+<text x="72.0" y="219.5" font-size="13">by its permission.</text>
+<rect x="59.0" y="236.4" width="5" height="5" class="fill-owner"/>
+<text x="72.0" y="243.4" font-size="13">An access class may answer per</text>
+<text x="72.0" y="261.3" font-size="13">key.</text>
+<line x1="59.0" y1="275.2" x2="285.0" y2="275.2" style="stroke: var(--line)"/>
+<text x="59.0" y="293.2" font-size="13" class="b">Reached on its own, through its</text>
+<text x="59.0" y="311.1" font-size="13" class="b">operations.</text>
+<path d="M116,327.95 L116,390.95" class="wire c-part" marker-end="url(#t-a-part)"/>
+<text x="128.0" y="357.9" font-size="13" class="t-part">attaches, mixes in</text>
+<path d="M46,56 L20,56 L20,794.9 L43,794.9" class="wire c-shape" marker-end="url(#t-a-shape)"/>
+<text x="14.0" y="445.4" font-size="13" text-anchor="middle" class="t-shape" transform="rotate(-90 14 445.45)">uses a shape at a key</text>
+<rect x="46.0" y="393.9" width="252.0" height="294.9" rx="3" class="box"/>
+<rect x="46.0" y="393.9" width="252.0" height="4.0" rx="0" class="fill-part"/>
+<rect x="59.0" y="410.8" width="22.2" height="20.3" rx="2" class="none stroke-part" stroke-width="1.6"/>
+<rect x="62.7" y="414.5" width="14.8" height="3.1" rx="1" class="fill-part"/>
+<rect x="62.7" y="420.0" width="14.8" height="3.1" rx="1" class="fill-part"/>
+<rect x="62.7" y="425.6" width="14.8" height="3.1" rx="1" class="fill-part"/>
+<text x="93.0" y="426.9" font-size="19" class="d t-part">Structure</text>
+<text x="59.0" y="454.9" font-size="12" class="m k">#[Structure(id, access:)]</text>
+<rect x="59.0" y="471.9" width="5" height="5" class="fill-part"/>
+<text x="72.0" y="478.9" font-size="13">A group of keys, behind its own</text>
+<text x="72.0" y="496.9" font-size="13">wall.</text>
+<rect x="59.0" y="513.7" width="5" height="5" class="fill-part"/>
+<text x="72.0" y="520.7" font-size="13">Held by a parent, at a key with</text>
+<text x="72.0" y="538.7" font-size="13">variants, or by a plugin.</text>
+<rect x="59.0" y="555.5" width="5" height="5" class="fill-part"/>
+<text x="72.0" y="562.5" font-size="13">No identity, no storage, no</text>
+<text x="72.0" y="580.5" font-size="13">permission of its own.</text>
+<rect x="59.0" y="597.3" width="5" height="5" class="fill-part"/>
+<text x="72.0" y="604.3" font-size="13">An access class may answer for</text>
+<text x="72.0" y="622.3" font-size="13">its keys.</text>
+<line x1="59.0" y1="636.1" x2="285.0" y2="636.1" style="stroke: var(--line)"/>
+<text x="59.0" y="654.1" font-size="13" class="b">Reached only through what holds</text>
+<text x="59.0" y="672.0" font-size="13" class="b">it.</text>
+<path d="M298,453.95 C338,453.95 338,648.9 301,648.9" class="wire c-part" marker-end="url(#t-a-part)"/>
+<text x="332.0" y="551.4" font-size="13" text-anchor="middle" class="t-part" transform="rotate(90 332 551.425)">attaches structures</text>
+<path d="M196,688.9 L196,751.9" class="wire c-shape" marker-end="url(#t-a-shape)"/>
+<text x="208.0" y="718.9" font-size="13" class="t-shape">uses a shape</text>
+<rect x="46.0" y="754.9" width="252.0" height="294.0" rx="3" class="box"/>
+<rect x="46.0" y="754.9" width="252.0" height="4.0" rx="0" class="fill-shape"/>
+<path d="M70.1,770.8 L80.2,781.9 L70.1,793.0 L59.9,781.9 Z" class="fill-shape" fill-opacity=".22" style="stroke: var(--shape); stroke-width: 1.6"/>
+<circle cx="70.1" cy="781.9" r="2.4" class="fill-shape"/>
+<text x="93.0" y="787.9" font-size="19" class="d t-shape">Shape</text>
+<text x="59.0" y="815.9" font-size="12" class="m k">#[Shape(id)]</text>
+<text x="59.0" y="832.9" font-size="12" class="m k">define(): one definition</text>
+<rect x="59.0" y="849.9" width="5" height="5" class="fill-shape"/>
+<text x="72.0" y="856.9" font-size="13">One value: type, label,</text>
+<text x="72.0" y="874.8" font-size="13">constraints, examples.</text>
+<rect x="59.0" y="891.7" width="5" height="5" class="fill-shape"/>
+<text x="72.0" y="898.7" font-size="13">Used at many keys: <tspan class="m">add($key,</tspan></text>
+<text x="72.0" y="916.6" font-size="13"><tspan class="m">License::class)</tspan>.</text>
+<rect x="59.0" y="933.5" width="5" height="5" class="fill-shape"/>
+<text x="72.0" y="940.5" font-size="13">Each key may only narrow it; an</text>
+<text x="72.0" y="958.4" font-size="13">alter of it tightens every key.</text>
+<rect x="59.0" y="975.3" width="5" height="5" class="fill-shape"/>
+<text x="72.0" y="982.3" font-size="13">Written once in each document,</text>
+<text x="72.0" y="1000.2" font-size="13">as a def.</text>
+<line x1="59.0" y1="1014.1" x2="285.0" y2="1014.1" style="stroke: var(--line)"/>
+<text x="59.0" y="1032.1" font-size="13" class="b">Declared once, used at many keys.</text>
+<text x="172.0" y="1074.9" font-size="12.5" text-anchor="middle" class="k">A shape stands alone: it names nothing else.</text>
+<text x="46.0" y="1099.4" font-size="12.5" class="k">In Smithy&#x27;s sense all three are shapes;</text>
+<text x="46.0" y="1116.7" font-size="12.5" class="k">#[Shape] names the third kind, one</text>
+<text x="46.0" y="1133.9" font-size="12.5" class="k">scalar value.</text></svg>
+  </figure>
+  <p class="caption">A <strong>resource</strong> is a thing with identity and storage that operations read and write, so it is the one of the three a caller reaches on its own. A <strong>structure</strong> is a group of keys only ever held by something else: it has no permission of its own, but it may answer access for its keys. A <strong>shape</strong> is one named value declared once and used at many keys, each of which may only narrow it.</p>
+  <p class="more"><b>Read more</b> <a href="https://github.com/mlander/data_surface/blob/next/README.md#glossary">Glossary</a>, <a href="https://github.com/mlander/data_surface/blob/next/docs/resources.md">Resources and structures</a>, <a href="https://github.com/mlander/data_surface/blob/next/docs/declaring-a-resource.md#named-shapes">Named shapes</a>. <b>Decisions</b> <a href="https://github.com/mlander/data_surface/blob/next/docs/decisions.md#resources-structures-and-operations">Resources, structures and operations</a>, <a href="https://github.com/mlander/data_surface/blob/next/docs/decisions.md#a-shape-is-a-named-definition">A shape is a named definition</a>.</p>
+  <p class="foot">Part of Data Surface; see the <a href="../every-door/index.html">full explainer</a>.</p>
+</main>
+</body>
+</html>
