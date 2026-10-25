@@ -331,9 +331,11 @@ their configuration may change without a deprecation path.
   14, a credential pasted or a key the site manages, which says to
   enable `data_surface_examples_keys`; example 15, a config entity
   type of its own, the venues example 2 chooses from, with a resource
-  that adds, edits, lists, reorders and removes them; and example 16,
+  that adds, edits, lists, reorders and removes them; example 16,
   keys that refer to an entity, which says to enable
-  `data_surface_examples_references`. Needs
+  `data_surface_examples_references`; and example 17, a bulk retitle of
+  nodes that borrows each node's access, which says to enable
+  `data_surface_examples_retitle`. Needs
   [Tool](https://www.drupal.org/project/tool).
 - **Data Surface Examples - Compliance**
   (`data_surface_examples_compliance`): example 4, a compliance
@@ -352,6 +354,13 @@ their configuration may change without a deprecation path.
   site has few and looked up past that. Needs node; ships the article
   and page bundles for a site that has neither, and writes three nodes
   its calls name.
+- **Data Surface examples: retitle**
+  (`data_surface_examples_retitle`): example 17, a bulk retitle of
+  nodes with keys, storage and a permission of its own, which borrows
+  each node's update access and its title's edit access as gates, asked
+  per node, a refusal on the node's own item. Needs node; ships the page
+  bundle for a site that has none, two roles, and writes three pages its
+  calls name.
 - **Data Surface Examples - Workflow**
   (`data_surface_examples_workflow`): example 10, extended, two alters
   that answer access for the program and its fees, which do not know

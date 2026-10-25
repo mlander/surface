@@ -409,8 +409,10 @@ has the rest.
 
 ## Access
 
-Two tiers, and another module's alter may answer after both
-([An alter's answer](#an-alters-answer)):
+Two tiers, a gate between them when the operation borrows access from
+another thing ([A gate borrowed from another
+thing](#a-gate-borrowed-from-another-thing)), and another module's alter
+may answer after both ([An alter's answer](#an-alters-answer)):
 
 - **The operation's permission**, on `#[Operation(permission:)]`: the
   static part, answerable with nothing loaded. A `%key` in it is filled
@@ -576,6 +578,88 @@ public static function roomsForAccount(DataDefinitionInterface $room, AccountInt
   return $room->addConstraint('LabeledChoice', ['choices' => array_diff_key(self::ROOMS, ['vault' => TRUE])]);
 }
 ```
+
+### A gate borrowed from another thing
+
+A resource of your own may act on things another module owns: a bulk
+retitle writes node titles with its own keys, storage and permission.
+Whether the account may change each node is the node's owner's answer,
+and every module that alters node access adds to it. A gate asks that
+answer instead of copying the check:
+
+```php
+#[Resource('ai.retitle', storage: RetitleStorage::class)]
+#[Operation('retitle',
+  label: new TranslatableMarkup('Retitle nodes'),
+  permission: 'retitle nodes',
+  gate: ['entity:node:update', 'field:node.title:edit'],
+)]
+```
+
+Each class's `use` line: [Namespaces](concepts.md#namespaces).
+
+`gate:` takes one gate or a list, each in one of two forms:
+
+- **Another resource's operation, by id**:
+  `entity.content:node.page:update`. The answer is that operation's
+  whole answer for the thing, as when it is asked on its own: its
+  permission, its own gates, its access class and every alter that
+  answers access for it, combined with `andIf()`. The thing is handed
+  to that operation as its one required entity parameter; an operation
+  that needs nothing is asked with nothing.
+- **Core's access on an entity or a field**: `entity:node:update` asks
+  the entity type's access control handler, `access()`, and
+  `field:node.title:edit` its `fieldAccess()` for that field's items,
+  with the cacheability core returns. This form works on a site with no
+  derived resource for the entity type. Field access does not include
+  entity access, which is why node's own form asks both, and a gate list
+  may name both.
+
+What the gate is asked about:
+
+- **The thing the context knows.** An identity key declared as a
+  reference to the gate's entity type (`$inputs->add('node',
+  'entity:node')`), or the `entity_type` and `id` a content entity
+  resource knows. The gate is asked after the operation's permission and
+  before its access class, at every door that asks
+  `ResourcesInterface::access()`: a refusal is a 403 on a route and an
+  access refusal from a tool.
+- **Each item of a collection.** When no identity key names the thing
+  and an item of a collection has a key that refers to one, the gate is
+  asked once per item, for the entity that key names. A refusal lands on
+  that key's path in that item, `/items/0/node`, with the gate's reason,
+  and the other items pass. A bulk call is refused whole if any item is
+  refused, as any refusal refuses a call, and the gates run before the
+  storage's `prepare()`, so a storage only ever sees items every gate
+  allowed.
+
+A refusal says what may not be done to what, then the owner's reason
+when it gave one: "You may not update volunteer briefing for the night
+shift: The 'edit any page content' permission is required." A gate whose
+thing nothing names refuses; a gate naming an operation, a resource or
+an entity type the site does not have is refused at discovery, naming
+it, and a field gate takes `view` or `edit` alone.
+
+**Narrow only.** The operation's own permission is asked first, and is
+static. The resource's own access class is asked after the gates and
+can only narrow: its answer is combined with theirs, so it refuses what
+they allow and never allows what they refuse.
+
+**The kind** of each gate's answer is read from its cacheability, as
+any access answer's ([Static and runtime
+access](#static-and-runtime-access)). A gate asked about the thing the
+context knows is static when core's answer read the account's
+permissions alone, and is then stated for the account, and runtime when
+it read the thing, which marks every key `x-surface.live` in the full
+schema and adds the tool's sentence that a key may be found locked or
+left out once the thing is known. A gate asked per item is settled per
+thing: the full schema marks the collection `live` and the tool listing
+says on it that whether it may be changed is decided once the thing is
+known. The tool listing declares only the operation's own permission.
+
+The worked example is example 17, a bulk retitle of nodes
+([its README](../modules/data_surface_examples/README.md#example-17-retitle-in-bulk-access-borrowed)),
+and the fixture the test module's notes (`GatesTest`).
 
 ## Storage
 
@@ -1987,7 +2071,9 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
   asked once, since field access is per field and not per delta: open,
   locked (the list key is locked, every item with it, and the form's
   add and remove controls), or omitted (the key is not in the data
-  surface).
+  surface). A gate the operation borrows is the exception: it is asked
+  per item, about the entity the item refers to
+  ([A gate borrowed from another thing](#a-gate-borrowed-from-another-thing)).
 - **Storage.** The parent stores the list under its key. A child that
   names storage of its own is not routed per item yet: its items are
   still the parent's to store.

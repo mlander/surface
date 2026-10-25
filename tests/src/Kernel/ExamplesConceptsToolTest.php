@@ -7,23 +7,26 @@ namespace Drupal\Tests\data_surface\Kernel;
 use Drupal\data_surface_examples\ConceptCalls;
 use Drupal\data_surface_examples\Hook\SpotlightBlockHooks;
 use Drupal\data_surface_examples_references\Sponsorship;
+use Drupal\data_surface_examples_retitle\Retitle;
+use Drupal\node\Entity\Node;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
 /**
- * Tests the tool calls of examples 7 to 16, and the README quoting them.
+ * Tests the tool calls of examples 7 to 17, and the README quoting them.
  *
  * Makes every call ConceptCalls writes down, on the settings the module
  * ships, the way each example's panel makes it, with example 10's
  * workflow module on for the call that needs it, example 13's
  * component block and placement resource on with its Spotlight block
- * placed, example 14's module that manages keys on, and example 16's
- * module on with its three nodes written: what each
+ * placed, example 14's module that manages keys on, and examples 16's
+ * and 17's modules on with their three nodes each written: what each
  * answers is
  * pinned here for the rule it shows, the README must quote every command
  * and every answer as made, and nothing is left written: example 15's
- * calls write a fourth venue and remove it again with the last.
+ * calls write a fourth venue and remove it again with the last, and
+ * example 17's retitle its pages and put each title back with the last.
  */
 #[Group('data_surface')]
 #[RunTestsInSeparateProcesses]
@@ -53,6 +56,7 @@ class ExamplesConceptsToolTest extends DataSurfaceKernelTestBase {
     'filter',
     'node',
     'data_surface_examples_references',
+    'data_surface_examples_retitle',
   ];
 
   /**
@@ -72,6 +76,7 @@ class ExamplesConceptsToolTest extends DataSurfaceKernelTestBase {
       'data_surface_examples',
       'data_surface_examples_keys',
       'data_surface_examples_references',
+      'data_surface_examples_retitle',
     ]);
     $this->container->get('theme_installer')->install(['stark']);
     $this->config('system.theme')->set('default', 'stark')->save();
@@ -79,6 +84,8 @@ class ExamplesConceptsToolTest extends DataSurfaceKernelTestBase {
     $this->setUpCurrentUser(admin: TRUE);
     // Example 16's three nodes, as its module writes them when installed.
     $this->container->get('class_resolver')->getInstanceFromDefinition(Sponsorship::class)->writeNodes();
+    // Example 17's three pages, as its module writes them when installed.
+    $this->container->get('class_resolver')->getInstanceFromDefinition(Retitle::class)->writeNodes();
   }
 
   /**
@@ -160,6 +167,21 @@ class ExamplesConceptsToolTest extends DataSurfaceKernelTestBase {
     $this->assertSame("Failed: The values were refused:\n" . sprintf('/page: This entity (node: %d) cannot be referenced.', $nodes['page']), $first($answers['event.sponsorship']['wrong_bundle']), 'A page where an article is asked for.');
     $this->assertSame("Failed: The values were refused:\n" . sprintf('/page: This entity (node: %d) cannot be referenced.', $nodes['draft']), $first($answers['event.sponsorship']['not_referenceable']), 'The draft, for an account that may not see unpublished content.');
     $this->assertStringContainsString('/setting/entity_type: The entity type node cannot be referenced here.', $answers['event.sponsorship']['not_config']);
+    $pages = $this->container->get('class_resolver')->getInstanceFromDefinition(Retitle::class)->ids();
+    $this->assertStringContainsString(sprintf('titles: [{"node":%d,"old":"volunteer briefing for the night shift","new":"Volunteer Briefing for the Night Shift"},{"node":%d,"old":"WHERE TO PARK ON FESTIVAL DAYS","new":"Where to Park on Festival Days"}', $pages['one'], $pages['two']), $answers['ai.retitle']['dry_run'], 'A dry run answers each title it would write.');
+    $this->assertSame("Failed: The values were refused:\n" . implode("\n", [
+      "/items/0/node: You may not update volunteer briefing for the night shift: The 'edit any page content' permission is required.",
+      "/items/1/node: You may not update WHERE TO PARK ON FESTIVAL DAYS: The 'edit any page content' permission is required.",
+      "/items/2/node: You may not update menu of the food stalls: The 'edit any page content' permission is required.",
+    ]), $answers['ai.retitle']['may_not_edit'], "Refused on each page by the entity gate, with core's reason.");
+    $this->assertSame("Failed: The values were refused:\n/items/1/node: You may not edit the title of menu of the food stalls: The menu is at the printer, so its title is locked.", $answers['ai.retitle']['title_locked'], 'The first page passes; the third is refused by the field gate alone, which the entity gate allowed.');
+    $this->assertSame('Success: Retitle nodes: the values were accepted and written.', $first($answers['ai.retitle']['retitle']));
+    $this->assertStringContainsString('{"node":' . $pages['one'] . ',"old":"Volunteer Briefing for the Night Shift","new":"Volunteer Briefing for the Night Shift"}', $answers['ai.retitle']['read_back'], 'Read back, each title is the one written, and the rewriter writes it again.');
+    $this->assertSame(Retitle::WRITTEN, ConceptCalls::INSTALLED);
+    foreach (Retitle::WRITTEN as $name => $title) {
+      $this->assertSame($title, Node::load($pages[$name])?->getTitle(), 'The last call put each title back as installed.');
+    }
+    $this->assertNull($this->container->get('state')->get(ConceptCalls::LOCKED), 'The lock the third call was made under is put back.');
 
     // The examples' README quotes every command, and every answer under
     // its call's label.

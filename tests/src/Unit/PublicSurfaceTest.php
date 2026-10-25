@@ -23,7 +23,9 @@ use PHPUnit\Framework\Attributes\Group;
  *
  * The counts were taken on 2026-10-24, when the surface was counted and
  * cut: 9 attributes, 33 arguments to 30, 17 blueprint methods to 15, 23
- * interfaces to 20.
+ * interfaces to 20. Grown on 2026-10-25 by one argument,
+ * `#[Operation(gate:)]`, access borrowed from another thing's owner
+ * (docs/decisions.md#a-gate-is-borrowed-never-copied): 31 arguments.
  *
  * @see docs/decisions.md#the-surface-was-counted-and-cut
  */
@@ -45,7 +47,7 @@ class PublicSurfaceTest extends UnitTestCase {
    */
   protected const PINNED = [
     'attributes' => 9,
-    'attribute arguments' => 30,
+    'attribute arguments' => 31,
     'blueprint methods' => 15,
     'interfaces' => 20,
   ];

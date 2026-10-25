@@ -1482,7 +1482,7 @@ present, then three keys of its own:
 | `violations` | Empty on a 2xx; a refusal is [problem details](#problem-details). |
 | `notes` | Each value sent for a locked key that the key did not take, `{path, code, message}`, code `locked`, once per key: "Machine name is locked and kept as stored; the value sent was not taken." The key keeps what it holds and nothing is refused ([decision](decisions.md#locked-at-the-top)); a value sent as it is held says nothing. |
 | `stale` | Each stale reference kept, `{path, code, message, stored}`, code `stale`, with the stored value it keeps: the operation form's warning, said out loud. |
-| `outputs` | The declared outputs as storage reads them back after the write (`StorageAdapter::outputs()`), the tool's same answer; `{}` when none are declared or nothing was written. |
+| `outputs` | The declared outputs as storage reads them back after the write (`StorageAdapter::outputs()`), the tool's same answer; on a dry run, and for an operation that changes nothing, what its `prepare()` answered under an output's name; `{}` when none are declared or none was answered. |
 | `contract` | On a write, the envelope rebuilt from what is stored now, its `$id` the read's, so a client re-renders without a second request; `null` otherwise. Its fingerprint is the answer's `ETag`. |
 | `created` | On a write by an operation that creates, where the created thing now lives: `{resource, operation, parameters}` ([below](#where-a-created-thing-lives)); otherwise `null`. |
 | `x-surface-dry-run` | `true`, on a dry run only. |

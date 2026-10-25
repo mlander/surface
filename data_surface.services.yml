@@ -35,7 +35,7 @@ services:
   # and seals them.
   data_surface.resource_registry:
     class: Drupal\data_surface\ResourceBuild\ResourceRegistry
-    arguments: ['%data_surface.resource_classes%', '@cache.discovery', '@data_surface.resource_plugins', '@class_resolver']
+    arguments: ['%data_surface.resource_classes%', '@cache.discovery', '@data_surface.resource_plugins', '@class_resolver', '@entity_type.manager']
   # A derived resource is read from site state; when its cache tags are
   # invalidated, the registry this request already read forgets it.
   data_surface.resource_registry_invalidator:

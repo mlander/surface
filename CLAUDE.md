@@ -42,7 +42,12 @@ the record of the rework that brought the module to the pattern.
 - **Operation**: a way a resource is asked for, `#[Operation]`, its
   static facts on the attribute: id, label, `description:` (the tool's
   first sentence and both documents' top `description`), permission and
-  `creates:`. On the class, repeatable, when the context needs nothing
+  `creates:`, and `gate:`, access borrowed from another thing's owner
+  (another resource's operation, or core's `entity:<type>:<op>` and
+  `field:<type>.<field>:<op>`), asked after the permission about the
+  entity the context knows or per item of a collection, the access class
+  narrowing on top (example 17,
+  `docs/decisions.md#a-gate-is-borrowed-never-copied`). On the class, repeatable, when the context needs nothing
   more (the default; no method); on a static method returning an
   `OperationContext` when it needs more, the attribute's id and
   `creates` stamped on it and a context saying otherwise refused
@@ -638,7 +643,9 @@ so the rule is this sentence. `npm test` is not part of
   example 15's documents under `tests/fixtures/venues/` by
   `VenueResourceTest` with `DATA_SURFACE_VENUE_WRITE=1`, and example
   16's under `tests/fixtures/references/` by `ReferenceKeysTest` with
-  `DATA_SURFACE_REFERENCES_WRITE=1`. Never edit any of them by hand.
+  `DATA_SURFACE_REFERENCES_WRITE=1`, and example 17's under
+  `tests/fixtures/retitle/` by `RetitleExampleTest` with
+  `DATA_SURFACE_RETITLE_WRITE=1`. Never edit any of them by hand.
 - Commit messages are one line.
 
 ## Naming
@@ -683,7 +690,7 @@ src/Widget/ src/Plugin/  Definition to form element; resolvers, hosts, constrain
 src/Options/             Option sets, the resolver plugin base and manager.
 src/Variants/            Variants from the site: ComponentProps and ComponentSlots.
 src/Refinement/          Narrowing and choice sets.
-modules/                 Eighteen experimental submodules; each has its own README.
+modules/                 Nineteen experimental submodules; each has its own README.
 tests/src/               Unit, Kernel, Functional, FunctionalJavascript.
 docs/ scripts/           Published documentation; check.sh and the generators.
 ```

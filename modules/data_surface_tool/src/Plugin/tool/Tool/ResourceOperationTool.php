@@ -338,13 +338,13 @@ final class ResourceOperationTool extends ResourceOperationToolBase implements I
       return ExecutableResult::failure($this->refusedMessage($result->violations, $result->notes), $answer, $category);
     }
     // The resource's own outputs, beside the shape and never over it: read
-    // back once committed, and for an operation that changes nothing, what
-    // its prepare answered.
+    // back once committed, and for an operation that changes nothing or a
+    // dry run, what its prepare answered.
     // Decision: see docs/decisions.md#who-produces-outputs.
     $outputs = match (TRUE) {
       !$storage instanceof StorageAdapter => [],
       $result->committed => $storage->outputs($built, $result->values),
-      $built->changesNothing() && $result->prepared !== NULL => $storage->outputs($built, $result->values, $result->prepared),
+      $result->prepared !== NULL => $storage->outputs($built, $result->values, $result->prepared),
       default => [],
     };
     $answer += $outputs;

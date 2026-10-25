@@ -65,6 +65,7 @@ class ContractBaselineTest extends DataSurfaceKernelTestBase {
     'filter',
     'node',
     'data_surface_examples_references',
+    'data_surface_examples_retitle',
   ];
 
   /**
@@ -77,6 +78,7 @@ class ContractBaselineTest extends DataSurfaceKernelTestBase {
     'data_surface_component_block',
     'data_surface_block',
     'data_surface_examples_references',
+    'data_surface_examples_retitle',
   ];
 
   /**
@@ -97,6 +99,7 @@ class ContractBaselineTest extends DataSurfaceKernelTestBase {
       'node',
       'filter',
       'data_surface_examples_references',
+      'data_surface_examples_retitle',
     ]);
     // A theme, so the placement's themes and regions are pinned.
     $this->container->get('theme_installer')->install(['stark']);
@@ -128,6 +131,8 @@ class ContractBaselineTest extends DataSurfaceKernelTestBase {
     }
     $this->assertSame(array_keys($committed), array_keys($current), 'Every declaration is pinned, and every baseline still declared.');
     $this->assertSame([
+      'ai.retitle',
+      'ai.retitle.item',
       'block.data_surface_component',
       'block.placement',
       'block.placement.condition',

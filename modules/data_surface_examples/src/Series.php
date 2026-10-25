@@ -91,6 +91,11 @@ final class Series {
   public const REFERENCES = 'modules/data_surface_examples_references/';
 
   /**
+   * Example 17's module, which needs node for the pages it retitles.
+   */
+  public const RETITLE = 'modules/data_surface_examples_retitle/';
+
+  /**
    * Lists the examples, in the order they are read.
    *
    * @return array<int, array{title: \Stringable, concept: \Stringable, docs: string, decision: string, routes: string[], files: array<string, \Stringable>, from?: int}>
@@ -409,6 +414,30 @@ final class Series {
           'src/Plugin/Validation/Constraint/ReferenceableTypeConstraint.php' => t("the entity type's constraint, which the filters are options of; the main module's"),
           'src/Plugin/DataSurfaceOptionsResolver/ReferenceOptions.php' => t("the resolver that lists the candidates up to the limit; the main module's"),
           'src/Plugin/DataSurfaceWidget/AutocompleteWidget.php' => t("core's entity autocomplete, for a key past the limit; the main module's"),
+        ],
+      ],
+      17 => [
+        'title' => t('retitle in bulk, access borrowed'),
+        'concept' => t("a gate: access another thing's owner decides, asked per node, never copied"),
+        'docs' => 'docs/resources.md#a-gate-borrowed-from-another-thing',
+        'decision' => 'a-gate-is-borrowed-never-copied',
+        'routes' => ['data_surface_examples.step17'],
+        'files' => [
+          self::RETITLE . 'data_surface_examples_retitle.info.yml' => t('the module: a third one, which needs node for the pages it retitles'),
+          self::RETITLE . 'src/Resource/RetitleResource.php' => t("the resource: a list of nodes and a style, its own permission, and two gates borrowed from core, a node's update and its title's edit"),
+          self::RETITLE . 'src/Structure/RetitleItemStructure.php' => t('an item: the node, which the gates ask about, and the new title, if one is sent'),
+          self::RETITLE . 'src/TitleRewriter.php' => t('the rewriter: title case, sentence case or a prefix, the same every time, where a model would suggest a title'),
+          self::RETITLE . 'src/Storage/RetitleStorage.php' => t('the storage: works out each title, then saves each node, and answers the titles before and after'),
+          self::RETITLE . 'data_surface_examples_retitle.routing.yml#data_surface_examples.step17' => t("the route: the generic operation form, with the examples' panels"),
+          self::RETITLE . 'data_surface_examples_retitle.permissions.yml' => t('its permission, to ask for a retitle at all'),
+          self::RETITLE . 'config/optional/user.role.node_retitler.yml' => t('the role the calls are made as: the permission, and core\'s "edit any page content", optional config so it is installed once the page bundle is there'),
+          self::RETITLE . 'config/install/user.role.retitle_requester.yml' => t('the role of the account the gate refuses: the permission alone'),
+          self::RETITLE . 'config/optional/node.type.page.yml' => t('the page bundle, for a site that has none'),
+          self::RETITLE . 'src/Hook/RetitleHooks.php' => t("writes the three pages once the module is installed, and locks the third one's title while a State flag is set, as another module would through core's field access"),
+          self::RETITLE . 'data_surface_examples_retitle.install' => t('deletes them when it is uninstalled'),
+          self::RETITLE . 'src/Retitle.php' => t('the three pages, their ids kept in State'),
+          'src/ResourceBuild/Gates.php' => t("what answers a gate: core's access handler, or another resource's operation; the main module's"),
+          'src/ResourceBuild/ItemGates.php' => t("the gates asked once per item, before the storage sees it; the main module's"),
         ],
       ],
     ];

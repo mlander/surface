@@ -1,0 +1,5 @@
+# Example 17: asks for a retitle, and so calls its tool. Which nodes it
+# may retitle is each node's own access, borrowed.
+retitle nodes:
+  title: 'Retitle nodes in bulk'
+  description: 'Each node is retitled only where the account may update it and edit its title.'

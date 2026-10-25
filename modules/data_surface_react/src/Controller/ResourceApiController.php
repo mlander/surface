@@ -507,13 +507,13 @@ final class ResourceApiController implements ContainerInjectionInterface {
       throw $this->refused($answer);
     }
     $answer += ['outputs' => new \stdClass(), 'contract' => NULL, 'created' => NULL];
-    if ($dry) {
-      return $this->respond($answer + [self::DRY_RUN => TRUE]);
-    }
-    if ($served->surface->changesNothing() && $served->storage instanceof StorageAdapter && $result->prepared !== NULL) {
-      // A read answers what its prepare answered.
+    if (($dry || $served->surface->changesNothing()) && $served->storage instanceof StorageAdapter && $result->prepared !== NULL) {
+      // A read, and a dry run, answer what its prepare answered.
       // Decision: see docs/decisions.md#who-produces-outputs.
       $answer['outputs'] = (object) $served->storage->outputs($served->surface, $result->values, $result->prepared);
+    }
+    if ($dry) {
+      return $this->respond($answer + [self::DRY_RUN => TRUE]);
     }
     if (!$result->committed || $deletes) {
       // An operation that writes nothing, a read, answers the run; so does

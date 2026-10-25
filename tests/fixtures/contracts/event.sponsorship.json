@@ -374,6 +374,14 @@
                                                     "title": "Administrator"
                                                 },
                                                 {
+                                                    "const": "node_retitler",
+                                                    "title": "Node retitler"
+                                                },
+                                                {
+                                                    "const": "retitle_requester",
+                                                    "title": "Retitle requester"
+                                                },
+                                                {
                                                     "const": "event_sponsorship_editor",
                                                     "title": "Sponsorship editor"
                                                 },

@@ -191,12 +191,12 @@ inputs get. What is lost, on top of the two the inputs already lose
 
 The tools `data_surface_tool` derives from operations answer with the
 accepted `values`, as the read tool would answer them, `committed`, and
-the resource's own outputs converted here; a dry run answers the same
-`values` and no outputs. A resource's outputs are what its storage's
-`load()` hands back once the values are committed; a read only
-operation, which is never committed, answers what its storage's
-`prepare()` answered under an output's name
-([decision](decisions.md#who-produces-outputs)). An operation that takes
+the resource's own outputs converted here. A resource's outputs are
+what its storage's `load()` hands back once the values are committed; a
+read only operation, which is never committed, and a dry run, which
+stops before it writes, answer what its storage's `prepare()` answered
+under an output's name: example 17's dry run answers each node's title
+before and after ([decision](decisions.md#who-produces-outputs)). An operation that takes
 the keys of a structure of its own (`#[Operation(structure:)]`) answers
 that structure's outputs: example 15's listing declares `items`, a list
 of maps, and `total`

@@ -31,6 +31,7 @@ use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\IgnoreDeprecations;
 use Drupal\data_surface_examples_references\Sponsorship;
+use Drupal\data_surface_examples_retitle\Retitle;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
 /**
@@ -145,6 +146,7 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
     'filter',
     'node',
     'data_surface_examples_references',
+    'data_surface_examples_retitle',
   ];
 
   /**
@@ -991,6 +993,46 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
       ]);
     });
     $resources->forgetBuilds();
+  }
+
+  /**
+   * Example 17's retitle: a list of nodes, each one's gates asked later.
+   *
+   * Both documents hold the list to its count, each node to the site's
+   * candidates and each title to its length, as the pipeline does. The
+   * gates are asked of each node after validation, before storage, so a
+   * node whose title is locked is valid here: both documents accept it,
+   * the full schema marking the list `live`, and the call refuses it on
+   * its item (ExamplesConceptsToolTest).
+   *
+   * @see docs/decisions.md#a-gate-is-borrowed-never-copied
+   */
+  public function testRetitle(): void {
+    $this->installEntitySchema('node');
+    $this->installSchema('node', ['node_access']);
+    $this->installConfig(['node', 'filter', 'data_surface_examples_retitle']);
+    $this->container->get('class_resolver')->getInstanceFromDefinition(Retitle::class)->writeNodes();
+    $pages = $this->container->get('class_resolver')->getInstanceFromDefinition(Retitle::class)->ids();
+    $this->container->get('state')->set(Retitle::LOCKED, TRUE);
+    $three = [['node' => $pages['one']], ['node' => $pages['two']], ['node' => $pages['three']]];
+    $built = $this->build('ai.retitle', 'retitle');
+    $this->assertTable('ai.retitle', $built, [], [
+      'three pages, no title sent' => [['items' => $three], TRUE],
+      'a title sent' => [
+        ['items' => [['node' => $pages['one'], 'new_title' => 'Night shift']], 'style' => 'sentence'],
+        TRUE,
+      ],
+      'the third page while its title is locked, which its gate refuses later' => [
+        ['items' => [['node' => $pages['three']]]],
+        TRUE,
+      ],
+      'no page' => [['items' => []], FALSE],
+      'fifty-one pages' => [['items' => array_fill(0, 51, ['node' => $pages['one']])], FALSE],
+      'a node the site does not have' => [['items' => [['node' => 999]]], FALSE],
+      'a title too long' => [['items' => [['node' => $pages['one'], 'new_title' => str_repeat('a', 256)]]], FALSE],
+      'a style not offered' => [['items' => $three, 'style' => 'shouting'], FALSE],
+    ], $this->container->get('data_surface.resources')->buildStatic('ai.retitle', $this->container->get('data_surface.resources')->operation('ai.retitle', 'retitle')));
+    $this->container->get('state')->delete(Retitle::LOCKED);
   }
 
   /**

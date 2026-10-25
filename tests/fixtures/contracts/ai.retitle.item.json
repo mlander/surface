@@ -1,0 +1,56 @@
+{
+    "resource": "ai.retitle.item",
+    "module": "data_surface_examples_retitle",
+    "contract": 4,
+    "documents": [
+        {
+            "resource": "ai.retitle.item",
+            "operation": null,
+            "label": null,
+            "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "x-surface": {
+                    "contract": 4,
+                    "version": 1
+                },
+                "type": "object",
+                "properties": {
+                    "node": {
+                        "title": "Node",
+                        "description": "The node to retitle.",
+                        "type": "integer",
+                        "oneOf": [
+                            {
+                                "const": null
+                            }
+                        ],
+                        "x-surface": {
+                            "reference": {
+                                "entityType": "node"
+                            },
+                            "checkedOnServer": [
+                                {
+                                    "constraint": "DataSurfaceValidReference",
+                                    "message": "Refers to an entity the account may reference"
+                                }
+                            ]
+                        }
+                    },
+                    "new_title": {
+                        "title": "New title",
+                        "description": "Written as sent; left out, the node's title is rewritten in the style chosen.",
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 255
+                    }
+                },
+                "additionalProperties": false,
+                "required": [
+                    "node"
+                ]
+            }
+        }
+    ]
+}

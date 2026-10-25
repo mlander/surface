@@ -40,6 +40,7 @@ class ExampleFilesTest extends UnitTestCase {
     'data_surface_component_block',
     'data_surface_examples_keys',
     'data_surface_examples_references',
+    'data_surface_examples_retitle',
   ];
 
   /**
@@ -78,7 +79,7 @@ class ExampleFilesTest extends UnitTestCase {
    * Tests every listed file is there, and is read as the docs tests read it.
    */
   public function testEveryListedFileIsThere(): void {
-    $this->assertSame(range(1, 16), array_keys(Series::examples()));
+    $this->assertSame(range(1, 17), array_keys(Series::examples()));
     foreach (Series::examples() as $number => $example) {
       $this->assertNotSame('', (string) $example['title']);
       $this->assertNotSame('', (string) $example['concept']);
@@ -168,8 +169,8 @@ class ExampleFilesTest extends UnitTestCase {
    * Tests what a listed class names is listed with it, or before it.
    *
    * A class it imports from the examples' parts or the main module's
-   * providers by an earlier example or the same one; its storage, the
-   * config object the storage names, both its settings and its schema,
+   * providers by an earlier example or the same one; its storage, and when
+   * the storage names a config object, both its settings and its schema,
    * and a variant of it by the same one; and a route's resource with the
    * route.
    */
@@ -197,13 +198,18 @@ class ExampleFilesTest extends UnitTestCase {
           if (preg_match('/#\[Resource\([^\n]*storage: (\w+)::class/', $source, $match)) {
             $storage = (string) self::resolve($file, $match[1]);
             $this->assertArrayHasKey($storage, $example['files'], sprintf('Example %d lists %s without its storage.', $number, $path));
-            $this->assertMatchesRegularExpression('/const CONFIG = \'([\w.]+)\';/', self::source($storage));
-            preg_match('/const CONFIG = \'([\w.]+)\';/', self::source($storage), $config);
-            // The module the storage is in ships the settings and the schema.
-            $module = explode('/', $storage)[1];
-            $base = 'modules/' . $module . '/config/';
-            $this->assertArrayHasKey($base . 'install/' . $config[1] . '.yml', $example['files'], sprintf('Example %d lists %s without the settings it ships.', $number, $path));
-            $this->assertArrayHasKey($base . 'schema/' . $module . '.schema.yml#' . $config[1], $example['files'], sprintf('Example %d lists %s without its config schema.', $number, $path));
+            // A storage that names a config object: the module the storage
+            // is in ships the settings and the schema. One that stores
+            // elsewhere, as example 17's writes node titles, ships neither.
+            if (preg_match('/const CONFIG = \'([\w.]+)\';/', self::source($storage), $config)) {
+              $module = explode('/', $storage)[1];
+              $base = 'modules/' . $module . '/config/';
+              $this->assertArrayHasKey($base . 'install/' . $config[1] . '.yml', $example['files'], sprintf('Example %d lists %s without the settings it ships.', $number, $path));
+              $this->assertArrayHasKey($base . 'schema/' . $module . '.schema.yml#' . $config[1], $example['files'], sprintf('Example %d lists %s without its config schema.', $number, $path));
+            }
+            else {
+              $this->assertStringNotContainsString('ConfigObjectStorage', self::source($storage), sprintf('%s is a config object storage and names no config object.', $storage));
+            }
           }
           foreach ($variants[$path] ?? [] as $variant) {
             $this->assertArrayHasKey($variant, $example['files'], sprintf('Example %d lists %s without its variant %s.', $number, $path, $variant));

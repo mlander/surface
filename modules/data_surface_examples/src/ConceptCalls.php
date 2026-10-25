@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Drupal\data_surface_examples;
 
 /**
- * The tool calls examples 7 to 16 show, written down once.
+ * The tool calls examples 7 to 17 show, written down once.
  *
  * None leaves anything written: every call is a dry run, which accepts,
  * validates and prepares the values, answers with what would be stored
@@ -13,7 +13,8 @@ namespace Drupal\data_surface_examples;
  * stops there by itself and is sent as it would be for real, and
  * example 15's, which adds a fourth venue, changes it and removes it
  * again with its last call, so the three venues the module ships are
- * what is left. So each
+ * what is left, and example 17's, which retitles its three pages and
+ * puts each title back with its last call. So each
  * example's panel can make its calls whenever it is drawn and show what
  * the tool answered, ExamplesConceptsToolTest makes them on the shipped
  * settings and holds the README to their answers, and the README and the
@@ -72,6 +73,64 @@ final class ConceptCalls {
   public const EDITOR = 'event_sponsorship_editor';
 
   /**
+   * Example 17: a value that stands for one of its pages, by name.
+   *
+   * `@page:one`, `@page:two` or `@page:three`: the id the retitle module
+   * wrote it under when it was installed, read from State (PAGES) when the
+   * call is made.
+   */
+  public const PAGE = '@page:';
+
+  /**
+   * Example 17: the State key its pages' ids are kept under, by name.
+   *
+   * \Drupal\data_surface_examples_retitle\Retitle::NODES, spelled here so
+   * this class needs nothing of a module that may be off.
+   */
+  public const PAGES = 'data_surface_examples_retitle.nodes';
+
+  /**
+   * Example 17: the State flag that locks the third page's title.
+   */
+  public const LOCKED = 'data_surface_examples_retitle.locked';
+
+  /**
+   * Example 17: the module its resource is in.
+   */
+  public const RETITLE = 'data_surface_examples_retitle';
+
+  /**
+   * Example 17: the role that may retitle and edit pages.
+   */
+  public const RETITLER = 'node_retitler';
+
+  /**
+   * Example 17: the role that may retitle and edit no page.
+   */
+  public const REQUESTER = 'retitle_requester';
+
+  /**
+   * Example 17: each page's title as installed, which the last call puts back.
+   *
+   * \Drupal\data_surface_examples_retitle\Retitle::WRITTEN, spelled here
+   * for the same reason as PAGES.
+   */
+  public const INSTALLED = [
+    'one' => 'volunteer briefing for the night shift',
+    'two' => 'WHERE TO PARK ON FESTIVAL DAYS',
+    'three' => 'menu of the food stalls',
+  ];
+
+  /**
+   * Example 17: the three pages, as the calls send them.
+   */
+  protected const THREE_PAGES = [
+    ['node' => self::PAGE . 'one'],
+    ['node' => self::PAGE . 'two'],
+    ['node' => self::PAGE . 'three'],
+  ];
+
+  /**
    * The calls, by resource id and then by name.
    *
    * Each says what it shows, the operation it calls (configure unless it
@@ -81,8 +140,9 @@ final class ConceptCalls {
    * only where it is enabled, and the State it is made in, set for the
    * call and put back after it. A call that says an account is made as an
    * account whose only role, beside authenticated, is that one. A value
-   * DEFAULT_THEME is the site's default theme when the call is made, and
-   * a value NODE and a name one of example 16's nodes (values()).
+   * DEFAULT_THEME is the site's default theme when the call is made, a
+   * value NODE and a name one of example 16's nodes, and a value PAGE and
+   * a name one of example 17's pages (values()).
    */
   public const CALLS = [
     'event.bulletin' => [
@@ -331,6 +391,59 @@ final class ConceptCalls {
         'values' => ['setting' => ['entity_type' => 'node', 'id' => self::NODE . 'article']],
       ],
     ],
+    'ai.retitle' => [
+      'dry_run' => [
+        'label' => 'Three pages in title case, rehearsed as the retitler: accepted, each new title shown',
+        'operation' => 'retitle',
+        'module' => self::RETITLE,
+        'account' => self::RETITLER,
+        'values' => ['items' => self::THREE_PAGES, 'style' => 'title'],
+      ],
+      'may_not_edit' => [
+        'label' => 'The same pages, as an account that may retitle and edit no page: refused, on each page',
+        'operation' => 'retitle',
+        'module' => self::RETITLE,
+        'account' => self::REQUESTER,
+        'values' => ['items' => self::THREE_PAGES, 'style' => 'title'],
+      ],
+      'title_locked' => [
+        'label' => "The first and third pages, while the third one's title is locked: refused by the field gate alone, on the third",
+        'operation' => 'retitle',
+        'module' => self::RETITLE,
+        'account' => self::RETITLER,
+        'state' => [self::LOCKED => TRUE],
+        'values' => ['items' => [['node' => self::PAGE . 'one'], ['node' => self::PAGE . 'three']], 'style' => 'title'],
+      ],
+      'retitle' => [
+        'label' => 'The three pages retitled as the retitler: written, one save per page',
+        'operation' => 'retitle',
+        'module' => self::RETITLE,
+        'account' => self::RETITLER,
+        'values' => ['items' => self::THREE_PAGES, 'style' => 'title'],
+        'dry_run' => FALSE,
+      ],
+      'read_back' => [
+        'label' => 'Read back: the same call rehearsed, each title now the one written',
+        'operation' => 'retitle',
+        'module' => self::RETITLE,
+        'account' => self::RETITLER,
+        'values' => ['items' => self::THREE_PAGES, 'style' => 'title'],
+      ],
+      'put_back' => [
+        'label' => 'Each title sent as it was installed: written, so the pages are as the module wrote them',
+        'operation' => 'retitle',
+        'module' => self::RETITLE,
+        'account' => self::RETITLER,
+        'values' => [
+          'items' => [
+            ['node' => self::PAGE . 'one', 'new_title' => self::INSTALLED['one']],
+            ['node' => self::PAGE . 'two', 'new_title' => self::INSTALLED['two']],
+            ['node' => self::PAGE . 'three', 'new_title' => self::INSTALLED['three']],
+          ],
+        ],
+        'dry_run' => FALSE,
+      ],
+    ],
     'block.placement' => [
       'place' => [
         'label' => 'The Spotlight block placed through create, made again: refused for the machine name it took',
@@ -483,6 +596,9 @@ final class ConceptCalls {
       }
       elseif (is_string($value) && str_starts_with($value, self::NODE)) {
         $value = (int) (\Drupal::state()->get(self::NODES, [])[substr($value, strlen(self::NODE))] ?? 0);
+      }
+      elseif (is_string($value) && str_starts_with($value, self::PAGE)) {
+        $value = (int) (\Drupal::state()->get(self::PAGES, [])[substr($value, strlen(self::PAGE))] ?? 0);
       }
     });
     return $values;

@@ -130,6 +130,11 @@ final class ExamplesController extends ControllerBase {
   public const REFERENCES = 'data_surface_examples_references';
 
   /**
+   * Example 17's module, which needs node.
+   */
+  public const RETITLE = 'data_surface_examples_retitle';
+
+  /**
    * That module's list, constraint, validator, resolver and alter.
    */
   public const KEYS_FILES = [
@@ -189,6 +194,11 @@ final class ExamplesController extends ControllerBase {
   public function index(): array {
     $steps = [];
     foreach ($this->steps() as $number => $step) {
+      if ($number === 17) {
+        $steps['gates'] = [
+          '#markup' => '<h2>' . $this->t('Access borrowed') . '</h2><p>' . $this->t("Example 17 is a resource of its own that acts on nodes: a bulk retitle, which asks each node's own access, core's and every module's, rather than copying it.") . '</p>',
+        ];
+      }
       if ($number === 16) {
         $steps['references'] = [
           '#markup' => '<h2>' . $this->t('References') . '</h2><p>' . $this->t("Example 16 is a key that refers to an entity: declared by the data type string of what it refers to, its candidates the selection handler's for the account, listed while there are few and looked up past that.") . '</p>',
@@ -732,6 +742,19 @@ final class ExamplesController extends ControllerBase {
             ],
           ],
       ],
+      17 => [
+        'title' => $series[17]['title'],
+        'sentence' => $this->t("A bulk retitle of nodes with its own keys, storage and permission, which may retitle only a node the account may update and whose title it may edit. It names those two answers as gates, core's update access and its field access for the title, and asks them of each node in the list, so a module that changes node access changes what it may do without being named. A refusal lands on the node's own item. The new titles come from a deterministic rewriter, not a model. It lives in @module, which needs node.", [
+          '@module' => self::RETITLE,
+        ]),
+        'items' => $this->moduleHandler()->moduleExists(self::RETITLE)
+          ? [$this->route('data_surface_examples.step17'), $this->react('ai.retitle', 'retitle')]
+          : [
+            [
+              '#markup' => $this->t('Enable it: <code>ddev drush pm:install @module</code>; its page is then /surface-examples/17.', ['@module' => self::RETITLE]),
+            ],
+          ],
+      ],
     ];
   }
 
@@ -811,18 +834,21 @@ final class ExamplesController extends ControllerBase {
    *
    * @param string $resource
    *   The example's resource id.
+   * @param string $operation
+   *   The operation, configure unless named.
    *
    * @return array|\Drupal\Core\StringTranslation\TranslatableMarkup
    *   A link render array, or the sentence naming the path.
    */
-  protected function react(string $resource): array|TranslatableMarkup {
+  protected function react(string $resource, string $operation = 'configure'): array|TranslatableMarkup {
     if (!$this->moduleHandler()->moduleExists(self::REACT)) {
-      return $this->t('In React at /surface-react/@resource/configure, once @module is enabled.', [
+      return $this->t('In React at /surface-react/@resource/@operation, once @module is enabled.', [
         '@resource' => $resource,
+        '@operation' => $operation,
         '@module' => self::REACT,
       ]);
     }
-    $url = Url::fromRoute('data_surface_react.page', ['resource' => $resource, 'operation' => 'configure']);
+    $url = Url::fromRoute('data_surface_react.page', ['resource' => $resource, 'operation' => $operation]);
     return Link::fromTextAndUrl($this->t('In React: @path', ['@path' => $url->toString()]), $url)->toRenderable();
   }
 

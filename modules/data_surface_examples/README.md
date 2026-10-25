@@ -28,7 +28,10 @@ page at a time and reordered in one write
 that refers to an entity, declared by the data type string of what it
 refers to, listed while the site has few and looked up past that, in a
 submodule that needs node
-([below](#example-16-references-three-ways)).
+([below](#example-16-references-three-ways)). Example 17 is a bulk
+retitle of nodes, a resource of its own that borrows each node's access,
+core's update and its title's edit, asked per node, in a submodule that
+needs node too ([below](#example-17-retitle-in-bulk-access-borrowed)).
 
 ```bash
 drush pm:install data_surface_examples
@@ -36,7 +39,8 @@ drush pm:install data_surface_examples
 
 Then visit `/surface-examples` as an administrator. Every page asks for
 "administer site configuration", example 15's for "administer event
-venues", and example 16's for "set event sponsorship". Nothing else is needed: the venues and rooms are the three
+venues", example 16's for "set event sponsorship", and example 17's
+for "retitle nodes". Nothing else is needed: the venues and rooms are the three
 venues the module ships, example 15's config entities, and each example
 keeps its settings in a config object of its own
 (`data_surface_examples.registration_step1` to `_step3`, then
@@ -4486,6 +4490,320 @@ of code, counted without blank lines or comments:
 | [`src/Plugin/DataSurfaceOptionsResolver/ReferenceOptions.php`](../../src/Plugin/DataSurfaceOptionsResolver/ReferenceOptions.php) | the resolver that lists the candidates up to the limit; the main module's | 39 |
 | [`src/Plugin/DataSurfaceWidget/AutocompleteWidget.php`](../../src/Plugin/DataSurfaceWidget/AutocompleteWidget.php) | core's entity autocomplete, for a key past the limit; the main module's | 59 |
 
+## Example 17: retitle in bulk, access borrowed
+
+`/surface-examples/17`, once its module is on:
+
+```bash
+drush pm:install data_surface_examples_retitle
+```
+
+The module needs node: it retitles nodes. It ships the page bundle as
+optional config, for a site that has none, two roles, Node retitler
+("retitle nodes" and core's "edit any page content") and Retitle
+requester ("retitle nodes" alone), and when it is installed it writes
+three basic pages its calls name. Uninstalled, it deletes them.
+
+A module ships a resource of its own, with its own keys, storage and
+permission, that acts on things another module owns. The retitle takes a
+list of nodes and a style, and writes their titles. It may retitle only
+a node the account may update and whose title it may edit, and those
+two answers are not its own: they are node's access handler's, with
+every module that alters node access or field access. The retitle names
+them as gates, `gate:` on its `#[Operation]`, and asks them of each node
+in the list. Nothing here copies a check, so a workflow, a group or a
+field permissions module that changes who may edit a node changes what
+the retitle may do, without being named.
+
+<!-- code: ../data_surface_examples_retitle/src/Resource/RetitleResource.php -->
+
+```php
+#[Resource('ai.retitle', storage: RetitleStorage::class)]
+#[Operation('retitle',
+  label: new TranslatableMarkup('Retitle nodes'),
+  description: new TranslatableMarkup('Rewrites the titles of one to fifty nodes in the style chosen, each node one the account may update and whose title it may edit; a new title sent is written as sent.'),
+  permission: 'retitle nodes',
+  gate: ['entity:node:update', 'field:node.title:edit'],
+)]
+final class RetitleResource implements ResourceInterface, DefinesOutputsInterface {
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function defineInputs(BlueprintInterface $inputs): void {
+    $inputs->attachList('items', RetitleItemStructure::class, min: 1, max: 50)
+      ->setLabel(t('Nodes'))
+      ->setDescription(t('Each node to retitle, one to fifty.'))
+      ->setRequired(TRUE);
+    $inputs->add('style', 'string', t('Style'), default: TitleRewriter::TITLE)
+      ->setDescription(t('How the title of a node sent no new title is rewritten.'))
+      ->addConstraint('LabeledChoice', ['choices' => TitleRewriter::styles()]);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function defineOutputs(BlueprintInterface $outputs): void {
+    $title = MapDataDefinition::create()
+      ->setLabel(t('Title'))
+      ->setPropertyDefinition('node', DataDefinition::create('integer')->setLabel(t('Node'))->setRequired(TRUE))
+      ->setPropertyDefinition('old', DataDefinition::create('string')->setLabel(t('Old title'))->setRequired(TRUE))
+      ->setPropertyDefinition('new', DataDefinition::create('string')->setLabel(t('New title'))->setRequired(TRUE));
+    $outputs->addList('titles', $title, t('Titles'))
+      ->setDescription(t("Each node's title before and after, in the order sent: what a dry run would write, or what was written."))
+      ->setRequired(TRUE);
+  }
+
+}
+```
+
+Each item is a node, which the gates ask about, and a new title, written
+as sent when one is sent:
+
+<!-- code: ../data_surface_examples_retitle/src/Structure/RetitleItemStructure.php -->
+
+```php
+#[Structure('ai.retitle.item')]
+final class RetitleItemStructure implements StructureInterface {
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function defineInputs(BlueprintInterface $inputs): void {
+    $inputs->add('node', 'entity:node', t('Node'))
+      ->setDescription(t('The node to retitle.'))
+      ->setRequired(TRUE);
+    $inputs->add('new_title', 'string', t('New title'))
+      ->setDescription(t("Written as sent; left out, the node's title is rewritten in the style chosen."))
+      ->addConstraint('Length', ['max' => 255]);
+  }
+
+}
+```
+
+| Gate | What answers it |
+| --- | --- |
+| `entity:node:update` | core's update access on the node: node's access handler, `hook_node_access()`, node grants and every module answering `hook_entity_access()` |
+| `field:node.title:edit` | core's edit access on the node's title: the handler's `fieldAccess()` and every module answering `hook_entity_field_access()`, this one's included |
+
+Field access does not include entity access, which is why node's own
+form asks both, and so does the retitle; each answers by itself, and a
+node either refuses is refused. The operation's own permission, "retitle
+nodes", is asked first; the tool listing declares it. Whether each node
+may be retitled is settled per node, once the list is sent: the full
+schema marks `items` `x-surface.live`, and the tool listing says on it
+that it is decided once the thing it belongs to is known. A refusal
+lands on the node's own item, `/items/0/node`, with what may not be done
+to which node and the owner's reason, and the other items carry none.
+The gates are asked before the storage's `prepare()`, so the storage
+only ever sees items every gate allowed.
+
+The new titles come from `TitleRewriter`, which is no model: title case,
+sentence case, or title case after the prefix "Festival:", the same
+every time. A dry run answers the titles before and after, which is
+what the storage's `prepare()` rehearsed, and a write answers what it
+wrote, one save per node whose title changes.
+
+<!-- code: ../data_surface_examples_retitle/src/Storage/RetitleStorage.php -->
+
+```php
+final class RetitleStorage implements ResourceStorageInterface, ContainerInjectionInterface {
+
+  /**
+   * Constructs a RetitleStorage.
+   *
+   * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entityTypeManager
+   *   The entity type manager, which loads and saves the nodes.
+   * @param \Drupal\Core\State\StateInterface $state
+   *   The State, which keeps the titles the last retitle wrote.
+   */
+  public function __construct(
+    protected readonly EntityTypeManagerInterface $entityTypeManager,
+    protected readonly StateInterface $state,
+  ) {}
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function create(ContainerInterface $container): static {
+    return new static($container->get('entity_type.manager'), $container->get('state'));
+  }
+
+  /**
+   * {@inheritdoc}
+   *
+   * No values: a retitle names its nodes each time. The titles the last
+   * one wrote, which are no key, are what a write reads back as its
+   * output.
+   */
+  public function load(OperationContext $context): array {
+    return ['titles' => array_values((array) $this->state->get(Retitle::LAST, []))];
+  }
+
+  /**
+   * {@inheritdoc}
+   *
+   * Each item's node, its title, and the title it takes.
+   */
+  public function prepare(OperationContext $context, array $values, AccountInterface $account): array {
+    $style = is_string($values['style'] ?? NULL) ? $values['style'] : TitleRewriter::TITLE;
+    $storage = $this->entityTypeManager->getStorage('node');
+    $titles = [];
+    $refused = [];
+    foreach (array_values((array) ($values['items'] ?? [])) as $delta => $item) {
+      $node = $storage->load($item['node'] ?? 0);
+      if (!$node instanceof NodeInterface) {
+        $refused[] = new Violation('items', $delta . '.node', sprintf('There is no node %s.', (string) ($item['node'] ?? '')), Violation::NOT_FOUND);
+        continue;
+      }
+      $sent = $item['new_title'] ?? NULL;
+      $new = is_string($sent) && $sent !== '' ? $sent : TitleRewriter::rewrite((string) $node->getTitle(), $style);
+      if (mb_strlen($new) > 255) {
+        $refused[] = new Violation('items', $delta . '.new_title', sprintf('The title %s rewrites to is longer than 255 characters.', $node->label()), 'length');
+        continue;
+      }
+      $titles[] = ['node' => (int) $node->id(), 'old' => (string) $node->getTitle(), 'new' => $new];
+    }
+    if ($refused !== []) {
+      throw new StorageViolationsException(new ViolationSet($refused));
+    }
+    return ['titles' => $titles];
+  }
+
+  /**
+   * {@inheritdoc}
+   *
+   * One save per node whose title changes, then the list kept.
+   */
+  public function commit(OperationContext $context, array $prepared, AccountInterface $account): void {
+    $storage = $this->entityTypeManager->getStorage('node');
+    foreach ($prepared['titles'] ?? [] as ['node' => $id, 'old' => $old, 'new' => $new]) {
+      $node = $storage->load($id);
+      if ($node instanceof NodeInterface && $old !== $new) {
+        $node->setTitle($new)->save();
+      }
+    }
+    $this->state->set(Retitle::LAST, $prepared['titles'] ?? []);
+  }
+
+}
+```
+
+On a site whose pages are moderated, the three pages are written as
+drafts, which an account that may not see unpublished content cannot
+name, and core's update access asks the workflow too, refusing an
+account without a transition: the reference key asks the first and the
+gate the second, so the calls there are refused before they write.
+
+### The calls
+
+Made on the three pages the module wrote, as an account whose only
+role, beside authenticated, is Node retitler, but the second, made as
+one whose only role is Retitle requester. The third is made while the
+module's field access hook locks the third page's title, which a State
+flag turns on. The fourth writes, the fifth rehearses the same call
+again, and the last puts each title back as it was installed. While a
+page is titled otherwise, by the form or a call of yours, the page makes
+every call as a dry run, so it never undoes what was saved. Drush names
+each account by its id, which the site chose when it made it.
+
+```bash
+# UID: an account whose only role, beside authenticated, is node_retitler.
+drush tool:run data_surface:ai.retitle:retitle --uid="$UID" --input='{"values":{"items":[{"node":4},{"node":5},{"node":6}],"style":"title"}}' --input=dry_run=true
+```
+
+```
+1. Three pages in title case, rehearsed as the retitler: accepted, each new title shown
+Success: Dry run of Retitle nodes: the values were accepted and prepared, and nothing was written.
+  values: {"items":[{"node":4,"new_title":null},{"node":5,"new_title":null},{"node":6,"new_title":null}],"style":"title"}
+  titles: [{"node":4,"old":"volunteer briefing for the night shift","new":"Volunteer Briefing for the Night Shift"},{"node":5,"old":"WHERE TO PARK ON FESTIVAL DAYS","new":"Where to Park on Festival Days"},{"node":6,"old":"menu of the food stalls","new":"Menu of the Food Stalls"}]
+```
+
+```bash
+# UID: an account whose only role, beside authenticated, is retitle_requester.
+drush tool:run data_surface:ai.retitle:retitle --uid="$UID" --input='{"values":{"items":[{"node":4},{"node":5},{"node":6}],"style":"title"}}' --input=dry_run=true
+```
+
+```
+2. The same pages, as an account that may retitle and edit no page: refused, on each page
+Failed: The values were refused:
+/items/0/node: You may not update volunteer briefing for the night shift: The 'edit any page content' permission is required.
+/items/1/node: You may not update WHERE TO PARK ON FESTIVAL DAYS: The 'edit any page content' permission is required.
+/items/2/node: You may not update menu of the food stalls: The 'edit any page content' permission is required.
+```
+
+```bash
+# UID: an account whose only role, beside authenticated, is node_retitler.
+drush state:set data_surface_examples_retitle.locked 1
+drush tool:run data_surface:ai.retitle:retitle --uid="$UID" --input='{"values":{"items":[{"node":4},{"node":6}],"style":"title"}}' --input=dry_run=true
+drush state:delete data_surface_examples_retitle.locked
+```
+
+```
+3. The first and third pages, while the third one's title is locked: refused by the field gate alone, on the third
+Failed: The values were refused:
+/items/1/node: You may not edit the title of menu of the food stalls: The menu is at the printer, so its title is locked.
+```
+
+```bash
+# UID: an account whose only role, beside authenticated, is node_retitler.
+drush tool:run data_surface:ai.retitle:retitle --uid="$UID" --input='{"values":{"items":[{"node":4},{"node":5},{"node":6}],"style":"title"}}'
+```
+
+```
+4. The three pages retitled as the retitler: written, one save per page
+Success: Retitle nodes: the values were accepted and written.
+  titles: [{"node":4,"old":"volunteer briefing for the night shift","new":"Volunteer Briefing for the Night Shift"},{"node":5,"old":"WHERE TO PARK ON FESTIVAL DAYS","new":"Where to Park on Festival Days"},{"node":6,"old":"menu of the food stalls","new":"Menu of the Food Stalls"}]
+```
+
+```bash
+# UID: an account whose only role, beside authenticated, is node_retitler.
+drush tool:run data_surface:ai.retitle:retitle --uid="$UID" --input='{"values":{"items":[{"node":4},{"node":5},{"node":6}],"style":"title"}}' --input=dry_run=true
+```
+
+```
+5. Read back: the same call rehearsed, each title now the one written
+Success: Dry run of Retitle nodes: the values were accepted and prepared, and nothing was written.
+  values: {"items":[{"node":4,"new_title":null},{"node":5,"new_title":null},{"node":6,"new_title":null}],"style":"title"}
+  titles: [{"node":4,"old":"Volunteer Briefing for the Night Shift","new":"Volunteer Briefing for the Night Shift"},{"node":5,"old":"Where to Park on Festival Days","new":"Where to Park on Festival Days"},{"node":6,"old":"Menu of the Food Stalls","new":"Menu of the Food Stalls"}]
+```
+
+```bash
+# UID: an account whose only role, beside authenticated, is node_retitler.
+drush tool:run data_surface:ai.retitle:retitle --uid="$UID" --input='{"values":{"items":[{"node":4,"new_title":"volunteer briefing for the night shift"},{"node":5,"new_title":"WHERE TO PARK ON FESTIVAL DAYS"},{"node":6,"new_title":"menu of the food stalls"}]}}'
+```
+
+```
+6. Each title sent as it was installed: written, so the pages are as the module wrote them
+Success: Retitle nodes: the values were accepted and written.
+  titles: [{"node":4,"old":"Volunteer Briefing for the Night Shift","new":"volunteer briefing for the night shift"},{"node":5,"old":"Where to Park on Festival Days","new":"WHERE TO PARK ON FESTIVAL DAYS"},{"node":6,"old":"Menu of the Food Stalls","new":"menu of the food stalls"}]
+```
+
+### Files
+
+What example 17 is made of, as its page lists them, each with its lines
+of code, counted without blank lines or comments:
+
+<!-- files: 17 -->
+
+| File | What it is | Lines |
+| --- | --- | --- |
+| [`modules/data_surface_examples_retitle/data_surface_examples_retitle.info.yml`](../data_surface_examples_retitle/data_surface_examples_retitle.info.yml) | the module: a third one, which needs node for the pages it retitles | 11 |
+| [`modules/data_surface_examples_retitle/src/Resource/RetitleResource.php`](../data_surface_examples_retitle/src/Resource/RetitleResource.php) | the resource: a list of nodes and a style, its own permission, and two gates borrowed from core, a node's update and its title's edit | 28 |
+| [`modules/data_surface_examples_retitle/src/Structure/RetitleItemStructure.php`](../data_surface_examples_retitle/src/Structure/RetitleItemStructure.php) | an item: the node, which the gates ask about, and the new title, if one is sent | 11 |
+| [`modules/data_surface_examples_retitle/src/TitleRewriter.php`](../data_surface_examples_retitle/src/TitleRewriter.php) | the rewriter: title case, sentence case or a prefix, the same every time, where a model would suggest a title | 38 |
+| [`modules/data_surface_examples_retitle/src/Storage/RetitleStorage.php`](../data_surface_examples_retitle/src/Storage/RetitleStorage.php) | the storage: works out each title, then saves each node, and answers the titles before and after | 46 |
+| [`modules/data_surface_examples_retitle/data_surface_examples_retitle.routing.yml`](../data_surface_examples_retitle/data_surface_examples_retitle.routing.yml), entry `data_surface_examples.step17` | the route: the generic operation form, with the examples' panels | 8 |
+| [`modules/data_surface_examples_retitle/data_surface_examples_retitle.permissions.yml`](../data_surface_examples_retitle/data_surface_examples_retitle.permissions.yml) | its permission, to ask for a retitle at all | 3 |
+| [`modules/data_surface_examples_retitle/config/optional/user.role.node_retitler.yml`](../data_surface_examples_retitle/config/optional/user.role.node_retitler.yml) | the role the calls are made as: the permission, and core's "edit any page content", optional config so it is installed once the page bundle is there | 16 |
+| [`modules/data_surface_examples_retitle/config/install/user.role.retitle_requester.yml`](../data_surface_examples_retitle/config/install/user.role.retitle_requester.yml) | the role of the account the gate refuses: the permission alone | 13 |
+| [`modules/data_surface_examples_retitle/config/optional/node.type.page.yml`](../data_surface_examples_retitle/config/optional/node.type.page.yml) | the page bundle, for a site that has none | 10 |
+| [`modules/data_surface_examples_retitle/src/Hook/RetitleHooks.php`](../data_surface_examples_retitle/src/Hook/RetitleHooks.php) | writes the three pages once the module is installed, and locks the third one's title while a State flag is set, as another module would through core's field access | 26 |
+| [`modules/data_surface_examples_retitle/data_surface_examples_retitle.install`](../data_surface_examples_retitle/data_surface_examples_retitle.install) | deletes them when it is uninstalled | 3 |
+| [`modules/data_surface_examples_retitle/src/Retitle.php`](../data_surface_examples_retitle/src/Retitle.php) | the three pages, their ids kept in State | 38 |
+| [`src/ResourceBuild/Gates.php`](../../src/ResourceBuild/Gates.php) | what answers a gate: core's access handler, or another resource's operation; the main module's | 87 |
+| [`src/ResourceBuild/ItemGates.php`](../../src/ResourceBuild/ItemGates.php) | the gates asked once per item, before the storage sees it; the main module's | 35 |
+
 ## How this page is kept true
 
 Every code block above is the file it names, from its first attribute
@@ -4494,7 +4812,7 @@ when one drifts, and so does the component example 12 quotes. Each
 example's Files table is its list in `Series`, the one its page and the
 landing page's reading order are drawn from, and `ExampleFilesTest`
 fails when a table and the list differ, or the list and the module. The Drush
-commands and answers of examples 7 to 16 are asserted by
+commands and answers of examples 7 to 17 are asserted by
 `ExamplesConceptsToolTest`, and example 15's config schema entry is the
 schema file's, which `ExamplesReadmeTest` checks. The JSON of example 1's config schema is asserted by
 `ConfigSchemaContractTest`, which also checks this page quotes it. The tool's three answers are asserted by
@@ -4521,10 +4839,12 @@ Drush commands are checked against `ExampleCalls`.
 | `Kernel\ExamplesResetTest` | Reset to defaults puts every example, and what another module stored on example 3, back to the shipped files, puts example 15's venues back as shipped, a venue removed made again and one added removed, and opens every room example 4 closed. |
 | `Kernel\ExamplesConceptsTest` | Examples 7 to 12 and 14: each form builds and saves; example 7's rules in the full schema as declared, the send day gone for a monthly bulletin and kept in storage; example 8's one def at two sites with each wiring, the mixed-in keys flat, the shape at two keys, the volunteers' collection; example 9's keys from the configuration, a type added without a cache rebuild, the locked type in both documents and on the form; example 10's fees for two accounts, locked once published, and both operations' facts and tools; example 11's widgets, the always held badges and the notes that clear; example 12's four components read as four variants at the props and again at the slots, the card's props as keys with their constraints, its text a slot, both documents stating them, the form swapped to the hero and saved with its slot, a hero too dark refused; the panel above each, and none above examples 1 to 3; each class stays screen sized; example 13's page with its modules off, saying how to enable both, then with the block alone on, its parts and no call, then with the placement resource on too, the Spotlight and Tonight blocks placed through the create operation, the three lines side by side, the block's contract cut to the four components, the hero's actions narrowed, the four placement tools and the five calls' answers, nothing written.; example 14's panel with its module off, then on: how to enable it, the one source and then two in the contract excerpt, the webhook's rule, the gap, the lock not shipped, and the calls each state allows. |
 | `Kernel\ExamplesWorkflowTest` | Example 10 with the workflow module: the fees left out of the full schema, the tool listing and the read tool for an account without "see event fees" and kept for one with it; the program locked whole once the workflow state is published, settled at call time and left unmarked in the full schema; checking still answers; the panel's paragraph, with the module and without it. |
-| `Kernel\ExamplesConceptsToolTest` | Examples 7 to 16: every call `ConceptCalls` writes down, its answer, nothing left written, the two blocks and the venues included, and this page quoting each command and answer. |
+| `Kernel\ExamplesConceptsToolTest` | Examples 7 to 17: every call `ConceptCalls` writes down, its answer, nothing left written, the two blocks and the venues included, and this page quoting each command and answer. |
 | `Kernel\VenueResourceTest` | Example 15: the entity type installs with its three venues and holds to its generated schema; the resource builds for each operation; both documents of create, update, list and reorder; the listing's outputs schema; the tools, the listing paged and filtered and an account that only views left without the disabled venue; the reorder written in one commit, and refused for an unknown venue and one named twice; the slug computed from the name on create and kept on a rename, left out of the write and in the read, a slug sent equal noted and another refused, one another venue holds refused naming the name, and the post-update writing a missing one; example 2 offering a venue added, with no cache rebuild. |
 | `Functional\VenueApiTest` | Example 15 over HTTP and through its forms: `GET` on the collection answering the listing, a refused query, `POST` 201 with `Location`, the slug written and read, `POST .../schema` answering the slug it would compute, a `PATCH` sending another slug refused, the venue's `PATCH` and `DELETE`, the reorder's `PATCH` and its 405 for `POST`; the create and update forms saving, the slug drawn fixed; the delete form's confirmation removing; the page and its calls. |
 | `Kernel\ReferenceKeysTest` | Example 16: the three spellings and what each builds; both documents of the sponsorship pinned whole under the limit and past it, under `tests/fixtures/references/`; the candidates the account's, cached by what they read; the refusals, in one message; the lookup and what it leaves out; the tool listing's enum and the sentence naming the lookup; the OpenAPI document's lookup; the page's panel. |
+| `Kernel\RetitleExampleTest` | Example 17: the module writes its three pages and its two roles, and deletes the pages when uninstalled; both documents of the retitle pinned whole under `tests/fixtures/retitle/`, the list marked `live` in the full schema alone; the tool listing's permission, its description and the sentence on the list; the rewriter the same every time, and again on what it wrote; the page's form and panel, the gates, the calls, and each title put back. |
+| `Functional\RetitleFormTest` | Example 17 through its form and over HTTP: anonymous refused; an account that may edit no page refused on its page, nothing written; the retitler's save written, and the page then making its calls as dry runs; `PATCH` refused with a 422 per item, a dry run answering the titles it would write, a write answering what it wrote, and the titles read back. |
 | `Functional\ReferenceKeysFormTest` | Example 16 without JavaScript: a select up to the limit, core's entity autocomplete past it, the id saved either way and refused in the constraint's words; the lookup answering, refusing an account without the permission and leaving the draft out for one that may not see it; the React page told where the lookup is, and the full schema stating a bare key's id per entity type. |
 | `Functional\ExamplesConceptsRoutesTest` | Every route of examples 7 to 12 and 14 answers an administrator and refuses anonymous; the landing page lists them; each page shows its panel and its Files panel and saves through its form; example 10's check writes nothing. Example 13 refuses anonymous, says to enable its two modules, then, with them on, shows its parts and the calls' answers, and draws the Spotlight card and the Tonight section below on its page alone; its Files panel, the modules on or off. |
 | `Kernel\ExamplesExtensionTest` | Example 14 with the module that manages keys off, then on: both resources' full schemas, whole; the one source stated as `const` and drawn fixed, then two; the second source and the managed key there with no cache rebuild, in the documents and the tool; a pasted key kept across a switch to the managed key and back, and the config schema each source's stored value holds to; the read tool leaving the pasted key out and naming the managed key; the refusals, a pasted key sent while the managed source is chosen, a pasted key beside a managed key on the webhook, a key the site does not manage; the webhook's pasted key back with its value once the module is off; and this page quoting the documents, the gap and the lock it does not ship. |

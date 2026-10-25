@@ -97,6 +97,9 @@ final class StorageAdapter implements CreatingStorageInterface, DeletingStorageI
    * @param \Drupal\Core\Session\AccountInterface|null $account
    *   The account the write is made as, handed to each write verb; NULL
    *   for one that only loads.
+   * @param \Drupal\data_surface\ResourceBuild\ItemGates|null $gates
+   *   The gates the operation asks once per item of a collection, asked
+   *   before the storage prepares anything; NULL for none.
    *
    * @throws \LogicException
    *   When the operation deletes and the storage cannot.
@@ -109,6 +112,7 @@ final class StorageAdapter implements CreatingStorageInterface, DeletingStorageI
     protected array $omitted = [],
     protected bool $deletes = FALSE,
     protected ?AccountInterface $account = NULL,
+    protected ?ItemGates $gates = NULL,
   ) {
     if ($deletes && !$storage instanceof DeletableStorageInterface) {
       throw new \LogicException(sprintf('The "%s" operation deletes, and %s cannot: a storage that removes what it holds implements %s.', $context->id, get_class($storage), DeletableStorageInterface::class));
@@ -163,6 +167,10 @@ final class StorageAdapter implements CreatingStorageInterface, DeletingStorageI
    * storage refuses, at any level, is collected before anything is
    * thrown, and a child's violations are filed under the key it sits
    * at, the way the pipeline files a child's own.
+   *
+   * Before any of it, the gates the operation asks per item of a
+   * collection: an item a gate refused is refused at its path, and the
+   * storage is not asked, so it only ever sees items every gate allowed.
    */
   public function prepare(DataSurfaceInterface $surface, array $values): PreparedValues {
     if ($this->storage instanceof DeletableStorageInterface && $this->deletes) {
@@ -171,6 +179,11 @@ final class StorageAdapter implements CreatingStorageInterface, DeletingStorageI
       $context = $this->context;
       $account = $this->account();
       return new PreparedValues($values, $this->onBehalf('prepareDelete', static fn (): array => $storage->prepareDelete($context, $account)));
+    }
+    // Decision: see docs/decisions.md#a-gate-is-borrowed-never-copied.
+    $gated = $this->gates?->refusals($values, $this->account()) ?? [];
+    if ($gated !== []) {
+      throw new StorageViolationsException(new ViolationSet($gated));
     }
     $own = self::applyThirdPartyLayouts($surface, $values, TRUE);
     if ($this->omitted !== []) {
@@ -327,7 +340,10 @@ final class StorageAdapter implements CreatingStorageInterface, DeletingStorageI
    * created is found by the identity it was given. An operation that
    * changes nothing is never committed: its outputs are what its
    * storage's prepare() answered under an output's name, prepare being
-   * the last stage it runs, and one with no side effects.
+   * the last stage it runs, and one with no side effects. A dry run is
+   * answered the same way, with what prepare() rehearsed under an
+   * output's name, which is what the write would have answered as far
+   * as the storage can say before it writes.
    *
    * Decision: see docs/decisions.md#who-produces-outputs.
    *
@@ -337,8 +353,8 @@ final class StorageAdapter implements CreatingStorageInterface, DeletingStorageI
    * @param array $values
    *   The accepted values.
    * @param \Drupal\data_surface\Pipeline\PreparedValues|null $prepared
-   *   What prepare() returned, for an operation that changes nothing;
-   *   NULL for one that was committed.
+   *   What prepare() returned, for an operation that changes nothing or a
+   *   dry run; NULL for one that was committed.
    *
    * @return array
    *   The outputs the storage could say, keyed by output name; empty for
@@ -349,7 +365,7 @@ final class StorageAdapter implements CreatingStorageInterface, DeletingStorageI
     if ($outputs === []) {
       return [];
     }
-    if ($surface->changesNothing()) {
+    if ($surface->changesNothing() || $prepared !== NULL) {
       $answered = $prepared === NULL ? NULL : $this->preview($prepared);
       $answered = $this->routes === [] ? $answered : ($answered['own'] ?? NULL);
       return is_array($answered) ? array_intersect_key($answered, $outputs) : [];

@@ -106,6 +106,21 @@ final class Operation {
    *   and permission stay the resource's. NULL, the default, takes the
    *   resource's keys. Refused on an operation that creates or deletes,
    *   which is about the thing's own keys.
+   * @param string|string[] $gate
+   *   Access another thing's owner decides, borrowed rather than copied:
+   *   one gate or a list of them, each asked for the thing a call is
+   *   about after the permission and before the access class, the
+   *   stricter standing. A gate is another resource's operation by id,
+   *   `entity.content:node.page:update`, answered as that operation is
+   *   (its permission, its access class, every alter answering access
+   *   for it), or core's access on an entity or a field,
+   *   `entity:node:update` or `field:node.title:edit`, answered by the
+   *   entity type's access handler. The thing is the one the context
+   *   knows (an identity key that refers to it), or, for a collection
+   *   whose items each refer to one, each item's own: a refusal lands on
+   *   that item's path. A gate naming an operation or an entity type the
+   *   site does not have is refused at discovery.
+   *   Decision: see docs/decisions.md#a-gate-is-borrowed-never-copied.
    */
   public function __construct(
     public readonly string $id,
@@ -118,6 +133,7 @@ final class Operation {
     public readonly string|\Stringable|null $description = NULL,
     public readonly bool $deletes = FALSE,
     public readonly ?string $structure = NULL,
+    public readonly string|array $gate = [],
   ) {}
 
 }

@@ -8,6 +8,8 @@ use Drupal\data_surface\Contract\SchemaReader;
 use Drupal\Core\Cache\Cache;
 use Drupal\Core\Cache\CacheBackendInterface;
 use Drupal\Core\DependencyInjection\ClassResolverInterface;
+use Drupal\Core\Entity\EntityTypeManagerInterface;
+use Drupal\Core\Entity\FieldableEntityInterface;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\data_surface\Hook\ResourcePluginHooks;
 use Drupal\data_surface\Resource\Attribute\Alters;
@@ -185,12 +187,16 @@ final class ResourceRegistry {
    * @param \Drupal\Core\DependencyInjection\ClassResolverInterface|null $classResolver
    *   What returns each deriver as the autowired service discovery
    *   registered; NULL asks no deriver.
+   * @param \Drupal\Core\Entity\EntityTypeManagerInterface|null $entityTypeManager
+   *   The entity type manager, which a gate naming an entity type is held
+   *   to; NULL holds it to nothing.
    */
   public function __construct(
     protected readonly array $classes,
     protected readonly CacheBackendInterface $cache,
     protected readonly ?ResourcePlugins $plugins = NULL,
     protected readonly ?ClassResolverInterface $classResolver = NULL,
+    protected readonly ?EntityTypeManagerInterface $entityTypeManager = NULL,
   ) {
   }
 
@@ -1201,10 +1207,67 @@ final class ResourceRegistry {
     foreach ($resources as $class => $definition) {
       $resources[$class] = $definition->with($operations[$class] ?? [], $alters[$class] ?? [], $variants[$class] ?? []);
     }
+    $this->assertGates($resources, $operations);
     foreach ($shapes as $class => $shape) {
       $shapes[$class] = $shape->withAlters($shape_alters[$class] ?? []);
     }
     return ['resources' => $resources, 'shapes' => $shapes];
+  }
+
+  /**
+   * Refuses a gate that names what the site does not have.
+   *
+   * An operation gate names a resource and one of its operations, each
+   * discovered; an entity or a field gate names an entity type the entity
+   * type manager has, and a field gate one whose entities have fields.
+   * Which fields an entity has is not known until one is asked about, so
+   * a field the entity lacks refuses when the gate is asked. Without an
+   * entity type manager, as a registry built for a test of discovery
+   * alone, the entity types are not looked at.
+   *
+   * Decision: see docs/decisions.md#a-gate-is-borrowed-never-copied.
+   *
+   * @param array<string, \Drupal\data_surface\ResourceBuild\ResourceDefinition> $resources
+   *   Every resource and structure discovered, by name.
+   * @param array<string, \Drupal\data_surface\ResourceBuild\OperationDefinition[]> $operations
+   *   Their operations, by name.
+   *
+   * @throws \LogicException
+   *   Naming the gate, the operation it is on and what is missing.
+   */
+  protected function assertGates(array $resources, array $operations): void {
+    $names = [];
+    foreach ($resources as $name => $definition) {
+      $names[$definition->id] = (string) $name;
+    }
+    foreach ($operations as $of => $list) {
+      foreach ($list as $operation) {
+        foreach ($operation->gates as $gate) {
+          $where = sprintf('The gate "%s" on the "%s" operation of %s', $gate->spelled, $operation->id, $resources[$of]->id ?? $of);
+          if ($gate->kind === Gate::OPERATION) {
+            $name = $names[(string) $gate->resource] ?? NULL;
+            if ($name === NULL) {
+              throw new \LogicException(sprintf('%s names the resource %s, which the site does not have.', $where, $gate->resource));
+            }
+            $ids = array_map(static fn (OperationDefinition $one): string => $one->id, $operations[$name] ?? []);
+            if (!in_array($gate->operation, $ids, TRUE)) {
+              throw new \LogicException(sprintf('%s names the "%s" operation of %s, which it does not have; it has %s.', $where, $gate->operation, $gate->resource, $ids === [] ? 'none' : implode(', ', $ids)));
+            }
+            continue;
+          }
+          if ($this->entityTypeManager === NULL) {
+            continue;
+          }
+          $entity_type = $this->entityTypeManager->getDefinition((string) $gate->entityType, FALSE);
+          if ($entity_type === NULL) {
+            throw new \LogicException(sprintf('%s names the entity type %s, which the site does not have.', $where, $gate->entityType));
+          }
+          if ($gate->kind === Gate::FIELD && !$entity_type->entityClassImplements(FieldableEntityInterface::class)) {
+            throw new \LogicException(sprintf('%s asks for a field of %s, whose entities have no fields.', $where, $gate->entityType));
+          }
+        }
+      }
+    }
   }
 
   /**
@@ -1530,6 +1593,7 @@ final class ResourceRegistry {
       description: $description,
       deletes: $operation->deletes,
       structure: $operation->structure,
+      gates: Gate::parseAll($operation->gate, sprintf('the "%s" operation of %s', $operation->id, $class)),
     );
   }
 

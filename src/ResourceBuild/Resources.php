@@ -324,6 +324,20 @@ final class Resources implements ResourcesInterface {
    */
   protected array $refusing = [];
 
+  /**
+   * Where each operation's gates are asked, once read, by name and id.
+   *
+   * @var array<string, array<int, array{gate: \Drupal\data_surface\ResourceBuild\Gate, type: string|null, top: string|null, list: string|null, item: string|null}>>
+   */
+  protected array $gatePlaces = [];
+
+  /**
+   * The operations whose gates are being asked, so a cycle refuses.
+   *
+   * @var array<string, true>
+   */
+  protected array $gating = [];
+
   public function __construct(
     protected readonly ResourceRegistry $registry,
     protected readonly TypedDataManagerInterface $typedDataManager,
@@ -786,6 +800,7 @@ final class Resources implements ResourcesInterface {
     $this->readPorts = [];
     $this->childrenDeclared = [];
     $this->refusing = [];
+    $this->gatePlaces = [];
   }
 
   /**
@@ -1184,6 +1199,10 @@ final class Resources implements ResourcesInterface {
     // answers once for the list, since field access is per field and not
     // per delta.
     // Decision: see docs/decisions.md#access-once-per-list.
+    // A gate the operation asks once per item is settled per thing: built
+    // for the account alone or for none, the list is marked.
+    // Decision: see docs/decisions.md#a-gate-is-borrowed-never-copied.
+    $gated_lists = $top && ($this->accountAlone || $this->declaring) ? $this->itemGatedLists($own, $context) : [];
     foreach ($inputs->lists() as $key => $child) {
       // Nothing wires an item's ports yet.
       $this->assertWiring($builder, $definition, NULL, $key, $child, [], $input_keys, $attached, $lists, 'collection');
@@ -1199,7 +1218,7 @@ final class Resources implements ResourcesInterface {
       if ($access !== NULL && $access->isLocked()) {
         $builder->lock($key, $access->getReason());
       }
-      if ($runtime) {
+      if ($runtime || isset($gated_lists[(string) $key])) {
         $builder->markRuntimeAccess($key);
       }
     }
@@ -1240,6 +1259,19 @@ final class Resources implements ResourcesInterface {
    *   Why it is locked, or NULL when it is not.
    */
   protected function lockedAtTheTop(DataSurfaceBuilderInterface $builder, ResourceDefinition $definition, OperationContext $context): ?string {
+    // A gate asked about the thing the context knows refuses rather than
+    // locks, and access() asks it; built for the account alone or for no
+    // account, one the subject decides marks every key.
+    // Decision: see docs/decisions.md#a-gate-is-borrowed-never-copied.
+    if ($this->accountAlone || $this->declaring) {
+      [$aside, $read] = $this->gatesAside($definition, $context, $this->currentUser, $this->declaring);
+      if ($aside) {
+        $builder->markRuntimeAccessWhole();
+      }
+      if ($read !== NULL) {
+        $builder->addCacheableDependency($read);
+      }
+    }
     $answering = static::answering($definition, $context, TRUE);
     if ($answering === []) {
       return NULL;
@@ -3290,7 +3322,14 @@ final class Resources implements ResourcesInterface {
    * {@inheritdoc}
    */
   public function isRuntimeAtTheTop(string $resource, OperationContext $context, AccountInterface $account): bool {
-    $answering = static::answering($this->registry->getDefinition($resource), $context, TRUE);
+    $definition = $this->registry->getDefinition($resource);
+    $answering = static::answering($definition, $context, TRUE);
+    // A gate asked about the thing the context knows is an answer at the
+    // top too, of the kind its cacheability says.
+    // Decision: see docs/decisions.md#a-gate-is-borrowed-never-copied.
+    if ($this->gatesAside($definition, $context, $account, FALSE)[0]) {
+      return TRUE;
+    }
     if ($answering === []) {
       return FALSE;
     }
@@ -3313,6 +3352,290 @@ final class Resources implements ResourcesInterface {
       ? $found->staticPermission()
       : static::resolvePermission($found->permission, $context);
     return $permission === NULL ? NULL : AccessResult::allowedIfHasPermission($account ?? $this->currentUser, $permission);
+  }
+
+  /**
+   * Gets what answers the gates an operation borrows.
+   *
+   * @return \Drupal\data_surface\ResourceBuild\Gates
+   *   The gates.
+   */
+  protected function gates(): Gates {
+    return $this->classResolver->getInstanceFromDefinition(Gates::class);
+  }
+
+  /**
+   * Says where each gate of an operation is asked, and about what.
+   *
+   * At the top when the context names the thing: an identity key that
+   * refers to an entity of the type the gate asks about, or the
+   * `entity_type` and `id` a content entity resource knows. Otherwise
+   * once per item of a collection whose item has a key referring to one,
+   * the first such collection and key. A gate that asks about nothing (an
+   * operation gate whose operation needs nothing) is asked at the top. A
+   * gate whose thing nothing names is refused when the operation is
+   * built or asked: it could never be answered. Read from what the
+   * resource and its items declare, nothing built.
+   *
+   * Decision: see docs/decisions.md#a-gate-is-borrowed-never-copied.
+   *
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   *   The resource the operation is of.
+   * @param string $operation
+   *   The operation id.
+   *
+   * @return array<int, array{gate: \Drupal\data_surface\ResourceBuild\Gate, type: string|null, top: string|null, list: string|null, item: string|null}>
+   *   Per gate: the entity type it asks about (NULL for none); for one
+   *   asked at the top, the identity key naming the thing (empty for the
+   *   `entity_type` and `id` pair); for one asked per item, the
+   *   collection's key and the item's key.
+   *
+   * @throws \LogicException
+   *   When nothing the operation is handed names what a gate asks about.
+   */
+  protected function gatePlaces(ResourceDefinition $definition, string $operation): array {
+    $memo = $definition->name() . ':' . $operation;
+    if (isset($this->gatePlaces[$memo])) {
+      return $this->gatePlaces[$memo];
+    }
+    $found = $this->registry->getOperations($definition->name())[$operation] ?? NULL;
+    if ($found === NULL || $found->gates === []) {
+      return $this->gatePlaces[$memo] = [];
+    }
+    $builder = new DataSurfaceBuilder();
+    $inputs = $this->blueprint($builder, $definition);
+    $this->fillBlueprints($definition, $inputs);
+    $top = [];
+    foreach ($definition->identity as $key) {
+      $declared = $builder->getDefinition($key);
+      $target = $declared === NULL ? NULL : References::target($declared);
+      if ($target !== NULL) {
+        $top[$target['entityType']] ??= $key;
+      }
+    }
+    $pair = in_array('entity_type', $definition->identity, TRUE) && in_array('id', $definition->identity, TRUE);
+    // The keys a call takes: the resource's, or a structure's in their
+    // place.
+    $shaped = $found->structure === NULL ? $definition : $this->registry->getDefinition($found->structure);
+    if ($shaped !== $definition) {
+      $builder = new DataSurfaceBuilder();
+      $inputs = $this->blueprint($builder, $shaped);
+      $this->fillBlueprints($shaped, $inputs);
+    }
+    $items = [];
+    foreach ($inputs->lists() as $key => $child) {
+      $item = $this->registry->getDefinition((string) $child);
+      $item_builder = new DataSurfaceBuilder();
+      $item_inputs = $this->blueprint($item_builder, $item);
+      $this->fillBlueprints($item, $item_inputs);
+      foreach ($item_inputs->keys() as $item_key) {
+        $declared = $item_builder->getDefinition($item_key);
+        $target = $declared === NULL ? NULL : References::target($declared);
+        if ($target !== NULL) {
+          $items[$target['entityType']] ??= [(string) $key, $item_key];
+        }
+      }
+    }
+    $places = [];
+    foreach ($found->gates as $gate) {
+      [$type] = $this->gates()->subjectOf($gate);
+      $place = ['gate' => $gate, 'type' => $type, 'top' => NULL, 'list' => NULL, 'item' => NULL];
+      if ($type === NULL) {
+        $places[] = $place;
+        continue;
+      }
+      if (isset($top[$type]) || $pair) {
+        $places[] = ['top' => $top[$type] ?? ''] + $place;
+        continue;
+      }
+      if (isset($items[$type])) {
+        $places[] = ['list' => $items[$type][0], 'item' => $items[$type][1]] + $place;
+        continue;
+      }
+      throw new \LogicException(sprintf(
+        'The gate "%s" on the "%s" operation of %s asks about %s %s, and nothing the operation is handed names one: no identity key refers to one, and no item of a collection has a key that does. Declare the key that names it as a reference, such as $inputs->add(\'%s\', \'entity:%s\', ...).',
+        $gate->spelled,
+        $operation,
+        $definition->id,
+        static::article($type),
+        $type,
+        $type,
+        $type,
+      ));
+    }
+    return $this->gatePlaces[$memo] = $places;
+  }
+
+  /**
+   * Finds the thing a gate asked at the top asks about.
+   *
+   * @param array{gate: \Drupal\data_surface\ResourceBuild\Gate, type: string|null, top: string|null, list: string|null, item: string|null} $place
+   *   Where the gate is asked (gatePlaces()).
+   * @param \Drupal\data_surface\Resource\OperationContext $context
+   *   The context, which knows the identity.
+   *
+   * @return array{0: bool, 1: \Drupal\Core\Entity\EntityInterface|null}
+   *   Whether the context names the thing, and the thing, NULL when it
+   *   names none or one that is not there.
+   */
+  protected function subjectAtTheTop(array $place, OperationContext $context): array {
+    if ($place['type'] === NULL) {
+      return [TRUE, NULL];
+    }
+    if ($place['top'] === '') {
+      $named = ($context->known['entity_type'] ?? NULL) === $place['type'] && isset($context->known['id']);
+      return [$named, $named ? $this->gates()->load((string) $place['type'], $context->known['id']) : NULL];
+    }
+    $id = $context->known[(string) $place['top']] ?? NULL;
+    return [$id !== NULL, $id === NULL ? NULL : $this->gates()->load((string) $place['type'], $id)];
+  }
+
+  /**
+   * Asks each gate the operation asks about the thing its context knows.
+   *
+   * Each answered by what owns it (Gates::answer()); a refusal says what
+   * may not be done to what and why. A gate whose thing the context does
+   * not name, or names and is not there, refuses: an operation whose gate
+   * cannot be asked is not let through unasked. An operation gate that
+   * leads back to an operation being asked refuses too.
+   *
+   * Decision: see docs/decisions.md#a-gate-is-borrowed-never-copied.
+   *
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   *   The resource.
+   * @param \Drupal\data_surface\Resource\OperationContext $context
+   *   Its context.
+   * @param \Drupal\Core\Session\AccountInterface $account
+   *   The account.
+   *
+   * @return \Drupal\Core\Access\AccessResultInterface|null
+   *   The gates' answers combined with andIf(), or NULL when no gate is
+   *   asked at the top.
+   */
+  protected function gatesAtTheTop(ResourceDefinition $definition, OperationContext $context, AccountInterface $account): ?AccessResultInterface {
+    $memo = $definition->name() . ':' . $context->id;
+    $answer = NULL;
+    foreach ($this->gatePlaces($definition, $context->id) as $place) {
+      if ($place['list'] !== NULL) {
+        continue;
+      }
+      $gate = $place['gate'];
+      [$named, $subject] = $this->subjectAtTheTop($place, $context);
+      if (isset($this->gating[$memo])) {
+        $one = AccessResult::forbidden(sprintf('The gate "%s" leads back to the "%s" operation of %s, which is being asked already.', $gate->spelled, $context->id, $definition->id));
+      }
+      elseif ($place['type'] !== NULL && $subject === NULL) {
+        $one = AccessResult::forbidden($named
+          ? sprintf('There is no %s the gate "%s" can ask about.', $place['type'], $gate->spelled)
+          : sprintf('Nothing names the %s the gate "%s" asks about.', $place['type'], $gate->spelled));
+      }
+      else {
+        $this->gating[$memo] = TRUE;
+        try {
+          $one = $this->gates()->answer($gate, $subject, $account, $this);
+        }
+        finally {
+          unset($this->gating[$memo]);
+        }
+        if (!$one->isAllowed()) {
+          $one = AccessResult::forbidden($this->gates()->refusal($gate, $subject, $one))->addCacheableDependency($one);
+        }
+      }
+      $answer = $answer === NULL ? $one : $answer->andIf($one);
+    }
+    return $answer;
+  }
+
+  /**
+   * Answers whether a gate asked at the top waits for the subject.
+   *
+   * For no account, any gate asked at the top does: nothing is asked. For
+   * the account alone, a gate whose thing the context does not name yet
+   * does (a tool's static definition, built before any subject), and so
+   * does one whose answer is runtime by its cacheability; a static answer
+   * is the account's, and access() refuses with it.
+   *
+   * Decision: see docs/decisions.md#a-gate-is-borrowed-never-copied.
+   *
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   *   The resource.
+   * @param \Drupal\data_surface\Resource\OperationContext $context
+   *   Its context.
+   * @param \Drupal\Core\Session\AccountInterface $account
+   *   The account.
+   * @param bool $declaring
+   *   TRUE when built for no account.
+   *
+   * @return array{0: bool, 1: \Drupal\Core\Cache\CacheableMetadata|null}
+   *   Whether one waits, and what the static answers read, which the build
+   *   varies by; NULL when nothing was asked.
+   */
+  protected function gatesAside(ResourceDefinition $definition, OperationContext $context, AccountInterface $account, bool $declaring): array {
+    $aside = FALSE;
+    $read = NULL;
+    foreach ($this->gatePlaces($definition, $context->id) as $place) {
+      if ($place['list'] !== NULL) {
+        continue;
+      }
+      [$named, $subject] = $this->subjectAtTheTop($place, $context);
+      if ($declaring || !$named || ($place['type'] !== NULL && $subject === NULL)) {
+        $aside = TRUE;
+        continue;
+      }
+      $answer = AccessAnswer::fromAnswer($this->gates()->answer($place['gate'], $subject, $account, $this));
+      $read ??= new CacheableMetadata();
+      if (!$answer->isStatic()) {
+        $aside = TRUE;
+        $read->addCacheContexts($answer->getCacheContexts());
+        continue;
+      }
+      $read->addCacheableDependency($answer);
+    }
+    return [$aside, $read];
+  }
+
+  /**
+   * Lists the collections whose items an operation's gates are asked of.
+   *
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   *   The resource the operation is of.
+   * @param \Drupal\data_surface\Resource\OperationContext $context
+   *   Its context.
+   *
+   * @return array<string, true>
+   *   The collections' keys.
+   */
+  protected function itemGatedLists(ResourceDefinition $definition, OperationContext $context): array {
+    $lists = [];
+    foreach ($this->gatePlaces($definition, $context->id) as $place) {
+      if ($place['list'] !== NULL) {
+        $lists[(string) $place['list']] = TRUE;
+      }
+    }
+    return $lists;
+  }
+
+  /**
+   * Gets the gates an operation asks once per item, for its storage.
+   *
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   *   The resource the operation is of.
+   * @param \Drupal\data_surface\Resource\OperationContext $context
+   *   Its context.
+   *
+   * @return \Drupal\data_surface\ResourceBuild\ItemGates|null
+   *   The gates by collection, or NULL when none is asked per item.
+   */
+  protected function itemGates(ResourceDefinition $definition, OperationContext $context): ?ItemGates {
+    $lists = [];
+    foreach ($this->gatePlaces($definition, $context->id) as $place) {
+      if ($place['list'] !== NULL) {
+        $lists[(string) $place['list']]['item'] = (string) $place['item'];
+        $lists[(string) $place['list']]['type'] = (string) $place['type'];
+        $lists[(string) $place['list']]['gates'][] = $place['gate'];
+      }
+    }
+    return $lists === [] ? NULL : new ItemGates($this->gates(), $this, $lists);
   }
 
   /**
@@ -3351,9 +3674,20 @@ final class Resources implements ResourcesInterface {
         return $result;
       }
     }
+    // Then each gate the operation borrows, asked about the thing the
+    // context knows; a gate asked per item of a collection waits for the
+    // items. The access class then narrows on top, never widening.
+    // Decision: see docs/decisions.md#a-gate-is-borrowed-never-copied.
+    $gated = $this->gatesAtTheTop($definition, $context, $account);
+    if ($gated !== NULL) {
+      $result = $permission === NULL ? $gated : $result->andIf($gated);
+      if (!$result->isAllowed()) {
+        return $result;
+      }
+    }
     if ($definition->access !== NULL) {
       $answer = static::atTheTop($this->answerAccess($definition->access, $context, $account));
-      $result = $permission === NULL ? $answer : $result->andIf($answer);
+      $result = $permission === NULL && $gated === NULL ? $answer : $result->andIf($answer);
     }
     // Then each alter that answers access, which may refuse and never
     // allow what was refused: core's andIf() keeps a refusal.
@@ -3615,7 +3949,7 @@ final class Resources implements ResourcesInterface {
         $definition->id,
       ));
     }
-    return $this->storageFor($definition, $context, $built ?? $this->build($definition->name(), $context), $account ?? $this->currentUser);
+    return $this->storageFor($definition, $context, $built ?? $this->build($definition->name(), $context), $account ?? $this->currentUser, $this->itemGates($definition, $context));
   }
 
   /**
@@ -3635,11 +3969,13 @@ final class Resources implements ResourcesInterface {
    *   The resource as built, whose entries carry the children.
    * @param \Drupal\Core\Session\AccountInterface $account
    *   The account each level writes as.
+   * @param \Drupal\data_surface\ResourceBuild\ItemGates|null $gates
+   *   The gates the operation asks per item, for the top level alone.
    *
    * @return \Drupal\data_surface\ResourceBuild\StorageAdapter
    *   The storage.
    */
-  protected function storageFor(ResourceDefinition $definition, OperationContext $context, DataSurfaceInterface $built, AccountInterface $account): StorageAdapter {
+  protected function storageFor(ResourceDefinition $definition, OperationContext $context, DataSurfaceInterface $built, AccountInterface $account, ?ItemGates $gates = NULL): StorageAdapter {
     $routes = [];
     foreach ($built->getDefinitions()->entries() as $key => $entry) {
       $children = $entry->attachment !== NULL
@@ -3661,6 +3997,7 @@ final class Resources implements ResourcesInterface {
       $this->omittedKeys($this->shapeOf($definition, $context), $built),
       $operation?->kind() === OperationDefinition::DELETE,
       $account,
+      $gates,
     );
   }
 

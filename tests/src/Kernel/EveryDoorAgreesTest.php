@@ -10,6 +10,7 @@ use Drupal\data_surface_examples\ConceptCalls;
 use Drupal\data_surface_examples\ExampleCalls;
 use Drupal\data_surface_examples\Hook\SpotlightBlockHooks;
 use Drupal\data_surface_examples_references\Sponsorship;
+use Drupal\data_surface_examples_retitle\Retitle;
 use Drupal\field\Entity\FieldConfig;
 use Drupal\field\Entity\FieldStorageConfig;
 use Drupal\node\Entity\Node;
@@ -39,9 +40,10 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * (KNOWN), so a new way to skip fails here first.
  *
  * Three data sets, each a site of its own: the examples, with the block
- * placement and the references example; content entities and fields;
- * the test modules' fixtures. A fixture refused at build, which the
- * broken ones are written to be, is left out by the reason it gives.
+ * placement, the references example and the retitle example; content
+ * entities and fields; the test modules' fixtures, the gates' among them.
+ * A fixture refused at build, which the broken ones are written to be, is
+ * left out by the reason it gives.
  *
  * @see docs/decisions.md#nothing-an-operation-runs-reads-the-request
  * @see docs/decisions.md#one-result-at-every-door
@@ -85,6 +87,7 @@ class EveryDoorAgreesTest extends DataSurfaceKernelTestBase {
         'data_surface_examples_workflow',
         'data_surface_examples_keys',
         'data_surface_examples_references',
+        'data_surface_examples_retitle',
         'data_surface_component_block',
         'data_surface_block',
         'data_surface_first',
@@ -115,6 +118,7 @@ class EveryDoorAgreesTest extends DataSurfaceKernelTestBase {
         'data_surface_storage_test',
         'data_surface_schema_test',
         'data_surface_paths_test',
+        'data_surface_gate_test',
       ],
     ],
   ];
@@ -133,6 +137,9 @@ class EveryDoorAgreesTest extends DataSurfaceKernelTestBase {
     'field.instance:update' => ['field' => 'node.page.body'],
     'field.storage:update' => ['storage' => 'node.body'],
     'entity.content:node.page:update' => ['id' => 1],
+    'gate_test.note:update' => ['node' => 1],
+    'gate_test.note:annotate' => ['node' => 1],
+    'gate_test.relay:update' => ['node' => 1],
   ];
 
   /**
@@ -227,6 +234,12 @@ class EveryDoorAgreesTest extends DataSurfaceKernelTestBase {
       $this->container->get('class_resolver')->getInstanceFromDefinition(SpotlightBlockHooks::class)->place();
       // Example 16's three nodes, as its module writes them when installed.
       $this->container->get('class_resolver')->getInstanceFromDefinition(Sponsorship::class)->writeNodes();
+      // Example 17's three pages, likewise.
+      $this->container->get('class_resolver')->getInstanceFromDefinition(Retitle::class)->writeNodes();
+    }
+    if ($site === 'the fixtures') {
+      // The page the gate test module's notes are about.
+      Node::create(['type' => 'page', 'title' => 'A page'])->save();
     }
   }
 

@@ -247,9 +247,11 @@ The widget attribute is in `src/Attribute/`, which `PublicSurfaceTest`
 does not count, so its pins are unchanged.
 
 `PublicSurfaceTest` pins what `src/Resource/` declares, so the count
-grows only with that test updated beside a reason: 9 attributes, 30
-attribute arguments (33 before), 15 blueprint methods (17), 20
-interfaces (23). It is the concept budget for the code, as
+grows only with that test updated beside a reason: 9 attributes, 31
+attribute arguments (33 before; 30 until 2026-10-25, when
+`#[Operation(gate:)]` was added, [A gate is borrowed, never
+copied](#a-gate-is-borrowed-never-copied)), 15 blueprint methods (17),
+20 interfaces (23). It is the concept budget for the code, as
 [Your first resource](first-resource.md) is for the docs.
 
 What changed, old → new, to grep:
@@ -1973,7 +1975,10 @@ list, and that access answers for the list: open, locked (the list key
 locked, so every item and the form's add and remove controls) or
 omitted (the key left out). Field access is per field, not per delta,
 and an item has no subject of its own to be asked about before it
-exists. (`Resources::buildResource()`)
+exists. *Added 2026-10-25:* a gate the operation borrows is asked per
+item, about the entity the item refers to, once the values are known
+([A gate is borrowed, never copied](#a-gate-is-borrowed-never-copied)).
+(`Resources::buildResource()`)
 
 ### Empty items are dropped
 
@@ -2258,7 +2263,13 @@ under an output's name: prepare is the last stage a read runs, and one
 with no side effects, so the storage reads there, and a listing's page
 is that answer
 ([A listing is a read-only operation with outputs](#a-listing-is-a-read-only-operation-with-outputs-a-reorder-is-an-update-over-the-collection)).
-A dry run of any other operation still answers none.
+*Changed 2026-10-25:* a dry run of any other operation answers what
+its `prepare()` rehearsed under an output's name, the same way, where it
+answered none: a dry run is a call that stops before it writes, and its
+caller wants the answer the write would give as far as the storage can
+say it before writing. Example 17's dry run answers each node's old title
+and the one it would write; a storage that rehearses nothing under an
+output's name answers nothing, as before.
 (`StorageAdapter::outputs()`)
 
 ### A computed key is a pure function of its sources
@@ -2679,6 +2690,80 @@ a reason an alter gives at a child is not shown, as no child's is.
 `ResourceDefinition::answersAccess()`, `Resources::answering()`,
 `Resources::answers()`, `Resources::alteredAtTheTop()`,
 `Resources::lockedAtTheTop()`)
+
+### A gate is borrowed, never copied
+
+Decided 2026-10-25, from the owner's case: a module ships a resource of
+its own, with its own keys, storage and permission, that acts on things
+another module owns and must respect the access their owner and every
+other module decide, without naming them. A bulk retitle may retitle
+only the nodes the account may update and whose title it may edit.
+`gate:` on `#[Operation]` names that access, and the module asks it.
+
+- **Borrowed, not copied.** Who may change a node is decided by node's
+  access handler and by every module that implements
+  `hook_entity_access()`, `hook_node_access()`, node grants or
+  `hook_entity_field_access()`: a workflow, a group, field permissions.
+  A resource that copied the check ("has edit any page content") would
+  agree with that answer only until one of those modules is enabled or
+  changes, and would then let through what the node's own form refuses.
+  A gate asks the owner each time, so it holds whatever the site adds.
+- **Two forms.** Another resource's operation by id,
+  `entity.content:node.page:update`, answered as that operation is when
+  it is asked on its own: its permission, its gates, its access class
+  and every alter answering access for it, by `andIf()`. And core's
+  access on an entity or a field, `entity:node:update` and
+  `field:node.title:edit`, through the entity type's access handler.
+  Core's form is there because entity access is what every module
+  already extends, and because it needs no derived resource for the
+  entity type: the gate works on a site without `data_surface_entity`.
+  Field access does not include entity access, as core's entity form
+  asks both, so a list may name both, and each is answered by itself.
+- **The subject is what the context hands, or each item's.** A gate is
+  asked about the entity an identity key refers to, or the
+  `entity_type` and `id` a content entity resource knows. Where none
+  does and an item of a collection has a key referring to one, the gate
+  is asked per item, because a bulk call is many subjects: the items do
+  not share one answer, so a refusal is filed at that item's key, with
+  the gate's reason, and the other items carry no refusal. A collection
+  is otherwise asked access once ([Access once per list](#access-once-per-list));
+  the gate is per item because its answer is about the item's entity,
+  which differs per item, where a child's access is about its keys,
+  which do not. Per item, the gates are asked after validation and
+  before the storage's `prepare()` (`ItemGates`, from
+  `StorageAdapter::prepare()`), so a storage sees only items every gate
+  allowed, and a refused item refuses the call, as any refusal does. A
+  gate whose subject nothing names refuses: it is never let through
+  unasked.
+- **Narrow only.** The operation's own permission is asked first, and is
+  static; then the gates; then the resource's own access class and its
+  alters, combined with `andIf()`. The resource can refuse what a gate
+  allows, never allow what a gate refuses.
+- **Its kind is its cacheability.** At the top, each gate's answer is
+  static or runtime as any access answer is
+  ([Access is static or runtime, read from its cacheability](#access-is-static-or-runtime-read-from-its-cacheability)):
+  core's update access for an account with "edit any page content" read
+  the account's permissions alone, so it is static and stated for that
+  account; one that read the entity is runtime and marks every key. A
+  gate asked per item cannot be stated ahead, since its subject is a
+  value: the full schema marks the collection `x-surface.live`, and the
+  tool listing says on it, in the existing sentence, that it is decided
+  once the thing is known. The listing declares the operation's own
+  permission alone.
+- **Refused at discovery.** A gate naming a resource, an operation or an
+  entity type the site does not have, or a field operation other than
+  view or edit, is refused when discovery reads it, naming it
+  (`ResourceRegistry::assertGates()`). Which fields an entity has is
+  known only once one is asked about, so a missing field refuses then.
+
+The worked example is example 17, `ai.retitle`; the fixture is the gate
+test module's notes (`GatesTest`). *Open:* a gate on a child's
+operation is not asked, since gates are asked where the operation is
+the one called; the tool listing's sentence for a list a gate is asked
+of says "locked or left out", where a gate refuses the item; and a gate
+is asked per item for the collections at the top only, not inside an
+item. (`Gate`, `Gates`, `ItemGates`, `Resources::gatePlaces()`,
+`Resources::gatesAtTheTop()`, `Resources::gatesAside()`)
 
 ### A permission a child cannot name
 

@@ -118,6 +118,9 @@ final class OperationDefinition {
    * @param string|null $structure
    *   The structure whose keys a call takes in place of the resource's,
    *   or NULL for the resource's own.
+   * @param \Drupal\data_surface\ResourceBuild\Gate[] $gates
+   *   The access it borrows from other things, asked after its
+   *   permission for the thing a call is about.
    *
    * @throws \LogicException
    *   When the id is a retired one (RETIRED_IDS), or the facts contradict
@@ -142,6 +145,7 @@ final class OperationDefinition {
     public readonly string|\Stringable|null $description = NULL,
     public readonly bool $deletes = FALSE,
     public readonly ?string $structure = NULL,
+    public readonly array $gates = [],
   ) {
     // Decision: see
     // docs/decisions.md#the-ids-are-the-standard-five-the-labels-are-drupals.

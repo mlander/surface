@@ -6,6 +6,7 @@ namespace Drupal\data_surface_examples;
 
 use Drupal\Component\Render\PlainTextOutput;
 use Drupal\Core\DependencyInjection\ClassResolverInterface;
+use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\Extension\ModuleHandlerInterface;
 use Drupal\Core\Session\AccountSwitcherInterface;
@@ -23,6 +24,7 @@ use Drupal\data_surface\Contract\SiteListBudget;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface\Pipeline\ResultDocument;
+use Drupal\data_surface\ResourceBuild\Gate;
 use Drupal\data_surface\ResourceBuild\OperationRoute;
 use Drupal\data_surface\ResourceBuild\ResourceRegistry;
 use Drupal\data_surface\Reference\References;
@@ -44,7 +46,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 
 /**
- * Says what one of examples 7 to 14 shows, above its contract panel.
+ * Says what one of examples 7 to 17 shows, above its contract panel.
  *
  * Each of those examples is one small resource for one or two concepts,
  * so its page says in one paragraph what it demonstrates and where the
@@ -109,6 +111,12 @@ final class ConceptPanel {
       'docs/served-contract.md#a-lookup',
       'docs/widgets.md#the-stock-widgets',
       'docs/decisions.md#a-reference-is-an-id-with-a-list-the-site-decides-listed-or-looked-up',
+    ],
+    'ai.retitle' => [
+      'docs/resources.md#a-gate-borrowed-from-another-thing',
+      'docs/resources.md#collections',
+      'docs/outputs.md',
+      'docs/decisions.md#a-gate-is-borrowed-never-copied',
     ],
     'event.venue' => [
       'docs/storage.md#a-config-entity',
@@ -237,6 +245,8 @@ final class ConceptPanel {
    * @param \Drupal\data_surface\Contract\SiteListBudget|null $budget
    *   How many entries of a list the site decides are spelled out, which
    *   says whether examples 12 and 13 list their components.
+   * @param \Drupal\Core\Entity\EntityTypeManagerInterface|null $entityTypeManager
+   *   The entity type manager, which loads example 17's pages.
    */
   public function __construct(
     protected readonly ContractEmitter $emitter,
@@ -253,6 +263,7 @@ final class ConceptPanel {
     protected readonly References $references,
     protected readonly OperationInputs $operationInputs,
     protected readonly ?SiteListBudget $budget = NULL,
+    protected readonly ?EntityTypeManagerInterface $entityTypeManager = NULL,
   ) {
     $this->stringTranslation = $string_translation;
   }
@@ -282,6 +293,7 @@ final class ConceptPanel {
       'event.spotlight' => $this->schemaRead($declared, $values, $served),
       'event.mailer', 'event.webhook' => $this->extension(),
       'event.sponsorship' => $this->references($served),
+      'ai.retitle' => $this->gates($served),
       default => NULL,
     };
     if ($blocks === NULL) {
@@ -325,8 +337,72 @@ final class ConceptPanel {
       'event.venue' => $this->t("A module that declares its own config entity type puts a resource over it from the start: the venue entity, with no form classes, no list builder and no links, and the resource <code>event.venue</code> naming it through a ConfigEntityStorage. Its config schema, <code>data_surface_examples.event_venue.*</code>, is written from the resource by <code>drush data_surface:config-schema --write</code>, as a config object's is. Add, edit and remove are about one venue. Listing and reordering are about the venues together, so they name none: each takes the keys of a structure of its own, a page and a filter, or a list of ids and weights, which <code>structure:</code> on its <code>#[Operation]</code> names. The listing is read only and declares outputs, the page and the total, each venue in it one the account may read; on HTTP it is what <code>GET</code> on the collection answers. The reorder is an update over the collection, written in one commit, served as a custom method, <code>PATCH /surface-api/event.venue:reorder</code>. The slug is a computed key, <code>\$inputs->compute('slug', ..., from: ['label'], using: Slugify::class)</code>: <code>Slugify</code> computes it from the name when a venue is added, and keeps it after, so a rename leaves its links working. Nobody types it: both documents state it <code>readOnly</code> with <code>x-surface.computed</code>, the write tool's values leave it out, the read answers it, a slug sent equal to the one it holds is noted and not taken, and any other is refused naming the name. Example 2 chooses its venue and room from these venues: add one here and example 2 offers it at the next request."),
       'event.mailer', 'event.webhook' => $this->t("Two resources call a service with a credential: a key pasted here, a secret, or a key the site manages, once a module that manages keys is on. @module stands in for the Key module. The mailer, at /surface-examples/14, is the owner's way: it declares both sources, each a structure of its own, and a provider lists them, the pasted one always and the managed one while the module is on. With one source to choose, the source is drawn as that source and stated as <code>const</code>. A pasted key stored is kept when the managed key is chosen, and taken up again when the pasted source is chosen back. The webhook, at /surface-examples/14/webhook, is the alter's way: it declares a pasted key and knows nothing of managed keys, and the module's alter mounts a managed key beside it and rules the pasted key out once one is chosen. Install the module and reload: the second source and the managed key are there at the next request, with no cache rebuild.", ['@module' => self::KEYS]),
       'event.sponsorship' => $this->t("A key that refers to an entity is declared by the data type string of what it refers to, and holds the entity's id: <code>entity:event_venue</code> a venue, <code>entity:user</code> a user, <code>entity:node:article</code> an article. Which entities it may name is core's selection handler's answer for the account asking, with the bundle and the access it checks, so a draft article is not one for an account that may not see it. While the site has at most @limit of them, <code>data_surface.settings:reference_list_limit</code>, the key lists them: a select on the form, a <code>oneOf</code> with their labels in both documents, an enum in the tool listing. Past it, the key is an id: core's entity autocomplete on the form, <code>x-surface.widget: autocomplete</code> in the documents, and the resource's lookup, <code>GET /surface-api/event.sponsorship:lookup</code>, which finds candidates by label for the same account. The bare <code>entity</code> is any entity: an entity type, then an id of it, narrowed to that type by the same constraint; its entity types are filtered by what kind of entity type they are, by bundle, and by what the account may reference.", ['@limit' => $this->references->limit()]),
+      'ai.retitle' => $this->t("A resource of your own may act on things another module owns. The retitle has its own keys, a list of nodes and a style, its own storage and its own permission, <code>retitle nodes</code>, and may retitle only a node the account may update and whose title it may edit. It does not copy those checks: it names them as gates, <code>gate: ['entity:node:update', 'field:node.title:edit']</code> on its <code>#[Operation]</code>, and each is core's answer through node's access handler, with every module that alters it, asked of each node in the list. Field access does not include entity access, which is why node's own form asks both, and so does the retitle. A node a gate refuses is refused on its own item, <code>/items/0/node</code>, with the owner's reason, and the storage never sees it. The retitle's permission is static and the tool listing declares it; whether each node may be retitled is settled per node, so the full schema marks the list <code>live</code>. A gate may also name another resource's operation, <code>entity.content:node.page:update</code>, answered whole. The new titles come from a rewriter that is no model: title case, sentence case or a prefix, the same every time, which a dry run answers before anything is written."),
       default => $this->t('Not an example of this series.'),
     };
+  }
+
+  /**
+   * Example 17: the gates, the full schema's list, and the tool listing.
+   *
+   * @param \Drupal\data_surface\ResourceBuild\OperationRoute $served
+   *   What the form serves.
+   *
+   * @return array
+   *   The blocks.
+   */
+  protected function gates(OperationRoute $served): array {
+    $rows = [];
+    foreach ($served->operation->gates as $gate) {
+      $rows[] = [
+        $gate->spelled,
+        match ($gate->kind) {
+          Gate::ENTITY => $this->t("core's @op access on the @type, its access handler's access()", [
+            '@op' => $gate->operation,
+            '@type' => $gate->entityType,
+          ]),
+          Gate::FIELD => $this->t("core's @op access on the @type's @field field, its access handler's fieldAccess()", [
+            '@op' => $gate->operation,
+            '@type' => $gate->entityType,
+            '@field' => $gate->field,
+          ]),
+          default => $this->t('the @op operation of @resource, answered whole', [
+            '@op' => $gate->operation,
+            '@resource' => $gate->resource,
+          ]),
+        },
+      ];
+    }
+    $full = $this->full($served);
+    $tool_id = 'data_surface:ai.retitle:' . $served->operation->id;
+    $tool = $this->toolManager->hasDefinition($tool_id) ? $this->toolManager->getDefinition($tool_id) : NULL;
+    $values = $tool instanceof ToolDefinition ? ($this->toolManager->createInstance($tool_id)->getInputDefinitions()[OperationInputs::VALUES] ?? NULL) : NULL;
+    $items = $values instanceof MapInputDefinition ? ($values->getPropertyDefinitions()['items'] ?? NULL) : NULL;
+    return [
+      'gates' => [
+        '#type' => 'table',
+        '#caption' => $this->t('The gates the operation borrows, after its permission, @permission, and each asked of every node in the list.', ['@permission' => (string) $served->operation->permission]),
+        '#header' => [$this->t('Gate'), $this->t('What answers it')],
+        '#rows' => $rows,
+      ],
+      'items' => $this->details(
+        $this->t('The list in the full schema'),
+        $this->t('Settled per node, so marked <code>live</code>: a client asks per request, and the answer to a call says which node was refused.'),
+        $this->json([
+          'x-surface' => $full['properties']['items']['x-surface'] ?? NULL,
+          'minItems' => $full['properties']['items']['minItems'] ?? NULL,
+          'maxItems' => $full['properties']['items']['maxItems'] ?? NULL,
+        ]),
+      ),
+      'listing' => $this->details(
+        $this->t('The tool listing'),
+        $this->t("The permission it declares is the operation's own; what is settled per node it says on the list."),
+        $this->json([
+          'permission' => $tool instanceof ToolDefinition ? $tool->getPermission() : NULL,
+          'items' => (string) $items?->getDescription(),
+        ]),
+      ),
+    ];
   }
 
   /**
@@ -985,6 +1061,27 @@ final class ConceptPanel {
   }
 
   /**
+   * Example 17: answers whether each page is titled as it was installed.
+   *
+   * @return bool
+   *   TRUE when every page the module wrote is there, titled as written.
+   */
+  protected function pagesAsInstalled(): bool {
+    if (!$this->moduleHandler->moduleExists(ConceptCalls::RETITLE)) {
+      return TRUE;
+    }
+    $ids = (array) $this->state->get(ConceptCalls::PAGES, []);
+    $storage = $this->entityTypeManager?->getStorage('node');
+    foreach (ConceptCalls::INSTALLED as $name => $title) {
+      $node = isset($ids[$name]) ? $storage?->load($ids[$name]) : NULL;
+      if ($node === NULL || $node->label() !== $title) {
+        return FALSE;
+      }
+    }
+    return TRUE;
+  }
+
+  /**
    * Example 15: the paths of the venues, and their tools.
    *
    * @return array
@@ -1104,11 +1201,21 @@ final class ConceptPanel {
     // the site has one of that name already, which they never touch: then
     // each is a dry run, and the page says so.
     $rehearsed = $id === 'event.venue' && $this->venueExists((string) ConceptCalls::TOWN_HALL['id']);
+    // Example 17's write and put back each title as installed, unless a
+    // page is titled otherwise now, by a form or a call, which they never
+    // undo: then each is a dry run.
+    $retitled = $id === 'ai.retitle' && !$this->pagesAsInstalled();
+    $rehearsed = $rehearsed || $retitled;
     $note = match (TRUE) {
+      $retitled => $this->t('A page of this example is not titled as the module wrote it, so each call below is made now as a dry run, and nothing is written: the calls would put each title back as installed, which would undo what was saved. Title the pages as installed again and the calls write and put back again. The command asks the same from Drush.'),
       $rehearsed => $this->t('This site has a venue named @id, so each call below is made now as a dry run, and nothing is written: the add is refused for the name it took, and the edit, the reorder and the removals rehearse what they would do to it. Remove that venue and the calls write and remove their own again. The command asks the same from Drush.', [
         '@id' => ConceptCalls::TOWN_HALL['id'],
       ]),
       $id === 'event.sponsorship' => $this->t('Each call made now, as this page was drawn, and none writes anything: each is a dry run, which accepts, validates and prepares the values and stops. The draft is sent as an account whose only role is @role, which may not see unpublished content; every other call as you. The command asks the same from Drush.', ['@role' => ConceptCalls::EDITOR]),
+      $id === 'ai.retitle' => $this->t("Each call made now, as this page was drawn, in order, as an account whose only role is @retitler, but the second, made as one whose only role is @requester, which may retitle and edit no page. The third is made while the third page's title is locked. The fourth writes the new titles, the fifth rehearses the same call again, and the last puts each title back as it was installed, so the three pages are what is left. A dry run accepts, validates and prepares the values and stops. The command asks the same from Drush.", [
+        '@retitler' => ConceptCalls::RETITLER,
+        '@requester' => ConceptCalls::REQUESTER,
+      ]),
       $id === 'event.venue' => $this->t('Each call made now, as this page was drawn, in order: the second add writes Town Hall, so the edit, the reorder and the removals find it, and the last call removes it again, so the three venues the module ships are what is left. A dry run accepts, validates and prepares the values and stops, and the listing changes nothing, so it stops there by itself. The command asks the same from Drush.'),
       default => $this->t('Each call made now, as this page was drawn, and none writes anything: a dry run accepts, validates and prepares the values and stops, and an operation that changes nothing stops there by itself. The command asks the same from Drush.'),
     };
@@ -1133,6 +1240,10 @@ final class ConceptPanel {
   /**
    * Makes the account a call says it is made as.
    *
+   * Each role's account has an id of its own, above any user's: core keeps
+   * entity access answers per account id for the request, so two roles
+   * sharing one id would share the first one's answers.
+   *
    * @param string|null $role
    *   The role, or NULL for the account viewing the page.
    *
@@ -1142,7 +1253,7 @@ final class ConceptPanel {
    */
   public static function accountOf(?string $role): ?AccountInterface {
     return $role === NULL ? NULL : new UserSession([
-      'uid' => PHP_INT_MAX,
+      'uid' => PHP_INT_MAX - crc32($role),
       'roles' => [RoleInterface::AUTHENTICATED_ID, $role],
     ]);
   }

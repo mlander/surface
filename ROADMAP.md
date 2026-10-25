@@ -1442,6 +1442,25 @@ renames sit in A because they are cheapest before new code exists.
     the catalog builds every variant; a theme of about 850 components
     passes memcached's 1 MB item.
 
+27. **Access borrowed from another thing.** DONE 2026-10-25
+    (`docs/decisions.md#a-gate-is-borrowed-never-copied`,
+    `docs/resources.md#a-gate-borrowed-from-another-thing`).
+    `#[Operation(gate:)]` names access another thing's owner decides:
+    another resource's operation by id, answered whole, or core's access
+    on an entity or a field, `entity:node:update` and
+    `field:node.title:edit`. Asked after the operation's permission and
+    before its access class, which narrows only, about the entity the
+    context knows, or per item of a collection whose item refers to one,
+    a refusal filed on that item's key with the owner's reason and the
+    storage never handed the item; a gate naming what the site lacks is
+    refused at discovery. A dry run answers the outputs prepare
+    rehearsed. Example 17 at `/surface-examples/17`, in
+    `data_surface_examples_retitle`: a bulk retitle of nodes, `ai.retitle`,
+    with a deterministic rewriter and no model. Open: a gate on a child's
+    operation; a gate per item inside an item; the tool listing's
+    sentence on a gated list says "locked or left out" where a gate
+    refuses.
+
 ## Maintenance
 
 - **Functional tests convert to kernel tests as units touch them**, by
