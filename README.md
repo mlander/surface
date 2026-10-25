@@ -127,7 +127,8 @@ The module uses these twenty-three words in exactly one sense each.
 - **Structure**: a group of keys with no identity or storage of its
   own, only ever held by something else: attached to a parent, one of
   the variants at a key, or configuring a plugin, whose host supplies the
-  operation and the storage. Declared as a class carrying
+  operation, its permission and the storage. It has no permission of its
+  own; it may answer access for its keys. Declared as a class carrying
   `#[Structure(id, access:)]`. The six ways one is made of others are
   side by side in [Which way to compose](docs/resources.md#which-way-to-compose).
 - **Shape**: a named type, in Smithy's sense, of which there are three

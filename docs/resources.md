@@ -441,6 +441,17 @@ hands it to the pipeline makes it decisive
 (`DataSurfaceAccess::decisive()`): no opinion is a refusal, as it is on
 a route.
 
+A structure has no permission of its own. A permission says who may
+make the call at a door, and only a resource opens doors; a structure
+is only ever attached, so the call that reaches it is its container's
+operation, gated by that operation's permission. What a structure may
+do is answer access for its own keys, with `access:` on `#[Structure]`:
+locked or left out for the account asking, in its own frame, reading a
+permission if it wants, as example 10's fees do. The sentence to keep:
+a permission decides whether you may ask; an access answer decides
+what you may see and change once you have asked; a structure can only
+ever do the second.
+
 ### Three answers
 
 An access class may return core's `AccessResultInterface`, as every one
