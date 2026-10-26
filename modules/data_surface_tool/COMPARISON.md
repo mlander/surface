@@ -58,7 +58,7 @@ What to look at:
                 "array",
                 "null"
             ],
-            "description": "Available countries: Leave empty for all countries.",
+            "description": "Leave empty for all countries.",
             "items": {
                 "oneOf": [
                     {
@@ -344,7 +344,7 @@ What to look at:
                 "en",
                 null
             ],
-            "description": "Language override: Ensures entered addresses are always formatted in the same language.",
+            "description": "Ensures entered addresses are always formatted in the same language.",
             "title": "Language override"
         },
         "field_overrides": {
@@ -558,11 +558,11 @@ What to look at:
                     "title": "Administrative area (e.g. State or Province)"
                 }
             },
-            "description": "Field overrides: Override the country-specific address format, forcing properties to always be hidden, optional, or required.",
+            "description": "Override the country-specific address format, forcing properties to always be hidden, optional, or required.",
             "title": "Field overrides"
         }
     },
-    "description": "Field settings: Settings for this field on this bundle, described by the field type itself.",
+    "description": "Settings for this field on this bundle, described by the field type itself.",
     "title": "Field settings"
 }
 ```
@@ -581,7 +581,7 @@ What to look at:
                 "array",
                 "null"
             ],
-            "description": "Available countries: The input definition for Available countries",
+            "description": "The input definition for Available countries",
             "items": {
                 "oneOf": [
                     {
@@ -591,7 +591,7 @@ What to look at:
                         "type": "null"
                     }
                 ],
-                "description": "String: The input definition for String",
+                "description": "The input definition for String",
                 "title": "String"
             },
             "title": "Available countries"
@@ -605,7 +605,7 @@ What to look at:
                     "type": "null"
                 }
             ],
-            "description": "Language override: The input definition for Language override",
+            "description": "The input definition for Language override",
             "title": "Language override"
         },
         "field_overrides": {
@@ -613,7 +613,7 @@ What to look at:
                 "array",
                 "null"
             ],
-            "description": "Field overrides: The input definition for Field overrides",
+            "description": "The input definition for Field overrides",
             "items": {
                 "type": [
                     "object",
@@ -629,11 +629,11 @@ What to look at:
                                 "type": "null"
                             }
                         ],
-                        "description": "Override: The input definition for Override",
+                        "description": "The input definition for Override",
                         "title": "Override"
                     }
                 },
-                "description": "Mapping: The input definition for Mapping",
+                "description": "The input definition for Mapping",
                 "title": "Mapping"
             },
             "title": "Field overrides"
@@ -643,7 +643,7 @@ What to look at:
                 "array",
                 "null"
             ],
-            "description": "Used fields: The input definition for Used fields",
+            "description": "The input definition for Used fields",
             "items": {
                 "oneOf": [
                     {
@@ -653,13 +653,13 @@ What to look at:
                         "type": "null"
                     }
                 ],
-                "description": "String: The input definition for String",
+                "description": "The input definition for String",
                 "title": "String"
             },
             "title": "Used fields"
         }
     },
-    "description": "Address field settings: The input definition for Address field settings",
+    "description": "The input definition for Address field settings",
     "title": "Address field settings"
 }
 ```
