@@ -123,6 +123,35 @@ final class References {
   protected ?int $held = NULL;
 
   /**
+   * Entity types read from the code of modules not installed (knowing()).
+   *
+   * @var array<string, \Drupal\Core\Entity\EntityTypeInterface>
+   */
+  protected array $fromCode = [];
+
+  /**
+   * Gives a copy that also knows entity types the site does not have yet.
+   *
+   * For the config schema generator, which builds a module's resources
+   * from its code before the module is installed: a key that refers to an
+   * entity type the module declares is built as it will be once the
+   * module is, its id typed as the entity type keeps it. Only the key's
+   * definition is built: nothing lists, looks up or validates an entity
+   * of such a type through the copy.
+   *
+   * @param array<string, \Drupal\Core\Entity\EntityTypeInterface> $entityTypes
+   *   The entity types, by id.
+   *
+   * @return static
+   *   The copy; this service is left as it was.
+   */
+  public function knowing(array $entityTypes): static {
+    $copy = clone $this;
+    $copy->fromCode = $entityTypes + $this->fromCode;
+    return $copy;
+  }
+
+  /**
    * Gets the most candidates a key lists as its options.
    *
    * @return int
@@ -216,7 +245,7 @@ final class References {
     // Typed data derives `entity:<type>` for every entity type. A bundle
     // is site state, which may not be there yet: the key then offers
     // nothing until it is.
-    if ($this->typedDataManager->getDefinition('entity:' . $parts[1], FALSE) === NULL) {
+    if (!isset($this->fromCode[$parts[1]]) && $this->typedDataManager->getDefinition('entity:' . $parts[1], FALSE) === NULL) {
       throw new \LogicException(sprintf('add("%s", "%s") names an entity type this site does not have: typed data has no "entity:%s" data type.', $key, $type, $parts[1]));
     }
     $definition = DataDefinition::create($this->idType($parts[1]));
@@ -238,12 +267,20 @@ final class References {
    *   'string'.
    */
   public function idType(string $entity_type_id): string {
-    $entity_type = $this->entityTypeManager->getDefinition($entity_type_id);
+    $entity_type = $this->fromCode[$entity_type_id] ?? $this->entityTypeManager->getDefinition($entity_type_id);
     if (!$entity_type->entityClassImplements(FieldableEntityInterface::class)) {
       return 'string';
     }
     $key = (string) $entity_type->getKey('id');
-    $fields = $this->entityFieldManager->getBaseFieldDefinitions($entity_type_id);
+    if (isset($this->fromCode[$entity_type_id])) {
+      // Not on the site yet: its class says what its id field is.
+      $class = $entity_type->getClass();
+      assert(is_subclass_of($class, FieldableEntityInterface::class));
+      $fields = $class::baseFieldDefinitions($entity_type);
+    }
+    else {
+      $fields = $this->entityFieldManager->getBaseFieldDefinitions($entity_type_id);
+    }
     return isset($fields[$key]) && $fields[$key]->getType() === 'integer' ? 'integer' : 'string';
   }
 

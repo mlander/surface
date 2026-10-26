@@ -9,8 +9,11 @@ use Composer\Autoload\ClassLoader;
 use Drupal\Core\Cache\NullBackend;
 use Drupal\Core\Config\Entity\ConfigEntityTypeInterface;
 use Drupal\Core\DependencyInjection\ClassResolverInterface;
+use Drupal\Core\Entity\Attribute\EntityType;
+use Drupal\Core\Entity\EntityTypeInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Extension\ModuleExtensionList;
+use Drupal\Core\Plugin\Discovery\AttributeDiscoveryWithAnnotations;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinition;
@@ -164,9 +167,12 @@ final class ConfigSchemaGenerator {
    * its classes scanned from its src/ as discovery scans an installed
    * module's (ResourceCollectorPass::discover()), autoloaded from there,
    * and its alters, storage and access classes built as the container
-   * would build them (AutowiringClassResolver). Nothing is installed and
-   * no cache is written. An owner and a module mounting keys on it are
-   * named together, so one run writes both, each seeing the other.
+   * would build them (AutowiringClassResolver), and the entity types it
+   * declares are read from its code, so a key that refers to one is built
+   * as it will be once the module is installed (References::knowing()).
+   * Nothing is installed and no cache is written. An owner and a module
+   * mounting keys on it are named together, so one run writes both, each
+   * seeing the other.
    *
    * Decision: see
    * docs/decisions.md#a-config-object-is-described-by-its-resource.
@@ -211,7 +217,36 @@ final class ConfigSchemaGenerator {
     $loader->register();
     $resolver = new AutowiringClassResolver($this->classResolver, $this->container);
     $registry = new ResourceRegistry(ResourceCollectorPass::discover($scanned, $this->root . '/'), new NullBackend('data_surface_config_schema'), $this->plugins, $resolver);
-    return new static($registry, $this->resources->withRegistry($registry, $resolver), $this->moduleList, $this->root, $scanned, entityTypeManager: $this->entityTypeManager);
+    // A key may refer to an entity type a module not installed declares,
+    // which the site does not have until it is.
+    $declared = $this->entityTypesOf(array_diff_key($scanned, $this->installed));
+    $references = $this->container->get('data_surface.references');
+    $known = $declared === [] ? NULL : $references->knowing($declared);
+    return new static($registry, $this->resources->withRegistry($registry, $resolver, $known), $this->moduleList, $this->root, $scanned, entityTypeManager: $this->entityTypeManager);
+  }
+
+  /**
+   * Reads the entity types modules declare, from their code.
+   *
+   * As the entity type manager discovers them, in each module's
+   * src/Entity, without installing anything.
+   *
+   * @param array<string, array{pathname: string}> $modules
+   *   The modules, each with the path of its info file from the root.
+   *
+   * @return array<string, \Drupal\Core\Entity\EntityTypeInterface>
+   *   The entity types, by id.
+   */
+  protected function entityTypesOf(array $modules): array {
+    $namespaces = [];
+    foreach ($modules as $module => $info) {
+      $namespaces['Drupal\\' . $module] = $this->root . '/' . dirname($info['pathname']) . '/src';
+    }
+    if ($namespaces === []) {
+      return [];
+    }
+    $discovery = new AttributeDiscoveryWithAnnotations('Entity', new \ArrayObject($namespaces), EntityType::class, 'Drupal\Core\Entity\Annotation\EntityType');
+    return array_filter($discovery->getDefinitions(), static fn (mixed $type): bool => $type instanceof EntityTypeInterface);
   }
 
   /**

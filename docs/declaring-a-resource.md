@@ -197,10 +197,11 @@ options resolver fetches it, never a list the class assembles. "Live"
 is decided by runtime dependence, not by structure: `PluginExists`,
 whose values are resolved from a plugin manager, is still written down
 as a literal constraint, and so is `EntityBundleExists`, handed the
-entity type by a refiner. A refiner points; the resolver fetches. When
-no core constraint names the list, a module adds one with its resolver,
-as the demo does with `DataSurfaceDemoBundleField`; see [Options and
-resolvers](options.md).
+entity type by a refiner. A refiner points; the resolver fetches. Look
+for a stock constraint or a reference type string (`entity:<type>`)
+first; only when none names the list does a module add one with its
+resolver, as the demo does with `DataSurfaceDemoBundleField`; see
+[Which constraint to write](options.md#which-constraint-to-write).
 
 A blueprint whose keys do depend on site state (a key offered only while a
 module is installed, a label read from configuration) says so with

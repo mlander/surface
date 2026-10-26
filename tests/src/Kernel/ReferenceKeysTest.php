@@ -204,6 +204,28 @@ class ReferenceKeysTest extends DataSurfaceKernelTestBase {
   }
 
   /**
+   * Tests a key may refer to an entity type read from code, not installed.
+   *
+   * What the config schema generator builds for a module it reads before
+   * it is installed: the id typed as the entity type's class says, and the
+   * service itself still refusing a type the site does not have.
+   */
+  public function testAnEntityTypeReadFromCode(): void {
+    $references = $this->container->get('data_surface.references');
+    $types = $this->container->get('entity_type.manager')->getDefinitions();
+    $content = clone $types['node'];
+    $content->set('id', 'zz_content');
+    $config = clone $types['event_venue'];
+    $config->set('id', 'zz_config');
+    $known = $references->knowing(['zz_content' => $content, 'zz_config' => $config]);
+    $this->assertSame('integer', $known->definition('thing', 'entity:zz_content')->getDataType(), "Its class's id field is an integer.");
+    $this->assertSame('string', $known->definition('thing', 'entity:zz_config')->getDataType());
+    $this->assertSame(['entityTypeId' => 'zz_config'], $known->definition('thing', 'entity:zz_config')->getConstraints()[References::CONSTRAINT]);
+    $this->expectExceptionMessage('names an entity type this site does not have');
+    $references->definition('thing', 'entity:zz_config');
+  }
+
+  /**
    * Tests both documents, whole, under the limit and past it.
    */
   public function testBothDocumentsUnderAndPastTheLimit(): void {
@@ -498,7 +520,8 @@ class ReferenceKeysTest extends DataSurfaceKernelTestBase {
       '/credit/id',
     ], $lookup['parameters'][0]['schema']['enum'], 'Every reference key, and a bare key, which names its id.');
     $this->assertSame(['key', 'entityType', 'bundles', 'items'], $lookup['responses']['200']['content']['application/json']['schema']['required']);
-    $this->assertSame([], array_values(array_filter(array_keys($document['paths']), static fn (string $path): bool => str_ends_with($path, ':lookup') && $path !== '/surface-api/event.sponsorship:lookup')), 'Only a resource with a reference key has a lookup.');
+    $this->assertSame(['/surface-api/registration.step2:lookup'], array_values(array_filter(array_keys($document['paths']), static fn (string $path): bool => str_ends_with($path, ':lookup') && $path !== '/surface-api/event.sponsorship:lookup')), 'Only a resource with a reference key has a lookup: example 2\'s venue is one.');
+    $this->assertSame(['/venue'], $document['paths']['/surface-api/registration.step2:lookup']['get']['parameters'][0]['schema']['enum']);
   }
 
   /**

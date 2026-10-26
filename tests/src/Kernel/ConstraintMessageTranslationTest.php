@@ -89,10 +89,13 @@ class ConstraintMessageTranslationTest extends DataSurfaceKernelTestBase {
     $emitter = $this->container->get('data_surface.contract_emitter');
     $message = static fn (array $document): mixed => $document['schema']['properties']['opens']['x-surface']['patternMessage'] ?? NULL;
 
-    $this->assertSame(self::MESSAGE, $message($emitter->emitFull($built, 'event.doors')->document));
+    $source = $message($emitter->emitFull($built, 'event.doors')->document);
+    $this->assertSame(self::MESSAGE, $source);
     $this->container->get('string_translation')->setDefaultLangcode('xx');
-    $this->assertSame('XX ' . self::MESSAGE, $message($emitter->emitFull($built, 'event.doors')->document));
-    $this->assertSame('XX ' . self::MESSAGE, $message($emitter->emit($built, $built->getDefaultValues(), 'event.doors')->document), 'The schema for these answers says the same.');
+    $full = $message($emitter->emitFull($built, 'event.doors')->document);
+    $this->assertSame('XX ' . self::MESSAGE, $full);
+    $answers = $message($emitter->emit($built, $built->getDefaultValues(), 'event.doors')->document);
+    $this->assertSame('XX ' . self::MESSAGE, $answers, 'The schema for these answers says the same.');
   }
 
 }

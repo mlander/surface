@@ -474,14 +474,18 @@ class VenueResourceTest extends DataSurfaceKernelTestBase {
       'harbour_auditorium',
       'harbour_deck',
     ];
-    $this->assertSame([['riverside', 'library', 'harbour'], $rooms], $this->offered());
+    // The venue is a reference: core's selection handler's candidates,
+    // sorted by name. The rooms are the resolver's, the venues lighter
+    // first.
+    $this->assertSame([['harbour', 'library', 'riverside'], $rooms], $this->offered());
     $this->assertTrue($this->call('create', ['values' => ['weight' => 5] + self::TOWN_HALL])['success']);
     [$venue, $room] = $this->offered();
-    $this->assertSame(['riverside', 'library', 'harbour', 'town_hall'], $venue, 'Offered at the next build, read under the venues\' list tag.');
+    $this->assertSame(['harbour', 'library', 'riverside', 'town_hall'], $venue, 'Offered at the next build, read under the venues\' list tag.');
     $this->assertContains('town_hall_council', $room);
-    // A venue disabled is no longer offered.
+    // A venue disabled is still offered, with its rooms: core's selection
+    // for a config entity type lists every one.
     EventVenue::load('library')->setStatus(FALSE)->save();
-    $this->assertSame(['riverside', 'harbour', 'town_hall'], $this->offered()[0]);
+    $this->assertSame([['harbour', 'library', 'riverside', 'town_hall'], [...$rooms, 'town_hall_council']], $this->offered());
     // And its room is refused by the pipeline in Choice's own words.
     $context = $resources->operation(RegistrationStep2Resource::class, 'configure');
     $built = $resources->build(RegistrationStep2Resource::class, $context);

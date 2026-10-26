@@ -693,6 +693,49 @@ operation. (`Operation`, `ResourceRegistry::discover()`,
 `OperationDefinition::isBare()`, `Resources::operation()`,
 `OperationFactsTest`)
 
+### A rule is a keyword first, a list second, code last
+
+Decided 2026-10-26, with example 2's venue moved to a reference. Which
+constraint an author writes is a ladder of three steps, taken from the
+top ([Which constraint to write](options.md#which-constraint-to-write)):
+
+- **A stock constraint with data options first.** `Range`, `Length`,
+  `Count`, `NotBlank`, `Regex`, `Email`, `Choice`, `LabeledChoice`:
+  the ones the emitter writes as JSON Schema keywords. Why: a keyword is
+  read by every client. The schema reader turns it back into the
+  constraint, the React page narrows on it with no request, and a tool
+  caller reads it before calling. JSON Schema has a closed set of
+  keywords and a generic validator ignores any other, so a constraint
+  with no keyword tells a client its name and nothing it can check.
+- **A list the site decides second.** A constraint that names a kind,
+  read by a resolver (`PluginExists`, `EntityBundleExists`,
+  `LanguageExists`, `Country`), or the type string `entity:<type>`. Why:
+  the class stays literal and holds no service, the resolver lists for
+  the site, and the schema states the list as a `oneOf` while it is
+  short, looked up or `deferred` past its budget, and a key a static
+  refiner narrows by it stays `enumerated`. Where no stock constraint
+  names the kind, a module writes one per kind with its resolver, as
+  example 2 does for a venue's rooms.
+- **A constraint of the author's own last.** Only for a rule no keyword
+  and no list states: a comparison between two keys, uniqueness against
+  what is stored, a check of site state with a reason of its own. Why
+  last: the schema can only name it under `checkedOnServer`, nothing
+  reads it back, nothing narrows on it in the browser, and a caller
+  learns it when a call is refused. One that is written extends the
+  closest stock constraint, so its validator, refusal and result code
+  come with it.
+
+Example 2's venue was a `Choice` subclass with a validator and a
+resolver of its own; it is `entity:event_venue` now, with no class. Its
+room keeps a constraint, since no stock one names a venue's rooms.
+Rejected: a constraint per resource for every list the site holds,
+which is how example 2 started, because each one is code a reader must
+open to learn what a key allows, where a type string or a stock
+constraint says it.
+(`ContractEmitter::STATED`, `ContractEmitter::keywords()`,
+`DataSurfaceOptions::isStatedByList()`, `RegistrationStep2Resource`,
+`EventVenueRoomConstraint`)
+
 ## Context
 
 ### A build is not cached across requests
@@ -2118,7 +2161,12 @@ format core is asked to replace with data definitions
   (`ResourceCollectorPass::discover()`), autoloaded from there, and its
   alters, storage and access classes built as the container would build
   them (`AutowiringClassResolver`), with nothing installed or cached.
-  So a new module is written, then its files, then installed once.
+  So a new module is written, then its files, then installed once. The
+  entity types it declares are read from its `src/Entity` as the entity
+  type manager discovers them, so a key that refers to one is built as
+  it will be (`References::knowing()`; *added 2026-10-26*, when example
+  2's venue, a reference to the examples' own entity type, stopped the
+  examples' files being written before their install).
   Decided 2026-10-21, from the fourth fresh-eyes log (entries 13 and
   14): the command read only installed modules, so a module was
   installed without its config object and installed again after the
@@ -5221,14 +5269,19 @@ listed, and how they are put in order.
   no list builder and no links: the resource's routes add, edit and
   remove a venue.
 - **Example 2 chooses from the venues.** Its venue and room are the
-  venue entities' (`EventVenue`, `EventVenueRoom` and, added by the
-  room's refiner, `RoomOfEventVenue`, read by one resolver under the
-  venues' list tag), so a venue added through example 15 is offered at
-  the next request with no cache rebuild. The shipped venues are the
-  hand-written list's, so example 2's documents are as they were, byte
-  for byte. A resolver may say its list is the whole of its constraint
+  venue entities', so a venue added through example 15 is offered at
+  the next request with no cache rebuild. A resolver may say its list
+  is the whole of its constraint
   (`#[DataSurfaceOptionsResolver(exact: TRUE)]`), as a `Choice`'s is,
   and the emitter then names that constraint under no `checkedOnServer`.
+  *Changed 2026-10-26:* the venue was a constraint of its own, read with
+  the room's by one resolver; it is a reference now, `entity:event_venue`
+  ([A rule is a keyword first, a list second, code
+  last](#a-rule-is-a-keyword-first-a-list-second-code-last)), its
+  candidates core's selection handler's: every venue, enabled or not,
+  sorted by name. The room keeps `EventVenueRoom` and, added by its
+  refiner, `RoomOfEventVenue`, read by `EventVenueRoomOptions` under the
+  venues' list tag, every room of every venue.
   *Open:* the capacity's cap per room still reads `Venues::seats()`: a
   static refiner reads only what it watches and cannot say what site
   state it read, so a room example 15 adds is offered with no cap on the

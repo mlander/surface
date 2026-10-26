@@ -45,24 +45,33 @@
                 "type": "string",
                 "oneOf": [
                     {
-                        "const": "riverside",
-                        "title": "Riverside Hall"
+                        "const": "harbour",
+                        "title": "Harbour Centre"
                     },
                     {
                         "const": "library",
                         "title": "Old Library"
                     },
                     {
-                        "const": "harbour",
-                        "title": "Harbour Centre"
+                        "const": "riverside",
+                        "title": "Riverside Hall"
                     }
                 ],
                 "x-surface": {
                     "widget": "select",
+                    "reference": {
+                        "entityType": "event_venue"
+                    },
                     "emptyOption": {
                         "show": false,
                         "label": "- Select -"
-                    }
+                    },
+                    "checkedOnServer": [
+                        {
+                            "constraint": "DataSurfaceValidReference",
+                            "message": "Refers to an entity the account may reference"
+                        }
+                    ]
                 }
             },
             "room": {

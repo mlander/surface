@@ -30,8 +30,8 @@ services:
   data_surface_examples.venue_form_cosmetics:
     class: Drupal\data_surface_examples\Form\VenueFormCosmetics
     arguments: ['@string_translation']
-  # The venues and rooms an event may be held in, example 15's entities,
-  # which example 2's venue and room are chosen from.
+  # The rooms an event may be held in, those of example 15's venues,
+  # which example 2's room is chosen from.
   data_surface_examples.venue_choices:
     class: Drupal\data_surface_examples\VenueChoices
     arguments: ['@entity_type.manager']

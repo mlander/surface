@@ -242,17 +242,19 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests example 2: labeled choices, and the venue narrowing the room.
+   * Tests example 2: a venue referred to, and the venue narrowing the room.
    */
   public function testExampleTwo(): void {
     $contract = $this->contract('registration.step2', 'configure');
     $schema = $contract['schema'];
     $venue = $schema['properties']['venue'];
+    // A reference: the selection handler's candidates, sorted by name.
     $this->assertSame([
-      'riverside' => 'Riverside Hall',
-      'library' => 'Old Library',
       'harbour' => 'Harbour Centre',
+      'library' => 'Old Library',
+      'riverside' => 'Riverside Hall',
     ], $this->titles($venue));
+    $this->assertSame(['entityType' => 'event_venue'], $venue['x-surface']['reference']);
     $this->assertArrayNotHasKey('enum', $venue);
     $this->assertSame('select', $venue['x-surface']['widget']);
     // Required, and a valid choice is stored: no empty option.
@@ -680,7 +682,9 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
       $this->assertSame(['oneOf'], array_keys($then), 'A conditional says only what changed.');
       $rooms[$when['venue']] = $this->titles($then);
     }
-    $this->assertSame(array_map(Venues::rooms(...), array_combine(array_keys(Venues::VENUES), array_keys(Venues::VENUES))), $rooms);
+    // One conditional per venue the reference lists, sorted by name.
+    $venues = ['harbour', 'library', 'riverside'];
+    $this->assertSame(array_map(Venues::rooms(...), array_combine($venues, $venues)), $rooms);
 
     $capacity = $schema['properties']['capacity'];
     $this->assertArrayNotHasKey('maximum', $capacity, 'Only a room bounds it from above.');
@@ -913,9 +917,9 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
       $rooms[$when['venue']] = array_keys($this->titles($then));
     }
     $this->assertSame([
-      'riverside' => ['riverside_main', 'riverside_east'],
-      'library' => ['library_reading', 'library_garden'],
       'harbour' => ['harbour_auditorium', 'harbour_deck'],
+      'library' => ['library_reading', 'library_garden'],
+      'riverside' => ['riverside_main', 'riverside_east'],
     ], $rooms);
 
     $capacity = $schema['properties']['capacity'];

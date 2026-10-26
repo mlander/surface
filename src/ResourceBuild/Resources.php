@@ -179,6 +179,11 @@ final class Resources implements ResourcesInterface {
   protected ?Shapes $shapes = NULL;
 
   /**
+   * What builds reference keys, where withRegistry() was handed one.
+   */
+  protected ?References $heldReferences = NULL;
+
+  /**
    * Whether the build under way is for the account alone (buildStatic()).
    */
   protected bool $accountAlone = FALSE;
@@ -363,6 +368,9 @@ final class Resources implements ResourcesInterface {
    *   The registry.
    * @param \Drupal\Core\DependencyInjection\ClassResolverInterface $classResolver
    *   What builds the classes discovery names.
+   * @param \Drupal\data_surface\Reference\References|null $references
+   *   What builds reference keys, knowing the entity types those modules
+   *   declare (References::knowing()); NULL for the service.
    *
    * @return static
    *   A build step with nothing built yet.
@@ -371,8 +379,10 @@ final class Resources implements ResourcesInterface {
    *
    * @see \Drupal\data_surface\Storage\ConfigSchemaGenerator::including()
    */
-  public function withRegistry(ResourceRegistry $registry, ClassResolverInterface $classResolver): static {
-    return new static($registry, $this->typedDataManager, $classResolver, $this->currentUser, $this->operationArguments, $this->watchedValueCheck, $this->permissionsHashGenerator, $this->siteDefaults);
+  public function withRegistry(ResourceRegistry $registry, ClassResolverInterface $classResolver, ?References $references = NULL): static {
+    $resources = new static($registry, $this->typedDataManager, $classResolver, $this->currentUser, $this->operationArguments, $this->watchedValueCheck, $this->permissionsHashGenerator, $this->siteDefaults);
+    $resources->heldReferences = $references;
+    return $resources;
   }
 
   /**
@@ -2777,7 +2787,7 @@ final class Resources implements ResourcesInterface {
     if ($resolved !== NULL && $resolved !== $gate && !$marked) {
       $result = AccessResult::allowedIfHasPermission($account, $resolved);
       if (!$result->isAllowed()) {
-        $omitted = AccessAnswer::omitted(sprintf('The "%s" operation needs the "%s" permission.', $operation?->id, $resolved));
+        $omitted = AccessAnswer::omitted(sprintf('The "%s" operation needs the "%s" permission.', $operation->id, $resolved));
         return [$omitted->addCacheableDependency($result), FALSE];
       }
       $access->addCacheableDependency($result);
@@ -4862,6 +4872,9 @@ final class Resources implements ResourcesInterface {
    *   The service.
    */
   protected function references(): References {
+    if ($this->heldReferences !== NULL) {
+      return $this->heldReferences;
+    }
     $references = $this->classResolver->getInstanceFromDefinition('data_surface.references');
     assert($references instanceof References);
     return $references;

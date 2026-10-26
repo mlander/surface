@@ -23,9 +23,9 @@ use Drupal\data_surface_examples\Venues;
  * one #[RefinesInput] method each, whose signature names what it reads.
  * Declaration order is form order, so the capacity comes after the room
  * that decides it, and its description names that room's limit. The
- * venues and their rooms are example 15's venue entities, which the two
- * constraints name and a resolver lists; the seats are Venues', since a
- * static refiner reads only what it watches.
+ * venue refers to one of example 15's venue entities by its machine name;
+ * the room names a room of one, by a constraint a resolver lists; the
+ * seats are Venues', since a static refiner reads only what it watches.
  */
 #[Resource('registration.step2', storage: RegistrationStep2Storage::class)]
 #[Operation('configure',
@@ -42,9 +42,8 @@ final class RegistrationStep2Resource implements ResourceInterface {
     $inputs->add('title', 'string', t('Event title'))
       ->setRequired(TRUE);
     $inputs->add('open', 'boolean', t('Registration open'), default: TRUE);
-    $inputs->add('venue', 'string', t('Venue'))
-      ->setRequired(TRUE)
-      ->addConstraint('EventVenue');
+    $inputs->add('venue', 'entity:event_venue', t('Venue'))
+      ->setRequired(TRUE);
     $inputs->add('room', 'string', t('Room'))
       ->setRequired(TRUE)
       ->addConstraint('EventVenueRoom');

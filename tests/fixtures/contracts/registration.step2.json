@@ -43,18 +43,29 @@
                         "type": "string",
                         "oneOf": [
                             {
-                                "const": "riverside",
-                                "title": "Riverside Hall"
+                                "const": "harbour",
+                                "title": "Harbour Centre"
                             },
                             {
                                 "const": "library",
                                 "title": "Old Library"
                             },
                             {
-                                "const": "harbour",
-                                "title": "Harbour Centre"
+                                "const": "riverside",
+                                "title": "Riverside Hall"
                             }
-                        ]
+                        ],
+                        "x-surface": {
+                            "reference": {
+                                "entityType": "event_venue"
+                            },
+                            "checkedOnServer": [
+                                {
+                                    "constraint": "DataSurfaceValidReference",
+                                    "message": "Refers to an entity the account may reference"
+                                }
+                            ]
+                        }
                     },
                     "room": {
                         "title": "Room",
@@ -119,7 +130,7 @@
                         "if": {
                             "properties": {
                                 "venue": {
-                                    "const": "riverside"
+                                    "const": "harbour"
                                 }
                             },
                             "required": [
@@ -131,12 +142,12 @@
                                 "room": {
                                     "oneOf": [
                                         {
-                                            "const": "riverside_main",
-                                            "title": "Main hall"
+                                            "const": "harbour_auditorium",
+                                            "title": "Auditorium"
                                         },
                                         {
-                                            "const": "riverside_east",
-                                            "title": "East room"
+                                            "const": "harbour_deck",
+                                            "title": "Upper deck"
                                         }
                                     ]
                                 }
@@ -175,7 +186,7 @@
                         "if": {
                             "properties": {
                                 "venue": {
-                                    "const": "harbour"
+                                    "const": "riverside"
                                 }
                             },
                             "required": [
@@ -187,12 +198,12 @@
                                 "room": {
                                     "oneOf": [
                                         {
-                                            "const": "harbour_auditorium",
-                                            "title": "Auditorium"
+                                            "const": "riverside_main",
+                                            "title": "Main hall"
                                         },
                                         {
-                                            "const": "harbour_deck",
-                                            "title": "Upper deck"
+                                            "const": "riverside_east",
+                                            "title": "East room"
                                         }
                                     ]
                                 }

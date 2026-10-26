@@ -319,9 +319,8 @@ final class RegistrationStep2Resource implements ResourceInterface {
     $inputs->add('title', 'string', t('Event title'))
       ->setRequired(TRUE);
     $inputs->add('open', 'boolean', t('Registration open'), default: TRUE);
-    $inputs->add('venue', 'string', t('Venue'))
-      ->setRequired(TRUE)
-      ->addConstraint('EventVenue');
+    $inputs->add('venue', 'entity:event_venue', t('Venue'))
+      ->setRequired(TRUE);
     $inputs->add('room', 'string', t('Room'))
       ->setRequired(TRUE)
       ->addConstraint('EventVenueRoom');
@@ -359,22 +358,38 @@ final class RegistrationStep2Resource implements ResourceInterface {
 }
 ```
 
-The venues and their rooms are example 15's venue entities: the venue
-declares `EventVenue` and the room `EventVenueRoom`, two constraints
-whose list is the site's, and the room's refiner adds
-`RoomOfEventVenue` for the venue chosen, a pure function of it. One
-resolver, `EventVenueOptions`, reads all three as the enabled venues or
-their rooms, under the venues' list tag, so a venue added through
-example 15 is offered here at the next request, with no cache rebuild,
-and a venue disabled is not. The resolver says its list is the whole of
-the constraint (`exact: TRUE`), as a `Choice`'s is, so both documents
-state the venues and rooms as the `oneOf` they always did and name
-nothing under `checkedOnServer`: the three venues shipped are the list
-the class held before, so example 2's documents are as they were, byte
-for byte. The seats the capacity reads are still `Venues::seats()`: a
-static refiner reads only what it watches, and cannot say what site
-state it read, so a room example 15 adds is offered with no cap on the
-capacity.
+The venue refers to one of example 15's venue entities, by the data
+type string `entity:event_venue`: it holds the venue's machine name, its
+candidates are core's entity reference selection handler's for the
+account, and both documents mark it `x-surface.reference`. This module
+writes no code for it. The list differs from the one example 2 had
+before the venue was a reference: core's selection for a config entity
+type lists every venue, enabled or not, sorted by name, where the old
+list left a disabled venue out and put the lighter first.
+
+The room is the one rule no stock constraint states, "a room of a venue
+this site has", so it keeps a constraint of its own, `EventVenueRoom`, a
+`Choice` whose list is the site's. Its refiner adds `RoomOfEventVenue`
+for the venue chosen, a pure function of it. One resolver,
+`EventVenueRoomOptions`, reads both as the rooms of every venue, under
+the venues' list tag, so a venue added through example 15 is offered
+here at the next request with no cache rebuild, and its rooms with it.
+The resolver says its list is the whole of the constraint
+(`exact: TRUE`), as a `Choice`'s is, so both documents state the rooms
+as a `oneOf` and name nothing under `checkedOnServer` for the room. The full
+schema states each venue's rooms as a conditional per venue the
+reference lists.
+
+The refiner adds a second constraint rather than `EventVenueRoom` again
+with the venue because core's `addConstraint()` replaces a constraint of
+the same name, and the narrowing check refuses a constraint whose
+options were replaced: it cannot read what an option means. Adding a
+constraint is narrower by its rule. Which constraint to write, and why
+the venue needs none, is in
+[Options](../../docs/options.md#which-constraint-to-write). The seats
+the capacity reads are still `Venues::seats()`: a static refiner reads
+only what it watches, and cannot say what site state it read, so a room
+example 15 adds is offered with no cap on the capacity.
 
 The example ships at Riverside Hall's main hall, so the text under the
 capacity says "Up to 400 for the Main hall." Change the venue to the Old
@@ -410,7 +425,7 @@ the resource uses. It edits the same config object. It chooses from
 Its page says what the two forms share and counts both, from the files,
 the way the landing page counts every class: without the namespace, the
 use statements, blank lines and comments. The twin is **94 lines of
-code**; example 2's resource and its storage are **40**. The storage is
+code**; example 2's resource and its storage are **39**. The storage is
 counted with the resource because the twin names its config object
 itself, which the resource leaves to its storage.
 
@@ -573,13 +588,12 @@ of code, counted without blank lines or comments:
 
 | File | What it is | Lines |
 | --- | --- | --- |
-| [`modules/data_surface_examples/src/Resource/RegistrationStep2Resource.php`](src/Resource/RegistrationStep2Resource.php) | the resource: five keys and two refiners, the rooms by the venue and the capacity by the room | 37 |
-| [`modules/data_surface_examples/src/Plugin/Validation/Constraint/EventVenueConstraint.php`](src/Plugin/Validation/Constraint/EventVenueConstraint.php) | the venue's constraint: a venue an event may be held in, a Choice whose list is the site's | 10 |
-| [`modules/data_surface_examples/src/Plugin/Validation/Constraint/EventVenueRoomConstraint.php`](src/Plugin/Validation/Constraint/EventVenueRoomConstraint.php) | the room's constraint: a room of any of those venues | 14 |
+| [`modules/data_surface_examples/src/Resource/RegistrationStep2Resource.php`](src/Resource/RegistrationStep2Resource.php) | the resource: five keys and two refiners, the rooms by the venue and the capacity by the room; the venue refers to a venue entity | 36 |
+| [`modules/data_surface_examples/src/Plugin/Validation/Constraint/EventVenueRoomConstraint.php`](src/Plugin/Validation/Constraint/EventVenueRoomConstraint.php) | the room's constraint: a room of a venue the site has, a Choice whose list is the site's | 17 |
 | [`modules/data_surface_examples/src/Plugin/Validation/Constraint/RoomOfEventVenueConstraint.php`](src/Plugin/Validation/Constraint/RoomOfEventVenueConstraint.php) | the constraint the room refiner adds: a room of the chosen venue | 6 |
-| [`modules/data_surface_examples/src/Plugin/Validation/Constraint/VenueChoiceValidator.php`](src/Plugin/Validation/Constraint/VenueChoiceValidator.php) | their validator: reads the list, then holds the value to it as Choice does | 14 |
-| [`modules/data_surface_examples/src/Plugin/DataSurfaceOptionsResolver/EventVenueOptions.php`](src/Plugin/DataSurfaceOptionsResolver/EventVenueOptions.php) | the resolver that reads the three constraints as the venues or their rooms, an exact list | 30 |
-| [`modules/data_surface_examples/src/VenueChoices.php`](src/VenueChoices.php) | the venues and rooms an event may be held in: example 15's venue entities, read under their list tag | 28 |
+| [`modules/data_surface_examples/src/Plugin/Validation/Constraint/EventVenueRoomConstraintValidator.php`](src/Plugin/Validation/Constraint/EventVenueRoomConstraintValidator.php) | their validator: reads the rooms, then holds the value to them as Choice does | 14 |
+| [`modules/data_surface_examples/src/Plugin/DataSurfaceOptionsResolver/EventVenueRoomOptions.php`](src/Plugin/DataSurfaceOptionsResolver/EventVenueRoomOptions.php) | the resolver that reads both constraints as the rooms, an exact list | 30 |
+| [`modules/data_surface_examples/src/VenueChoices.php`](src/VenueChoices.php) | the rooms an event may be held in: those of example 15's venue entities, read under their list tag | 25 |
 | [`modules/data_surface_examples/src/Venues.php`](src/Venues.php) | the seats of each room, which the capacity reads, beside the fixed lists of venues and rooms example 3 and the classic twin choose from | 27 |
 | [`modules/data_surface_examples/src/Storage/RegistrationStep2Storage.php`](src/Storage/RegistrationStep2Storage.php) | the storage: names the config object | 3 |
 | [`modules/data_surface_examples/data_surface_examples.routing.yml`](data_surface_examples.routing.yml), entry `data_surface_examples.step2` | the route | 8 |
@@ -4483,7 +4497,7 @@ of code, counted without blank lines or comments:
 | [`modules/data_surface_examples_references/src/Hook/SponsorshipHooks.php`](../data_surface_examples_references/src/Hook/SponsorshipHooks.php) | writes the three nodes the calls name once the module is installed | 11 |
 | [`modules/data_surface_examples_references/data_surface_examples_references.install`](../data_surface_examples_references/data_surface_examples_references.install) | deletes them when it is uninstalled | 3 |
 | [`modules/data_surface_examples_references/src/Sponsorship.php`](../data_surface_examples_references/src/Sponsorship.php) | the three nodes: an article, a draft article and a page, their ids kept in State | 40 |
-| [`src/Reference/References.php`](../../src/Reference/References.php) | what a reference key is: its definition, core's selection handler for its candidates, the limit and the lookup; the main module's | 182 |
+| [`src/Reference/References.php`](../../src/Reference/References.php) | what a reference key is: its definition, core's selection handler for its candidates, the limit and the lookup; the main module's | 195 |
 | [`src/Reference/EntityReferenceStructure.php`](../../src/Reference/EntityReferenceStructure.php) | the two parts of a bare entity key, and the refiner that narrows its id to the entity type chosen; the main module's | 46 |
 | [`src/Plugin/Validation/Constraint/ValidReferenceConstraint.php`](../../src/Plugin/Validation/Constraint/ValidReferenceConstraint.php) | the id's constraint, core's ValidReference for a key that holds one id; the main module's | 20 |
 | [`src/Plugin/Validation/Constraint/ReferenceableTypeConstraint.php`](../../src/Plugin/Validation/Constraint/ReferenceableTypeConstraint.php) | the entity type's constraint, which the filters are options of; the main module's | 17 |

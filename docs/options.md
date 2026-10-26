@@ -214,24 +214,53 @@ defensiveness: plugin definitions genuinely have three, and core's own
 entity type definition keeps its label behind an accessor. Without the
 third spelling an entity type select reads as machine names.
 
-## Declare the constraint, resolve the list
+## Which constraint to write
 
-Prefer an existence or validity constraint plus a resolver over a
-`LabeledChoice` whose choices are assembled at build time.
+A rule on a key is said by a constraint. Take the first of three steps
+that can say it: each step down tells a client less before it calls
+([decision](decisions.md#a-rule-is-a-keyword-first-a-list-second-code-last)).
 
-The address port is the worked example. Its countries and languages
-started as labeled choices filled from the country repository and the
-language manager, and the cost was not the code: **a definition that
-cannot be written down without services cannot sit in a resource or
-structure class**, which holds no service. Said as the `Country` and
+**1. A stock constraint with data options.** `Range`, `Length`,
+`Count`, `NotBlank`, `Regex`, `Email`, `Choice` and `LabeledChoice` are
+the constraints `ContractEmitter` writes as JSON Schema keywords
+(`minimum`, `maxLength`, `minItems`, `pattern`, `format`, `oneOf`). The
+schema reader turns those keywords back into the same constraints, the
+React page narrows on them with no request, and a tool caller reads them
+in the listing before it calls. JSON Schema has a closed set of
+keywords, and a generic validator ignores any other. A constraint the
+emitter has no keyword for is in the same place: a client can read its
+name, and nothing it can check. Keep
+`LabeledChoice` for a vocabulary that is literal, such as
+hidden/optional/required.
+
+**2. A list the site decides: name the kind, and a resolver lists it.**
+When the allowed values are "every one of a kind that this site has",
+say which kind: `PluginExists`, `EntityBundleExists`, `LanguageExists`
+or the address module's `Country`, each read by a [stock
+resolver](#the-stock-resolvers), or the type string `entity:<type>` for
+an entity's id ([below](#a-key-that-refers-to-an-entity)). There is no
+code per resource: the constraint names the kind, the resolver lists
+it for the site, and both documents state the list as a `oneOf` while it
+is short. Past its budget a reference is looked up and a list of
+variants or keys from the site is `deferred`
+([below](#a-list-the-site-decides-past-its-budget)). A key a static
+refiner narrows by such a key is still `enumerated`: one conditional per
+value it lists. When no stock constraint names the kind, write one for
+the kind, not for a resource, and [its resolver](#writing-a-resolver):
+example 2 does for the rooms of the site's venues (`EventVenueRoom`),
+and `data_surface_examples_keys` for the keys the site manages
+(`ManagedKey`).
+
+The address port shows why this beats a `LabeledChoice` whose choices
+are assembled at build time. Its countries and languages started as
+labeled choices filled from the country repository and the language
+manager, and the cost was not the code: **a definition that cannot be
+written down without services cannot sit in a resource or structure
+class**, which holds no service. Said as the `Country` and
 `LanguageExists` constraints instead, the definitions became literal
 enough to sit in `AddressFieldSettingsResource`, readable without
 instantiating anything, and the live lookup moved to the one place that
 already answers for freshness.
-
-So: when a list is "every one of a kind that this site has", say that and
-write a resolver. Keep `LabeledChoice` for a vocabulary that really is
-literal, such as hidden/optional/required.
 
 `LanguageExists` is a constraint this module adds because core has none.
 Core validates that a plugin, a bundle, an extension or a config object
@@ -240,6 +269,31 @@ next existence constraint to propose upstream beside the ones that exist.
 It is written to be module-agnostic, in core's own style (`allowLocked`
 as the permission option, a placeholder message), for the same reason
 `LabeledChoice` is.
+
+**3. A constraint of your own, last.** Only for a rule no keyword and no
+list can state: a comparison between two keys, uniqueness against what
+is stored, a check of site state with a reason of its own. The cost: the
+schema can only name it under `x-surface.checkedOnServer`, it does not
+read back from the schema, the React page cannot narrow on it, and a
+caller learns the rule when a call is refused. When you write a
+constraint, at this step or for a kind at step 2, extend the stock
+constraint closest to it, so its validator, its refusal and its result
+code come with it. Example 2's room constraint extends `Choice`: a room
+no venue has is refused in `Choice`'s words,
+naming the rooms, and its resolver says its list is the whole of the
+constraint ([below](#writing-a-resolver)), so both documents state the
+rooms as a `oneOf` and name nothing under `checkedOnServer`.
+
+**Example 2, before and after.** Its venue was a string with a
+constraint of its own, a `Choice` subclass, a validator that read the
+enabled venues and a resolver that listed them. It is now
+`add('venue', 'entity:event_venue', t('Venue'))`, step 2 with no code:
+its candidates are core's selection handler's, and both documents mark
+it `x-surface.reference`. The room keeps what no stock constraint
+says, a room of one of the site's venues: one constraint with its
+validator and its resolver, and a narrower one its refiner adds for the
+venue chosen
+([example 2](../modules/data_surface_examples/README.md#example-2-answers-depend-on-answers)).
 
 ## A key that refers to an entity
 
@@ -375,8 +429,8 @@ constraint checks nothing more. A resolver whose list is every value its
 constraint accepts and nothing else, as a `Choice`'s is, says so with
 `exact: TRUE` on its attribute, and the constraint, and every subclass of
 it the resolver reads, is then named under no `checkedOnServer`. Example
-2's venue and room do: their constraints are `Choice`s whose list is the
-venues the site has, read by `EventVenueOptions`
+2's room does: its constraint is a `Choice` whose list is the rooms of
+the venues the site has, read by `EventVenueRoomOptions`
 ([decision](decisions.md#a-listing-is-a-read-only-operation-with-outputs-a-reorder-is-an-update-over-the-collection)).
 A memoized answer is dropped when a tag it was read under is
 invalidated, so a definition kept for the rest of a request is answered
