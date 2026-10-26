@@ -1034,8 +1034,8 @@ final class Resources implements ResourcesInterface {
     // key is locked to what the context knows.
     // Decision: see docs/decisions.md#a-site-sets-a-default-in-configuration.
     $childDefaults = $this->writeSiteDefaults($builder, $definition, $inputs, $top, $siteDefaults);
-    $this->applyContext($builder, $definition, $context, $input_keys, $attached, $lists);
-    $ports = $inputs->ports();
+    $build = new Build($builder, $definition, $context, $ancestry, $input_keys, $outputs->keys(), $attached, $lists, $inputs->ports());
+    $this->applyContext($build);
     $frame = ['class' => $definition->name(), 'id' => $definition->id, 'key' => '', 'inputs' => $input_keys];
     $permission = $this->registry->getOperations($own->name())[$context->id]->permission ?? NULL;
     $frame['permission'] = $permission === NULL ? NULL : static::resolvePermission($permission, $context);
@@ -1046,12 +1046,13 @@ final class Resources implements ResourcesInterface {
     // An operation's own values are no keys the storage holds.
     $frame['held'] = $definition === $own ? $this->heldBy($definition, $context, $ancestry) : NULL;
     $this->markAlwaysHeld($builder, $input_keys, $frame['held']);
+    $build = $build->withFrame($frame);
     // Each structure mixed in, built by itself for its def and its access,
     // which locks its members or takes them back out; then nothing of the
     // owner's may name what that access may take away, or rule a member
     // out.
     // Decision: see docs/decisions.md#a-mixin-is-merged-flat.
-    $mixins = $this->mixIn($builder, $definition, $inputs, $context, $frame, $input_keys, $attached, $lists);
+    $mixins = $this->mixIn($build, $inputs);
     $owned_rules = [$inputs->rules()];
     $wirings = [];
     foreach (array_keys($inputs->attachments()) as $key) {
@@ -1065,13 +1066,14 @@ final class Resources implements ResourcesInterface {
     }
     $this->assertMixinsUnnamed($definition, $mixins, $links, array_merge(...$owned_rules), $wirings);
     $input_keys = array_values(array_filter($input_keys, static fn (string $key): bool => $builder->getDefinition($key) !== NULL));
+    $build = $build->withInputKeys($input_keys);
     // Each alter's structure at its own mount, built before any refiner or
     // rule is bound, since the alter's glue reads its keys.
     // Decision: see docs/decisions.md#an-alter-attaches-at-its-own-mount.
     $readable = [];
     foreach ($additions as $contributor => $blueprint) {
       foreach ($blueprint->attachments() as $key => $child) {
-        $readable[(string) $contributor] = $this->mountStructure($builder, $definition, (string) $contributor, (string) $key, (string) $child, $blueprint->wiring((string) $key), $context, $frame, $ancestry, $input_keys, $attached, $lists);
+        $readable[(string) $contributor] = $this->mountStructure($build, (string) $contributor, (string) $key, (string) $child, $blueprint->wiring((string) $key));
       }
     }
     // What each module mounted, so an alter's method may watch its own
@@ -1093,12 +1095,13 @@ final class Resources implements ResourcesInterface {
         }
       }
     }
+    $build = $build->withRuling($ruling);
     // Each structure mixed in first, in the owner's frame: its coded
     // refiners, its rules and its alters', on its own members, its ports
     // read at the owner's keys they are wired to.
     // Decision: see docs/decisions.md#a-mixin-is-merged-flat.
     foreach ($mixins['bind'] as $mixin) {
-      $this->bindMixin($builder, $definition, $mixin, $context);
+      $this->bindMixin($build, $mixin);
     }
     // Each contributor's coded refiners, then the rules it declared, the
     // owner's before any alter's.
@@ -1113,13 +1116,14 @@ final class Resources implements ResourcesInterface {
     foreach ($contributors as $contributor) {
       $extended = $contributor !== NULL && isset($additions[$contributor]) ? $additions[$contributor]->extended() : [];
       $mounted = $contributor !== NULL && isset($additions[$contributor]) ? $additions[$contributor]->keys() : [];
+      $contributing = $build->forContributor($contributor, $extended, $mounted, $contributor === NULL ? [] : $mounted_by, $contributor === NULL ? [] : ($readable[$contributor] ?? []));
       foreach ($links as [$instance, $refiners, $module]) {
         if ($module === $contributor) {
-          $this->bindRefiners($builder, $definition, $instance, $refiners, $input_keys, $outputs->keys(), $attached, $ancestry === [] ? NULL : $ancestry[count($ancestry) - 1], $module, $extended, $mounted, $module === NULL ? [] : $mounted_by, $lists, $ports, $module === NULL ? [] : ($readable[$module] ?? []));
+          $this->bindRefiners($contributing, $instance, $refiners);
         }
       }
       $rules = $contributor === NULL ? $inputs->rules() : (isset($additions[$contributor]) ? $additions[$contributor]->rules() : []);
-      $this->bindRules($builder, $definition, $rules, $contributor, $input_keys, $attached, $lists, $extended, $mounted, $contributor === NULL ? [] : $mounted_by, $ruling, $ports, $contributor === NULL ? [] : ($readable[$contributor] ?? []));
+      $this->bindRules($contributing, $rules);
     }
 
     // The children, each through this same build step in its own frame:
@@ -1129,8 +1133,8 @@ final class Resources implements ResourcesInterface {
     foreach ($inputs->attachments() as $key => $child) {
       // Decision: see docs/decisions.md#a-port-is-a-live-sibling-value.
       $reads = $inputs->wiring((string) $key);
-      $this->assertWiring($builder, $definition, NULL, (string) $key, (string) $child, $reads, $input_keys, $attached, $lists);
-      [$attachment, $access, , $runtime] = $this->buildChild((string) $child, $context, $key, $frame, $ancestry, siteDefaults: $childDefaults[(string) $key] ?? NULL);
+      $this->assertWiring($build, NULL, (string) $key, (string) $child, $reads);
+      [$attachment, $access, , $runtime] = $this->buildChild($build, (string) $child, $key, siteDefaults: $childDefaults[(string) $key] ?? NULL);
       if ($access !== NULL) {
         // What the child's access answer read is what this data surface,
         // and everything emitted from it, varies by.
@@ -1161,7 +1165,7 @@ final class Resources implements ResourcesInterface {
     foreach ([FALSE, TRUE] as $reading) {
       foreach ($maps as $key => $each) {
         if (($each['reads'] !== []) === $reading) {
-          $listed[(string) $key] = $this->buildEach($builder, $definition, (string) $key, $each, $context, $frame, $ancestry, $input_keys, $attached, $lists, $maps, $listed);
+          $listed[(string) $key] = $this->buildEach($build, (string) $key, $each, $maps, $listed);
         }
       }
     }
@@ -1179,9 +1183,9 @@ final class Resources implements ResourcesInterface {
         $deferred = isset($site[(string) $value]) ? $at : NULL;
         if ($deferred === NULL) {
           // Nothing wires a variant's ports yet.
-          $this->assertWiring($builder, $definition, NULL, $key, $child, [], $input_keys, $attached, $lists, 'variant');
+          $this->assertWiring($build, NULL, $key, $child, [], 'variant');
         }
-        [$attachment, $access, , $runtime] = $this->buildChild($child, $context, $key, $frame, $ancestry, TRUE, deferred: $deferred);
+        [$attachment, $access, , $runtime] = $this->buildChild($build, $child, $key, TRUE, deferred: $deferred);
         if ($access !== NULL) {
           $builder->addCacheableDependency($access);
         }
@@ -1215,8 +1219,8 @@ final class Resources implements ResourcesInterface {
     $gated_lists = $top && ($this->accountAlone || $this->declaring) ? $this->itemGatedLists($own, $context) : [];
     foreach ($inputs->lists() as $key => $child) {
       // Nothing wires an item's ports yet.
-      $this->assertWiring($builder, $definition, NULL, $key, $child, [], $input_keys, $attached, $lists, 'collection');
-      [$attachment, $access, $child_context, $runtime] = $this->buildChild($child, $context, $key, $frame, $ancestry);
+      $this->assertWiring($build, NULL, $key, $child, [], 'collection');
+      [$attachment, $access, $child_context, $runtime] = $this->buildChild($build, $child, $key);
       if ($access !== NULL) {
         $builder->addCacheableDependency($access);
       }
@@ -1398,17 +1402,14 @@ final class Resources implements ResourcesInterface {
   /**
    * Builds one child at a key, invoked the way invokeChild() resolves.
    *
+   * @param \Drupal\data_surface\ResourceBuild\Build $build
+   *   The parent's build: its context, its frame (the parent, for messages
+   *   and the cycle check, with the permission its own operation asks,
+   *   resolved) and its own ancestry.
    * @param string $child
    *   The child's name: its class, or a derived resource's id.
-   * @param \Drupal\data_surface\Resource\OperationContext $context
-   *   The parent's context.
    * @param string $key
    *   The key the child sits at.
-   * @param array{class: class-string, id: string, key: string, inputs: string[], permission?: string|null} $frame
-   *   The parent, for messages and the cycle check, with the permission
-   *   its own operation asks, resolved.
-   * @param array $ancestry
-   *   The parent's own ancestry.
    * @param bool $whole
    *   TRUE for a variant, which a locked answer builds locked whole, since
    *   the parent's key holds all the variants and not this one alone.
@@ -1430,7 +1431,10 @@ final class Resources implements ResourcesInterface {
    *   context the child was invoked in; and whether, built for the account
    *   alone, a runtime answer was set aside, so the key is marked.
    */
-  protected function buildChild(string $child, OperationContext $context, string $key, array $frame, array $ancestry, bool $whole = FALSE, ?string $storedAt = NULL, ?array $siteDefaults = NULL, ?VariantsToSettle $deferred = NULL): array {
+  protected function buildChild(Build $build, string $child, string $key, bool $whole = FALSE, ?string $storedAt = NULL, ?array $siteDefaults = NULL, ?VariantsToSettle $deferred = NULL): array {
+    $context = $build->context;
+    $frame = $build->frame;
+    $ancestry = $build->ancestry;
     $definition = $this->registry->getDefinition($child);
     [$child_context, $operation] = $this->invokeChild($definition, $context, $key, $frame['id']);
     [$access, $runtime] = $this->childAccess($definition, $operation, $child_context, $this->account(), $frame['permission'] ?? NULL);
@@ -1523,7 +1527,7 @@ final class Resources implements ResourcesInterface {
     $this->settlingAs = $at->account;
     try {
       // Nothing wires a variant's ports yet.
-      $this->assertWiring(new DataSurfaceBuilder(), $this->registry->getDefinition($parent['class']), NULL, $at->key, $name, [], [], [], [], 'variant');
+      $this->assertWiring(new Build(new DataSurfaceBuilder(), $this->registry->getDefinition($parent['class']), $context), NULL, $at->key, $name, [], 'variant');
       $built = $read
         ? $this->buildRead($name, $context, $ancestry)
         : $this->buildResource($name, $context, $ancestry, $locked);
@@ -1630,26 +1634,13 @@ final class Resources implements ResourcesInterface {
    *
    * Decision: see docs/decisions.md#keys-that-come-from-the-site.
    *
-   * @param \Drupal\data_surface\DataSurfaceBuilderInterface $builder
-   *   The owner's builder.
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
-   *   The owner.
+   * @param \Drupal\data_surface\ResourceBuild\Build $build
+   *   The owner's build: its builder, the owner, its context, and the
+   *   frame and ancestry its children are built under.
    * @param string $key
    *   The key the map sits at.
    * @param array{each: string, from: class-string<\Drupal\data_surface\Resource\SiteListInterface>, default: mixed, child: bool, reads: array<string, string>} $each
    *   What the blueprint recorded for it.
-   * @param \Drupal\data_surface\Resource\OperationContext $context
-   *   The owner's context.
-   * @param array $frame
-   *   The owner, as buildChild() takes it.
-   * @param array $ancestry
-   *   The owner's own ancestry.
-   * @param string[] $input_keys
-   *   The owner's plain input keys.
-   * @param string[] $attached
-   *   The owner's keys holding a child.
-   * @param string[] $lists
-   *   The owner's collection keys.
    * @param array<string, array> $maps
    *   Every map of keys from the site the owner declared, by key, as the
    *   blueprint recorded them: what a port on an entry may read.
@@ -1667,7 +1658,10 @@ final class Resources implements ResourcesInterface {
    *   structure stores itself, or its ports are wired to what an entry
    *   cannot read (assertEachWiring()).
    */
-  protected function buildEach(DataSurfaceBuilderInterface $builder, ResourceDefinition $definition, string $key, array $each, OperationContext $context, array $frame, array $ancestry, array $input_keys, array $attached, array $lists, array $maps = [], array $listed = []): ?DataSurfaceInterface {
+  protected function buildEach(Build $build, string $key, array $each, array $maps = [], array $listed = []): ?DataSurfaceInterface {
+    $builder = $build->builder;
+    $definition = $build->definition;
+    $frame = $build->frame;
     $keys = $this->keysFrom($definition, $key, $each['from']);
     $builder->addCacheableDependency($keys);
     // What every entry is, whatever the site lists: what the map's config
@@ -1690,7 +1684,7 @@ final class Resources implements ResourcesInterface {
       // Decision: see docs/decisions.md#keys-that-come-from-the-site.
       $wired = $this->assertEachWiring($definition, $key, $each, $entries, $maps, $listed);
       $first = array_key_first($entries);
-      [$attachment, $access, , $runtime] = $this->buildChild($each['each'], $context, $key, $frame, $ancestry, storedAt: $first === NULL ? NULL : $key . '.' . $first);
+      [$attachment, $access, , $runtime] = $this->buildChild($build, $each['each'], $key, storedAt: $first === NULL ? NULL : $key . '.' . $first);
       if ($access !== NULL) {
         $builder->addCacheableDependency($access);
       }
@@ -1912,22 +1906,13 @@ final class Resources implements ResourcesInterface {
    *
    * Decision: see docs/decisions.md#a-mixin-is-merged-flat.
    *
-   * @param \Drupal\data_surface\DataSurfaceBuilderInterface $builder
-   *   The owner's builder.
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
-   *   The owner.
+   * @param \Drupal\data_surface\ResourceBuild\Build $build
+   *   The owner's build: its builder, the owner, its context, its frame
+   *   (with the permission its operation asks), and its input keys, every
+   *   structure's members among them, the keys holding a child or
+   *   variants, and its collection keys.
    * @param \Drupal\data_surface\ResourceBuild\ResourceBlueprint $inputs
    *   The owner's input blueprint.
-   * @param \Drupal\data_surface\Resource\OperationContext $context
-   *   The owner's context.
-   * @param array $frame
-   *   The owner, with the permission its operation asks.
-   * @param string[] $input_keys
-   *   The owner's plain input keys, every structure's members among them.
-   * @param string[] $attached
-   *   The owner's keys holding a child or variants.
-   * @param string[] $lists
-   *   The owner's collection keys.
    *
    * @return array{bind: array<int, array{definition: \Drupal\data_surface\ResourceBuild\ResourceDefinition, blueprint: \Drupal\data_surface\ResourceBuild\ResourceBlueprint, reads: array<string, string>, keys: string[]}>, members: array<string, string>, guarded: array<string, string>, answeredBy: array<string, string>, ruling: string[]}
    *   What to bind in the owner's frame, innermost first, each with the
@@ -1936,11 +1921,14 @@ final class Resources implements ResourcesInterface {
    *   to its structure's id, with what answers for each such structure;
    *   and the members a structure's coded refiner may rule out.
    */
-  protected function mixIn(DataSurfaceBuilderInterface $builder, ResourceDefinition $definition, ResourceBlueprint $inputs, OperationContext $context, array $frame, array $input_keys, array $attached, array $lists): array {
+  protected function mixIn(Build $build, ResourceBlueprint $inputs): array {
+    $builder = $build->builder;
+    $context = $build->context;
+    $frame = $build->frame;
     $mixed = ['bind' => [], 'members' => [], 'guarded' => [], 'answeredBy' => [], 'ruling' => []];
     foreach ($inputs->mixins() as ['class' => $class, 'reads' => $reads, 'blueprint' => $blueprint]) {
       $structure = $this->registry->getDefinition($class);
-      $this->assertMixinWiring($builder, $definition, $structure, $blueprint, $reads, $input_keys, $attached, $lists);
+      $this->assertMixinWiring($build, $structure, $blueprint, $reads);
       $mixed = static::mixedMembers($mixed, $blueprint, $structure, fn (string $name): ResourceDefinition => $this->registry->getDefinition($name));
       // By itself, as if on its own: what its def is written from, in the
       // context its owner's hands it, and what its access answers there.
@@ -2062,27 +2050,25 @@ final class Resources implements ResourcesInterface {
    *
    * Decision: see docs/decisions.md#a-mixin-is-merged-flat.
    *
-   * @param \Drupal\data_surface\DataSurfaceBuilderInterface $builder
-   *   The owner's builder.
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
-   *   The owner.
+   * @param \Drupal\data_surface\ResourceBuild\Build $build
+   *   The owner's build: its builder, the owner, its plain input keys,
+   *   the keys holding a child or variants, and its collection keys.
    * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $structure
    *   The structure.
    * @param \Drupal\data_surface\ResourceBuild\ResourceBlueprint $blueprint
    *   The blueprint it was declared through.
    * @param array<string, string> $reads
    *   The wiring.
-   * @param string[] $input_keys
-   *   The owner's plain input keys.
-   * @param string[] $attached
-   *   The owner's keys holding a child or variants.
-   * @param string[] $lists
-   *   The owner's collection keys.
    *
    * @throws \LogicException
    *   Naming the owner, the port and what is wrong with the wiring.
    */
-  protected function assertMixinWiring(DataSurfaceBuilderInterface $builder, ResourceDefinition $definition, ResourceDefinition $structure, ResourceBlueprint $blueprint, array $reads, array $input_keys, array $attached, array $lists): void {
+  protected function assertMixinWiring(Build $build, ResourceDefinition $structure, ResourceBlueprint $blueprint, array $reads): void {
+    $builder = $build->builder;
+    $definition = $build->definition;
+    $input_keys = $build->inputKeys;
+    $attached = $build->attached;
+    $lists = $build->lists;
     $ports = $blueprint->ports();
     foreach ($reads as $port => $wired) {
       if (!isset($ports[$port])) {
@@ -2210,16 +2196,16 @@ final class Resources implements ResourcesInterface {
    *
    * Decision: see docs/decisions.md#a-mixin-is-merged-flat.
    *
-   * @param \Drupal\data_surface\DataSurfaceBuilderInterface $builder
-   *   The owner's builder.
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
-   *   The owner.
+   * @param \Drupal\data_surface\ResourceBuild\Build $build
+   *   The owner's build: its builder, the owner, and its context, which
+   *   says which alters apply.
    * @param array{definition: \Drupal\data_surface\ResourceBuild\ResourceDefinition, blueprint: \Drupal\data_surface\ResourceBuild\ResourceBlueprint, reads: array<string, string>, keys: string[]} $mixin
    *   The structure, as mixIn() lists it.
-   * @param \Drupal\data_surface\Resource\OperationContext $context
-   *   The owner's context, which says which alters apply.
    */
-  protected function bindMixin(DataSurfaceBuilderInterface $builder, ResourceDefinition $definition, array $mixin, OperationContext $context): void {
+  protected function bindMixin(Build $build, array $mixin): void {
+    $builder = $build->builder;
+    $definition = $build->definition;
+    $context = $build->context;
     $structure = $mixin['definition'];
     $keys = $mixin['keys'];
     $ports = $mixin['blueprint']->ports();
@@ -2230,8 +2216,9 @@ final class Resources implements ResourcesInterface {
         $ruling[] = $refiner->key;
       }
     }
-    $this->bindRefiners($builder, $structure, $structure->isDerived() ? $structure->name() : static::resourceClass($structure), $structure->refiners, $keys, [], ports: $ports, translated: $reads);
-    $this->bindRules($builder, $structure, $mixin['blueprint']->rules(), NULL, $keys, [], [], [], [], [], $ruling, $ports, translated: $reads);
+    $inside = $build->forMixin($structure, $keys, $ports, $reads, $ruling);
+    $this->bindRefiners($inside, $structure->isDerived() ? $structure->name() : static::resourceClass($structure), $structure->refiners);
+    $this->bindRules($inside, $mixin['blueprint']->rules());
     foreach ($structure->alters as $alter) {
       if (!$alter->appliesIn($context->id)) {
         continue;
@@ -2242,8 +2229,9 @@ final class Resources implements ResourcesInterface {
       if ($instance instanceof AltersInputsInterface) {
         $instance->alterInputs($additions);
       }
-      $this->bindRefiners($builder, $structure, $instance, $alter->refiners, $keys, [], [], NULL, $alter->module, $additions->extended(), ports: $ports, translated: $reads);
-      $this->bindRules($builder, $structure, $additions->rules(), $alter->module, $keys, [], [], $additions->extended(), [], [], $ruling, $ports, translated: $reads);
+      $contributing = $inside->forContributor($alter->module, $additions->extended());
+      $this->bindRefiners($contributing, $instance, $alter->refiners);
+      $this->bindRules($contributing, $additions->rules());
     }
   }
 
@@ -2258,10 +2246,10 @@ final class Resources implements ResourcesInterface {
    *
    * Decision: see docs/decisions.md#an-alter-attaches-at-its-own-mount.
    *
-   * @param \Drupal\data_surface\DataSurfaceBuilderInterface $builder
-   *   The owner's builder.
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
-   *   The owner.
+   * @param \Drupal\data_surface\ResourceBuild\Build $build
+   *   The owner's build: its builder, the owner, its context, the frame
+   *   and ancestry the structure is built under, and its input keys, the
+   *   keys holding a child or variants, and its collection keys.
    * @param string $module
    *   The alter's module.
    * @param string $key
@@ -2270,18 +2258,6 @@ final class Resources implements ResourcesInterface {
    *   The structure, by name.
    * @param array<string, string> $reads
    *   Its ports, each wired to an owner's key.
-   * @param \Drupal\data_surface\Resource\OperationContext $context
-   *   The owner's context.
-   * @param array $frame
-   *   The owner, as buildChild() reads it.
-   * @param array $ancestry
-   *   The owner's own ancestry.
-   * @param string[] $input_keys
-   *   The owner's plain input keys.
-   * @param string[] $attached
-   *   The owner's keys holding a child or variants.
-   * @param string[] $lists
-   *   The owner's collection keys.
    *
    * @return string[]
    *   The structure's keys, which the alter's glue may read.
@@ -2291,7 +2267,9 @@ final class Resources implements ResourcesInterface {
    *   child, a wiring the owner cannot honor, or an access answer other
    *   than open.
    */
-  protected function mountStructure(DataSurfaceBuilderInterface $builder, ResourceDefinition $definition, string $module, string $key, string $child, array $reads, OperationContext $context, array $frame, array $ancestry, array $input_keys, array $attached, array $lists): array {
+  protected function mountStructure(Build $build, string $module, string $key, string $child, array $reads): array {
+    $builder = $build->builder;
+    $definition = $build->definition;
     $structure = $this->registry->getDefinition($child);
     if ($structure->storage !== NULL || $structure->identity !== []) {
       throw new \LogicException(sprintf(
@@ -2304,8 +2282,8 @@ final class Resources implements ResourcesInterface {
         $structure->storage !== NULL ? 'storage of its own' : 'identity keys',
       ));
     }
-    $this->assertWiring($builder, $definition, $module, $key, $child, $reads, $input_keys, $attached, $lists);
-    [$attachment, $access] = $this->buildChild($child, $context, $key, $frame, $ancestry);
+    $this->assertWiring($build, $module, $key, $child, $reads);
+    [$attachment, $access] = $this->buildChild($build, $child, $key);
     if ($attachment === NULL || ($access !== NULL && !$access->isOpen())) {
       throw new \LogicException(sprintf(
         'The access of %s, attached at %s by the %s alter of %s, answered %s. A structure at a mount that is locked or left out is not built yet.',
@@ -2349,10 +2327,10 @@ final class Resources implements ResourcesInterface {
    *
    * Decision: see docs/decisions.md#a-port-is-a-live-sibling-value.
    *
-   * @param \Drupal\data_surface\DataSurfaceBuilderInterface $builder
-   *   The container's builder, holding its keys.
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
-   *   The container: the owner, or the owner an alter adapts.
+   * @param \Drupal\data_surface\ResourceBuild\Build $build
+   *   The container's build: its builder, holding its keys, the container
+   *   (the owner, or the owner an alter adapts), its plain input keys,
+   *   the keys holding a child or variants, and its collection keys.
    * @param string|null $module
    *   The alter's module, or NULL for the owner itself.
    * @param string $key
@@ -2361,12 +2339,6 @@ final class Resources implements ResourcesInterface {
    *   The child, by name.
    * @param array<string, string> $reads
    *   The wiring.
-   * @param string[] $input_keys
-   *   The owner's plain input keys.
-   * @param string[] $attached
-   *   The owner's keys holding a child or variants.
-   * @param string[] $lists
-   *   The owner's collection keys.
    * @param string $as
    *   How the child is held: attach, variant or collection. An entry of a
    *   map of keys from the site is wired by assertEachWiring().
@@ -2374,7 +2346,12 @@ final class Resources implements ResourcesInterface {
    * @throws \LogicException
    *   Naming the container, the port and what is wrong with the wiring.
    */
-  protected function assertWiring(DataSurfaceBuilderInterface $builder, ResourceDefinition $definition, ?string $module, string $key, string $child, array $reads, array $input_keys, array $attached, array $lists, string $as = 'attach'): void {
+  protected function assertWiring(Build $build, ?string $module, string $key, string $child, array $reads, string $as = 'attach'): void {
+    $builder = $build->builder;
+    $definition = $build->definition;
+    $input_keys = $build->inputKeys;
+    $attached = $build->attached;
+    $lists = $build->lists;
     [$ports, $declared] = $this->portsOf($child);
     if ($ports === [] && $reads === []) {
       return;
@@ -4104,24 +4081,23 @@ final class Resources implements ResourcesInterface {
   /**
    * Applies what a context says about where it is asked for.
    *
-   * @param \Drupal\data_surface\DataSurfaceBuilderInterface $builder
-   *   The builder holding the shape.
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
-   *   The resource or structure.
-   * @param \Drupal\data_surface\Resource\OperationContext $context
-   *   The context.
-   * @param string[] $input_keys
-   *   The owner's input keys.
-   * @param string[] $attached
-   *   The owner's keys holding an attached child or variants.
-   * @param string[] $lists
-   *   The owner's collection keys, which a context may narrow.
+   * @param \Drupal\data_surface\ResourceBuild\Build $build
+   *   The build: the builder holding the shape, the resource or
+   *   structure, the context, the owner's input keys, its keys holding an
+   *   attached child or variants, and its collection keys, which a context
+   *   may narrow.
    *
    * @throws \LogicException
    *   When the context names a key the shape does not declare, or widens
    *   a key.
    */
-  protected function applyContext(DataSurfaceBuilderInterface $builder, ResourceDefinition $definition, OperationContext $context, array $input_keys, array $attached = [], array $lists = []): void {
+  protected function applyContext(Build $build): void {
+    $builder = $build->builder;
+    $definition = $build->definition;
+    $context = $build->context;
+    $input_keys = $build->inputKeys;
+    $attached = $build->attached;
+    $lists = $build->lists;
     $assert_input = static function (string $key, string $what) use ($definition, $context, $input_keys, $attached, $lists): void {
       if (in_array($key, $lists, TRUE)) {
         // The list key is the parent's, so where the parent is asked for
@@ -4172,54 +4148,51 @@ final class Resources implements ResourcesInterface {
   /**
    * Checks one class's refiners against the shape, and binds them.
    *
-   * @param \Drupal\data_surface\DataSurfaceBuilderInterface $builder
-   *   The builder holding the shape.
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
-   *   The resource or structure.
+   * @param \Drupal\data_surface\ResourceBuild\Build $build
+   *   The build, as the contributor whose methods these are:
+   *   - the builder holding the shape and the resource or structure;
+   *   - its input and output keys, and the keys holding an attached child
+   *     or variants;
+   *   - its collection keys: a method may refine one (its Count), and may
+   *     not watch one;
+   *   - the ports it reads, which a method may watch by name, never
+   *     refine;
+   *   - the parent this one is attached inside, or none;
+   *   - for an alter, its module (none for the owner itself), the owner's
+   *     keys it offered more values on with extendChoices(), whose
+   *     methods narrow its own values; the keys it added, which its
+   *     methods may refine and watch too; every key any alter of the owner
+   *     mounted, mapped to the modules that mounted it; and, for one that
+   *     attached a structure at its mount, the structure's keys, which its
+   *     methods may watch and refine none;
+   *   - for a structure mixed into an owner, each of its ports mapped to
+   *     the owner's key it is wired to: a method watching the port is
+   *     handed that key's value, and the edge is the key's.
    * @param object|class-string $instance
    *   The owner's class, whose methods are static, or the alter instance
    *   the methods are called on.
    * @param \Drupal\data_surface\ResourceBuild\RefinerDefinition[] $refiners
    *   Its #[RefinesInput] methods.
-   * @param string[] $input_keys
-   *   The owner's input keys.
-   * @param string[] $output_keys
-   *   The owner's output keys.
-   * @param string[] $attached
-   *   The owner's keys holding an attached child or variants.
-   * @param array{class: class-string, id: string, key: string, inputs: string[]}|null $parent
-   *   The parent this one is attached inside, or NULL.
-   * @param string|null $module
-   *   The module of an alter, or NULL for the owner itself.
-   * @param string[] $extended
-   *   The owner's keys that alter offered more values on with
-   *   extendChoices(): its methods on those keys narrow its own values.
-   * @param string[] $mounted
-   *   The keys that alter added, which its methods may refine and watch
-   *   too.
-   * @param array<string, string[]> $mountedBy
-   *   For an alter, every key any alter of the owner mounted, mapped
-   *   to the modules that mounted it; empty for the owner itself.
-   * @param string[] $lists
-   *   The owner's collection keys: a method may refine one (its Count),
-   *   and may not watch one.
-   * @param array<string, \Drupal\data_surface\Port> $ports
-   *   The ports the owner reads, which a method may watch by name, never
-   *   refine.
-   * @param string[] $readable
-   *   For an alter that attached a structure at its mount, the
-   *   structure's keys: its methods may watch them, as keys it mounted,
-   *   and refine none.
-   * @param array<string, string> $translated
-   *   For a structure mixed into an owner, each of its ports mapped to the
-   *   owner's key it is wired to: a method watching the port is handed
-   *   that key's value, and the edge is the key's.
    *
    * @throws \LogicException
    *   When a method fails a seal-time check, or one that watches nothing
    *   widens what it was given.
    */
-  protected function bindRefiners(DataSurfaceBuilderInterface $builder, ResourceDefinition $definition, object|string $instance, array $refiners, array $input_keys, array $output_keys, array $attached = [], ?array $parent = NULL, ?string $module = NULL, array $extended = [], array $mounted = [], array $mountedBy = [], array $lists = [], array $ports = [], array $readable = [], array $translated = []): void {
+  protected function bindRefiners(Build $build, object|string $instance, array $refiners): void {
+    $builder = $build->builder;
+    $definition = $build->definition;
+    $input_keys = $build->inputKeys;
+    $output_keys = $build->outputKeys;
+    $attached = $build->attached;
+    $parent = $build->parent();
+    $module = $build->module;
+    $extended = $build->extended;
+    $mounted = $build->mounted;
+    $mountedBy = $build->mountedBy;
+    $lists = $build->lists;
+    $ports = $build->ports;
+    $readable = $build->readable;
+    $translated = $build->translated;
     if ($refiners === []) {
       return;
     }
@@ -4328,44 +4301,43 @@ final class Resources implements ResourcesInterface {
    *
    * Decision: see docs/decisions.md#a-rule-declared-as-data.
    *
-   * @param \Drupal\data_surface\DataSurfaceBuilderInterface $builder
-   *   The builder holding the shape.
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
-   *   The resource or structure.
+   * @param \Drupal\data_surface\ResourceBuild\Build $build
+   *   The build, as the contributor whose rules these are:
+   *   - the builder holding the shape and the resource or structure;
+   *   - its plain input keys, the keys holding an attached child or
+   *     variants, and its collection keys;
+   *   - the keys a coded or runtime refiner may rule out, an alter's own
+   *     by `<module>.<key>`;
+   *   - the ports it reads, which a condition may name, and no rule
+   *     narrows;
+   *   - for an alter, its module (none for the owner itself), the owner's
+   *     keys it offered more values on, the keys it added, every key any
+   *     alter mounted mapped to the modules that did, and, for one that
+   *     attached a structure at its mount, the structure's keys: a
+   *     condition may name them, and no rule of the alter's narrows them;
+   *   - for a structure mixed into an owner, each of its ports mapped to
+   *     the owner's key it is wired to, where a condition on the port
+   *     reads.
    * @param \Drupal\data_surface\Refinement\Rule[] $rules
    *   The rules the contributor declared, in order.
-   * @param string|null $module
-   *   The alter's module, or NULL for the owner.
-   * @param string[] $input_keys
-   *   The owner's plain input keys.
-   * @param string[] $attached
-   *   The owner's keys holding an attached child or variants.
-   * @param string[] $lists
-   *   The owner's collection keys.
-   * @param string[] $extended
-   *   The owner's keys the alter offered more values on.
-   * @param string[] $mounted
-   *   The keys the alter added.
-   * @param array<string, string[]> $mountedBy
-   *   Every key an alter mounted, mapped to the modules that did.
-   * @param string[] $ruling
-   *   The keys a coded or runtime refiner may rule out, an alter's own by
-   *   `<module>.<key>`.
-   * @param array<string, \Drupal\data_surface\Port> $ports
-   *   The ports the owner reads, which a condition may name, and no rule
-   *   narrows.
-   * @param string[] $readable
-   *   For an alter that attached a structure at its mount, the
-   *   structure's keys: a condition may name them, and no rule of the
-   *   alter's narrows them.
-   * @param array<string, string> $translated
-   *   For a structure mixed into an owner, each of its ports mapped to the
-   *   owner's key it is wired to, where a condition on the port reads.
    *
    * @throws \LogicException
    *   Naming the rule and what is wrong with it.
    */
-  protected function bindRules(DataSurfaceBuilderInterface $builder, ResourceDefinition $definition, array $rules, ?string $module, array $input_keys, array $attached, array $lists, array $extended, array $mounted, array $mountedBy, array $ruling, array $ports = [], array $readable = [], array $translated = []): void {
+  protected function bindRules(Build $build, array $rules): void {
+    $builder = $build->builder;
+    $definition = $build->definition;
+    $module = $build->module;
+    $input_keys = $build->inputKeys;
+    $attached = $build->attached;
+    $lists = $build->lists;
+    $extended = $build->extended;
+    $mounted = $build->mounted;
+    $mountedBy = $build->mountedBy;
+    $ruling = $build->ruling;
+    $ports = $build->ports;
+    $readable = $build->readable;
+    $translated = $build->translated;
     if ($rules === []) {
       return;
     }

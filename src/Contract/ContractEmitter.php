@@ -396,11 +396,11 @@ final class ContractEmitter {
     $this->site = ['pointer' => '', 'steps' => []];
     try {
       $cacheability = new CacheableMetadata();
-      $stale = [];
       $standing = $values[DataSurfaceFormBuilderInterface::STANDING_KEY] ?? [];
       unset($values[DataSurfaceFormBuilderInterface::STANDING_KEY]);
       $subschemas = new Subschemas(FALSE, $widgets ? [] : self::WIDGET_HINTS, $this->mixedIn($surface));
-      [$schema, $shown] = $this->frame($surface, $values, '', $resource_id, $cacheability, $stale, $subschemas, is_array($standing) ? $standing : []);
+      $emission = new Emission($subschemas, $cacheability, new \ArrayObject(), $resource_id, standing: is_array($standing) ? $standing : []);
+      [$schema, $shown] = $this->frame($surface, $values, $emission);
       $schema += $this->definitions($subschemas);
       $schema = $this->named($schema);
       if (!$widgets) {
@@ -414,9 +414,9 @@ final class ContractEmitter {
         'values' => $shown,
         // Each a JSON Pointer, the one spelling a path has on the wire.
         // Decision: see docs/decisions.md#one-result-at-every-door.
-        'stale' => array_map(ResultDocument::pointer(...), $stale),
+        'stale' => array_map(ResultDocument::pointer(...), $emission->stale->getArrayCopy()),
       ];
-      $outputs = $this->outputs($surface, $cacheability);
+      $outputs = $this->outputs($surface, $emission);
       if ($outputs !== NULL) {
         $document['outputs'] = $outputs;
       }
@@ -510,9 +510,9 @@ final class ContractEmitter {
     $this->site = ['pointer' => '', 'steps' => []];
     try {
       $cacheability = new CacheableMetadata();
-      $ignored = [];
       $subschemas = new Subschemas(TRUE, [...self::PRESENT, ...($widgets ? [] : self::WIDGET_HINTS)], $this->mixedIn($surface));
-      [$schema] = $this->frame($surface, $this->known($surface), '', $resource_id, $cacheability, $ignored, $subschemas);
+      $emission = new Emission($subschemas, $cacheability, new \ArrayObject(), $resource_id);
+      [$schema] = $this->frame($surface, $this->known($surface), $emission);
       $schema += $this->definitions($subschemas);
       $schema = $this->named($schema);
       $schema = $this->withoutPresent($schema);
@@ -525,7 +525,7 @@ final class ContractEmitter {
         'label' => $label === NULL ? NULL : PlainText::of($label),
         'schema' => $this->top($surface, $schema, $label, $operation, $id),
       ];
-      $outputs = $this->outputs($surface, $cacheability);
+      $outputs = $this->outputs($surface, $emission);
       if ($outputs !== NULL) {
         $document['outputs'] = $outputs;
       }
@@ -1043,49 +1043,30 @@ final class ContractEmitter {
    *   The data surface of this frame, as advertised.
    * @param array $values
    *   The values of this frame.
-   * @param string $prefix
-   *   The dotted path of this frame from the top, with its trailing dot.
-   * @param string $owner
-   *   The id this frame was built from: the document's at the top,
-   *   a child's own, or the key a child with no class is defined under.
-   *   A child with no class of its own is defined as `<owner>.<key>`, a
-   *   variant with none as `<owner>.<key>.<value>`.
-   * @param \Drupal\Core\Cache\CacheableMetadata $cacheability
-   *   Collects what the description depends on.
-   * @param string[] $stale
-   *   Collects the dotted paths of stale values.
-   * @param \Drupal\data_surface\Contract\Subschemas $subschemas
-   *   The document's defs, which every child is written to, and
-   *   whether it is the full schema (emitFull()): $values are then the
-   *   locked keys the frame knows and nothing else, every frame inside is
+   * @param \Drupal\data_surface\Contract\Emission $emission
+   *   What the walk carries: where this frame is (its path and the id it
+   *   was built from), the orphans of a refinement, whether it is a def,
+   *   locked whole or stands for every item of a collection, and the
+   *   document's defs, cacheability and stale paths, which every frame
+   *   inside collects into. In the full schema $values are the locked
+   *   keys the frame knows and nothing else, every frame inside is
    *   described from its own locked keys instead of its defaults, and a
    *   key that watches anything a value could change is described as
    *   declared.
-   * @param array<string, mixed> $standing
-   *   The orphans of a refinement, by dotted path from the top, each
-   *   mapped to the stored value it stands for; held unanswered in
-   *   $values.
-   * @param bool $declaring
-   *   Whether this frame is a def: the data surface as declared, for no
-   *   values, with nothing locked. A locked key is then described as the
-   *   key it is before a context fixes it (no `readOnly`, no `const`, and
-   *   no default, which is the context's), and every child inside is
-   *   a bare reference to its own def.
-   * @param bool $frozen
-   *   Whether the frame is a child its access locked, or is inside one:
-   *   every key is then described locked (`readOnly`, `const` where held)
-   *   and holds what it was given, which is what is stored.
-   * @param bool $blank
-   *   Whether the frame stands for every item of a collection rather than
-   *   one value: it is described from the locked keys the child's
-   *   operation knows alone, and a key locked only because the frame is
-   *   frozen holds no `const`, since each item holds its own.
    *
    * @return array{0: array, 1: array|\stdClass}
    *   The object schema of the frame, and its values as shown.
    */
-  protected function frame(DataSurfaceInterface $declared, array $values, string $prefix, string $owner, CacheableMetadata $cacheability, array &$stale, Subschemas $subschemas, array $standing = [], bool $declaring = FALSE, bool $frozen = FALSE, bool $blank = FALSE): array {
-    $full = $subschemas->full;
+  protected function frame(DataSurfaceInterface $declared, array $values, Emission $emission): array {
+    $full = $emission->full();
+    $prefix = $emission->prefix;
+    $owner = $emission->owner;
+    $cacheability = $emission->cacheability;
+    $subschemas = $emission->subschemas;
+    $standing = $emission->standing;
+    $declaring = $emission->declaring;
+    $frozen = $emission->frozen;
+    $blank = $emission->blank;
     // Decision: see docs/decisions.md#static-by-default-runtime-by-declaration.
     // The present moment is refined by every refiner; the full schema and
     // a def, which are for any values, by the static ones alone.
@@ -1093,8 +1074,8 @@ final class ContractEmitter {
     // in the full schema and a def; for one set of values it is evaluated
     // like any refiner. Decision: see
     // docs/decisions.md#a-rule-declared-as-data.
-    $runtime = !$full && !$declaring;
-    $kinds = $runtime ? DataSurfaceInterface::STATIC : DataSurfaceInterface::CODED;
+    $runtime = $emission->runtime();
+    $kinds = $emission->kinds();
     // A port holds what its container bound it to, read as a sibling is.
     // Decision: see docs/decisions.md#a-port-is-a-live-sibling-value.
     $ports = $declared->getDefinitions()->ports();
@@ -1155,20 +1136,20 @@ final class ContractEmitter {
       $enumerated = NULL;
       $stating = [];
       if ($entry->variants !== NULL) {
-        [$properties[$name], $shown[$name], $branches] = $this->variants($declared, $entry, $values, $prefix . $name, $owner, $cacheability, $stale, $subschemas, $standing, $declaring, $locked, $blank);
+        [$properties[$name], $shown[$name], $branches] = $this->variants($declared, $entry, $values, $locked, $emission);
         array_push($conditions, ...$branches);
         if ($ahead_of_time) {
           // A parent's refiner of a key with variants says only whether
           // it applies.
-          $enumerated = $this->enumerate($declared, $static, $entry, $values, $properties[$name], $prefix . $name, $cacheability, $kinds, TRUE);
+          $enumerated = $this->enumerate($declared, $static, $entry, $values, $properties[$name], $emission, TRUE);
         }
       }
       elseif ($entry->list !== NULL) {
-        [$properties[$name], $shown[$name]] = $this->collection($declared, $entry->list, $current, $entry, $values, $prefix . $name, $owner, $cacheability, $stale, $subschemas, $standing, $declaring, $locked, $depends);
+        [$properties[$name], $shown[$name]] = $this->collection($declared, $entry->list, $current, $entry, $values, $locked, $depends, $emission);
         if ($ahead_of_time) {
           // A parent's refiner of the list watches a sibling that holds
           // nothing yet: its Count for every value that sibling offers.
-          $enumerated = $this->enumerate($declared, $static, $entry, $values, $properties[$name], $prefix . $name, $cacheability, $kinds);
+          $enumerated = $this->enumerate($declared, $static, $entry, $values, $properties[$name], $emission);
         }
       }
       elseif ($entry->attachment !== NULL && ($full || $declaring) && $this->budget?->over($entry, $cacheability)) {
@@ -1186,7 +1167,7 @@ final class ContractEmitter {
         $pointer = $this->site['pointer'] . '/' . Choices::escape($name);
         $picked = $this->choices?->entries($entry->attachment->child, $pointer) ?? [];
         if ($picked !== []) {
-          [$stated, $requiring] = $this->entriesChosen($name, $entry->attachment, $owner . '.' . $name, $picked, $cacheability, $subschemas);
+          [$stated, $requiring] = $this->entriesChosen($name, $entry->attachment, $owner . '.' . $name, $picked, $emission);
           $properties[$name]['properties'] = $stated;
           if ($requiring !== []) {
             $properties[$name]['required'] = $requiring;
@@ -1204,7 +1185,7 @@ final class ContractEmitter {
         ];
         $shown[$name] = new \stdClass();
         if ($ahead_of_time) {
-          $enumerated = $this->enumerate($declared, $static, $entry, $values, $properties[$name], $prefix . $name, $cacheability, $kinds, TRUE);
+          $enumerated = $this->enumerate($declared, $static, $entry, $values, $properties[$name], $emission, TRUE);
         }
       }
       elseif ($entry->attachment !== NULL) {
@@ -1212,7 +1193,7 @@ final class ContractEmitter {
         $fallback = $owner . '.' . $name;
         $around = $this->enter($name);
         try {
-          $key = $this->define($attachment, $fallback, $cacheability, $subschemas);
+          $key = $this->define($attachment, $fallback, $emission);
           if ($declaring) {
             $instance = $subschemas->get($key) ?? [];
             $reference = $this->reference($key, NULL, $subschemas);
@@ -1226,7 +1207,7 @@ final class ContractEmitter {
             $inside = $full || $blank ? $this->known($child) : array_replace($child->getDefaultValues(), is_array($held) ? $held : []);
             // A child its access locked is described locked through and
             // through: every key inside it fixed to what it holds.
-            [$instance, $shown[$name]] = $this->instance($child, $key, $inside, $prefix . $name . '.', $attachment->id ?? $fallback, $cacheability, $stale, $subschemas, $standing, $locked, $blank);
+            [$instance, $shown[$name]] = $this->instance($child, $key, $inside, $emission->withPrefix($prefix . $name . '.')->withOwner($attachment->id ?? $fallback)->withFrozen($locked));
             $reference = $this->reference($key, $instance, $subschemas);
           }
         }
@@ -1241,7 +1222,7 @@ final class ContractEmitter {
         if ($ahead_of_time) {
           // A parent's refiner of an attached key says only whether it
           // applies.
-          $enumerated = $this->enumerate($declared, $static, $entry, $values, $properties[$name], $prefix . $name, $cacheability, $kinds, TRUE);
+          $enumerated = $this->enumerate($declared, $static, $entry, $values, $properties[$name], $emission, TRUE);
         }
         if (!$declaring && $attachment->reads !== [] && !static::readsThrough($attachment, $ports)) {
           // Which of this frame's keys each port reads, and what the child
@@ -1253,8 +1234,8 @@ final class ContractEmitter {
           $properties[$name][self::EXTENSION]['reads'] = $each ? $this->eachReads($attachment) : $attachment->reads;
           if (!$locked) {
             [$branches, $markers] = $each
-              ? $this->entrySites($declared, $static, $entry, $bound, $values, $prefix . $name, $cacheability, $kinds, $runtime)
-              : $this->site($declared, $static, $entry, $bound, '', $values, $prefix . $name, $cacheability, $kinds, $runtime);
+              ? $this->entrySites($declared, $static, $entry, $bound, $values, $emission)
+              : $this->site($declared, $static, $entry, $bound, '', $values, $emission);
             array_push($conditions, ...$branches);
             $properties[$name][self::EXTENSION] += $markers;
           }
@@ -1281,7 +1262,7 @@ final class ContractEmitter {
           $orphan => $standing[$prefix . $name],
           default => $values[$name] ?? $declared->getDefault($name),
         };
-        [$properties[$name], $shown[$name]] = $this->property($current->definition, $entry->definition, $value, $prefix . $name, $locked, $depends, $cacheability, $stale);
+        [$properties[$name], $shown[$name]] = $this->property($current->definition, $entry->definition, $value, $prefix . $name, $locked, $depends, $emission);
         if ($declaring && $entry->locked) {
           // What the context fixed it to is the instance's, not the
           // declaration's: the reference site says it.
@@ -1295,7 +1276,7 @@ final class ContractEmitter {
           // value again, as for any stale key.
           if (empty($properties[$name][self::EXTENSION]['stale'])) {
             $properties[$name][self::EXTENSION]['stale'] = TRUE;
-            $stale[] = $prefix . $name;
+            $emission->markStale($prefix . $name);
           }
           if (isset($properties[$name][self::EXTENSION]['emptyOption']) && ($properties[$name][self::EXTENSION]['widget'] ?? NULL) !== 'radios') {
             // Refused by the save that moved what it refines against, not
@@ -1314,9 +1295,8 @@ final class ContractEmitter {
           // narrowed for these values): a runtime refiner may have
           // narrowed it for the present moment already, and a conditional
           // says what the coded ones add.
-          $ignored = [];
-          $base = $current->definition === $stated->definition ? $properties[$name] : $this->property($stated->definition, NULL, NULL, $prefix . $name, FALSE, [], $cacheability, $ignored)[0];
-          $enumerated = $this->enumerate($declared, $static, $entry, $values, $base, $prefix . $name, $cacheability, $kinds);
+          $base = $current->definition === $stated->definition ? $properties[$name] : $this->property($stated->definition, NULL, NULL, $prefix . $name, FALSE, [], $emission->withoutStale())[0];
+          $enumerated = $this->enumerate($declared, $static, $entry, $values, $base, $emission);
           if ($enumerated !== NULL && $current->definition === $stated->definition) {
             $properties[$name] = $enumerated['base'];
           }
@@ -1358,13 +1338,13 @@ final class ContractEmitter {
         // Decision: see docs/decisions.md#a-rule-declared-as-data.
         // The frame's `x-surface.rules` lists each conditional that states
         // one; the key itself carries no marker.
-        [$properties[$name], $stating, $requires] = $this->rules($entry, $current->definition, $properties[$name], $stating, $requires, $prefix . $name, $cacheability, array_keys($ports));
+        [$properties[$name], $stating, $requires] = $this->rules($entry, $current->definition, $properties[$name], $stating, $requires, $emission, array_keys($ports));
       }
       if ($entry->mounted !== [] && !$declaring) {
         // The structures alters attached at their mounts: each module's
         // property a site of the structure's def, and what the structure
         // answers for keys its ports read stated here, on this frame.
-        [$properties[$name], $branches] = $this->mounts($declared, $static, $entry, $current, $properties[$name], $values, $prefix, $owner, $cacheability, $subschemas, $standing, $locked, $blank, $kinds, $runtime);
+        [$properties[$name], $branches] = $this->mounts($declared, $static, $entry, $current, $properties[$name], $values, $locked, $emission);
         array_push($stating, ...$branches);
       }
       array_push($conditions, ...$stating);
@@ -1416,7 +1396,7 @@ final class ContractEmitter {
     }
     if ($advertised->mixins() !== []) {
       // Decision: see docs/decisions.md#a-mixin-is-merged-flat.
-      $schema = $this->composed($advertised, $schema, $owner, $cacheability, $subschemas);
+      $schema = $this->composed($advertised, $schema, $emission);
     }
     return [$schema, $shown === [] ? new \stdClass() : $shown];
   }
@@ -1442,24 +1422,22 @@ final class ContractEmitter {
    *   The frame's definitions, which say which structures are mixed in.
    * @param array $schema
    *   The frame, described flat.
-   * @param string $owner
-   *   The id the frame was built from.
-   * @param \Drupal\Core\Cache\CacheableMetadata $cacheability
-   *   Collects what the description depends on.
-   * @param \Drupal\data_surface\Contract\Subschemas $subschemas
-   *   The document's defs.
+   * @param \Drupal\data_surface\Contract\Emission $emission
+   *   The walk, at the frame: its owner is the id the frame was built from.
    *
    * @return array
    *   The frame, composed.
    */
-  protected function composed(DefinitionMap $advertised, array $schema, string $owner, CacheableMetadata $cacheability, Subschemas $subschemas): array {
+  protected function composed(DefinitionMap $advertised, array $schema, Emission $emission): array {
+    $owner = $emission->owner;
+    $subschemas = $emission->subschemas;
     $flat = is_array($schema['properties']) ? $schema['properties'] : [];
     $required = $schema['required'] ?? [];
     $conditions = $schema['allOf'] ?? [];
     $references = [];
     $members = [];
     foreach ($advertised->mixins() as $mixin) {
-      $key = $this->define($mixin->structure, $owner . '.' . $mixin->structure->source, $cacheability, $subschemas);
+      $key = $this->define($mixin->structure, $owner . '.' . $mixin->structure->source, $emission);
       // Read flat: a structure it mixes in itself says its members there.
       $def = SchemaResolver::inline($subschemas->get($key) ?? [], ['$defs' => $subschemas->all()]);
       $references[] = ['$ref' => self::DEFS . self::pointer($key)];
@@ -1593,15 +1571,9 @@ final class ContractEmitter {
    *   module for a structure at a mount.
    * @param array $values
    *   The container's values.
-   * @param string $path
-   *   The key's dotted path.
-   * @param \Drupal\Core\Cache\CacheableMetadata $cacheability
-   *   Collects what the description depends on.
-   * @param int $kinds
-   *   The kinds of refiner a combination is answered by.
-   * @param bool $runtime
-   *   Whether the document is for one set of values, where a rule is
-   *   evaluated, not stated.
+   * @param \Drupal\data_surface\Contract\Emission $emission
+   *   The walk, at the container's frame. Whether it is for one set of
+   *   values decides whether a rule is evaluated, not stated.
    * @param array|null $inline
    *   The key's property as this frame states it inline, for a mount;
    *   NULL for an attached child, which is described here.
@@ -1610,7 +1582,7 @@ final class ContractEmitter {
    *   The conditionals, and the markers the site carries: `enumerated`
    *   or `refine`.
    */
-  protected function site(DataSurfaceInterface $declared, DataSurfaceInterface $static, Entry $entry, Attachment $attachment, string $below, array $values, string $path, CacheableMetadata $cacheability, int $kinds, bool $runtime, ?array $inline = NULL): array {
+  protected function site(DataSurfaceInterface $declared, DataSurfaceInterface $static, Entry $entry, Attachment $attachment, string $below, array $values, Emission $emission, ?array $inline = NULL): array {
     $map = $attachment->child->getDefinitions();
     $ports = $map->ports();
     $held = $attachment->ports ?? $attachment->readFrom($values)->ports ?? [];
@@ -1620,7 +1592,7 @@ final class ContractEmitter {
       return [[], []];
     }
     $definition = $static->getDefinition($entry->name) ?? $entry->definition;
-    $base = $inline ?? $this->stated($entry, $definition, $path, $cacheability);
+    $base = $inline ?? $this->stated($entry, $definition, $emission);
     $markers = [];
     $branches = [];
     if ($below === '') {
@@ -1641,12 +1613,12 @@ final class ContractEmitter {
       if ($reading) {
         // The def requires none of what may not apply; nor does the base a
         // conditional is read over.
-        $enumerated = $mixed ? NULL : $this->enumerate($declared, $static, $entry, $values, static::requiringNone($base, $ruled), $path, $cacheability, $kinds);
+        $enumerated = $mixed ? NULL : $this->enumerate($declared, $static, $entry, $values, static::requiringNone($base, $ruled), $emission);
         $markers[$enumerated === NULL ? 'refine' : 'enumerated'] = TRUE;
         array_push($branches, ...($enumerated['branches'] ?? []));
       }
     }
-    if ($runtime) {
+    if ($emission->runtime()) {
       return [$branches, $markers];
     }
     $links = [];
@@ -1686,7 +1658,7 @@ final class ContractEmitter {
     }
     if ($links !== []) {
       $pseudo = new Entry($entry->name, $definition, refiners: [DataSurfaceInterface::OWNER => $links]);
-      [, $stated] = $this->rules($pseudo, $definition, $base, [], FALSE, $path, $cacheability);
+      [, $stated] = $this->rules($pseudo, $definition, $base, [], FALSE, $emission);
       array_push($branches, ...$stated);
     }
     return [$branches, $markers];
@@ -1773,19 +1745,13 @@ final class ContractEmitter {
    *   The map, wired to its siblings.
    * @param array $values
    *   This frame's values.
-   * @param string $path
-   *   The key's dotted path.
-   * @param \Drupal\Core\Cache\CacheableMetadata $cacheability
-   *   Collects what the description depends on.
-   * @param int $kinds
-   *   The kinds of refiner a combination is answered by.
-   * @param bool $runtime
-   *   Whether the document is for one set of values.
+   * @param \Drupal\data_surface\Contract\Emission $emission
+   *   The walk, at this frame.
    *
    * @return array{0: array, 1: array<string, true>}
    *   The conditionals, and the markers the key carries.
    */
-  protected function entrySites(DataSurfaceInterface $declared, DataSurfaceInterface $static, Entry $entry, Attachment $attachment, array $values, string $path, CacheableMetadata $cacheability, int $kinds, bool $runtime): array {
+  protected function entrySites(DataSurfaceInterface $declared, DataSurfaceInterface $static, Entry $entry, Attachment $attachment, array $values, Emission $emission): array {
     $branches = [];
     $markers = [];
     foreach ($attachment->child->getDefinitions()->entries() as $id => $inner) {
@@ -1800,7 +1766,7 @@ final class ContractEmitter {
         $reads[(string) $port] = ($attachment->reads[$first] ?? $first) . '.' . $rest;
       }
       $site = new Attachment($child->child, $child->source, $child->id, $reads, $child->wired);
-      [$stated, $marked] = $this->site($declared, $static, $entry, $site, (string) $id, $values, $path, $cacheability, $kinds, $runtime);
+      [$stated, $marked] = $this->site($declared, $static, $entry, $site, (string) $id, $values, $emission);
       array_push($branches, ...$stated);
       $markers += $marked;
       // A coded refiner reading a port is not enumerated at an entry:
@@ -1837,30 +1803,17 @@ final class ContractEmitter {
    *   Its property, stated inline.
    * @param array $values
    *   The frame's values.
-   * @param string $prefix
-   *   The frame's path, with its trailing dot.
-   * @param string $owner
-   *   The frame's id.
-   * @param \Drupal\Core\Cache\CacheableMetadata $cacheability
-   *   Collects what the description depends on.
-   * @param \Drupal\data_surface\Contract\Subschemas $subschemas
-   *   The document's defs.
-   * @param array<string, mixed> $standing
-   *   The orphans of a refinement, by dotted path from the top.
    * @param bool $locked
    *   Whether the key is described locked.
-   * @param bool $blank
-   *   Whether the frame stands for every item of a collection.
-   * @param int $kinds
-   *   The kinds of refiner a combination is answered by.
-   * @param bool $runtime
-   *   Whether the document is for one set of values.
+   * @param \Drupal\data_surface\Contract\Emission $emission
+   *   The walk, at the frame.
    *
    * @return array{0: array, 1: array}
    *   The property, each mount a site, and the conditionals for the
    *   frame's `allOf`.
    */
-  protected function mounts(DataSurfaceInterface $declared, DataSurfaceInterface $static, Entry $entry, Entry $current, array $property, array $values, string $prefix, string $owner, CacheableMetadata $cacheability, Subschemas $subschemas, array $standing, bool $locked, bool $blank, int $kinds, bool $runtime): array {
+  protected function mounts(DataSurfaceInterface $declared, DataSurfaceInterface $static, Entry $entry, Entry $current, array $property, array $values, bool $locked, Emission $emission): array {
+    $subschemas = $emission->subschemas;
     $branches = [];
     foreach ($entry->mounted as $module => $attachment) {
       $module = (string) $module;
@@ -1870,20 +1823,19 @@ final class ContractEmitter {
       if (!is_array($inline)) {
         continue;
       }
-      $path = $prefix . $entry->name;
+      $path = $emission->at($entry->name);
       $markers = [];
       if (!$locked) {
-        [$stated, $markers] = $this->site($declared, $static, $entry, $attachment, $module, $values, $path, $cacheability, $kinds, $runtime, $property);
+        [$stated, $markers] = $this->site($declared, $static, $entry, $attachment, $module, $values, $emission, $property);
         array_push($branches, ...$stated);
       }
       $around = $this->enter($entry->name, $module);
       try {
-        $key = $this->define($attachment, $owner . '.' . $entry->name . '.' . $module, $cacheability, $subschemas);
+        $key = $this->define($attachment, $emission->owner . '.' . $entry->name . '.' . $module, $emission);
         $child = $attachment->bound($values);
         $held = NestedArray::getValue($values, [$entry->name, $module]);
-        $inside = $subschemas->full || $blank ? $this->known($child) : array_replace($child->getDefaultValues(), is_array($held) ? $held : []);
-        $ignored = [];
-        [$instance] = $this->instance($child, $key, $inside, $path . '.' . $module . '.', $attachment->id ?? $key, $cacheability, $ignored, $subschemas, $standing, $locked, $blank);
+        $inside = $emission->full() || $emission->blank ? $this->known($child) : array_replace($child->getDefaultValues(), is_array($held) ? $held : []);
+        [$instance] = $this->instance($child, $key, $inside, $emission->withPrefix($path . '.' . $module . '.')->withOwner($attachment->id ?? $key)->withFrozen($locked)->withoutStale());
       }
       finally {
         $this->site = $around;
@@ -1989,10 +1941,8 @@ final class ContractEmitter {
    *   The conditionals the coded refiners state for it.
    * @param bool $requires
    *   Whether the frame requires it so far.
-   * @param string $path
-   *   The key's dotted path.
-   * @param \Drupal\Core\Cache\CacheableMetadata $cacheability
-   *   Collects what the description depends on.
+   * @param \Drupal\data_surface\Contract\Emission $emission
+   *   The walk, at the key's frame.
    * @param string[] $ports
    *   The ports of the frame: a rule reading one is not stated here, the
    *   site that wires it states it, and a key it may rule out is not
@@ -2002,10 +1952,10 @@ final class ContractEmitter {
    *   The property, the key's conditionals, the coded ones first, and
    *   whether the frame still requires the key.
    */
-  protected function rules(Entry $entry, DataDefinitionInterface $definition, array $property, array $branches, bool $requires, string $path, CacheableMetadata $cacheability, array $ports = []): array {
+  protected function rules(Entry $entry, DataDefinitionInterface $definition, array $property, array $branches, bool $requires, Emission $emission, array $ports = []): array {
     $name = $entry->name;
     $applicability = $entry->isNested();
-    $base = $applicability ? [] : $this->stated($entry, $definition, $path, $cacheability);
+    $base = $applicability ? [] : $this->stated($entry, $definition, $emission);
     $declared = [];
     $ruling = [];
     foreach ($entry->refiners as $chain) {
@@ -2041,7 +1991,7 @@ final class ContractEmitter {
           $then = [];
           if (!$applicability) {
             $answer = static::appliedAt(DataSurface::deepClone($definition), $below, $rule);
-            $narrowed = static::onlyAdded($this->narrowed($this->stated($entry, $answer, $path, $cacheability), $base), $base);
+            $narrowed = static::onlyAdded($this->narrowed($this->stated($entry, $answer, $emission), $base), $base);
             if ($narrowed !== []) {
               $then['properties'] = [$name => $narrowed];
             }
@@ -2241,46 +2191,37 @@ final class ContractEmitter {
    *   The key as advertised.
    * @param array $values
    *   The values of the collection's frame.
-   * @param string $path
-   *   The collection's dotted path.
-   * @param string $owner
-   *   The id of the resource or structure it belongs to.
-   * @param \Drupal\Core\Cache\CacheableMetadata $cacheability
-   *   Collects what the description depends on.
-   * @param string[] $stale
-   *   Collects the dotted paths of stale values, an item's under its
-   *   delta.
-   * @param \Drupal\data_surface\Contract\Subschemas $subschemas
-   *   The document's defs, and whether it is the full schema, which shows
-   *   no values.
-   * @param array<string, mixed> $standing
-   *   The orphans of a refinement, by dotted path from the top.
-   * @param bool $declaring
-   *   Whether the collection is part of a def: its items are then a bare
-   *   reference.
    * @param bool $locked
    *   Whether the list is locked: its items are then described locked.
    * @param string[] $depends
    *   The siblings the parent's refiners of the list watch.
+   * @param \Drupal\data_surface\Contract\Emission $emission
+   *   The walk, at the collection's frame: its owner is the id of the
+   *   resource or structure it belongs to, a stale value inside an item
+   *   is listed under its delta, and a def (declaring) has its items as a
+   *   bare reference.
    *
    * @return array{0: array, 1: mixed}
    *   The collection's property schema, and its value as shown: one map
    *   per item, or NULL for a list that holds nothing.
    */
-  protected function collection(DataSurfaceInterface $declared, Collection $list, Entry $current, Entry $entry, array $values, string $path, string $owner, CacheableMetadata $cacheability, array &$stale, Subschemas $subschemas, array $standing, bool $declaring, bool $locked, array $depends): array {
+  protected function collection(DataSurfaceInterface $declared, Collection $list, Entry $current, Entry $entry, array $values, bool $locked, array $depends, Emission $emission): array {
+    $path = $emission->at($entry->name);
+    $owner = $emission->owner;
+    $declaring = $emission->declaring;
+    $subschemas = $emission->subschemas;
     $child = $list->child();
     $fallback = $owner . '.' . $entry->name;
     // Every item is one structure: a key inside one is named by the
     // first item's index.
     $around = $this->enter($entry->name, '0');
     try {
-      $key = $this->define($list->item, $fallback, $cacheability, $subschemas);
+      $key = $this->define($list->item, $fallback, $emission);
       if ($declaring) {
         $items = $this->reference($key, NULL, $subschemas);
       }
       else {
-        $ignored = [];
-        [$instance] = $this->instance($child, $key, $this->known($child), $path . '.*.', $list->item->id ?? $fallback, $cacheability, $ignored, $subschemas, [], $locked, TRUE);
+        [$instance] = $this->instance($child, $key, $this->known($child), $emission->withPrefix($path . '.*.')->withOwner($list->item->id ?? $fallback)->withStanding([])->withFrozen($locked)->withBlank(TRUE)->withoutStale());
         $items = $this->reference($key, $instance, $subschemas);
       }
     }
@@ -2300,14 +2241,14 @@ final class ContractEmitter {
 
     $shown = NULL;
     $held = $values[$entry->name] ?? $declared->getDefault($entry->name);
-    if (!$subschemas->full && !$declaring && is_array($held)) {
+    if (!$emission->full() && !$declaring && is_array($held)) {
       // Each item as its element would be built with, read in the
       // child's own frame: a secret not handed over, a stale value shown
       // as nothing and listed under its delta.
       $shown = [];
       foreach (array_values($held) as $delta => $item) {
         $inside = array_replace($child->getDefaultValues(), is_array($item) ? $item : []);
-        [, $shown[]] = $this->frame($child, $inside, $path . '.' . $delta . '.', $list->item->id ?? $fallback, $cacheability, $stale, $subschemas, $standing, FALSE, $locked);
+        [, $shown[]] = $this->frame($child, $inside, $emission->withPrefix($path . '.' . $delta . '.')->withOwner($list->item->id ?? $fallback)->withFrozen($locked)->withBlank(FALSE));
       }
     }
     return [$schema, $shown];
@@ -2351,15 +2292,15 @@ final class ContractEmitter {
    * @param string $fallback
    *   The id to define it under when it has no `#[Resource]` or
    *   `#[Structure]` id of its own.
-   * @param \Drupal\Core\Cache\CacheableMetadata $cacheability
-   *   Collects what the description depends on.
-   * @param \Drupal\data_surface\Contract\Subschemas $subschemas
-   *   The document's defs.
+   * @param \Drupal\data_surface\Contract\Emission $emission
+   *   The walk: the document's defs the def is written to, and the
+   *   cacheability it collects into.
    *
    * @return string
    *   The key under `$defs`.
    */
-  protected function define(Attachment $attachment, string $fallback, CacheableMetadata $cacheability, Subschemas $subschemas): string {
+  protected function define(Attachment $attachment, string $fallback, Emission $emission): string {
+    $subschemas = $emission->subschemas;
     $child = $attachment->child;
     $key = $subschemas->keyOf($child);
     if ($key !== NULL) {
@@ -2371,8 +2312,7 @@ final class ContractEmitter {
     }
     $id = $attachment->id ?? $fallback;
     $subschemas->begin($id, $child);
-    $ignored = [];
-    [$def] = $this->frame($child, [], '', $id, $cacheability, $ignored, $subschemas, [], TRUE);
+    [$def] = $this->frame($child, [], $emission->forDef($id));
     if ($subschemas->isOpen($id)) {
       // Mixed in somewhere in this document: open, so an owner composes it
       // with keys of its own, and closed by every other place it is used.
@@ -2395,33 +2335,22 @@ final class ContractEmitter {
    *   The key its def is filed under.
    * @param array $values
    *   Its values.
-   * @param string $prefix
-   *   Its dotted path from the top, with the trailing dot.
-   * @param string $owner
-   *   Its id.
-   * @param \Drupal\Core\Cache\CacheableMetadata $cacheability
-   *   Collects what the description depends on.
-   * @param string[] $stale
-   *   Collects the dotted paths of stale values.
-   * @param \Drupal\data_surface\Contract\Subschemas $subschemas
-   *   The document's defs.
-   * @param array<string, mixed> $standing
-   *   The orphans of a refinement, by dotted path from the top.
-   * @param bool $frozen
-   *   Whether the child is locked whole, by its access or its parent's.
-   * @param bool $blank
-   *   Whether the child stands for every item of a collection.
+   * @param \Drupal\data_surface\Contract\Emission $emission
+   *   The walk, at the child: its path from the top, its id, the orphans
+   *   standing in it, whether it is locked whole (by its access or its
+   *   parent's) and whether it stands for every item of a collection. Not
+   *   a def.
    *
    * @return array{0: array, 1: array|\stdClass}
    *   The child's object schema here, and its values as shown.
    */
-  protected function instance(DataSurfaceInterface $child, string $key, array $values, string $prefix, string $owner, CacheableMetadata $cacheability, array &$stale, Subschemas $subschemas, array $standing, bool $frozen = FALSE, bool $blank = FALSE): array {
-    $def = $subschemas->get($key);
+  protected function instance(DataSurfaceInterface $child, string $key, array $values, Emission $emission): array {
+    $def = $emission->subschemas->get($key);
     $bound = array_filter($child->getPortValues(), ValueState::isConfigured(...)) !== [];
-    if ($subschemas->full && $def !== NULL && !$frozen && !$bound && !$this->locks($child)) {
+    if ($emission->full() && $def !== NULL && !$emission->frozen && !$bound && !$this->locks($child)) {
       return [$def, new \stdClass()];
     }
-    return $this->frame($child, $values, $prefix, $owner, $cacheability, $stale, $subschemas, $standing, FALSE, $frozen, $blank);
+    return $this->frame($child, $values, $emission);
   }
 
   /**
@@ -2669,19 +2598,17 @@ final class ContractEmitter {
    *   The id to describe it under when it has none of its own.
    * @param list<string> $picked
    *   The ids chosen.
-   * @param \Drupal\Core\Cache\CacheableMetadata $cacheability
-   *   Collects what the description depends on.
-   * @param \Drupal\data_surface\Contract\Subschemas $subschemas
-   *   The document's defs, which an entry's structure is filed in.
+   * @param \Drupal\data_surface\Contract\Emission $emission
+   *   The walk: the document's defs, which an entry's structure is filed
+   *   in, and the cacheability it collects into.
    *
    * @return array{0: array<string, mixed>, 1: list<string>}
    *   The entries' properties, in the map's order, and those required.
    */
-  protected function entriesChosen(string $name, Attachment $attachment, string $fallback, array $picked, CacheableMetadata $cacheability, Subschemas $subschemas): array {
+  protected function entriesChosen(string $name, Attachment $attachment, string $fallback, array $picked, Emission $emission): array {
     $around = $this->enter($name);
     try {
-      $ignored = [];
-      [$map] = $this->frame($attachment->child, [], '', $attachment->id ?? $fallback, $cacheability, $ignored, $subschemas, [], TRUE);
+      [$map] = $this->frame($attachment->child, [], $emission->forDef($attachment->id ?? $fallback));
     }
     finally {
       $this->site = $around;
@@ -2731,37 +2658,31 @@ final class ContractEmitter {
    *   The entry of the key the variants are attached at.
    * @param array $values
    *   The values of the variants' frame.
-   * @param string $path
-   *   The key's dotted path.
-   * @param string $owner
-   *   The id of the resource or structure the variants belong to.
-   * @param \Drupal\Core\Cache\CacheableMetadata $cacheability
-   *   Collects what the description depends on.
-   * @param string[] $stale
-   *   Collects the dotted paths of stale values.
-   * @param \Drupal\data_surface\Contract\Subschemas $subschemas
-   *   The document's defs, and whether it is the full schema: every
-   *   variant is then described from its own locked keys, none as the
-   *   chosen one.
-   * @param array<string, mixed> $standing
-   *   The orphans of a refinement, by dotted path from the top; only the
-   *   chosen variant's are its own.
-   * @param bool $declaring
-   *   Whether the variants are part of a def: every variant is then a bare
-   *   reference, and a locked deciding key chooses nothing.
-   * @param bool $frozen
-   *   Whether the variants are inside a child locked whole: every variant is
-   *   then described locked.
-   * @param bool $blank
-   *   Whether the variants are inside a collection's items: no variant is
-   *   then chosen, and every one is described from its locked keys.
+   * @param bool $locked
+   *   Whether the key is locked, or inside a child locked whole: every
+   *   variant is then described locked.
+   * @param \Drupal\data_surface\Contract\Emission $emission
+   *   The walk, at the variants' frame. Its owner is the id of the
+   *   resource or structure the variants belong to; only the chosen
+   *   variant's orphans of its standing are its own; in the full schema
+   *   every variant is described from its own locked keys, none as the
+   *   chosen one; in a def (declaring) every variant is a bare reference
+   *   and a locked deciding key chooses nothing; inside a collection's
+   *   items (blank) no variant is chosen and every one is described from
+   *   its locked keys.
    *
    * @return array{0: array, 1: mixed, 2: array}
    *   The key's property schema, its value as shown, and the
    *   conditionals for the parent's `allOf`.
    */
-  protected function variants(DataSurfaceInterface $declared, Entry $entry, array $values, string $path, string $owner, CacheableMetadata $cacheability, array &$stale, Subschemas $subschemas, array $standing = [], bool $declaring = FALSE, bool $frozen = FALSE, bool $blank = FALSE): array {
-    $full = $subschemas->full;
+  protected function variants(DataSurfaceInterface $declared, Entry $entry, array $values, bool $locked, Emission $emission): array {
+    $full = $emission->full();
+    $path = $emission->at($entry->name);
+    $owner = $emission->owner;
+    $cacheability = $emission->cacheability;
+    $subschemas = $emission->subschemas;
+    $declaring = $emission->declaring;
+    $blank = $emission->blank;
     $variants = $entry->variants;
     assert($variants !== NULL);
     $by = $declared->getDefinitions()->get($variants->by);
@@ -2771,7 +2692,7 @@ final class ContractEmitter {
     $shell = $this->describe($variants->shell);
     $property = $shell + ['type' => $this->nullable('object', $variants->shell)];
     $depends = array_values(array_unique([$variants->by, ...$entry->dependencies]));
-    if ($frozen) {
+    if ($locked) {
       $property['readOnly'] = TRUE;
     }
     $property[self::EXTENSION] = $this->extension('variants', $depends, $chosen !== NULL) + [
@@ -2827,19 +2748,19 @@ final class ContractEmitter {
       // Below a variant, a key is reached through the choice of it.
       $around = $this->enter($entry->name, NULL, $id);
       try {
-        $key = $this->define($variant, $fallback, $cacheability, $subschemas);
+        $key = $this->define($variant, $fallback, $emission);
         if ($declaring) {
           $instance = $subschemas->get($key) ?? [];
           $reference = $this->reference($key, NULL, $subschemas);
         }
         else {
           $own = $is_chosen ? ($variants->held($id, $held) ?? []) : [];
-          $variant_stale = [];
+          $variant_stale = new \ArrayObject();
           $inside = $full || $blank ? $this->known($child) : array_replace($child->getDefaultValues(), $own);
-          [$instance, $variant_values] = $this->instance($child, $key, $inside, $path . '.', $variant->id ?? $fallback, $cacheability, $variant_stale, $subschemas, $is_chosen ? $standing : [], $frozen, $blank);
+          [$instance, $variant_values] = $this->instance($child, $key, $inside, $emission->withPrefix($path . '.')->withOwner($variant->id ?? $fallback)->withStanding($is_chosen ? $emission->standing : [])->withFrozen($locked)->withStale($variant_stale));
           if ($is_chosen) {
             $shown = $variant_values;
-            array_push($stale, ...$variant_stale);
+            $emission->markStale(...$variant_stale);
           }
           $reference = $this->reference($key, $instance, $subschemas);
         }
@@ -2922,15 +2843,13 @@ final class ContractEmitter {
    *   The values of the frame.
    * @param array $base
    *   The key's schema as emitted, unrefined.
-   * @param string $path
-   *   The key's dotted path.
-   * @param \Drupal\Core\Cache\CacheableMetadata $cacheability
-   *   Collects what every list read and every refinement depends on.
-   * @param int $kinds
-   *   The kinds of refiner each combination is answered by: the coded
-   *   ones for the full schema, which states a declared rule as written,
-   *   and the declared ones beside them for one set of values, which a
-   *   declared rule is evaluated for.
+   * @param \Drupal\data_surface\Contract\Emission $emission
+   *   The walk, at the key's frame: its cacheability collects what every
+   *   list read and every refinement depends on, and its kinds are the
+   *   kinds of refiner each combination is answered by (the coded ones
+   *   for the full schema, which states a declared rule as written, and
+   *   the declared ones beside them for one set of values, which a
+   *   declared rule is evaluated for).
    * @param bool $applicability
    *   Whether only whether the key applies is stated: a key holding a
    *   child, whose parent may say nothing else about it.
@@ -2944,7 +2863,9 @@ final class ContractEmitter {
    *   key with no list of values, or it would take more than
    *   ENUMERATION_CAP combinations.
    */
-  protected function enumerate(DataSurfaceInterface $declared, DataSurfaceInterface $refined, Entry $entry, array $values, array $base, string $path, CacheableMetadata $cacheability, int $kinds = DataSurfaceInterface::STATIC, bool $applicability = FALSE): ?array {
+  protected function enumerate(DataSurfaceInterface $declared, DataSurfaceInterface $refined, Entry $entry, array $values, array $base, Emission $emission, bool $applicability = FALSE): ?array {
+    $cacheability = $emission->cacheability;
+    $kinds = $emission->kinds();
     $order = array_flip($declared->getDefinitions()->names());
     $ports = $declared->getDefinitions()->ports();
     $watched = $entry->codedDependencies();
@@ -2995,10 +2916,10 @@ final class ContractEmitter {
     $vanishing = [];
     foreach ($combinations as $i => [$combination, $surface]) {
       $definition = $surface->getDefinition($entry->name) ?? $entry->definition;
-      $schema = $this->answer($entry, $definition, $path, $cacheability, $applicability);
+      $schema = $this->answer($entry, $definition, $emission, $applicability);
       // In development and tests only, and for one combination per key:
       // asked again, a static refiner answers the same.
-      assert($i > 0 || $this->answersAgain($declared, $entry, array_replace($values, $combination), $schema, $path, $cacheability, $kinds, $applicability));
+      assert($i > 0 || $this->answersAgain($declared, $entry, array_replace($values, $combination), $schema, $emission, $applicability));
       if ($schema === FALSE) {
         $ruled = TRUE;
       }
@@ -3051,10 +2972,8 @@ final class ContractEmitter {
    *   The key.
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   Its definition, refined for the combination.
-   * @param string $path
-   *   The key's dotted path.
-   * @param \Drupal\Core\Cache\CacheableMetadata $cacheability
-   *   Collects what the description depends on.
+   * @param \Drupal\data_surface\Contract\Emission $emission
+   *   The walk, at the key's frame.
    * @param bool $applicability
    *   Whether only whether it applies is asked: a key holding a child,
    *   whose parent may say nothing else about it.
@@ -3062,11 +2981,11 @@ final class ContractEmitter {
    * @return array|false
    *   The key's schema, FALSE where it does not apply.
    */
-  protected function answer(Entry $entry, DataDefinitionInterface $definition, string $path, CacheableMetadata $cacheability, bool $applicability = FALSE): array|false {
+  protected function answer(Entry $entry, DataDefinitionInterface $definition, Emission $emission, bool $applicability = FALSE): array|false {
     if (DoesNotApply::marks($definition)) {
       return FALSE;
     }
-    return $applicability ? [] : $this->stated($entry, $definition, $path, $cacheability);
+    return $applicability ? [] : $this->stated($entry, $definition, $emission);
   }
 
   /**
@@ -3143,20 +3062,17 @@ final class ContractEmitter {
    *   The key.
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   Its definition: as declared, or refined for a combination.
-   * @param string $path
-   *   The key's dotted path.
-   * @param \Drupal\Core\Cache\CacheableMetadata $cacheability
-   *   Collects what the description depends on.
+   * @param \Drupal\data_surface\Contract\Emission $emission
+   *   The walk, at the key's frame.
    *
    * @return array
    *   A collection's own keywords, its items being the child's, which no
    *   parent's refiner reaches; any other key's property schema.
    */
-  protected function stated(Entry $entry, DataDefinitionInterface $definition, string $path, CacheableMetadata $cacheability): array {
-    $ignored = [];
+  protected function stated(Entry $entry, DataDefinitionInterface $definition, Emission $emission): array {
     return $entry->list !== NULL
       ? $this->listKeywords($definition)[0]
-      : $this->property($definition, NULL, NULL, $path, FALSE, [], $cacheability, $ignored)[0];
+      : $this->property($definition, NULL, NULL, $emission->at($entry->name), FALSE, [], $emission->withoutStale())[0];
   }
 
   /**
@@ -3177,7 +3093,7 @@ final class ContractEmitter {
    */
   public function describeKey(Entry $entry, ?DataDefinitionInterface $definition = NULL): array|false {
     $definition ??= $entry->definition;
-    return DoesNotApply::marks($definition) ? FALSE : $this->withoutExtension($this->stated($entry, $definition, $entry->name, new CacheableMetadata()));
+    return DoesNotApply::marks($definition) ? FALSE : $this->withoutExtension($this->stated($entry, $definition, Emission::detached()));
   }
 
   /**
@@ -3260,12 +3176,9 @@ final class ContractEmitter {
    * @param array|false $schema
    *   What the first refinement answered for the key; FALSE where it does
    *   not apply.
-   * @param string $path
-   *   The key's dotted path.
-   * @param \Drupal\Core\Cache\CacheableMetadata $cacheability
-   *   Collects what the description depends on.
-   * @param int $kinds
-   *   The kinds of refiner the combination was answered by.
+   * @param \Drupal\data_surface\Contract\Emission $emission
+   *   The walk, at the key's frame; its kinds are the kinds of refiner the
+   *   combination was answered by.
    * @param bool $applicability
    *   Whether only whether the key applies was asked.
    *
@@ -3275,8 +3188,8 @@ final class ContractEmitter {
    * @throws \LogicException
    *   Naming the key's static refiners and the values.
    */
-  protected function answersAgain(DataSurfaceInterface $declared, Entry $entry, array $values, array|false $schema, string $path, CacheableMetadata $cacheability, int $kinds = DataSurfaceInterface::STATIC, bool $applicability = FALSE): bool {
-    $again = $this->answer($entry, $declared->refine($values, $kinds)->getDefinition($entry->name) ?? $entry->definition, $path, $cacheability, $applicability);
+  protected function answersAgain(DataSurfaceInterface $declared, Entry $entry, array $values, array|false $schema, Emission $emission, bool $applicability = FALSE): bool {
+    $again = $this->answer($entry, $declared->refine($values, $emission->kinds())->getDefinition($entry->name) ?? $entry->definition, $emission, $applicability);
     if (json_encode($again === FALSE ? FALSE : $this->withoutExtension($again)) === json_encode($schema === FALSE ? FALSE : $this->withoutExtension($schema))) {
       return TRUE;
     }
@@ -3291,7 +3204,7 @@ final class ContractEmitter {
     throw new \LogicException(sprintf(
       'The refiner %s is declared static but answered differently when run again, for "%s" with %s: a refiner whose answer depends on anything but the siblings it watches must declare runtime: TRUE.',
       $refiners === [] ? 'of "' . $entry->name . '"' : implode(' or ', $refiners),
-      $path,
+      $emission->at($entry->name),
       json_encode(array_intersect_key($values, array_flip($entry->codedDependencies()))),
     ));
   }
@@ -3395,15 +3308,15 @@ final class ContractEmitter {
    * @param string[] $depends
    *   The sibling keys its refiners watch; a mounted one by its dotted
    *   path in the frame.
-   * @param \Drupal\Core\Cache\CacheableMetadata $cacheability
-   *   Collects what the description depends on.
-   * @param string[] $stale
-   *   Collects the dotted paths of stale values.
+   * @param \Drupal\data_surface\Contract\Emission $emission
+   *   The walk: its cacheability collects what the description depends
+   *   on, and its stale paths the dotted paths of stale values.
    *
    * @return array{0: array, 1: mixed}
    *   The property schema, and its value as shown.
    */
-  protected function property(DataDefinitionInterface $definition, ?DataDefinitionInterface $advertised, mixed $value, string $path, bool $locked, array $depends, CacheableMetadata $cacheability, array &$stale): array {
+  protected function property(DataDefinitionInterface $definition, ?DataDefinitionInterface $advertised, mixed $value, string $path, bool $locked, array $depends, Emission $emission): array {
+    $cacheability = $emission->cacheability;
     $schema = $this->describe($definition);
     $shown = $value;
     $set = $this->optionSet($definition instanceof ListDataDefinitionInterface ? $definition->getItemDefinition() : $definition, $cacheability);
@@ -3414,8 +3327,7 @@ final class ContractEmitter {
 
     if ($definition instanceof ListDataDefinitionInterface) {
       $item = $definition->getItemDefinition();
-      $ignored = [];
-      [$items] = $this->property($item, NULL, NULL, $path . '.*', FALSE, [], $cacheability, $ignored);
+      [$items] = $this->property($item, NULL, NULL, $path . '.*', FALSE, [], $emission->withoutStale());
       $schema += ['type' => $this->nullable('array', $definition), 'items' => static::neverNull($items)] + $this->keywords($definition, 'array');
       // Decision: see docs/decisions.md#a-widget-is-chosen-from-the-definition.
       $checkboxes = $set !== NULL && CheckboxesWidget::drawsList($definition, $set);
@@ -3437,7 +3349,7 @@ final class ContractEmitter {
           // A key an alter mounted, ruled out: as at the top of a frame.
           continue;
         }
-        [$properties[$name], $nested[$name]] = $this->property($property, $before[$name] ?? NULL, is_array($value) ? ($value[$name] ?? NULL) : NULL, $path . '.' . $name, FALSE, [], $cacheability, $stale);
+        [$properties[$name], $nested[$name]] = $this->property($property, $before[$name] ?? NULL, is_array($value) ? ($value[$name] ?? NULL) : NULL, $path . '.' . $name, FALSE, [], $emission);
         if (static::required($property)) {
           $required[] = $name;
         }
@@ -3530,7 +3442,7 @@ final class ContractEmitter {
           // which stays on the server: the caller sends the path back
           // and an empty answer there keeps what is stored.
           $extension['stale'] = TRUE;
-          $stale[] = $path;
+          $emission->markStale($path);
           $shown = NULL;
         }
       }
@@ -3584,10 +3496,9 @@ final class ContractEmitter {
       // Written whole here, so a conditional, a site and a def compare it
       // keyword by keyword as any key; named() refers to the shape at the
       // end. Decision: see docs/decisions.md#a-shape-is-a-named-definition.
-      $ignored = [];
       $schema[self::SHAPED] = [
         'id' => (string) DefinitionMetadata::shapeOf($definition),
-        'def' => $this->shapeDef($this->property($shape, NULL, NULL, $path, FALSE, [], $cacheability, $ignored)[0]),
+        'def' => $this->shapeDef($this->property($shape, NULL, NULL, $path, FALSE, [], $emission->withoutStale())[0]),
       ];
     }
     return [$schema, $shown];
@@ -3696,18 +3607,18 @@ final class ContractEmitter {
    *
    * @param \Drupal\data_surface\DataSurfaceInterface $surface
    *   The data surface.
-   * @param \Drupal\Core\Cache\CacheableMetadata $cacheability
-   *   Collects what the description depends on.
+   * @param \Drupal\data_surface\Contract\Emission $emission
+   *   The walk: its cacheability collects what the description depends on.
    *
    * @return array|null
    *   The output schema, or NULL for a data surface with no outputs.
    */
-  protected function outputs(DataSurfaceInterface $surface, CacheableMetadata $cacheability): ?array {
+  protected function outputs(DataSurfaceInterface $surface, Emission $emission): ?array {
     $properties = [];
     $required = [];
-    $ignored = [];
+    $emission = $emission->withoutStale();
     foreach ($surface->getOutputDefinitions() as $name => $definition) {
-      [$schema] = $this->property($definition, NULL, NULL, (string) $name, FALSE, [], $cacheability, $ignored);
+      [$schema] = $this->property($definition, NULL, NULL, (string) $name, FALSE, [], $emission);
       $properties[(string) $name] = $this->withoutExtension($schema);
       if ($definition->isRequired()) {
         $required[] = (string) $name;

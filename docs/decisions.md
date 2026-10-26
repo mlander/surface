@@ -973,6 +973,46 @@ that type; a type several entity types satisfy is taken only as an
 object. A guess between entity types would load the wrong thing.
 (`OperationArguments`)
 
+### One context per walk, not a parameter list
+
+The emitter and the build step each walk a structure, and each used to
+hand the same facts from method to method as loose parameters:
+`ContractEmitter::frame()` took twelve, `Resources::bindRefiners()`
+sixteen. Each walk now carries them in one immutable object, passed
+whole.
+
+- **`Contract\Emission`** holds what the walk of one document shares,
+  the cacheability, the stale paths and the defs (objects written to as
+  the walk goes, so every step collects into the same ones), and what is
+  true of the frame being described: its path, the id it was built from,
+  the orphans standing in it, and whether it is a def, locked whole, or
+  stands for every item of a collection. Descending into a child, a
+  variant or a collection item is a `with...()` call that answers a copy.
+  Whether a frame is described for one set of values, and the kinds of
+  refiner it is answered by, follow from the full schema and the def
+  flag, so they are asked of the object and not held.
+- **`ResourceBuild\Build`** holds what one build of a resource or
+  structure needs: the builder, the definition, the context, the
+  ancestry and the owner's frame, how its keys divide (inputs, outputs,
+  children, collections, ports), and the contributor whose refiners and
+  rules are bound now (an alter's module, the keys it extended and
+  mounted, every key any alter mounted, the keys of a structure at its
+  mount, the ports of a mixed-in structure mapped to the owner's keys).
+  A structure mixed in is built by `forMixin()`, a contributor by
+  `forContributor()`.
+
+A reader sees what a walk carries in one place, and not by comparing two
+signatures that differ by one parameter. A core reviewer reads a method
+signature of a few parameters, each saying what that method decides.
+Nothing changed in what is built or emitted: both classes are internal,
+and the documents, the sealed data surfaces and the contract baselines
+are byte for byte what they were. Neither holds a service of the site
+or the request, so neither carries a door-specific thing into a place
+that runs on an operation's behalf
+([No door-specific context](resources.md#no-door-specific-context)).
+(`Contract\Emission`, `ResourceBuild\Build`, `ContractEmitter::frame()`,
+`Resources::bindRefiners()`, `ContractBaselineTest`)
+
 ## Refinement
 
 ### Gating per key
