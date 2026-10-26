@@ -5383,8 +5383,8 @@ components, route, config schema entries and shipped settings, each with
 a line saying what it is. Its page lists them (`FilesPanel`), a file of
 fewer than 80 lines of code shown whole and collapsed, because the
 newcomer logs found whole files were what stopped the guessing; the
-landing page reads its reading order from the same list, and the
-README's Files tables are held to it by `ExampleFilesTest`, which also
+landing page reads each example's line, what it introduces and how many
+files it is made of, from the same list, and the README's Files tables are held to it by `ExampleFilesTest`, which also
 fails when the examples have a part no example lists. The links name a
 branch from `$settings['data_surface_examples_branch']`, `next` by
 default: asking git on every request costs a process, and a site need

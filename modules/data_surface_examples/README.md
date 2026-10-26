@@ -4809,8 +4809,8 @@ of code, counted without blank lines or comments:
 Every code block above is the file it names, from its first attribute
 or its class line to its closing brace, and `ExamplesReadmeTest` fails
 when one drifts, and so does the component example 12 quotes. Each
-example's Files table is its list in `Series`, the one its page and the
-landing page's reading order are drawn from, and `ExampleFilesTest`
+example's Files table is its list in `Series`, the one its page and its
+line on the landing page are drawn from, and `ExampleFilesTest`
 fails when a table and the list differ, or the list and the module. The Drush
 commands and answers of examples 7 to 17 are asserted by
 `ExamplesConceptsToolTest`, and example 15's config schema entry is the
@@ -4829,7 +4829,7 @@ Drush commands are checked against `ExampleCalls`.
 | `Kernel\ExamplesTodayPanelTest` | The second panel under examples 1 to 3: its two documents and its table, row by row; its rows read from the resource's full schema, so the pricing, the venue and what is stored leave every row and both documents as they were; example 4's keys on the resource's side only; the classic twins' pages, example 2's with its two line counts. |
 | `Unit\ExamplesReadmeTest` | This page against the files it quotes, its Drush commands, and the two line counts it states for example 2's twin. |
 | `Unit\ExampleFilesTest` | Each example's files in `Series`: every one there, every resource, storage, structure, shape, provider, access class, alter, component, route, config schema entry and shipped settings file of the examples listed by one example, what a listed class names listed with it or before it, each docs page and decision there, the line counts, and each Files table on this page the list's. |
-| `Functional\ExamplesRoutesTest` | Every route answers an administrator and refuses anonymous; the landing page; both panels under example 3, and a save through it; each classic twin's page with its two documents, and a save through it; example 2's twin linked from the landing page with its line counts, and its page saying them; the Files panel of examples 1 to 5, the twins included, each file linked with its lines of code and a short one shown whole; the landing page's reading order, one row per example from `Series`. |
+| `Functional\ExamplesRoutesTest` | Every route answers an administrator and refuses anonymous; the landing page; both panels under example 3, and a save through it; each classic twin's page with its two documents, and a save through it; example 2's twin linked from the landing page with its line counts, and its page saying them; the Files panel of examples 1 to 5, the twins included, each file linked with its lines of code and a short one shown whole; under each example on the landing page, what it introduces, where it is explained, the decision and the file count, one line per example from `Series`. |
 | `Functional\ExamplesStep2ClassicTest` | Example 2 and its twin posted the same answers without JavaScript: a room of another venue refused on the room by both, a capacity beyond the room's seats and one below 1 refused by both in the same words, and a valid set stored identically by each. |
 | `FunctionalJavascript\ExamplesStep2ClassicAjaxTest` | Example 2's twin in a browser: a new venue swaps the room's options and leaves it on "- Select -" with nothing stored changed, a room describes the capacity, the venue moved back shows the stored room again, and a save after a move writes the new venue and room. |
 | `FunctionalJavascript\ExamplesAjaxRefreshTest` | In a browser: example 2's venue replaces the room and the capacity and leaves the venue the same node, the orphaned room on its empty option with the stale marker and the capacity with no upper bound; a room then narrows the capacity and loses `- Select -`. Example 3's paid pricing swaps the note for a price and a currency, and leaves the second panel's table and its two documents as they were. |

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\data_surface\Functional;
 
-use Drupal\Core\Url;
 use Drupal\data_surface_examples\CodeLines;
 use Drupal\data_surface_examples\Form\RegistrationStep2ClassicForm;
 use Drupal\data_surface_examples\Resource\RegistrationStep2Resource;
@@ -166,39 +165,33 @@ class ExamplesRoutesTest extends BrowserTestBase {
   }
 
   /**
-   * Tests the landing page's reading order: one row per example, from Series.
+   * Tests that each example on the landing page says what it introduces.
+   *
+   * One line per example, from Series: the concept, the docs page, the
+   * decision and the file count; and the intro says where to start.
    */
-  public function testTheLandingPageSaysWhatToReadInWhatOrder(): void {
+  public function testTheLandingPageSaysWhatEachExampleIntroduces(): void {
     $this->drupalLogin($this->drupalCreateUser(['administer site configuration']));
     $this->drupalGet('surface-examples');
     $assert = $this->assertSession();
-    $assert->elementTextContains('css', '.data-surface-reading-order h2', 'Read in this order');
-    $rows = $this->getSession()->getPage()->findAll('css', '.data-surface-reading-order tbody tr');
-    $this->assertCount(count(Series::examples()), $rows);
+    $assert->elementNotExists('css', '.data-surface-reading-order');
+    $sections = $this->getSession()->getPage()->findAll('css', '.data-surface-example');
+    $this->assertCount(count(Series::examples()), $sections);
     foreach (array_values(Series::examples()) as $index => $example) {
       $number = $index + 1;
-      $this->assertSame((string) $number, $rows[$index]->getAttribute('data-example'));
-      $cells = array_map(static fn ($cell): string => trim($cell->getText()), $rows[$index]->findAll('css', 'td'));
+      $this->assertSame((string) $number, $sections[$index]->getAttribute('data-example'));
+      $this->assertStringContainsString(sprintf('Example %d: %s', $number, $example['title']), $sections[$index]->find('css', 'h2')->getText());
+      $line = $sections[$index]->find('css', 'p.data-surface-example-introduces');
+      $count = count($example['files']);
+      $this->assertSame(sprintf('It introduces %s. Explained in %s; the why is decisions.md#%s. %d %s.', $example['concept'], $example['docs'], $example['decision'], $count, $count === 1 ? 'file' : 'files'), $line->getText(), sprintf('Example %d', $number));
+      $links = array_map(static fn ($link): string => (string) $link->getAttribute('href'), $line->findAll('css', 'a'));
       $this->assertSame([
-        sprintf('%d. %s', $number, $example['title']),
-        (string) $example['concept'],
-        $example['docs'],
-        'decisions.md#' . $example['decision'],
-        (string) count($example['files']),
-      ], $cells, sprintf('Example %d', $number));
-      $links = array_map(static fn ($link): string => (string) $link->getAttribute('href'), $rows[$index]->findAll('css', 'a'));
-      $expected = [
         Series::url($example['docs'], Series::BRANCH),
         Series::url('docs/decisions.md#' . $example['decision'], Series::BRANCH),
-      ];
-      // An example whose module is off, as examples 16's and 17's are here,
-      // names no page to link.
-      if ($example['routes'] !== [] && $this->container->get('router.route_provider')->getRoutesByNames([$example['routes'][0]]) !== []) {
-        array_unshift($expected, Url::fromRoute($example['routes'][0])->toString());
-      }
-      $this->assertSame($expected, $links, sprintf('Example %d', $number));
+      ], $links, sprintf('Example %d', $number));
     }
     $assert->pageTextContains('Start at Your first resource: one settings page from a resource, an operation, a storage and add(), and nothing else.');
+    $assert->pageTextContains('under each heading is the idea it introduces, the page that explains it, the decision that says why, and how many files it is made of');
     $assert->linkByHrefExists(Series::url('docs/first-resource.md', Series::BRANCH));
     $assert->linkByHrefExists(Series::url('docs/concepts.md', Series::BRANCH));
   }

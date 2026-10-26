@@ -226,80 +226,63 @@ final class ExamplesController extends ControllerBase {
       }
       $steps[$number] = [
         '#type' => 'container',
+        '#attributes' => ['class' => ['data-surface-example'], 'data-example' => (string) $number],
         'title' => [
           '#markup' => '<h2>' . $this->t('Example @number: @title', ['@number' => $number, '@title' => $step['title']]) . '</h2>',
         ],
         'sentence' => ['#markup' => '<p>' . $step['sentence'] . '</p>'],
+        'introduces' => $this->introduces($number),
         'where' => [
           '#theme' => 'item_list',
           '#items' => $step['items'],
         ],
       ];
     }
+    $branch = Series::branch();
     return [
       'intro' => [
-        '#markup' => '<p>' . $this->t('One resource that grows, one idea per example: the settings of an event registration. Under each example\'s form, collapsed as "Behind the scenes: the contract, as it stands", is the contract the form is built from. Below it, collapsed as "Without a resource: what config schema can say", is what a client could be told about the same settings today, from config schema alone.') . '</p>',
+        '#markup' => '<p>' . $this->t('One resource that grows, one idea per example: the settings of an event registration. Under each example\'s form, collapsed as "Behind the scenes: the contract, as it stands", is the contract the form is built from. Below it, collapsed as "Without a resource: what config schema can say", is what a client could be told about the same settings today, from config schema alone.') . '</p>'
+        . '<p>' . $this->t('Start at <a href=":first">Your first resource</a>: one settings page from a resource, an operation, a storage and add(), and nothing else. Then read the examples in order, each adding one idea to what the last showed; under each heading is the idea it introduces, the page that explains it, the decision that says why, and how many files it is made of, and on its page open those files before the contract. Keep <a href=":concepts">Concepts</a> open beside them as the map: one row per idea, the question that makes you need it, and the example that shows it.', [
+          ':first' => Series::url('docs/first-resource.md', $branch),
+          ':concepts' => Series::url('docs/concepts.md', $branch),
+        ]) . '</p>',
       ],
       'reset' => [
         '#type' => 'container',
         'link' => Link::fromTextAndUrl($this->t('Reset to defaults'), Url::fromRoute('data_surface_examples.reset'))->toRenderable(),
         'why' => ['#markup' => ' ' . $this->t('puts every example back to the settings the module ships with, for a retake.')],
       ],
-      'order' => $this->order(),
     ] + $steps;
   }
 
   /**
-   * Says what order to read the examples in, one row per example.
+   * Says what an example introduces, where it is explained, and why.
    *
-   * Each row is read from Series, as the Files panel on each page is, so
-   * the two cannot disagree: the example, the concept it introduces, the
-   * docs page that explains it, the decision that says why, and how many
-   * files it is made of.
+   * Read from Series, as the Files panel on each page is, so the two
+   * cannot disagree: the concept the example introduces, the docs page
+   * that explains it, the decision that says why, and how many files it
+   * is made of.
+   *
+   * @param int $number
+   *   The example.
    *
    * @return array
-   *   A render array: a heading, the table and how to read it.
+   *   A render array: one line under the example's sentence.
    */
-  protected function order(): array {
+  protected function introduces(int $number): array {
+    $example = Series::examples()[$number];
     $branch = Series::branch();
-    $github = static fn (string $page, string $text): array => Link::fromTextAndUrl($text, Url::fromUri(Series::url($page, $branch)))->toRenderable();
-    $rows = [];
-    foreach (Series::examples() as $number => $example) {
-      $title = $this->t('@number. @title', ['@number' => $number, '@title' => $example['title']]);
-      $rows[] = [
-        'data' => [
-          [
-            'data' => $example['routes'] === [] || !$this->routed($example['routes'][0]) ? ['#markup' => $title] : Link::fromTextAndUrl($title, Url::fromRoute($example['routes'][0]))->toRenderable(),
-          ],
-          (string) $example['concept'],
-          ['data' => $github($example['docs'], $example['docs'])],
-          ['data' => $github('docs/decisions.md#' . $example['decision'], 'decisions.md#' . $example['decision'])],
-          count($example['files']),
-        ],
-        'data-example' => (string) $number,
-      ];
-    }
+    $count = count($example['files']);
     return [
-      '#type' => 'container',
-      '#attributes' => ['class' => ['data-surface-reading-order']],
-      'title' => ['#markup' => '<h2>' . $this->t('Read in this order') . '</h2>'],
-      'table' => [
-        '#type' => 'table',
-        '#header' => [
-          $this->t('Example'),
-          $this->t('It introduces'),
-          $this->t('Explained in'),
-          $this->t('Why'),
-          $this->t('Files'),
-        ],
-        '#rows' => $rows,
-      ],
-      'how' => [
-        '#markup' => '<p>' . $this->t('Start at <a href=":first">Your first resource</a>: one settings page from a resource, an operation, a storage and add(), and nothing else. Then read the examples in order, each adding one idea to what the last showed, and on each page open the files it is made of before the contract. Keep <a href=":concepts">Concepts</a> open beside them as the map: one row per idea, the question that makes you need it, and the example that shows it.', [
-          ':first' => Series::url('docs/first-resource.md', $branch),
-          ':concepts' => Series::url('docs/concepts.md', $branch),
-        ]) . '</p>',
-      ],
+      '#markup' => '<p class="data-surface-example-introduces">' . $this->t('It introduces @concept. Explained in <a href=":docs">@docs</a>; the why is <a href=":decision">decisions.md#@decision</a>. @count @files.', [
+        '@concept' => $example['concept'],
+        ':docs' => Series::url($example['docs'], $branch),
+        '@docs' => $example['docs'],
+        ':decision' => Series::url('docs/decisions.md#' . $example['decision'], $branch),
+        '@decision' => $example['decision'],
+        '@count' => $count,
+        '@files' => $this->formatPlural($count, 'file', 'files'),
+      ]) . '</p>',
     ];
   }
 
@@ -583,7 +566,7 @@ final class ExamplesController extends ControllerBase {
    *   The examples, keyed by number.
    */
   protected function steps(): array {
-    // The titles are the series', which the reading order shows too.
+    // The titles are the series', which each example's line shows too.
     $series = Series::examples();
     return [
       1 => [
