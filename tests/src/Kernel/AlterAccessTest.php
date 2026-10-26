@@ -7,9 +7,10 @@ namespace Drupal\Tests\data_surface\Kernel;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\data_surface\Contract\SchemaResolver;
 use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\Refinement\StaticRefinerContainer;
+use Drupal\data_surface\Pipeline\PipelineGuard;
 use Drupal\data_surface\Resource\AccessAnswer;
 use Drupal\data_surface\Resource\OperationContext;
+use Drupal\data_surface\ResourceBuild\ResourceRegistry;
 use Drupal\data_surface_resource_test\Access\WallAccess;
 use Drupal\data_surface_resource_test\Alter\GalleryAlter;
 use Drupal\data_surface_resource_test\Alter\OilFinishAlter;
@@ -165,6 +166,23 @@ class AlterAccessTest extends DataSurfaceKernelTestBase {
   }
 
   /**
+   * Tests an alter answers through the access class's interface, as one.
+   *
+   * One interface for both roles: #[Alters] on the class says it is an
+   * alter's answer, and an access class that carries #[Alters] is refused,
+   * since it would answer twice, once in each role.
+   */
+  public function testAnAlterAnswersThroughTheOneInterface(): void {
+    $gallery = $this->container->get('data_surface.resource_registry')->getDefinition(GalleryResource::class);
+    $this->assertSame([GalleryAlter::class], array_values(array_map(static fn ($alter): string => $alter->class, array_filter($gallery->alters, static fn ($alter): bool => $alter->answersAccess))));
+    $refuse = new \ReflectionMethod(ResourceRegistry::class, 'assertAccessClass');
+    $refuse->invoke(NULL, GalleryResource::class, WallAccess::class);
+    $this->expectException(\LogicException::class);
+    $this->expectExceptionMessage(GalleryResource::class . ' names ' . GalleryAlter::class . ' on access:, which carries #[Alters]. An alter that answers access is asked as an alter, after the owner\'s answer; an access class is the owner\'s own.');
+    $refuse->invoke(NULL, GalleryResource::class, GalleryAlter::class);
+  }
+
+  /**
    * Tests the owner's answer is asked first, then each alter in order.
    */
   public function testTheOwnerFirstThenEachAlterInOrder(): void {
@@ -272,7 +290,7 @@ class AlterAccessTest extends DataSurfaceKernelTestBase {
    */
   protected function assertionsOn(): bool {
     $on = FALSE;
-    assert(StaticRefinerContainer::asserting($on));
+    assert(PipelineGuard::asserting($on));
     return $on;
   }
 
@@ -363,7 +381,7 @@ class AlterAccessTest extends DataSurfaceKernelTestBase {
     $full = $this->full('curate');
     $this->assertTrue($full['readOnly']);
     $this->assertTrue($full['properties']['north']['readOnly']);
-    $this->assertSame('live', $full['properties']['north']['x-surface']['access']);
+    $this->assertTrue($full['properties']['north']['x-surface']['live']);
   }
 
   /**
@@ -374,8 +392,7 @@ class AlterAccessTest extends DataSurfaceKernelTestBase {
     $full = $this->full();
     foreach (['north', 'south'] as $wall) {
       $this->assertTrue($full['properties'][$wall]['readOnly'], $wall);
-      $this->assertTrue($full['properties'][$wall]['x-surface']['locked'], $wall);
-      $this->assertArrayNotHasKey('access', $full['properties'][$wall]['x-surface'], 'Static: stated, not marked.');
+      $this->assertArrayNotHasKey('live', $full['properties'][$wall]['x-surface'] ?? [], 'Static: stated, not marked.');
     }
 
     $this->actAs('plaque hider');
@@ -386,9 +403,9 @@ class AlterAccessTest extends DataSurfaceKernelTestBase {
     $full = $this->full();
     foreach (['caption', 'credit', 'north', 'south', 'finish', 'rooms'] as $key) {
       $this->assertArrayNotHasKey('readOnly', $full['properties'][$key], $key);
-      $this->assertSame('live', $full['properties'][$key]['x-surface']['access'], $key);
+      $this->assertTrue($full['properties'][$key]['x-surface']['live'], $key);
     }
-    $this->assertArrayNotHasKey('access', $full['properties']['name']['x-surface'] ?? []);
+    $this->assertArrayNotHasKey('live', $full['properties']['name']['x-surface'] ?? []);
 
     // What the full schema depends on: the account's permissions, and
     // nothing a runtime answer read.

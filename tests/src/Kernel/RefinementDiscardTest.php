@@ -572,7 +572,7 @@ class RefinementDiscardTest extends DataSurfaceKernelTestBase {
    */
   protected function pantryForm(): FormInterface {
     $resources = $this->container->get('data_surface.resources');
-    return new class($resources->build(PantryResource::class, PantryResource::add())) extends FormBase {
+    return new class($resources->build(PantryResource::class, PantryResource::create())) extends FormBase {
 
       use DataSurfaceHostTrait;
 
@@ -697,7 +697,7 @@ class RefinementDiscardTest extends DataSurfaceKernelTestBase {
       trim($this->ajaxMarkup($response, $this->wrapperSelector($container['kind_settings']))),
     );
     $resources = $this->container->get('data_surface.resources');
-    $surface = $resources->build(PantryResource::class, PantryResource::add());
+    $surface = $resources->build(PantryResource::class, PantryResource::create());
     $values = $this->formBuilder()->extractSurfaceValues($surface, $container, $state, ['kind_settings' => ['lid' => 'clip']]);
     $this->assertSame(['lid' => 'clip'], $values['kind_settings']);
   }

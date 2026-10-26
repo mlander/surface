@@ -60,6 +60,11 @@ final class DataSurfaceResult {
    *   held that was left at its default, which is not written
    *   (DataSurfacePipeline::kept()); NULL when the run did not reach
    *   prepare.
+   * @param bool $writes
+   *   Whether committing what was prepared writes: on a dry run, whether
+   *   the run would have committed (DataSurfacePipeline::commitDryRun()
+   *   reads it); FALSE when the run did not reach prepare, changes
+   *   nothing, or would leave a thing that exists as it is.
    */
   public function __construct(
     public readonly array $values,
@@ -70,6 +75,7 @@ final class DataSurfaceResult {
     public readonly array $notes = [],
     public readonly ?array $changes = NULL,
     public readonly ?array $written = NULL,
+    public readonly bool $writes = FALSE,
   ) {
   }
 

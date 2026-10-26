@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { createApi, pageOf, SEND_FINGERPRINT, type Fetcher, type FullSchema, type Settings } from './api';
+import { createApi, pageOf, SEND_FINGERPRINT, type Fetcher, type Settings } from './api';
 import type { Contract, Narrowed, Schema, Settled, Values, Violation } from './contract';
-import { ContractRefused, inlineSchema, narrow, narrowingStatus, watchedPaths, setAt } from './contract';
+import { ContractRefused, inlineSchema, joinedFetch, narrow, narrowingStatus, watchedPaths, setAt, withoutComputed } from './contract';
 import { ContractPanel } from './ContractPanel';
 import { Properties } from './widgets/Field';
+import { LookupContext } from './widgets/Shell';
 
-/** How long a change waits before the refine it asks for is sent: the request path only. */
+/** How long a change waits before the narrowing it asks of the server is sent: the request path only. */
 export const REFINE_DELAY = 300;
 
 function same(a: unknown, b: unknown): boolean {
@@ -24,7 +25,8 @@ const browserNavigate = (url: string): void => window.location.assign(url);
 
 /** What the summary above the form says: a rehearsal's or a write's answer. */
 interface Summary {
-  kind: 'submit';
+  /** `run` for an accepted run that wrote nothing: an operation that only reads. */
+  kind: 'submit' | 'run';
   valid: boolean;
   violations: Violation[];
   notes: Violation[];
@@ -43,25 +45,31 @@ function byPath(violations: Violation[]): Record<string, string[]> {
 /**
  * One operation of one resource, as a form rendered from its contract.
  *
- * The contract for the stored values and the full schema, which reads no
- * value, are fetched together, once. On a change of any key something
- * depends on, the form narrows itself from the full schema's conditionals
- * when every key that depends on the change is stated there, by the rules
- * /refine applies, with no request. When one is not (`refine`,
- * `live`, a stale value only the server knows), or anything cannot be
- * settled here, the current values go to /refine (debounced) and the form
- * re-renders from the contract that comes back, the way the operation
- * form rebuilds over AJAX: a value the person has touched since the
- * request left is kept, everything else takes the server's answer, so an
- * orphaned dependent comes back on its empty option, standing for the
- * stored value the server kept. Either way an orphan is listed stale and
- * sent back by its path. The contract panel says which it was. Submit
- * sends the values, with the fingerprint of what was stored when the
- * contract was loaded, to /submit: a refusal shows beside each field and
- * in a summary, with nothing written; a write says so, with any stale value it kept, and re-renders from the
- * contract the answer carries; a write that created something moves to
- * the page where it now lives. A document of any contract but 2 is
- * refused, and the refusal shown as the form's error.
+ * The contract for the stored values, with the ETag of what is stored,
+ * and the full schema, which reads no value, are fetched together, once.
+ * On a change of any key something depends on, the form narrows itself
+ * from the full schema's conditionals when every key that depends on the
+ * change is stated there, by the rules the server's narrowing applies,
+ * with no request. A key `deferred` for its size is stated by the full
+ * schema fetched for the value chosen (its `fetch`, with the choices of
+ * every other deferred key the change reaches joined in), kept in memory
+ * for the page's life, and the form narrows from that, then from it for
+ * the changes after. When one is not stated (`refine`, `live`, a stale value only
+ * the server knows), or anything cannot be settled here, the current
+ * values are posted to the schema (debounced) and the form re-renders
+ * from the contract that comes back, the way the operation form rebuilds
+ * over AJAX: a value the person has touched since the request left is
+ * kept, everything else takes the server's answer, so an orphaned
+ * dependent comes back on its empty option, standing for the stored
+ * value the server kept. Either way an orphan is listed stale and sent
+ * back by its path. The contract panel says which it was. Submit writes
+ * the values, `If-Match` the ETag of what was stored when the contract
+ * was loaded: a refusal shows beside each field and in a summary, with
+ * nothing written; a write says so, with any stale value it kept, and
+ * re-renders from the contract the answer carries, its ETag the next
+ * write's; a write that created something moves to the page where it
+ * now lives. A document of any contract but 3 is refused, and the
+ * refusal shown as the form's error.
  */
 export function SurfaceForm({
   settings,
@@ -81,7 +89,7 @@ export function SurfaceForm({
   const [schema, setSchema] = useState<Schema | null>(null);
   // The full schema as served, for the panel; null when it did not load,
   // and then every change is asked of the server.
-  const [fullDocument, setFullDocument] = useState<FullSchema | null>(null);
+  const [fullDocument, setFullDocument] = useState<Schema | null>(null);
   const [narrowing, setNarrowing] = useState<string | null>(null);
   const [values, setValues] = useState<Values>({});
   const [failure, setFailure] = useState<string | null>(null);
@@ -91,22 +99,26 @@ export function SurfaceForm({
   const [submitting, setSubmitting] = useState(false);
   const current = useRef<Values>({});
   const stale = useRef<string[]>([]);
-  // What storage held when the contract was loaded, or last written; a
-  // refine re-reads storage, so it never replaces this.
+  // The ETag of what storage held when the contract was loaded, or last
+  // written, as received; a narrowing re-reads storage, so it never
+  // replaces this.
   const fingerprint = useRef<string | null>(null);
   // What the operation was loaded with, or last written: what is stored
   // over the defaults, which a dropped answer falls back to.
   const stored = useRef<Values>({});
   // The schema the form shows and the values it was settled for.
   const settled = useRef<Settled | null>(null);
-  // Whether a refine is out; one scheduled has a timer. A change
+  // Whether a narrowing is out; one scheduled has a timer. A change
   // meanwhile joins it.
   const pending = useRef(false);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const sequence = useRef(0);
+  // The full schema fetched for the choices made, which states the deferred
+  // keys they choose; null until a choice needs one.
+  const chosenFull = useRef<Schema | null>(null);
 
   // Value-independent, so resolved once for the page.
-  const full = useMemo(() => (fullDocument === null ? null : inlineSchema(fullDocument.schema)), [fullDocument]);
+  const full = useMemo(() => (fullDocument === null ? null : inlineSchema(fullDocument)), [fullDocument]);
 
   const show = useCallback((next: Contract, kept: Values) => {
     const inline = inlineSchema(next.schema);
@@ -122,8 +134,9 @@ export function SurfaceForm({
     let live = true;
     // Two requests, once: the contract for the stored values, and the full
     // schema, which is the same whatever is stored or typed and so is never
-    // asked for again. Without it the form asks /refine, as it always did;
-    // a full schema of another contract is refused as the contract would be.
+    // asked for again. Without it the form asks the server for every
+    // narrowing; a full schema of another contract is refused as the
+    // contract would be.
     const loading = api.contract();
     const full = api.schema().catch((error: Error) => {
       if (error instanceof ContractRefused) {
@@ -134,10 +147,10 @@ export function SurfaceForm({
     Promise.all([loading, full]).then(
       ([loaded, loadedFull]) => {
         if (live) {
-          fingerprint.current = loaded.fingerprint ?? null;
-          stored.current = loaded.values;
+          fingerprint.current = loaded.etag;
+          stored.current = loaded.document.values;
           setFullDocument(loadedFull);
-          show(loaded, loaded.values);
+          show(loaded.document, loaded.document.values);
         }
       },
       (error: Error) => live && setFailure(error.message),
@@ -155,7 +168,7 @@ export function SurfaceForm({
     pending.current = true;
     setRefining(true);
     try {
-      const refined = await api.refine(sent, stale.current);
+      const refined = await api.narrow(sent, stale.current);
       if (mine !== sequence.current) {
         return;
       }
@@ -190,8 +203,51 @@ export function SurfaceForm({
     if (full === null || settled.current === null) {
       return { local: false, key: path, marker: 'unsettled' };
     }
-    return narrow({ full, previous: settled.current, stored: stored.current, values: current.current, stale: stale.current, changed: path });
+    return narrow({ full: chosenFull.current ?? full, previous: settled.current, stored: stored.current, values: current.current, stale: stale.current, changed: path });
   }, [full]);
+
+  // A change a deferred key depends on: the full schema with the choice
+  // stated is fetched (once per set of choices), and the change narrowed
+  // from it; a deferred key it reaches in turn joins its choice to the next
+  // fetch. Anything still not stated, or a fetch that fails, is asked of
+  // the server as before.
+  const fetchChosen = useCallback(async (path: string, first: Narrowed): Promise<Narrowed> => {
+    const mine = ++sequence.current;
+    pending.current = true;
+    setRefining(true);
+    let decided = first;
+    const fetches: string[] = [];
+    try {
+      while (!decided.local && decided.marker === 'deferred' && decided.fetch !== undefined && fetches.length < 8) {
+        fetches.push(decided.fetch);
+        const fetched = inlineSchema(await api.chosen(joinedFetch(fetches, settings.endpoints.schema)));
+        if (mine !== sequence.current || settled.current === null) {
+          // A later change took it over.
+          return { local: false, key: path, marker: 'pending' };
+        }
+        decided = narrow({ full: fetched, previous: settled.current, stored: stored.current, values: current.current, stale: stale.current, changed: path });
+        if (decided.local) {
+          chosenFull.current = fetched;
+          settled.current = decided.settled;
+          current.current = decided.settled.values;
+          stale.current = decided.settled.stale;
+          setSchema(decided.settled.schema);
+          setValues(decided.settled.values);
+          setNarrowing(narrowingStatus(decided, true));
+        }
+      }
+    }
+    catch {
+      decided = { local: false, key: path, marker: 'unsettled' };
+    }
+    finally {
+      if (mine === sequence.current) {
+        setRefining(false);
+        pending.current = false;
+      }
+    }
+    return decided;
+  }, [api, settings]);
 
   // The contract defines each part once and refers to it; the form reads
   // every key inline, resolved once per contract or narrowing, not once
@@ -223,8 +279,8 @@ export function SurfaceForm({
       });
       if (watched.has(path)) {
         const decided = decide(path);
-        setNarrowing(narrowingStatus(decided));
         if (decided.local) {
+          setNarrowing(narrowingStatus(decided));
           settled.current = decided.settled;
           current.current = decided.settled.values;
           stale.current = decided.settled.stale;
@@ -232,11 +288,22 @@ export function SurfaceForm({
           setValues(decided.settled.values);
           return;
         }
+        if (decided.marker === 'deferred' && decided.fetch !== undefined) {
+          void fetchChosen(path, decided).then((answered) => {
+            if (!answered.local && answered.marker !== 'pending') {
+              setNarrowing(narrowingStatus(answered));
+              clearTimeout(timer.current);
+              timer.current = setTimeout(() => void refine(), refineDelay);
+            }
+          });
+          return;
+        }
+        setNarrowing(narrowingStatus(decided));
         clearTimeout(timer.current);
         timer.current = setTimeout(() => void refine(), refineDelay);
       }
     },
-    [watched, refine, refineDelay, decide],
+    [watched, refine, refineDelay, decide, fetchChosen],
   );
 
   const submit = useCallback(async () => {
@@ -245,10 +312,14 @@ export function SurfaceForm({
     setSubmitting(true);
     try {
       const send = settings.sendFingerprint ?? SEND_FINGERPRINT;
-      const result = await api.submit(current.current, stale.current, send ? fingerprint.current : null);
+      const sent = settled.current === null ? current.current : withoutComputed(settled.current.schema, current.current);
+      const { document: result, etag } = await api.submit(sent, stale.current, send ? fingerprint.current : null);
       setFailure(null);
       setErrors(byPath(result.violations));
-      setSummary({ kind: 'submit', valid: result.committed, violations: result.violations, notes: result.notes, stale: result.stale });
+      // An operation that only reads answers its run accepted, and writes
+      // nothing: valid, but not saved.
+      const kind = result.ok && !result.committed ? 'run' : 'submit';
+      setSummary({ kind, valid: result.ok, violations: result.violations, notes: result.notes, stale: result.stale });
       if (!result.committed) {
         return;
       }
@@ -257,11 +328,11 @@ export function SurfaceForm({
         return;
       }
       if (result.contract !== null) {
-        // A refine still out was asked of what is now overwritten.
+        // A narrowing still out was asked of what is now overwritten.
         sequence.current++;
         setRefining(false);
         pending.current = false;
-        fingerprint.current = result.contract.fingerprint ?? null;
+        fingerprint.current = etag;
         stored.current = result.contract.values;
         show(result.contract, result.contract.values);
       }
@@ -347,7 +418,9 @@ export function SurfaceForm({
       {contract.schema.readOnly ? (
         <p className="dsr-status">This may be seen and not changed.</p>
       ) : null}
-      <Properties schema={schema} values={values} prefix="" onChange={onChange} errors={errors} />
+      <LookupContext.Provider value={api.lookup}>
+        <Properties schema={schema} values={values} prefix="" onChange={onChange} errors={errors} />
+      </LookupContext.Provider>
       {contract.schema.readOnly ? null : (
         <div className="dsr-actions">
           <button type="submit" className="dsr-button dsr-button--primary" disabled={submitting}>

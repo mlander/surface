@@ -30,7 +30,10 @@ use Drupal\data_surface\Storage\StorageLayoutInterface;
  * the typed data manager, is the pipeline's. The one question refinement
  * asks of a value (may a refiner see it?) goes to the watched value
  * check the data surface was sealed with, which serializes as a service id
- * the way an alter's refiner link does.
+ * the way an alter's refiner link does. A variant the site lists may be
+ * held unsettled (Attachment, SettlesChildInterface): reading it asks the
+ * build step to build it, the one other time a data surface reaches a
+ * service, and it is kept from then on.
  *
  * Everything the data surface knows about one key lives on that key's
  * Entry inside the DefinitionMap, so there are no parallel arrays
@@ -115,6 +118,33 @@ final class DataSurface implements DataSurfaceInterface {
     protected readonly array $withheld = [],
     protected readonly ?array $runtimeAccessOwn = NULL,
   ) {
+  }
+
+  /**
+   * Stores what it holds, with each map's properties core would drop.
+   *
+   * Decision: see
+   * docs/decisions.md#the-static-build-is-cached-the-rest-is-per-request.
+   *
+   * @return array
+   *   Its properties, and the maps it holds with their properties.
+   */
+  public function __serialize(): array {
+    $values = get_object_vars($this);
+    return ['values' => $values, 'maps' => SerializedMaps::export($values)];
+  }
+
+  /**
+   * Restores what it holds, each map with its properties.
+   *
+   * @param array $data
+   *   What __serialize() stored.
+   */
+  public function __unserialize(array $data): void {
+    foreach ($data['values'] as $name => $value) {
+      $this->{$name} = $value;
+    }
+    SerializedMaps::restore($data['maps']);
   }
 
   /**
@@ -349,6 +379,14 @@ final class DataSurface implements DataSurfaceInterface {
     // What was handed as nothing because its own key refused it, which a
     // refusal names as such.
     $refusals = [];
+    // What a key's definition as declared refuses, every definition
+    // refined from it refuses too, since refinement only narrows: it is
+    // withheld before any refiner runs, so none is handed a value of
+    // another type.
+    foreach ($this->watchedValueCheck === NULL ? [] : $this->refusedWatchedValues($this, $admitted) as $path) {
+      $refusals[$path] = NestedArray::getValue($values, explode('.', $path));
+      NestedArray::setValue($admitted, explode('.', $path), NULL, TRUE);
+    }
     do {
       $refined = $this->refineAgainst($values, $admitted, $runtime);
       $refused = $this->watchedValueCheck === NULL ? [] : $this->refusedWatchedValues($refined, $admitted);
@@ -722,7 +760,20 @@ final class DataSurface implements DataSurfaceInterface {
     foreach ($this->definitions->refinementDependencies() as $path) {
       $parents = explode('.', $path);
       $value = NestedArray::getValue($admitted, $parents);
-      if (!ValueState::isConfigured($value) || $this->definitions->entry($parents[0])?->isNested() !== FALSE) {
+      if (!ValueState::isConfigured($value)) {
+        continue;
+      }
+      $port = $this->definitions->entry($parents[0]) === NULL && count($parents) === 1 ? ($this->portDefinitions[$path] ?? NULL) : NULL;
+      if ($port !== NULL) {
+        // A port's value, read from the container, held to the type the
+        // structure declared it with: a capacity the container holds as
+        // a word reaches no refiner typed for a number.
+        if ($this->watchedValueCheck !== NULL && !$this->watchedValueCheck->admits($port, $value)) {
+          $refused[] = $path;
+        }
+        continue;
+      }
+      if ($this->definitions->entry($parents[0])?->isNested() !== FALSE) {
         continue;
       }
       $definition = $refined->getDefinition((string) array_shift($parents));
@@ -800,10 +851,10 @@ final class DataSurface implements DataSurfaceInterface {
     }
     $value = $values[$entry->name] ?? NULL;
     $chosen = $entry->variants?->chosen($values[$entry->variants->by] ?? NULL);
-    if ($chosen !== NULL && !$entry->variants->fits($chosen, $value)) {
+    if ($chosen !== NULL) {
       // A value left behind by another variant says nothing about this
       // one, so the variant is refined from its own defaults.
-      $value = [];
+      $value = $entry->variants->held($chosen, $value) ?? [];
     }
     $refined = $child->refine(array_replace($child->getDefaultValues(), is_array($value) ? $value : []), $runtime);
     $cacheability->addCacheableDependency($refined);

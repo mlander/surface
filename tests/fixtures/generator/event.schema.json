@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Event settings",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["name", "kind"],
+  "properties": {
+    "name": {"type": "string", "title": "Name", "maxLength": 80},
+    "kind": {"type": "string", "title": "Kind", "enum": ["meetup", "conference"], "default": "meetup"},
+    "seats": {"type": ["integer", "null"], "title": "Seats", "minimum": 1},
+    "slug": {"$ref": "#/$defs/slug", "title": "Slug"},
+    "venue": {"$ref": "#/$defs/venue", "title": "Venue"},
+    "contact": {
+      "type": "object",
+      "title": "Contact",
+      "additionalProperties": false,
+      "properties": {
+        "email": {"type": "string", "format": "idn-email", "title": "Email"},
+        "phone": {"type": ["string", "null"], "title": "Phone"}
+      }
+    },
+    "tags": {"type": ["array", "null"], "title": "Tags", "items": {"type": "string"}, "uniqueItems": true}
+  },
+  "allOf": [
+    {"if": {"properties": {"kind": {"const": "conference"}}, "required": ["kind"]}, "then": {"required": ["seats"]}}
+  ],
+  "$defs": {
+    "slug": {"type": "string", "pattern": "^[a-z0-9-]+$"},
+    "venue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["city"],
+      "properties": {
+        "city": {"type": "string", "title": "City"},
+        "capacity": {"type": ["integer", "null"], "title": "Capacity", "minimum": 1}
+      }
+    }
+  }
+}

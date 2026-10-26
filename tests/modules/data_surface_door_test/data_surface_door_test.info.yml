@@ -1,0 +1,8 @@
+name: Data Surface Door Test
+type: module
+description: 'Test support for the rule that nothing an operation runs reads the request: a runtime refiner, a storage, an access class and a provider that each read a service bound to the door, and a storage built with the current user.'
+package: Testing
+version: VERSION
+core_version_requirement: ^11.3 || ^12
+dependencies:
+  - data_surface:data_surface

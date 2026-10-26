@@ -30,12 +30,19 @@ final class DataSurfaceOptionsResolver extends Plugin {
    *   (optional) The deriver class, as every core plugin attribute
    *   accepts one: one resolver per constraint in a family is derived
    *   rather than written out.
+   * @param bool $exact
+   *   (optional) Whether the list it answers is every value the constraint
+   *   accepts and nothing else, as a Choice's is. A schema that states the
+   *   list then states the constraint whole, so the emitter names it under
+   *   no `checkedOnServer`. FALSE, the default, for a list a constraint
+   *   checks more than, or less.
    */
   public function __construct(
     public readonly string $id,
     public readonly TranslatableMarkup $label,
     public readonly string $constraint,
     public readonly ?string $deriver = NULL,
+    public readonly bool $exact = FALSE,
   ) {
   }
 

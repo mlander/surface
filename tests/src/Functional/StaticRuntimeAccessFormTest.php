@@ -69,9 +69,9 @@ class StaticRuntimeAccessFormTest extends BrowserTestBase {
    *   The schema.
    */
   protected function fullSchema(): array {
-    $this->drupalGet('surface-api/resource_test.exhibit/configure/schema');
+    $this->drupalGet('surface-api/resource_test.exhibit/schema');
     $this->assertSession()->statusCodeEquals(200);
-    return json_decode($this->getSession()->getPage()->getContent(), TRUE)['schema'];
+    return json_decode($this->getSession()->getPage()->getContent(), TRUE);
   }
 
   /**
@@ -85,7 +85,7 @@ class StaticRuntimeAccessFormTest extends BrowserTestBase {
     $this->drupalLogin($this->drupalCreateUser([]));
     $this->drupalGet('surface-test/exhibit');
     $assert->statusCodeEquals(403);
-    $this->drupalGet('surface-api/resource_test.exhibit/configure/schema');
+    $this->drupalGet('surface-api/resource_test.exhibit/schema');
     $assert->statusCodeEquals(403);
 
     $this->drupalLogin($this->drupalCreateUser(['keep an exhibit', 'inspect exhibit']));
@@ -104,12 +104,12 @@ class StaticRuntimeAccessFormTest extends BrowserTestBase {
     $full = $this->fullSchema();
     $this->assertTrue($full['properties']['loan']['readOnly']);
     $this->assertTrue($full['properties']['source']['readOnly']);
-    $this->assertArrayNotHasKey('access', $full['properties']['loan']['x-surface']);
+    $this->assertArrayNotHasKey('live', $full['properties']['loan']['x-surface'] ?? []);
 
     $this->drupalLogin($this->drupalCreateUser(['keep an exhibit']));
     $full = $this->fullSchema();
     $this->assertArrayNotHasKey('readOnly', $full['properties']['loan']);
-    $this->assertSame('live', $full['properties']['loan']['x-surface']['access']);
+    $this->assertTrue($full['properties']['loan']['x-surface']['live']);
     $this->drupalGet('surface-test/exhibit');
     foreach (self::ANSWERED as $name) {
       $assert->fieldEnabled($name);
@@ -125,8 +125,8 @@ class StaticRuntimeAccessFormTest extends BrowserTestBase {
     foreach (self::ANSWERED as $name) {
       $assert->fieldDisabled($name);
     }
-    $this->assertSame('live', $this->fullSchema()['properties']['loan']['x-surface']['access'], 'The full schema is the same whatever is stored.');
-    $this->drupalGet('surface-api/resource_test.exhibit/configure');
+    $this->assertTrue($this->fullSchema()['properties']['loan']['x-surface']['live'], 'The full schema is the same whatever is stored.');
+    $this->drupalGet('surface-api/resource_test.exhibit');
     $contract = json_decode($this->getSession()->getPage()->getContent(), TRUE);
     $this->assertTrue($contract['schema']['properties']['loan']['readOnly'], 'The schema for these answers settles it.');
 

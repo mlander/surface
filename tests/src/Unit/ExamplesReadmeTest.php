@@ -81,14 +81,75 @@ class ExamplesReadmeTest extends UnitTestCase {
       'Access/FeesAccess',
       'Resource/ProgramResource',
       'Resource/DoorsResource',
+      'Resource/SpotlightResource',
     ];
     foreach ($concepts as $class) {
       $this->assertContains('src/' . $class . '.php', $quoted);
+    }
+    // Example 12's provider is the main module's, and example 13 is the
+    // component block's submodule.
+    $this->assertContains('../../src/Variants/ComponentProps.php', $quoted);
+    $this->assertContains('../data_surface_component_block/src/Structure/ComponentBlockStructure.php', $quoted);
+    $this->assertContains('../data_surface_component_block/src/Plugin/Block/ComponentBlock.php', $quoted);
+    // Example 14: the owner's way whole, and the alter's way, whose alter
+    // is the keys module's.
+    $extension = [
+      'Resource/MailerResource',
+      'Variants/CredentialSources',
+      'Structure/PastedCredentialStructure',
+      'Structure/ManagedCredentialStructure',
+      'Resource/WebhookResource',
+    ];
+    foreach ($extension as $class) {
+      $this->assertContains('src/' . $class . '.php', $quoted);
+    }
+    $this->assertContains('../data_surface_examples_keys/src/Alter/WebhookKeyAlter.php', $quoted);
+    // Example 15: the entity type, the resource, the structures of its
+    // two operations over the venues, the storage and the access class.
+    $venues = [
+      'Entity/EventVenue',
+      'Resource/VenueResource',
+      'Structure/VenueListingStructure',
+      'Structure/VenueReorderStructure',
+      'Structure/VenueOrderStructure',
+      'Storage/VenueStorage',
+      'Access/VenueAccess',
+    ];
+    foreach ($venues as $class) {
+      $this->assertContains('src/' . $class . '.php', $quoted);
+    }
+    // Example 16: the resource, in its own module.
+    $this->assertContains('../data_surface_examples_references/src/Resource/SponsorshipResource.php', $quoted);
+    // Example 17: the resource, its item and its storage, in its own module.
+    foreach (['Resource/RetitleResource', 'Structure/RetitleItemStructure', 'Storage/RetitleStorage'] as $class) {
+      $this->assertContains('../data_surface_examples_retitle/src/' . $class . '.php', $quoted);
     }
     foreach ($blocks as [, $path, $code]) {
       $file = self::MODULE . '/' . $path;
       $this->assertFileExists($file);
       $this->assertSame(self::excerpt($file), $code, sprintf('The README quotes %s as it no longer is; copy the file from its class attributes down into the block.', $path));
+    }
+  }
+
+  /**
+   * Tests each component the README quotes is the file it names, whole.
+   */
+  public function testTheComponentBlocksMatchTheFiles(): void {
+    preg_match_all('/<!-- component: (\S+) -->\n\n```yaml\n(.*?)\n```/s', self::readme(), $blocks, PREG_SET_ORDER);
+    $this->assertSame(['components/card/card.component.yml'], array_column($blocks, 1));
+    foreach ($blocks as [, $path, $yaml]) {
+      $this->assertSame(rtrim((string) file_get_contents(self::MODULE . '/' . $path), "\n"), $yaml, sprintf('The README quotes %s as it no longer is.', $path));
+    }
+  }
+
+  /**
+   * Tests each config schema entry the README quotes is the schema file's.
+   */
+  public function testTheSchemaEntriesMatchTheFile(): void {
+    preg_match_all('/<!-- schema: (\S+) -->\n\n```yaml\n(.*?)\n```/s', self::readme(), $blocks, PREG_SET_ORDER);
+    $this->assertSame(['data_surface_examples.event_venue.*'], array_column($blocks, 1));
+    foreach ($blocks as [, $key, $yaml]) {
+      $this->assertSame(FirstResourceDocsTest::entry(self::MODULE . '/config/schema/data_surface_examples.schema.yml', $key), $yaml, sprintf('The README quotes the %s entry as it no longer is.', $key));
     }
   }
 

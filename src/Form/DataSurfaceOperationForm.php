@@ -14,6 +14,7 @@ use Drupal\data_surface\DataSurfaceHostTrait;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\Pipeline\DataSurfaceStorageInterface;
 use Drupal\data_surface\ResourceBuild\OperationArguments;
+use Drupal\data_surface\ResourceBuild\OperationDefinition;
 use Drupal\data_surface\ResourceBuild\OperationRoute;
 use Drupal\data_surface\ResourceBuild\ResourceRegistry;
 use Drupal\data_surface\ResourceBuild\ResourcesInterface;
@@ -41,10 +42,8 @@ use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
  *     _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
  *     _title: 'Edit example'
  *     _data_surface_resource: 'Drupal\example\Resource\ExampleResource'
- *     _data_surface_operation: 'edit'
+ *     _data_surface_operation: 'update'
  *     _data_surface_cosmetics: 'example.surface_form_cosmetics'
- *   requirements:
- *     _data_surface_operation_access: 'TRUE'
  *   options:
  *     parameters:
  *       example:
@@ -115,6 +114,11 @@ class DataSurfaceOperationForm extends FormBase {
   public const PANEL_KEY = 'data_surface_panel';
 
   /**
+   * The temporary form state value the validated dry run is kept under.
+   */
+  protected const DRY_RUN = 'data_surface_dry_run';
+
+  /**
    * Constructs a DataSurfaceOperationForm.
    *
    * @param \Drupal\Core\DependencyInjection\ClassResolverInterface $classResolver
@@ -178,6 +182,9 @@ class DataSurfaceOperationForm extends FormBase {
       throw new AccessDeniedHttpException($reason ?: 'The resource this form configures may not be written by this account.');
     }
     $operation = $served->operation->id;
+    if ($served->operation->kind() === OperationDefinition::DELETE) {
+      return $this->confirmForm($form, $served, $surface, $form_state);
+    }
     $values = $this->surfaceFormValues($surface, array_replace(
       $surface->getDefaultValues(),
       $this->storedSurfaceValues($surface, $storage),
@@ -227,11 +234,44 @@ class DataSurfaceOperationForm extends FormBase {
    * {@inheritdoc}
    */
   public function validateForm(array &$form, FormStateInterface $form_state): void {
-    [, $surface, $storage] = $this->operationServed();
-    $current = $this->storedSurfaceValues($surface, $storage);
+    [$served, $surface, $storage, $access] = $this->operationServed();
+    $deletes = $served->operation->kind() === OperationDefinition::DELETE;
     $builder = $this->surfaceFormBuilder();
-    $values = $builder->extractSurfaceValues($surface, $form[static::SURFACE_KEY], $form_state, $current);
-    $builder->validateSurfaceForm($surface, $values, $form[static::SURFACE_KEY], $form_state, $current);
+    // A delete takes no values: the pipeline judges the removal.
+    $values = $deletes ? [] : $builder->extractSurfaceValues($surface, $form[static::SURFACE_KEY], $form_state, $this->storedSurfaceValues($surface, $storage));
+    // The whole run, dry: access, the values, and what storage's own
+    // prepare refuses, said here, on the elements, since a submit handler
+    // may no longer set an error. The submit commits what it prepared.
+    // Decision: see docs/decisions.md#one-result-at-every-door.
+    $stored = static::fingerprint($storage->load($surface));
+    $result = $this->surfacePipeline()->submit(
+      $surface,
+      $values,
+      $storage,
+      TRUE,
+      DataSurfaceAccess::decisive($access, 'The resource this form configures may not be written by this account.'),
+    );
+    if ($result->isValid() && $result->prepared !== NULL) {
+      // Kept for the submit in this request, with what it was judged
+      // against: the values sent and what storage held.
+      // Decision: see
+      // docs/decisions.md#the-static-build-is-cached-the-rest-is-per-request.
+      $form_state->setTemporaryValue(self::DRY_RUN, [
+        'result' => $result,
+        'values' => $values,
+        'stored' => $stored,
+        'storage' => $storage,
+      ]);
+    }
+    if ($deletes) {
+      foreach ($result->violations as $violation) {
+        $form_state->setErrorByName('', $violation->message);
+      }
+      return;
+    }
+    // Every refusal on its element, and every stale value kept said
+    // beside it, as validation always said them.
+    $builder->flagSurfaceErrors($result->violations, $form[static::SURFACE_KEY], $form_state);
   }
 
   /**
@@ -240,30 +280,44 @@ class DataSurfaceOperationForm extends FormBase {
   public function submitForm(array &$form, FormStateInterface $form_state): void {
     [$served, $surface, $storage, $access] = $this->operationServed();
     $builder = $this->surfaceFormBuilder();
-    $values = $builder->extractSurfaceValues(
+    $deletes = $served->operation->kind() === OperationDefinition::DELETE;
+    $values = $deletes ? [] : $builder->extractSurfaceValues(
       $surface,
       $form[static::SURFACE_KEY],
       $form_state,
       $this->storedSurfaceValues($surface, $storage),
     );
-    // The operation is its own gate, so an answer with no opinion is
-    // a refusal here as it is on the route: the pipeline would read a
-    // neutral answer as nothing to say.
-    $result = $this->surfacePipeline()->submit(
-      $surface,
-      $values,
-      $storage,
-      access: DataSurfaceAccess::decisive($access, 'The resource this form configures may not be written by this account.'),
-    );
+    // What validation prepared is committed, once: the values are the
+    // ones it judged and storage holds what it held then. Otherwise the
+    // whole run again. The operation is its own gate, so an answer with
+    // no opinion is a refusal here as it is on the route: the pipeline
+    // would read a neutral answer as nothing to say.
+    // Decision: see
+    // docs/decisions.md#the-static-build-is-cached-the-rest-is-per-request.
+    $dry = $form_state->getTemporaryValue(self::DRY_RUN);
+    $result = is_array($dry) && $dry['values'] === $values && $dry['stored'] === static::fingerprint($storage->load($surface))
+      ? $this->surfacePipeline()->commitDryRun($dry['result'], $dry['storage'])
+      : $this->surfacePipeline()->submit(
+        $surface,
+        $values,
+        $storage,
+        access: DataSurfaceAccess::decisive($access, 'The resource this form configures may not be written by this account.'),
+      );
     if (!$result->isValid()) {
-      $builder->flagSurfaceErrors($result->violations, $form[static::SURFACE_KEY], $form_state);
+      // Refused since it was validated (what is stored moved in between):
+      // validation is over, so the refusal is said as a message, and
+      // nothing was written.
+      foreach ($result->violations as $violation) {
+        $this->messenger()->addError($violation->message);
+      }
+      $form_state->setRebuild();
       return;
     }
     $operation = $served->operation->id;
     $cosmetics = $this->surfaceCosmetics();
     $message = $cosmetics?->surfaceFormMessage($result, $operation, $served->subject)
       ?? ($result->committed
-        ? $this->t('The changes have been saved.')
+        ? ($deletes ? $this->t('@label: removed.', ['@label' => $served->operation->label]) : $this->t('The changes have been saved.'))
         : $this->t('The values were accepted. @label changes nothing, so nothing was written.', ['@label' => $served->operation->label]));
     if ((string) $message !== '') {
       $this->messenger()->addStatus($message);
@@ -272,6 +326,53 @@ class DataSurfaceOperationForm extends FormBase {
     if ($redirect !== NULL) {
       $form_state->setRedirectUrl($redirect);
     }
+  }
+
+  /**
+   * Builds the confirmation a delete asks before it removes anything.
+   *
+   * A delete takes no values, so the form draws none: it names what is
+   * removed, says it cannot be undone, and offers one button, the
+   * operation's label. The cosmetic layer may still arrange it.
+   *
+   * Decision: see docs/decisions.md#a-placed-block-is-a-resource.
+   *
+   * @param array $form
+   *   The form.
+   * @param \Drupal\data_surface\ResourceBuild\OperationRoute $served
+   *   The operation and its context.
+   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   *   The resource built for it.
+   * @param \Drupal\Core\Form\FormStateInterface $form_state
+   *   The form state.
+   *
+   * @return array
+   *   The form.
+   */
+  protected function confirmForm(array $form, OperationRoute $served, DataSurfaceInterface $surface, FormStateInterface $form_state): array {
+    $description = $served->operation->description === NULL ? '' : (string) $served->operation->description;
+    $form['confirm'] = [
+      '#type' => 'item',
+      '#markup' => $served->subject === NULL
+        ? $this->t('@description This cannot be undone.', ['@description' => $description])
+        : $this->t('@description %subject is removed, and this cannot be undone.', [
+          '@description' => $description,
+          '%subject' => $served->subject,
+        ]),
+    ];
+    $form['actions'] = [
+      '#type' => 'actions',
+      '#weight' => 100,
+      'submit' => [
+        '#type' => 'submit',
+        '#value' => $served->operation->label,
+        '#button_type' => 'danger',
+      ],
+    ];
+    $cosmetics = $this->surfaceCosmetics();
+    return $cosmetics === NULL
+      ? $form
+      : $cosmetics->alterSurfaceForm($form, $surface, $form_state, $served->operation->id, $served->subject);
   }
 
   /**
@@ -293,6 +394,19 @@ class DataSurfaceOperationForm extends FormBase {
       $this->resources->storage($served->resource, $served->context, $surface),
       $this->resources->access($served->resource, $served->context),
     ];
+  }
+
+  /**
+   * Fingerprints what storage holds, for the submit to find it unmoved.
+   *
+   * @param array $stored
+   *   What the storage loads.
+   *
+   * @return string
+   *   A hash of it.
+   */
+  protected static function fingerprint(array $stored): string {
+    return hash('xxh128', serialize($stored));
   }
 
   /**

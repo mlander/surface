@@ -12,7 +12,6 @@ use Drupal\Core\Ajax\AppendCommand;
 use Drupal\Core\Ajax\PrependCommand;
 use Drupal\Core\Ajax\RemoveCommand;
 use Drupal\Core\Ajax\ReplaceCommand;
-use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\Extension\ModuleHandlerInterface;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Form\OptGroup;
@@ -25,13 +24,17 @@ use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
+use Drupal\data_surface\Computed;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Refinement\DoesNotApply;
+use Drupal\data_surface\SettledCacheability;
 use Drupal\data_surface\Resource\ArrangementGroup;
+use Drupal\data_surface\Resource\Compute;
 use Drupal\data_surface\Options\DataSurfaceOptions;
 use Drupal\data_surface\Pipeline\DataSurfacePipelineInterface;
 use Drupal\data_surface\Plugin\DataSurfaceWidget\OptionsWidget;
+use Drupal\data_surface\Pipeline\Sentences;
 use Drupal\data_surface\Pipeline\ValueState;
 use Drupal\data_surface\Pipeline\ViolationSet;
 use Drupal\data_surface\Entry;
@@ -105,6 +108,11 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
    * Render key marking a collection's element: its dotted path.
    */
   protected const LIST_KEY = '#data_surface_list';
+
+  /**
+   * Marks the item a computed key is drawn as.
+   */
+  protected const COMPUTED_KEY = '#data_surface_computed';
 
   /**
    * The key of a collection's "Add another" button inside its element.
@@ -237,6 +245,14 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
         $container[$name] = DataSurfaceWidgetBase::arranged($ruled_out, $declared);
         continue;
       }
+      $computed = Computed::of($definition);
+      if ($computed !== NULL && !$definitions->isLocked($name)) {
+        // Shown and fixed: nobody types it, and nothing is posted for it.
+        // Decision: see
+        // docs/decisions.md#a-computed-key-is-a-pure-function-of-its-sources.
+        $container[$name] = DataSurfaceWidgetBase::arranged(static::computedItem($definition, $computed, $surface, $shown[$name] ?? NULL), $declared);
+        continue;
+      }
       $list = $definitions->entry($name)?->list;
       if ($list !== NULL && $definition instanceof ListDataDefinitionInterface) {
         // Decision: see docs/decisions.md#a-list-of-child-invocations.
@@ -275,7 +291,7 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
         $held = $values[$name] ?? NULL;
         $definition = $variants->definitionFor($chosen, $child->refine(array_replace(
           $child->getDefaultValues(),
-          $variants->fits($chosen, $held) ? $held : [],
+          $variants->held($chosen, $held) ?? [],
         )));
       }
       $value = match (TRUE) {
@@ -298,10 +314,15 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
         // Rendered for the variant now chosen, from that variant's
         // defaults when what is held was written for another one.
         $chosen = (string) $variants->chosen($values[$variants->by] ?? $surface->getDefault($variants->by));
-        $value = $variants->fits($chosen, $value) ? $value : $variants->defaultsOf($chosen);
+        $value = $variants->held($chosen, $value) ?? $variants->defaultsOf($chosen);
         // A variant its access locked is offered, and drawn fixed.
         // Decision: see
         // docs/decisions.md#a-variant-is-open-locked-or-not-offered.
+        if ($chosen !== '' && static::nestsVariants($variants->variant($chosen)->child)) {
+          // Each variant inside it drawn from what it holds, or from its
+          // own defaults where its deciding key chose it afresh.
+          $value = static::nestedHeld($variants->variant($chosen)->child, $value);
+        }
         $variant = $chosen !== '' ? $variants->variant($chosen)->child->lockedWhole() : NULL;
         $locked = $locked || $variant !== NULL;
         $reason ??= $variant;
@@ -364,8 +385,39 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
     // applies each option set's own metadata to its element; this is the
     // other half, the data surface's, and without it a form holding a
     // state-dependent shape would be cached as though it were static.
-    CacheableMetadata::createFromObject($surface)->applyTo($container);
+    // A variant built to be drawn adds what it read.
+    SettledCacheability::of($surface)->applyTo($container);
     return $container;
+  }
+
+  /**
+   * Draws a computed key: its value, fixed, and what it is computed from.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The key.
+   * @param \Drupal\data_surface\Computed $computed
+   *   What it is computed from.
+   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   *   The data surface it belongs to, which labels its sources.
+   * @param mixed $value
+   *   What it holds for the values shown.
+   *
+   * @return array
+   *   An item, which posts nothing.
+   */
+  protected static function computedItem(DataDefinitionInterface $definition, Computed $computed, DataSurfaceInterface $surface, mixed $value): array {
+    $sources = implode(', ', array_map(static fn (string $source): string => (string) ($surface->getDefinition($source)?->getLabel() ?? $source), $computed->from));
+    $note = $computed->when === Compute::ON_CHANGE
+      ? t('Computed from @sources, again whenever they change.', ['@sources' => $sources])
+      : t('Computed from @sources when this is created, and kept as it is after.', ['@sources' => $sources]);
+    $description = $definition->getDescription();
+    return [
+      '#type' => 'item',
+      '#title' => $definition->getLabel(),
+      '#plain_text' => is_scalar($value) ? (string) $value : '',
+      '#description' => $description !== NULL && (string) $description !== '' ? new Sentences($description, $note) : $note,
+      self::COMPUTED_KEY => TRUE,
+    ];
   }
 
   /**
@@ -640,6 +692,10 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
     foreach (array_keys($orphaned) as $dotted) {
       NestedArray::setValue($values, explode('.', (string) $dotted), NULL, TRUE);
     }
+    // A computed key shows what a write of these values would store.
+    // Decision: see
+    // docs/decisions.md#a-computed-key-is-a-pure-function-of-its-sources.
+    $values = Computed::apply($surface, $values, $stored);
     if ($orphaned !== []) {
       $values[self::STANDING_KEY] = $orphaned;
     }
@@ -768,10 +824,10 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
         continue;
       }
       $held = $stored[$name] ?? NULL;
-      if ($entry->variants !== NULL && !$entry->variants->fits((string) $entry->variants->chosen($values[$entry->variants->by] ?? NULL), $held)) {
+      if ($entry->variants !== NULL) {
         // What is stored was written for another variant, and says
         // nothing about this one.
-        $held = NULL;
+        $held = $entry->variants->held((string) $entry->variants->chosen($values[$entry->variants->by] ?? NULL), $held);
       }
       $child_stored = array_replace($child->getDefaultValues(), is_array($held) ? $held : []);
       [$child_discarded, $child_orphaned] = $this->settle($child, $child_stored, $input[$name]);
@@ -1864,6 +1920,10 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
     $definitions = $surface->getDefinitions();
     $variantKeys = [];
     foreach ($definitions->entries() as $name => $entry) {
+      if (!$entry->locked && Computed::of($entry->definition) !== NULL) {
+        // Drawn as an item, which posts nothing: accept() computes it.
+        continue;
+      }
       if ($entry->variants !== NULL) {
         $variantKeys[] = $name;
         continue;
@@ -1881,9 +1941,20 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
       $resolved = $definitions->withVariantsResolved($raw + $current + $surface->getDefaultValues());
       foreach ($variantKeys as $name) {
         $definition = $resolved->get((string) $name);
-        if ($definition !== NULL && DefinitionMetadata::variantsBy($definition) === NULL) {
-          $raw += $this->extractKey((string) $name, $definition, $container, $form_state);
+        if ($definition === NULL || DefinitionMetadata::variantsBy($definition) !== NULL) {
+          continue;
         }
+        $variants = $definitions->entry((string) $name)->variants;
+        $chosen = $variants->chosen($raw[$variants->by] ?? $current[$variants->by] ?? $surface->getDefault($variants->by));
+        $child = $chosen === NULL ? NULL : $variants->variant($chosen)->child;
+        if ($child !== NULL && static::nestsVariants($child) && is_array($container[$name] ?? NULL) && empty($container[$name][self::PLACEHOLDER_KEY])) {
+          // Variants inside the variant (a component's slots, each holding
+          // a component that chooses its own props): each level is read
+          // through what its own deciding key chose in this submission.
+          $raw[$name] = $this->extractFrame($child, $container[$name], $form_state);
+          continue;
+        }
+        $raw += $this->extractKey((string) $name, $definition, $container, $form_state);
       }
     }
     // A key drawn as nothing when the page was drawn sent nothing, even
@@ -1896,6 +1967,103 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
     // the same accept() a payload goes through, which is also where
     // locked keys take the value the data surface declares.
     return $this->pipeline->accept($surface, $raw, $current);
+  }
+
+  /**
+   * Answers whether a child holds variants below a key of its own.
+   *
+   * @param \Drupal\data_surface\DataSurfaceInterface $child
+   *   The child.
+   *
+   * @return bool
+   *   TRUE when a key of it, or of a child attached inside it, holds
+   *   variants.
+   */
+  protected static function nestsVariants(DataSurfaceInterface $child): bool {
+    foreach ($child->getDefinitions()->entries() as $entry) {
+      if ($entry->variants !== NULL || ($entry->attachment !== NULL && static::nestsVariants($entry->attachment->child))) {
+        return TRUE;
+      }
+    }
+    return FALSE;
+  }
+
+  /**
+   * Gives each variant inside a child what it is drawn from.
+   *
+   * What the variant holds when it fits the variant its deciding key
+   * chose, and that variant's defaults when it does not (chosen afresh, or
+   * written for another), at every depth, as the top of a form does.
+   *
+   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   *   The child.
+   * @param mixed $value
+   *   What it holds.
+   *
+   * @return mixed
+   *   The same, each variant inside it drawn from what fits it.
+   */
+  protected static function nestedHeld(DataSurfaceInterface $surface, mixed $value): mixed {
+    if (!is_array($value)) {
+      return $value;
+    }
+    foreach ($surface->getDefinitions()->entries() as $name => $entry) {
+      $held = $value[$name] ?? NULL;
+      if ($entry->variants !== NULL) {
+        $chosen = $entry->variants->chosen($value[$entry->variants->by] ?? NULL);
+        if ($chosen !== NULL) {
+          $held = $entry->variants->held($chosen, $held) ?? $entry->variants->defaultsOf($chosen);
+          $value[$name] = static::nestedHeld($entry->variants->variant($chosen)->child, $held);
+        }
+      }
+      elseif ($entry->attachment !== NULL && is_array($held)) {
+        $value[$name] = static::nestedHeld($entry->attachment->child, $held);
+      }
+    }
+    return $value;
+  }
+
+  /**
+   * Reads a child's keys out of its element, a level at a time.
+   *
+   * A key is read through its widget; an attached child through its own
+   * keys; variants through the variant their deciding key chose in what
+   * was just read, so an element drawn for another variant gives nothing
+   * of its own. A collection below the top is not drawn, so nothing is
+   * read for it, and what it holds is kept.
+   *
+   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   *   The child.
+   * @param array $element
+   *   Its element.
+   * @param \Drupal\Core\Form\FormStateInterface $form_state
+   *   The form state.
+   *
+   * @return array
+   *   The raw values read, by key.
+   */
+  protected function extractFrame(DataSurfaceInterface $surface, array $element, FormStateInterface $form_state): array {
+    $raw = [];
+    foreach ($surface->getDefinitions()->entries() as $name => $entry) {
+      $name = (string) $name;
+      $at = $element[$name] ?? NULL;
+      if (!is_array($at) || !empty($at[self::PLACEHOLDER_KEY]) || $entry->list !== NULL) {
+        continue;
+      }
+      if ($entry->variants !== NULL) {
+        $chosen = $entry->variants->chosen($raw[$entry->variants->by] ?? $surface->getDefault($entry->variants->by));
+        if ($chosen !== NULL) {
+          $raw[$name] = $this->extractFrame($entry->variants->variant($chosen)->child, $at, $form_state);
+        }
+        continue;
+      }
+      if ($entry->attachment !== NULL) {
+        $raw[$name] = $this->extractFrame($entry->attachment->child, $at, $form_state);
+        continue;
+      }
+      $raw += $this->extractKey($name, $entry->definition, $element, $form_state);
+    }
+    return $raw;
   }
 
   /**
@@ -1946,13 +2114,21 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
       }
     }
     $widget = $this->widgetManager->getWidgetFor($map);
+    // An item holding variants (a placed block's visibility conditions,
+    // each one's settings chosen by its plugin id) is read a level at a
+    // time, each variant through what its deciding key chose in the item,
+    // as the top of the form reads its own: the item's plain map knows
+    // none of the variants' keys.
+    $frame = $child !== NULL && static::nestsVariants($child);
     $items = [];
     $deltas = [];
     foreach (static::elementChildren($element) as $delta) {
       if (!is_int($delta)) {
         continue;
       }
-      $value = $widget->extractValue($map, $element[$delta], $form_state, [$name, $delta]);
+      $value = $frame
+        ? $this->extractFrame($child, $element[$delta], $form_state)
+        : $widget->extractValue($map, $element[$delta], $form_state, [$name, $delta]);
       foreach ($inner as $nested) {
         $value += $this->extractCollection($nested, $element[$delta], $form_state, $container_key);
       }
@@ -2314,7 +2490,8 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
    *   The element, wired or left as it was.
    */
   protected function attachRefinementAjax(array $element, string $wrapper_id, array $path, array $replaces): array {
-    if (!isset($element['#type']) || in_array($element['#type'], self::GROUPING_TYPES, TRUE)) {
+    if (!isset($element['#type']) || in_array($element['#type'], self::GROUPING_TYPES, TRUE) || $element['#type'] === 'item') {
+      // A value drawn fixed cannot change, so nothing is rebuilt on it.
       return $element;
     }
     $element['#ajax'] = [
@@ -2443,7 +2620,7 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
         // with: its own defaults when what is held was another's.
         $chosen = $entry->variants->chosen($values[$entry->variants->by] ?? $surface->getDefault($entry->variants->by));
         $child = $chosen === NULL ? NULL : $entry->variants->variant($chosen)->child;
-        $held = $chosen !== NULL && $entry->variants->fits($chosen, $held) ? $held : NULL;
+        $held = $chosen !== NULL ? $entry->variants->held($chosen, $held) : NULL;
       }
       if ($child !== NULL) {
         $element[$name] = $this->wireRefinement(

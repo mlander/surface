@@ -1,0 +1,4 @@
+# Example 16: sets the sponsorship, and so calls its tool.
+set event sponsorship:
+  title: 'Set the sponsorship of the examples'' event'
+  restrict access: true

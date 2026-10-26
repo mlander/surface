@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Drupal\data_surface_resource_test\Alter;
 
 use Drupal\Core\TypedData\DataDefinitionInterface;
-use Drupal\data_surface\Resource\AltersOutputsInterface;
 use Drupal\data_surface\Resource\Attribute\Alters;
 use Drupal\data_surface\Resource\Attribute\RefinesInput;
 use Drupal\data_surface\Resource\BlueprintAdditionsInterface;
@@ -13,23 +12,16 @@ use Drupal\data_surface\Resource\AltersInputsInterface;
 use Drupal\data_surface_resource_test\Resource\RecipeResource;
 
 /**
- * Adds an input and an output to every recipe, and tightens the dish.
+ * Adds an input to every recipe, and tightens the dish.
  */
 #[Alters(RecipeResource::class)]
-final class RecipeAlter implements AltersInputsInterface, AltersOutputsInterface {
+final class RecipeAlter implements AltersInputsInterface {
 
   /**
    * {@inheritdoc}
    */
   public function alterInputs(BlueprintAdditionsInterface $inputs): void {
     $inputs->add('garnish', 'string', 'Garnish', default: 'parsley');
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function alterOutputs(BlueprintAdditionsInterface $outputs): void {
-    $outputs->add('plated', 'boolean', 'Plated');
   }
 
   /**

@@ -34,16 +34,29 @@ use Drupal\Core\TypedData\MapDataDefinition;
  * now: the child still names nothing of its container's, and its
  * container names nothing inside it.
  *
+ * A variant the site lists may be held unsettled: its child is built the
+ * first time something reads it (SettlesChildInterface), and kept.
+ * Reading `child` settles it; isSettled() asks without building.
+ *
+ * @property-read \Drupal\data_surface\DataSurfaceInterface $child
+ *   The sealed child, as it was advertised, built now if it was not yet.
+ *
  * @see \Drupal\data_surface\DataSurfaceBuilderInterface::attach()
  * @see \Drupal\data_surface\Variants
  */
 final class Attachment {
 
   /**
+   * The sealed child, or what builds it the first time it is read.
+   */
+  private readonly DataSurfaceInterface|SettlesChildInterface $holds;
+
+  /**
    * Constructs an Attachment.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $child
-   *   The sealed child, as it was advertised.
+   * @param \Drupal\data_surface\DataSurfaceInterface|\Drupal\data_surface\SettlesChildInterface $child
+   *   The sealed child, as it was advertised; or, for a child built only
+   *   when read, what builds it.
    * @param string|null $source
    *   The resource or structure the child was built from, by name: its
    *   class, or a derived one's id; or NULL for a child handed over
@@ -63,13 +76,73 @@ final class Attachment {
    *   refinement of the container has read it; NULL until then.
    */
   public function __construct(
-    public readonly DataSurfaceInterface $child,
+    DataSurfaceInterface|SettlesChildInterface $child,
     public readonly ?string $source = NULL,
     public readonly ?string $id = NULL,
     public readonly array $reads = [],
     public readonly array $wired = [],
     public readonly ?array $ports = NULL,
   ) {
+    $this->holds = $child;
+  }
+
+  /**
+   * Reads the child, building it the first time when it was held unsettled.
+   *
+   * @param string $name
+   *   The property: `child`.
+   *
+   * @return \Drupal\data_surface\DataSurfaceInterface
+   *   The sealed child.
+   */
+  public function __get(string $name): DataSurfaceInterface {
+    if ($name !== 'child') {
+      throw new \LogicException(sprintf('An attachment has no "%s" property.', $name));
+    }
+    return $this->holds instanceof SettlesChildInterface ? $this->holds->settle() : $this->holds;
+  }
+
+  /**
+   * Answers whether `child` can be read, which it always can.
+   *
+   * @param string $name
+   *   The property.
+   *
+   * @return bool
+   *   TRUE for `child`.
+   */
+  public function __isset(string $name): bool {
+    return $name === 'child';
+  }
+
+  /**
+   * Answers whether the child is built, without building it.
+   *
+   * @return bool
+   *   FALSE for a child held unsettled that nothing has read yet.
+   */
+  public function isSettled(): bool {
+    return !$this->holds instanceof SettlesChildInterface || $this->holds->settled() !== NULL;
+  }
+
+  /**
+   * Answers whether the child was held unsettled, read since or not.
+   *
+   * @return bool
+   *   TRUE when the build left the child to be built when read.
+   */
+  public function isDeferred(): bool {
+    return $this->holds instanceof SettlesChildInterface;
+  }
+
+  /**
+   * Gets the child if it is built, without building it.
+   *
+   * @return \Drupal\data_surface\DataSurfaceInterface|null
+   *   The child, or NULL when it is held unsettled and nothing read it.
+   */
+  public function settledChild(): ?DataSurfaceInterface {
+    return $this->holds instanceof SettlesChildInterface ? $this->holds->settled() : $this->holds;
   }
 
   /**
@@ -85,7 +158,7 @@ final class Attachment {
    *   The attachment.
    */
   public function withReads(array $reads, array $wired = []): static {
-    return new static($this->child, $this->source, $this->id, $reads, $wired);
+    return new static($this->holds, $this->source, $this->id, $reads, $wired);
   }
 
   /**
@@ -107,7 +180,7 @@ final class Attachment {
     foreach ($this->reads as $port => $path) {
       $ports[(string) $port] = NestedArray::getValue($values, explode('.', $path));
     }
-    return new static($this->child, $this->source, $this->id, $this->reads, $this->wired, $ports);
+    return new static($this->holds, $this->source, $this->id, $this->reads, $this->wired, $ports);
   }
 
   /**

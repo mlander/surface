@@ -31,11 +31,15 @@ final class OpenApiDescription implements CacheableDependencyInterface {
    *   the component its request bodies take (the patch, for one that
    *   changes what exists), NULL for a read, and the component its
    *   declared outputs became, NULL when it declares none.
+   * @param string|null $etag
+   *   A hash of the document as JSON, which its responses are served
+   *   with as their `ETag`; NULL when none was taken.
    */
   public function __construct(
     public readonly array $document,
     public readonly CacheableMetadata $cacheability,
     public readonly array $operations,
+    public readonly ?string $etag = NULL,
   ) {}
 
   /**

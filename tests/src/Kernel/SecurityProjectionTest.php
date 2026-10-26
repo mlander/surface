@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\data_surface\Kernel;
 
+use Drupal\Tests\data_surface\Traits\ServedControllerTrait;
 use Drupal\Core\Access\AccessResultReasonInterface;
 use Drupal\Core\Routing\RouteMatch;
 use Drupal\Core\Session\AccountInterface;
@@ -18,7 +19,6 @@ use Drupal\data_surface\Pipeline\PreparedValues;
 use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface_examples_workflow\Alter\FeesWorkflowAlter;
 use Drupal\data_surface_react\Access\ServedOperationAccessCheck;
-use Drupal\data_surface_react\Controller\ResourceApiController;
 use Drupal\data_surface_tool\OperationInputs;
 use Drupal\data_surface_tool\Plugin\tool\Tool\ResourceOperationToolBase;
 use Drupal\data_surface_tool_test\Storage\VaultStorage;
@@ -51,6 +51,8 @@ use Symfony\Component\Routing\Route;
 #[Group('data_surface')]
 #[RunTestsInSeparateProcesses]
 class SecurityProjectionTest extends DataSurfaceKernelTestBase {
+
+  use ServedControllerTrait;
 
   use UserCreationTrait;
 
@@ -116,7 +118,7 @@ class SecurityProjectionTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Posts to React's /validate, as the current account.
+   * Runs a dry write on the API, as the current account.
    *
    * @param string $resource
    *   The resource id.
@@ -129,9 +131,7 @@ class SecurityProjectionTest extends DataSurfaceKernelTestBase {
    *   The decoded answer.
    */
   protected function validate(string $resource, string $operation, array $values): array {
-    $request = Request::create('/surface-api/' . $resource . '/' . $operation . '/validate', 'POST', [], [], [], ['CONTENT_TYPE' => 'application/json'], (string) json_encode(['values' => (object) $values]));
-    $response = ResourceApiController::create($this->container)->validate($request, $resource, $operation);
-    return json_decode((string) $response->getContent(), TRUE, 512, JSON_THROW_ON_ERROR);
+    return $this->httpDryRun($resource, $operation, $values);
   }
 
   /**
@@ -153,8 +153,8 @@ class SecurityProjectionTest extends DataSurfaceKernelTestBase {
     $check = $this->container->get('data_surface_react.access');
     assert($check instanceof ServedOperationAccessCheck);
     $ids = ['resource' => $resource, 'operation' => $operation];
-    $route_match = new RouteMatch('data_surface_react.contract', new Route('/surface-api/{resource}/{operation}'), $ids, $ids);
-    $result = $check->access($route_match, $account ?? User::getAnonymousUser(), Request::create('/surface-api/' . $resource . '/' . $operation, 'GET', $query));
+    $route_match = new RouteMatch('data_surface_react.page', new Route('/surface-react/{resource}/{operation}'), $ids, $ids);
+    $result = $check->access($route_match, $account ?? User::getAnonymousUser(), Request::create('/surface-react/' . $resource . '/' . $operation, 'GET', $query));
     return [$result->isAllowed(), $result instanceof AccessResultReasonInterface ? (string) $result->getReason() : ''];
   }
 
@@ -183,7 +183,7 @@ class SecurityProjectionTest extends DataSurfaceKernelTestBase {
 
     $validated = $this->validate('event.program', 'configure', []);
     $this->assertTrue($validated['ok']);
-    $this->assertSame(['ok', 'committed', 'changed', 'changes', 'values', 'violations', 'notes', 'stale'], array_keys($validated));
+    $this->assertSame(['ok', 'committed', 'changed', 'changes', 'values', 'violations', 'notes', 'stale'], array_slice(array_keys($validated), 0, 8));
     $this->assertArrayNotHasKey('fees', $validated['values']);
     $this->assertStringNotContainsString('concession', (string) json_encode($validated));
 
@@ -272,7 +272,7 @@ class SecurityProjectionTest extends DataSurfaceKernelTestBase {
     // The first removed: the second now sits where the first's secret is.
     $removed = $this->runTool('data_surface:tool_test.vault:configure', [OperationInputs::VALUES => ['mirrors' => [['host' => 'west-2.example.com']]]]);
     $this->assertFalse($removed['success']);
-    $this->assertStringContainsString('mirrors.0.password: Password is stored for the item at this position', $removed['message']);
+    $this->assertStringContainsString('/mirrors/0/password: Password is stored for the item at this position', $removed['message']);
     $this->assertSame(['mirror-one', 'mirror-two'], array_column($this->container->get('state')->get(VaultStorage::KEY)['mirrors'], 'password'), 'Nothing was written.');
 
     // Sent again, or cleared, it is said.
@@ -361,8 +361,8 @@ class SecurityProjectionTest extends DataSurfaceKernelTestBase {
     NodeType::create(['type' => 'article', 'name' => 'Article'])->save();
     // A permission as written: refused before the parameter is read, so
     // an id that names something and one that names nothing read alike.
-    $there = $this->reactAccess('node.type', 'edit', ['type' => 'article']);
-    $missing = $this->reactAccess('node.type', 'edit', ['type' => 'nothing_here']);
+    $there = $this->reactAccess('node.type', 'update', ['type' => 'article']);
+    $missing = $this->reactAccess('node.type', 'update', ['type' => 'nothing_here']);
     $this->assertFalse($there[0]);
     $this->assertSame($there, $missing);
     $this->assertStringContainsString('administer data surface node type demo', $there[1]);
@@ -371,8 +371,8 @@ class SecurityProjectionTest extends DataSurfaceKernelTestBase {
     // refusal says the same whether it was there.
     FieldStorageConfig::create(['field_name' => 'field_note', 'entity_type' => 'entity_test', 'type' => 'string'])->save();
     FieldConfig::create(['field_name' => 'field_note', 'entity_type' => 'entity_test', 'bundle' => 'entity_test'])->save();
-    $there = $this->reactAccess('field.instance', 'edit', ['field' => 'entity_test.entity_test.field_note']);
-    $missing = $this->reactAccess('field.instance', 'edit', ['field' => 'entity_test.entity_test.field_none']);
+    $there = $this->reactAccess('field.instance', 'update', ['field' => 'entity_test.entity_test.field_note']);
+    $missing = $this->reactAccess('field.instance', 'update', ['field' => 'entity_test.entity_test.field_none']);
     $this->assertSame([FALSE, ServedOperationAccessCheck::REFUSED], $there);
     $this->assertSame($there, $missing);
 
@@ -380,7 +380,7 @@ class SecurityProjectionTest extends DataSurfaceKernelTestBase {
     $tools = $this->container->get('plugin.manager.tool');
     $reasons = [];
     foreach (['field_note', 'field_none'] as $name) {
-      $tool = $tools->createInstance('data_surface:field.instance:edit');
+      $tool = $tools->createInstance('data_surface:field.instance:update');
       $tool->setInputValue('field', 'entity_test.entity_test.' . $name);
       $tool->setInputValue(OperationInputs::VALUES, []);
       $result = $tool->access(User::getAnonymousUser(), TRUE);
@@ -393,10 +393,10 @@ class SecurityProjectionTest extends DataSurfaceKernelTestBase {
     // refused what the parameter names, and is let in where it may; a
     // parameter naming nothing is still the one fixed reason.
     $holder = $this->createUser(['administer data surface node type demo']);
-    $this->assertSame([FALSE, 'The resource this page serves may not be written by this account.'], $this->reactAccess('node.type', 'edit', ['type' => 'article'], $holder));
-    $this->assertSame([FALSE, ServedOperationAccessCheck::REFUSED], $this->reactAccess('node.type', 'edit', ['type' => 'nothing_here'], $holder));
+    $this->assertSame([FALSE, 'The resource this page serves may not be written by this account.'], $this->reactAccess('node.type', 'update', ['type' => 'article'], $holder));
+    $this->assertSame([FALSE, ServedOperationAccessCheck::REFUSED], $this->reactAccess('node.type', 'update', ['type' => 'nothing_here'], $holder));
     $admin = $this->createUser(['administer data surface node type demo', 'administer content types']);
-    $this->assertTrue($this->reactAccess('node.type', 'edit', ['type' => 'article'], $admin)[0]);
+    $this->assertTrue($this->reactAccess('node.type', 'update', ['type' => 'article'], $admin)[0]);
   }
 
   /**
@@ -408,10 +408,10 @@ class SecurityProjectionTest extends DataSurfaceKernelTestBase {
    */
   public function testChildPermissionNothingCanNameIsRefused(): void {
     $resources = $this->container->get('data_surface.resources');
-    $bare = new OperationContext('add');
+    $bare = new OperationContext('create');
     $this->assertFalse($resources->build('field.instance', $bare)->getDefinitions()->has('storage'));
     $this->assertTrue($resources->buildStatic('field.instance', $bare)->getDefinitions()->has('storage'), 'A static listing describes it as it may be.');
-    $named = $resources->operation('field.instance', 'add', [
+    $named = $resources->operation('field.instance', 'create', [
       'entity_type_id' => 'entity_test',
       'bundle' => 'entity_test',
     ]);

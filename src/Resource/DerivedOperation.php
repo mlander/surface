@@ -10,10 +10,9 @@ namespace Drupal\data_surface\Resource;
  * What #[Operation] says on a resource class or its static method, said
  * as a value, because a derived resource has no class to put the
  * attribute on: an id, a label, a description, the static part of
- * access, whether it creates, whether it is the default a parent
- * invokes, how a call behaves, and the parameters a route or a tool
- * supplies. A class-based operation reads its parameters off its
- * signature; a derived one names them, since one method serves every
+ * access, whether it creates, how a call behaves, and the parameters a
+ * route or a tool supplies. A class-based operation reads its parameters
+ * off its signature; a derived one names them, since one method serves every
  * derivative and a parameter may be named after the derivative (a node
  * is `id`, typed `entity:node`).
  *
@@ -42,9 +41,6 @@ final class DerivedOperation {
    * @param string|null $permission
    *   The static part of access, with `%key` placeholders, as on
    *   #[Operation].
-   * @param bool $default
-   *   Whether this is the operation it is invoked through as a child
-   *   when nothing else picks one.
    * @param bool $destructive
    *   Whether a call may destroy what is there, as on #[Operation].
    * @param bool $readOnly
@@ -57,6 +53,8 @@ final class DerivedOperation {
    *   on the context, which must agree.
    * @param string|\Stringable|null $description
    *   What a call does to what, as on #[Operation]; NULL for none.
+   * @param bool $deletes
+   *   Whether a call removes the thing it names, as on #[Operation].
    */
   public function __construct(
     public readonly string $id,
@@ -64,12 +62,12 @@ final class DerivedOperation {
     public readonly ResourceCallable $context,
     public readonly array $parameters = [],
     public readonly ?string $permission = NULL,
-    public readonly bool $default = FALSE,
     public readonly bool $destructive = FALSE,
     public readonly bool $readOnly = FALSE,
     public readonly ?bool $idempotent = NULL,
     public readonly bool $creates = FALSE,
     public readonly string|\Stringable|null $description = NULL,
+    public readonly bool $deletes = FALSE,
   ) {}
 
 }

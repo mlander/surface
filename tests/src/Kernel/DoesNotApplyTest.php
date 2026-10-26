@@ -240,7 +240,7 @@ class DoesNotApplyTest extends DataSurfaceKernelTestBase {
     $this->assertSame(['frequency'], $monthly['schema']['required']);
     $this->assertSame(['frequency' => 'monthly'], $monthly['values']);
     $this->assertArrayNotHasKey('allOf', $monthly['schema']);
-    $this->assertSame(['contract' => 2, 'version' => 1, 'doesNotApply' => ['send_day' => ['frequency']]], $monthly['schema']['x-surface'], 'Named on the frame, with what to refine on.');
+    $this->assertSame(['contract' => 4, 'version' => 1, 'doesNotApply' => ['send_day' => ['frequency']]], $monthly['schema']['x-surface'], 'Named on the frame, with what to refine on.');
 
     $weekly = $emitter->emit($built, ['frequency' => 'weekly', 'send_day' => 'friday'], 'resource_test.bulletin', 'configure')->document;
     $this->assertSame(['frequency', 'send_day'], array_keys($weekly['schema']['properties']));
@@ -323,7 +323,7 @@ class DoesNotApplyTest extends DataSurfaceKernelTestBase {
     $this->container->get('state')->set(NoticeBoardStructure::CLOSED, TRUE);
     $closed = $emitter->emit($board, ['title' => 'Hall'], 'resource_test.notice_board')->document['schema'];
     $this->assertSame(['title'], array_keys($closed['properties']));
-    $this->assertSame(['contract' => 2, 'version' => 1, 'doesNotApply' => ['pinned' => []]], $closed['x-surface']);
+    $this->assertSame(['contract' => 4, 'version' => 1, 'doesNotApply' => ['pinned' => []]], $closed['x-surface']);
     $accepted = $this->pipeline()->accept($board, ['title' => 'Hall']);
     $this->assertSame(['title' => 'Hall'], $accepted);
     $this->assertTrue($this->pipeline()->validate($board, $accepted)->isEmpty(), 'Closed: not asked for.');
@@ -350,7 +350,7 @@ class DoesNotApplyTest extends DataSurfaceKernelTestBase {
     $tool->setInputValue(OperationInputs::VALUES, ['frequency' => 'monthly', 'send_day' => 'monday']);
     $tool->execute();
     $this->assertFalse($tool->getResult()->isSuccess());
-    $this->assertStringContainsString('send_day: Send day does not apply when frequency is monthly (Monthly).', (string) $tool->getResult()->getMessage());
+    $this->assertStringContainsString('/send_day: Send day does not apply when Frequency is monthly (Monthly).', (string) $tool->getResult()->getMessage());
 
     $read = $tools->createInstance('data_surface:resource_test.bulletin:configure:read');
     $read->execute();

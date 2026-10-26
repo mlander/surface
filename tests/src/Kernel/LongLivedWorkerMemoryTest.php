@@ -21,7 +21,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * An MCP stdio server, a queue worker or a Drush batch validates, emits
  * and builds for as long as it runs. Every refine makes new definitions,
  * which the options memo kept for good (about 2.5 KB a call), and an
- * edit context per entity added a static access answer per entity id.
+ * update context per entity added a static access answer per entity id.
  * Both now let go: the options memo is weak, and the static answers keep
  * only the latest. So do the sealed builds the build step keeps for a
  * request: a worker building in one context after another keeps the
@@ -134,7 +134,7 @@ class LongLivedWorkerMemoryTest extends DataSurfaceKernelTestBase {
     $ask = new \ReflectionMethod($resources, 'ask');
     $account = $this->container->get('current_user');
     for ($id = 0; $id < $limit + 300; $id++) {
-      $context = new OperationContext('edit', known: ['id' => $id]);
+      $context = new OperationContext('update', known: ['id' => $id]);
       $answer = $ask->invoke($resources, ArchiveAccess::class, OperationAccessInterface::class, $context, $account);
       $this->assertInstanceOf(AccessAnswer::class, $answer);
       $this->assertTrue($answer->isStatic());
@@ -157,9 +157,8 @@ class LongLivedWorkerMemoryTest extends DataSurfaceKernelTestBase {
     $memo = new \ReflectionProperty($resources, 'builds');
     $limit = (new \ReflectionClassConstant($resources, 'BUILDS_KEPT'))->getValue();
     $this->assertIsInt($limit);
-    $context = static fn (int $capacity): OperationContext => new OperationContext('configure', constraints: [
-      'capacity' => ['Range' => ['min' => 1, 'max' => $capacity]],
-    ]);
+    $context = static fn (int $capacity): OperationContext => (new OperationContext('configure'))
+      ->withConstraint('capacity', 'Range', ['min' => 1, 'max' => $capacity]);
     for ($capacity = 1; $capacity <= $limit + 300; $capacity++) {
       $resources->build(RegistrationStep3Resource::class, $context($capacity));
     }

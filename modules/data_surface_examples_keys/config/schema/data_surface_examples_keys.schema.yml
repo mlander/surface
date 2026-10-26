@@ -1,0 +1,30 @@
+data_surface_examples_keys.keys:
+  type: config_object
+  label: 'Managed keys'
+  mapping:
+    keys:
+      type: sequence
+      label: 'Keys'
+      sequence:
+        type: mapping
+        label: 'Key'
+        mapping:
+          id:
+            type: machine_name
+            label: 'Machine name'
+          label:
+            type: label
+            label: 'Label'
+
+# Generated from the event.webhook resource by drush data_surface:config-schema.
+data_surface_examples.webhook.third_party.data_surface_examples_keys:
+  type: mapping
+  label: 'Managed key'
+  constraints:
+    FullyValidatable: ~
+  mapping:
+    key_id:
+      type: string
+      label: 'Key'
+      nullable: true
+      requiredKey: false

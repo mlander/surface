@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\data_surface\Kernel;
 
+use Drupal\Tests\data_surface\Traits\ServedControllerTrait;
 use Drupal\Core\Entity\Entity\EntityFormDisplay;
 use Drupal\data_surface_entity\Plugin\DataSurfaceOptionsResolver\ReferenceableOptions;
-use Drupal\data_surface_react\Controller\ResourceApiController;
+use Drupal\Core\Cache\CacheableJsonResponse;
 use Drupal\node\Entity\Node;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
-use Symfony\Component\HttpFoundation\Request;
 
 /**
  * Tests a reference's options say what they vary by.
@@ -28,6 +28,8 @@ use Symfony\Component\HttpFoundation\Request;
 #[Group('data_surface')]
 #[RunTestsInSeparateProcesses]
 class ReferenceableCacheabilityTest extends DataSurfaceKernelTestBase {
+
+  use ServedControllerTrait;
 
   use ContentEntityFixtureTrait;
   use UserCreationTrait;
@@ -58,9 +60,10 @@ class ReferenceableCacheabilityTest extends DataSurfaceKernelTestBase {
    * @return \Drupal\Core\Cache\CacheableJsonResponse
    *   The response.
    */
-  protected function schema() {
-    $request = Request::create('/surface-api/entity.content:node.page/add/schema');
-    return ResourceApiController::create($this->container)->schema($request, 'entity.content:node.page', 'add');
+  protected function schema(): CacheableJsonResponse {
+    $response = $this->served('GET', '/surface-api/entity.content:node.page/schema');
+    $this->assertInstanceOf(CacheableJsonResponse::class, $response);
+    return $response;
   }
 
   /**
@@ -68,7 +71,7 @@ class ReferenceableCacheabilityTest extends DataSurfaceKernelTestBase {
    */
   public function testNodeReferenceVariesByNodeGrants(): void {
     $response = $this->schema();
-    $schema = json_decode((string) $response->getContent(), TRUE)['schema'];
+    $schema = json_decode((string) $response->getContent(), TRUE);
     $this->assertArrayHasKey('field_related', $schema['properties']);
     $this->assertStringContainsString('A page to point at', (string) json_encode($schema['$defs']['field.item:node.page.field_related']), 'The targets are enumerated.');
     $contexts = $response->getCacheableMetadata()->getCacheContexts();

@@ -1,0 +1,33 @@
+{% autoescape false %}
+<?php
+
+declare(strict_types=1);
+
+namespace Drupal\{{ r.module }}\Resource;
+
+{% for use in r.uses %}
+use {{ use }};
+{% endfor %}
+
+/**
+{% for line in r.summary %}
+ *{{ line ? ' ' ~ line : '' }}
+{% endfor %}
+ */
+#[Resource({{ r.id_literal }}, storage: {{ r.storage_class }}::class)]
+#[Operation('configure',
+  label: new TranslatableMarkup({{ r.operation_label_literal }}),
+  description: new TranslatableMarkup({{ r.operation_description_literal }}),
+  permission: {{ r.permission_literal }},
+)]
+final class {{ r.resource_class }} implements ResourceInterface {
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function defineInputs(BlueprintInterface $inputs): void {
+{{ r.inputs }}
+  }
+
+}
+{% endautoescape %}

@@ -104,6 +104,30 @@ final class DefinitionMetadata {
   protected const EACH_KEY = 'data_surface_each';
 
   /**
+   * The offset where a key's variants say the provider that lists them.
+   */
+  protected const VARIANTS_FROM_KEY = 'data_surface_variants_from';
+
+  /**
+   * The offset marking variants a schema read into a structure states.
+   *
+   * Written by the build step on the key of variants a structure read from
+   * a schema document holds (a component in a slot, its props chosen by
+   * its id): the list is the document's, so the site's when a provider
+   * wrote it, and the budget for what the site decides counts it.
+   */
+  protected const READ_VARIANTS_KEY = 'data_surface_read_variants';
+
+  /**
+   * The offset marking a deciding key whose variants offer one value.
+   *
+   * Written by the build step on a deciding key that declares no list of
+   * its own and whose variants offer a single value: the key is a fixed
+   * value then, drawn as one and stated as `const`.
+   */
+  protected const ONE_VARIANT_KEY = 'data_surface_one_variant';
+
+  /**
    * The definition array key holding the label the owner gave a key.
    *
    * Written when an alter rewords a key it does not own, so what
@@ -120,6 +144,14 @@ final class DefinitionMetadata {
    * the same for fields, and has nowhere on a data definition to say it.
    */
   protected const ARRANGEMENT_KEY = 'data_surface_arrangement';
+
+  /**
+   * The definition array key holding what a computed key is computed from.
+   *
+   * Holds a Computed: the keys, the class computing it and when. Set by
+   * BlueprintInterface::compute() alone.
+   */
+  protected const COMPUTED_KEY = 'data_surface_computed';
 
   /**
    * Declares the value a definition starts from.
@@ -502,6 +534,39 @@ final class DefinitionMetadata {
   }
 
   /**
+   * Marks a deciding key whose variants offer one value.
+   *
+   * Its list is the variants' values, and there is one: nothing to
+   * choose, so a form draws the value fixed, with its label, and both
+   * documents state it as `const`. Only a list the variants derive is
+   * marked; a list the key declares is the author's, and is drawn as
+   * declared.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The deciding key.
+   *
+   * @see docs/decisions.md#an-extension-is-a-variant-the-site-adds-or-an-alter
+   */
+  public static function setOneVariant(DataDefinitionInterface $definition): void {
+    static::arrayAccess($definition)->offsetSet(static::ONE_VARIANT_KEY, TRUE);
+  }
+
+  /**
+   * Returns whether a deciding key's variants offer one value.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The definition to read.
+   *
+   * @return bool
+   *   TRUE when its list is the variants' and holds one value.
+   */
+  public static function isOneVariant(DataDefinitionInterface $definition): bool {
+    return $definition instanceof \ArrayAccess
+      && $definition->offsetExists(static::ONE_VARIANT_KEY)
+      && (bool) $definition->offsetGet(static::ONE_VARIANT_KEY);
+  }
+
+  /**
    * Marks a key its storage always holds a value for.
    *
    * Null on an optional key clears it, where clearing is possible. Where
@@ -537,6 +602,37 @@ final class DefinitionMetadata {
   }
 
   /**
+   * Says a key is computed from others, and how.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The key's definition.
+   * @param \Drupal\data_surface\Computed $computed
+   *   What it is computed from, by what, and when.
+   *
+   * @see docs/decisions.md#a-computed-key-is-a-pure-function-of-its-sources
+   */
+  public static function setComputed(DataDefinitionInterface $definition, Computed $computed): void {
+    static::arrayAccess($definition)->offsetSet(static::COMPUTED_KEY, $computed);
+  }
+
+  /**
+   * Reads what a key is computed from.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The key's definition.
+   *
+   * @return \Drupal\data_surface\Computed|null
+   *   What it is computed from, or NULL for a key a caller types.
+   */
+  public static function computedOf(DataDefinitionInterface $definition): ?Computed {
+    if (!$definition instanceof \ArrayAccess || !$definition->offsetExists(static::COMPUTED_KEY)) {
+      return NULL;
+    }
+    $computed = $definition->offsetGet(static::COMPUTED_KEY);
+    return $computed instanceof Computed ? $computed : NULL;
+  }
+
+  /**
    * Says what each entry of a map of keys from the site is.
    *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
@@ -567,6 +663,70 @@ final class DefinitionMetadata {
     }
     $each = $definition->offsetGet(static::EACH_KEY);
     return $each instanceof DataDefinitionInterface || is_string($each) ? $each : NULL;
+  }
+
+  /**
+   * Says that a key's variants come from the site, and from which provider.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The map attachVariants() declared.
+   * @param string $from
+   *   The provider's class.
+   *
+   * @see docs/decisions.md#a-schema-can-be-read-back-into-a-structure
+   */
+  public static function setVariantsFrom(DataDefinitionInterface $definition, string $from): void {
+    static::arrayAccess($definition)->offsetSet(static::VARIANTS_FROM_KEY, $from);
+  }
+
+  /**
+   * Reads which provider lists a key's variants from the site.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The definition to read.
+   *
+   * @return string|null
+   *   The provider's class; NULL for any other key, its variants classes
+   *   alone or none.
+   */
+  public static function variantsFrom(DataDefinitionInterface $definition): ?string {
+    if (!$definition instanceof \ArrayAccess || !$definition->offsetExists(static::VARIANTS_FROM_KEY)) {
+      return NULL;
+    }
+    $from = $definition->offsetGet(static::VARIANTS_FROM_KEY);
+    return is_string($from) ? $from : NULL;
+  }
+
+  /**
+   * Says that a key's variants were read from a schema document.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The map the variants are attached at.
+   *
+   * @see docs/decisions.md#a-budget-for-what-the-site-decides
+   */
+  public static function setReadVariants(DataDefinitionInterface $definition): void {
+    static::arrayAccess($definition)->offsetSet(static::READ_VARIANTS_KEY, TRUE);
+  }
+
+  /**
+   * Answers whether a key's variants are a list the site decides.
+   *
+   * Listed by a provider of variants from the site, or read from a schema
+   * document, which a provider wrote where it nests (a component in a
+   * slot).
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The map the variants are attached at.
+   *
+   * @return bool
+   *   TRUE when the site's list decides which variants there are.
+   *
+   * @see docs/decisions.md#a-budget-for-what-the-site-decides
+   */
+  public static function variantsListedBySite(DataDefinitionInterface $definition): bool {
+    return static::variantsFrom($definition) !== NULL
+      || ($definition instanceof \ArrayAccess && $definition->offsetExists(static::READ_VARIANTS_KEY));
   }
 
   /**

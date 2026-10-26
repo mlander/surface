@@ -379,7 +379,7 @@ class ExamplesComplianceTest extends DataSurfaceKernelTestBase {
       $messages($this->pipeline()->validate($this->surface(), ['capacity' => 150] + self::compliance('2048', 2) + self::EVENT)),
     );
     $this->assertSame(
-      ['This value should be between 1 and 100. This applies when Room is Main hall and Event license is empty.'],
+      ['This value should be between 1 and 100. This applies when Room is Main hall and Compliance: Event license is empty.'],
       $messages($this->pipeline()->validate($this->surface(), ['capacity' => 150] + self::compliance(NULL, 3) + self::EVENT)),
     );
   }
@@ -400,7 +400,7 @@ class ExamplesComplianceTest extends DataSurfaceKernelTestBase {
       $violations[$violation->fullPath()] = strip_tags((string) $violation->message);
     }
     $this->assertSame(
-      'This value should be between 1 and 100. This applies when Room is Main hall and Event license is empty (EV-2048 was refused).',
+      'This value should be between 1 and 100. This applies when Room is Main hall and Compliance: Event license is empty (EV-2048 was refused).',
       $violations['capacity'],
     );
     $this->assertSame('A license number is four digits, such as 2048.', $violations[self::LICENSE]);

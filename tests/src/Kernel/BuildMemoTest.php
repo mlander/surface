@@ -77,13 +77,13 @@ class BuildMemoTest extends DataSurfaceKernelTestBase {
    * Tests that a build asked twice in a request is made once.
    */
   public function testBuildIsMadeOncePerRequest(): void {
-    $context = $this->resources()->operation('entity.content:node.page', 'add');
+    $context = $this->resources()->operation('entity.content:node.page', 'create');
     $first = NULL;
     $second = NULL;
     $this->assertSame([1, 1], $this->counted(function () use ($context, &$first, &$second): void {
       $first = $this->resources()->build('entity.content:node.page', $context);
       // The same context made again, asked by the id's class-less name.
-      $second = $this->resources()->build('entity.content:node.page', $this->resources()->operation('entity.content:node.page', 'add'));
+      $second = $this->resources()->build('entity.content:node.page', $this->resources()->operation('entity.content:node.page', 'create'));
     }));
     $this->assertSame($first, $second);
   }
@@ -92,7 +92,7 @@ class BuildMemoTest extends DataSurfaceKernelTestBase {
    * Tests that a tag a build read makes it again, and no other tag does.
    */
   public function testWhatItReadInvalidatedBuildsAgain(): void {
-    $context = $this->resources()->operation('entity.content:node.page', 'add');
+    $context = $this->resources()->operation('entity.content:node.page', 'create');
     $build = fn () => $this->resources()->build('entity.content:node.page', $context);
     $build();
     $invalidator = $this->container->get('cache_tags.invalidator');
@@ -107,7 +107,7 @@ class BuildMemoTest extends DataSurfaceKernelTestBase {
    */
   public function testEachKindAndAccountKindIsItsOwn(): void {
     $resources = $this->resources();
-    $context = $resources->operation('entity.content:node.page', 'add');
+    $context = $resources->operation('entity.content:node.page', 'create');
     $all = function () use ($resources, $context): void {
       $resources->build('entity.content:node.page', $context);
       $resources->buildStatic('entity.content:node.page', $context);
@@ -137,7 +137,7 @@ class BuildMemoTest extends DataSurfaceKernelTestBase {
     $tools->getDefinitions();
     $this->resources()->forgetBuilds();
     [$built, $reused] = $this->counted(function () use ($tools, $node): void {
-      $tool = $tools->createInstance('data_surface:entity.content:node.page:edit');
+      $tool = $tools->createInstance('data_surface:entity.content:node.page:update');
       $tool->setInputValue('id', (int) $node->id());
       $tool->setInputValue('values', [
         'field_description' => ['value' => 'Second'],
@@ -163,11 +163,19 @@ class BuildMemoTest extends DataSurfaceKernelTestBase {
     $node->save();
     $check = $this->container->get('data_surface_react.access');
     assert($check instanceof ServedOperationAccessCheck);
-    $ids = ['resource' => 'entity.content:node.page', 'operation' => 'edit'];
-    $route_match = new RouteMatch('data_surface_react.contract', new Route('/surface-api/{resource}/{operation}'), $ids, $ids);
+    // The API's route, the page's id the path's one identity segment.
+    $ids = [
+      'resource' => 'entity.content:node.page',
+      's1' => (string) $node->id(),
+      's2' => '',
+      's3' => '',
+      's4' => '',
+      's5' => '',
+    ];
+    $route_match = new RouteMatch('data_surface_react.api', new Route('/surface-api/{resource}/{s1}/{s2}/{s3}/{s4}/{s5}'), $ids, $ids);
     $this->resources()->forgetBuilds();
     $this->assertSame([0, 0], $this->counted(function () use ($check, $route_match, $node): void {
-      $request = Request::create('/surface-api/entity.content:node.page/edit', 'GET', ['id' => $node->id()]);
+      $request = Request::create('/surface-api/entity.content:node.page/' . $node->id());
       $this->assertTrue($check->access($route_match, $this->container->get('current_user'), $request)->isAllowed());
     }));
   }

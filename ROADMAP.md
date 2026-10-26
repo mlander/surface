@@ -227,7 +227,8 @@ which serves the real contract.
    being invisible to enumeration. On top of it, a **list tool**
    through the bridge (drush is broken on this site) giving a human
    the thirty-second answer: every surface, where it lives, who
-   provides it, which kind. And a **form debug annotation**: when a
+   provides it, which kind. (The thirty-second answer DONE 2026-10-24
+   as `drush surface:catalog`, item 23.) And a **form debug annotation**: when a
    debug setting is on, generated forms carry an HTML comment naming
    the host id and provider class, the Twig-debug move, bridging a
    misbehaving page to the right file with no convention knowledge.
@@ -569,7 +570,8 @@ renames sit in A because they are cheapest before new code exists.
    states each as written (`x-surface.declared`); the compliance capacity
    was the first case and is exact now, its stewards still `dynamic`.
    Left out: a conditional lock, and an alter's rule on values it
-   offered with `extendChoices()`.
+   offered with `extendChoices()`. Example 14 rules a key out where a
+   lock was weighed, and quotes the spelling a lock would have.
 4. **Ports: a structure declares what it reads from its container.**
    DONE 2026-10-18 (`docs/decisions.md#a-port-is-a-live-sibling-value`,
    `docs/resources.md#ports`): `$inputs->reads('capacity', 'integer',
@@ -695,7 +697,7 @@ renames sit in A because they are cheapest before new code exists.
    the account alone, static answers applied, runtime ones set aside and
    their keys marked; a static answer is asked once per context and
    account kind and kept, asked again under `assert()` with the container
-   guarded (`StaticRefinerContainer::guardAccess()`), and held to the
+   guarded (`PipelineGuard::guardAccess()`), and held to the
    build by `StaticAccessAgreementTrait`; the full schema (the schema
    route, the contract panel) and the tool listing, a tool instance
    listing `values` for the account that asks, state static answers and
@@ -756,7 +758,7 @@ renames sit in A because they are cheapest before new code exists.
    `docs/decisions.md#required-is-the-resources-and-an-update-tool-requires-nothing-at-its-door`): a tool listing is
    cached by clients and is a discovery channel, so it stops carrying
    current stored values as `default`. A create operation lists the
-   declared defaults; an edit operation lists none and says in its
+   declared defaults; an update operation lists none and says in its
    description that a key left out keeps its current value and that the
    read tool returns current values. The schema for these answers keeps
    current values in `values` (per request, never cached) and the full
@@ -860,7 +862,13 @@ renames sit in A because they are cheapest before new code exists.
    first override (country narrows subdivisions), path alias as the
    first alter with a storage of its own, and a placed block as a
    config entity resource whose settings are variants chosen by plugin
-   id, each plugin's structure one of them. And base field items shared
+   id, each plugin's structure one of them (DONE 2026-10-23,
+   `docs/decisions.md#a-placed-block-is-a-resource`: `data_surface_block`'s
+   `block.placement`, placed, configured, moved within its theme and
+   removed through four tools, HTTP with `DELETE` for a delete, and a
+   form; `ConfigEntityStorage` a resource's storage, `NodeTypeStorage`
+   rebuilt on it; open: context-aware plugins, moving between themes,
+   Layout Builder). And base field items shared
    across bundles (11 of a basic page's 14 field items are base fields,
    derived again for every bundle), deferred here from the performance
    review's H7 because it changes the id shape.
@@ -891,6 +899,14 @@ renames sit in A because they are cheapest before new code exists.
       concept, the question that makes you need it, and the sentence to
       skip it. Smithy's recurring complaint is weight; this is the
       defense.
+    - **An API budget, pinned.** DONE 2026-10-24: the public surface
+      was counted and cut, 195 names to 182 and 49 concept rows to 44
+      (`docs/decisions.md#the-surface-was-counted-and-cut`), and the
+      count is pinned: `PublicSurfaceTest` counts the attributes, their
+      arguments, the blueprint methods and the interfaces under
+      `src/Resource/` (9, 30, 15, 20) and fails when the count moves
+      without the test updated beside a reason. It is the concept budget
+      for the API, as the first page is for the docs.
     - **Fresh eyes, twice.** First a reader with no context (an agent
       given only the docs and a task, none of this history) writes a
       resource with a structure, an alter and a runtime rule from the
@@ -926,7 +942,12 @@ renames sit in A because they are cheapest before new code exists.
       them together.
     - **The audit stays green.** the matrix tests (`AdvertisedSchemaAcceptanceTest`, `InputCoercionMatrixTest`) pin the
       invariant; a breach decided and fixed changes a test on purpose,
-      never silently. New doors and new kinds add cases to it.
+      never silently. New doors and new kinds add cases to it. An
+      adopter holds it the same way, with `ResourceTestBase`
+      (`docs/testing-a-resource.md`): never stricter, the round trip,
+      the static refiner and access agreement, every door agreeing and
+      the contract baseline, for its own resources, from its own
+      kernel test (DONE 2026-10-24, item 24).
     - **An evolution design before anyone depends on a resource.**
       DONE 2026-10-19 (`docs/evolution.md`,
       `docs/decisions.md#a-resource-evolves-in-the-open`): the
@@ -1209,6 +1230,251 @@ renames sit in A because they are cheapest before new code exists.
     - Held by `PerformanceBudgetTest` (builds counted, entries sized) and
       `LongLivedWorkerMemoryTest`. Open: the Tool API's single item,
       read whole by every listing; H7 is ROADMAP item 11.
+
+15. **Reading a schema.** DONE 2026-10-22
+    (`docs/decisions.md#a-schema-can-be-read-back-into-a-structure`,
+    `docs/reading-a-schema.md`). `Contract\SchemaReader` reads a JSON
+    Schema (2020-12, draft-04 to -07 converted first) into a blueprint,
+    the emitter's mapping run backwards: `$inputs->fromSchema()`, and
+    variants from the site, `attachVariants(..., from:)` with a
+    `VariantsFromSiteInterface` provider, each variant read from its own
+    schema. What no keyword says is kept as a `JsonSchema` constraint on
+    the key or the frame, checked with opis/json-schema, now a runtime
+    dependency, and named under `checkedOnServer` with its schema. The
+    full schema of every shipped declaration with no runtime refiner
+    reads back to itself, or differs in what its kind says
+    (`SchemaRoundTripTest`). Example 12 reads every single-directory
+    component's props (`/surface-examples/12`). Open: a mixin's port
+    wiring and a site's lock, which no document states; a per-entry
+    wiring of keys from the site; more `format`s with a constraint of
+    their own; a preview of the chosen component on example 12's page.
+
+16. **A block embeds a component.** DONE 2026-10-23
+    (`docs/decisions.md#a-block-embeds-a-component-through-its-structure`).
+    `data_surface_component_block`: a block, "Component", whose settings
+    are example 12's two lines named by `#[UsesStructure]`, so its form,
+    validation and storage come from the block host, and which renders
+    the component with the props it holds. The provider, `ComponentProps`,
+    moved to the main module, shared by example 12 and the block. A
+    placed component block is a resource, `block.placed_component`,
+    named by its machine name, with a write tool and a read tool.
+    Example 13 at `/surface-examples/13`. Open: listing the placed
+    blocks (how a resource lists its things is settled by item 19; the
+    placement resource gains `list` that way when it is wanted); the add
+    form without JavaScript (After the rework, item 7).
+    Closed 2026-10-23: a placed block of any plugin as one resource,
+    `block.placement` (item 11), which replaced
+    `block.placed_component`; placing, moving within a theme and
+    removing blocks through a tool; the component's slots (item 17).
+
+17. **A component's slots.** DONE 2026-10-23
+    (`docs/decisions.md#a-slot-holds-text-a-component-or-components`).
+    `slots` beside `props`, one key per slot a component's metadata
+    declares, from a second provider, `ComponentSlots`, chosen by the
+    same component; each slot holds text, one component (the same three
+    keys again) or a list of them, three deep at most. What a slot
+    expects (`expected` by id or tag, `minItems`, `maxItems`) is a
+    refusal both documents state. The shipped components gained slots:
+    the card's `body`, the hero's `actions`, and a fourth, `section`,
+    whose `content` takes any component tagged `block`. Example 13
+    places a section holding a card. Shared defs a provider lists once
+    (`VariantList::addDefs()`) and read structures built once
+    (`Resources::buildRead()`) keep a site with hundreds of components
+    to a def per shape. Open: the list of components on the block form;
+    formatted text in a slot.
+
+18. **An alter may supply a value it rules out.** Designed, not built;
+    for a decision of its own. Found by example 14 (DONE 2026-10-23,
+    `docs/decisions.md#an-extension-is-a-variant-the-site-adds-or-an-alter`:
+    a credential pasted as a secret or a key the site manages, once as
+    the owner's variants from a closed provider, once as another
+    module's alter, at `/surface-examples/14`). The alter's way leaves
+    a gap the owner's way does not: the alter rules the pasted key out
+    once a managed key is chosen, and the owner's code, which reads
+    `api_key`, gets no key, since it never names the alter's `key_id`.
+    - **The design.** An alter that rules a key out
+      (`narrow('api_key')->when(Condition::present('key_id'))->doesNotApply()`)
+      may supply that key's value at load, from what it mounted: the
+      key service's value for the stored `key_id`, with the cacheability
+      of what it read. The owner's frame then holds the resolved value at
+      `api_key`, as the owner's code reads it, and storage never does:
+      the write path treats a supplied key as a key that does not apply,
+      keeping what is stored under it and writing nothing new.
+    - **Why it needs a decision of its own.** It is the first thing to
+      enter the owner's frame from outside after the seal. Today an
+      alter adds keys under its own mount, narrows the owner's keys and
+      answers access; nothing it reads crosses into the owner's values.
+      A supplied value does, so the owner's code would run on a value
+      no caller sent and no storage holds.
+    - **What to weigh.** Secrets never stored: a supplied secret is
+      never written and is answered by no door, as a stored secret is
+      not, and the write path must not mistake it for one sent.
+      Cacheability of the supplied value: a key service's answer may be
+      tagged or per request, and the owner's code must not cache past it,
+      so it travels with the built resource, as a provider's list does.
+      The read tool's view: it answers stored values less secrets, and a
+      supplied value is neither stored nor sent, so whether the read
+      shows a supplied non-secret value, and marked how, is part of the
+      decision. The contract's `x-surface` mark: the full schema states
+      `api_key` ruled out where `key_id` is present, and a supplied
+      value needs a mark naming who supplies it, so a client does not
+      read "does not apply" as "holds nothing".
+    - Until then, an owner that needs a managed key's value integrates
+      the key module itself, as the mailer does.
+
+19. **A listing and a reorder.** DONE 2026-10-23
+    (`docs/decisions.md#a-listing-is-a-read-only-operation-with-outputs-a-reorder-is-an-update-over-the-collection`).
+    Example 15 at `/surface-examples/15`: a config entity type the
+    examples module declares, `event_venue`, with a resource over it from
+    the start, `event.venue`, on a `VenueStorage`. Closes the listing gap
+    the placement unit left (item 16): an operation may take the keys of
+    a structure of its own (`#[Operation(values:)]`); a listing is a read
+    only operation with outputs, answered from its storage's prepare,
+    each thing filtered by the resource's access answer for it, and
+    `GET` on a collection answers it where a resource declares one; a
+    reorder is an update over the collection, written in one commit, a
+    custom method run with `PATCH`. The config schema command writes an
+    entity type's schema from its resource. Example 2 chooses its venue
+    and room from the venues, through a resolver whose list is the whole
+    of its constraint (`exact: TRUE`). Open: `list` on the placement
+    resource, a page of a theme's placed blocks; a next page as a link; a
+    `sort` input; example 2's capacity cap still read from `Venues`,
+    until a refiner can read a site's list as a resolver does.
+
+20. **A key that refers to an entity.** DONE 2026-10-23
+    (`docs/decisions.md#a-reference-is-an-id-with-a-list-the-site-decides-listed-or-looked-up`).
+    Example 16 at `/surface-examples/16`, in
+    `data_surface_examples_references`: `add($key, 'entity:<type>')`,
+    `'entity:<type>:<bundle>'` and the bare `'entity'`, the id stored;
+    the candidates core's selection handler's for the account; listed up
+    to `data_surface.settings:reference_enum_limit`, an id past it, with
+    core's entity autocomplete on the form, `x-surface.widget:
+    autocomplete` in both documents and the resource's lookup, `GET
+    .../{x}:lookup`, which the tool listing names, the React app calls
+    and the OpenAPI document describes; `x-surface.reference` on every
+    reference key. Open: a uuid representation; a multi-value reference,
+    a list of references; the entity side's two shapes, a reference
+    field's `target_id` item beside a reference key, with no marker; a
+    lookup tool for an agent with no HTTP; a custom method's own lookup;
+    a stored id the account may no longer reference.
+
+21. **A key computed from others.** DONE 2026-10-23
+    (`docs/decisions.md#a-computed-key-is-a-pure-function-of-its-sources`).
+    Example 15's venues gain `slug`, computed from the name when a venue
+    is added: `$inputs->derive('slug', 'string', t('Slug'), from:
+    ['label'], using: Slugify::class)`, the class a static
+    `DeriverInterface::derive()` run under the static guard and the
+    PHPStan rule. Computed in `accept()` once the rest is accepted,
+    judged by its own constraints and the venue storage's rule that a
+    slug is held once, a refusal naming the name; `when:
+    Derive::ON_CHANGE` computes it again on every write that changes a
+    source. A value sent equal to the one it holds is noted, any other
+    refused, code `computed`. Both documents state it `readOnly` with
+    `x-surface.computed`; the write tool's `values` leaves it out, the
+    read answers it, the form draws it fixed, the React page shows what
+    `POST .../schema` computes as the name is typed. Open: a runtime
+    deriver (a changed time stays storage's); a computed key in a
+    structure or under an alter's mount; recomputing on demand; a
+    deriver the React page runs locally.
+
+22. **The generator.** DONE 2026-10-24
+    (`docs/decisions.md#the-generator-writes-what-the-first-page-shows`).
+    `drush generate surface:resource` writes what the first page lists
+    from an interview, `--from-config-schema=<name>` or
+    `--from-json-schema=<file>`; the newsletter's answers write
+    `data_surface_first` byte for byte, a foreign constraint is a comment
+    naming the keyword and the key, and a routing or permissions file is
+    added to, never replaced ([Generating a resource](docs/generating.md)).
+    Open: a resource with identity in a config entity type; a variant, a
+    mixin or a port read from a schema written as code rather than as a
+    comment.
+23. **The site's catalog.** DONE 2026-10-24
+    (`docs/decisions.md#the-catalog-is-the-sites-live-map`,
+    `docs/catalog-command.md`). `drush surface:catalog` lists every
+    resource and structure on the site with each operation's doors (the
+    form route, the HTTP path, the tool and the read tool, the OpenAPI
+    operation, the React page, each named by the module that opens it)
+    and every build refusal with its file; `--resource` shows one in
+    full, `--refused` only what did not build. `docs/catalog.md` is its
+    markdown for this repository's modules. Open: a door for a plugin's
+    host (the block or formatter form a structure is configured in).
+24. **An adopter's tests hold the invariants.** DONE 2026-10-24
+    (`docs/decisions.md#an-adopters-tests-hold-the-invariants`,
+    `docs/testing-a-resource.md`). `ResourceTestBase`: an adopter names
+    its modules, its resource ids and optionally rows of values, and
+    each resource is held never stricter, read back by kind, to its
+    static refiners and access, to one answer at every door and to its
+    contract baseline. `FirstResourceInvariantsTest` holds the first two
+    resources with it; run over the honeypot port it passes. Open: an
+    operation that needs a subject; a `uri` key sent a value of another
+    type crashes core's primitive type validator through the Tool API.
+
+25. **Nothing an operation runs reads the request.** DONE 2026-10-24
+    (`docs/decisions.md#nothing-an-operation-runs-reads-the-request`,
+    `docs/resources.md#no-door-specific-context`). The guard
+    (`Pipeline\PipelineGuard`, once `StaticRefinerContainer`) refuses
+    the request, route, session, form, theme and current user to runtime
+    refiners, access classes, alters, providers, derivers, options
+    resolvers and storages under `assert()`, an injected one included;
+    `DoorSpecificRule` flags the same in PHPStan. The account is an
+    argument: each storage write verb and a runtime refiner's
+    `AccountInterface` parameter. `DoorAgreementTrait` holds the
+    pipeline, the tool, the HTTP API and the form to one answer, and
+    `EveryDoorAgreesTest` runs it over every resource shipped and every
+    fixture, which found and fixed four disagreements. Open: a nullable
+    boolean filter drawn as a checkbox cannot say "any"; the plugin
+    hosts' forms say a refusal from their submit handler; core's
+    selection handler reads the current user for a reference's options.
+
+26. **Performance that every host supports.** DONE 2026-10-24
+    (`docs/decisions.md#the-static-build-is-cached-the-rest-is-per-request`,
+    `docs/performance.md`). A build for no account is kept across
+    requests in `cache.data_surface_build`, keyed by the memo's key and
+    the languages and dropped by every tag it was read from; a sealed
+    surface stores and wakes equal (`SerializedMaps` keeps what core's
+    map definitions drop), or is refused by name. A variant the site
+    lists is built when a door reads it (`VariantToSettle`), so the
+    spotlight's kept build is 374 KB where every component built was
+    10.9 MB. The operation form commits what validation prepared; the
+    OpenAPI document is kept and served with an `ETag` and 304. Held by
+    `BuildCacheTest`, `LazyVariantsTest`, `OnePreparePerSubmitTest` and
+    `BuildBenchmarkTest`. Open: builds for an account are per request;
+    the catalog builds every variant; a theme of about 850 components
+    passes memcached's 1 MB item.
+
+27. **Access borrowed from another thing.** DONE 2026-10-25
+    (`docs/decisions.md#a-gate-is-borrowed-never-copied`,
+    `docs/resources.md#a-gate-borrowed-from-another-thing`).
+    `#[Operation(gate:)]` names access another thing's owner decides:
+    another resource's operation by id, answered whole, or core's access
+    on an entity or a field, `entity:node:update` and
+    `field:node.title:edit`. Asked after the operation's permission and
+    before its access class, which narrows only, about the entity the
+    context knows, or per item of a collection whose item refers to one,
+    a refusal filed on that item's key with the owner's reason and the
+    storage never handed the item; a gate naming what the site lacks is
+    refused at discovery. A dry run answers the outputs prepare
+    rehearsed. Example 17 at `/surface-examples/17`, in
+    `data_surface_examples_retitle`: a bulk retitle of nodes, `ai.retitle`,
+    with a deterministic rewriter and no model. Open: a gate on a child's
+    operation; a gate per item inside an item; the tool listing's
+    sentence on a gated list says "locked or left out" where a gate
+    refuses.
+
+## Maintenance
+
+- **Functional tests convert to kernel tests as units touch them**, by
+  the rule in `CLAUDE.md` (Running the suite): a test that only submits
+  a form and reads config back is a kernel test. None is converted
+  ahead of the work that touches it. A grep of the 30 functional
+  classes (2026-10-23) finds none that never asserts on rendered markup
+  or routing; 7 are candidates because what they read from the page is
+  form state a kernel test reads from the built form. Two read only
+  element state and the save message (`MixinFormTest`,
+  `FieldUiAddressSettingsTest`); five also read one form fact from
+  markup, an `.error` class, `aria-invalid`, `aria-label`, `maxlength`
+  or `disabled` (`ExamplesStep2ClassicTest`, `RemoveButtonNamesTest`,
+  `NestedCollectionFormTest`, `ShapeFormTest`, `KeysFromSiteFormTest`).
 
 ## Rejected, on the record
 

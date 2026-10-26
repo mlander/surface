@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { createContext, type ReactNode } from 'react';
 import type { Schema, Values } from '../contract';
 import { fieldId } from '../contract';
 
@@ -22,14 +22,29 @@ export interface FieldProps {
   disabled?: boolean;
 }
 
+/**
+ * Looks candidates of a reference key up, by the key's dotted path and
+ * the text their labels contain; for a bare reference's id, of the entity
+ * type its sibling holds. Null where no page provides one.
+ */
+export type Lookup = (path: string, text: string, type?: string) => Promise<{ id: string | number; label: string }[]>;
+
+export const LookupContext = createContext<Lookup | null>(null);
+
 /** The note a locked element carries, as the form builder appends it. */
 export const LOCKED_NOTE = 'Fixed for this operation.';
+
+/** The note a computed key carries, by when it is computed, in place of the locked one. */
+export const COMPUTED_NOTES = {
+  create: 'Computed from other keys when this is created, and kept as it is after.',
+  change: 'Computed from other keys, again whenever they change.',
+} as const;
 
 /** The note a secret carries, as the string widget appends it. */
 export const SECRET_NOTE = 'Leave blank to keep the current value.';
 
 export function isLocked(props: FieldProps): boolean {
-  return Boolean(props.disabled || props.schema['x-surface']?.locked || props.schema.readOnly);
+  return Boolean(props.disabled || props.schema.readOnly);
 }
 
 /** The required marker: drawn, and not read twice by a screen reader. */
@@ -43,11 +58,13 @@ export function RequiredMarker(): JSX.Element {
 
 /**
  * What is said under an element: its description, the help its
- * arrangement gives, and the locked or secret note, as the form builder
- * appends them.
+ * arrangement gives, and the locked, computed or secret note, as the form
+ * builder appends them.
  */
 function notesOf(props: FieldProps): string[] {
-  return [props.schema.description, props.schema['x-surface']?.arrangement?.help, isLocked(props) ? LOCKED_NOTE : undefined, props.schema.writeOnly ? SECRET_NOTE : undefined]
+  const computed = props.schema['x-surface']?.computed;
+  const fixed = computed !== undefined && !props.disabled ? COMPUTED_NOTES[computed.when] : isLocked(props) ? LOCKED_NOTE : undefined;
+  return [props.schema.description, props.schema['x-surface']?.arrangement?.help, fixed, props.schema.writeOnly ? SECRET_NOTE : undefined]
     .filter((note): note is string => typeof note === 'string' && note !== '');
 }
 

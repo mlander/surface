@@ -272,9 +272,10 @@ interface DataSurfacePipelineInterface {
    * Values are arrays, and an empty PHP array encodes as a JSON list:
    * here every map is an object, an empty one included (a map whose
    * every key does not apply, a mount with nothing in it), and every
-   * list a list, as the served contract writes its own `values`. It
-   * writes what it is handed: a door hands it what outbound() projected,
-   * never the accepted values as they are.
+   * list a list, as the served contract writes its own `values`. A
+   * secret that holds nothing is left out, since null is no value of it.
+   * It writes what it is handed: a door hands it what outbound()
+   * projected, never the accepted values as they are.
    *
    * Decision: see docs/decisions.md#a-key-that-does-not-apply, and
    * docs/decisions.md#every-door-projects-what-the-read-tool-projects.
@@ -330,5 +331,30 @@ interface DataSurfacePipelineInterface {
    *   not take, blocking nothing.
    */
   public function submit(DataSurfaceInterface $surface, array $input, DataSurfaceStorageInterface $storage, bool $dry_run = FALSE, ?AccessResultInterface $access = NULL): DataSurfaceResult;
+
+  /**
+   * Commits what a dry run prepared, without preparing it again.
+   *
+   * For a door that runs submit() dry to judge the values and then writes
+   * them in the same request, as a form validates and then submits: the
+   * dry run's prepared artifact is committed when the run would have
+   * written (DataSurfaceResult::$writes), and the result is the one the
+   * whole run would have answered. The caller holds the window between
+   * the two closed: what storage holds and the values sent are the ones
+   * the dry run read, which a fingerprint of each shows; otherwise it
+   * runs submit() again.
+   *
+   * @param \Drupal\data_surface\Pipeline\DataSurfaceResult $dry
+   *   The dry run, valid, which reached prepare.
+   * @param \Drupal\data_surface\Pipeline\DataSurfaceStorageInterface $storage
+   *   The storage the dry run prepared for.
+   *
+   * @return \Drupal\data_surface\Pipeline\DataSurfaceResult
+   *   The result, committed unless the operation changes nothing.
+   *
+   * @throws \LogicException
+   *   When the run was refused, stopped before prepare, or was written.
+   */
+  public function commitDryRun(DataSurfaceResult $dry, DataSurfaceStorageInterface $storage): DataSurfaceResult;
 
 }

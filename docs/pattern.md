@@ -84,7 +84,7 @@ modules/data_surface_address/src/
   Storage/AddressFieldSettingsStorage.php    and stores them itself
 
 modules/data_surface_demo_node_type/src/
-  Resource/NodeTypeResource.php       a content type, with add and edit
+  Resource/NodeTypeResource.php       a content type, with create and update
 
 modules/data_surface_demo_extras/src/
   Alter/DemoBlockAlter.php            adds a key, rewords one, narrows one
@@ -103,7 +103,7 @@ method.
 | | Blueprint | Values |
 | --- | --- | --- |
 | **Owner** | `static defineInputs($inputs)`, optionally `static defineOutputs($outputs)` | static `#[RefinesInput('key')]` methods |
-| **Another module** | `alterInputs($inputs)`, optionally `alterOutputs($outputs)` | `#[RefinesInput('key')]` methods |
+| **Another module** | `alterInputs($inputs)` | `#[RefinesInput('key')]` methods |
 
 - **`defineInputs()` and `alterInputs()` get a blueprint to fill, and nothing else**: no
   values, no context, no services. On a resource or structure they are
@@ -121,9 +121,8 @@ method.
   and outputs use the same two interfaces.
 - **A `#[RefinesInput('bundle')]` method takes the key's definition
   first, then one parameter per sibling it watches**, matched by name
-  to that sibling's key, or listed on the attribute as `watches:` when
-  a renamed parameter should fail at build rather than silently stop
-  watching. Its signature is its dependency declaration, the way an
+  to that sibling's key: one that names no declared key fails at build,
+  so a renamed parameter never silently stops watching. Its signature is its dependency declaration, the way an
   operation method's is. `DemoBlockStructure::fieldOfBundle()` watches
   the entity type and the bundle. It runs once every watched sibling has
   a value (a key its alter mounted is never waited for), and again when
@@ -266,11 +265,11 @@ final class AddressFieldSettingsResource implements ResourceInterface {
 Each class's `use` line: [Namespaces](concepts.md#namespaces).
 
 The deciding key's allowed values become exactly the values the
-variants are for. Variants may also come from a description that
-already exists: a service implementing `DerivedVariantsInterface` adds
-variants for the values no variant class declares.
-`FieldSettingsSchemaVariants` derives a plain `string` or `integer`
-field's settings from `field.field_settings.<field type>`, and
+variants are for. Variants may also come from the site: `from:` names a
+provider (`SiteListInterface`) listing one per thing, each read from a
+description that already exists. `FieldSettingsSchemaVariants` lists a
+plain `string` or `integer` field's settings from
+`field.field_settings.<field type>`, and
 `FieldStorageSettingsSchemaVariants` its storage settings from
 `field.storage_settings.<field type>`, so a string's `max_length` can be
 set when the field is added. A declared variant always wins.
@@ -291,9 +290,9 @@ something from its parent, the parent hands it over as identity in the
 child's context, which is how the storage learns which field it belongs
 to. That keeps every child buildable and testable on its own.
 
-## Operations: add, reuse, edit
+## Operations: create, reuse, update
 
-A resource never mentions add or edit. The difference between them is
+A resource never mentions create or update. The difference between them is
 not which keys there are. It is how much is already known.
 
 - `#[Resource(identity: [...])]` names the **identity keys**: the input
@@ -307,35 +306,33 @@ not which keys there are. It is how much is already known.
   whether it creates. One that needs nothing more stands on the class
   and has no method (a settings object's `configure`); one whose
   context needs more is a **static method on the class**:
-  `FieldInstanceResource::add()`, `::reuse()`, `::edit()`. Each returns
+  `FieldInstanceResource::create()`, `::reuse()`, `::update()`. Each returns
   an `OperationContext` and knows more than the last; what it needs is
   its own signature. Whether it creates is on the attribute, stamped on
   the context, where the storage reads it.
-- **Another module can add one.** `#[Operation('clone', of:
-  FieldInstanceResource::class)]` on a static method of any class in its
-  `src/Alter/` is found the way a hook method is, no interface
-  needed, typically building on one of the owner's operations and
-  giving the context starting values with `withDefaults()`.
+- **On the owner's class only.** An operation stands on its
+  resource's or structure's own class, found the way a hook method is,
+  no interface needed; one on any other class is refused at discovery.
 
 That makes operations listable ([the catalog](catalog.md)),
-addressable (`field.instance:edit`), and generatable: one route or one
+addressable (`field.instance:update`), and generatable: one route or one
 tool per operation, its inputs being the parameters plus the resource's
 open keys.
 
-| Keys | `add()` | `reuse()` | `edit()` |
+| Keys | `create()` | `reuse()` | `update()` |
 | --- | --- | --- | --- |
 | Entity type, bundle | locked | locked | locked |
 | Field type, machine name | open | locked | locked |
 | Label, help text, required | open | open | open, current values loaded |
-| Storage (attached resource) | its own add | its own edit | its own edit |
+| Storage (attached resource) | its own create | its own update | its own update |
 | Field settings | chosen by field type | fixed by the known type | fixed by the known type |
 | Storage settings | chosen by the storage's field type | fixed by the known type | fixed by the known type |
 
 An operation can hand a child its own context (`withChild()`), or name
 one of the child's operations for it (`withChild('storage',
-operation: 'edit', known: [...])`): reusing a storage is an add for
-the field and an edit for its storage.
-An operation can also narrow (`withConstraint()`): the storage's edit
+operation: 'update', known: [...])`): reusing a storage is a create for
+the field and an update for its storage.
+An operation can also narrow (`withConstraint()`): the storage's update
 operation, when the field has data, constrains cardinality not to
 shrink. The rule: **what depends on where you are is the operation's;
 what depends on what was entered is a refiner's.**
@@ -413,7 +410,8 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
   owner's away (`DemoFormatterAlter`).
 - An alter that only tightens implements no interface: the attribute is
   what makes it an alter.
-- An alter may answer access, implementing `AltersAccessInterface`: it
+- An alter may answer access, implementing `OperationAccessInterface`,
+  the access class's interface, its role read from `#[Alters]`: it
   is asked after the owner's answer and the stricter stands, so it locks
   or leaves out and never opens
   ([decision](decisions.md#an-alter-may-answer-access-and-the-stricter-stands)).

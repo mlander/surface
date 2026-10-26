@@ -1,7 +1,7 @@
 {
     "resource": "registration.step3.ticket.free",
     "module": "data_surface_examples",
-    "contract": 2,
+    "contract": 4,
     "documents": [
         {
             "resource": "registration.step3.ticket.free",
@@ -10,7 +10,7 @@
             "schema": {
                 "$schema": "https://json-schema.org/draft/2020-12/schema",
                 "x-surface": {
-                    "contract": 2,
+                    "contract": 4,
                     "version": 1
                 },
                 "type": "object",
@@ -21,11 +21,7 @@
                         "type": [
                             "string",
                             "null"
-                        ],
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": []
-                        }
+                        ]
                     }
                 },
                 "additionalProperties": false

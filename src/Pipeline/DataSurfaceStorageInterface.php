@@ -25,8 +25,8 @@ interface DataSurfaceStorageInterface {
    *
    * The data surface is an argument rather than something a storage
    * holds, because a storage describes a destination and a data surface
-   * describes values: the same destination serves the add operation and
-   * the edit operation of one resource, and a storage that held the data
+   * describes values: the same destination serves the create operation and
+   * the update operation of one resource, and a storage that held the data
    * surface of one of them could not. It is also what keeps a storage
    * free of the data surface when it rides along on a cached form.
    *

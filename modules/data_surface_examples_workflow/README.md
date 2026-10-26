@@ -5,7 +5,8 @@ extended: another module answers access for a resource it does not own.
 
 ## What it shows
 
-Two alters, each implementing `AltersAccessInterface`, and nothing else:
+Two alters, each implementing `OperationAccessInterface` (`#[Alters]`
+on the class makes it an alter's answer), and nothing else:
 no form alter, no change to example 10's program or its fees.
 `Alter\FeesWorkflowAlter` names the fees structure. An account without
 "see event fees", this module's permission, does not see the fees at

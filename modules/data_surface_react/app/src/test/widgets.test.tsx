@@ -5,11 +5,12 @@ import type { Extension, Schema, Values } from '../contract';
 import { setAt } from '../contract';
 import { ContractPanel } from '../ContractPanel';
 import { Properties } from '../widgets/Field';
+import { LookupContext, type Lookup } from '../widgets/Shell';
 
 // Each widget from a schema fragment the way the emitter writes one.
 
 function x(widget: Extension['widget'], more: Partial<Extension> = {}): Extension {
-  return { widget, locked: false, dependsOn: [], refined: false, stale: false, ...more };
+  return { widget, ...more };
 }
 
 /** Renders an object schema's properties over values, editable. */
@@ -347,11 +348,26 @@ describe('checkboxes, radios and a time', () => {
   });
 });
 
+describe('computed', () => {
+  it('renders a computed key disabled, holding what the server computed, saying so', () => {
+    render(
+      <Form
+        schema={object({ slug: { title: 'Slug', description: 'The name in a link.', type: ['string', 'null'], readOnly: true, 'x-surface': x('text', { computed: { from: ['label'], when: 'create' } }) } }, [])}
+        initial={{ slug: 'town-hall' }}
+      />,
+    );
+    const input = screen.getByLabelText(/Slug/);
+    expect(input).toBeDisabled();
+    expect(input).toHaveValue('town-hall');
+    expect(input).toHaveAccessibleDescription('The name in a link. Computed from other keys when this is created, and kept as it is after.');
+  });
+});
+
 describe('locked', () => {
   it('renders a locked key disabled, saying why', () => {
     render(
       <Form
-        schema={object({ type: { title: 'Machine name', description: 'Unique.', type: 'string', readOnly: true, const: 'article', 'x-surface': x('text', { locked: true }) } }, ['type'])}
+        schema={object({ type: { title: 'Machine name', description: 'Unique.', type: 'string', readOnly: true, const: 'article', 'x-surface': x('text') } }, ['type'])}
         initial={{ type: 'article' }}
       />,
     );
@@ -363,13 +379,13 @@ describe('locked', () => {
 
   it('renders a child its access locked as a fieldset of disabled keys, holding what is stored', () => {
     // As the emitter writes a locked child: the fieldset and every key in
-    // it readOnly and locked, each holding its stored value.
+    // it readOnly, each holding its stored value.
     const locked = (title: string, value: unknown, widget: Extension['widget']): Schema => ({
       title,
       type: widget === 'number' ? 'integer' : 'string',
       readOnly: true,
       const: value,
-      'x-surface': x(widget, { locked: true }),
+      'x-surface': x(widget),
     });
     render(
       <Form
@@ -379,7 +395,7 @@ describe('locked', () => {
             type: 'object',
             readOnly: true,
             properties: { spices: locked('Spices', 7, 'number'), label: locked('Label', 'Everyday', 'text') },
-            'x-surface': x('fieldset', { locked: true }),
+            'x-surface': x('fieldset'),
           },
         })}
         initial={{ rack: { spices: 7, label: 'Everyday' } }}
@@ -527,8 +543,9 @@ describe('fieldset, variants and list', () => {
   });
 
   it('locks the chosen variant\'s fieldset with the key with variants, which says it', () => {
-    // A variant's conditional carries no `x-surface`: the lock is the key's.
-    const locked: Schema = { ...ticketVariants, 'x-surface': { ...(ticketVariants['x-surface'] as Extension), locked: true } };
+    // A variant's conditional carries no `x-surface`: the lock is the
+    // key's `readOnly`.
+    const locked: Schema = { ...ticketVariants, readOnly: true };
     render(<Form schema={object({ pricing, ticket: locked }, [], branches)} initial={{ pricing: 'free', ticket: { note: 'Donations welcome' } }} />);
     expect(screen.getByLabelText('Note')).toBeDisabled();
     expect(screen.getByRole('group', { name: 'Ticket' })).toHaveTextContent('Fixed for this operation.');
@@ -573,7 +590,7 @@ describe('a collection', () => {
     items: rack,
     minItems: 1,
     maxItems: 3,
-    'x-surface': x('list', { list: true, ...extension }),
+    'x-surface': x('list', { collection: true, ...extension }),
     ...more,
   });
 
@@ -624,7 +641,7 @@ describe('a collection', () => {
         },
         additionalProperties: false,
       },
-      'x-surface': x('list', { list: true }),
+      'x-surface': x('list', { collection: true }),
     };
     render(<Form schema={object({ aisles })} initial={{ aisles: [{ label: 'North', racks: [{ label: 'Everyday' }] }, { label: 'South', racks: [] }] }} onValues={(values) => (seen = values)} />);
     const south = screen.getByRole('group', { name: 'Aisles 2' });
@@ -635,7 +652,7 @@ describe('a collection', () => {
   });
 
   it('locks every item and both controls with a locked list', () => {
-    render(<Form schema={object({ racks: racks({ readOnly: true }, { locked: true }) })} initial={{ racks: [{ label: 'Everyday' }] }} />);
+    render(<Form schema={object({ racks: racks({ readOnly: true }) })} initial={{ racks: [{ label: 'Everyday' }] }} />);
     expect(within(screen.getByRole('group', { name: 'Spice racks 1' })).getByLabelText('Label')).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Add another' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Remove 1' })).toBeDisabled();
@@ -646,7 +663,7 @@ describe('the contract panel', () => {
   it('lists a collection, its bounds, and its item keys once, under a star', () => {
     render(
       <ContractPanel
-        contract={{ resource: 'cellar', operation: 'edit', label: null, stale: [], values: {}, schema: object({}) }}
+        contract={{ resource: 'cellar', operation: 'update', label: null, stale: [], values: {}, schema: object({}) }}
         schema={object({
           racks: {
             title: 'Spice racks',
@@ -654,7 +671,7 @@ describe('the contract panel', () => {
             minItems: 1,
             maxItems: 4,
             items: object({ label: { title: 'Label', type: 'string', 'x-surface': x('text') } }),
-            'x-surface': x('list', { list: true }),
+            'x-surface': x('list', { collection: true }),
           },
         })}
         values={{}}
@@ -819,5 +836,126 @@ describe('a select standing for a stale value', () => {
     // and the label still says the key is required.
     expect(select).not.toBeRequired();
     expect(screen.getByText('*')).toBeInTheDocument();
+  });
+});
+
+describe('a value drawn fixed', () => {
+  it('draws the one value a deciding key may hold as its label, with no select and no input', () => {
+    const { container } = render(
+      <Form
+        schema={object(
+          {
+            source: {
+              title: 'Credential source',
+              type: 'string',
+              const: 'pasted',
+              default: 'pasted',
+              'x-surface': x('fixed', { fixed: 'Pasted here' }),
+            },
+          },
+          ['source'],
+        )}
+        initial={{ source: 'pasted' }}
+      />,
+    );
+    expect(screen.getByText('Credential source')).toBeInTheDocument();
+    expect(screen.getByText('Pasted here')).toBeInTheDocument();
+    expect(container.querySelector('select')).toBeNull();
+    expect(container.querySelector('input')).toBeNull();
+  });
+});
+
+describe('a key that refers to an entity (x-surface.widget: autocomplete)', () => {
+  const reference = { entityType: 'event_venue' };
+
+  it('draws the listed candidates as a select, as the form does up to the limit', () => {
+    render(
+      <Form
+        schema={object({ venue: { title: 'Venue', type: 'string', oneOf: venues, 'x-surface': x('autocomplete', { reference }) } })}
+        initial={{ venue: 'library' }}
+      />,
+    );
+    expect(screen.getByRole('combobox', { name: 'Venue' }).tagName).toBe('SELECT');
+    expect(screen.getByRole('option', { name: 'Old Library' })).toBeInTheDocument();
+  });
+
+  it('past the limit, looks the typed text up and takes the id of the candidate chosen', async () => {
+    const asked: [string, string, string | undefined][] = [];
+    const lookup: Lookup = async (path, text, type) => {
+      asked.push([path, text, type]);
+      return [{ id: 'riverside', label: 'Riverside Hall' }];
+    };
+    let last: Values = {};
+    render(
+      <LookupContext.Provider value={lookup}>
+        <Form
+          schema={object({ venue: { title: 'Venue', type: 'string', 'x-surface': x('autocomplete', { reference }) } })}
+          initial={{ venue: null }}
+          onValues={(values) => {
+            last = values;
+          }}
+        />
+      </LookupContext.Provider>,
+    );
+    const input = screen.getByRole('combobox', { name: 'Venue' });
+    expect(input.tagName).toBe('INPUT');
+    await userEvent.type(input, 'r');
+    await userEvent.click(await screen.findByRole('button', { name: 'Riverside Hall (riverside)' }));
+    expect(asked[0]).toEqual(['venue', 'r', undefined]);
+    expect(last).toEqual({ venue: 'riverside' });
+  });
+
+  it("looks a bare reference's id up of the entity type its sibling holds", async () => {
+    const asked: [string, string, string | undefined][] = [];
+    const lookup: Lookup = async (path, text, type) => {
+      asked.push([path, text, type]);
+      return [];
+    };
+    render(
+      <LookupContext.Provider value={lookup}>
+        <Form
+          schema={object({
+            thing: {
+              ...object({
+                entity_type: { title: 'Entity type', type: 'string', 'x-surface': x('text') },
+                id: { title: 'ID', type: 'string', 'x-surface': x('autocomplete', { reference: { by: 'entity_type' } }) },
+              }),
+              title: 'Featured beside',
+              'x-surface': x('fieldset'),
+            },
+          })}
+          initial={{ thing: { entity_type: 'node', id: null } }}
+        />
+      </LookupContext.Provider>,
+    );
+    await userEvent.type(screen.getByRole('combobox', { name: 'ID' }), '5');
+    expect(asked[0]).toEqual(['thing.id', '5', 'node']);
+  });
+});
+
+describe("a module's widget the page has no field for", () => {
+  it('draws the stock field for the key type, and leaves a key no widget claims not editable', async () => {
+    let seen: Values = {};
+    render(
+      <Form
+        schema={object({
+          accent: { title: 'Accent', type: ['string', 'null'], 'x-surface': x('widget_test_color') },
+          venue: { title: 'Venue', type: 'string', oneOf: venues, 'x-surface': x('my_module_map') },
+          open: { title: 'Open', type: 'boolean', 'x-surface': x('my_module_toggle') },
+          layout: { title: 'Layout', 'x-surface': x(null) },
+        })}
+        initial={{ accent: '#336699', venue: 'library', open: true, layout: null }}
+        onValues={(values) => (seen = values)}
+      />,
+    );
+    const accent = screen.getByLabelText('Accent');
+    expect(accent).toHaveAttribute('type', 'text');
+    expect(accent).toHaveValue('#336699');
+    await userEvent.clear(accent);
+    await userEvent.type(accent, '#000000');
+    expect(seen.accent).toBe('#000000');
+    expect(within(screen.getByLabelText('Venue')).getByRole('option', { name: 'Old Library' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Open')).toBeChecked();
+    expect(screen.getByText('Not editable here: no widget claims this key.')).toBeInTheDocument();
   });
 });

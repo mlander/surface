@@ -23,9 +23,7 @@ use Symfony\Component\Routing\Route;
  *   defaults:
  *     _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
  *     _data_surface_resource: 'Drupal\example\Resource\ExampleResource'
- *     _data_surface_operation: 'edit'
- *   requirements:
- *     _data_surface_operation_access: 'TRUE'
+ *     _data_surface_operation: 'update'
  *   options:
  *     parameters:
  *       example:
@@ -48,6 +46,9 @@ final class OperationRoute {
 
   /**
    * The route requirement that gates the route by the operation.
+   *
+   * Added to every route naming a resource and an operation
+   * (OperationRouteSubscriber); a routing file may still say it.
    */
   public const ACCESS = '_data_surface_operation_access';
 

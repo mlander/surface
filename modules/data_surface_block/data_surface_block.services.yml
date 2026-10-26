@@ -1,0 +1,14 @@
+services:
+  # The providers the placement's variants are read from, each named by
+  # its class where the blueprint attaches them; both write a plugin's
+  # config schema as JSON Schema with the main module's writer.
+  Drupal\data_surface_block\Variants\BlockPluginStructures:
+    arguments: ['@plugin.manager.block', '@data_surface.config_schema_document', '@module_handler']
+  Drupal\data_surface_block\Variants\ConditionPluginStructures:
+    arguments: ['@plugin.manager.condition', '@context.repository', '@context.handler', '@language_manager', '@data_surface.config_schema_document', '@string_translation']
+
+  # The cosmetic layer the three routes name beside the operation: the
+  # message and the block layout to return to.
+  data_surface_block.form_cosmetics:
+    class: Drupal\data_surface_block\Form\BlockPlacementFormCosmetics
+    arguments: ['@string_translation']

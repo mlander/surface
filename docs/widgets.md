@@ -31,7 +31,7 @@ value tree is already in the definition's clean shape.
 ## Applicability is an instance method
 
 `isApplicable()` is deliberately not static. A widget may have to ask a
-collaborator before it can answer (the options widget asks the options
+collaborator before it can answer (the select widget asks the options
 service whether the definition's constraints name a list that is not
 empty), and a static answer would have to reach the container to do it.
 
@@ -39,7 +39,9 @@ The manager instantiates every widget once, in ascending weight order,
 and asks each in turn; the first that says yes wins. So a specialized
 widget undercuts a generic per-type one by declaring a **lower** weight.
 Widgets hold no per-definition state, so one instance serves every
-definition for the rest of the request.
+definition for the rest of the request. A widget that claims keys is
+asked before any of them, for the keys it claims alone
+([below](#a-module-serves-a-widget-to-every-key-of-a-kind)).
 
 ### How a widget declines
 
@@ -55,7 +57,7 @@ weight rather than its class:
 
 ```php
 function my_module_data_surface_widget_info_alter(array &$definitions): void {
-  $definitions['options']['weight'] = 10;
+  $definitions['select']['weight'] = 10;
 }
 ```
 
@@ -65,18 +67,20 @@ function my_module_data_surface_widget_info_alter(array &$definitions): void {
 | --- | --- | --- | --- |
 | `checkboxes` | -15 | A list whose item resolves to a list of allowed values, while it offers at most twelve (`CheckboxesWidget::MAXIMUM_OPTIONS`), or that asks for checkboxes. | `checkboxes`, never `#required` |
 | `radios` | -15 | One value that resolves to a list of allowed values and asks for radios. | `radios`; `- None -` a radio only where the key may be cleared |
-| `options` | -10 | Any definition whose constraints resolve to a list of allowed values, an empty one included: one value, and a list the checkboxes leave (more than twelve, or asking for a select). See [Options and resolvers](options.md). | `select`; a list's `#multiple`, never `#required` |
-| `map` | 5 | A `ComplexDataDefinitionInterface`. One that declares no property, such as a variant for a choice with nothing more to say, renders as an empty container and answers an empty map. | `details` |
+| `select` | -10 | Any definition whose constraints resolve to a list of allowed values, an empty one included: one value, and a list the checkboxes leave (more than twelve, or asking for a select). See [Options and resolvers](options.md). | `select`; a list's `#multiple`, never `#required`; an `item` showing the one value a deciding key's variants offer |
+| `autocomplete` | -5 | A key that refers to one entity type, `entity:<type>[:<bundle>]` or a bare `entity` key's id once its entity type is chosen, whose candidates are not listed: more than `data_surface.settings:reference_list_limit` ([Options](options.md#a-key-that-refers-to-an-entity)). | core's `entity_autocomplete`, its selection settings the key's; read back as the id in brackets, `Riverside Hall (riverside)` as `riverside`; core's own check of what was typed taken off |
+| `fieldset` | 5 | A `ComplexDataDefinitionInterface`. One that declares no property, such as a variant for a choice with nothing more to say, renders as an empty container and answers an empty map. | `details` |
 | `list` | 8 | A list of single values with no list of allowed values, whose item a widget draws: keywords, a list of free strings or numbers. | a `fieldset` of rows, "Remove" beside each, "Add another" under them |
 | `time` | 9 | A `string` that asks for a time. | a time input |
 | `string` | 10 | `string`, `email`, `uri`. | `textfield`, `email`, `url`; `textarea` when multiline; `password` for a secret |
 | `number` | 10 | `integer`, `float`. | `number` |
-| `boolean` | 10 | `boolean`. | `checkbox`, never `#required` |
+| `checkbox` | 10 | `boolean`. | `checkbox`, never `#required` |
 
 The weights say the selection rule out loud: the checkboxes and radios
 are asked first, and each claims only what its rule gives it; the
-options widget next, so a string key carrying a `Choice` renders as a
-select rather than a text field; the map widget comes next, so a complex
+select widget next, so a string key carrying a `Choice` renders as a
+select rather than a text field; a reference with too many candidates
+to list next, so it is no number or text field; the fieldset widget comes next, so a complex
 definition that also resolves to options is still a select; the list
 widget takes a list with no choices; and the per-type widgets are the
 fallback.
@@ -94,6 +98,11 @@ the stock widgets have a rule ([decision](decisions.md#a-widget-is-chosen-from-t
 - **One choice is a select**, whatever its length, unless it asks for
   radios. A select has none of the multiple select's faults, and radios
   spend a line per choice on every key, which is the page's to decide.
+- **One value to choose is no choice.** A deciding key whose variants
+  offer one value, which may not be cleared, is drawn as an `item`
+  showing that value's label and posting the value, while it holds it or
+  nothing; a list the key declares, or a stored value no longer offered,
+  is a select as above ([decision](decisions.md#an-extension-is-a-variant-the-site-adds-or-an-alter)).
 - **A list of free values is rows**, each the element the item's own
   widget draws, added and removed over AJAX. Each item keeps its own
   element's hints, and a refusal of one is shown on its row.
@@ -114,7 +123,12 @@ $inputs->add('opens', 'string', t('Opens at'))
 ```
 
 `checkboxes`, `radios`, `select` and `time` are the words the stock
-widgets answer to (`DataSurfaceWidgetBase::answersTo()`). A word the
+widgets answer to (`DataSurfaceWidgetBase::answersTo()`): each is the
+widget's plugin ID, as `fieldset` and `checkbox` are, and the word
+`x-surface.widget` says. *Renamed 2026-10-24:* the select, fieldset and
+checkbox widgets were the plugins `options`, `map` and `boolean`; a
+`hook_data_surface_widget_info_alter()` keyed by an old ID finds
+nothing. A word the
 widget that claims the definition does not answer to is refused when the
 element is built ("... asks for the radios widget, which does not draw a
 key of type list of string; the select widget does."), rather than drawn
@@ -122,7 +136,7 @@ as something it did not ask for. A widget of a module's own answers to
 its plugin ID, so `setSetting('widget', 'my_module_color')` asks for one
 whose `isApplicable()` reads that setting.
 
-The options widget claims a key whose list is **empty** too. A refiner
+The select widget claims a key whose list is **empty** too. A refiner
 that narrows a list to nothing (`'choices' => []`), or a resolver that
 finds nothing on a site, leaves a select offering its empty option and
 nothing else, and the constraint refuses any value: a list of nothing is
@@ -245,7 +259,8 @@ that is its own. `#required` draws the marker and the browser's
 `required` attribute and is never checked by core: the form builder
 keeps that check off, so a required key left empty is refused in the
 data surface's words ([decision](decisions.md#an-element-hints-and-the-rule-speaks)). The attribute takes `id`, `label`, `weight`, and
-optionally a `deriver`, as every core plugin attribute does.
+optionally a `deriver`, as every core plugin attribute does, and
+`claims` and `priority` ([below](#a-module-serves-a-widget-to-every-key-of-a-kind)).
 
 Three things to hold to:
 
@@ -257,3 +272,70 @@ Three things to hold to:
 3. **Read nothing but the definition.** If you find yourself wanting the
    data surface or the host, the thing you want is probably a constraint on
    the definition and a resolver that reads it.
+
+## A module serves a widget to every key of a kind
+
+The example above draws a key whose owner asked for it. A module that
+ships a color picker wants every color key on the site, on resources it
+did not write, and their owners cannot each ask. The widget claims them
+instead:
+
+```php
+#[DataSurfaceWidget(
+  id: 'my_module_color',
+  label: new TranslatableMarkup('Color'),
+  claims: [['type' => 'string', 'format' => 'color']],
+  priority: 10,
+)]
+final class ColorWidget extends DataSurfaceWidgetBase {
+
+  public function isApplicable(DataDefinitionInterface $definition): bool {
+    return !DefinitionMetadata::isSecret($definition);
+  }
+
+  // buildElement() as above.
+
+}
+```
+
+Each class's `use` line: [Namespaces](concepts.md#namespaces).
+
+A claim names what the definition says its value is, in one of three
+forms:
+
+| Claim | Serves |
+| --- | --- |
+| `['type' => 'string']` | every key of that data type |
+| `['type' => 'string', 'format' => 'color']` | every key of that type whose `format` setting is that word, `->setSetting('format', 'color')` |
+| `['shape' => 'event.license']` | every key of that [shape](declaring-a-resource.md#named-shapes) |
+
+A claim of a list or a map is refused when the plugins are discovered:
+a list is drawn item by item, each item by the widget that serves it,
+and a map is a fieldset of its keys.
+
+How the manager chooses (`DataSurfaceWidgetManager::claimed()`):
+
+1. **A key whose owner asks for a widget**, `setSetting('widget', ...)`,
+   is drawn by that widget, and no claim is asked. The owner wins.
+2. **The claims**, the highest `priority` first, then by plugin ID. The
+   first widget whose claim matches the key and whose `isApplicable()`
+   says yes draws it. A claimed widget may still decline a key, as the
+   one above declines a secret.
+3. **The stock rule**, by weight, as above. A widget that claims is not
+   asked here for a key it does not claim, unless the key names it, so
+   its `isApplicable()` answers for the keys it claims alone, and its
+   weight matters only when a key asks for it by name.
+
+`x-surface.widget` says the chosen widget's word, the first word it
+answers to (its plugin ID), in both documents, and the catalog's view
+of one resource (`drush surface:catalog --resource=<id>`) names each
+key's widget among its notes. The React page draws the stock widgets
+and nothing else, so a word it has no field for is drawn as the stock
+field for the key's JSON type: a list of choices a multiple select, a
+list rows, choices a select, an object a fieldset, a boolean a
+checkbox, a number a number input, an address an email input, any other
+string a text input (`stockWidget()` in the app). A key no widget draws,
+`widget: null`, stays "Not editable here". The OpenAPI document carries
+no widget hints. The `format` setting is read by claims alone: no
+document writes it as JSON Schema's `format`, and no rule checks it
+([decision](decisions.md#a-widget-is-chosen-from-the-definition)).

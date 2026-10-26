@@ -27,16 +27,21 @@ nav:
   - Home: index.md
   - Your first resource: first-resource.md
   - Your second resource: second-resource.md
+  - Generating a resource: generating.md
   - Concepts: concepts.md
+  - Transformations: transformations.md
   - Common settings recipes: recipes.md
   - Installation: installation.md
   - The pattern: pattern.md
   - How it fits: how-it-fits.md
   - Resources and structures: resources.md
+  - Reading a schema: reading-a-schema.md
   - Catalog: catalog.md
+  - "The site's catalog": catalog-command.md
   - Content entities: entities.md
   - Declaring a resource: declaring-a-resource.md
   - Decisions: decisions.md
+  - Performance: performance.md
   - Values:
       - The pipeline: pipeline.md
       - Value semantics: semantics.md
@@ -48,6 +53,7 @@ nav:
       - Options and resolvers: options.md
       - The served contract: served-contract.md
       - Evolving a resource: evolution.md
+      - Testing a resource: testing-a-resource.md
       - 'Audit: never stricter': audit-never-stricter.md
   - Extending a resource or structure:
       - Refinement and contributions: refinement.md

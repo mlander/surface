@@ -1,0 +1,156 @@
+{
+    "resource": "event.venue",
+    "operation": "create",
+    "label": "Add a venue",
+    "schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "Add a venue",
+        "description": "Adds a venue under a machine name the caller chooses, with its capacity, address and rooms; a machine name already in use is refused.",
+        "x-surface": {
+            "contract": 4,
+            "operation": {
+                "id": "create",
+                "label": "Add a venue",
+                "description": "Adds a venue under a machine name the caller chooses, with its capacity, address and rooms; a machine name already in use is refused.",
+                "kind": "create",
+                "creates": true,
+                "destructive": false,
+                "idempotent": true
+            },
+            "version": 1
+        },
+        "type": "object",
+        "properties": {
+            "label": {
+                "title": "Name",
+                "type": "string",
+                "maxLength": 128
+            },
+            "id": {
+                "title": "Machine name",
+                "description": "A unique name for the venue: lowercase letters, numbers and underscores.",
+                "type": "string",
+                "pattern": "^[a-z0-9_]+$",
+                "maxLength": 32,
+                "x-surface": {
+                    "patternMessage": "The machine name may hold only lowercase letters, numbers and underscores."
+                }
+            },
+            "slug": {
+                "title": "Slug",
+                "description": "The name in a link: lowercase letters, numbers and dashes, set when the venue is added.",
+                "type": [
+                    "string",
+                    "null"
+                ],
+                "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+                "maxLength": 128,
+                "readOnly": true,
+                "x-surface": {
+                    "computed": {
+                        "from": [
+                            "label"
+                        ],
+                        "when": "create"
+                    },
+                    "patternMessage": "The slug may hold only lowercase letters, numbers and single dashes between them."
+                }
+            },
+            "capacity": {
+                "title": "Capacity",
+                "description": "How many people the venue holds.",
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100000
+            },
+            "address": {
+                "title": "Address",
+                "type": [
+                    "string",
+                    "null"
+                ],
+                "maxLength": 255
+            },
+            "rooms": {
+                "title": "Rooms",
+                "description": "The rooms an event at the venue may be held in.",
+                "type": [
+                    "array",
+                    "null"
+                ],
+                "maxItems": 20,
+                "items": {
+                    "$ref": "#/$defs/event.venue.room"
+                },
+                "x-surface": {
+                    "collection": true
+                }
+            },
+            "weight": {
+                "title": "Weight",
+                "description": "Its place among the venues: lighter first.",
+                "type": "integer",
+                "minimum": -1000,
+                "maximum": 1000,
+                "default": 0
+            },
+            "status": {
+                "title": "Enabled",
+                "description": "Whether events may be held there; a disabled venue is listed only for an account that administers the venues.",
+                "type": "boolean",
+                "default": true
+            }
+        },
+        "additionalProperties": false,
+        "required": [
+            "label",
+            "id",
+            "capacity"
+        ],
+        "$defs": {
+            "event.venue.room": {
+                "title": "event.venue.room",
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "title": "Room id",
+                        "type": "string",
+                        "pattern": "^[a-z0-9_]+$",
+                        "maxLength": 64,
+                        "x-surface": {
+                            "patternMessage": "A room id holds only lowercase letters, numbers and underscores."
+                        }
+                    },
+                    "label": {
+                        "title": "Room name",
+                        "type": "string",
+                        "maxLength": 128
+                    },
+                    "seats": {
+                        "title": "Seats",
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 10000
+                    }
+                },
+                "additionalProperties": false,
+                "required": [
+                    "id",
+                    "label",
+                    "seats"
+                ]
+            }
+        }
+    },
+    "values": {
+        "label": null,
+        "id": null,
+        "slug": null,
+        "capacity": null,
+        "address": null,
+        "rooms": null,
+        "weight": 0,
+        "status": true
+    },
+    "stale": []
+}

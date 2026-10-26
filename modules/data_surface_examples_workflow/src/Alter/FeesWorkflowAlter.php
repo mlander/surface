@@ -8,7 +8,7 @@ use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\State\StateInterface;
 use Drupal\data_surface\Resource\AccessAnswer;
-use Drupal\data_surface\Resource\AltersAccessInterface;
+use Drupal\data_surface\Resource\OperationAccessInterface;
 use Drupal\data_surface\Resource\Attribute\Alters;
 use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface_examples\Structure\FeesStructure;
@@ -25,7 +25,7 @@ use Drupal\data_surface_examples\Structure\FeesStructure;
  * says. Neither answer can open what the fees' own access class locked.
  */
 #[Alters(FeesStructure::class)]
-final class FeesWorkflowAlter implements AltersAccessInterface {
+final class FeesWorkflowAlter implements OperationAccessInterface {
 
   /**
    * The permission that may see the fees.

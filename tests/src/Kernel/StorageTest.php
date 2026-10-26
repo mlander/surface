@@ -8,27 +8,20 @@ use Drupal\Core\TypedData\DataDefinition;
 use Drupal\data_surface\DataSurface;
 use Drupal\data_surface\DefinitionMap;
 use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\DataSurfaceBuilder;
-use Drupal\data_surface\DataSurfaceBuilderInterface;
 use Drupal\data_surface\DefinitionMetadata;
-use Drupal\data_surface\Pipeline\PreparedValues;
-use Drupal\data_surface\Pipeline\StorageViolationsException;
 use Drupal\data_surface\Pipeline\Storage\CompositeStorage;
-use Drupal\data_surface\Pipeline\Storage\ConfigEntityStorage;
-use Drupal\data_surface\Storage\SchemaViolations;
 use Drupal\data_surface\Pipeline\Storage\StateStorage;
 use Drupal\data_surface_test\RecordingStorage;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use PHPUnit\Framework\Attributes\Group;
 
 /**
- * Tests the config entity and composite storage classes.
+ * Tests the composite storage class.
  *
- * Two of the engine's destinations: a config entity, and several
- * storage classes at once. What each one has to prove is the same: it
+ * One of the engine's destinations: several storage classes at once. It
  * reads what it stores back in the data surface's shape, it shapes values
- * without writing, it folds the config schema's opinion into the same
- * violation shape the data surface uses, and it writes only when told to.
+ * without writing, and it writes only when told to. The config entity
+ * storage is a resource's storage now (ConfigEntityStorageTest).
  */
 #[Group('data_surface')]
 #[RunTestsInSeparateProcesses]
@@ -39,9 +32,7 @@ class StorageTest extends DataSurfaceKernelTestBase {
    */
   protected static $modules = [
     'system',
-    'config_test',
     'data_surface',
-    'data_surface_storage_test',
   ];
 
   /**
@@ -63,16 +54,6 @@ class StorageTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Gets the typed configuration manager.
-   *
-   * @return \Drupal\Core\Config\TypedConfigManagerInterface
-   *   The typed configuration manager.
-   */
-  protected function typedConfig() {
-    return $this->container->get('config.typed');
-  }
-
-  /**
    * Builds the data surface the composite storage is tested against.
    *
    * A site name and a slogan: two keys, for two destinations.
@@ -85,352 +66,6 @@ class StorageTest extends DataSurfaceKernelTestBase {
     DefinitionMetadata::setDefaultValue($definitions['name'], 'Drupal');
     DefinitionMetadata::setDefaultValue($definitions['slogan'], '');
     return new DataSurface(DefinitionMap::fromArrays(definitions: $definitions));
-  }
-
-  /**
-   * Builds the data surface the config entity storage is tested against.
-   *
-   * Three of the test entity's own properties, all of which the entity
-   * type exports and the config schema describes.
-   */
-  protected function entitySurface(): DataSurfaceInterface {
-    return $this->entityBuilder()->seal();
-  }
-
-  /**
-   * Builds the same data surface with a third party's setting mounted.
-   *
-   * The mount is what turns into a 'third_party_settings' map holding
-   * one map per provider, which is the layout the entity already stores
-   * third party settings in.
-   */
-  protected function mountedSurface(): DataSurfaceInterface {
-    $builder = $this->entityBuilder();
-    $builder->setThirdPartyDefinition(
-      'data_surface_storage_test',
-      'note',
-      DataDefinition::create('string')->setLabel('Note'),
-      'nothing yet',
-    );
-    return $builder->seal();
-  }
-
-  /**
-   * Builds the unsealed data surface both entity data surfaces start from.
-   *
-   * @return \Drupal\data_surface\DataSurfaceBuilderInterface
-   *   The builder.
-   */
-  protected function entityBuilder(): DataSurfaceBuilderInterface {
-    $builder = new DataSurfaceBuilder([
-      'label' => DataDefinition::create('string')->setLabel('Label')->setRequired(TRUE),
-      'weight' => DataDefinition::create('integer')->setLabel('Weight')->setRequired(TRUE),
-      'style' => DataDefinition::create('string')->setLabel('Style'),
-    ]);
-    $builder->setDefault('label', 'Example');
-    $builder->setDefault('weight', 0);
-    $builder->setDefault('style', '');
-    return $builder;
-  }
-
-  /**
-   * Creates the config entity the entity storage is tested against.
-   *
-   * @param string $id
-   *   The entity identifier.
-   *
-   * @return \Drupal\Core\Config\Entity\ConfigEntityInterface
-   *   The unsaved entity.
-   */
-  protected function testEntity(string $id) {
-    return $this->container->get('entity_type.manager')
-      ->getStorage('config_test')
-      ->create(['id' => $id, 'label' => 'Placeholder']);
-  }
-
-  /**
-   * Tests creating and then updating one config entity.
-   */
-  public function testConfigEntityCreateAndUpdate(): void {
-    $surface = $this->entitySurface();
-    $entity = $this->testEntity('surface_one');
-    $map = ['label', 'weight', 'style'];
-    $resource_storage = new ConfigEntityStorage($entity, $map, $this->typedConfig());
-
-    // What the storage reads off a brand new entity is what the pipeline
-    // merges the input over, which is why the placeholder label is not
-    // the data surface's default here.
-    $this->assertSame(
-      ['label' => 'Placeholder', 'weight' => 0, 'style' => NULL],
-      $resource_storage->load($surface),
-    );
-
-    $result = $this->pipeline()->submit($surface, [
-      'label' => 'First label',
-      'weight' => '3',
-      'style' => 'wide',
-    ], $resource_storage);
-
-    $this->assertTrue($result->isValid());
-    $this->assertTrue($result->committed);
-    // The artifact is a copy, and the copy is what was saved: the entity
-    // the caller handed over is never written to.
-    $this->assertNotSame($entity, $result->prepared->artifact);
-    $this->assertSame('First label', $result->prepared->artifact->label());
-    $this->assertSame('Placeholder', $entity->label());
-
-    $storage = $this->container->get('entity_type.manager')->getStorage('config_test');
-    $storage->resetCache();
-    $saved = $storage->load('surface_one');
-    $this->assertSame('First label', $saved->label());
-    $this->assertSame(3, $saved->get('weight'));
-    $this->assertSame('wide', $saved->get('style'));
-
-    // A partial update over the saved entity leaves the rest alone.
-    $update_storage = new ConfigEntityStorage($saved, $map, $this->typedConfig());
-    $updated = $this->pipeline()->submit($surface, ['weight' => '9'], $update_storage);
-    $this->assertTrue($updated->isValid());
-    $storage->resetCache();
-    $reloaded = $storage->load('surface_one');
-    $this->assertSame(9, $reloaded->get('weight'));
-    $this->assertSame('First label', $reloaded->label());
-    $this->assertSame('wide', $reloaded->get('style'));
-  }
-
-  /**
-   * Tests the third party mount reaching the entity, and coming back.
-   *
-   * The provider is a module of its own for a reason worth writing down:
-   * core expects a third party to describe its own settings, at
-   * CONFIG_NAME.third_party.PROVIDER, and a mapping nothing describes
-   * fails the supported keys check on the way in and the schema check on
-   * the way to storage. So the mount is only as legal as the schema its
-   * provider ships.
-   */
-  public function testConfigEntityThirdPartySettings(): void {
-    $surface = $this->mountedSurface();
-    $entity = $this->testEntity('surface_two');
-    $map = ['label', 'weight', 'style', 'third_party_settings'];
-    $resource_storage = new ConfigEntityStorage($entity, $map, $this->typedConfig());
-
-    $result = $this->pipeline()->submit($surface, [
-      'label' => 'Second label',
-      'weight' => '1',
-      'third_party_settings' => ['data_surface_storage_test' => ['note' => 'Written by a third party']],
-    ], $resource_storage);
-
-    $this->assertTrue($result->isValid());
-    $this->assertTrue($result->committed);
-    // Storing a third party's settings is what makes the entity depend
-    // on that third party, and the storage hands the answer back rather
-    // than leaving the caller to ask the entity again.
-    $this->assertSame(['module' => ['data_surface_storage_test']], $result->prepared->dependencies);
-
-    $storage = $this->container->get('entity_type.manager')->getStorage('config_test');
-    $storage->resetCache();
-    $saved = $storage->load('surface_two');
-    $this->assertSame('Written by a third party', $saved->getThirdPartySetting('data_surface_storage_test', 'note'));
-
-    // Loading the saved entity gives the data surface's shape back, mount and
-    // all, so a partial update leaves the third party's settings alone.
-    $update_storage = new ConfigEntityStorage($saved, $map, $this->typedConfig());
-    $this->assertSame([
-      'label' => 'Second label',
-      'weight' => 1,
-      'style' => NULL,
-      'third_party_settings' => ['data_surface_storage_test' => ['note' => 'Written by a third party']],
-    ], $update_storage->load($surface));
-
-    $this->pipeline()->submit($surface, ['weight' => '5'], $update_storage);
-    $storage->resetCache();
-    $reloaded = $storage->load('surface_two');
-    $this->assertSame(5, $reloaded->get('weight'));
-    $this->assertSame('Written by a third party', $reloaded->getThirdPartySetting('data_surface_storage_test', 'note'));
-  }
-
-  /**
-   * Tests the config schema refusing a value bound for an entity.
-   */
-  public function testConfigEntitySchemaViolations(): void {
-    $surface = $this->entitySurface();
-    $entity = $this->testEntity('surface_three');
-    $map = ['label', 'weight', 'style'];
-    $resource_storage = new ConfigEntityStorage($entity, $map, $this->typedConfig());
-    $values = $this->pipeline()->accept($surface, ['label' => "Two\nlines", 'weight' => '0']);
-    $this->assertCount(0, $this->pipeline()->validate($surface, $values));
-
-    try {
-      $this->pipeline()->prepare($surface, $values, $resource_storage);
-      $this->fail('Expected a StorageViolationsException.');
-    }
-    catch (StorageViolationsException $e) {
-      $this->assertSame(['label'], $e->getViolations()->keys());
-      $this->assertSame('', $e->getViolations()->byKey('label')[0]->path);
-    }
-
-    // Preparing wrote nothing: the artifact is the unsaved entity.
-    $this->assertTrue($entity->isNew());
-
-    // The same values go through once the storage is told not to ask the
-    // schema, which is the escape hatch for storage nobody has described
-    // yet.
-    $lenient = new ConfigEntityStorage($entity, $map, $this->typedConfig(), FALSE);
-    $prepared = $this->pipeline()->prepare($surface, $values, $lenient);
-    $this->assertInstanceOf(PreparedValues::class, $prepared);
-    $this->assertNotSame($entity, $prepared->artifact);
-    $this->assertSame("Two\nlines", $prepared->artifact->label());
-  }
-
-  /**
-   * Tests that nothing a dry run shapes reaches the caller's entity.
-   *
-   * The probed bug this is the regression test for: preparing set the
-   * values on the entity the caller handed over, so a rehearsal was
-   * visible to everything else holding that entity, and the next
-   * unrelated save of it persisted a submission nobody accepted.
-   */
-  public function testConfigEntityDryRunLeavesTheCallerEntityAlone(): void {
-    $surface = $this->entitySurface();
-    $entity = $this->testEntity('surface_dry_run');
-    $entity->set('weight', 7);
-    $resource_storage = new ConfigEntityStorage($entity, ['label', 'weight', 'style'], $this->typedConfig());
-
-    $result = $this->pipeline()->submit($surface, [
-      'label' => 'Rehearsed',
-      'weight' => '42',
-      'style' => 'wide',
-    ], $resource_storage, TRUE);
-
-    $this->assertTrue($result->isValid());
-    $this->assertFalse($result->committed);
-    // The artifact holds the submission.
-    $this->assertSame('Rehearsed', $result->prepared->artifact->label());
-    $this->assertSame(42, $result->prepared->artifact->get('weight'));
-    // The caller's entity holds exactly what it held before.
-    $this->assertSame('Placeholder', $entity->label());
-    $this->assertSame(7, $entity->get('weight'));
-    $this->assertNull($entity->get('style'));
-
-    // And saving that entity later stores what the caller put in it,
-    // not the rehearsal.
-    $entity->save();
-    $storage = $this->container->get('entity_type.manager')->getStorage('config_test');
-    $storage->resetCache();
-    $this->assertSame('Placeholder', $storage->load('surface_dry_run')->label());
-  }
-
-  /**
-   * Tests that a schema refusal leaves the caller's entity alone too.
-   */
-  public function testConfigEntitySchemaRefusalLeavesTheCallersEntityAlone(): void {
-    $surface = $this->entitySurface();
-    $entity = $this->testEntity('surface_refused');
-    $resource_storage = new ConfigEntityStorage($entity, ['label', 'weight', 'style'], $this->typedConfig());
-    $values = $this->pipeline()->accept($surface, ['label' => "Two\nlines", 'style' => 'wide']);
-
-    try {
-      $this->pipeline()->prepare($surface, $values, $resource_storage);
-      $this->fail('Expected a StorageViolationsException.');
-    }
-    catch (StorageViolationsException) {
-      // The refusal is asserted elsewhere; what matters here is what it
-      // left behind.
-    }
-
-    $this->assertSame('Placeholder', $entity->label());
-    $this->assertNull($entity->get('style'));
-  }
-
-  /**
-   * Tests a foreign violation not blocking a write it has nothing to do with.
-   *
-   * A config schema validates the whole object, so an entity carrying a
-   * violation under a key the data surface never declared used to refuse
-   * a submission that had nothing to do with it, naming a key the caller
-   * cannot see. Only the paths this storage writes are reported.
-   */
-  public function testConfigEntityIgnoresForeignViolations(): void {
-    // A data surface that says nothing about the label, so neither the
-    // map nor the data surface claims that path.
-    $builder = new DataSurfaceBuilder([
-      'style' => DataDefinition::create('string')->setLabel('Style'),
-    ]);
-    $builder->setDefault('style', '');
-    $surface = $builder->seal();
-    $entity = $this->testEntity('surface_foreign');
-    // The entity's label is a label, and a label may not span lines.
-    $entity->set('label', "Two\nlines");
-    $resource_storage = new ConfigEntityStorage($entity, ['style'], $this->typedConfig());
-
-    $result = $this->pipeline()->submit($surface, ['style' => 'wide'], $resource_storage);
-
-    $this->assertCount(0, $result->violations);
-    $this->assertTrue($result->committed);
-
-    // Asked for the whole picture, the schema still has its say.
-    $everything = SchemaViolations::collect(
-      $this->typedConfig(),
-      $entity->getConfigDependencyName(),
-      $result->prepared->artifact->toArray(),
-      ['style' => 'style'],
-      FALSE,
-    );
-    $this->assertContains('label', $everything->keys());
-  }
-
-  /**
-   * Tests the map form that names a setter the entity already offers.
-   *
-   * A string rather than a closure, and the same spelling core's config
-   * actions use, so a key a data surface writes is a key a recipe can
-   * write.
-   */
-  public function testConfigEntityMethodMap(): void {
-    // The config test entity keeps one property behind a setter, and
-    // that setter carries core's own #[ActionMethod].
-    $builder = new DataSurfaceBuilder([
-      'protected_property' => DataDefinition::create('string')
-        ->setLabel('Protected property')
-        ->setRequired(TRUE),
-    ]);
-    $builder->setDefault('protected_property', 'unset');
-    $surface = $builder->seal();
-    $entity = $this->testEntity('surface_method');
-    $resource_storage = new ConfigEntityStorage(
-      $entity,
-      ['protected_property' => [ConfigEntityStorage::METHOD => 'setProtectedProperty']],
-      $this->typedConfig(),
-    );
-
-    $result = $this->pipeline()->submit($surface, ['protected_property' => 'Through a setter'], $resource_storage);
-
-    $this->assertTrue($result->committed);
-    $storage = $this->container->get('entity_type.manager')->getStorage('config_test');
-    $storage->resetCache();
-    $this->assertSame('Through a setter', $storage->load('surface_method')->getProtectedProperty());
-
-    // A method the entity does not have is a mistake worth naming.
-    $broken = new ConfigEntityStorage(
-      $this->testEntity('surface_method_broken'),
-      ['protected_property' => [ConfigEntityStorage::METHOD => 'setNothing']],
-      $this->typedConfig(),
-    );
-    $this->expectException(\InvalidArgumentException::class);
-    $this->expectExceptionMessage('setNothing');
-    $broken->prepare($surface, ['protected_property' => 'Nowhere']);
-  }
-
-  /**
-   * Tests that a load() after a commit reads what was written.
-   */
-  public function testConfigEntityReadsBackAfterCommit(): void {
-    $surface = $this->entitySurface();
-    $resource_storage = new ConfigEntityStorage($this->testEntity('surface_read_back'), ['label', 'weight', 'style'], $this->typedConfig());
-
-    $this->pipeline()->submit($surface, ['label' => 'Written', 'weight' => '6'], $resource_storage);
-
-    $this->assertSame('Written', $resource_storage->load($surface)['label']);
-    $this->assertSame(6, $resource_storage->load($surface)['weight']);
   }
 
   /**

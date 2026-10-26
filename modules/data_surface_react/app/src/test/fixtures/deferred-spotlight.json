@@ -1,0 +1,2205 @@
+{
+  "envelope": {
+    "resource": "event.spotlight",
+    "operation": "configure",
+    "label": "Configure the spotlight",
+    "schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "$id": "/surface-api/event.spotlight",
+      "title": "Configure the spotlight",
+      "description": "Sets the component the event home page spotlights, chosen from the components the site has, and the props it is drawn with.",
+      "x-surface": {
+        "contract": 4,
+        "operation": {
+          "id": "configure",
+          "label": "Configure the spotlight",
+          "description": "Sets the component the event home page spotlights, chosen from the components the site has, and the props it is drawn with.",
+          "kind": "update",
+          "creates": false,
+          "destructive": false,
+          "idempotent": true
+        },
+        "version": 1
+      },
+      "type": "object",
+      "properties": {
+        "component": {
+          "title": "Component",
+          "type": "string",
+          "oneOf": [
+            {
+              "const": "data_surface_examples:call_to_action",
+              "title": "Call to action"
+            },
+            {
+              "const": "data_surface_examples:card",
+              "title": "Card"
+            },
+            {
+              "const": "data_surface_examples:hero",
+              "title": "Hero"
+            },
+            {
+              "const": "data_surface_examples:section",
+              "title": "Section"
+            }
+          ],
+          "default": "data_surface_examples:card",
+          "x-surface": {
+            "widget": "select",
+            "emptyOption": {
+              "show": false,
+              "label": "- Select -"
+            }
+          }
+        },
+        "props": {
+          "title": "Props",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/event.spotlight.props.data_surface_examples:card"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "x-surface": {
+            "widget": "variants",
+            "dependsOn": [
+              "component"
+            ],
+            "refined": true,
+            "by": "component",
+            "variants": {
+              "data_surface_examples:card": "#/$defs/event.spotlight.props.data_surface_examples:card"
+            },
+            "chosen": "data_surface_examples:card"
+          }
+        },
+        "slots": {
+          "title": "Slots",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/event.spotlight.slots.data_surface_examples:card"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "x-surface": {
+            "widget": "variants",
+            "dependsOn": [
+              "component"
+            ],
+            "refined": true,
+            "by": "component",
+            "variants": {
+              "data_surface_examples:card": "#/$defs/event.spotlight.slots.data_surface_examples:card"
+            },
+            "chosen": "data_surface_examples:card"
+          }
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "component"
+      ],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "component": {
+                "const": "data_surface_examples:card"
+              }
+            },
+            "required": [
+              "component"
+            ]
+          },
+          "then": {
+            "properties": {
+              "props": {
+                "title": "Props",
+                "$ref": "#/$defs/event.spotlight.props.data_surface_examples:card"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "component": {
+                "const": "data_surface_examples:card"
+              }
+            },
+            "required": [
+              "component"
+            ]
+          },
+          "then": {
+            "properties": {
+              "slots": {
+                "title": "Slots",
+                "$ref": "#/$defs/event.spotlight.slots.data_surface_examples:card"
+              }
+            }
+          }
+        }
+      ],
+      "$defs": {
+        "event.spotlight.props.data_surface_examples:card": {
+          "title": "event.spotlight.props.data_surface_examples:card",
+          "type": "object",
+          "properties": {
+            "heading": {
+              "title": "Heading",
+              "type": "string",
+              "maxLength": 80,
+              "x-surface": {
+                "widget": "text"
+              }
+            },
+            "tone": {
+              "title": "Tone",
+              "type": "string",
+              "oneOf": [
+                {
+                  "const": "plain",
+                  "title": "Plain"
+                },
+                {
+                  "const": "highlight",
+                  "title": "Highlighted"
+                }
+              ],
+              "default": "plain",
+              "x-surface": {
+                "widget": "select",
+                "emptyOption": {
+                  "show": false,
+                  "label": "- Select -"
+                }
+              }
+            },
+            "link": {
+              "title": "Link",
+              "type": [
+                "object",
+                "null"
+              ],
+              "properties": {
+                "url": {
+                  "title": "Address",
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uri",
+                  "x-surface": {
+                    "widget": "text"
+                  }
+                },
+                "label": {
+                  "title": "Link text",
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "x-surface": {
+                    "widget": "text"
+                  }
+                }
+              },
+              "additionalProperties": false,
+              "x-surface": {
+                "widget": "fieldset"
+              }
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "heading"
+          ]
+        },
+        "component.slot.text": {
+          "title": "component.slot.text",
+          "type": "object",
+          "properties": {
+            "kind": {
+              "title": "Holds",
+              "type": "string",
+              "oneOf": [
+                {
+                  "const": "text",
+                  "title": "Text"
+                }
+              ],
+              "default": "text",
+              "x-surface": {
+                "widget": "select",
+                "emptyOption": {
+                  "show": false,
+                  "label": "- Select -"
+                }
+              }
+            },
+            "text": {
+              "title": "Text",
+              "type": [
+                "string",
+                "null"
+              ],
+              "x-surface": {
+                "widget": "textarea",
+                "dependsOn": [
+                  "kind"
+                ]
+              }
+            }
+          },
+          "additionalProperties": false,
+          "allOf": [
+            {
+              "if": {
+                "not": {
+                  "properties": {
+                    "kind": {
+                      "const": "text"
+                    }
+                  },
+                  "required": [
+                    "kind"
+                  ]
+                }
+              },
+              "then": {
+                "properties": {
+                  "text": false
+                }
+              }
+            }
+          ],
+          "x-surface": {
+            "rules": [
+              0
+            ]
+          }
+        },
+        "event.spotlight.slots.data_surface_examples:card": {
+          "title": "event.spotlight.slots.data_surface_examples:card",
+          "type": "object",
+          "properties": {
+            "body": {
+              "title": "Text",
+              "description": "A line under the heading.",
+              "$ref": "#/$defs/component.slot.text",
+              "x-surface": {
+                "widget": "fieldset"
+              }
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+    "values": {
+      "component": "data_surface_examples:card",
+      "props": {
+        "heading": "Doors open at half past six",
+        "tone": "highlight",
+        "link": {
+          "url": "https://example.com/tickets",
+          "label": "Find your ticket"
+        }
+      },
+      "slots": {
+        "body": {
+          "kind": "text",
+          "text": "Bring your ticket, on your phone or printed."
+        }
+      }
+    },
+    "stale": [],
+    "notes": []
+  },
+  "full": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "/surface-api/event.spotlight/schema",
+    "title": "Configure the spotlight",
+    "description": "Sets the component the event home page spotlights, chosen from the components the site has, and the props it is drawn with.",
+    "x-surface": {
+      "contract": 4,
+      "operation": {
+        "id": "configure",
+        "label": "Configure the spotlight",
+        "description": "Sets the component the event home page spotlights, chosen from the components the site has, and the props it is drawn with.",
+        "kind": "update",
+        "creates": false,
+        "destructive": false,
+        "idempotent": true
+      },
+      "version": 1
+    },
+    "type": "object",
+    "properties": {
+      "component": {
+        "title": "Component",
+        "type": "string",
+        "oneOf": [
+          {
+            "const": "data_surface_examples:call_to_action",
+            "title": "Call to action"
+          },
+          {
+            "const": "data_surface_examples:card",
+            "title": "Card"
+          },
+          {
+            "const": "data_surface_examples:hero",
+            "title": "Hero"
+          },
+          {
+            "const": "data_surface_examples:section",
+            "title": "Section"
+          }
+        ],
+        "default": "data_surface_examples:card",
+        "x-surface": {
+          "widget": "select"
+        }
+      },
+      "props": {
+        "title": "Props",
+        "type": [
+          "object",
+          "null"
+        ],
+        "x-surface": {
+          "widget": "variants",
+          "dependsOn": [
+            "component"
+          ],
+          "by": "component",
+          "deferred": {
+            "fetch": "/surface-api/event.spotlight/schema?choose=/props={value}"
+          }
+        }
+      },
+      "slots": {
+        "title": "Slots",
+        "type": [
+          "object",
+          "null"
+        ],
+        "x-surface": {
+          "widget": "variants",
+          "dependsOn": [
+            "component"
+          ],
+          "by": "component",
+          "deferred": {
+            "fetch": "/surface-api/event.spotlight/schema?choose=/slots={value}"
+          }
+        }
+      }
+    },
+    "additionalProperties": false,
+    "required": [
+      "component"
+    ]
+  },
+  "chosen": {
+    "choose=/props=data_surface_examples%3Ahero": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "$id": "/surface-api/event.spotlight/schema?choose=/props=data_surface_examples:hero",
+      "title": "Configure the spotlight",
+      "description": "Sets the component the event home page spotlights, chosen from the components the site has, and the props it is drawn with.",
+      "x-surface": {
+        "contract": 4,
+        "operation": {
+          "id": "configure",
+          "label": "Configure the spotlight",
+          "description": "Sets the component the event home page spotlights, chosen from the components the site has, and the props it is drawn with.",
+          "kind": "update",
+          "creates": false,
+          "destructive": false,
+          "idempotent": true
+        },
+        "version": 1
+      },
+      "type": "object",
+      "properties": {
+        "component": {
+          "title": "Component",
+          "type": "string",
+          "oneOf": [
+            {
+              "const": "data_surface_examples:call_to_action",
+              "title": "Call to action"
+            },
+            {
+              "const": "data_surface_examples:card",
+              "title": "Card"
+            },
+            {
+              "const": "data_surface_examples:hero",
+              "title": "Hero"
+            },
+            {
+              "const": "data_surface_examples:section",
+              "title": "Section"
+            }
+          ],
+          "default": "data_surface_examples:card",
+          "x-surface": {
+            "widget": "select"
+          }
+        },
+        "props": {
+          "title": "Props",
+          "type": [
+            "object",
+            "null"
+          ],
+          "x-surface": {
+            "widget": "variants",
+            "dependsOn": [
+              "component"
+            ],
+            "by": "component",
+            "variants": {
+              "data_surface_examples:hero": "#/$defs/event.spotlight.props.data_surface_examples:hero"
+            },
+            "deferred": {
+              "fetch": "/surface-api/event.spotlight/schema?choose=/props={value}"
+            }
+          }
+        },
+        "slots": {
+          "title": "Slots",
+          "type": [
+            "object",
+            "null"
+          ],
+          "x-surface": {
+            "widget": "variants",
+            "dependsOn": [
+              "component"
+            ],
+            "by": "component",
+            "deferred": {
+              "fetch": "/surface-api/event.spotlight/schema?choose=/slots={value}"
+            }
+          }
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "component"
+      ],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "component": {
+                "const": "data_surface_examples:hero"
+              }
+            },
+            "required": [
+              "component"
+            ]
+          },
+          "then": {
+            "properties": {
+              "props": {
+                "title": "Props",
+                "$ref": "#/$defs/event.spotlight.props.data_surface_examples:hero"
+              }
+            }
+          }
+        }
+      ],
+      "$defs": {
+        "event.spotlight.props.data_surface_examples:hero": {
+          "title": "event.spotlight.props.data_surface_examples:hero",
+          "type": "object",
+          "properties": {
+            "title": {
+              "title": "Title",
+              "type": "string",
+              "x-surface": {
+                "widget": "text"
+              }
+            },
+            "subtitle": {
+              "title": "Subtitle",
+              "type": [
+                "string",
+                "null"
+              ],
+              "x-surface": {
+                "widget": "text"
+              }
+            },
+            "align": {
+              "title": "Alignment",
+              "type": "string",
+              "oneOf": [
+                {
+                  "const": "start",
+                  "title": "Start"
+                },
+                {
+                  "const": "center",
+                  "title": "Center"
+                }
+              ],
+              "default": "center",
+              "x-surface": {
+                "widget": "select"
+              }
+            },
+            "overlay": {
+              "title": "Overlay opacity",
+              "description": "How dark the picture is under the title, in percent.",
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100,
+              "default": 40,
+              "x-surface": {
+                "widget": "number"
+              }
+            },
+            "full_width": {
+              "title": "Full width",
+              "type": "boolean",
+              "default": false,
+              "x-surface": {
+                "widget": "checkbox"
+              }
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "title"
+          ]
+        }
+      }
+    },
+    "choose=/props=data_surface_examples%3Ahero&choose=/slots=data_surface_examples%3Ahero": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "$id": "/surface-api/event.spotlight/schema?choose=/props=data_surface_examples:hero&choose=/slots=data_surface_examples:hero",
+      "title": "Configure the spotlight",
+      "description": "Sets the component the event home page spotlights, chosen from the components the site has, and the props it is drawn with.",
+      "x-surface": {
+        "contract": 4,
+        "operation": {
+          "id": "configure",
+          "label": "Configure the spotlight",
+          "description": "Sets the component the event home page spotlights, chosen from the components the site has, and the props it is drawn with.",
+          "kind": "update",
+          "creates": false,
+          "destructive": false,
+          "idempotent": true
+        },
+        "version": 1
+      },
+      "type": "object",
+      "properties": {
+        "component": {
+          "title": "Component",
+          "type": "string",
+          "oneOf": [
+            {
+              "const": "data_surface_examples:call_to_action",
+              "title": "Call to action"
+            },
+            {
+              "const": "data_surface_examples:card",
+              "title": "Card"
+            },
+            {
+              "const": "data_surface_examples:hero",
+              "title": "Hero"
+            },
+            {
+              "const": "data_surface_examples:section",
+              "title": "Section"
+            }
+          ],
+          "default": "data_surface_examples:card",
+          "x-surface": {
+            "widget": "select"
+          }
+        },
+        "props": {
+          "title": "Props",
+          "type": [
+            "object",
+            "null"
+          ],
+          "x-surface": {
+            "widget": "variants",
+            "dependsOn": [
+              "component"
+            ],
+            "by": "component",
+            "variants": {
+              "data_surface_examples:hero": "#/$defs/event.spotlight.props.data_surface_examples:hero"
+            },
+            "deferred": {
+              "fetch": "/surface-api/event.spotlight/schema?choose=/props={value}"
+            }
+          }
+        },
+        "slots": {
+          "title": "Slots",
+          "type": [
+            "object",
+            "null"
+          ],
+          "x-surface": {
+            "widget": "variants",
+            "dependsOn": [
+              "component"
+            ],
+            "by": "component",
+            "variants": {
+              "data_surface_examples:hero": "#/$defs/event.spotlight.slots.data_surface_examples:hero"
+            },
+            "deferred": {
+              "fetch": "/surface-api/event.spotlight/schema?choose=/slots={value}"
+            }
+          }
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "component"
+      ],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "component": {
+                "const": "data_surface_examples:hero"
+              }
+            },
+            "required": [
+              "component"
+            ]
+          },
+          "then": {
+            "properties": {
+              "props": {
+                "title": "Props",
+                "$ref": "#/$defs/event.spotlight.props.data_surface_examples:hero"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "component": {
+                "const": "data_surface_examples:hero"
+              }
+            },
+            "required": [
+              "component"
+            ]
+          },
+          "then": {
+            "properties": {
+              "slots": {
+                "title": "Slots",
+                "$ref": "#/$defs/event.spotlight.slots.data_surface_examples:hero"
+              }
+            }
+          }
+        }
+      ],
+      "$defs": {
+        "event.spotlight.props.data_surface_examples:hero": {
+          "title": "event.spotlight.props.data_surface_examples:hero",
+          "type": "object",
+          "properties": {
+            "title": {
+              "title": "Title",
+              "type": "string",
+              "x-surface": {
+                "widget": "text"
+              }
+            },
+            "subtitle": {
+              "title": "Subtitle",
+              "type": [
+                "string",
+                "null"
+              ],
+              "x-surface": {
+                "widget": "text"
+              }
+            },
+            "align": {
+              "title": "Alignment",
+              "type": "string",
+              "oneOf": [
+                {
+                  "const": "start",
+                  "title": "Start"
+                },
+                {
+                  "const": "center",
+                  "title": "Center"
+                }
+              ],
+              "default": "center",
+              "x-surface": {
+                "widget": "select"
+              }
+            },
+            "overlay": {
+              "title": "Overlay opacity",
+              "description": "How dark the picture is under the title, in percent.",
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100,
+              "default": 40,
+              "x-surface": {
+                "widget": "number"
+              }
+            },
+            "full_width": {
+              "title": "Full width",
+              "type": "boolean",
+              "default": false,
+              "x-surface": {
+                "widget": "checkbox"
+              }
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "title"
+          ]
+        },
+        "component.props.data_surface_examples:call_to_action": {
+          "title": "component.props.data_surface_examples:call_to_action",
+          "type": "object",
+          "properties": {
+            "text": {
+              "title": "Button text",
+              "type": "string",
+              "maxLength": 40,
+              "x-surface": {
+                "widget": "text"
+              }
+            },
+            "url": {
+              "title": "Address",
+              "type": "string",
+              "format": "uri",
+              "x-surface": {
+                "widget": "text"
+              }
+            },
+            "style": {
+              "title": "Style",
+              "type": "string",
+              "oneOf": [
+                {
+                  "const": "primary",
+                  "title": "Primary"
+                },
+                {
+                  "const": "secondary",
+                  "title": "Secondary"
+                }
+              ],
+              "default": "primary",
+              "x-surface": {
+                "widget": "select"
+              }
+            },
+            "new_window": {
+              "title": "Open in a new window",
+              "type": "boolean",
+              "default": false,
+              "x-surface": {
+                "widget": "checkbox"
+              }
+            },
+            "tags": {
+              "title": "Tags",
+              "description": "Up to three words the button is filed under.",
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "string",
+                "x-surface": {
+                  "widget": "text"
+                }
+              },
+              "maxItems": 3,
+              "x-surface": {
+                "widget": "list"
+              }
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "text",
+            "url"
+          ]
+        },
+        "component.slots.data_surface_examples:call_to_action.2": {
+          "title": "component.slots.data_surface_examples:call_to_action.2",
+          "type": "object",
+          "properties": {},
+          "additionalProperties": false
+        },
+        "component.nested.data_surface_examples:call_to_action.1": {
+          "title": "component.nested.data_surface_examples:call_to_action.1",
+          "type": "object",
+          "properties": {
+            "component": {
+              "title": "Component",
+              "type": "string",
+              "oneOf": [
+                {
+                  "const": "data_surface_examples:call_to_action",
+                  "title": "Call to action"
+                }
+              ],
+              "x-surface": {
+                "widget": "select"
+              }
+            },
+            "props": {
+              "title": "Props",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/component.props.data_surface_examples:call_to_action"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "x-surface": {
+                "widget": "variants",
+                "dependsOn": [
+                  "component"
+                ],
+                "by": "component",
+                "variants": {
+                  "data_surface_examples:call_to_action": "#/$defs/component.props.data_surface_examples:call_to_action"
+                }
+              }
+            },
+            "slots": {
+              "title": "Slots",
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/component.slots.data_surface_examples:call_to_action.2"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "x-surface": {
+                "widget": "variants",
+                "dependsOn": [
+                  "component"
+                ],
+                "by": "component",
+                "variants": {
+                  "data_surface_examples:call_to_action": "#/$defs/component.slots.data_surface_examples:call_to_action.2"
+                }
+              }
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "component"
+          ],
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "component": {
+                    "const": "data_surface_examples:call_to_action"
+                  }
+                },
+                "required": [
+                  "component"
+                ]
+              },
+              "then": {
+                "properties": {
+                  "props": {
+                    "title": "Props",
+                    "$ref": "#/$defs/component.props.data_surface_examples:call_to_action"
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "component": {
+                    "const": "data_surface_examples:call_to_action"
+                  }
+                },
+                "required": [
+                  "component"
+                ]
+              },
+              "then": {
+                "properties": {
+                  "slots": {
+                    "title": "Slots",
+                    "$ref": "#/$defs/component.slots.data_surface_examples:call_to_action.2"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "component.slot.data_surface_examples:hero.actions.1": {
+          "title": "component.slot.data_surface_examples:hero.actions.1",
+          "type": "object",
+          "properties": {
+            "kind": {
+              "title": "Holds",
+              "type": "string",
+              "oneOf": [
+                {
+                  "const": "text",
+                  "title": "Text"
+                },
+                {
+                  "const": "component",
+                  "title": "A component"
+                },
+                {
+                  "const": "components",
+                  "title": "Components"
+                }
+              ],
+              "default": "text",
+              "x-surface": {
+                "widget": "select"
+              }
+            },
+            "text": {
+              "title": "Text",
+              "type": [
+                "string",
+                "null"
+              ],
+              "x-surface": {
+                "widget": "textarea",
+                "dependsOn": [
+                  "kind"
+                ]
+              }
+            },
+            "component": {
+              "title": "Component",
+              "$ref": "#/$defs/component.nested.data_surface_examples:call_to_action.1",
+              "x-surface": {
+                "widget": "fieldset",
+                "dependsOn": [
+                  "kind"
+                ]
+              }
+            },
+            "components": {
+              "title": "Components",
+              "type": "array",
+              "maxItems": 2,
+              "items": {
+                "$ref": "#/$defs/component.nested.data_surface_examples:call_to_action.1"
+              },
+              "x-surface": {
+                "widget": "list",
+                "dependsOn": [
+                  "kind"
+                ],
+                "collection": true
+              }
+            }
+          },
+          "additionalProperties": false,
+          "allOf": [
+            {
+              "if": {
+                "not": {
+                  "properties": {
+                    "kind": {
+                      "const": "text"
+                    }
+                  },
+                  "required": [
+                    "kind"
+                  ]
+                }
+              },
+              "then": {
+                "properties": {
+                  "text": false
+                }
+              }
+            },
+            {
+              "if": {
+                "not": {
+                  "properties": {
+                    "kind": {
+                      "const": "component"
+                    }
+                  },
+                  "required": [
+                    "kind"
+                  ]
+                }
+              },
+              "then": {
+                "properties": {
+                  "component": false
+                }
+              }
+            },
+            {
+              "if": {
+                "not": {
+                  "properties": {
+                    "kind": {
+                      "const": "components"
+                    }
+                  },
+                  "required": [
+                    "kind"
+                  ]
+                }
+              },
+              "then": {
+                "properties": {
+                  "components": false
+                }
+              }
+            }
+          ],
+          "x-surface": {
+            "rules": [
+              0,
+              1,
+              2
+            ]
+          }
+        },
+        "event.spotlight.slots.data_surface_examples:hero": {
+          "title": "event.spotlight.slots.data_surface_examples:hero",
+          "type": "object",
+          "properties": {
+            "actions": {
+              "title": "Actions",
+              "description": "Up to two buttons under the title.",
+              "$ref": "#/$defs/component.slot.data_surface_examples:hero.actions.1",
+              "x-surface": {
+                "widget": "fieldset"
+              }
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+    "choose=/props=data_surface_examples%3Acard": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "$id": "/surface-api/event.spotlight/schema?choose=/props=data_surface_examples:card",
+      "title": "Configure the spotlight",
+      "description": "Sets the component the event home page spotlights, chosen from the components the site has, and the props it is drawn with.",
+      "x-surface": {
+        "contract": 4,
+        "operation": {
+          "id": "configure",
+          "label": "Configure the spotlight",
+          "description": "Sets the component the event home page spotlights, chosen from the components the site has, and the props it is drawn with.",
+          "kind": "update",
+          "creates": false,
+          "destructive": false,
+          "idempotent": true
+        },
+        "version": 1
+      },
+      "type": "object",
+      "properties": {
+        "component": {
+          "title": "Component",
+          "type": "string",
+          "oneOf": [
+            {
+              "const": "data_surface_examples:call_to_action",
+              "title": "Call to action"
+            },
+            {
+              "const": "data_surface_examples:card",
+              "title": "Card"
+            },
+            {
+              "const": "data_surface_examples:hero",
+              "title": "Hero"
+            },
+            {
+              "const": "data_surface_examples:section",
+              "title": "Section"
+            }
+          ],
+          "default": "data_surface_examples:card",
+          "x-surface": {
+            "widget": "select"
+          }
+        },
+        "props": {
+          "title": "Props",
+          "type": [
+            "object",
+            "null"
+          ],
+          "x-surface": {
+            "widget": "variants",
+            "dependsOn": [
+              "component"
+            ],
+            "by": "component",
+            "variants": {
+              "data_surface_examples:card": "#/$defs/event.spotlight.props.data_surface_examples:card"
+            },
+            "deferred": {
+              "fetch": "/surface-api/event.spotlight/schema?choose=/props={value}"
+            }
+          }
+        },
+        "slots": {
+          "title": "Slots",
+          "type": [
+            "object",
+            "null"
+          ],
+          "x-surface": {
+            "widget": "variants",
+            "dependsOn": [
+              "component"
+            ],
+            "by": "component",
+            "deferred": {
+              "fetch": "/surface-api/event.spotlight/schema?choose=/slots={value}"
+            }
+          }
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "component"
+      ],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "component": {
+                "const": "data_surface_examples:card"
+              }
+            },
+            "required": [
+              "component"
+            ]
+          },
+          "then": {
+            "properties": {
+              "props": {
+                "title": "Props",
+                "$ref": "#/$defs/event.spotlight.props.data_surface_examples:card"
+              }
+            }
+          }
+        }
+      ],
+      "$defs": {
+        "event.spotlight.props.data_surface_examples:card": {
+          "title": "event.spotlight.props.data_surface_examples:card",
+          "type": "object",
+          "properties": {
+            "heading": {
+              "title": "Heading",
+              "type": "string",
+              "maxLength": 80,
+              "x-surface": {
+                "widget": "text"
+              }
+            },
+            "tone": {
+              "title": "Tone",
+              "type": "string",
+              "oneOf": [
+                {
+                  "const": "plain",
+                  "title": "Plain"
+                },
+                {
+                  "const": "highlight",
+                  "title": "Highlighted"
+                }
+              ],
+              "default": "plain",
+              "x-surface": {
+                "widget": "select"
+              }
+            },
+            "link": {
+              "title": "Link",
+              "type": [
+                "object",
+                "null"
+              ],
+              "properties": {
+                "url": {
+                  "title": "Address",
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uri",
+                  "x-surface": {
+                    "widget": "text"
+                  }
+                },
+                "label": {
+                  "title": "Link text",
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "x-surface": {
+                    "widget": "text"
+                  }
+                }
+              },
+              "additionalProperties": false,
+              "x-surface": {
+                "widget": "fieldset"
+              }
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "heading"
+          ]
+        }
+      }
+    },
+    "choose=/props=data_surface_examples%3Acard&choose=/slots=data_surface_examples%3Acard": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "$id": "/surface-api/event.spotlight/schema?choose=/props=data_surface_examples:card&choose=/slots=data_surface_examples:card",
+      "title": "Configure the spotlight",
+      "description": "Sets the component the event home page spotlights, chosen from the components the site has, and the props it is drawn with.",
+      "x-surface": {
+        "contract": 4,
+        "operation": {
+          "id": "configure",
+          "label": "Configure the spotlight",
+          "description": "Sets the component the event home page spotlights, chosen from the components the site has, and the props it is drawn with.",
+          "kind": "update",
+          "creates": false,
+          "destructive": false,
+          "idempotent": true
+        },
+        "version": 1
+      },
+      "type": "object",
+      "properties": {
+        "component": {
+          "title": "Component",
+          "type": "string",
+          "oneOf": [
+            {
+              "const": "data_surface_examples:call_to_action",
+              "title": "Call to action"
+            },
+            {
+              "const": "data_surface_examples:card",
+              "title": "Card"
+            },
+            {
+              "const": "data_surface_examples:hero",
+              "title": "Hero"
+            },
+            {
+              "const": "data_surface_examples:section",
+              "title": "Section"
+            }
+          ],
+          "default": "data_surface_examples:card",
+          "x-surface": {
+            "widget": "select"
+          }
+        },
+        "props": {
+          "title": "Props",
+          "type": [
+            "object",
+            "null"
+          ],
+          "x-surface": {
+            "widget": "variants",
+            "dependsOn": [
+              "component"
+            ],
+            "by": "component",
+            "variants": {
+              "data_surface_examples:card": "#/$defs/event.spotlight.props.data_surface_examples:card"
+            },
+            "deferred": {
+              "fetch": "/surface-api/event.spotlight/schema?choose=/props={value}"
+            }
+          }
+        },
+        "slots": {
+          "title": "Slots",
+          "type": [
+            "object",
+            "null"
+          ],
+          "x-surface": {
+            "widget": "variants",
+            "dependsOn": [
+              "component"
+            ],
+            "by": "component",
+            "variants": {
+              "data_surface_examples:card": "#/$defs/event.spotlight.slots.data_surface_examples:card"
+            },
+            "deferred": {
+              "fetch": "/surface-api/event.spotlight/schema?choose=/slots={value}"
+            }
+          }
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "component"
+      ],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "component": {
+                "const": "data_surface_examples:card"
+              }
+            },
+            "required": [
+              "component"
+            ]
+          },
+          "then": {
+            "properties": {
+              "props": {
+                "title": "Props",
+                "$ref": "#/$defs/event.spotlight.props.data_surface_examples:card"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "component": {
+                "const": "data_surface_examples:card"
+              }
+            },
+            "required": [
+              "component"
+            ]
+          },
+          "then": {
+            "properties": {
+              "slots": {
+                "title": "Slots",
+                "$ref": "#/$defs/event.spotlight.slots.data_surface_examples:card"
+              }
+            }
+          }
+        }
+      ],
+      "$defs": {
+        "event.spotlight.props.data_surface_examples:card": {
+          "title": "event.spotlight.props.data_surface_examples:card",
+          "type": "object",
+          "properties": {
+            "heading": {
+              "title": "Heading",
+              "type": "string",
+              "maxLength": 80,
+              "x-surface": {
+                "widget": "text"
+              }
+            },
+            "tone": {
+              "title": "Tone",
+              "type": "string",
+              "oneOf": [
+                {
+                  "const": "plain",
+                  "title": "Plain"
+                },
+                {
+                  "const": "highlight",
+                  "title": "Highlighted"
+                }
+              ],
+              "default": "plain",
+              "x-surface": {
+                "widget": "select"
+              }
+            },
+            "link": {
+              "title": "Link",
+              "type": [
+                "object",
+                "null"
+              ],
+              "properties": {
+                "url": {
+                  "title": "Address",
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uri",
+                  "x-surface": {
+                    "widget": "text"
+                  }
+                },
+                "label": {
+                  "title": "Link text",
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "x-surface": {
+                    "widget": "text"
+                  }
+                }
+              },
+              "additionalProperties": false,
+              "x-surface": {
+                "widget": "fieldset"
+              }
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "heading"
+          ]
+        },
+        "component.slot.text": {
+          "title": "component.slot.text",
+          "type": "object",
+          "properties": {
+            "kind": {
+              "title": "Holds",
+              "type": "string",
+              "oneOf": [
+                {
+                  "const": "text",
+                  "title": "Text"
+                }
+              ],
+              "default": "text",
+              "x-surface": {
+                "widget": "select"
+              }
+            },
+            "text": {
+              "title": "Text",
+              "type": [
+                "string",
+                "null"
+              ],
+              "x-surface": {
+                "widget": "textarea",
+                "dependsOn": [
+                  "kind"
+                ]
+              }
+            }
+          },
+          "additionalProperties": false,
+          "allOf": [
+            {
+              "if": {
+                "not": {
+                  "properties": {
+                    "kind": {
+                      "const": "text"
+                    }
+                  },
+                  "required": [
+                    "kind"
+                  ]
+                }
+              },
+              "then": {
+                "properties": {
+                  "text": false
+                }
+              }
+            }
+          ],
+          "x-surface": {
+            "rules": [
+              0
+            ]
+          }
+        },
+        "event.spotlight.slots.data_surface_examples:card": {
+          "title": "event.spotlight.slots.data_surface_examples:card",
+          "type": "object",
+          "properties": {
+            "body": {
+              "title": "Text",
+              "description": "A line under the heading.",
+              "$ref": "#/$defs/component.slot.text",
+              "x-surface": {
+                "widget": "fieldset"
+              }
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    }
+  },
+  "narrowed": {
+    "component=data_surface_examples:hero": {
+      "resource": "event.spotlight",
+      "operation": "configure",
+      "label": "Configure the spotlight",
+      "schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "/surface-api/event.spotlight",
+        "title": "Configure the spotlight",
+        "description": "Sets the component the event home page spotlights, chosen from the components the site has, and the props it is drawn with.",
+        "x-surface": {
+          "contract": 4,
+          "operation": {
+            "id": "configure",
+            "label": "Configure the spotlight",
+            "description": "Sets the component the event home page spotlights, chosen from the components the site has, and the props it is drawn with.",
+            "kind": "update",
+            "creates": false,
+            "destructive": false,
+            "idempotent": true
+          },
+          "version": 1,
+          "within": {
+            "/allOf/1/then/properties/slots/allOf/1/properties/actions/allOf/1": {
+              "doesNotApply": {
+                "component": [
+                  "kind"
+                ],
+                "components": [
+                  "kind"
+                ]
+              }
+            }
+          }
+        },
+        "type": "object",
+        "properties": {
+          "component": {
+            "title": "Component",
+            "type": "string",
+            "oneOf": [
+              {
+                "const": "data_surface_examples:call_to_action",
+                "title": "Call to action"
+              },
+              {
+                "const": "data_surface_examples:card",
+                "title": "Card"
+              },
+              {
+                "const": "data_surface_examples:hero",
+                "title": "Hero"
+              },
+              {
+                "const": "data_surface_examples:section",
+                "title": "Section"
+              }
+            ],
+            "default": "data_surface_examples:card",
+            "x-surface": {
+              "widget": "select",
+              "emptyOption": {
+                "show": false,
+                "label": "- Select -"
+              }
+            }
+          },
+          "props": {
+            "title": "Props",
+            "anyOf": [
+              {
+                "$ref": "#/$defs/event.spotlight.props.data_surface_examples:hero"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "x-surface": {
+              "widget": "variants",
+              "dependsOn": [
+                "component"
+              ],
+              "refined": true,
+              "by": "component",
+              "variants": {
+                "data_surface_examples:hero": "#/$defs/event.spotlight.props.data_surface_examples:hero"
+              },
+              "chosen": "data_surface_examples:hero"
+            }
+          },
+          "slots": {
+            "title": "Slots",
+            "anyOf": [
+              {
+                "$ref": "#/$defs/event.spotlight.slots.data_surface_examples:hero"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "x-surface": {
+              "widget": "variants",
+              "dependsOn": [
+                "component"
+              ],
+              "refined": true,
+              "by": "component",
+              "variants": {
+                "data_surface_examples:hero": "#/$defs/event.spotlight.slots.data_surface_examples:hero"
+              },
+              "chosen": "data_surface_examples:hero"
+            }
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "component"
+        ],
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "component": {
+                  "const": "data_surface_examples:hero"
+                }
+              },
+              "required": [
+                "component"
+              ]
+            },
+            "then": {
+              "properties": {
+                "props": {
+                  "title": "Props",
+                  "$ref": "#/$defs/event.spotlight.props.data_surface_examples:hero"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "component": {
+                  "const": "data_surface_examples:hero"
+                }
+              },
+              "required": [
+                "component"
+              ]
+            },
+            "then": {
+              "properties": {
+                "slots": {
+                  "title": "Slots",
+                  "allOf": [
+                    {
+                      "$ref": "#/$defs/event.spotlight.slots.data_surface_examples:hero"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "actions": {
+                          "allOf": [
+                            {
+                              "$ref": "#/$defs/component.slot.data_surface_examples:hero.actions.1"
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "component": false,
+                                "components": false
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        ],
+        "$defs": {
+          "event.spotlight.props.data_surface_examples:hero": {
+            "title": "event.spotlight.props.data_surface_examples:hero",
+            "type": "object",
+            "properties": {
+              "title": {
+                "title": "Title",
+                "type": "string",
+                "x-surface": {
+                  "widget": "text"
+                }
+              },
+              "subtitle": {
+                "title": "Subtitle",
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "x-surface": {
+                  "widget": "text"
+                }
+              },
+              "align": {
+                "title": "Alignment",
+                "type": "string",
+                "oneOf": [
+                  {
+                    "const": "start",
+                    "title": "Start"
+                  },
+                  {
+                    "const": "center",
+                    "title": "Center"
+                  }
+                ],
+                "default": "center",
+                "x-surface": {
+                  "widget": "select",
+                  "emptyOption": {
+                    "show": false,
+                    "label": "- Select -"
+                  }
+                }
+              },
+              "overlay": {
+                "title": "Overlay opacity",
+                "description": "How dark the picture is under the title, in percent.",
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 100,
+                "default": 40,
+                "x-surface": {
+                  "widget": "number"
+                }
+              },
+              "full_width": {
+                "title": "Full width",
+                "type": "boolean",
+                "default": false,
+                "x-surface": {
+                  "widget": "checkbox"
+                }
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "title"
+            ]
+          },
+          "component.props.data_surface_examples:call_to_action": {
+            "title": "component.props.data_surface_examples:call_to_action",
+            "type": "object",
+            "properties": {
+              "text": {
+                "title": "Button text",
+                "type": "string",
+                "maxLength": 40,
+                "x-surface": {
+                  "widget": "text"
+                }
+              },
+              "url": {
+                "title": "Address",
+                "type": "string",
+                "format": "uri",
+                "x-surface": {
+                  "widget": "text"
+                }
+              },
+              "style": {
+                "title": "Style",
+                "type": "string",
+                "oneOf": [
+                  {
+                    "const": "primary",
+                    "title": "Primary"
+                  },
+                  {
+                    "const": "secondary",
+                    "title": "Secondary"
+                  }
+                ],
+                "default": "primary",
+                "x-surface": {
+                  "widget": "select",
+                  "emptyOption": {
+                    "show": false,
+                    "label": "- Select -"
+                  }
+                }
+              },
+              "new_window": {
+                "title": "Open in a new window",
+                "type": "boolean",
+                "default": false,
+                "x-surface": {
+                  "widget": "checkbox"
+                }
+              },
+              "tags": {
+                "title": "Tags",
+                "description": "Up to three words the button is filed under.",
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "items": {
+                  "type": "string",
+                  "x-surface": {
+                    "widget": "text"
+                  }
+                },
+                "maxItems": 3,
+                "x-surface": {
+                  "widget": "list"
+                }
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "text",
+              "url"
+            ]
+          },
+          "component.slots.data_surface_examples:call_to_action.2": {
+            "title": "component.slots.data_surface_examples:call_to_action.2",
+            "type": "object",
+            "properties": {},
+            "additionalProperties": false
+          },
+          "component.nested.data_surface_examples:call_to_action.1": {
+            "title": "component.nested.data_surface_examples:call_to_action.1",
+            "type": "object",
+            "properties": {
+              "component": {
+                "title": "Component",
+                "type": "string",
+                "oneOf": [
+                  {
+                    "const": "data_surface_examples:call_to_action",
+                    "title": "Call to action"
+                  }
+                ],
+                "x-surface": {
+                  "widget": "select",
+                  "emptyOption": {
+                    "show": true,
+                    "label": "- Select -"
+                  }
+                }
+              },
+              "props": {
+                "title": "Props",
+                "anyOf": [
+                  {
+                    "$ref": "#/$defs/component.props.data_surface_examples:call_to_action"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "x-surface": {
+                  "widget": "variants",
+                  "dependsOn": [
+                    "component"
+                  ],
+                  "by": "component",
+                  "variants": {
+                    "data_surface_examples:call_to_action": "#/$defs/component.props.data_surface_examples:call_to_action"
+                  }
+                }
+              },
+              "slots": {
+                "title": "Slots",
+                "anyOf": [
+                  {
+                    "$ref": "#/$defs/component.slots.data_surface_examples:call_to_action.2"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "x-surface": {
+                  "widget": "variants",
+                  "dependsOn": [
+                    "component"
+                  ],
+                  "by": "component",
+                  "variants": {
+                    "data_surface_examples:call_to_action": "#/$defs/component.slots.data_surface_examples:call_to_action.2"
+                  }
+                }
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "component"
+            ],
+            "allOf": [
+              {
+                "if": {
+                  "properties": {
+                    "component": {
+                      "const": "data_surface_examples:call_to_action"
+                    }
+                  },
+                  "required": [
+                    "component"
+                  ]
+                },
+                "then": {
+                  "properties": {
+                    "props": {
+                      "title": "Props",
+                      "$ref": "#/$defs/component.props.data_surface_examples:call_to_action"
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "component": {
+                      "const": "data_surface_examples:call_to_action"
+                    }
+                  },
+                  "required": [
+                    "component"
+                  ]
+                },
+                "then": {
+                  "properties": {
+                    "slots": {
+                      "title": "Slots",
+                      "$ref": "#/$defs/component.slots.data_surface_examples:call_to_action.2"
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          "component.slot.data_surface_examples:hero.actions.1": {
+            "title": "component.slot.data_surface_examples:hero.actions.1",
+            "type": "object",
+            "properties": {
+              "kind": {
+                "title": "Holds",
+                "type": "string",
+                "oneOf": [
+                  {
+                    "const": "text",
+                    "title": "Text"
+                  },
+                  {
+                    "const": "component",
+                    "title": "A component"
+                  },
+                  {
+                    "const": "components",
+                    "title": "Components"
+                  }
+                ],
+                "default": "text",
+                "x-surface": {
+                  "widget": "select",
+                  "emptyOption": {
+                    "show": false,
+                    "label": "- Select -"
+                  }
+                }
+              },
+              "text": {
+                "title": "Text",
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "x-surface": {
+                  "widget": "textarea",
+                  "dependsOn": [
+                    "kind"
+                  ]
+                }
+              },
+              "component": {
+                "title": "Component",
+                "$ref": "#/$defs/component.nested.data_surface_examples:call_to_action.1",
+                "x-surface": {
+                  "widget": "fieldset",
+                  "dependsOn": [
+                    "kind"
+                  ]
+                }
+              },
+              "components": {
+                "title": "Components",
+                "type": "array",
+                "maxItems": 2,
+                "items": {
+                  "$ref": "#/$defs/component.nested.data_surface_examples:call_to_action.1"
+                },
+                "x-surface": {
+                  "widget": "list",
+                  "dependsOn": [
+                    "kind"
+                  ],
+                  "collection": true
+                }
+              }
+            },
+            "additionalProperties": false,
+            "allOf": [
+              {
+                "if": {
+                  "not": {
+                    "properties": {
+                      "kind": {
+                        "const": "text"
+                      }
+                    },
+                    "required": [
+                      "kind"
+                    ]
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "text": false
+                  }
+                }
+              },
+              {
+                "if": {
+                  "not": {
+                    "properties": {
+                      "kind": {
+                        "const": "component"
+                      }
+                    },
+                    "required": [
+                      "kind"
+                    ]
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "component": false
+                  }
+                }
+              },
+              {
+                "if": {
+                  "not": {
+                    "properties": {
+                      "kind": {
+                        "const": "components"
+                      }
+                    },
+                    "required": [
+                      "kind"
+                    ]
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "components": false
+                  }
+                }
+              }
+            ],
+            "x-surface": {
+              "rules": [
+                0,
+                1,
+                2
+              ]
+            }
+          },
+          "event.spotlight.slots.data_surface_examples:hero": {
+            "title": "event.spotlight.slots.data_surface_examples:hero",
+            "type": "object",
+            "properties": {
+              "actions": {
+                "title": "Actions",
+                "description": "Up to two buttons under the title.",
+                "$ref": "#/$defs/component.slot.data_surface_examples:hero.actions.1",
+                "x-surface": {
+                  "widget": "fieldset"
+                }
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "values": {
+        "component": "data_surface_examples:hero",
+        "props": {
+          "title": null,
+          "subtitle": null,
+          "align": "center",
+          "overlay": 40,
+          "full_width": false
+        },
+        "slots": {
+          "actions": {
+            "kind": "text",
+            "text": null
+          }
+        }
+      },
+      "stale": [],
+      "notes": [],
+      "discarded": []
+    }
+  }
+}

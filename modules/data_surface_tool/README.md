@@ -4,7 +4,7 @@ Tools generated from resources: one per operation of every resource that
 can be asked on its own, `data_surface:<resource>:<operation>`, and a
 read tool beside each that changes a thing that exists,
 `data_surface:<resource>:<operation>:read`. For a
-field that is `data_surface:field.instance:add`, `:reuse` and `:edit`,
+field that is `data_surface:field.instance:create`, `:reuse` and `:update`,
 whose `settings` are the field type's own settings variant where it has
 one, so the A/B against the free-form Tool Belt tools is a fair one: the
 same question, "what may the settings be?", answered from a contract
@@ -21,8 +21,8 @@ document. What a caller sends moved:
 | Was | Is | Inputs |
 | --- | --- | --- |
 | `data_surface:field_add` (an existing storage) | `data_surface:field.instance:reuse` | `storage` (`<entity type>.<field name>`), `bundle`, `values` |
-| — (a new storage) | `data_surface:field.instance:add` | `entity_type_id`, `bundle`, `values` (with `field_type`, `field_name`, `storage`) |
-| `data_surface:field_update` | `data_surface:field.instance:edit` | `field` (`<entity type>.<bundle>.<field name>`), `values` |
+| — (a new storage) | `data_surface:field.instance:create` | `entity_type_id`, `bundle`, `values` (with `field_type`, `field_name`, `storage`) |
+| `data_surface:field_update` | `data_surface:field.instance:update` | `field` (`<entity type>.<bundle>.<field name>`), `values` |
 
 `values` holds what used to be top-level inputs (`label`,
 `description`, `required`, `settings`) beside `storage` (cardinality,
@@ -42,7 +42,7 @@ default settings where their type fits, and nothing more. The storage
 settings are the same kind of variants on the storage, described by
 `field.storage_settings.<field type>` through
 `FieldStorageSettingsSchemaVariants`. The tools place a new field on the
-bundle's default form and view displays, as the old add tool did.
+bundle's default form and view displays, as the old field add tool did.
 
 ## What it shows
 
@@ -64,15 +64,15 @@ what the retired ones did.
 Five pieces:
 
 - `Resource\FieldInstanceResource`: a field on a bundle, in the new
-  spelling, with `add`, `reuse` and `edit` operations, a storage class
+  spelling, with `create`, `reuse` and `update` operations, a storage class
   and an access class. It attaches `Resource\FieldStorageResource` at
   `storage` (its field type, cardinality, translatability and storage
   settings, with storage of its own, committed before the field), and its
   `settings` are variants chosen by `field_type`: the settings class a
   field type's module marks with `#[Variant]` (the address module's, and
   the test module's gated one), and for every other field type the one
-  `FieldSettingsSchemaVariants` derives. `reuse($storage, $bundle)` is an add for the
-  field and an edit for its storage; the storage's edit operation knows
+  `FieldSettingsSchemaVariants` derives. `reuse($storage, $bundle)` is a create for the
+  field and an update for its storage; the storage's update operation knows
   the field type, which locks its settings to that type's, and refuses
   shrinking its cardinality once the field has data. Adding a field
   leaves the type open on the storage as on the field: a caller setting
@@ -87,34 +87,36 @@ Five pieces:
   one, its settings.
 - The generated tools: `Plugin\Derivative\ResourceOperationToolDeriver`
   and `Plugin\tool\Tool\ResourceOperationTool`, with `OperationInputs`
-  describing them. Here that is `data_surface:field.instance:add`,
-  `:reuse` and `:edit` and `data_surface:field.storage:edit`; the node
-  type demo adds `data_surface:node.type:add` and `:edit`, and
-  `data_surface_entity` one `add` and one `edit` per content entity
-  bundle with a form display, `data_surface:entity.content:node.page:add`. The inputs
+  describing them. Here that is `data_surface:field.instance:create`,
+  `:reuse` and `:update` and `data_surface:field.storage:update`; the node
+  type demo adds `data_surface:node.type:create` and `:update`, and
+  `data_surface_entity` one `create` and one `update` per content entity
+  bundle with a form display, `data_surface:entity.content:node.page:create`. The inputs
   are the operation's parameters (an entity parameter as its id; a
   scalar one named for a resource key described as that key), the
   resource's keys the operation does not know as `values`, and
   `dry_run`; see `docs/resources.md`, Tools. Two rules leave an operation
-  out: `field.storage`'s `add` asks `administer %entity_type_id fields`
+  out: `field.storage`'s `create` asks `administer %entity_type_id fields`
   and no parameter supplies the entity type, so it could never be
   allowed and is only ever a field's; and a structure a plugin names
   with `#[UsesStructure]` is configured through the plugin's host. Only
   a resource that names its storage is a tool. Beside the
-  edit tools is a read tool, `Plugin\tool\Tool\ResourceOperationReadTool`
+  update tools is a read tool, `Plugin\tool\Tool\ResourceOperationReadTool`
   (below).
-- `FieldSettingsSchemaVariants`: a service tagged
-  `data_surface.derived_variants` that adds the field instance
-  resource's `settings` variants for every field type offered in the UI
-  that no `#[Variant]` declares, reading `field.field_settings.<field
-  type>` through typed config: a mapping becomes a map, a sequence a
-  list, a primitive its typed data type, and what the schema cannot
-  resolve without a value `any`. `FieldStorageSettingsSchemaVariants`
-  is the same class pointed at the storage resource's `settings`,
+- `FieldSettingsSchemaVariants`: the provider the field instance
+  resource's `attachVariants('settings', by: 'field_type', from: ...)`
+  names, a `SiteListInterface` listing one variant per field type offered
+  in the UI, labeled with the field type's label, its schema
+  `field.field_settings.<field type>` written as JSON Schema
+  (`ConfigSchemaDocument`) for the schema reader, with the field type's
+  own default settings where their type fits; a `#[Variant]` wins for
+  its value. `FieldStorageSettingsSchemaVariants` is the same class
+  pointed at the storage resource's `settings`,
   `field.storage_settings.<field type>` and the field type's default
-  storage settings. A derived variant has no storage of its own, so the
-  field, or the storage, stores it. The catalog says, per key with
-  variants, where derived variants come from.
+  storage settings. A variant from the site has no storage of its own,
+  so the field, or the storage, stores it. It is a list the site
+  decides: past `data_surface.settings:site_list_limit` field types the
+  tools state `settings` open and `deferred`, fetched per field type.
 - `InputDefinitions`: converts core data definitions into the
   Tool API's input definitions: type, label, description, required,
   default value and constraints, with maps and lists becoming the Tool
@@ -132,14 +134,14 @@ before merging them over the stored ones, so a setting can be set but
 never cleared. Here the pipeline merges the payload over what storage
 loads, key by key and at every depth, and a null is a value like any
 other. Sending `{"label": "Address", "settings": {"field_overrides":
-{"organization": null}}}` to the edit tool removes that one override and
+{"organization": null}}}` to the update tool removes that one override and
 leaves the rest alone, which is what a caller correcting one mistake
 actually wants to say. A key left out keeps what is stored; a null
 clears it ([decision](../../docs/decisions.md#absent-keeps-null-clears)).
 A secret is the one exception: it is optional, a null or a key left out
 keeps the stored secret, and only the clear marker
 (`@data_surface:clear-secret`) empties it. The label could be left out
-too: the edit tool requires no key, and a required one left out keeps
+too: the update tool requires no key, and a required one left out keeps
 what is stored, which the pipeline judges (below).
 
 ## What a tool answers
@@ -155,7 +157,7 @@ description, and always present:
 | `ok` | Whether nothing was refused. |
 | `committed` | Whether the values were written; false for a dry run, a refusal and a read only operation. |
 | `changed` | Whether the write moved a stored value; false when the values were what is stored, and then nothing was saved. |
-| `changes` | The dotted path of each stored value the write changed, or a dry run would, so writing back what the read tool returned changes nothing ([decision](../../docs/decisions.md#absent-keeps-null-clears)). |
+| `changes` | The JSON Pointer of each stored value the write changed, or a dry run would, so writing back what the read tool returned changes nothing ([decision](../../docs/decisions.md#absent-keeps-null-clears)). |
 | `values` | The accepted values, as the read tool would answer them after the write: no secret, no key this account may not see, and no key never stored that the write left at its default (a mounted key not sent). |
 | `violations` | Each refusal, `{path, code, message}`; a refusal of the whole call has an empty path. |
 | `notes` | Each value sent for a locked key and not taken, `{path, code, message}`, code `locked`. |
@@ -183,13 +185,13 @@ drush tool:run data_surface:registration.step3:configure --uid=1 --json \
 
 ```json
 {"success": false,
- "message": "The values were refused:\nroom: The value you selected is not a valid choice. This applies when venue is riverside (Riverside Hall). Choose riverside_main (Main hall) or riverside_east (East room).\ncapacity: This value should be between 1 and 100. This applies when room is empty (harbour_deck was refused) and third_party_settings.data_surface_examples_compliance.license is empty.",
+ "message": "The values were refused:\nroom: The value you selected is not a valid choice. This applies when Venue is riverside (Riverside Hall). Choose riverside_main (Main hall) or riverside_east (East room).\ncapacity: This value should be between 1 and 100. This applies when Room is empty (harbour_deck was refused) and Compliance: Event license is empty.",
  "outputs": {
    "ok": false, "committed": false, "changed": false, "changes": [],
    "values": {"title": "Spring meetup", "open": true, "venue": "riverside", "room": "harbour_deck", "capacity": 500, ...},
    "violations": [
-     {"path": "room", "code": "no_such_choice", "message": "The value you selected is not a valid choice. This applies when venue is riverside (Riverside Hall). Choose riverside_main (Main hall) or riverside_east (East room)."},
-     {"path": "capacity", "code": "not_in_range", "message": "This value should be between 1 and 100. This applies when room is empty (harbour_deck was refused) and third_party_settings.data_surface_examples_compliance.license is empty."}],
+     {"path": "/room", "code": "no_such_choice", "message": "The value you selected is not a valid choice. This applies when Venue is riverside (Riverside Hall). Choose riverside_main (Main hall) or riverside_east (East room)."},
+     {"path": "/capacity", "code": "not_in_range", "message": "This value should be between 1 and 100. This applies when Room is empty (harbour_deck was refused) and Compliance: Event license is empty."}],
    "notes": [], "stale": []}}
 ```
 
@@ -223,14 +225,18 @@ drush pm:install data_surface_tool data_surface_address
 drush tool:list
 ```
 
+`drush surface:catalog` names, per operation, the tool and the read tool
+it reaches, read off the Tool API's own definitions, beside its other
+doors ([The site's catalog](../../docs/catalog-command.md)).
+
 `drush tool:info data_surface:field.instance:reuse` prints the input
 definitions. The title is the operation's label, and the description is
 the operation's own description followed by one line of call rules
-that names its kind (`Create:`, `Update:` or `Read only:`). A tool for an operation that creates requires each
+that names its kind (`Create:`, `Update:`, `Read only:` or `Delete:`). A tool for an operation that creates requires each
 key in `values` exactly when the resource requires it, and lists the
 declared defaults. One for an operation that changes what exists, such
 as `data_surface:registration.step3:configure` or
-`data_surface:field.instance:edit`, requires no key and lists no
+`data_surface:field.instance:update`, requires no key and lists no
 default at all, because a listing is cached by its clients and a key
 left out keeps its current value: each key the resource requires says
 "Required; a value already stored stands when left out.", and the
@@ -259,8 +265,11 @@ is `free`), or every variant's keys with none required before anything
 chooses. The full contract, with an `if`/`then` per variant on the key
 that chooses it, is the main module's `data_surface.contract_emitter`:
 see it in the contract panel below, or, with `data_surface_react`
-enabled, at `/surface-api/{resource}/{operation}`
-([`docs/served-contract.md`](../../docs/served-contract.md)).
+enabled, at `/surface-api/{resource}`
+([`docs/served-contract.md`](../../docs/served-contract.md)). Since
+contract 3 the tool and HTTP agree: one call per operation, with a dry
+run as a flag (`dry_run` here, `?dryRun=true` there), and every path
+in a result a JSON Pointer.
 
 ## The read tool
 
@@ -273,16 +282,16 @@ base plugin id:
 
 | Read tool | Inputs |
 | --- | --- |
-| `data_surface:node.type:edit:read` | `type` |
-| `data_surface:field.instance:edit:read` | `field` |
-| `data_surface:field.storage:edit:read` | `storage` |
+| `data_surface:node.type:update:read` | `type` |
+| `data_surface:field.instance:update:read` | `field` |
+| `data_surface:field.storage:update:read` | `storage` |
 | `data_surface:registration.step1:configure:read`, `step2`, `step3` | nothing |
-| `data_surface:entity.content:<entity type>.<bundle>:edit:read`, with `data_surface_entity` | `id` |
+| `data_surface:entity.content:<entity type>.<bundle>:update:read`, with `data_surface_entity` | `id` |
 
 - **Which operations.** One that needs nothing and whose context does
   not create, and one that needs a subject and whose parameters name one
   thing whole: a single entity, or a scalar for every identity key.
-  `node.type:add`, `field.instance:add` and `field.instance:reuse`
+  `node.type:create`, `field.instance:create` and `field.instance:reuse`
   create, and have none. `ResourceCatalog::reads()` decides, and the
   catalog lists it ("Read on its own"); a context that turns out to
   create is refused when the read runs.
@@ -320,12 +329,65 @@ base plugin id:
 ```bash
 drush tool:info data_surface:registration.step3:configure:read
 drush tool:run data_surface:registration.step3:configure:read --uid=1
-drush tool:run data_surface:node.type:edit:read --uid=1 --input=type=page
+drush tool:run data_surface:node.type:update:read --uid=1 --input=type=page
 ```
 
 `tool:info` lists the `values` output without its properties; Drush
 prints outputs one level deep. The nested schema is what the Tool API's
 serializer emits, and what an MCP client sees as `outputSchema`.
+
+## The narrowing tool
+
+A key whose list the site decides (a component per single-directory
+component, a key per thing a provider lists) is spelled out in the
+listing while the site lists at most `data_surface.settings:site_list_limit`
+entries, 20 as shipped. Past it, the full schema marks the key
+`deferred` and the write tool lists it as an open map, the deciding key
+keeps its enum, and the key's description names two ways to learn its
+keys: the full schema fetched with the choice stated, once per value,
+where the site serves its API (data_surface_react on), and a third tool
+beside the write and read tools, asked with the values:
+
+> Too many to list: choose component, then fetch GET
+> /surface-api/event.spotlight/schema?choose=/props={component} once per
+> component, or call data_surface:event.spotlight:configure:schema with
+> your values, to get this key's schema.
+
+A key inside a variant names the choice on the way,
+`?choose=/settings=data_surface_component&choose=/settings/props={component}`;
+a map of keys from the site names an entry's id, `{id}`, which the full
+schema lists under `x-surface.deferred.entries`. The fetch answers a schema that
+changes only when the site's list does, so an agent keeps it per value;
+the tool answers for the values sent, so it is asked again when a choice
+changes. The narrowing tool's own description says both.
+
+| Narrowing tool | Inputs | Outputs |
+| --- | --- | --- |
+| `data_surface:<resource>:<operation>:schema` | the operation's parameters; `values`, optional and open | `schema`, `values` |
+
+- **Which operations.** One whose listing has such a key, at any depth
+  (`OperationInputs::narrows()`); a resource whose lists are all spelled
+  out adds no tool. A delete has none.
+- **What it answers.** What `POST /surface-api/{resource}/schema`
+  answers for the same values and account, with no widget hints: the
+  schema for these answers, which states the chosen variant's keys
+  exactly, and the values settled so far, computed keys and defaults
+  included. It writes nothing.
+- **How it behaves.** The Read kind, never destructive, so the MCP
+  bridge annotates it read only and idempotent. Its access is the write
+  tool's.
+
+The two calls an agent makes, the narrowing and then the write:
+
+```bash
+drush tool:run data_surface:event.spotlight:configure:schema --uid=1 --input='{"values":{"component":"data_surface_examples:call_to_action"}}'
+drush tool:run data_surface:event.spotlight:configure --uid=1 --input='{"values":{"component":"data_surface_examples:call_to_action","props":{"text":"Buy a ticket","url":"https://example.com/tickets"}}}' --input=dry_run=true
+```
+
+([Asking again at the tool door](../../docs/served-contract.md#asking-again-at-the-tool-door),
+[the fetch per choice](../../docs/served-contract.md#the-fetch-per-choice),
+[decision](../../docs/decisions.md#a-budget-for-what-the-site-decides),
+[deferred](../../docs/decisions.md#a-list-left-out-for-size-is-deferred-not-refined).)
 
 ## The contract panel
 
@@ -351,34 +413,43 @@ The routes of `data_surface_examples` name it.
 
 | Test | Covers |
 | --- | --- |
-| `Kernel\FieldToolsTest` | The three field tools end to end: add, reuse, edit, dry run, the schema refusing at prepare, a `string` field added and edited through settings derived from its schema, its storage's `max_length` set on add and changed by `data_surface:field.storage:edit`, a storage type other than the field's refused, cardinality and columns kept once the field has data, access. |
+| `Kernel\FieldToolsTest` | The three field tools end to end: add, reuse, edit, dry run, the schema refusing at prepare, a `string` field added and edited through settings derived from its schema, its storage's `max_length` set on add and changed by `data_surface:field.storage:update`, a storage type other than the field's refused, cardinality and columns kept once the field has data, access. |
 | `Kernel\FieldToolsAccessTest` | The field type's own access class refusing both the tools and its Field UI host. |
 | `Kernel\FieldToolsComparisonTest` | The two JSON Schema documents in `COMPARISON.md`, against what the code emits, and parity with the retired tools. |
 | `Kernel\FieldInstanceResourceTest` | The three operations, the storage child (its keys, its locked type) and its has-data constraint, the settings variants, starting values. |
 | `Kernel\OperationToolsTest` | The generated tools: which exist, the two derivation rules, what they advertise, refinement to the thing a parameter names, execution, dry run, access, the storage tool's has-data constraint. |
-| `Kernel\ResourceCatalogTest` | The catalog read from the static layer, and `docs/catalog.md` against it, where each key with derived variants is listed. |
+| `Kernel\ResourceCatalogTest` | The catalog read from the static layer, and `docs/catalog.md` against what `drush surface:catalog --format=markdown` writes, where each key with derived variants is listed and each operation's tool. |
 | `Kernel\ExamplesStepsTest` | The contract panel: its rows as the answers narrow them, the contract's variant conditionals, and the tool's schema below them. |
 | `Kernel\ExamplesToolTest` | `data_surface:registration.step3:configure`: the example calls, its definition (no key required and each the resource requires saying so, no default at any depth, the operation's description and the update's call rules as its description, and the same after a write), and a partial update that leaves a required key out, kept where it is stored and refused by the pipeline where it is not. |
 | `Kernel\OperationKindsTest` | Every shipped operation's kind, on the examples, the first module and the tool test modules: each tool's description is the operation's description and its kind's call rules, with no literal quotes; a create lists the resource's required keys, an update lists none and says why, a read only operation lists none, and a read tool takes only the parameters and is titled "Current values:" and the write tool's title; no two tools share a title, and where labels are shared each adds its resource. |
 | `Kernel\ReadToolTest` | The read tools: one per operation that changes a thing that exists and none for one that creates, a read operation taking exactly the parameters, an output map of the write tool's keys, step 3's stored values with the compliance module's mounted keys before and after a write, the content type read by its type, an unknown parameter failing as for the write tool, access as the write tool's, and a secret never returned. |
 | `Kernel\OperationFactsTest` | How an operation behaves: the attribute's defaults, `creates` read off the attribute and stamped on the context, idempotence derived from it, an operation on the class with no method, a method's context taking the attribute's id and `creates` and its docblock summary as its description, a context naming another id or creating against its attribute refused at discovery, contradicting facts refused, the Tool API's kind and destructive flag as the MCP bridge reads them, no read tool beside a read only operation, and `x-surface.operation` and the description at the top of both documents. |
 | `Kernel\ToolFeedbackTest` | What the listing and a refusal say: each key another narrows naming what it depends on, once, through a port at its site; every refusal form (a list, a list another key narrows, a long list capped, a bound, a pattern, a key that does not apply); `values` held to its shape before the tool runs; and an agent's retry loop on example 3 fixing each key from its refusal in one try, through the runner MCP and ECA call. |
-| `Kernel\ToolResultShapeTest` | What a tool answers: exactly the result shape's keys, refused or not, at the write tool, a read only one and React's `/validate` and `/submit`, the same refusal by paths at the tool and by labels at React, with one path and code; the failure category; one violation per line, each the entry's path and message; `values` required and never null, `{}` changing nothing. |
+| `Kernel\ToolResultShapeTest` | What a tool answers: exactly the result shape's keys, refused or not, at the write tool, a read only one and the HTTP door (a refusal there as problem details), the same refusal by paths at the tool and by labels at React, with one JSON Pointer and code; the failure category; one violation per line, each the entry's path and message; `values` required and never null, `{}` changing nothing. |
 | `Kernel\ResultCodesTest` | Every refusal path's code, by path: the module's own, a constraint's, a refusal of the whole call with an empty path, a note and a stale reference. |
-| `Kernel\SecurityProjectionTest` | Every door projecting what the read projects: a dry run and React `/validate` answering no key access left out and no `prepared`, no door echoing a secret, a collection item keeping its position's secret or refused when positions moved, a note saying nothing of a secret, the React and tool doors asking the permission first and naming no id, a child permission nothing can name refused, and the cached definitions no account's. |
+| `Kernel\SecurityProjectionTest` | Every door projecting what the read projects: a dry run and an HTTP dry run answering no key access left out and no `prepared`, no door echoing a secret, a collection item keeping its position's secret or refused when positions moved, a note saying nothing of a secret, the React and tool doors asking the permission first and naming no id, a child permission nothing can name refused, and the cached definitions no account's. |
 | `Kernel\DerivedToolDefinitionsTest` | Tool Explorer showing every derived tool, read tools included, installing a module deriving its tools, and each tool declaring its operation's permission unless it has a placeholder. |
 
 ## Who may run them
 
+A tool runs as the current user, and the build hands that account to the
+access class, to each storage write and to a runtime refiner that asks
+for it; nothing the operation runs reads the request, so a call through
+`drush tool:run --uid` or an MCP bridge answers as the form does
+([No door-specific context](../../docs/resources.md#no-door-specific-context)).
+
 A write tool is `ToolOperation::Write`, or `ToolOperation::Read` for an
 operation that says it is read only, and destructive when its operation
 says so (`ResourceOperationToolDeriver::behaves()`); the MCP bridge
-reads both as the tool's annotations. None of the module's own
+reads both as the tool's annotations. None of this module's own
 operations says either, so every write tool here is a `Write` that
 destroys nothing, and the access answer has to be the real one, and a
-read tool asks the same question. It is the operation's permission, `administer %entity_type_id
+read tool asks the same question. A delete, such as
+`data_surface:block.placement:delete` from `data_surface_block`, is a
+destructive `Write` whose inputs are its parameters and `dry_run`, with
+no `values` and no read tool beside it. It is the operation's permission, `administer %entity_type_id
 fields`, named from the identity the operation's context knows (the
-entity type the add tool is given, or the one the storage or field it
+entity type the create tool is given, or the one the storage or field it
 names is on), then `FieldInstanceAccess`, which refuses a locked
 storage, then the access class of the settings variant the field type
 chose, which may refuse (the gated test field type does). A tool asks a
@@ -398,7 +469,7 @@ id ...", not as access denied, which reads as final.
 The operation's permission is also the tool's declared permission
 (`ToolDefinition::getPermission()`), so `tool:info` prints it and the
 Tool API checks it before reading any input, when it is one permission
-as written: `data_surface:node.type:add` declares the node type demo's
+as written: `data_surface:node.type:create` declares the node type demo's
 permission. A permission with a `%key` placeholder, as the field tools'
 `administer %entity_type_id fields`, names a different permission for
 each call, and the Tool API has no place for one that depends on the
@@ -435,7 +506,7 @@ normalizes an instance's inputs see the caller's own listing:
   and writable, and its description ends with "Whether this may be
   changed is decided once the thing it belongs to is known: a call may
   find it locked or left out." The served contract says the same with
-  `x-surface.access: "live"`; the Tool API's normalizer writes its
+  `x-surface.live`; the Tool API's normalizer writes its
   schema from typed definitions, which carry a description and no
   extension keyword, so the listing says it in words;
 - when that answer is the resource's own, at the top, it marks every
@@ -549,7 +620,10 @@ changing the Tool API.
   word of the type wanted. A caller cannot tell it from any other input
   refusal without parsing the sentence. Called through `execute()`, the
   tool answers it in its own shape, `code` and `path` included; a runner
-  never gives it the chance. A type mismatch that named the type wanted
+  never gives it the chance: the Tool API's position in the message
+  ("(property deposit)") is read back off its arguments onto the path,
+  and its primitive type refusal is `type_mismatch`, the pipeline's code.
+  A type mismatch that named the type wanted
   (core's `PrimitiveType` constraint has its type to hand), or a way for
   a runner to hand the refusal to the tool to answer, would close it.
   Found by the fourth fresh-eyes run (entry 19).

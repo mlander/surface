@@ -95,7 +95,7 @@ class ContentEntityResourceFormTest extends BrowserTestBase {
   }
 
   /**
-   * Tests the landing page and the edit route for another bundle.
+   * Tests the landing page and the update route for another bundle.
    */
   public function testLandingPageAndAnotherBundle(): void {
     $assert_session = $this->assertSession();
@@ -106,7 +106,7 @@ class ContentEntityResourceFormTest extends BrowserTestBase {
     $assert_session->pageTextContains('Left out');
     $assert_session->pageTextContains('the language field type is not covered yet');
 
-    // An article is no page: the page's edit operation refuses it.
+    // An article is no page: the page's update operation refuses it.
     $this->drupalCreateContentType(['type' => 'article', 'name' => 'Article']);
     $article = Node::create(['type' => 'article', 'title' => 'Not a page']);
     $article->save();

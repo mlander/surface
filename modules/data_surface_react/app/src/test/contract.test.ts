@@ -1,5 +1,5 @@
 import type { Extension, Schema } from '../contract';
-import { assertContract, CONTRACT, ContractRefused, defName, inlineSchema, isPart, resolveSchema, resolveVariants, restored, watchedPaths } from '../contract';
+import { assertContract, assertSchema, CONTRACT, ContractRefused, defName, inlineSchema, isPart, resolveSchema, resolveVariants, restored, watchedPaths, withoutComputed, narrow, narrowingStatus } from '../contract';
 import example3 from './fixtures/example3.json';
 import license from './fixtures/refine-example3-license.json';
 import journal from './fixtures/refine-journal.json';
@@ -11,14 +11,14 @@ import journal from './fixtures/refine-journal.json';
 const contact: Schema = {
   type: 'object',
   properties: {
-    email: { title: 'Email', type: 'string', format: 'idn-email', 'x-surface': { widget: 'email', locked: false, dependsOn: [], refined: false, stale: false } },
-    phone: { title: 'Phone', type: ['string', 'null'], 'x-surface': { widget: 'text', locked: false, dependsOn: [], refined: false, stale: false } },
+    email: { title: 'Email', type: 'string', format: 'idn-email', 'x-surface': { widget: 'email' } },
+    phone: { title: 'Phone', type: ['string', 'null'], 'x-surface': { widget: 'text' } },
   },
   additionalProperties: false,
   required: ['email'],
 };
 
-const fieldset = { widget: 'fieldset' as const, locked: false, dependsOn: [], refined: false, stale: false };
+const fieldset = { widget: 'fieldset' as const };
 
 describe('resolving a reference', () => {
   it('replaces a reference with its def, the keywords beside it kept in their places', () => {
@@ -39,8 +39,8 @@ describe('resolving a reference', () => {
     const bin: Schema = {
       type: 'object',
       properties: {
-        bin: { title: 'Bin', type: 'string', 'x-surface': { widget: 'text', locked: false, dependsOn: [], refined: false, stale: false } },
-        size: { title: 'Size', type: ['integer', 'null'], minimum: 1, maximum: 10, 'x-surface': { widget: 'number', locked: false, dependsOn: [], refined: false, stale: false } },
+        bin: { title: 'Bin', type: 'string', 'x-surface': { widget: 'text' } },
+        size: { title: 'Size', type: ['integer', 'null'], minimum: 1, maximum: 10, 'x-surface': { widget: 'number' } },
       },
       additionalProperties: false,
       required: ['bin'],
@@ -51,7 +51,7 @@ describe('resolving a reference', () => {
         { $ref: '#/$defs/resource_test.cupboard.bin' },
         {
           properties: {
-            bin: { readOnly: true, const: 'left', 'x-surface': { widget: 'text', locked: true, dependsOn: [], refined: false, stale: false } },
+            bin: { readOnly: true, const: 'left', 'x-surface': { widget: 'text', refined: true } },
             size: { maximum: 4 },
           },
           required: ['size'],
@@ -64,12 +64,13 @@ describe('resolving a reference', () => {
     expect(resolved).not.toHaveProperty('allOf');
     expect(resolved.title).toBe('Left bin');
     expect(resolved.properties?.bin).toMatchObject({ title: 'Bin', type: 'string', readOnly: true, const: 'left' });
-    expect(resolved.properties?.bin['x-surface']?.locked).toBe(true);
+    expect(resolved.properties?.bin['x-surface']?.refined).toBe(true);
     expect(resolved.properties?.size).toMatchObject({ title: 'Size', minimum: 1, maximum: 4 });
     expect(resolved.required).toEqual(['bin', 'size']);
     // The def itself is untouched.
     expect(bin.properties?.size.maximum).toBe(10);
-    expect(bin.properties?.bin['x-surface']?.locked).toBe(false);
+    expect(bin.properties?.bin.readOnly).toBeUndefined();
+    expect(bin.properties?.bin['x-surface']?.refined).toBeUndefined();
   });
 
   it('resolves a def inside a def, and two sites sharing one def each with their own label', () => {
@@ -154,8 +155,8 @@ describe('a collection', () => {
   const shelf: Schema = {
     type: 'object',
     properties: {
-      unit: { title: 'Unit', type: 'string', 'x-surface': { widget: 'select', locked: false, dependsOn: [], refined: false, stale: false } },
-      height: { title: 'Height', type: 'integer', 'x-surface': { widget: 'number', locked: false, dependsOn: ['unit'], refined: false, stale: false } },
+      unit: { title: 'Unit', type: 'string', 'x-surface': { widget: 'select' } },
+      height: { title: 'Height', type: 'integer', 'x-surface': { widget: 'number', dependsOn: ['unit'] } },
     },
     additionalProperties: false,
   };
@@ -167,7 +168,7 @@ describe('a collection', () => {
         type: ['array', 'null'],
         items: { $ref: '#/$defs/resource_test.pantry.shelf' },
         maxItems: 3,
-        'x-surface': { widget: 'list', list: true, locked: false, dependsOn: [], refined: false, stale: false },
+        'x-surface': { widget: 'list', collection: true },
       },
     },
     $defs: { 'resource_test.pantry.shelf': shelf },
@@ -185,11 +186,43 @@ describe('a collection', () => {
   });
 });
 
+describe('a computed key', () => {
+  // Example 15's venue, abbreviated: the slug is computed from the name.
+  const venue: Schema = {
+    type: 'object',
+    properties: {
+      label: { title: 'Name', type: 'string', 'x-surface': { widget: 'text' } },
+      slug: {
+        title: 'Slug',
+        type: ['string', 'null'],
+        readOnly: true,
+        'x-surface': { widget: 'text', computed: { from: ['label'], when: 'create' } },
+      },
+    },
+    additionalProperties: false,
+    required: ['label'],
+  };
+
+  it('watches what it is computed from, which the server narrows', () => {
+    expect([...watchedPaths(venue, {})]).toEqual(['label']);
+  });
+
+  it('sends a change of what it is computed from to the server', () => {
+    const narrowed = narrow({ full: venue, previous: { schema: venue, values: {}, stale: [] }, stored: {}, values: { label: 'Town Hall' }, stale: [], changed: 'label' });
+    expect(narrowed).toEqual({ local: false, key: 'slug', marker: 'computed' });
+    expect(narrowingStatus(narrowed)).toBe('Asked the server: slug is computed on the server');
+  });
+
+  it('is never sent', () => {
+    expect(withoutComputed(venue, { label: 'Town Hall', slug: 'town' })).toEqual({ label: 'Town Hall' });
+  });
+});
+
 describe('a key declared with a shape', () => {
   // A shape is written once, as a def that allows null (whether a key may
   // hold nothing is the key's), and each key that uses it refers to it
   // first, then says its title, what it narrows and its whole x-surface.
-  const text = (dependsOn: string[] = []) => ({ widget: 'text' as const, locked: false, dependsOn, refined: false, stale: false });
+  const text = (dependsOn: string[] = []) => ({ widget: 'text' as const, dependsOn });
   const code: Schema = {
     title: 'Stock code',
     description: 'Letters and digits.',
@@ -237,8 +270,8 @@ describe('a key declared with a shape', () => {
   });
 
   it('reads the compliance license the server refers to its def, in both documents', () => {
-    const recorded = license as unknown as { schema: { schema: Schema }; contract: { schema: Schema } };
-    for (const document of [recorded.schema.schema, recorded.contract.schema]) {
+    const recorded = license as unknown as { schema: Schema; contract: { schema: Schema } };
+    for (const document of [recorded.schema, recorded.contract.schema]) {
       expect(document.$defs?.['event.license']).toMatchObject({ type: ['string', 'null'], pattern: '^\\d{4}$', examples: ['2048'] });
       const mount = inlineSchema(document).properties?.third_party_settings.properties?.data_surface_examples_compliance as Schema;
       expect(isPart(mount)).toBe(true);
@@ -249,15 +282,23 @@ describe('a key declared with a shape', () => {
   });
 });
 
-describe('contract 2 on the wire', () => {
-  const said = (widget: Extension['widget'], more: Partial<Extension> = {}): Extension => ({ widget, locked: false, dependsOn: [], refined: false, stale: false, ...more });
+describe('contract 4 on the wire', () => {
+  const said = (widget: Extension['widget'], more: Partial<Extension> = {}): Extension => ({ widget, ...more });
 
   it('refuses a document of contract 1, which states no version, and one of any other', () => {
-    expect(CONTRACT).toBe(2);
+    expect(CONTRACT).toBe(4);
     expect(() => assertContract({ schema: { type: 'object' } })).toThrow(new ContractRefused('1'));
-    expect(() => assertContract({ schema: { type: 'object' } })).toThrow('This page reads contract 2; the server sent contract 1.');
-    expect(() => assertContract({ schema: { 'x-surface': { contract: 3 } as Extension } })).toThrow('This page reads contract 2; the server sent contract 3.');
-    expect(assertContract(example3 as unknown as { schema: Schema }).schema['x-surface']?.contract).toBe(2);
+    expect(() => assertContract({ schema: { type: 'object' } })).toThrow('This page reads contract 4; the server sent contract 1.');
+    expect(() => assertContract({ schema: { 'x-surface': { contract: 3 } as Extension } })).toThrow('This page reads contract 4; the server sent contract 3.');
+    expect(assertContract(example3 as unknown as { schema: Schema }).schema['x-surface']?.contract).toBe(4);
+  });
+
+  it('refuses a full schema, served bare, of any other contract', () => {
+    const recorded = license as unknown as { schema: Schema };
+    expect(assertSchema(recorded.schema)['x-surface']?.contract).toBe(4);
+    expect(() => assertSchema({ ...recorded.schema, 'x-surface': { ...recorded.schema['x-surface'], contract: 3 } as Extension })).toThrow(
+      'This page reads contract 4; the server sent contract 3.',
+    );
   });
 
   it('puts each `within` entry back at its pointer, a property left out or a `true` made an object again, and drops the map', () => {
@@ -282,9 +323,9 @@ describe('contract 2 on the wire', () => {
         ...said('fieldset', { refined: true }),
         within: {
           '/allOf/1/properties/size': said('number', { refined: true }),
-          '/allOf/1/properties/a~1b': said('text', { locked: true }),
-          '/allOf/1/properties/tag': said('text', { locked: true }),
-          '/allOf/1/properties/note': said('text', { locked: true }),
+          '/allOf/1/properties/a~1b': said('text', { dependsOn: ['size'] }),
+          '/allOf/1/properties/tag': said('text', { dependsOn: ['size'] }),
+          '/allOf/1/properties/note': said('text', { dependsOn: ['size'] }),
         },
       },
     } as unknown as Schema;
@@ -292,17 +333,17 @@ describe('contract 2 on the wire', () => {
     const right = {
       title: 'Right bin',
       allOf: [{ $ref: '#/$defs/pantry.bin' }, true],
-      'x-surface': { ...said('fieldset'), within: { '/allOf/1/properties/tag': said('text', { locked: true }) } },
+      'x-surface': { ...said('fieldset'), within: { '/allOf/1/properties/tag': said('text', { dependsOn: ['size'] }) } },
     } as unknown as Schema;
     const root: Schema = { type: 'object', properties: { left: site, right }, $defs: { 'pantry.bin': bin } };
     const back = restored(root).properties!.left as unknown as { allOf: { properties: Record<string, Schema> }[]; 'x-surface': Extension };
     expect(back['x-surface']).toEqual(said('fieldset', { refined: true }));
     expect(back.allOf[1].properties.size['x-surface']).toEqual(said('number', { refined: true }));
     // A property that said nothing else was left out of the narrowing.
-    expect(back.allOf[1].properties['a/b']).toEqual({ 'x-surface': said('text', { locked: true }) });
+    expect(back.allOf[1].properties['a/b']).toEqual({ 'x-surface': said('text', { dependsOn: ['size'] }) });
     // An empty narrowing encoded as an empty list.
-    expect(back.allOf[1].properties.tag).toEqual({ 'x-surface': said('text', { locked: true }) });
-    expect(restored(root).properties?.right.allOf?.[1]).toEqual({ properties: { tag: { 'x-surface': said('text', { locked: true }) } } });
+    expect(back.allOf[1].properties.tag).toEqual({ 'x-surface': said('text', { dependsOn: ['size'] }) });
+    expect(restored(root).properties?.right.allOf?.[1]).toEqual({ properties: { tag: { 'x-surface': said('text', { dependsOn: ['size'] }) } } });
     // What was served is left as it was.
     expect((site as unknown as { 'x-surface': Extension })['x-surface'].within).toBeDefined();
 
@@ -310,12 +351,12 @@ describe('contract 2 on the wire', () => {
     expect(left['x-surface']).toEqual(said('fieldset', { refined: true }));
     expect(left.title).toBe('Left bin');
     expect(left.properties?.size).toMatchObject({ title: 'Size', maximum: 4, 'x-surface': { refined: true } });
-    expect(left.properties?.['a/b']['x-surface']?.locked).toBe(true);
-    expect(left.properties?.tag['x-surface']?.locked).toBe(true);
-    expect(left.properties?.note).toMatchObject({ readOnly: true, const: 'kept', 'x-surface': { locked: true } });
+    expect(left.properties?.['a/b']['x-surface']?.dependsOn).toEqual(['size']);
+    expect(left.properties?.tag['x-surface']?.dependsOn).toEqual(['size']);
+    expect(left.properties?.note).toMatchObject({ readOnly: true, const: 'kept', 'x-surface': { dependsOn: ['size'] } });
     const rightBin = inlineSchema(root).properties!.right;
-    expect(rightBin.properties?.tag).toMatchObject({ title: 'Tag', 'x-surface': { locked: true } });
-    expect(rightBin.properties?.size['x-surface']?.locked).toBe(false);
+    expect(rightBin.properties?.tag).toMatchObject({ title: 'Tag', 'x-surface': { dependsOn: ['size'] } });
+    expect(rightBin.properties?.size['x-surface']?.dependsOn).toBeUndefined();
   });
 
   it('reads the compliance mount\'s stewards with what the site says of them', () => {
@@ -326,7 +367,7 @@ describe('contract 2 on the wire', () => {
   });
 
   it('marks each conditional `x-surface.rules` lists as a declared rule, at the top and in a def', () => {
-    const raw = (journal as unknown as { schema: { schema: Schema } }).schema.schema;
+    const raw = (journal as unknown as { schema: Schema }).schema;
     const rules = (schema: Schema): number[] => (schema.allOf ?? []).flatMap((condition, i) => (condition['x-surface']?.declared ? [i] : []));
     expect(raw['x-surface']?.rules).toEqual([2, 4, 5]);
     const back = restored(raw);

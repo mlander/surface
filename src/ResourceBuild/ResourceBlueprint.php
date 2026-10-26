@@ -5,19 +5,27 @@ declare(strict_types=1);
 namespace Drupal\data_surface\ResourceBuild;
 
 use Drupal\Core\Cache\CacheableDependencyInterface;
+use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Component\Plugin\Exception\PluginNotFoundException;
 use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
+use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
+use Drupal\data_surface\Computed;
 use Drupal\data_surface\DataSurfaceBuilderInterface;
 use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Port;
+use Drupal\data_surface\Reference\EntityReferenceStructure;
 use Drupal\data_surface\Resource\Arrangement;
 use Drupal\data_surface\Resource\BlueprintInterface;
 use Drupal\data_surface\Resource\DefinesInputsInterface;
+use Drupal\data_surface\Resource\Compute;
+use Drupal\data_surface\Resource\ComputesValueInterface;
 use Drupal\data_surface\Resource\DefinesOutputsInterface;
-use Drupal\data_surface\Resource\KeysFromSiteInterface;
+use Drupal\data_surface\Resource\ResourceCallable;
+use Drupal\data_surface\Resource\SiteListInterface;
+use Drupal\data_surface\Contract\SchemaReader;
 
 /**
  * The owner's blueprint: keys land at the top of the data surface.
@@ -48,9 +56,26 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
   protected array $variants = [];
 
   /**
+   * The provider of variants from the site at each key that names one.
+   *
+   * @var array<string, class-string<\Drupal\data_surface\Resource\SiteListInterface>>
+   */
+  protected array $variantsFrom = [];
+
+  /**
+   * The variants a schema read into this blueprint states, by key.
+   *
+   * Each value's structure, by the name it was registered under, and the
+   * label its value is offered as, if the document gives one.
+   *
+   * @var array<string, array<string, array{name: string, label: string|null}>>
+   */
+  protected array $readVariants = [];
+
+  /**
    * The maps of keys from the site declared through this blueprint, by key.
    *
-   * @var array<string, array{each: string, from: class-string<\Drupal\data_surface\Resource\KeysFromSiteInterface>, default: mixed, child: bool, reads: array<string, string>}>
+   * @var array<string, array{each: string, from: class-string<\Drupal\data_surface\Resource\SiteListInterface>, default: mixed, child: bool, reads: array<string, string>}>
    */
   protected array $fromSite = [];
 
@@ -74,6 +99,16 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
    * @var array<string, string>
    */
   protected array $origins = [];
+
+  /**
+   * The keys declared as a bare `entity`, each with the map at the key.
+   *
+   * Its two parts are registered once its author is done narrowing it,
+   * when the build step first asks for the children (attachments()).
+   *
+   * @var array<string, \Drupal\Core\TypedData\MapDataDefinition>
+   */
+  protected array $entities = [];
 
   /**
    * Constructs a blueprint.
@@ -143,7 +178,7 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
     if (is_subclass_of($structure, DefinesOutputsInterface::class)) {
       throw new \LogicException(sprintf('%s mixes %s in, which declares outputs. A structure\'s inputs are mixed in; its outputs are not, yet.', $who, $this->name($structure)));
     }
-    $mixin = (new static($this->builder, $this->typedDataManager, FALSE, $this->registry, $structure, $this))->useShapes($this->shapes);
+    $mixin = (new static($this->builder, $this->typedDataManager, FALSE, $this->registry, $structure, $this))->useShapes($this->shapes)->useReferences($this->references);
     $structure::defineInputs($mixin);
     $this->mixins[] = ['class' => $structure, 'reads' => $reads, 'blueprint' => $mixin];
     return $this;
@@ -303,6 +338,50 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
 
   /**
    * {@inheritdoc}
+   *
+   * A key declared as a bare `entity` holds its two parts, registered for
+   * what its author narrowed it by.
+   */
+  public function attachments(): array {
+    foreach ($this->entities as $key => $shell) {
+      assert($this->registry !== NULL);
+      $owner = $this->owner === NULL ? NULL : $this->registry->getDefinition($this->owner);
+      $this->attachments[$key] = $this->registry->defineReference(
+        ($owner->id ?? $this->name($this->owner)) . '.' . $key,
+        $owner->module ?? 'data_surface',
+        EntityReferenceStructure::filter($shell),
+      );
+    }
+    $this->entities = [];
+    return parent::attachments();
+  }
+
+  /**
+   * {@inheritdoc}
+   *
+   * Decision: see
+   * docs/decisions.md#a-reference-is-an-id-with-a-list-the-site-decides-listed-or-looked-up.
+   */
+  protected function addEntity(string $key, string|\Stringable $label, mixed $default): DataDefinition {
+    if ($default !== NULL) {
+      throw new \LogicException(sprintf('add("%s", "entity") was given a default: a reference to an entity of any type is two keys, its entity type and its id, which start from nothing.', $key));
+    }
+    if ($this->registry === NULL || $this->references === NULL || $this->outputs) {
+      throw new \LogicException(sprintf('add("%s", "entity") declares a reference to an entity of any type where nothing can attach its two parts: a resource or a structure declares it among its inputs.', $key));
+    }
+    // Held for its two parts, registered once its author is done with it
+    // (attachments()).
+    $this->assertHoldsNoChild('attaches a reference to an entity of any type', $key);
+    $shell = $this->reserveChild('add', $key);
+    $this->attachments[$key] = EntityReferenceStructure::class;
+    $this->wirings[$key] = [];
+    $shell->setLabel($label);
+    $this->entities[$key] = $shell;
+    return $shell;
+  }
+
+  /**
+   * {@inheritdoc}
    */
   public function attachList(string $key, string $child, ?int $min = NULL, ?int $max = NULL): ListDataDefinition {
     $this->assertHoldsNoChild('attaches a collection of ' . $child, $key);
@@ -312,11 +391,215 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
   /**
    * {@inheritdoc}
    */
-  public function attachVariants(string $key, string $by): MapDataDefinition {
+  public function attachVariants(string $key, string $by, ?string $from = NULL): MapDataDefinition {
     $this->assertHoldsNoChild('attaches variants', $key);
+    if ($from !== NULL && !is_subclass_of($from, SiteListInterface::class)) {
+      throw new \LogicException(sprintf('attachVariants("%s") names %s as where its variants come from, which does not implement %s: a provider lists the site\'s variants, each with its schema or structure, with list().', $key, $from, SiteListInterface::class));
+    }
     $shell = $this->reserveChild('attachVariants', $key);
     $this->variants[$key] = $by;
+    if ($from !== NULL) {
+      $this->variantsFrom[$key] = $from;
+      DefinitionMetadata::setVariantsFrom($shell, $from);
+    }
     return $shell;
+  }
+
+  /**
+   * Gets the providers of variants from the site, by the key they fill.
+   *
+   * Decision: see docs/decisions.md#a-schema-can-be-read-back-into-a-structure.
+   *
+   * @return array<string, class-string<\Drupal\data_surface\Resource\SiteListInterface>>
+   *   The provider of each key that names one.
+   */
+  public function variantsFrom(): array {
+    return $this->variantsFrom;
+  }
+
+  /**
+   * Registers a structure a schema read into this blueprint describes.
+   *
+   * @param string $id
+   *   Its id in the document.
+   * @param array $root
+   *   The document, as SchemaReader prepared it.
+   * @param string $pointer
+   *   The JSON pointer of the structure's object in it.
+   * @param string|null $hash
+   *   The document's hash (documentHash()), when the caller took it
+   *   already; NULL to take it here.
+   *
+   * @return string
+   *   The name it is attached, listed, mixed in or chosen by.
+   *
+   * @internal
+   *   For SchemaReader alone.
+   */
+  public function readStructure(string $id, array $root, string $pointer, ?string $hash = NULL): string {
+    if ($this->registry === NULL) {
+      throw new \LogicException(sprintf('The document read into %s holds a structure at %s, and this blueprint has no registry to build one by.', $this->name($this->owner), $pointer === '' ? 'its root' : $pointer));
+    }
+    $owner = $this->owner === NULL ? NULL : $this->registry->getDefinition($this->owner);
+    // A document is read a frame at a time, each naming the structures it
+    // holds: its hash is taken once and handed on with it.
+    $hash ??= static::documentHash($root);
+    return $this->registry->defineRead(
+      $id,
+      $owner->module ?? 'data_surface',
+      new ResourceCallable(SchemaReader::class, 'fill', [$root, $pointer, $hash]),
+      hash('xxh128', serialize([$id, $hash, $pointer])),
+    );
+  }
+
+  /**
+   * Hashes a document a structure is read from.
+   *
+   * @param array $root
+   *   The document, as SchemaReader prepared it.
+   *
+   * @return string
+   *   Its hash: the same for two documents that say the same.
+   *
+   * @internal
+   *   For SchemaReader alone.
+   */
+  public static function documentHash(array $root): string {
+    return hash('xxh128', serialize($root));
+  }
+
+  /**
+   * Gets the id of what declares through this blueprint.
+   *
+   * @return string
+   *   Its #[Resource] or #[Structure] id, a derived or read one's id, or
+   *   its name where the registry does not know it.
+   *
+   * @internal
+   *   For SchemaReader alone.
+   */
+  public function ownerId(): string {
+    return $this->name($this->owner);
+  }
+
+  /**
+   * Gets a key declared through this blueprint, or its owner's.
+   *
+   * @param string $key
+   *   The key.
+   *
+   * @return \Drupal\Core\TypedData\DataDefinitionInterface|null
+   *   Its definition, or NULL.
+   *
+   * @internal
+   *   For SchemaReader alone.
+   */
+  public function definitionOf(string $key): ?DataDefinitionInterface {
+    return $this->builder->getDefinition($key);
+  }
+
+  /**
+   * Finds the shape of an id, for a schema read into this blueprint.
+   *
+   * @param string $id
+   *   A def's key.
+   *
+   * @return class-string|null
+   *   The class of the shape of that id, or NULL when discovery found none.
+   *
+   * @internal
+   *   For SchemaReader alone.
+   */
+  public function shapeOf(string $id): ?string {
+    return $this->registry !== NULL && $this->registry->hasShape($id) ? $this->registry->getShape($id)->class : NULL;
+  }
+
+  /**
+   * Attaches variants a schema read into this blueprint states.
+   *
+   * @param string $key
+   *   The key the variants sit at.
+   * @param string $by
+   *   The deciding key.
+   * @param array<string, array{name: string, label: string|null}> $variants
+   *   Each value's structure, by its read name, and its label, if any.
+   *
+   * @return \Drupal\Core\TypedData\MapDataDefinition
+   *   The map at the key.
+   *
+   * @internal
+   *   For SchemaReader alone.
+   */
+  public function attachReadVariants(string $key, string $by, array $variants): MapDataDefinition {
+    $shell = $this->attachVariants($key, $by);
+    $this->readVariants[$key] = $variants;
+    DefinitionMetadata::setReadVariants($shell);
+    return $shell;
+  }
+
+  /**
+   * Gets the variants a schema read into this blueprint states, by key.
+   *
+   * @return array<string, array<string, array{name: string, label: string|null}>>
+   *   Each key's variants: each value's read structure and label.
+   */
+  public function readVariants(): array {
+    return $this->readVariants;
+  }
+
+  /**
+   * Mixes in a structure a schema read into this blueprint refers to.
+   *
+   * @param string $name
+   *   The read structure's name (readStructure()).
+   *
+   * @return $this
+   *
+   * @internal
+   *   For SchemaReader alone.
+   */
+  public function mixInRead(string $name): static {
+    $mixin = (new static($this->builder, $this->typedDataManager, FALSE, $this->registry, $name, $this))->useShapes($this->shapes)->useReferences($this->references);
+    $inputs = $this->registry?->getDefinition($name)->inputs;
+    if ($inputs !== NULL) {
+      // A read structure's inputs are SchemaReader::fill(), a static
+      // method, handed the blueprint first.
+      ($inputs->class . '::' . $inputs->method)($mixin, ...$inputs->arguments);
+    }
+    $this->mixins[] = ['class' => $name, 'reads' => [], 'blueprint' => $mixin];
+    return $this;
+  }
+
+  /**
+   * Holds the frame as a whole to what a schema read into it says of it.
+   *
+   * @param array $schema
+   *   The JSON Schema left over.
+   *
+   * @return $this
+   *
+   * @internal
+   *   For SchemaReader alone.
+   */
+  public function constrainFrame(array $schema): static {
+    $this->builder->constrainFrame($schema);
+    return $this;
+  }
+
+  /**
+   * Locks a key a schema read into this blueprint says is read only.
+   *
+   * @param string $key
+   *   The key.
+   *
+   * @return $this
+   *
+   * @internal
+   *   For SchemaReader alone.
+   */
+  public function lockRead(string $key): static {
+    $this->builder->lock($key);
+    return $this;
   }
 
   /**
@@ -370,8 +653,8 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
    *   When the provider is none.
    */
   protected function reserveEach(string $verb, string $key, string $each, string $from, mixed $default, bool $child, array $reads = []): MapDataDefinition {
-    if (!is_subclass_of($from, KeysFromSiteInterface::class)) {
-      throw new \LogicException(sprintf('%s("%s") names %s as where its keys come from, which does not implement %s: a provider lists the site\'s things with keys().', $verb, $key, $from, KeysFromSiteInterface::class));
+    if (!is_subclass_of($from, SiteListInterface::class)) {
+      throw new \LogicException(sprintf('%s("%s") names %s as where its keys come from, which does not implement %s: a provider lists the site\'s things with list().', $verb, $key, $from, SiteListInterface::class));
     }
     $shell = $this->reserveChild($verb, $key);
     $this->fromSite[$key] = [
@@ -387,7 +670,7 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
   /**
    * Gets the maps of keys from the site declared through this blueprint.
    *
-   * @return array<string, array{each: string, from: class-string<\Drupal\data_surface\Resource\KeysFromSiteInterface>, default: mixed, child: bool, reads: array<string, string>}>
+   * @return array<string, array{each: string, from: class-string<\Drupal\data_surface\Resource\SiteListInterface>, default: mixed, child: bool, reads: array<string, string>}>
    *   What each entry is, the provider, the default for every entry,
    *   whether each entry is a child, and the sibling map each of its ports
    *   reads per entry, by key, in declaration order.
@@ -487,6 +770,45 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
     if (isset($this->ports[$key])) {
       throw new \LogicException(sprintf('"%s" is read as a port by this blueprint, so it cannot also be a key: a port is the container\'s key, read under a name of the structure\'s own.', $key));
     }
+  }
+
+  /**
+   * {@inheritdoc}
+   *
+   * Decision: see
+   * docs/decisions.md#a-computed-key-is-a-pure-function-of-its-sources.
+   */
+  public function compute(string $key, string $type, string|\Stringable $label, array $from, string $using, string $when = Compute::ON_CREATE): DataDefinition {
+    $refuse = fn (string $why): \LogicException => new \LogicException(sprintf('compute("%s") on %s %s', $key, $this->name($this->owner), $why));
+    if ($this->outputs) {
+      throw $refuse('declares a computed output: an output is emitted, never stored, so it has nothing to compute; a computed key is an input the caller does not type.');
+    }
+    if ($this->into !== NULL) {
+      throw $refuse(sprintf('is inside %s, mixed in: a computed key is a resource\'s own key, for now.', $this->name($this->root()->owner)));
+    }
+    if ($this->owner !== NULL && $this->registry?->hasDefinition($this->owner) && !$this->registry->getDefinition($this->owner)->isResource()) {
+      throw $refuse('is in a structure: a computed key is a resource\'s own key, at its top, for now. Declare it on the resource that holds the structure.');
+    }
+    if (!is_subclass_of($using, ComputesValueInterface::class)) {
+      throw $refuse(sprintf('names %s, which implements no %s: the class it names has a static compute().', $using, ComputesValueInterface::class));
+    }
+    if (!in_array($when, Compute::ALL, TRUE)) {
+      throw $refuse(sprintf('says when: "%s"; it is Compute::ON_CREATE or Compute::ON_CHANGE.', $when));
+    }
+    if ($from === [] || !array_is_list($from)) {
+      throw $refuse('names no key it is computed from: from: lists one or more keys.');
+    }
+    foreach ($from as $source) {
+      if ($source === $key || !in_array($source, $this->keys, TRUE)) {
+        throw $refuse(sprintf('is computed from "%s", which is no key declared before it in this blueprint.', $source));
+      }
+    }
+    $definition = $this->add($key, $type, $label);
+    if ($definition instanceof ComplexDataDefinitionInterface) {
+      throw $refuse('is a map: a computed key holds one value.');
+    }
+    DefinitionMetadata::setComputed($definition, new Computed($from, $using, $when));
+    return $definition;
   }
 
   /**

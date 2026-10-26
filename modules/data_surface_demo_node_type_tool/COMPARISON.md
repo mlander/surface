@@ -44,8 +44,8 @@ answer: the schema-only agent's best inference is in range, accepted,
 and wrong.
 
 Neither tool below was written with those settings in mind.
-`data_surface:node.type:add` is not written at all: it is generated from
-the content type resource's `add` operation, one tool per operation of
+`data_surface:node.type:create` is not written at all: it is generated from
+the content type resource's `create` operation, one tool per operation of
 every resource that names storage, and no tool class names a resource
 or a key. Its values input is the resource as built for that operation,
 in the static plugin definition. (It was `data_surface:node_type_add`, a
@@ -75,18 +75,18 @@ them: the pipeline never turns a value into a different one on a
 caller's behalf, so the contract says what a stored tag looks like and a
 caller sends that.
 
-| Case | `data_surface:node.type:add` | `tool_belt:entity_bundle_add` | Core's content type form, for a person |
+| Case | `data_surface:node.type:create` | `tool_belt:entity_bundle_add` | Core's content type form, for a person |
 | --- | --- | --- | --- |
 | One week. Resource: `{"amount": 1, "unit": "weeks"}`; classic: `604800`, by a schema-only agent that reads 3600 and 2592000 as an hour and thirty days in seconds and infers the unit, rightly, though nothing tells it so before storage; form: 1, Weeks | Created. Stored `{"review_deadline":604800,"audience_tags":[]}`. | Created. Stored `{"review_deadline":604800}`. | Stored `{"review_deadline":604800,"audience_tags":[]}`. |
-| Forty-five days, past the ceiling. Resource: `{"amount": 45, "unit": "days"}`; classic: `3888000`; form: 45, Days | Refused; nothing created. `third_party_settings.data_surface_demo_extras.review_deadline.amount`: A review deadline is at least one hour and at most thirty days; 45 days is outside that. | Created. Stored `{"review_deadline":3888000}`. The stored schema refuses it (This value should be between 3600 and 2592000.), but nothing on the write path asked. | Refused: The review deadline must be between one hour and thirty days. |
+| Forty-five days, past the ceiling. Resource: `{"amount": 45, "unit": "days"}`; classic: `3888000`; form: 45, Days | Refused; nothing created. `/third_party_settings/data_surface_demo_extras/review_deadline/amount`: A review deadline is at least one hour and at most thirty days; 45 days is outside that. | Created. Stored `{"review_deadline":3888000}`. The stored schema refuses it (This value should be between 3600 and 2592000.), but nothing on the write path asked. | Refused: The review deadline must be between one hour and thirty days. |
 | A schema-only agent that infers instead that the integer counts days sends `7`, meaning seven. Form: 7, Days, which is what it meant | Refused; nothing created. `values`: (property third_party_settings) (property data_surface_demo_extras) (property review_deadline) Invalid values given. Values must be represented as an associative array. | Created. Stored `{"review_deadline":7}`. The stored schema refuses it (This value should be between 3600 and 2592000.), but nothing on the write path asked. | Stored `{"review_deadline":604800,"audience_tags":[]}`. |
 | Ten business days. Resource: `{"amount": 10, "unit": "business_days"}`; classic: `864000`, a schema-only agent's best inference, ten days in seconds: plausible, in range, and wrong, since no reading of the schema says what a business day becomes; form: 10, Business days | Created. Stored `{"review_deadline":1036800,"audience_tags":[]}`. | Created. Stored `{"review_deadline":864000}`. | Stored `{"review_deadline":1036800,"audience_tags":[]}`. |
 | Set the tags `["news", "sports"]`. Form: news, sports | Created. Stored `{"review_deadline":null,"audience_tags":["news","sports"]}`. | Created. Stored `{"audience_tags":["news","sports"]}`. | Stored `{"review_deadline":null,"audience_tags":["news","sports"]}`. |
-| Tags as a person types them: `["News", "news ", "Sports"]`. Form: News, news , Sports | Refused; nothing created. `third_party_settings.data_surface_demo_extras.audience_tags.0`, `third_party_settings.data_surface_demo_extras.audience_tags.1`, `third_party_settings.data_surface_demo_extras.audience_tags.2`: An audience tag is lower case letters and digits, words joined by one space or one hyphen, with nothing around it. | Created. Stored `{"audience_tags":["News","news ","Sports"]}`. | Stored `{"review_deadline":null,"audience_tags":["news","sports"]}`. |
-| Unsplit tags: `"News, Sports"`. Form: the same text | Refused; nothing created. `third_party_settings.data_surface_demo_extras.audience_tags.0`: An audience tag is lower case letters and digits, words joined by one space or one hyphen, with nothing around it. | Created. Stored `{"audience_tags":"News, Sports"}`. Not the type the stored schema declares. | Stored `{"review_deadline":null,"audience_tags":["news","sports"]}`. |
+| Tags as a person types them: `["News", "news ", "Sports"]`. Form: News, news , Sports | Refused; nothing created. `/third_party_settings/data_surface_demo_extras/audience_tags/0`, `/third_party_settings/data_surface_demo_extras/audience_tags/1`, `/third_party_settings/data_surface_demo_extras/audience_tags/2`: An audience tag is lower case letters and digits, words joined by one space or one hyphen, with nothing around it. | Created. Stored `{"audience_tags":["News","news ","Sports"]}`. | Stored `{"review_deadline":null,"audience_tags":["news","sports"]}`. |
+| Unsplit tags: `"News, Sports"`. Form: the same text | Refused; nothing created. `/third_party_settings/data_surface_demo_extras/audience_tags/0`: An audience tag is lower case letters and digits, words joined by one space or one hyphen, with nothing around it. | Created. Stored `{"audience_tags":"News, Sports"}`. Not the type the stored schema declares. | Stored `{"review_deadline":null,"audience_tags":["news","sports"]}`. |
 | Dry run of one week | Accepted and prepared; nothing created. | No such input: This input is not defined for the tool. | No equivalent. |
 
-## What an agent is handed: `data_surface:node.type:add`
+## What an agent is handed: `data_surface:node.type:create`
 
 ```json
 {

@@ -24,9 +24,9 @@ final class StoreroomResource implements ResourceInterface {
   /**
    * Edits the storeroom, which always exists.
    */
-  #[Operation('edit', label: 'Edit the storeroom', permission: 'keep a larder')]
-  public static function edit(): OperationContext {
-    return new OperationContext('edit');
+  #[Operation('update', label: 'Edit the storeroom', permission: 'keep a larder')]
+  public static function update(): OperationContext {
+    return new OperationContext('update');
   }
 
   /**

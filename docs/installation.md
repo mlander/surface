@@ -19,7 +19,8 @@ On its own the base module adds the resource and structure model, the
 pipeline, the two plugin types (widgets and options resolvers), the stock
 storage classes, and the host adoption layer. It adds no resources or
 structures, no routes and no permissions. Those come from the modules
-that declare them.
+that declare them. `drush generate surface:resource` writes a settings
+page's files into one ([Generating a resource](generating.md)).
 
 ## In production: compile assertions out
 
@@ -31,7 +32,7 @@ zend.assertions = -1
 
 The module checks, under `assert()`, what a declaration promises and
 no type can say: a static refiner runs with the container guarded and
-throws if it asks for a service (`Refinement\StaticRefinerContainer`),
+throws if it asks for a service (`Pipeline\PipelineGuard`),
 the emitter asks each enumerated key's static refiners a second time
 and refuses a different answer, and a static access answer is asked a
 second time and held to the first
@@ -81,8 +82,8 @@ drush pm:install data_surface_tool
 Derives one [Tool](https://www.drupal.org/project/tool) API tool,
 `data_surface:<id>:<operation>`, for every operation that can be
 asked on its own. Among them are the field tools,
-`data_surface:field.instance:add`, `:reuse` and `:edit` and
-`data_surface:field.storage:edit`, whose settings are derived from the
+`data_surface:field.instance:create`, `:reuse` and `:update` and
+`data_surface:field.storage:update`, whose settings are derived from the
 field type's own settings class, or from its config schema when it has
 none, so an agent is offered typed, labeled, bounded settings instead of
 a free-form map.
@@ -105,12 +106,15 @@ of them is meant to replace core's own forms on a production site.
 | `data_surface_address` | A contributed field type adopting a resource without being forked. Needs Address. |
 | `data_surface_tool` | The same resources serving a non-form caller. Needs Tool. |
 | `data_surface_entity` | A resource derived for every content entity bundle with a form display, one structure per field, and a basic page added and edited through it at `/surface-entity`. Needs `node` and Tool; see [Content entities](entities.md). |
-| `data_surface_demo_node_type_tool` | A content type add tool whose input is the content type resource, compared with Tool Belt's bundle tool once another module has extended content types. Needs Tool. |
+| `data_surface_demo_node_type_tool` | A content type create tool whose input is the content type resource, compared with Tool Belt's bundle tool once another module has extended content types. Needs Tool. |
 | `data_surface_examples` | One resource that grows, one idea per example, each example a form beside the contract it emits, at `/surface-examples`: declaring, refining, parts, and the same contract as a tool. Needs Tool. |
 | `data_surface_examples_compliance` | Example 4: a compliance structure, and one alter that attaches it to example 3's resource, and nothing else. |
 | `data_surface_examples_workflow` | Example 10, extended: two alters that answer access for the program and its fees, with no change to the program, and nothing else. |
-| `data_surface_react` | The served contract: an operation as JSON Schema with refine and validate endpoints, and a React form rendered from it at `/surface-react/{resource}/{operation}`. Its built app is committed, so it needs no Node. |
-| `data_surface_openapi` | An OpenAPI 3.1 document of every operation's endpoints at `/surface-api/openapi.json` (and `.yaml`), for any OpenAPI client, generator or UI. Needs `data_surface_react`. |
+| `data_surface_examples_keys` | Example 14: a module that manages keys, standing in for the Key module: a list of named keys, the constraint and resolver that offer them, and an alter that offers one on a resource that takes a pasted key. |
+| `data_surface_component_block` | Example 13: a block, "Component", that embeds a single-directory component, its settings example 12's two lines named by `#[UsesStructure]`. Needs `block`. |
+| `data_surface_block` | A placed block as a resource, `block.placement`: its plugin chooses its settings, its theme its region, its visibility a list of conditions; placed, configured, read and removed through four tools, HTTP and a form. Needs `block`. |
+| `data_surface_react` | The served contract: a resource over HTTP at `/surface-api/{resource}`, the method its operation, as JSON Schema with a narrowing and a dry run, and a React form rendered from it at `/surface-react/{resource}/{operation}`. Its built app is committed, so it needs no Node. |
+| `data_surface_openapi` | An OpenAPI 3.1 document of every operation's paths at `/surface-api/openapi.json` (and `.yaml`), for any OpenAPI client, generator or UI, with Swagger UI at `/surface-api/docs` and Redoc at `/surface-api/redoc`. Needs `data_surface_react`. |
 
 Each submodule's own README says what it shows, how to try it, and which
 tests gate it.
@@ -138,7 +142,7 @@ drush pm:install data_surface_react
 ```
 
 With `data_surface_openapi` as well, `/surface-api/openapi.json` describes
-every operation's endpoints for an OpenAPI client, and the landing page
+every operation's paths for an OpenAPI client, and the landing page
 links it under example 6:
 
 ```bash
@@ -157,3 +161,13 @@ Place the demo block, or visit the standalone demo form at
 select. The bundle and field selects rebuild over AJAX from the structure's
 refinement map, which is the shortest proof that the whole chain is
 wired.
+
+`drush surface:catalog` lists every resource and structure the site's
+modules declare, with the doors each operation reaches, and `drush
+surface:catalog --refused` what did not build, with the file to open
+([The site's catalog](catalog-command.md)). The same listing, each door
+linked, is the page at `/admin/config/development/surfaces`, for a role
+with "View the data surface catalog" ([the catalog
+page](catalog-command.md#the-catalog-page)). To hold your own resources
+to the invariants from your module's tests, see [Testing a
+resource](testing-a-resource.md).

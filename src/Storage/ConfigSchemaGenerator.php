@@ -7,7 +7,9 @@ namespace Drupal\data_surface\Storage;
 use Drupal\Component\Serialization\Yaml as DrupalYaml;
 use Composer\Autoload\ClassLoader;
 use Drupal\Core\Cache\NullBackend;
+use Drupal\Core\Config\Entity\ConfigEntityTypeInterface;
 use Drupal\Core\DependencyInjection\ClassResolverInterface;
+use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Extension\ModuleExtensionList;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
@@ -24,6 +26,7 @@ use Drupal\data_surface\DefinitionMap;
 use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Entry;
 use Drupal\data_surface\Refinement\ChoiceSet;
+use Drupal\data_surface\Resource\ClosedSiteListInterface;
 use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface\ResourceBuild\AutowiringClassResolver;
 use Drupal\data_surface\ResourceBuild\ResourceCollectorPass;
@@ -40,7 +43,9 @@ use Symfony\Component\Yaml\Yaml;
  * The resource is the one description of a config object; its config
  * schema and the values it is installed with are derived from it, until
  * core can read a data definition as the schema. For every resource whose
- * storage is a ConfigObjectStorage, sealed as declared:
+ * storage is a ConfigObjectStorage of an object its own module provides
+ * (another module's object keeps its owner's schema, which the resource is
+ * held to), sealed as declared:
  *
  * - `config/schema/<module>.schema.yml` gains the object's entry, a
  *   `config_object` that is fully validatable, its mapping in declaration
@@ -64,6 +69,15 @@ use Symfony\Component\Yaml\Yaml;
  *   a site starts from and may differ from the default; its declared
  *   default, for a key the file does not give; nothing for one with
  *   neither (an empty list for a list).
+ *
+ * For every resource whose storage is a ConfigEntityStorage over an
+ * entity type the resource's own module declares, the entity type's entry,
+ * `<module>.<config prefix>.*`, a `config_entity` that is fully
+ * validatable, its mapping each key the storage maps to a property, by the
+ * property's name, written by the same rules; its install files
+ * are the things a module ships, which no resource describes, so none is
+ * written. An entity type of core or of another module has a schema of
+ * its own.
  *
  * A file's entries the resource does not describe are kept as they are,
  * and so are the comments above an entry; each written entry says it was
@@ -126,6 +140,9 @@ final class ConfigSchemaGenerator {
    *   The class resolver.
    * @param \Drupal\data_surface\ResourceBuild\ResourcePlugins|null $plugins
    *   The plugins that are their own structure.
+   * @param \Drupal\Core\Entity\EntityTypeManagerInterface|null $entityTypeManager
+   *   The entity type manager, for the config entity types an installed
+   *   module declares; NULL writes no entity type's entry.
    */
   public function __construct(
     protected readonly ResourceRegistry $registry,
@@ -136,6 +153,7 @@ final class ConfigSchemaGenerator {
     protected readonly ?ContainerInterface $container = NULL,
     protected readonly ?ClassResolverInterface $classResolver = NULL,
     protected readonly ?ResourcePlugins $plugins = NULL,
+    protected readonly ?EntityTypeManagerInterface $entityTypeManager = NULL,
   ) {}
 
   /**
@@ -155,20 +173,24 @@ final class ConfigSchemaGenerator {
    *
    * @param string[] $modules
    *   The modules, installed or not.
+   * @param bool $fromCode
+   *   TRUE to read the named modules from their code even where they are
+   *   installed: a resource class written since the container was built
+   *   (drush generate surface:resource) is in no registry yet.
    *
    * @return static
-   *   This generator when every one is installed; otherwise one reading
-   *   them beside the installed modules.
+   *   This generator when every one is installed and none is read again;
+   *   otherwise one reading them beside the installed modules.
    *
    * @throws \InvalidArgumentException
    *   When no module of a name is there to read.
    */
-  public function including(array $modules): static {
-    $missing = array_values(array_diff($modules, array_keys($this->installed)));
+  public function including(array $modules, bool $fromCode = FALSE): static {
+    $missing = $fromCode ? array_values($modules) : array_values(array_diff($modules, array_keys($this->installed)));
     if ($missing === [] || $this->container === NULL || $this->classResolver === NULL) {
       return $this;
     }
-    $absent = array_filter($missing, fn (string $module): bool => !$this->moduleList->exists($module));
+    $absent = array_filter($missing, fn (string $module): bool => !isset($this->installed[$module]) && !$this->moduleList->exists($module));
     if ($absent !== []) {
       // A module written since the list was cached is not in it yet.
       $this->moduleList->reset();
@@ -180,7 +202,7 @@ final class ConfigSchemaGenerator {
     $scanned = $this->installed;
     $loader = new ClassLoader();
     foreach ($missing as $module) {
-      $pathname = $this->moduleList->getPathname($module);
+      $pathname = $this->installed[$module]['pathname'] ?? $this->moduleList->getPathname($module);
       $loader->addPsr4('Drupal\\' . $module . '\\', $this->root . '/' . dirname($pathname) . '/src');
       $scanned[$module] = ['pathname' => $pathname];
     }
@@ -189,23 +211,53 @@ final class ConfigSchemaGenerator {
     $loader->register();
     $resolver = new AutowiringClassResolver($this->classResolver, $this->container);
     $registry = new ResourceRegistry(ResourceCollectorPass::discover($scanned, $this->root . '/'), new NullBackend('data_surface_config_schema'), $this->plugins, $resolver);
-    return new static($registry, $this->resources->withRegistry($registry, $resolver), $this->moduleList, $this->root, $scanned);
+    return new static($registry, $this->resources->withRegistry($registry, $resolver), $this->moduleList, $this->root, $scanned, entityTypeManager: $this->entityTypeManager);
   }
 
   /**
    * Lists the resources whose config schema this writes.
    *
    * @return array<string, \Drupal\data_surface\ResourceBuild\ResourceDefinition>
-   *   Each resource stored in a simple config object, by name.
+   *   Each resource stored in a simple config object, or in a config
+   *   entity whose type its own module declares, by name.
    */
   public function resources(): array {
     $found = [];
     foreach ($this->registry->getDefinitions() as $name => $definition) {
-      if (!$definition->isDerived() && $definition->storage !== NULL && is_subclass_of($definition->storage, ConfigObjectStorage::class)) {
+      if ($definition->isDerived() || $definition->storage === NULL) {
+        continue;
+      }
+      if (is_subclass_of($definition->storage, ConfigObjectStorage::class) && !static::owns($definition->module, (string) constant($definition->storage . '::CONFIG'))) {
+        // Another module's object: its owner's schema describes it, and the
+        // resource is held to that schema (HeldToConfigSchemaInterface).
+        // Decision: see
+        // docs/decisions.md#the-generator-writes-what-the-first-page-shows.
+        continue;
+      }
+      if (is_subclass_of($definition->storage, ConfigObjectStorage::class) || $this->entityType($definition) !== NULL) {
         $found[(string) $name] = $definition;
       }
     }
     return $found;
+  }
+
+  /**
+   * Gives the config entity type a resource is stored in, if its module's.
+   *
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   *   The resource.
+   *
+   * @return \Drupal\Core\Config\Entity\ConfigEntityTypeInterface|null
+   *   The entity type its ConfigEntityStorage names, when the resource's
+   *   module declares it; NULL for any other storage, and for an entity
+   *   type of core or of another module, which has a schema of its own.
+   */
+  protected function entityType(ResourceDefinition $definition): ?ConfigEntityTypeInterface {
+    if ($this->entityTypeManager === NULL || !is_subclass_of((string) $definition->storage, ConfigEntityStorage::class)) {
+      return NULL;
+    }
+    $type = $this->entityTypeManager->getDefinition((string) constant($definition->storage . '::ENTITY_TYPE_ID'), FALSE);
+    return $type instanceof ConfigEntityTypeInterface && $type->getProvider() === $definition->module ? $type : NULL;
   }
 
   /**
@@ -245,7 +297,7 @@ final class ConfigSchemaGenerator {
           $schemas[$entry['module']][$entry['name']] = $entry;
         }
       }
-      if (in_array($definition->module, $modules, TRUE)) {
+      if (in_array($definition->module, $modules, TRUE) && $described['install'] !== NULL) {
         $installs[$this->path($definition->module, 'config/install/' . $described['config'] . '.yml')] = $described['install'];
       }
     }
@@ -255,7 +307,7 @@ final class ConfigSchemaGenerator {
       $files[$path] = static::merge($this->read($path), $entries);
     }
     foreach ($installs as $path => $values) {
-      $files[$path] = $values === [] ? "{  }\n" : Yaml::dump($values, PHP_INT_MAX, 2, Yaml::DUMP_EXCEPTION_ON_INVALID_TYPE | Yaml::DUMP_MULTI_LINE_LITERAL_BLOCK | Yaml::DUMP_NULL_AS_TILDE | Yaml::DUMP_EMPTY_ARRAY_AS_SEQUENCE);
+      $files[$path] = static::installFile($values);
     }
     ksort($files);
     return $files;
@@ -267,25 +319,64 @@ final class ConfigSchemaGenerator {
    * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
    *   The resource.
    *
+   * @return array{config: string, entries: list<array{module: string, name: string, resource: string, schema: array}>, install: array|null}
+   *   The object's name, each schema entry with the module it is written
+   *   in, and the values it is installed with; for a config entity type,
+   *   the name of its entry and no install values.
+   */
+  public function describe(ResourceDefinition $definition): array {
+    $type = $this->entityType($definition);
+    if ($type !== NULL) {
+      return $this->describeEntityType($definition, $type);
+    }
+    $config = (string) constant($definition->storage . '::CONFIG');
+    $built = $this->resources->declaration($definition->name(), $this->context($definition));
+    $existing = $this->existing($definition->module, $config);
+    $always_held = array_map('strval', (array) constant($definition->storage . '::ALWAYS_HELD'));
+    return $this->describeBuilt($built, $definition, $config, $always_held, $existing['schema'], $existing['install']);
+  }
+
+  /**
+   * Describes the config object a sealed resource is stored in.
+   *
+   * What describe() writes for a resource discovery found, for one built
+   * any other way: the resource generator builds what it is about to
+   * write before any class of it exists, and writes its schema and install
+   * file from this, the same mapping the command uses.
+   *
+   * Decision: see
+   * docs/decisions.md#the-generator-writes-what-the-first-page-shows.
+   *
+   * @param \Drupal\data_surface\DataSurfaceInterface $built
+   *   The resource, sealed as declared.
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $owner
+   *   What it was built from: its id names the entry, its module the file.
+   * @param string $config
+   *   The config object.
+   * @param string[] $always_held
+   *   The optional keys its storage always holds, by dotted path.
+   * @param array $schema
+   *   The entries the module's schema file holds now, by name, for what
+   *   the resource does not say: the object's label.
+   * @param array $install
+   *   What the object's install file holds now.
+   *
    * @return array{config: string, entries: list<array{module: string, name: string, resource: string, schema: array}>, install: array}
    *   The object's name, each schema entry with the module it is written
    *   in, and the values it is installed with.
    */
-  public function describe(ResourceDefinition $definition): array {
-    $config = (string) constant($definition->storage . '::CONFIG');
-    $built = $this->resources->declaration($definition->name(), $this->context($definition));
-    $existing = $this->existing($definition->module, $config);
-    $this->alwaysHeld = array_map('strval', (array) constant($definition->storage . '::ALWAYS_HELD'));
+  public function describeBuilt(DataSurfaceInterface $built, ResourceDefinition $owner, string $config, array $always_held, array $schema, array $install): array {
+    $this->alwaysHeld = $always_held;
     $entries = [];
-    $install = $this->install($built, $existing['install']);
-    $mapping = $this->mapping($built->getDefinitions(), $config, $definition, $entries, $existing['schema'], TRUE, installed: $install);
+    $installed = $this->install($built, $install);
+    $mapping = $this->mapping($built->getDefinitions(), $config, $owner, $entries, $schema, TRUE, installed: $installed);
     array_unshift($entries, [
-      'module' => $definition->module,
+      'module' => $owner->module,
       'name' => $config,
-      'resource' => $definition->id,
+      'resource' => $owner->id,
       'schema' => [
         'type' => 'config_object',
-        'label' => $existing['schema'][$config]['label'] ?? $definition->id,
+        'label' => $schema[$config]['label'] ?? $owner->id,
         'constraints' => ['FullyValidatable' => NULL],
         'mapping' => $mapping,
       ],
@@ -293,7 +384,71 @@ final class ConfigSchemaGenerator {
     return [
       'config' => $config,
       'entries' => $entries,
-      'install' => $install,
+      'install' => $installed,
+    ];
+  }
+
+  /**
+   * Answers whether a config object is a module's own, by core's rule.
+   *
+   * @param string $module
+   *   The module.
+   * @param string $config
+   *   The object's name, whose first part is the module that provides it.
+   *
+   * @return bool
+   *   TRUE when the module provides it.
+   */
+  public static function owns(string $module, string $config): bool {
+    return explode('.', $config, 2)[0] === $module;
+  }
+
+  /**
+   * Describes a config entity type a resource is stored in.
+   *
+   * Decision: see
+   * docs/decisions.md#a-listing-is-a-read-only-operation-with-outputs-a-reorder-is-an-update-over-the-collection.
+   *
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   *   The resource.
+   * @param \Drupal\Core\Config\Entity\ConfigEntityTypeInterface $type
+   *   The entity type its storage names, which its module declares.
+   *
+   * @return array{config: string, entries: list<array{module: string, name: string, resource: string, schema: array}>, install: null}
+   *   The entry's name, `<config prefix>.*`, each schema entry with the
+   *   module it is written in, and no install values.
+   */
+  protected function describeEntityType(ResourceDefinition $definition, ConfigEntityTypeInterface $type): array {
+    $config = $type->getConfigPrefix() . '.*';
+    $built = $this->resources->declaration($definition->name(), $this->context($definition));
+    $existing = $this->existing($definition->module, $config);
+    $this->alwaysHeld = array_map('strval', (array) constant($definition->storage . '::ALWAYS_HELD'));
+    $storage = (string) $definition->storage;
+    assert(is_subclass_of($storage, ConfigEntityStorage::class));
+    $properties = array_filter($storage::properties(), 'is_string');
+    $entries = [];
+    $written = $this->mapping($built->getDefinitions(), $type->getConfigPrefix(), $definition, $entries, $existing['schema']);
+    $mapping = [];
+    foreach ($properties as $key => $property) {
+      if (isset($written[$key])) {
+        $mapping[$property] = $written[$key];
+      }
+    }
+    array_unshift($entries, [
+      'module' => $definition->module,
+      'name' => $config,
+      'resource' => $definition->id,
+      'schema' => [
+        'type' => 'config_entity',
+        'label' => $existing['schema'][$config]['label'] ?? (string) $type->getLabel(),
+        'constraints' => ['FullyValidatable' => NULL],
+        'mapping' => $mapping,
+      ],
+    ]);
+    return [
+      'config' => $config,
+      'entries' => $entries,
+      'install' => NULL,
     ];
   }
 
@@ -304,11 +459,12 @@ final class ConfigSchemaGenerator {
    *   The resource.
    *
    * @return \Drupal\data_surface\Resource\OperationContext
-   *   Its first operation that needs nothing, or the plugin host's verb.
+   *   Its first operation that needs nothing and takes the resource's own
+   *   keys, or the plugin host's verb.
    */
   protected function context(ResourceDefinition $definition): OperationContext {
     foreach ($this->registry->getOperations($definition->name()) as $operation) {
-      if ($operation->needsNothing()) {
+      if ($operation->needsNothing() && $operation->structure === NULL) {
         return $this->resources->operation($definition->name(), $operation->id);
       }
     }
@@ -396,24 +552,51 @@ final class ConfigSchemaGenerator {
     $held = $installed === NULL ? NULL : ($installed[$entry->name] ?? NULL);
     $definition = $entry->definition;
     $label = static::label($definition, $entry->name);
+    $from = $entry->variants === NULL ? NULL : DefinitionMetadata::variantsFrom($entry->variants->shell);
+    if ($from !== NULL && !is_subclass_of($from, ClosedSiteListInterface::class)) {
+      // Variants from the site: which there are is the site's, not the
+      // code's, so no schema written once can name them. The key is open
+      // here, and the variant its deciding key chooses holds it to its own
+      // keys before anything is written.
+      // Decision: see
+      // docs/decisions.md#a-schema-can-be-read-back-into-a-structure.
+      return ['type' => 'ignore', 'label' => $label];
+    }
     if ($entry->variants !== NULL) {
       $by = $entry->variants->by;
       $labels = [];
       foreach ($deciding === NULL ? [] : (ChoiceSet::of($deciding)->labels ?? []) as $value => $choice) {
         $labels[(string) $value] = $choice instanceof TranslatableMarkup ? strtr($choice->getUntranslatedString(), array_map('strval', $choice->getArguments())) : (string) $choice;
       }
-      foreach ($entry->variants->variants as $value => $variant) {
+      $variants = [];
+      if ($from !== NULL) {
+        // A closed provider: every structure it may list, whichever this
+        // site offers now.
+        // Decision: see
+        // docs/decisions.md#an-extension-is-a-variant-the-site-adds-or-an-alter.
+        foreach ($from::structures() as $value => $class) {
+          $source = $this->registry->getDefinition($class);
+          $declared = $this->resources->declaration($source->name(), $this->context($owner));
+          $variants[(string) $value] = [$declared->getDefinitions(), $source];
+        }
+      }
+      else {
+        foreach ($entry->variants->variants as $value => $variant) {
+          $source = $variant->source !== NULL && $this->registry->hasDefinition($variant->source) ? $this->registry->getDefinition($variant->source) : NULL;
+          $variants[(string) $value] = [$variant->child->getDefinitions(), $source];
+        }
+      }
+      foreach ($variants as $value => [$map, $source]) {
         $name = $path . '.' . $value;
-        $source = $variant->source !== NULL && $this->registry->hasDefinition($variant->source) ? $this->registry->getDefinition($variant->source) : NULL;
         $entries[] = [
           'module' => $source->module ?? $owner->module,
           'name' => $name,
           'resource' => $owner->id,
           'schema' => [
             'type' => 'mapping',
-            'label' => $labels[(string) $value] ?? $existing[$name]['label'] ?? (string) $value,
+            'label' => $labels[$value] ?? $existing[$name]['label'] ?? $value,
             'constraints' => ['FullyValidatable' => NULL],
-            'mapping' => $this->mapping($variant->child->getDefinitions(), $name, $owner, $entries, $existing, installed: is_array($held) && $entry->variants->chosen($installed[$by] ?? NULL) === (string) $value ? $held : NULL, at: $at . '.'),
+            'mapping' => $this->mapping($map, $name, $owner, $entries, $existing, installed: is_array($held) && $entry->variants->chosen($installed[$by] ?? NULL) === $value ? $held : NULL, at: $at . '.') + $this->keptSecrets($value, $variants),
           ],
         ];
       }
@@ -463,6 +646,41 @@ final class ConfigSchemaGenerator {
       ];
     }
     return $this->definition($definition, $label, installedEmpty: $installed !== NULL && $held === NULL, at: $at);
+  }
+
+  /**
+   * Writes the secrets of other variants that a variant's map keeps.
+   *
+   * A secret is kept as stored when its variant is not chosen, beside the
+   * chosen variant's keys, so each variant's mapping says it may be
+   * there: of its own type, never null, and absent until it is kept.
+   *
+   * Decision: see
+   * docs/decisions.md#an-extension-is-a-variant-the-site-adds-or-an-alter.
+   *
+   * @param string $value
+   *   The variant whose mapping is written.
+   * @param array<string, array{0: \Drupal\data_surface\DefinitionMap, 1: mixed}> $variants
+   *   Every variant's keys, by value.
+   *
+   * @return array
+   *   The mapping of the secrets other variants keep here, by key.
+   */
+  protected function keptSecrets(string $value, array $variants): array {
+    $own = $variants[$value][0];
+    $kept = [];
+    foreach ($variants as $other => [$map]) {
+      if ((string) $other === $value) {
+        continue;
+      }
+      foreach ($map->entries() as $name => $entry) {
+        $name = (string) $name;
+        if (!$own->has($name) && !isset($kept[$name]) && DefinitionMetadata::isSecret($entry->definition)) {
+          $kept[$name] = $this->definition($entry->definition, static::label($entry->definition, $name)) + ['requiredKey' => FALSE];
+        }
+      }
+    }
+    return $kept;
   }
 
   /**
@@ -774,6 +992,19 @@ final class ConfigSchemaGenerator {
   protected function read(string $path): string {
     $file = $this->root . '/' . $path;
     return is_file($file) ? (string) file_get_contents($file) : '';
+  }
+
+  /**
+   * Writes an install file's values as YAML, the way Drupal's own are.
+   *
+   * @param array $values
+   *   The values the object is installed with.
+   *
+   * @return string
+   *   The file.
+   */
+  public static function installFile(array $values): string {
+    return $values === [] ? "{  }\n" : Yaml::dump($values, PHP_INT_MAX, 2, Yaml::DUMP_EXCEPTION_ON_INVALID_TYPE | Yaml::DUMP_MULTI_LINE_LITERAL_BLOCK | Yaml::DUMP_NULL_AS_TILDE | Yaml::DUMP_EMPTY_ARRAY_AS_SEQUENCE);
   }
 
   /**

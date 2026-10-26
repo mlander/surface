@@ -31,8 +31,6 @@ use Drupal\data_surface\Resource\BlueprintAdditionsInterface;
  */
 final class ShapeBlueprint implements BlueprintAdditionsInterface {
 
-  use DeprecatedWithTrait;
-
   /**
    * The rules declared, in order.
    *

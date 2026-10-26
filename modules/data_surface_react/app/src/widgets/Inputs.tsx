@@ -1,5 +1,6 @@
 import { choices, fieldId, isEmpty, jsonType, sameValue } from '../contract';
-import { describedBy, Description, Errors, isLocked, Item, RequiredMarker, type FieldProps } from './Shell';
+import { useContext, useEffect, useState } from 'react';
+import { describedBy, Description, Errors, isLocked, Item, LookupContext, RequiredMarker, type FieldProps } from './Shell';
 
 /**
  * A single select, under the empty option rule.
@@ -306,6 +307,25 @@ export function TextareaField(props: FieldProps): JSX.Element {
   );
 }
 
+/**
+ * The one value a deciding key may hold, drawn as its label: nothing to
+ * choose. The value is the schema's `const`, held in the form's values
+ * from its default, and sent as any other.
+ */
+export function FixedField(props: FieldProps): JSX.Element {
+  const id = fieldId(props.path);
+  return (
+    <Item props={props} marker={false} label={false}>
+      <div className="dsr-label" id={id}>
+        {props.schema.title ?? props.name}
+      </div>
+      <div className="dsr-fixed" aria-labelledby={id}>
+        {props.schema['x-surface']?.fixed ?? String(props.schema.const)}
+      </div>
+    </Item>
+  );
+}
+
 /** What a key no widget claims shows, as the Form API would refuse it. */
 export function UnsupportedField(props: FieldProps): JSX.Element {
   return (
@@ -313,5 +333,75 @@ export function UnsupportedField(props: FieldProps): JSX.Element {
       <div className="dsr-label">{props.schema.title ?? props.name}</div>
       <div className="dsr-description">Not editable here: no widget claims this key.</div>
     </div>
+  );
+}
+
+/**
+ * A key that refers to an entity: listed, a select; past the site's limit,
+ * a text input whose suggestions the resource's lookup answers.
+ *
+ * While the schema lists the candidates (`oneOf`, a bare reference's id
+ * narrowed by its entity type), it is drawn as the select the form draws.
+ * Otherwise the text typed is looked up, for the account, by label, and a
+ * suggestion chosen sets its id; an id typed alone is taken as it is, as
+ * the form's entity autocomplete takes it, and the server checks either.
+ */
+export function AutocompleteField(props: FieldProps): JSX.Element {
+  const lookup = useContext(LookupContext);
+  const [text, setText] = useState<string>(isEmpty(props.value) ? '' : String(props.value));
+  const [found, setFound] = useState<{ id: string | number; label: string }[]>([]);
+  const reference = props.schema['x-surface']?.reference;
+  const by = reference?.by;
+  const type = by === undefined ? undefined : props.parentValues?.[by];
+  useEffect(() => {
+    setText(isEmpty(props.value) ? '' : String(props.value));
+  }, [props.value]);
+  if (props.schema.oneOf !== undefined) {
+    return <SelectField {...props} />;
+  }
+  const id = fieldId(props.path);
+  const ask = (typed: string) => {
+    setText(typed);
+    props.onChange(props.path, typed === '' ? null : typed);
+    if (lookup === null || typed === '' || (by !== undefined && typeof type !== 'string')) {
+      setFound([]);
+      return;
+    }
+    lookup(props.path, typed, typeof type === 'string' ? type : undefined).then(setFound, () => setFound([]));
+  };
+  return (
+    <Item props={props} marker={props.required}>
+      <input
+        type="text"
+        id={id}
+        name={props.path}
+        value={text}
+        required={props.required}
+        disabled={isLocked(props)}
+        role="combobox"
+        aria-autocomplete="list"
+        aria-expanded={found.length > 0}
+        aria-controls={`${id}--suggestions`}
+        aria-describedby={describedBy(props, id)}
+        aria-invalid={(props.errors[props.path] ?? []).length > 0 || undefined}
+        onChange={(event) => ask(event.target.value)}
+      />
+      <ul id={`${id}--suggestions`} role="listbox" hidden={found.length === 0}>
+        {found.map((candidate) => (
+          <li key={String(candidate.id)} role="option" aria-selected={sameValue(candidate.id, props.value)}>
+            <button
+              type="button"
+              onClick={() => {
+                setFound([]);
+                setText(String(candidate.id));
+                props.onChange(props.path, candidate.id);
+              }}
+            >
+              {`${candidate.label} (${String(candidate.id)})`}
+            </button>
+          </li>
+        ))}
+      </ul>
+    </Item>
   );
 }

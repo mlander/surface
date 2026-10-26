@@ -56,14 +56,14 @@ class CollectionTest extends DataSurfaceKernelTestBase {
   use UserCreationTrait;
 
   /**
-   * The write tool for the cellar's edit operation.
+   * The write tool for the cellar's update operation.
    */
-  protected const TOOL = 'data_surface:resource_test.cellar:edit';
+  protected const TOOL = 'data_surface:resource_test.cellar:update';
 
   /**
    * The read tool beside it.
    */
-  protected const READ_TOOL = 'data_surface:resource_test.cellar:edit:read';
+  protected const READ_TOOL = 'data_surface:resource_test.cellar:update:read';
 
   /**
    * What the cellar holds before each test.
@@ -133,7 +133,7 @@ class CollectionTest extends DataSurfaceKernelTestBase {
    *   The cellar.
    */
   protected function edit(): DataSurfaceInterface {
-    return $this->resources()->buildOperation(CellarResource::class, 'edit', ['larder' => 'main']);
+    return $this->resources()->buildOperation(CellarResource::class, 'update', ['larder' => 'main']);
   }
 
   /**
@@ -199,18 +199,18 @@ class CollectionTest extends DataSurfaceKernelTestBase {
     $edit = $this->edit();
     $racks = self::collection($edit, 'racks');
     $this->assertSame(['min' => 0, 'max' => 40], $racks->child()->getDefinition('spices')->getConstraints()['Range']);
-    $this->assertSame('edit', $racks->context->id);
+    $this->assertSame('update', $racks->context->id);
     $this->assertSame('main', $racks->context->known['larder']);
     // Each item's context knows its delta.
     $this->assertEquals(['larder' => 'main', 'delta' => 2], $racks->contextFor(2)->known);
     $this->assertSame(0, $racks->contextFor(0)->known['delta']);
-    // Added: the rack has no add, so its default, browse, ten at most.
-    $add = $this->resources()->buildOperation(CellarResource::class, 'add');
+    // Added: the rack's own create, ten at most.
+    $add = $this->resources()->buildOperation(CellarResource::class, 'create');
     $this->assertSame(['min' => 0, 'max' => 10], self::collection($add, 'racks')->child()->getDefinition('spices')->getConstraints()['Range']);
-    $this->assertSame('browse', self::collection($add, 'racks')->context->id);
+    $this->assertSame('create', self::collection($add, 'racks')->context->id);
     // The shelf declares no operation: it inherits, with no access of
     // its own asked.
-    $this->assertSame('edit', self::collection($edit, 'shelves')->context->id);
+    $this->assertSame('update', self::collection($edit, 'shelves')->context->id);
     // The rack's access answer reached the cellar's cacheability.
     $this->assertContains('user.permissions', $edit->getCacheContexts());
 
@@ -347,7 +347,7 @@ class CollectionTest extends DataSurfaceKernelTestBase {
       $this->assertSame('racks', $e->getPath());
     }
     // Through submit, the same refusals are violations by path.
-    $storage = $this->resources()->storage(CellarResource::class, CellarResource::edit('main'), $edit);
+    $storage = $this->resources()->storage(CellarResource::class, CellarResource::update('main'), $edit);
     $result = $pipeline->submit($edit, ['racks' => [['spices' => 1], ['brand' => 'red']]], $storage);
     $this->assertSame(['racks.1.brand'], array_map(static fn ($v) => $v->fullPath(), iterator_to_array($result->violations, FALSE)));
 
@@ -407,12 +407,12 @@ class CollectionTest extends DataSurfaceKernelTestBase {
    * @return array
    *   The document.
    */
-  protected function contract(DataSurfaceInterface $surface, bool $full = FALSE, string $operation = 'edit'): array {
+  protected function contract(DataSurfaceInterface $surface, bool $full = FALSE, string $operation = 'update'): array {
     $emitter = $this->container->get('data_surface.contract_emitter');
     if ($full) {
       return $emitter->emitFull($surface, 'resource_test.cellar', $operation)->document;
     }
-    $context = $this->resources()->operation(CellarResource::class, 'edit', ['larder' => 'main']);
+    $context = $this->resources()->operation(CellarResource::class, 'update', ['larder' => 'main']);
     $stored = $this->resources()->storage(CellarResource::class, $context, $surface)->load($surface);
     return $emitter->emit($surface, array_replace($surface->getDefaultValues(), $stored), 'resource_test.cellar', $operation)->document;
   }
@@ -430,9 +430,9 @@ class CollectionTest extends DataSurfaceKernelTestBase {
     $this->assertSame(['$ref' => '#/$defs/resource_test.larder.rack'], $racks['items']);
     $this->assertSame(1, $racks['minItems']);
     $this->assertSame(4, $racks['maxItems']);
-    $this->assertTrue($racks['x-surface']['list']);
+    $this->assertTrue($racks['x-surface']['collection']);
     $this->assertSame(['size'], $racks['x-surface']['dependsOn']);
-    $this->assertFalse($racks['x-surface']['locked']);
+    $this->assertArrayNotHasKey('readOnly', $racks);
     $this->assertArrayHasKey('resource_test.larder.rack', $schema['$defs']);
     $this->assertSame('#/$defs/resource_test.pantry.shelf', $schema['properties']['shelves']['items']['$ref']);
     // The values carry every item, in order; the schema none of them.
@@ -446,7 +446,7 @@ class CollectionTest extends DataSurfaceKernelTestBase {
     $racks = $full['properties']['racks'];
     $this->assertSame(['$ref' => '#/$defs/resource_test.larder.rack'], $racks['items']);
     $this->assertSame(4, $racks['maxItems']);
-    $this->assertTrue($racks['x-surface']['list']);
+    $this->assertTrue($racks['x-surface']['collection']);
     $this->assertTrue($racks['x-surface']['enumerated']);
     $this->assertContains([
       'if' => ['properties' => ['size' => ['const' => 'small']], 'required' => ['size']],
@@ -469,9 +469,9 @@ class CollectionTest extends DataSurfaceKernelTestBase {
 
     // Added, every rack is the rack's default browse, ten at most: the
     // def is the child as its operation built it, so the items say so.
-    $add = $this->resources()->buildOperation(CellarResource::class, 'add');
+    $add = $this->resources()->buildOperation(CellarResource::class, 'create');
     foreach ([FALSE, TRUE] as $is_full) {
-      $schema = $this->contract($add, $is_full, 'add')['schema'];
+      $schema = $this->contract($add, $is_full, 'create')['schema'];
       $this->assertSame(['$ref' => '#/$defs/resource_test.larder.rack'], $schema['properties']['racks']['items']);
       $inline = SchemaResolver::inline($schema['properties']['racks'], $schema);
       $this->assertSame(10, $inline['items']['properties']['spices']['maximum']);
@@ -483,7 +483,6 @@ class CollectionTest extends DataSurfaceKernelTestBase {
     foreach ([FALSE, TRUE] as $is_full) {
       $schema = $this->contract($locked, $is_full)['schema'];
       $this->assertTrue($schema['properties']['racks']['readOnly']);
-      $this->assertTrue($schema['properties']['racks']['x-surface']['locked']);
       // Every item differs from its def, the def being the rack as
       // declared: the items narrow it by composition.
       $this->assertSame(['$ref' => '#/$defs/resource_test.larder.rack'], $schema['properties']['racks']['items']['allOf'][0]);
@@ -587,7 +586,7 @@ class CollectionTest extends DataSurfaceKernelTestBase {
     // The pipeline holds each item to the child's rules, and names the
     // second item's spices by its full path.
     $this->assertFalse($refused['success']);
-    $this->assertStringContainsString('racks.1.spices: This value should be between 0 and 40.', $refused['message']);
+    $this->assertStringContainsString('/racks/1/spices: This value should be between 0 and 40.', $refused['message']);
 
     // The read tool answers with the list.
     $read = $this->runTool(self::READ_TOOL, ['larder' => 'main']);
@@ -609,7 +608,7 @@ class CollectionTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Builds the generic form at the cellar's edit route.
+   * Builds the generic form at the cellar's update route.
    *
    * @param array $input
    *   What a browser posted, if anything: the form is then processed as
@@ -619,11 +618,11 @@ class CollectionTest extends DataSurfaceKernelTestBase {
    *   The resource's part of the built form.
    */
   protected function form(array $input = []): array {
-    $route = $this->container->get('router.route_provider')->getRouteByName('data_surface_resource_test.cellar.edit');
+    $route = $this->container->get('router.route_provider')->getRouteByName('data_surface_resource_test.cellar.update');
     $stack = $this->container->get('request_stack');
     $request = Request::create('/surface-test/cellar/main');
     $request->setSession($stack->getSession());
-    $request->attributes->set(RouteObjectInterface::ROUTE_NAME, 'data_surface_resource_test.cellar.edit');
+    $request->attributes->set(RouteObjectInterface::ROUTE_NAME, 'data_surface_resource_test.cellar.update');
     $request->attributes->set(RouteObjectInterface::ROUTE_OBJECT, $route);
     $request->attributes->set('larder', 'main');
     $request->attributes->set('_raw_variables', new InputBag(['larder' => 'main']));

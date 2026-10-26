@@ -11,6 +11,7 @@ use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\Site\Settings;
 use Drupal\data_surface\DataSurfaceAccess;
 use Drupal\data_surface\DataSurfaceInterface;
+use Drupal\data_surface\Pipeline\ResultDocument;
 use Drupal\data_surface\Pipeline\ValueState;
 use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface\ResourceBuild\ResourceRegistry;
@@ -21,10 +22,10 @@ use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 /**
  * Reads an operation off a request, and the values it is served with.
  *
- * The page and the endpoints address an operation by the resource's
- * `#[Resource]` id (or a structure's `#[Structure]` id) and the operation
- * id, in the path, and its parameters by the operation method's
- * parameter names, in the query string or in a POST body's `parameters`.
+ * The page addresses an operation by the resource's `#[Resource]` id (or
+ * a structure's `#[Structure]` id) and the operation id, in the path, and
+ * its parameters by the operation method's parameter names, in the query
+ * string; the API by what ServedPaths reads off its path and method.
  * Everything after that is what DataSurfaceOperationForm does for a
  * route: the operation builds the context, the resource is built in it,
  * its storage composed for it, and the current values are what the
@@ -46,19 +47,14 @@ final class ServedOperations {
   ) {}
 
   /**
-   * Builds the operation a request names.
+   * Builds the operation the React page names.
    *
    * @param string $resource
    *   The resource's `#[Resource]` id, or its class.
    * @param string $operation
    *   The operation id.
    * @param \Symfony\Component\HttpFoundation\Request $request
-   *   The request, whose query string, and on a POST whose body, carry
-   *   the operation's parameters.
-   * @param bool $read_body
-   *   Whether a POST body's `parameters` are read. The access check reads
-   *   the query string alone for a body it cannot decode, so the
-   *   controller is the one that refuses the body, with a 400.
+   *   The request, whose query string carries the operation's parameters.
    *
    * @return \Drupal\data_surface_react\ServedOperation
    *   The operation, built.
@@ -66,15 +62,29 @@ final class ServedOperations {
    * @throws \InvalidArgumentException
    *   When the resource or operation is not discovered, or a parameter
    *   the operation needs is missing or names nothing.
-   * @throws \Symfony\Component\HttpKernel\Exception\BadRequestHttpException
-   *   When the body is read and is not a JSON object.
    */
-  public function fromRequest(string $resource, string $operation, Request $request, bool $read_body = TRUE): ServedOperation {
-    return $this->resolve($resource, $operation, $this->parameters($resource, $operation, $request, $read_body));
+  public function fromRequest(string $resource, string $operation, Request $request): ServedOperation {
+    return $this->resolve($resource, $operation, $this->parameters($resource, $operation, $request));
   }
 
   /**
-   * Gets the context of the operation a request names, building nothing.
+   * Builds the operation an API request names.
+   *
+   * @param \Drupal\data_surface_react\ServedTarget $target
+   *   What the path and the method named.
+   *
+   * @return \Drupal\data_surface_react\ServedOperation
+   *   The operation, built.
+   *
+   * @throws \InvalidArgumentException
+   *   When a parameter names nothing.
+   */
+  public function fromTarget(ServedTarget $target): ServedOperation {
+    return $this->resolve($target->definition->name(), $target->operation->id, $target->parameters);
+  }
+
+  /**
+   * Gets the context of the operation the React page names, building nothing.
    *
    * What the access check asks with: the operation's context, its subject
    * loaded from the parameters, and no build, so a response the page cache
@@ -88,24 +98,40 @@ final class ServedOperations {
    *   The operation id.
    * @param \Symfony\Component\HttpFoundation\Request $request
    *   The request.
-   * @param bool $read_body
-   *   Whether a POST body's `parameters` are read, as fromRequest() says.
    *
    * @return \Drupal\data_surface\Resource\OperationContext
    *   The context.
    *
    * @throws \InvalidArgumentException
    *   As fromRequest() does.
-   * @throws \Symfony\Component\HttpKernel\Exception\BadRequestHttpException
-   *   As fromRequest() does.
    */
-  public function contextFromRequest(string $resource, string $operation, Request $request, bool $read_body = TRUE): OperationContext {
-    $definition = $this->registry->getDefinition($resource);
-    return $this->resources->operation($definition->name(), $operation, $this->parameters($resource, $operation, $request, $read_body));
+  public function contextFromRequest(string $resource, string $operation, Request $request): OperationContext {
+    return $this->context($resource, $operation, $this->parameters($resource, $operation, $request));
   }
 
   /**
-   * Reads the operation's parameters off a request.
+   * Gets the context of an operation for its parameters, building nothing.
+   *
+   * @param string $resource
+   *   The resource's `#[Resource]` id, or its class.
+   * @param string $operation
+   *   The operation id.
+   * @param array $parameters
+   *   The operation's parameters, by name, as raw values.
+   *
+   * @return \Drupal\data_surface\Resource\OperationContext
+   *   The context.
+   *
+   * @throws \InvalidArgumentException
+   *   When a parameter the operation needs is missing or names nothing.
+   */
+  public function context(string $resource, string $operation, array $parameters): OperationContext {
+    $definition = $this->registry->getDefinition($resource);
+    return $this->resources->operation($definition->name(), $operation, $parameters);
+  }
+
+  /**
+   * Reads the operation's parameters off the React page's query string.
    *
    * @param string $resource
    *   The resource's `#[Resource]` id, or its class.
@@ -113,19 +139,15 @@ final class ServedOperations {
    *   The operation id.
    * @param \Symfony\Component\HttpFoundation\Request $request
    *   The request.
-   * @param bool $read_body
-   *   Whether a POST body's `parameters` are read.
    *
    * @return array
    *   The parameters given, by name, as raw values.
    */
-  protected function parameters(string $resource, string $operation, Request $request, bool $read_body): array {
+  protected function parameters(string $resource, string $operation, Request $request): array {
     $found = $this->registry->getOperation($resource, $operation);
     $given = [];
-    $body = $read_body && $request->isMethod('POST') ? $this->body($request) : [];
-    $posted = is_array($body['parameters'] ?? NULL) ? $body['parameters'] : [];
     foreach ($found->parameters as $parameter) {
-      $value = $posted[$parameter->name] ?? $request->query->all()[$parameter->name] ?? NULL;
+      $value = $request->query->all()[$parameter->name] ?? NULL;
       if ($value !== NULL) {
         $given[$parameter->name] = $value;
       }
@@ -281,9 +303,9 @@ final class ServedOperations {
   /**
    * Fingerprints what the storage holds now, for a write to be checked by.
    *
-   * A keyed hash of the stored values the contract was built from, read
-   * by load(): served with the contract, sent back with a submit, and
-   * compared with what storage holds when the submit arrives. Keyed by
+   * A keyed hash of the stored values the envelope was built from, read
+   * by load(): served as its `ETag`, sent back in a write's `If-Match`,
+   * and compared with what storage holds when the write arrives. Keyed by
    * the site's hash salt, so it says nothing that could be guessed back
    * from it, a secret included.
    *
@@ -311,9 +333,9 @@ final class ServedOperations {
    * The answer is checked rather than trusted: the operation is built
    * from those parameters, has to load what they name, and has to know
    * the same identity the write was given. A content type added as
-   * `recipe` lives at `edit` with `{type: recipe}`; a page added through
-   * its derived resource lives at `edit` with `{id: <its new id>}`, which
-   * its `id` output says, the add operation knowing only that it had
+   * `recipe` lives at `update` with `{type: recipe}`; a page added through
+   * its derived resource lives at `update` with `{id: <its new id>}`, which
+   * its `id` output says, the create operation knowing only that it had
    * none; a field added to a bundle has no answer, because its edit
    * operation takes the field's own id, which neither its outputs nor
    * its identity carry.
@@ -383,7 +405,7 @@ final class ServedOperations {
   }
 
   /**
-   * Decodes a POST body.
+   * Decodes a request body: the values document itself.
    *
    * @param \Symfony\Component\HttpFoundation\Request $request
    *   The request.
@@ -392,7 +414,8 @@ final class ServedOperations {
    *   The body, an object decoded as an array; empty when there is none.
    *
    * @throws \Symfony\Component\HttpKernel\Exception\BadRequestHttpException
-   *   When the body is not a JSON object.
+   *   When the body is not a JSON object: a list, a string or a number is
+   *   no values document.
    */
   public function body(Request $request): array {
     $content = (string) $request->getContent();
@@ -400,15 +423,15 @@ final class ServedOperations {
       return [];
     }
     try {
-      $body = json_decode($content, TRUE, 512, JSON_THROW_ON_ERROR);
+      $body = json_decode($content, FALSE, 512, JSON_THROW_ON_ERROR);
     }
     catch (\JsonException $e) {
       throw new BadRequestHttpException('The body is not JSON: ' . $e->getMessage(), $e);
     }
-    if (!is_array($body)) {
+    if (!$body instanceof \stdClass) {
       throw new BadRequestHttpException('The body is not a JSON object.');
     }
-    return $body;
+    return (array) json_decode($content, TRUE, 512, JSON_THROW_ON_ERROR);
   }
 
   /**
@@ -428,8 +451,8 @@ final class ServedOperations {
    * @param array $stored
    *   The values the operation is served with.
    * @param mixed $paths
-   *   The dotted stale paths the caller sent back; anything that is not
-   *   a list of strings is no paths.
+   *   The stale paths the caller sent back, each a JSON Pointer or a
+   *   dotted path; anything that is not a list of strings is no paths.
    *
    * @return array
    *   The input, standing for the stored value at each kept path.
@@ -442,7 +465,7 @@ final class ServedOperations {
       if (!is_string($dotted) || $dotted === '') {
         continue;
       }
-      $segments = explode('.', $dotted);
+      $segments = explode('.', ResultDocument::dotted($dotted));
       $exists = FALSE;
       $value = NestedArray::getValue($input, $segments, $exists);
       if ($exists && !ValueState::isConfigured($value) && NestedArray::keyExists($stored, $segments)) {

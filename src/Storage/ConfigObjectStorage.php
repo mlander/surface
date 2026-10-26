@@ -20,6 +20,7 @@ use Drupal\data_surface\Resource\HeldToConfigSchemaInterface;
 use Drupal\data_surface\Resource\KnowsClearableKeysInterface;
 use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface\Resource\ResourceStorageInterface;
+use Drupal\Core\Session\AccountInterface;
 
 /**
  * Keeps a singleton resource's values in one simple config object.
@@ -147,7 +148,7 @@ abstract class ConfigObjectStorage implements ResourceStorageInterface, KnowsCle
    *   When no config schema describes the object: the storage exists to
    *   hold values to it.
    */
-  public function prepare(OperationContext $context, array $values): array {
+  public function prepare(OperationContext $context, array $values, AccountInterface $account): array {
     $name = $this->name();
     if (!$this->typedConfig->hasConfigSchema($name)) {
       throw new \LogicException(sprintf('No config schema describes %s, which %s stores in. Declare it in the module\'s config/schema/*.schema.yml.', $name, static::class));
@@ -171,7 +172,7 @@ abstract class ConfigObjectStorage implements ResourceStorageInterface, KnowsCle
   /**
    * {@inheritdoc}
    */
-  public function commit(OperationContext $context, array $prepared): void {
+  public function commit(OperationContext $context, array $prepared, AccountInterface $account): void {
     $config = $this->configFactory->getEditable($this->name());
     $before = $config->getRawData();
     foreach ($prepared as $key => $value) {

@@ -7,6 +7,7 @@ namespace Drupal\data_surface_resource_test\Storage;
 use Drupal\Core\State\StateInterface;
 use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface\Resource\ResourceStorageInterface;
+use Drupal\Core\Session\AccountInterface;
 
 /**
  * Keeps a larder in state, whole: what it is handed is what it stores.
@@ -49,14 +50,14 @@ final class LarderStorage implements ResourceStorageInterface {
   /**
    * {@inheritdoc}
    */
-  public function prepare(OperationContext $context, array $values): array {
+  public function prepare(OperationContext $context, array $values, AccountInterface $account): array {
     return $values;
   }
 
   /**
    * {@inheritdoc}
    */
-  public function commit(OperationContext $context, array $prepared): void {
+  public function commit(OperationContext $context, array $prepared, AccountInterface $account): void {
     $larder = $context->known['larder'] ?? $prepared['larder'] ?? NULL;
     if (!is_string($larder)) {
       throw new \LogicException('A larder was committed with no larder known.');

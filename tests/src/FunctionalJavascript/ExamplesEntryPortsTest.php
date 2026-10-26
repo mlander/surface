@@ -61,6 +61,8 @@ class ExamplesEntryPortsTest extends ExamplesWebDriverTestBase {
     $page->uncheckField('surface[on_sale][student]');
     $assert->assertWaitOnAjaxRequest();
     $page->pressButton('Save');
+    // The press returns before the saved page has loaded: wait for it.
+    $this->assertNotNull($assert->waitForText('The changes have been saved.'));
     $assert->elementNotExists('css', '.error');
     $stored = $this->config('data_surface_examples.sales')->get();
     $this->assertFalse($stored['on_sale']['student']);
@@ -86,8 +88,10 @@ class ExamplesEntryPortsTest extends ExamplesWebDriverTestBase {
     $page->checkField('dsr-on_sale-student');
     $this->assertNotNull($assert->waitForElement('css', '#dsr-limits-student-per_order'));
     $this->assertSame('1', $page->findById('dsr-limits-student-per_order')->getValue());
-    $refined = (int) $this->getSession()->evaluateScript("performance.getEntriesByType('resource').filter((entry) => new URL(entry.name).pathname.endsWith('/refine')).length");
-    $this->assertSame(0, $refined);
+    // The full schema's path, fetched once with GET as the page loads;
+    // a narrowing asked of the server would be a POST to it.
+    $schema = (int) $this->getSession()->evaluateScript("performance.getEntriesByType('resource').filter((entry) => new URL(entry.name).pathname.endsWith('/event.sales/schema')).length");
+    $this->assertSame(1, $schema);
   }
 
 }

@@ -1,7 +1,7 @@
 {
     "resource": "event.review",
     "module": "data_surface_examples",
-    "contract": 2,
+    "contract": 4,
     "documents": [
         {
             "resource": "event.review",
@@ -10,7 +10,7 @@
             "schema": {
                 "$schema": "https://json-schema.org/draft/2020-12/schema",
                 "x-surface": {
-                    "contract": 2,
+                    "contract": 4,
                     "version": 1,
                     "rules": [
                         0
@@ -27,8 +27,6 @@
                         ],
                         "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
                         "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
                             "patternMessage": "Write the date as YYYY-MM-DD, such as 2026-10-19."
                         }
                     },
@@ -39,11 +37,9 @@
                             "null"
                         ],
                         "x-surface": {
-                            "locked": false,
                             "dependsOn": [
                                 "reviewed_on"
-                            ],
-                            "declared": true
+                            ]
                         }
                     }
                 },

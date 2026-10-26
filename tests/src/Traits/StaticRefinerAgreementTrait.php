@@ -206,7 +206,7 @@ trait StaticRefinerAgreementTrait {
     foreach ($rules as $key => $conditions) {
       $entry = $surface->getDefinitions()->entry($key);
       $this->assertNotNull($entry, sprintf('%s states a rule for "%s", which it does not declare.', $label, $key));
-      $this->assertTrue($schema['properties'][$key]['x-surface']['declared'] ?? FALSE, sprintf('In %s, "%s" has declared conditionals and is not marked declared.', $label, $key));
+      $this->assertArrayNotHasKey('declared', $schema['properties'][$key]['x-surface'] ?? [], sprintf('In %s, "%s" carries no marker of its own: the frame\'s `rules` lists its conditionals.', $label, $key));
       // Every value a condition names, either side of every bound, nothing,
       // and a value the key would hold.
       $candidates = [];

@@ -4,50 +4,42 @@ declare(strict_types=1);
 
 namespace Drupal\data_surface_tool;
 
-use Drupal\Component\Plugin\Exception\PluginException;
-use Drupal\Core\Config\Schema\Mapping;
-use Drupal\Core\Config\Schema\Sequence;
-use Drupal\Core\Config\TypedConfigManagerInterface;
+use Drupal\Core\Cache\CacheableDependencyInterface;
 use Drupal\Core\Field\FieldTypePluginManagerInterface;
-use Drupal\Core\TypedData\Attribute\DataType;
-use Drupal\Core\TypedData\DataDefinition;
-use Drupal\Core\TypedData\DataDefinitionInterface;
-use Drupal\Core\TypedData\ListDataDefinition;
-use Drupal\Core\TypedData\MapDataDefinition;
-use Drupal\Core\TypedData\TypedDataManagerInterface;
-use Drupal\data_surface\DefinitionMetadata;
-use Drupal\data_surface\ResourceBuild\DerivedVariantsInterface;
-use Drupal\data_surface_tool\Resource\FieldInstanceResource;
+use Drupal\data_surface\Contract\ConfigSchemaDocument;
+use Drupal\data_surface\Resource\SiteList;
+use Drupal\data_surface\Resource\SiteListInterface;
 
 /**
- * A field type's settings, read from its config schema, as a variant.
+ * Every field type the site offers in its UI, each its settings' schema.
  *
- * Derives FieldInstanceResource's settings variant for every field type a
- * site offers in its UI that no #[Variant] covers, so a plain `string`
- * or `integer` field can be added and edited through the derived field
- * tools as an address field can. What a caller gets is what the schema
- * says: the keys of `field.field_settings.<field type>`, their types and
- * labels, and the field type's own default settings where their type
- * fits. No vocabulary, no bounds, no refinement: a field type that wants
- * those writes a settings class and marks it #[Variant], and
- * that variant wins.
+ * Lists FieldInstanceResource's settings variants, named by its
+ * `attachVariants('settings', by: 'field_type', from: ...)`: one entry
+ * per field type offered in the UI, labeled with the field type's label,
+ * its settings the config schema `field.field_settings.<field type>`,
+ * written as JSON Schema (ConfigSchemaDocument) for the schema reader,
+ * with the field type's own default settings where their type fits and
+ * they say something: an empty string is a form's "nothing yet", which a
+ * key its storage always holds could not be sent, so it is no default. So a
+ * plain `string` or `integer` field can be added and edited through the
+ * field tools as an address field can. No vocabulary, no bounds, no
+ * refinement: a field type that wants those writes a settings class and
+ * marks it #[Variant], and that variant wins for its value.
  *
- * Read through typed config, as Tool Belt's free-form field tools read
- * it: a mapping becomes a map, a sequence a list, a primitive its typed
- * data type, and anything the schema cannot resolve without a value (a
- * dynamic type such as an entity reference's handler settings) `any`.
+ * It is a list the site decides, as any provider's is, so it counts
+ * against `data_surface.settings:site_list_limit`: on a site offering
+ * more field types than that, the settings key is stated open and
+ * `deferred`, its variant fetched per field type. Which field types there
+ * are follows from the modules installed, so the list carries the field
+ * type plugin manager's cacheability and the extension list's tag.
  *
  * The field's storage has settings of its own, chosen by the same field
  * type and described the same way: FieldStorageSettingsSchemaVariants
- * is this class pointed at the storage's settings variants, its schema
- * and its defaults.
+ * is this class pointed at the storage's settings schema and defaults.
+ *
+ * Decision: see docs/decisions.md#derived-variants.
  */
-class FieldSettingsSchemaVariants implements DerivedVariantsInterface {
-
-  /**
-   * The resource whose settings variants this derives.
-   */
-  protected const RESOURCE = FieldInstanceResource::class;
+class FieldSettingsSchemaVariants implements SiteListInterface {
 
   /**
    * The config schema of a field type's settings, less the field type.
@@ -60,118 +52,43 @@ class FieldSettingsSchemaVariants implements DerivedVariantsInterface {
   protected const DEFAULTS = 'defaultFieldSettings';
 
   /**
-   * Constructs the deriver.
+   * The list, once read in this request.
+   */
+  protected ?SiteList $list = NULL;
+
+  /**
+   * Constructs the provider.
    *
    * @param \Drupal\Core\Field\FieldTypePluginManagerInterface $fieldTypes
    *   The field type plugin manager, which lists the field types.
-   * @param \Drupal\Core\Config\TypedConfigManagerInterface $typedConfig
-   *   The typed config manager, which owns the config schema.
-   * @param \Drupal\Core\TypedData\TypedDataManagerInterface $typedDataManager
-   *   The typed data manager, asked whether a schema's data type is one.
+   * @param \Drupal\data_surface\Contract\ConfigSchemaDocument $schemas
+   *   Writes a field type's settings schema as JSON Schema.
    */
   public function __construct(
     protected readonly FieldTypePluginManagerInterface $fieldTypes,
-    protected readonly TypedConfigManagerInterface $typedConfig,
-    protected readonly TypedDataManagerInterface $typedDataManager,
+    protected readonly ConfigSchemaDocument $schemas,
   ) {
   }
 
   /**
    * {@inheritdoc}
    */
-  public function variantsAt(): array {
-    return [static::RESOURCE, 'settings'];
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function source(): string {
-    return 'the config schema `' . static::SCHEMA . '<field type>`, for every field type offered in the UI';
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function variants(array $declared): array {
-    $variants = [];
+  public function list(): SiteList {
+    if ($this->list !== NULL) {
+      return $this->list;
+    }
+    $list = (new SiteList())->addCacheTags(['config:core.extension']);
+    if ($this->fieldTypes instanceof CacheableDependencyInterface) {
+      $list->addCacheableDependency($this->fieldTypes);
+    }
     foreach ($this->fieldTypes->getDefinitions() as $type => $definition) {
       $type = (string) $type;
-      if (!empty($definition['no_ui']) || in_array($type, $declared, TRUE)) {
+      if (!empty($definition['no_ui'])) {
         continue;
       }
-      $schema = $this->typedConfig->getDefinition(static::SCHEMA . $type);
-      $defaults = $this->defaults($definition['class'] ?? NULL);
-      $keys = [];
-      foreach ($schema['mapping'] ?? [] as $key => $property) {
-        $keys[(string) $key] = $this->definition(is_array($property) ? $property : []);
-        if (array_key_exists($key, $defaults) && $this->fits($keys[(string) $key], $defaults[$key])) {
-          DefinitionMetadata::setDefaultValue($keys[(string) $key], $defaults[$key]);
-        }
-      }
-      $variants[$type] = $keys;
+      $list->add($type, $definition['label'] ?? $type, schema: $this->schemas->object(static::SCHEMA . $type, [], $this->defaults($definition['class'] ?? NULL)));
     }
-    return $variants;
-  }
-
-  /**
-   * Turns one schema element into a core data definition.
-   *
-   * @param array $schema
-   *   The element as the schema writes it: a type and what goes with it.
-   *
-   * @return \Drupal\Core\TypedData\DataDefinitionInterface
-   *   The definition.
-   */
-  protected function definition(array $schema): DataDefinitionInterface {
-    try {
-      $built = $this->typedConfig->buildDataDefinition($schema, NULL);
-    }
-    catch (\Throwable) {
-      return DataDefinition::create('any');
-    }
-    // A config schema definition is an array underneath; the interface
-    // does not say so, every implementation typed config builds does.
-    $built = $built instanceof DataDefinition ? $built->toArray() : [];
-    $label = $built['label'] ?? NULL;
-    $class = (string) ($built['class'] ?? '');
-    if (is_a($class, Mapping::class, TRUE)) {
-      $map = MapDataDefinition::create();
-      foreach ($built['mapping'] ?? [] as $key => $property) {
-        $map->setPropertyDefinition((string) $key, $this->definition(is_array($property) ? $property : []));
-      }
-      return $label === NULL ? $map : $map->setLabel($label);
-    }
-    if (is_a($class, Sequence::class, TRUE)) {
-      $list = ListDataDefinition::create('any');
-      $list->setItemDefinition($this->definition(is_array($built['sequence'] ?? NULL) ? $built['sequence'] : []));
-      return $label === NULL ? $list : $list->setLabel($label);
-    }
-    $definition = DataDefinition::create($this->dataType($class));
-    return $label === NULL ? $definition : $definition->setLabel($label);
-  }
-
-  /**
-   * Reads the typed data type a schema element's class implements.
-   *
-   * @param string $class
-   *   The class the schema names.
-   *
-   * @return string
-   *   Its #[DataType] id when typed data knows it, `any` otherwise.
-   */
-  protected function dataType(string $class): string {
-    if ($class === '' || !class_exists($class)) {
-      return 'any';
-    }
-    $attribute = (new \ReflectionClass($class))->getAttributes(DataType::class)[0] ?? NULL;
-    $id = $attribute?->newInstance()->getId();
-    try {
-      return is_string($id) && $this->typedDataManager->getDefinition($id, FALSE) !== NULL ? $id : 'any';
-    }
-    catch (PluginException) {
-      return 'any';
-    }
+    return $this->list = $list;
   }
 
   /**
@@ -181,7 +98,8 @@ class FieldSettingsSchemaVariants implements DerivedVariantsInterface {
    *   The field item class.
    *
    * @return array
-   *   The defaults, or none when the class cannot say.
+   *   The defaults, less the empty strings, or none when the class cannot
+   *   say.
    */
   protected function defaults(mixed $class): array {
     $method = static::DEFAULTS;
@@ -189,39 +107,12 @@ class FieldSettingsSchemaVariants implements DerivedVariantsInterface {
       return [];
     }
     try {
-      return $class::$method();
+      $defaults = $class::$method();
     }
     catch (\Throwable) {
       return [];
     }
-  }
-
-  /**
-   * Says whether a default is a value of the definition's own type.
-   *
-   * A field type's defaults are what its form starts from, and an
-   * integer setting defaulting to the empty string is a form's notion of
-   * "nothing yet": declared as the key's default it would be a value the
-   * key refuses.
-   *
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The definition.
-   * @param mixed $default
-   *   The default.
-   *
-   * @return bool
-   *   TRUE when the default fits.
-   */
-  protected function fits(DataDefinitionInterface $definition, mixed $default): bool {
-    return match ($definition->getDataType()) {
-      'string', 'email', 'uri' => is_string($default),
-      'integer' => is_int($default),
-      'float' => is_int($default) || is_float($default),
-      'boolean' => is_bool($default),
-      'map' => is_array($default) && !array_is_list($default),
-      'list' => is_array($default) && array_is_list($default),
-      default => $default !== NULL,
-    };
+    return is_array($defaults) ? array_filter($defaults, static fn (mixed $value): bool => $value !== '') : [];
   }
 
 }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Drupal\data_surface\Pipeline;
 
 use Symfony\Component\Validator\ConstraintViolationInterface;
+use Drupal\data_surface\Plugin\Validation\Constraint\JsonSchemaConstraint;
 use Symfony\Component\Validator\Constraints\Choice;
 use Symfony\Component\Validator\Constraints\Count;
 use Symfony\Component\Validator\Constraints\Email;
@@ -74,6 +75,14 @@ final class Violation {
   public const LOCKED = 'locked';
 
   /**
+   * A value sent for a computed key: refused when other than it holds.
+   *
+   * As a violation, a value other than the one the key holds; as a note,
+   * the one it holds, not taken.
+   */
+  public const COMPUTED = 'computed';
+
+  /**
    * Null sent for a key its storage always holds.
    */
   public const CANNOT_CLEAR = 'cannot_clear';
@@ -119,6 +128,11 @@ final class Violation {
   public const CONFLICT = 'conflict';
 
   /**
+   * A create names a thing that exists already: its machine name is taken.
+   */
+  public const TAKEN = 'taken';
+
+  /**
    * A storage holds settings no schema describes.
    */
   public const NO_SCHEMA = 'no_schema';
@@ -127,6 +141,21 @@ final class Violation {
    * A stored value kept, which is no longer one the key offers.
    */
   public const STALE = 'stale';
+
+  /**
+   * Values a schema read into a structure refuses, beyond any key's rules.
+   *
+   * The code of a JsonSchema constraint's refusal too, read off its own
+   * code by codeOf().
+   */
+  public const NOT_VALID = 'not_valid';
+
+  /**
+   * Values a schema read into a structure cannot decide here.
+   *
+   * It refers to a document outside it, which is never fetched.
+   */
+  public const UNRESOLVED = 'unresolved';
 
   /**
    * Symfony's constraints whose codes name a violation that lost its own.
@@ -141,6 +170,7 @@ final class Violation {
     Regex::class,
     Email::class,
     Type::class,
+    JsonSchemaConstraint::class,
   ];
 
   /**

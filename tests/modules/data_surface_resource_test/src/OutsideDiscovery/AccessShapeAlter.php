@@ -6,7 +6,7 @@ namespace Drupal\data_surface_resource_test\OutsideDiscovery;
 
 use Drupal\Core\Session\AccountInterface;
 use Drupal\data_surface\Resource\AccessAnswer;
-use Drupal\data_surface\Resource\AltersAccessInterface;
+use Drupal\data_surface\Resource\OperationAccessInterface;
 use Drupal\data_surface\Resource\AltersInputsInterface;
 use Drupal\data_surface\Resource\Attribute\Alters;
 use Drupal\data_surface\Resource\BlueprintAdditionsInterface;
@@ -17,7 +17,7 @@ use Drupal\data_surface_resource_test\Shape\Sku;
  * Answers access for a shape, which is one value with no access of its own.
  */
 #[Alters(Sku::class)]
-final class AccessShapeAlter implements AltersInputsInterface, AltersAccessInterface {
+final class AccessShapeAlter implements AltersInputsInterface, OperationAccessInterface {
 
   /**
    * {@inheritdoc}

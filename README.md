@@ -1,47 +1,37 @@
 # Data Surface
 
-A *data surface* is the description of a group of values a piece of software
-accepts: what each value is called, what it means, what type it is, what
-it may contain, what it defaults to, and which of its values depend on
-which others. Drupal core already has a vocabulary for all of that in its
-typed data definitions; what it has never had is a place to keep a group
-of them, hand that group to one caller after another, and have every
-caller agree about what was accepted.
+A *data surface* is what one resource accepts, settled in layers and
+then sealed. The owner, the resource's class, declares its keys and the
+rules between them. Other modules contribute under names of their own:
+they add keys at their own mount, and their rules may narrow the
+owner's keys but never widen them. Declared rules and refiners settle
+what applies to these values, ahead of time where the answer depends
+only on the values, and per request where it depends on the site, such
+as a room closed today. Access locks keys or leaves them out for the
+account that asks. The build seals the result.
 
-This module is that place. A *resource* (a thing with identity and
-storage that operations read and write: a content type, a field) or a
-*structure* (a group of keys that only something else holds: a
-block's settings) is declared once as a class, built in a context,
-sealed into a data surface, and then read: a generated form renders it,
-a pipeline accepts and validates values against it, and storage writes
-the accepted values where they live (a plugin's configuration, a
-field's settings, a content type and its base field overrides, a config
-object, or state). A resource names its own storage class; a plugin's
-host supplies the storage for the structure it holds. The same data
-surface answers a form submit, a Drush command, an agent call and a test
-without any of them owning a second copy of the rules. When a value
-depends on another (a bundle list that only makes sense once an entity
-type is chosen), a refiner narrows the definition, and the form rebuilds
-that part of itself over AJAX rather than the host re-implementing the
-dependency.
-
-The rule the module holds itself to is that refinement may only *narrow*.
-Whatever a data surface advertises when it is sealed stays true of
-everything it accepts afterwards, so a caller that read it once, or a
-machine-readable contract emitted from it, is never contradicted later,
-with one qualifier: the schema for a set of answers is exact for them,
-and the full schema, written for any answers, marks what only the
-runtime can settle (`refine`, `live`, `checkedOnServer`), where the
-pipeline may still refuse what the schema allows
-([the served contract](docs/served-contract.md#two-documents)).
-That is the property that makes a data surface worth having over a form
-array, and it is the property the module exists to prove out for
+Every door reads that one sealed data surface and nothing else: the
+generated form, the tool, MCP, ECA, HTTP with its OpenAPI document, and
+the React page. That is why they agree on what is accepted, and why one
+module can change all of them at once without touching any. The
+reason is the alter contract: a contribution is made under its module's
+own name before the seal, and after the seal nothing widens, so no door
+sees anything but the sealed result and nothing a door was told stops
+being true. The module exists to prove this out for
 [the core issue behind it](https://www.drupal.org/project/drupal/issues/3622144).
+
+To get one, write a class with a `#[Resource]` attribute, an operation
+on it, a storage class for where its values live, and its keys,
+declared with `add()`. [Your first resource](docs/first-resource.md)
+builds a settings page from those four things.
 
 ## Requirements
 
-Drupal 11.3 or 12, PHP 8.3 or newer. No dependencies beyond core, and no
-configuration of its own.
+Drupal 11.3 or 12, PHP 8.3 or newer, and
+[opis/json-schema](https://github.com/opis/json-schema) (Apache-2.0),
+which checks what a structure read from a JSON Schema keeps of it
+([Reading a schema](docs/reading-a-schema.md#what-is-kept)); Composer
+installs it with the module. No configuration of its own.
 
 ## Installation
 
@@ -137,7 +127,8 @@ The module uses these twenty-three words in exactly one sense each.
 - **Structure**: a group of keys with no identity or storage of its
   own, only ever held by something else: attached to a parent, one of
   the variants at a key, or configuring a plugin, whose host supplies the
-  operation and the storage. Declared as a class carrying
+  operation, its permission and the storage. It has no permission of its
+  own; it may answer access for its keys. Declared as a class carrying
   `#[Structure(id, access:)]`. The six ways one is made of others are
   side by side in [Which way to compose](docs/resources.md#which-way-to-compose).
 - **Shape**: a named type, in Smithy's sense, of which there are three
@@ -185,12 +176,17 @@ The module uses these twenty-three words in exactly one sense each.
   constraint into a value/label list with its cacheability, so the list
   that validates a value and the list that is offered as form options are
   the same list, derived rather than repeated.
-- **Keys from the site**: one key per thing the site has, such as a
-  checkbox per form, in a map at a key: `addEach($key, $type, from:)` for
-  a value per thing, `attachEach($key, Structure::class, from:)` for a
-  structure per thing. The provider is a service implementing
-  `KeysFromSiteInterface`, whose `keys()` answers a `KeyedList`, asked
-  at every build ([Keys that come from the site](docs/resources.md#keys-that-come-from-the-site)).
+- **Keys and variants from the site**: one key per thing the site has,
+  such as a checkbox per form, in a map at a key: `addEach($key, $type,
+  from:)` for a value per thing, `attachEach($key, Structure::class,
+  from:)` for a structure per thing; or one variant per thing, each read
+  from its JSON Schema or a structure class, `attachVariants($key, by:
+  $sibling, from:)`. The provider is one interface for both, a service
+  implementing `SiteListInterface`, whose `list()` answers a `SiteList`,
+  asked at every build; a closed one, `ClosedSiteListInterface`, names
+  every structure it may list
+  ([Keys that come from the site](docs/resources.md#keys-that-come-from-the-site),
+  [variants from the site](docs/resources.md#variants-from-the-site)).
 - **Storage**: where accepted values are written, and the place that
   knows the distance between how a resource asks for its values and
   how the store lays them out (a layout). A resource names its storage class, a
@@ -204,7 +200,7 @@ The module uses these twenty-three words in exactly one sense each.
   holds with `#[UsesStructure]`, or is the structure itself when the
   attribute names none, and supplies the context and the storage,
   because only it holds the instance.
-- **Operation**: one way a resource is asked for: add, edit, reuse.
+- **Operation**: one way a resource is asked for: create, update, reuse.
   `#[Operation]` states its id, label, description, the permission that
   gates it and whether it creates. On the class when asking needs
   nothing more (a settings object's `configure`); on a static method
@@ -226,12 +222,13 @@ The module uses these twenty-three words in exactly one sense each.
   cacheability and never declared: static varies by the account's
   permissions or roles alone and is stated in the full schema and the
   tool listing for that account; runtime is anything else, marked there
-  `x-surface.access: "live"` and settled once the thing is known
+  `x-surface.live`, as a runtime refiner's key is, and settled once the
+  thing is known
   ([Static and runtime access](docs/resources.md#static-and-runtime-access)).
 - **Context**: an `OperationContext`: where a resource or structure is
   being asked for. Its id (the operation id, or a host's own verb such
   as `configure`), whether it creates, which identity keys are known, and
-  any narrowing, starting values or child contexts the operation adds.
+  any narrowing or child contexts the operation adds.
   Built by an operation (or bare, by a plugin host), applied once by the
   build step, and never seen by a method that fills a blueprint or by a
   refiner.
@@ -240,10 +237,11 @@ The module uses these twenty-three words in exactly one sense each.
   `third_party_settings.<module>`), rewords a label with `describe()`,
   offers more values on a fixed list with `extendChoices()`, and narrows
   with `#[RefinesInput]` methods, on the owner's keys or its own, and
-  may answer access after the owner (`AltersAccessInterface`), locking
-  or leaving out and never opening. It never removes a key or a value
-  from the declaration, never retypes, and attaches a structure only at
-  its own mount.
+  may answer access after the owner (`OperationAccessInterface`, the
+  access class's interface), locking or leaving out and never opening.
+  It never removes a key or a value from the declaration, never retypes,
+  adds no output (what a call answers is its operation's), and attaches
+  a structure only at its own mount.
 - **Variants**: a tagged union whose tag is a sibling key, attached with
   `attachVariants($key, by: $sibling)`; each variant is a structure for
   one value of that key, `#[Variant(of:, at:, for:)]`
@@ -292,7 +290,7 @@ their configuration may change without a deprecation path.
   the same two settings added to core's own form the classic way, so the
   two can be compared.
 - **Data Surface Demo - Node type** (`data_surface_demo_node_type`): one
-  resource serving an add form and an edit form through two operations,
+  resource serving a create form and an update form through two operations,
   with storage of its own, and two routes that name the generic
   operation form rather than a form class. Adds its own permission; see its README.
 - **Data Surface - Address field settings** (`data_surface_address`): a
@@ -312,7 +310,7 @@ their configuration may change without a deprecation path.
   and `data_surface_tool`; see `docs/entities.md`.
 - **Data Surface Demo - Node type tool**
   (`data_surface_demo_node_type_tool`): no code of its own, only the
-  generated comparison between `data_surface:node.type:add`, the tool
+  generated comparison between `data_surface:node.type:create`, the tool
   derived from the content type resource, and Tool Belt's bundle tool and
   core's form, once another module has extended content types.
 - **Data Surface - Your first resource** (`data_surface_first`): the
@@ -323,31 +321,78 @@ their configuration may change without a deprecation path.
   that grows, one idea per example, at `/surface-examples`: each
   example a form beside the contract it emits, a classic twin for
   examples 1 and 2, and example 3 called as a tool with no form, with a reset
-  to the shipped settings for a retake. Then examples 7 to 11, a small
+  to the shipped settings for a retake. Then examples 7 to 12, a small
   resource each for a later concept: a rule written as data, one part
   used twice, keys that come from the site, access and how an operation
-  behaves, and the stock widgets, each page saying what it shows and
-  what its tool answers. Needs
+  behaves, the stock widgets, and a component's props read from its JSON
+  Schema, each page saying what it shows and what its tool answers; and
+  example 13, a block that embeds a component, which says to enable
+  `data_surface_component_block` and `data_surface_block`; and example
+  14, a credential pasted or a key the site manages, which says to
+  enable `data_surface_examples_keys`; example 15, a config entity
+  type of its own, the venues example 2 chooses from, with a resource
+  that adds, edits, lists, reorders and removes them; example 16,
+  keys that refer to an entity, which says to enable
+  `data_surface_examples_references`; and example 17, a bulk retitle of
+  nodes that borrows each node's access, which says to enable
+  `data_surface_examples_retitle`. Needs
   [Tool](https://www.drupal.org/project/tool).
 - **Data Surface Examples - Compliance**
   (`data_surface_examples_compliance`): example 4, a compliance
   structure and the one alter that attaches it to example 3's resource,
   which does not know it.
+- **Data Surface examples: managed keys**
+  (`data_surface_examples_keys`): example 14, a module that manages
+  keys, standing in for the Key module: a list of named keys, the
+  constraint and resolver that offer them, and an alter that offers one
+  on a resource that takes a pasted key, ruling the pasted key out once
+  one is chosen.
+- **Data Surface examples: references**
+  (`data_surface_examples_references`): example 16, keys that refer to
+  an entity, declared by the data type string of what they refer to: a
+  venue, a user, an article and an entity of any type, listed while the
+  site has few and looked up past that. Needs node; ships the article
+  and page bundles for a site that has neither, and writes three nodes
+  its calls name.
+- **Data Surface examples: retitle**
+  (`data_surface_examples_retitle`): example 17, a bulk retitle of
+  nodes with keys, storage and a permission of its own, which borrows
+  each node's update access and its title's edit access as gates, asked
+  per node, a refusal on the node's own item. Needs node; ships the page
+  bundle for a site that has none, two roles, and writes three pages its
+  calls name.
 - **Data Surface Examples - Workflow**
   (`data_surface_examples_workflow`): example 10, extended, two alters
   that answer access for the program and its fees, which do not know
   them: the fees left out for an account that may not see them, and the
   program fixed once its workflow publishes it.
+- **Data Surface component block** (`data_surface_component_block`):
+  example 13, a block, "Component", that embeds a single-directory
+  component: the component chosen from those the site has and its props
+  read from the schema it declares, example 12's two lines named by
+  `#[UsesStructure]`, so the block's form, validation and storage come
+  from them, placed through the placement resource of
+  `data_surface_block`. Needs `block`.
+- **Data Surface block placement** (`data_surface_block`): a placed
+  block as a resource, `block.placement`, by its machine name: its
+  plugin chooses its settings (a plugin's declared structure, or its
+  config schema read), its theme its region, and its visibility is a
+  list of conditions. Placed, configured, read and removed through four
+  tools, HTTP (`DELETE` removes) and a form. Needs `block`.
 - **Data Surface - React** (`data_surface_react`): the served contract,
-  an operation as JSON Schema 2020-12 with an `x-surface` extension, a
-  refine endpoint that re-narrows it as answers change, a validate
-  endpoint that rehearses the write, and a React app that renders the
-  form from it at `/surface-react/{resource}/{operation}`. Its built app
+  an operation as JSON Schema 2020-12 with an `x-surface` extension,
+  served over HTTP at `/surface-api/{resource}`, the method its
+  operation (`GET` reads, `PATCH` updates, `POST` creates, `DELETE`
+  removes), with a
+  narrowing that re-narrows it as answers change and a dry run that
+  rehearses the write, and a React app that renders the form from it at
+  `/surface-react/{resource}/{operation}`. Its built app
   is committed, so it needs no Node.
 - **Data Surface - OpenAPI** (`data_surface_openapi`): an OpenAPI 3.1
-  document of every operation's endpoints at `/surface-api/openapi.json`
+  document of every operation's paths at `/surface-api/openapi.json`
   (and `.yaml`), each operation's full schema as components, built for
-  no account so it is the same for everyone. Needs `data_surface_react`.
+  no account so it is the same for everyone, with Swagger UI at
+  `/surface-api/docs` and Redoc at `/surface-api/redoc`. Needs `data_surface_react`.
 
 Each submodule's README says what it shows, how to try it, and what gates
 it.
@@ -365,7 +410,10 @@ nothing on it is needed to build.
 | [Home](docs/index.md) | What a resource and a structure are, and where each concept lives in the code. |
 | [Your first resource](docs/first-resource.md) | A settings page from a resource, an operation, a storage and `add()`: the whole module, pinned to `data_surface_first`. |
 | [Your second resource](docs/second-resource.md) | One key whose allowed values depend on another's, with one refiner. |
+| [Generating a resource](docs/generating.md) | `drush generate surface:resource`: the first page's files from an interview, a config schema entry or a JSON Schema document, and the comments it leaves for what it cannot write. |
 | [Concepts](docs/concepts.md) | Every concept, the question that makes you need it, when to skip it, and the page that shows it. |
+| [Visuals](docs/visuals/index.html) | Seven small drawings, one relationship each: resource, structure and shape; who may ask; the layers; the markers; six ways to compose; the doors; the pipeline. |
+| [Transformations](docs/transformations.md) | A value asked for one way and stored another (coercion, layouts, the doors' wire forms), what runs because something was saved, and a value nobody types. |
 | [Common settings recipes](docs/recipes.md) | A time of day, a multi-select, a text area and the other keys a settings page often asks for, one snippet each. |
 | [The examples](modules/data_surface_examples/README.md) | One registration form that grows an idea at a time, then a small resource per later concept, each at `/surface-examples`. |
 
@@ -374,7 +422,8 @@ nothing on it is needed to build.
 | Page | What it covers |
 | --- | --- |
 | [Declaring a resource or structure](docs/declaring-a-resource.md) | The class, adopting it on a plugin, defaults, locking, secrets, required. |
-| [Resources and structures](docs/resources.md) | Which way to compose, operations, alters, attached structures and variants, ports, mixins, collections, keys from the site, access, storage, tools, the catalog. |
+| [Resources and structures](docs/resources.md) | Which way to compose, operations, alters, attached structures and variants, variants from the site, ports, mixins, collections, keys from the site, access, storage, tools, the catalog. |
+| [Reading a schema](docs/reading-a-schema.md) | A JSON Schema read into a structure: the mapping, what is kept and checked on the server, what is noted and refused, older drafts, the round trip. |
 | [Refinement](docs/refinement.md) | An alter offering values and a refiner narrowing them, a rule declared as data, a key that does not apply, the narrowing table, cacheability, a worked example, and what it does not reach yet. |
 | [Options and resolvers](docs/options.md) | `LabeledChoice`, the resolver plugin type, the stock resolvers. |
 | [Storage](docs/storage.md) | What storage is, prepare and commit, the seven engine storage classes (a simple config object first), config schema, settings layouts, secrets, the serialization rule. |
@@ -393,8 +442,10 @@ nothing on it is needed to build.
 | [The Tool API bridge](modules/data_surface_tool/README.md) | One tool per operation and a read tool beside it, who may run them, the contract panel, and what MCP and the Tool API are told. |
 | [The React app](modules/data_surface_react/README.md) | The served contract's endpoints and the React form drawn from them. |
 | [The OpenAPI document](modules/data_surface_openapi/README.md) | Every operation's endpoints as OpenAPI 3.1, for any OpenAPI client, generator or UI. |
+| [The component block](modules/data_surface_component_block/README.md) | A block that embeds a single-directory component, its settings a structure. |
+| [Block placement](modules/data_surface_block/README.md) | A placed block of any plugin as a resource: placed, configured and removed through a tool, HTTP and a form. |
 | [Installation: Tool](docs/installation.md#tool) | Enabling the tool bridge, through which an agent, MCP and Drush call each operation. |
-| [One resource, every door](docs/every-door/index.html) | An interactive 3D model: a resource, its attached structures and an alter, the doors that read its contract, and the same inputs as they are written today. Open the file in a browser. |
+| [One resource, every door](docs/every-door/index.html) | An interactive 3D model: the layers a data surface is sealed from, a resource, its attached structures and an alter, the doors that read its contract, and the same inputs as they are written today. Open the file in a browser. |
 
 **The engine and the record**
 
@@ -403,8 +454,10 @@ nothing on it is needed to build.
 | [The pattern](docs/pattern.md) | What an author writes, where it goes, and why it is shaped that way. |
 | [How it fits](docs/how-it-fits.md) | One build followed from the caller to a sealed data surface. |
 | [Decisions](docs/decisions.md) | The points the pattern left open, and how the module settled them. |
-| [Catalog](docs/catalog.md) | Every resource and structure the modules here declare, generated from the static layer. |
+| [Catalog](docs/catalog.md) | Every resource and structure the modules here declare, with each operation's doors: `drush surface:catalog --format=markdown` for this repository. |
+| [The site's catalog](docs/catalog-command.md) | `drush surface:catalog`: every resource and structure on a site, each operation's doors, one in full, and what did not build. |
 | [Evolving a resource](docs/evolution.md) | Which changes are compatible, the version, stored-value migrations as designed, and the contract diff that holds a module to its baselines. |
+| [Testing a resource](docs/testing-a-resource.md) | `ResourceTestBase`: the invariants (never stricter, the round trip, static agreement, every door, the baseline) held for your own resources from one kernel test. |
 | [Installation](docs/installation.md) | Install, integrations, submodules. |
 
 **Evidence**

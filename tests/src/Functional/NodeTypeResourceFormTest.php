@@ -17,8 +17,8 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * and that the operation is build-time context: uniqueness is added on
  * add, the machine name is locked on edit, and one storage class writes a
  * config entity and a set of base field overrides in one commit. Each
- * route names the resource and an operation, and the edit route's {type}
- * is the edit operation's parameter. All of that is exercised in kernel
+ * route names the resource and an operation, and the update route's {type}
+ * is the update operation's parameter. All of that is exercised in kernel
  * tests by calling the resource, its storage and the pipeline.
  * What only a browser shows is that the form really redirects and says
  * so, that a locked key is not merely marked disabled but is refused

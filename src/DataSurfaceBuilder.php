@@ -82,21 +82,14 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
   protected array $contributions = [];
 
   /**
-   * Third-party output definitions keyed by provider, then key.
-   *
-   * @var array<string, array<string, \Drupal\Core\TypedData\DataDefinitionInterface>>
-   */
-  protected array $thirdPartyOutputs = [];
-
-  /**
    * The map each provider's mounted keys are sealed into.
    *
-   * Keyed 'settings' or 'outputs', then by provider; made the first time
-   * it is asked for, so an alter can label its own before the seal.
+   * Keyed by provider; made the first time it is asked for, so an alter
+   * can label its own before the seal.
    *
-   * @var array<string, array<string, \Drupal\Core\TypedData\MapDataDefinition>>
+   * @var array<string, \Drupal\Core\TypedData\MapDataDefinition>
    */
-  protected array $thirdPartyMounts = ['settings' => [], 'outputs' => []];
+  protected array $thirdPartyMounts = [];
 
   /**
    * How each provider's mounted settings are written down, by provider.
@@ -194,6 +187,13 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
    * @var \Drupal\data_surface\Mixin[]
    */
   protected array $mixins = [];
+
+  /**
+   * What the frame as a whole is held to beyond its keys, in order.
+   *
+   * @var array<int, array>
+   */
+  protected array $frameConstraints = [];
 
   /**
    * The wirings refinement edges came from, by target, then dependency.
@@ -387,6 +387,15 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
   /**
    * {@inheritdoc}
    */
+  public function constrainFrame(array $schema): static {
+    $this->assertMutable();
+    $this->frameConstraints[] = $schema;
+    return $this;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
   public function extendChoices(string $name, array $choices, string $contributor): static {
     $this->assertMutable();
     $definition = $this->named($name);
@@ -492,6 +501,12 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
         }
         (new ChoiceSet('LabeledChoice', $ids, $named))->applyTo($deciding);
       }
+      if (count($ids) === 1) {
+        // One value to choose is none: the key is that value, fixed.
+        // Decision: see
+        // docs/decisions.md#an-extension-is-a-variant-the-site-adds-or-an-alter.
+        DefinitionMetadata::setOneVariant($deciding);
+      }
     }
     else {
       // A list the key declares narrows the variants: one whose value it
@@ -509,8 +524,15 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
     $this->definitions[$key] = $this->shellFor($key);
     $this->variants[$key] = ['by' => $by, 'variants' => $variants];
     $this->refinements[$key] = array_values(array_unique(array_merge($this->refinements[$key] ?? [], [$by])));
+    // A variant held unsettled adds what it read once it is built: the
+    // data surface asks its settled children for theirs.
+    // Decision: see
+    // docs/decisions.md#the-static-build-is-cached-the-rest-is-per-request.
     foreach ($variants as $variant) {
-      $this->cacheability->addCacheableDependency($variant->child);
+      $settled = $variant->settledChild();
+      if ($settled !== NULL) {
+        $this->cacheability->addCacheableDependency($settled);
+      }
     }
     return $this;
   }
@@ -558,27 +580,8 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
   /**
    * {@inheritdoc}
    */
-  public function setThirdPartyOutputDefinition(string $provider, string $key, DataDefinitionInterface $definition): static {
-    $this->assertMutable();
-    if ($provider === '' || str_contains($provider, '#') || str_contains($provider, '.')) {
-      throw new \InvalidArgumentException(sprintf(
-        'The provider mounting the "%s" output must be named by its module name: "%s" is not one, and the name is what the mounted output is addressed and answered for under.',
-        $key,
-        $provider,
-      ));
-    }
-    static::assertNoDefault(self::THIRD_PARTY_OUTPUTS . '.' . $provider . '.' . $key, $definition);
-    $this->thirdPartyOutputs[$provider][$key] = $definition;
-    return $this;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function getThirdPartyDefinition(string $provider, string $key, bool $output = FALSE): ?DataDefinitionInterface {
-    return $output
-      ? ($this->thirdPartyOutputs[$provider][$key] ?? NULL)
-      : ($this->thirdParty[$provider][$key] ?? NULL);
+  public function getThirdPartyDefinition(string $provider, string $key): ?DataDefinitionInterface {
+    return $this->thirdParty[$provider][$key] ?? NULL;
   }
 
   /**
@@ -624,12 +627,11 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
   /**
    * {@inheritdoc}
    */
-  public function getThirdPartyMount(string $provider, bool $output = FALSE): ?MapDataDefinition {
-    if (!isset(($output ? $this->thirdPartyOutputs : $this->thirdParty)[$provider])) {
+  public function getThirdPartyMount(string $provider): ?MapDataDefinition {
+    if (!isset($this->thirdParty[$provider])) {
       return NULL;
     }
-    $side = $output ? 'outputs' : 'settings';
-    return $this->thirdPartyMounts[$side][$provider] ??= static::providerMap($provider, $output);
+    return $this->thirdPartyMounts[$provider] ??= static::providerMap($provider);
   }
 
   /**
@@ -640,17 +642,12 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
    *
    * @param string $provider
    *   The module that mounted the keys.
-   * @param bool $output
-   *   TRUE for the map of its mounted outputs.
    *
    * @return \Drupal\Core\TypedData\MapDataDefinition
    *   The map, with no properties yet.
    */
-  protected static function providerMap(string $provider, bool $output): MapDataDefinition {
-    return MapDataDefinition::create()
-      ->setLabel($output
-        ? t('@provider outputs', ['@provider' => static::providerLabel($provider)])
-        : static::providerLabel($provider));
+  protected static function providerMap(string $provider): MapDataDefinition {
+    return MapDataDefinition::create()->setLabel(static::providerLabel($provider));
   }
 
   /**
@@ -751,7 +748,7 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
       $definitions[$key] = Collection::listOf($this->assertListShell((string) $key), $list->item->child);
     }
     if ($this->thirdParty !== []) {
-      $definitions['third_party_settings'] = $this->mountedMap($this->thirdParty, FALSE);
+      $definitions['third_party_settings'] = $this->mountedMap($this->thirdParty);
     }
     // A message written with t() is handed to Symfony as its source, which
     // core's validator translator translates when a violation is made.
@@ -778,9 +775,6 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
     foreach ($outputs as $name => $definition) {
       static::assertOutputDeclarable((string) $name, $definition);
     }
-    if ($this->thirdPartyOutputs !== []) {
-      $outputs[self::THIRD_PARTY_OUTPUTS] = $this->mountedMap($this->thirdPartyOutputs, TRUE);
-    }
     return $this->sealed = new DataSurface(
       DefinitionMap::fromArrays(
         definitions: $definitions,
@@ -799,6 +793,7 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
         held: $held,
         runtimeAccess: $this->runtimeAccessWhole ? array_map('strval', array_keys($definitions)) : array_values(array_intersect($this->runtimeAccess, array_keys($definitions))),
         lockReasons: array_intersect_key($this->lockReasons, $definitions),
+        frameConstraints: $this->frameConstraints,
       ),
       $this->cacheability,
       DefinitionMap::fromArrays(definitions: $outputs),
@@ -814,9 +809,7 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
   /**
    * Builds the map one provider namespace per property is mounted into.
    *
-   * Shared by the settings a contributor mounts and the outputs it
-   * mounts, because the shape is the same statement in both directions:
-   * a map of provider maps, so a contributed key is addressed under the
+   * A map of provider maps, so a contributed key is addressed under the
    * name of whoever answers for it and can collide with nobody.
    *
    * The settings' map only groups: it is marked so, and a form or a
@@ -826,18 +819,14 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
    *
    * @param array<string, array<string, \Drupal\Core\TypedData\DataDefinitionInterface>> $mounted
    *   The mounted definitions, keyed by provider, then by key.
-   * @param bool $emitted
-   *   TRUE for the outputs a contributor emits, FALSE for the settings
-   *   it accepts. Only the wording differs, and it has to: a reader of
-   *   the emitted map is being told what came back, not what to send.
    *
    * @return \Drupal\Core\TypedData\MapDataDefinition
    *   The assembled map.
    */
-  protected function mountedMap(array $mounted, bool $emitted): MapDataDefinition {
-    $providers = static::groupingMap($emitted);
+  protected function mountedMap(array $mounted): MapDataDefinition {
+    $providers = static::groupingMap();
     foreach ($mounted as $provider => $keys) {
-      $provider_map = $this->getThirdPartyMount((string) $provider, $emitted);
+      $provider_map = $this->getThirdPartyMount((string) $provider);
       assert($provider_map instanceof MapDataDefinition);
       foreach ($keys as $key => $definition) {
         $provider_map->setPropertyDefinition((string) $key, $definition);
@@ -850,23 +839,14 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
   /**
    * Makes the map the providers' maps are mounted in, with no providers.
    *
-   * @param bool $emitted
-   *   TRUE for the outputs' map, FALSE for the settings'.
-   *
    * @return \Drupal\Core\TypedData\MapDataDefinition
-   *   The map; the settings' marked as only grouping.
+   *   The map, marked as only grouping.
    */
-  protected static function groupingMap(bool $emitted): MapDataDefinition {
+  protected static function groupingMap(): MapDataDefinition {
     $providers = MapDataDefinition::create()
-      ->setLabel($emitted
-        ? t('Third party outputs')
-        : t('Third party settings'))
-      ->setDescription($emitted
-        ? t('Values emitted by other modules.')
-        : t('Settings added by other modules.'));
-    if (!$emitted) {
-      DefinitionMetadata::setGrouping($providers);
-    }
+      ->setLabel(t('Third party settings'))
+      ->setDescription(t('Settings added by other modules.'));
+    DefinitionMetadata::setGrouping($providers);
     return $providers;
   }
 
@@ -1001,15 +981,9 @@ final class DataSurfaceBuilder implements DataSurfaceBuilderInterface {
    *   The definition to check.
    *
    * @throws \InvalidArgumentException
-   *   When the name is reserved, or the definition declares a default.
+   *   When the definition declares a default.
    */
   protected static function assertOutputDeclarable(string $name, DataDefinitionInterface $definition): void {
-    if ($name === self::THIRD_PARTY_OUTPUTS) {
-      throw new \InvalidArgumentException(sprintf(
-        'The "%s" output key is reserved for the outputs other modules mount, so the declaring class cannot declare it: mount one with setThirdPartyOutputDefinition() instead.',
-        self::THIRD_PARTY_OUTPUTS,
-      ));
-    }
     static::assertNoDefault($name, $definition);
   }
 

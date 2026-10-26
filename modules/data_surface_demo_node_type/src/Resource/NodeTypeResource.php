@@ -66,26 +66,26 @@ final class NodeTypeResource implements ResourceInterface {
    * the same call twice leaves what the first left, the second refused
    * for the name the first took: idempotent, though it creates.
    */
-  #[Operation('add',
+  #[Operation('create',
     label: new TranslatableMarkup('Add a content type'),
     description: new TranslatableMarkup('Creates a content type under a machine name the caller chooses; a machine name already in use is refused.'),
     permission: self::PERMISSION,
     creates: TRUE,
     idempotent: TRUE,
   )]
-  public static function add(): OperationContext {
+  public static function create(): OperationContext {
     return (new OperationContext())->withConstraint('type', 'DataSurfaceUniqueNodeType');
   }
 
   /**
    * Edits a content type. Its machine name is known, so it is locked.
    */
-  #[Operation('edit',
+  #[Operation('update',
     label: new TranslatableMarkup('Edit a content type'),
     description: new TranslatableMarkup('Changes a content type, named by its machine name, which stays as it is.'),
     permission: self::PERMISSION,
   )]
-  public static function edit(NodeTypeInterface $type): OperationContext {
+  public static function update(NodeTypeInterface $type): OperationContext {
     return new OperationContext(known: ['type' => $type->id()]);
   }
 

@@ -22,6 +22,9 @@ use PHPUnit\Framework\Attributes\Group;
  *   whole, with the two schemas that describe its keys.
  * - "Storage" quotes the opening hours' fully validatable schema, which
  *   RecipesTest holds to what the page says it asks.
+ * - "Transformations" quotes the coercion rule, the layouts, the tool
+ *   door's entity parameter, the commit and the computed values it
+ *   puts in their places.
  */
 #[Group('data_surface')]
 class QuotedCodeDocsTest extends UnitTestCase {
@@ -34,7 +37,7 @@ class QuotedCodeDocsTest extends UnitTestCase {
   /**
    * The pages, relative to the module root.
    */
-  public const PAGES = [self::RECIPES, 'docs/resources.md', 'docs/storage.md'];
+  public const PAGES = [self::RECIPES, 'docs/resources.md', 'docs/storage.md', 'docs/transformations.md'];
 
   /**
    * Provides each marked block of the pages.

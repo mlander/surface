@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<meta name="description" content="enumerated, deferred, refine and live, with checkedOnServer beside: what each marker in the served contract promises and what a client does about it.">
+<title>The Four Markers</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root {
+  --bg: #E8EDF1; --bg-2: #D9E1E8; --panel: #F5F8FA; --ink: #12202C; --ink-2: #4B5C6B;
+  --line: #B7C4CF; --slab: #C3CED8; --owner: #0A6EB4; --part: #1B978F; --alter: #D48F12;
+  --refine: #C93A6E; --contract: #2C95E0; --shape: #6A55B8; --old: #7B8998; --code-bg: #E9EEF2;
+  --f-display: "Archivo", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --f-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0E151B; --bg-2: #16212B; --panel: #131C24; --ink: #E6EDF2; --ink-2: #9DB1C0;
+    --line: #2E3E4C; --slab: #25333F; --owner: #2F93DB; --part: #35BDB4; --alter: #EDB23C;
+    --refine: #EE5C8F; --contract: #7CC8FF; --shape: #A895F2; --old: #73869A; --code-bg: #0B1116; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0E151B; --bg-2: #16212B; --panel: #131C24; --ink: #E6EDF2; --ink-2: #9DB1C0;
+    --line: #2E3E4C; --slab: #25333F; --owner: #2F93DB; --part: #35BDB4; --alter: #EDB23C;
+    --refine: #EE5C8F; --contract: #7CC8FF; --shape: #A895F2; --old: #73869A; --code-bg: #0B1116; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 var(--f-body); }
+a { color: var(--owner); }
+a:focus-visible { outline: 2px solid var(--contract); outline-offset: 2px; }
+code { font: 400 0.92em var(--f-mono); }
+.page { max-width: 1010px; margin: 0 auto; padding: 22px 24px 26px; display: flex; flex-direction: column; gap: 14px; }
+.top { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.eyebrow { font: 500 11px/1 var(--f-mono); letter-spacing: .12em; text-transform: uppercase; color: var(--ink-2); margin: 0; }
+.eyebrow a { color: inherit; text-decoration: none; }
+.eyebrow a:hover { color: var(--ink); }
+.pager { font: 500 12px/1 var(--f-mono); display: flex; gap: 14px; }
+.pager a { text-decoration: none; }
+h1 { font: 750 30px/1.04 var(--f-display); font-stretch: 122%; letter-spacing: -.01em; margin: 6px 0 0; text-wrap: balance; }
+.plate { margin: 0; background: var(--panel); border: 1px solid var(--line); padding: 14px; display: flex; justify-content: center; }
+.plate svg { display: block; width: 100%; height: auto; }
+.plate svg.tall { display: none; max-width: 420px; }
+.caption { margin: 0; max-width: 78ch; font-size: 15.5px; }
+.caption strong { font-weight: 600; }
+.more { margin: 0; font-size: 13.5px; color: var(--ink-2); padding-left: 10px; border-left: 2px solid var(--line); max-width: 92ch; }
+.more b { font: 500 11px/1 var(--f-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--ink-2); margin-right: 4px; }
+.foot { margin: 4px 0 0; padding-top: 12px; border-top: 1px solid var(--line); font-size: 12.5px; color: var(--ink-2); }
+@media (max-width: 899px) {
+  .plate svg.wide { display: none; }
+  .plate svg.tall { display: block; }
+}
+@media (max-width: 600px) {
+  .page { padding: 16px 16px 22px; gap: 12px; }
+  h1 { font-size: 24px; }
+  .plate { padding: 10px 6px; }
+  .caption { font-size: 15px; }
+}
+/* The drawing */
+svg text { font-family: var(--f-body); fill: var(--ink); }
+svg .m { font-family: var(--f-mono); }
+svg .d { font-family: var(--f-display); font-weight: 700; font-stretch: 112%; }
+svg .b { font-weight: 600; }
+svg .k { fill: var(--ink-2); }
+svg .box { fill: var(--panel); stroke: var(--line); stroke-width: 1; }
+svg .card { fill: var(--bg); stroke: var(--line); stroke-width: 1; }
+svg .chip { fill: var(--panel); stroke: var(--line); stroke-width: 1; }
+svg .slab { fill: var(--slab); stroke: var(--line); stroke-width: 1; }
+svg .wire { fill: none; stroke: var(--ink-2); stroke-width: 1.5; }
+svg .wire.dash { stroke-dasharray: 5 4; }
+svg .ghost { fill: none; stroke: var(--ink-2); stroke-width: 1.2; stroke-dasharray: 4 3; }
+svg .hatch-bg { fill: var(--panel); }
+svg .hatch-line { stroke: var(--ink-2); stroke-width: 1.6; stroke-opacity: .45; }
+svg .none { fill: none; }
+.fill-ink { fill: var(--ink); } .stroke-ink { stroke: var(--ink); } .tint-ink { fill: var(--ink); fill-opacity: .1; stroke: var(--ink); stroke-width: 1.4; }
+.fill-ink-2 { fill: var(--ink-2); } .stroke-ink-2 { stroke: var(--ink-2); } .tint-ink-2 { fill: var(--ink-2); fill-opacity: .1; stroke: var(--ink-2); stroke-width: 1.4; }
+.fill-owner { fill: var(--owner); } .stroke-owner { stroke: var(--owner); } .tint-owner { fill: var(--owner); fill-opacity: .1; stroke: var(--owner); stroke-width: 1.4; }
+.fill-part { fill: var(--part); } .stroke-part { stroke: var(--part); } .tint-part { fill: var(--part); fill-opacity: .1; stroke: var(--part); stroke-width: 1.4; }
+.fill-shape { fill: var(--shape); } .stroke-shape { stroke: var(--shape); } .tint-shape { fill: var(--shape); fill-opacity: .1; stroke: var(--shape); stroke-width: 1.4; }
+.fill-alter { fill: var(--alter); } .stroke-alter { stroke: var(--alter); } .tint-alter { fill: var(--alter); fill-opacity: .1; stroke: var(--alter); stroke-width: 1.4; }
+.fill-refine { fill: var(--refine); } .stroke-refine { stroke: var(--refine); } .tint-refine { fill: var(--refine); fill-opacity: .1; stroke: var(--refine); stroke-width: 1.4; }
+.fill-contract { fill: var(--contract); } .stroke-contract { stroke: var(--contract); } .tint-contract { fill: var(--contract); fill-opacity: .1; stroke: var(--contract); stroke-width: 1.4; }
+.fill-line { fill: var(--line); } .stroke-line { stroke: var(--line); } .tint-line { fill: var(--line); fill-opacity: .1; stroke: var(--line); stroke-width: 1.4; }
+svg .wire.c-owner { stroke: var(--owner); } svg .wire.c-part { stroke: var(--part); } svg .wire.c-shape { stroke: var(--shape); }
+svg .wire.c-contract { stroke: var(--contract); } svg .wire.c-alter { stroke: var(--alter); } svg .wire.c-refine { stroke: var(--refine); }
+svg .t-owner { fill: var(--owner); } svg .t-part { fill: var(--part); } svg .t-shape { fill: var(--shape); } svg .t-contract { fill: var(--contract); }
+svg .t-alter { fill: var(--alter); } svg .t-refine { fill: var(--refine); }
+</style>
+</head>
+<body>
+<main class="page">
+  <header>
+    <div class="top">
+      <p class="eyebrow"><a href="index.html">Data Surface visuals</a> &middot; 4 of 7</p>
+      <nav class="pager" aria-label="Visuals"><a href="layers.html" rel="prev">Previous</a> <a href="index.html">All</a> <a href="composition.html" rel="next">Next</a></nav>
+    </div>
+    <h1>The four markers</h1>
+  </header>
+  <figure class="plate">
+<svg class="wide" viewBox="0 0 960 446" role="img" aria-labelledby="w-title w-desc" xmlns="http://www.w3.org/2000/svg"><title id="w-title">The four markers</title><desc id="w-desc">Four columns, enumerated, deferred, refine and live, with checkedOnServer beside: what each promises and what a client does, from stated to ask every time.</desc><defs><marker id="w-a-ink" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0.8 L10,5 L0,9.2 z" class="fill-ink"/></marker><marker id="w-a-ink-2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0.8 L10,5 L0,9.2 z" class="fill-ink-2"/></marker><marker id="w-a-owner" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0.8 L10,5 L0,9.2 z" class="fill-owner"/></marker><marker id="w-a-part" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0.8 L10,5 L0,9.2 z" class="fill-part"/></marker><marker id="w-a-shape" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0.8 L10,5 L0,9.2 z" class="fill-shape"/></marker><marker id="w-a-alter" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0.8 L10,5 L0,9.2 z" class="fill-alter"/></marker><marker id="w-a-refine" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0.8 L10,5 L0,9.2 z" class="fill-refine"/></marker><marker id="w-a-contract" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0.8 L10,5 L0,9.2 z" class="fill-contract"/></marker><marker id="w-a-line" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0.8 L10,5 L0,9.2 z" class="fill-line"/></marker><pattern id="w-hatch" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="7" height="7" class="hatch-bg"/><line x1="0" y1="0" x2="0" y2="7" class="hatch-line"/></pattern></defs><text x="16.0" y="22.0" font-size="13" class="k">A key in the full schema carries at most one marker for its static refiners, and live besides.</text>
+<rect x="8.0" y="40.0" width="176.0" height="4.0" rx="0" class="fill-part"/>
+<rect x="20" y="58" width="32" height="40" rx="2" style="stroke: var(--part); stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round"/>
+<path d="M25,68 l3,3 l5,-6" style="stroke: var(--part); stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round"/>
+<path d="M37,68 h10" style="stroke: var(--part); stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round"/>
+<path d="M25,78 l3,3 l5,-6" style="stroke: var(--part); stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round"/>
+<path d="M37,78 h10" style="stroke: var(--part); stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round"/>
+<path d="M25,88 l3,3 l5,-6" style="stroke: var(--part); stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round"/>
+<path d="M37,88 h10" style="stroke: var(--part); stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round"/>
+<text x="66.0" y="83.0" font-size="13" class="m b">enumerated</text>
+<text x="16.0" y="124.0" font-size="16" class="d t-part">Stated</text>
+<text x="16.0" y="148.0" font-size="11" class="m k" letter-spacing="1.2">PROMISES</text>
+<text x="16.0" y="166.5" font-size="12.5">Every answer of the key&#x27;s</text>
+<text x="16.0" y="183.8" font-size="12.5">static refiners is</text>
+<text x="16.0" y="201.0" font-size="12.5">written as a conditional</text>
+<text x="16.0" y="218.2" font-size="12.5">on its frame.</text>
+<text x="16.0" y="243.9" font-size="11" class="m k" letter-spacing="1.2">A CLIENT DOES</text>
+<text x="16.0" y="262.4" font-size="12.5">Narrow locally: evaluate</text>
+<text x="16.0" y="279.6" font-size="12.5">the conditionals for the</text>
+<text x="16.0" y="296.9" font-size="12.5">values.</text>
+<rect x="196.0" y="40.0" width="176.0" height="4.0" rx="0" class="fill-contract"/>
+<path d="M224,58 v22 M216,72 l8,8 l8,-8" style="stroke: var(--contract); stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round"/>
+<path d="M208,84 v12 h32 v-12" style="stroke: var(--contract); stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round"/>
+<text x="238.0" y="70.0" font-size="13" class="m b t-contract">1</text>
+<text x="254.0" y="83.0" font-size="13" class="m b">deferred</text>
+<text x="204.0" y="124.0" font-size="16" class="d t-contract">Fetch once</text>
+<text x="204.0" y="148.0" font-size="11" class="m k" letter-spacing="1.2">PROMISES</text>
+<text x="204.0" y="166.5" font-size="12.5">Static, but left out for</text>
+<text x="204.0" y="183.8" font-size="12.5">its size: a list the site</text>
+<text x="204.0" y="201.0" font-size="12.5">decides, past</text>
+<text x="204.0" y="218.2" font-size="12.5"><tspan class="m">site_list_limit</tspan>.</text>
+<text x="204.0" y="243.9" font-size="11" class="m k" letter-spacing="1.2">A CLIENT DOES</text>
+<text x="204.0" y="262.4" font-size="12.5">Fetch the full schema</text>
+<text x="204.0" y="279.6" font-size="12.5">once per choice, with</text>
+<text x="204.0" y="296.9" font-size="12.5"><tspan class="m">choose=</tspan> naming the key</text>
+<text x="204.0" y="314.1" font-size="12.5">and its value, and cache</text>
+<text x="204.0" y="331.4" font-size="12.5">it until the list</text>
+<text x="204.0" y="348.6" font-size="12.5">changes.</text>
+<rect x="384.0" y="40.0" width="176.0" height="4.0" rx="0" class="fill-owner"/>
+<path d="M396,70 h26 M416,64 l6,6 l-6,6" style="stroke: var(--owner); stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round"/>
+<path d="M428,88 h-26 M408,82 l-6,6 l6,6" style="stroke: var(--owner); stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round"/>
+<text x="442.0" y="83.0" font-size="13" class="m b">refine</text>
+<text x="392.0" y="124.0" font-size="16" class="d t-owner">Ask with values</text>
+<text x="392.0" y="148.0" font-size="11" class="m k" letter-spacing="1.2">PROMISES</text>
+<text x="392.0" y="166.5" font-size="12.5">Static, but not writable:</text>
+<text x="392.0" y="183.8" font-size="12.5">a refiner over a number</text>
+<text x="392.0" y="201.0" font-size="12.5">or free text, or past</text>
+<text x="392.0" y="218.2" font-size="12.5"><tspan class="m">ENUMERATION_CAP</tspan>.</text>
+<text x="392.0" y="243.9" font-size="11" class="m k" letter-spacing="1.2">A CLIENT DOES</text>
+<text x="392.0" y="262.4" font-size="12.5">Ask the narrowing with</text>
+<text x="392.0" y="279.6" font-size="12.5">values, <tspan class="m">POST</tspan> <tspan class="m">.../schema</tspan></text>
+<text x="392.0" y="296.9" font-size="12.5">or the <tspan class="m">:schema</tspan> tool,</text>
+<text x="392.0" y="314.1" font-size="12.5">when a watched key</text>
+<text x="392.0" y="331.4" font-size="12.5">changes.</text>
+<rect x="572.0" y="40.0" width="176.0" height="4.0" rx="0" class="fill-refine"/>
+<circle cx="600" cy="78" r="16" style="stroke: var(--refine); stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round"/>
+<path d="M600,68 v10 l7,5" style="stroke: var(--refine); stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round"/>
+<path d="M613,60 l3,8 l-8,1" style="stroke: var(--refine); stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round"/>
+<text x="630.0" y="83.0" font-size="13" class="m b">live</text>
+<text x="580.0" y="124.0" font-size="16" class="d t-refine">Ask every time</text>
+<text x="580.0" y="148.0" font-size="11" class="m k" letter-spacing="1.2">PROMISES</text>
+<text x="580.0" y="166.5" font-size="12.5">Runtime: a rule no schema</text>
+<text x="580.0" y="183.8" font-size="12.5">states (a lookup,</text>
+<text x="580.0" y="201.0" font-size="12.5">uniqueness, the account,</text>
+<text x="580.0" y="218.2" font-size="12.5">the time), or an access</text>
+<text x="580.0" y="235.5" font-size="12.5">answer only the subject</text>
+<text x="580.0" y="252.8" font-size="12.5">settles.</text>
+<text x="580.0" y="278.4" font-size="11" class="m k" letter-spacing="1.2">A CLIENT DOES</text>
+<text x="580.0" y="296.9" font-size="12.5">Ask the narrowing per</text>
+<text x="580.0" y="314.1" font-size="12.5">request, and never cache</text>
+<text x="580.0" y="331.4" font-size="12.5">the answer.</text>
+<path d="M770,40 L770,362.25" class="ghost"/>
+<text x="784.0" y="34.0" font-size="11" class="m k" letter-spacing="1.2">BESIDE THEM</text>
+<rect x="784.0" y="40.0" width="160.0" height="4.0" rx="0" class="fill-ink-2"/>
+<rect x="788" y="60" width="32" height="10" rx="2" style="stroke: var(--ink-2); stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round"/>
+<circle cx="795" cy="65" r="1.6" class="fill-ink-2"/>
+<rect x="788" y="73" width="32" height="10" rx="2" style="stroke: var(--ink-2); stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round"/>
+<circle cx="795" cy="78" r="1.6" class="fill-ink-2"/>
+<rect x="788" y="86" width="32" height="10" rx="2" style="stroke: var(--ink-2); stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round"/>
+<circle cx="795" cy="91" r="1.6" class="fill-ink-2"/>
+<text x="834.0" y="83.0" font-size="13" class="m b">checkedOnServer</text>
+<text x="784.0" y="124.0" font-size="16" class="d t-ink-2">Send and read</text>
+<text x="784.0" y="148.0" font-size="11" class="m k" letter-spacing="1.2">PROMISES</text>
+<text x="784.0" y="166.5" font-size="12.5">A constraint only the</text>
+<text x="784.0" y="183.8" font-size="12.5">server checks, named with</text>
+<text x="784.0" y="201.0" font-size="12.5">what it checks.</text>
+<text x="784.0" y="226.6" font-size="11" class="m k" letter-spacing="1.2">A CLIENT DOES</text>
+<text x="784.0" y="245.1" font-size="12.5">Send, or rehearse with</text>
+<text x="784.0" y="262.4" font-size="12.5"><tspan class="m">?dryRun=true</tspan>, and read</text>
+<text x="784.0" y="279.6" font-size="12.5">the refusal.</text>
+<text x="16.0" y="384.2" font-size="12.5" class="b">Round trips a client pays for the key</text>
+<rect x="8.0" y="416.2" width="176.0" height="2.0" rx="0" class="fill-part" fill-opacity=".5"/>
+<text x="8.0" y="436.2" font-size="12.5" class="m">none</text>
+<rect x="196.0" y="409.2" width="176.0" height="9.0" rx="0" class="fill-contract" fill-opacity=".5"/>
+<text x="196.0" y="436.2" font-size="12.5" class="m">one per choice</text>
+<rect x="384.0" y="402.2" width="176.0" height="16.0" rx="0" class="fill-owner" fill-opacity=".5"/>
+<text x="384.0" y="436.2" font-size="12.5" class="m">one per change</text>
+<rect x="572.0" y="395.2" width="176.0" height="23.0" rx="0" class="fill-refine" fill-opacity=".5"/>
+<text x="572.0" y="436.2" font-size="12.5" class="m">one per request</text></svg>
+<svg class="tall" viewBox="0 0 340 1438" role="img" aria-labelledby="t-title t-desc" xmlns="http://www.w3.org/2000/svg"><title id="t-title">The four markers</title><desc id="t-desc">enumerated, deferred, refine and live, with checkedOnServer beside: what each promises and what a client does.</desc><defs><marker id="t-a-ink" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0.8 L10,5 L0,9.2 z" class="fill-ink"/></marker><marker id="t-a-ink-2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0.8 L10,5 L0,9.2 z" class="fill-ink-2"/></marker><marker id="t-a-owner" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0.8 L10,5 L0,9.2 z" class="fill-owner"/></marker><marker id="t-a-part" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0.8 L10,5 L0,9.2 z" class="fill-part"/></marker><marker id="t-a-shape" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0.8 L10,5 L0,9.2 z" class="fill-shape"/></marker><marker id="t-a-alter" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0.8 L10,5 L0,9.2 z" class="fill-alter"/></marker><marker id="t-a-refine" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0.8 L10,5 L0,9.2 z" class="fill-refine"/></marker><marker id="t-a-contract" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0.8 L10,5 L0,9.2 z" class="fill-contract"/></marker><marker id="t-a-line" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0.8 L10,5 L0,9.2 z" class="fill-line"/></marker><pattern id="t-hatch" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="7" height="7" class="hatch-bg"/><line x1="0" y1="0" x2="0" y2="7" class="hatch-line"/></pattern></defs><text x="12.0" y="21.0" font-size="13" class="k">A key in the full schema carries at most one</text>
+<text x="12.0" y="38.9" font-size="13" class="k">marker for its static refiners, and live</text>
+<text x="12.0" y="56.9" font-size="13" class="k">besides.</text>
+<rect x="12.0" y="80.7" width="316.0" height="4.0" rx="0" class="fill-part"/>
+<rect x="16" y="96.72999999999999" width="32" height="40" rx="2" style="stroke: var(--part); stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round"/>
+<path d="M21,106.72999999999999 l3,3 l5,-6" style="stroke: var(--part); stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round"/>
+<path d="M33,106.72999999999999 h10" style="stroke: var(--part); stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round"/>
+<path d="M21,116.72999999999999 l3,3 l5,-6" style="stroke: var(--part); stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round"/>
+<path d="M33,116.72999999999999 h10" style="stroke: var(--part); stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round"/>
+<path d="M21,126.72999999999999 l3,3 l5,-6" style="stroke: var(--part); stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round"/>
+<path d="M33,126.72999999999999 h10" style="stroke: var(--part); stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round"/>
+<text x="62.0" y="121.7" font-size="13" class="m b">enumerated</text>
+<text x="12.0" y="162.7" font-size="16" class="d t-part">Stated</text>
+<text x="12.0" y="186.7" font-size="11" class="m k" letter-spacing="1.2">PROMISES</text>
+<text x="12.0" y="205.7" font-size="13">Every answer of the key&#x27;s static refiners is</text>
+<text x="12.0" y="223.7" font-size="13">written as a conditional on its frame.</text>
+<text x="12.0" y="249.5" font-size="11" class="m k" letter-spacing="1.2">A CLIENT DOES</text>
+<text x="12.0" y="268.5" font-size="13">Narrow locally: evaluate the conditionals for</text>
+<text x="12.0" y="286.5" font-size="13">the values.</text>
+<text x="12.0" y="310.3" font-size="12.5" class="b t-part">Round trips: none</text>
+<rect x="12.0" y="342.3" width="316.0" height="4.0" rx="0" class="fill-contract"/>
+<path d="M32,358.31 v22 M24,372.31 l8,8 l8,-8" style="stroke: var(--contract); stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round"/>
+<path d="M16,384.31 v12 h32 v-12" style="stroke: var(--contract); stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round"/>
+<text x="46.0" y="370.3" font-size="13" class="m b t-contract">1</text>
+<text x="62.0" y="383.3" font-size="13" class="m b">deferred</text>
+<text x="12.0" y="424.3" font-size="16" class="d t-contract">Fetch once</text>
+<text x="12.0" y="448.3" font-size="11" class="m k" letter-spacing="1.2">PROMISES</text>
+<text x="12.0" y="467.3" font-size="13">Static, but left out for its size: a list the</text>
+<text x="12.0" y="485.2" font-size="13">site decides, past <tspan class="m">site_list_limit</tspan>.</text>
+<text x="12.0" y="511.1" font-size="11" class="m k" letter-spacing="1.2">A CLIENT DOES</text>
+<text x="12.0" y="530.1" font-size="13">Fetch the full schema once per choice, with</text>
+<text x="12.0" y="548.0" font-size="13"><tspan class="m">choose=</tspan> naming the key and its value, and</text>
+<text x="12.0" y="566.0" font-size="13">cache it until the list changes.</text>
+<text x="12.0" y="589.8" font-size="12.5" class="b t-contract">Round trips: one per choice</text>
+<rect x="12.0" y="621.8" width="316.0" height="4.0" rx="0" class="fill-owner"/>
+<path d="M16,649.83 h26 M36,643.83 l6,6 l-6,6" style="stroke: var(--owner); stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round"/>
+<path d="M48,667.83 h-26 M28,661.83 l-6,6 l6,6" style="stroke: var(--owner); stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round"/>
+<text x="62.0" y="662.8" font-size="13" class="m b">refine</text>
+<text x="12.0" y="703.8" font-size="16" class="d t-owner">Ask with values</text>
+<text x="12.0" y="727.8" font-size="11" class="m k" letter-spacing="1.2">PROMISES</text>
+<text x="12.0" y="746.8" font-size="13">Static, but not writable: a refiner over a</text>
+<text x="12.0" y="764.8" font-size="13">number or free text, or past <tspan class="m">ENUMERATION_CAP</tspan>.</text>
+<text x="12.0" y="790.6" font-size="11" class="m k" letter-spacing="1.2">A CLIENT DOES</text>
+<text x="12.0" y="809.6" font-size="13">Ask the narrowing with values, <tspan class="m">POST</tspan></text>
+<text x="12.0" y="827.6" font-size="13"><tspan class="m">.../schema</tspan> or the <tspan class="m">:schema</tspan> tool, when a</text>
+<text x="12.0" y="845.5" font-size="13">watched key changes.</text>
+<text x="12.0" y="869.4" font-size="12.5" class="b t-owner">Round trips: one per change</text>
+<rect x="12.0" y="901.4" width="316.0" height="4.0" rx="0" class="fill-refine"/>
+<circle cx="32" cy="937.35" r="16" style="stroke: var(--refine); stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round"/>
+<path d="M32,927.35 v10 l7,5" style="stroke: var(--refine); stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round"/>
+<path d="M45,919.35 l3,8 l-8,1" style="stroke: var(--refine); stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round"/>
+<text x="62.0" y="942.4" font-size="13" class="m b">live</text>
+<text x="12.0" y="983.4" font-size="16" class="d t-refine">Ask every time</text>
+<text x="12.0" y="1007.4" font-size="11" class="m k" letter-spacing="1.2">PROMISES</text>
+<text x="12.0" y="1026.3" font-size="13">Runtime: a rule no schema states (a lookup,</text>
+<text x="12.0" y="1044.3" font-size="13">uniqueness, the account, the time), or an</text>
+<text x="12.0" y="1062.2" font-size="13">access answer only the subject settles.</text>
+<text x="12.0" y="1088.1" font-size="11" class="m k" letter-spacing="1.2">A CLIENT DOES</text>
+<text x="12.0" y="1107.1" font-size="13">Ask the narrowing per request, and never cache</text>
+<text x="12.0" y="1125.0" font-size="13">the answer.</text>
+<text x="12.0" y="1148.9" font-size="12.5" class="b t-refine">Round trips: one per request</text>
+<text x="12.0" y="1184.9" font-size="11" class="m k" letter-spacing="1.2">BESIDE THEM</text>
+<rect x="12.0" y="1194.9" width="316.0" height="4.0" rx="0" class="fill-ink-2"/>
+<rect x="16" y="1212.87" width="32" height="10" rx="2" style="stroke: var(--ink-2); stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round"/>
+<circle cx="23" cy="1217.87" r="1.6" class="fill-ink-2"/>
+<rect x="16" y="1225.87" width="32" height="10" rx="2" style="stroke: var(--ink-2); stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round"/>
+<circle cx="23" cy="1230.87" r="1.6" class="fill-ink-2"/>
+<rect x="16" y="1238.87" width="32" height="10" rx="2" style="stroke: var(--ink-2); stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round"/>
+<circle cx="23" cy="1243.87" r="1.6" class="fill-ink-2"/>
+<text x="62.0" y="1235.9" font-size="13" class="m b">checkedOnServer</text>
+<text x="12.0" y="1276.9" font-size="16" class="d t-ink-2">Send and read</text>
+<text x="12.0" y="1300.9" font-size="11" class="m k" letter-spacing="1.2">PROMISES</text>
+<text x="12.0" y="1319.9" font-size="13">A constraint only the server checks, named with</text>
+<text x="12.0" y="1337.8" font-size="13">what it checks.</text>
+<text x="12.0" y="1363.7" font-size="11" class="m k" letter-spacing="1.2">A CLIENT DOES</text>
+<text x="12.0" y="1382.7" font-size="13">Send, or rehearse with <tspan class="m">?dryRun=true</tspan>, and read</text>
+<text x="12.0" y="1400.6" font-size="13">the refusal.</text></svg>
+  </figure>
+  <p class="caption">A marker on a key in the full schema says how far that key can be trusted and what a client does about the rest. <code>enumerated</code> is stated in full, <code>deferred</code> is fetched once per choice, <code>refine</code> is asked again with values, and <code>live</code> is asked on every request; <code>checkedOnServer</code> names a constraint only the server checks. In contract 4, <code>deferred</code> is an object holding its <code>fetch</code> template, and <code>live</code> also marks a key a runtime access answer may lock or leave out.</p>
+  <p class="more"><b>Read more</b> <a href="https://github.com/mlander/data_surface/blob/next/docs/served-contract.md#markers">Markers</a>, <a href="https://github.com/mlander/data_surface/blob/next/docs/served-contract.md#contract-4">Contract 4</a>. <b>Decisions</b> <a href="https://github.com/mlander/data_surface/blob/next/docs/decisions.md#a-list-left-out-for-size-is-deferred-not-refined">A list left out for size is deferred, not refined</a>, <a href="https://github.com/mlander/data_surface/blob/next/docs/decisions.md#static-by-default-runtime-by-declaration">Static by default, runtime by declaration</a>, <a href="https://github.com/mlander/data_surface/blob/next/docs/decisions.md#contract-4-fewer-keywords-nothing-new-on-the-wire">Contract 4: fewer keywords, nothing new on the wire</a>.</p>
+  <p class="foot">Part of Data Surface; see the <a href="../every-door/index.html">full explainer</a>.</p>
+</main>
+</body>
+</html>

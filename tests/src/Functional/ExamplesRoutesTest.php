@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\data_surface\Functional;
 
+use Drupal\Core\Url;
 use Drupal\data_surface_examples\CodeLines;
 use Drupal\data_surface_examples\Form\RegistrationStep2ClassicForm;
 use Drupal\data_surface_examples\Resource\RegistrationStep2Resource;
+use Drupal\data_surface_examples\Series;
 use Drupal\data_surface_examples\Storage\RegistrationStep2Storage;
 use Drupal\Tests\BrowserTestBase;
+use Drupal\Tests\data_surface\Traits\ExampleFilesPanelTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
@@ -22,6 +25,8 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 #[Group('data_surface')]
 #[RunTestsInSeparateProcesses]
 class ExamplesRoutesTest extends BrowserTestBase {
+
+  use ExampleFilesPanelTrait;
 
   /**
    * {@inheritdoc}
@@ -91,9 +96,11 @@ class ExamplesRoutesTest extends BrowserTestBase {
     $assert->pageTextContains('The schema for these answers');
     $assert->pageTextContains('The full schema, for any answers');
     $assert->pageTextContains('What the Tool API can advertise: data_surface:registration.step3:configure');
+    // Above the contract, the files the example is made of.
+    $this->assertFilesPanel(3);
     // Below the contract, what config schema alone can say: core's
     // answer, the plain mapping, and the two set side by side.
-    $assert->elementsCount('css', 'details.data-surface-contract-panel', 2);
+    $assert->elementsCount('css', 'details.data-surface-contract-panel:not(.data-surface-files-panel)', 2);
     $today = $assert->elementExists('css', 'details.data-surface-today-panel');
     $this->assertNull($today->getAttribute('open'));
     $assert->elementTextContains('css', 'details.data-surface-today-panel > summary', 'Without a resource: what config schema can say');
@@ -123,6 +130,7 @@ class ExamplesRoutesTest extends BrowserTestBase {
     // table, and the rules only the form holds, named.
     $this->drupalGet('surface-examples/1/classic');
     $assert->fieldValueEquals('title', 'Spring meetup');
+    $this->assertFilesPanel(1);
     $assert->elementsCount('css', 'details.data-surface-today-panel pre', 2);
     $assert->elementNotExists('css', 'table.data-surface-today-comparison');
     $assert->pageTextContains('This form requires the event title and holds the capacity between 1 and 1000, in its own code. The config schema below states the bounds only because it is written from the resource of example 1; written for this form alone, it would state neither rule.');
@@ -135,6 +143,7 @@ class ExamplesRoutesTest extends BrowserTestBase {
     // and its storage, then the same panel under the form, with its note.
     $this->drupalGet('surface-examples/2/classic');
     $assert->pageTextContains('Example 2, the classic way');
+    $this->assertFilesPanel(2);
     $assert->pageTextContains('The two forms ask the same five questions under the same labels');
     $assert->pageTextContains(sprintf("This form is %d lines of code; example 2's resource and its storage are %d, counted the same way, without blank lines or comments.", $classic, $resource));
     $assert->fieldValueEquals('venue', 'riverside');
@@ -147,10 +156,51 @@ class ExamplesRoutesTest extends BrowserTestBase {
     $assert->pageTextContains('The configuration options have been saved.');
     $this->assertSame('Classic meetup', $this->config('data_surface_examples.registration_step2')->get('title'));
 
+    $this->drupalGet('surface-examples/4');
+    $this->assertFilesPanel(4);
     $this->drupalGet('surface-examples/5');
+    $this->assertFilesPanel(5);
     $assert->pageTextContains('drush tool:info data_surface:registration.step3:configure');
     $assert->pageTextContains('drush tool:run data_surface:registration.step3:configure:read --uid=1');
     $assert->pageTextContains('--input=dry_run=true');
+  }
+
+  /**
+   * Tests the landing page's reading order: one row per example, from Series.
+   */
+  public function testTheLandingPageSaysWhatToReadInWhatOrder(): void {
+    $this->drupalLogin($this->drupalCreateUser(['administer site configuration']));
+    $this->drupalGet('surface-examples');
+    $assert = $this->assertSession();
+    $assert->elementTextContains('css', '.data-surface-reading-order h2', 'Read in this order');
+    $rows = $this->getSession()->getPage()->findAll('css', '.data-surface-reading-order tbody tr');
+    $this->assertCount(count(Series::examples()), $rows);
+    foreach (array_values(Series::examples()) as $index => $example) {
+      $number = $index + 1;
+      $this->assertSame((string) $number, $rows[$index]->getAttribute('data-example'));
+      $cells = array_map(static fn ($cell): string => trim($cell->getText()), $rows[$index]->findAll('css', 'td'));
+      $this->assertSame([
+        sprintf('%d. %s', $number, $example['title']),
+        (string) $example['concept'],
+        $example['docs'],
+        'decisions.md#' . $example['decision'],
+        (string) count($example['files']),
+      ], $cells, sprintf('Example %d', $number));
+      $links = array_map(static fn ($link): string => (string) $link->getAttribute('href'), $rows[$index]->findAll('css', 'a'));
+      $expected = [
+        Series::url($example['docs'], Series::BRANCH),
+        Series::url('docs/decisions.md#' . $example['decision'], Series::BRANCH),
+      ];
+      // An example whose module is off, as examples 16's and 17's are here,
+      // names no page to link.
+      if ($example['routes'] !== [] && $this->container->get('router.route_provider')->getRoutesByNames([$example['routes'][0]]) !== []) {
+        array_unshift($expected, Url::fromRoute($example['routes'][0])->toString());
+      }
+      $this->assertSame($expected, $links, sprintf('Example %d', $number));
+    }
+    $assert->pageTextContains('Start at Your first resource: one settings page from a resource, an operation, a storage and add(), and nothing else.');
+    $assert->linkByHrefExists(Series::url('docs/first-resource.md', Series::BRANCH));
+    $assert->linkByHrefExists(Series::url('docs/concepts.md', Series::BRANCH));
   }
 
   /**

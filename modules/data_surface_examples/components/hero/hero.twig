@@ -1,0 +1,9 @@
+<header class="data-surface-hero data-surface-hero--{{ align|default('center') }}{{ full_width ? ' data-surface-hero--full' : '' }}" style="--data-surface-hero-overlay: {{ overlay|default(40) }}%">
+  <h2>{{ title }}</h2>
+  {% if subtitle %}
+    <p>{{ subtitle }}</p>
+  {% endif %}
+  {% if actions %}
+    <div class="data-surface-hero__actions">{% block actions %}{% endblock %}</div>
+  {% endif %}
+</header>

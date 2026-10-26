@@ -143,36 +143,47 @@ counts the breaking changes made to its stored values, the contract's
 the changes made to how every document is spelled and laid out, whatever
 it describes ([decision](decisions.md#contract-2)). Contract 1 is what
 the module served until 2026-10-20, and what every document was before
-it had a number; today's is 2 (`ContractEmitter::CONTRACT`).
+it had a number, contract 2 until 2026-10-22, and contract 3, which
+changed the HTTP door and kept the documents' spelling
+([decision](decisions.md#contract-3-the-operation-is-the-method)), until
+2026-10-24; today's is 4 (`ContractEmitter::CONTRACT`), which kept the
+door and cut the `x-surface` keywords that said nothing or said it twice
+(`locked`, `declared`, `access: "live"`, `fetch` and `entries` beside
+`deferred`, `list`), and writes every keyword only where it says
+something ([decision](decisions.md#contract-4-fewer-keywords-nothing-new-on-the-wire)).
 
 **What raises it.** A change to how documents are spelled or laid out
 that a client reading the old spelling would misread: a key or a marker
-renamed, moved or reshaped (`surface` becoming `resource`, `dynamic`
-becoming `refine`, `variants` a map where it was a list, a marker moved
-off a conditional onto the object that owns it). Not a resource's own
-change, which its version answers, and not an addition a client may
-ignore, such as a new marker under `x-surface` that narrows nothing.
+renamed, moved, reshaped or removed (`surface` becoming `resource`,
+`dynamic` becoming `refine`, `variants` a map where it was a list, a
+marker moved off a conditional onto the object that owns it, `locked`
+dropped for `readOnly`). Not a resource's own change, which its version
+answers, and not an addition a client may ignore, such as a new marker
+under `x-surface` that narrows nothing: keywords are additive within a
+contract, so a client must ignore a keyword it does not know, and reads
+an absent one as its empty value. A removed or moved keyword is what
+makes a new contract.
 Every wire change waiting for a version moves together, once, so a
 client moves once.
 
 **How a server states it.** Both documents carry it first under the top
-`x-surface`, `"contract": 2`, and every answer of the five
-`/surface-api` endpoints that is not an error carries the response header
-`Contract-Version: 2`, so a client can tell before it reads a body. A
+`x-surface`, `"contract": 4`, and every answer of the `/surface-api`
+API carries the response header `Contract-Version: 4`, so a client can
+tell before it reads a body. A
 document that states none is of contract 1.
 
 **What a client does.** It reads the header, or the document's
 `x-surface.contract`, first, and refuses a version it does not know
 rather than guess at it: a key read by its old name finds nothing, and
 a marker read where it no longer sits says nothing, so a guess fails
-quietly. The React app reads contract 2 only, and refuses another by
+quietly. The React app reads contract 4 only, and refuses another by
 the header or by the document. A full schema cached in another contract
 version is fetched again, as one of another resource version is.
 
 **What the lint does.** The contract diff compares only documents of one
 contract version. A baseline written in another is not compared keyword
 by keyword, since every keyword may be spelled anew: the run reports it
-once, as one change, "contract version 1 to 2", its document and owner
+once, as one change, "contract version 3 to 4", its document and owner
 `*`, of its own class, `contract`. It fails, as an unpinned declaration
 does, and it is no breaking change, since no resource broke its promise:
 `--write` re-pins every such baseline in today's version with no
@@ -289,7 +300,7 @@ never more lenient than it can show. A required key added with no
 default is judged by the kind of operation the document describes
 (`x-surface.operation.kind`): a note in an update or a read, breaking in
 a create and in a structure described alone, so one declaration can be a
-note on its `configure` and breaking on its `add`, each reported on its
+note on its `configure` and breaking on its `create`, each reported on its
 own document. A change to a key's union of its
 variants is a note, since the conditionals that state each variant are
 judged themselves, and so is one to `$id`, `rules` or `within`, which
@@ -316,14 +327,17 @@ it with no reason asked.
 fails on a breaking change that is neither versioned nor allowed, and
 on a declaration with no baseline. Compatible changes pass; the
 baseline is the promise last made, and it is pinned again when a change
-is accepted.
+is accepted. An adopter gets the same test, per resource, from
+`ResourceTestBase`: `$baselines` names its directory, and
+`DATA_SURFACE_BASELINES_WRITE=1` pins today's ([Testing a
+resource](testing-a-resource.md#the-baselines)).
 
 **The command.**
 
 ```
 ddev drush data_surface:contract-diff \
   --module=data_surface_examples,data_surface_examples_compliance,data_surface_first \
-  --dir=modules/custom/data_surface/tests/fixtures/contracts
+  --baselines=modules/custom/data_surface/tests/fixtures/contracts
 ```
 
 prints every difference with its verdict, and a summary naming the
@@ -331,8 +345,8 @@ contract version and the account the documents were emitted for ("19
 resources and structures in contract 2, emitted for user 1 (admin):
 ..."), and exits non-zero on a failing one. It fails closed:
 
-- **`--dir`** is the directory the baselines are kept in, read from the
-  Drupal root, by default the first module's `tests/fixtures/contracts`,
+- **`--baselines`** is the directory the baselines are kept in, read
+  from the Drupal root (`--dir`, its earlier name, is still read), by default the first module's `tests/fixtures/contracts`,
   which is where an adopter keeps its own. One that does not exist fails
   ("nothing was compared"), unless `--write` makes it; a declaration
   with no baseline in it fails as unpinned.
@@ -367,6 +381,7 @@ an alter a site installs, which only that site's own baselines cover.
 ## See also
 
 - [Decisions: a resource evolves in the open](decisions.md#a-resource-evolves-in-the-open)
+- [Testing a resource](testing-a-resource.md), the contract baseline among an adopter's checks
 - [The served contract](served-contract.md), whose full schema the lint compares
 - [Value semantics](semantics.md), which says what a client asked for
 - [Storage](storage.md), which owns the layout and will own the ledger

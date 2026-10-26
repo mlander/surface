@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Drupal\data_surface_resource_test\Keys;
 
-use Drupal\data_surface\Resource\KeyedList;
-use Drupal\data_surface\Resource\KeysFromSiteInterface;
+use Drupal\data_surface\Resource\SiteList;
+use Drupal\data_surface\Resource\SiteListInterface;
 
 /**
  * A list that leaves its last entry out every other time it is asked.
@@ -13,7 +13,7 @@ use Drupal\data_surface\Resource\KeysFromSiteInterface;
  * So two maps it lists in one build disagree: the first asked has one
  * entry fewer than the second.
  */
-final class ShiftingBenches implements KeysFromSiteInterface {
+final class ShiftingBenches implements SiteListInterface {
 
   /**
    * How many times a list was asked for.
@@ -23,8 +23,8 @@ final class ShiftingBenches implements KeysFromSiteInterface {
   /**
    * {@inheritdoc}
    */
-  public function keys(): KeyedList {
-    $keys = (new KeyedList())->add('lathe', 'Lathe');
+  public function list(): SiteList {
+    $keys = (new SiteList())->add('lathe', 'Lathe');
     if (++static::$asked % 2 === 0) {
       $keys->add('press', 'Drill press');
     }

@@ -10,6 +10,7 @@ use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\Url;
 use Drupal\data_surface\ResourceBuild\ResourceRegistry;
 use Drupal\data_surface_react\ServedOperations;
+use Drupal\data_surface_react\ServedPaths;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -18,10 +19,11 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  * The page an operation's React form mounts on.
  *
  * It renders no form itself: an element for the app to mount into, the
- * app's library, and in drupalSettings where the app finds the contract
- * (the API base, the resource and operation ids, the operation's
- * parameters from the query string) and where it fetches the CSRF token
- * its POSTs carry.
+ * app's library, and in drupalSettings where the app finds the operation
+ * on the API (the paths it reads the envelope and the schema at, the
+ * method and path it writes with, as ServedPaths writes them for the
+ * operation and its parameters) and where it fetches the CSRF token its
+ * writes carry.
  */
 final class ResourceReactPage implements ContainerInjectionInterface {
 
@@ -39,10 +41,13 @@ final class ResourceReactPage implements ContainerInjectionInterface {
    *   What reads an operation off a request.
    * @param \Drupal\data_surface\ResourceBuild\ResourceRegistry $registry
    *   What discovery found, for the title.
+   * @param \Drupal\data_surface_react\ServedPaths $servedPaths
+   *   What writes the operation's paths on the API.
    */
   public function __construct(
     protected readonly ServedOperations $servedOperations,
     protected readonly ResourceRegistry $registry,
+    protected readonly ServedPaths $servedPaths,
   ) {}
 
   /**
@@ -52,6 +57,7 @@ final class ResourceReactPage implements ContainerInjectionInterface {
     $instance = new static(
       $container->get('data_surface_react.served_operations'),
       $container->get('data_surface.resource_registry'),
+      $container->get('data_surface_react.served_paths'),
     );
     $instance->setStringTranslation($container->get('string_translation'));
     return $instance;
@@ -78,6 +84,19 @@ final class ResourceReactPage implements ContainerInjectionInterface {
       throw new NotFoundHttpException($e->getMessage(), $e);
     }
     $token = Url::fromRoute('system.csrftoken')->toString(TRUE);
+    $parameters = array_filter($served->parameters, 'is_scalar');
+    $read = !$this->servedPaths->readsPlain($served->definition, $served->operation);
+    [$method, $named] = $this->servedPaths->writes($served->definition, $served->operation);
+    $urls = [
+      'read' => $this->servedPaths->url($served->definition, $served->operation, $parameters, $read),
+      'schema' => $this->servedPaths->url($served->definition, $served->operation, $parameters, $read, TRUE),
+      'write' => $this->servedPaths->url($served->definition, $served->operation, $parameters, $named),
+    ];
+    // The lookup answers for the operation GET serves at the path, so a
+    // page of another operation has none.
+    // Decision: see
+    // docs/decisions.md#a-reference-is-an-id-with-a-list-the-site-decides-listed-or-looked-up.
+    $lookup = $read ? NULL : $this->servedPaths->lookupUrl($served->definition, $served->operation, $parameters)->getGeneratedUrl();
     $build = [
       '#type' => 'html_tag',
       '#tag' => 'div',
@@ -97,15 +116,24 @@ final class ResourceReactPage implements ContainerInjectionInterface {
             'pageBase' => $request->getBasePath() . '/surface-react',
             'resource' => $served->definition->id,
             'operation' => $served->operation->id,
-            'parameters' => array_filter($served->parameters, 'is_scalar'),
+            'parameters' => $parameters,
+            // Where the API answers this operation: contract 3's paths.
+            'endpoints' => [
+              'read' => $urls['read']->getGeneratedUrl(),
+              'schema' => $urls['schema']->getGeneratedUrl(),
+              'write' => ['method' => $method, 'url' => $urls['write']->getGeneratedUrl()],
+              'lookup' => $lookup,
+            ],
             'tokenUrl' => $token->getGeneratedUrl(),
           ],
         ],
       ],
     ];
-    CacheableMetadata::createFromObject($token)
-      ->addCacheContexts(['url.query_args'])
-      ->applyTo($build);
+    $cacheability = CacheableMetadata::createFromObject($token)->addCacheContexts(['url.query_args']);
+    foreach ($urls as $url) {
+      $cacheability->addCacheableDependency($url);
+    }
+    $cacheability->applyTo($build);
     return $build;
   }
 

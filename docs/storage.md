@@ -6,8 +6,9 @@ type whether a form, a config action, a test or an agent is doing the
 submitting, and what lets one storage class serve both the operation
 that adds a thing and the operation that edits it.
 
-This page is about the second half: a resource's own storage and the
-engine's seven storage classes, the prepare-versus-commit split, dry runs,
+This page is about the second half: a resource's own storage, the two
+it may extend (a simple config object's and a config entity's), the
+engine's five storage classes, the prepare-versus-commit split, dry runs,
 what may ride on a form, and the one small interface storage uses when
 the input layout and the storage layout differ. [The pipeline](pipeline.md)
 is the other half, and the stage names below are its.
@@ -15,7 +16,9 @@ is the other half, and the stage names below are its.
 A settings page needs none of this page but the next section: its
 resource names a subclass of `ConfigObjectStorage` and is done ([A
 simple config object](#a-simple-config-object), and [Your first
-resource](first-resource.md) for the whole module).
+resource](first-resource.md) for the whole module). A thing with a
+machine name kept as a config entity names a subclass of
+`ConfigEntityStorage` ([A config entity](#a-config-entity)).
 
 ## A simple config object
 
@@ -97,7 +100,10 @@ The first writes nothing: it prints how each file differs from what the
 resources declare, as a unified diff, and fails when one does, so a
 check can run it. The second writes them; commit what it writes. Without
 `--module` it names every installed module owning a resource stored in
-a simple config object, or writing an entry for one.
+a simple config object, or writing an entry for one. An object another
+module provides (its name's first part is that module) keeps its
+owner's schema, which the resource is held to, and no entry is written
+for it ([decision](decisions.md#the-generator-writes-what-the-first-page-shows)).
 
 A module named need not be installed. Its resources, structures, shapes
 and alters are read from its `src/`, as discovery reads an installed
@@ -156,7 +162,17 @@ resource the command writes:
   key of an entry free to be absent, since an entry is stored as it was
   accepted), and variants as a type their deciding key names,
   `<config>.<key>.[%parent.<deciding key>]`, each variant's mapping
-  written in the schema file of the module that declares it.
+  written in the schema file of the module that declares it, with the
+  secrets of the other variants, which a switch keeps, as keys that may
+  be absent. Variants from the site are `type: ignore`: which there are
+  is the site's, so no schema written once can name them, and the chosen
+  variant holds the value to its own keys before anything is written
+  ([Variants from the site](resources.md#variants-from-the-site)); the
+  check that a resource offers nothing its schema refuses reads `ignore`
+  as refusing nothing. A closed provider (`ClosedSiteListInterface`)
+  names every structure it may list, so its variants are written as a
+  class's are, each a type of its own, whichever the site offers when
+  the file is written (example 14's credential).
 - **The install file**, `config/install/<config>.yml`: every key the
   object stores, in declaration order, the value the file already gives
   it (what a site starts from, which may differ from the default), the
@@ -354,6 +370,105 @@ refused by the schema under that key. A structure an alter attaches at
 its mount is written the same way, its keys the mount's
 ([Reusing a structure](resources.md#reusing-a-structure-from-another-module)).
 
+### A config entity
+
+A resource whose thing is a config entity (a placed block, a content
+type) names a subclass of `ConfigEntityStorage`, which says the entity
+type and the property each key is stored under:
+
+```php
+final class BlockPlacementStorage extends ConfigEntityStorage {
+
+  public const ENTITY_TYPE_ID = 'block';
+
+  public const PROPERTIES = ['id', 'status', 'weight', 'theme', 'region', 'plugin'];
+
+}
+```
+
+A plain entry is a key stored under its own name, `'name' => 'label'` a
+key stored under another, and `'kind' => ['method' => 'setKind']` a key
+set through a setter the entity offers, the spelling core's config
+actions use. The key mapped to the entity type's id key is its identity:
+`load()` reads the entity the context knows by it, and nothing for a
+context that creates.
+
+- **`prepare()`** builds the entity it would save, unsaved: a copy of the
+  stored one made from its exported array (a clone shares the plugin
+  collections of the entity the request holds, and shaping settings
+  onto it would reach that entity's plugins), or a new one under the id
+  the values carry, refused when the id is in use (`taken`, under the
+  identity key). It shapes the values onto it, calculates the
+  dependencies a save would, and holds the whole entity to its config
+  schema, which for a config entity is its validation, filing each
+  violation under the key that owns the property. It returns the
+  entity's exported array.
+- **`commit()`** saves that array, the uuid the rehearsal handed out
+  included, so what a dry run showed is what is stored.
+- **`prepareDelete()` and `delete()`** remove the entity the context
+  names, for an operation that deletes
+  ([A placed block is a resource](decisions.md#a-placed-block-is-a-resource)).
+- **`mayClear()` and `widerThanSchema()`** read the entity's config
+  schema, `<config prefix>.*`, for the keys stored under a property: the
+  build refuses a resource that advertises what that schema refuses.
+- **Third party settings** arrive under `third_party_settings.<module>`
+  and are written with `setThirdPartySetting()`, where core keeps them.
+
+A key the map leaves out is the subclass's: it overrides `fromEntity()`
+and `toEntity()`. `BlockPlacementStorage` keeps the label and the
+plugin's own settings in the block's settings array, and the visibility
+as core's map of conditions; `NodeTypeStorage` reads the description
+and the help through their getters and writes a content type's base
+field overrides beside it.
+
+Each class's `use` line: [Namespaces](concepts.md#namespaces).
+
+**An entity type of your own** (example 15). A module that declares a
+config entity type puts a resource over it from the start: the entity
+class carries `#[ConfigEntityType]` with its keys and `config_export`,
+and no form classes, no list builder and no links, since the resource's
+operations are what create, update and delete one, at every door. Its config
+schema is written from the resource by `drush data_surface:config-schema
+--write`, as a config object's is: for a resource whose
+`ConfigEntityStorage` names an entity type its own module declares, the
+command writes the entry `<module>.<config prefix>.*`, a `config_entity`
+that is fully validatable, its mapping each key the storage maps to a
+property, by the property's name, by the rules a config object's keys
+follow, so nothing generated is translatable, the label included.
+The storage class's `ALWAYS_HELD` names the optional keys written as
+never null, as `ConfigObjectStorage`'s does. No install file is written:
+the things a module ships are config of their own, which no resource
+describes. An entity type of core or of another module (the block, the
+content type) has a schema of its own and is left alone. Example 15's:
+
+```yaml
+# Generated from the event.venue resource by drush data_surface:config-schema.
+data_surface_examples.event_venue.*:
+  type: config_entity
+  label: 'Venue'
+  constraints:
+    FullyValidatable: ~
+  mapping:
+    id:
+      type: string
+      label: 'Machine name'
+      constraints:
+        Regex:
+          pattern: '/^[a-z0-9_]+$/D'
+        Length:
+          max: 32
+    label:
+      type: string
+      label: 'Name'
+      # ...
+```
+
+The storage may read and write more than one thing for an operation
+that names no thing: `VenueStorage` answers a listing from every venue
+in its `prepare()` and writes a reorder's weights to each venue it names
+in one `commit()`
+([decision](decisions.md#a-listing-is-a-read-only-operation-with-outputs-a-reorder-is-an-update-over-the-collection)).
+
 ### Keys a mixed-in structure brings
 
 A structure [mixed in](resources.md#mixins) stores nothing itself
@@ -367,6 +482,32 @@ repeats the members.
 A member the structure's access omits for the account writing is kept
 as stored, at the owner's level or inside a child the owner stores.
 
+### The site's defaults are not stored values
+
+A site's own defaults live in their own config object,
+`data_surface.defaults`, which the build reads and no storage writes
+([A site's own defaults](declaring-a-resource.md#a-sites-own-defaults)).
+A default is what a key with nothing stored starts from: changing one
+changes a new thing and a key no write has set, never a value already
+stored, and the install file written from the resource keeps the
+module's defaults. Set them with `drush config:set data_surface.defaults`;
+a config export carries them with the rest of the site's configuration.
+
+### Config overrides change what the site runs on
+
+A `settings.php` override (`$config['data_surface_first.newsletter']['frequency']
+= 'monthly';`) and config split change what the site runs on, not what
+is stored. The form, the read tool and both documents show the stored
+value, as core's own config forms do (they load the editable object,
+which no override reaches), and the pipeline writes the stored value
+and holds it to the schema. A key overridden on a site therefore reads
+here differently from what the site runs on; that is core's behavior,
+and on purpose: a form that showed the override would save it into
+storage on the next submit, and the override would stop being one. To
+see it, `drush config:get data_surface_first.newsletter --include-overridden`
+prints the value with overrides applied, beside the stored one plain
+`drush config:get` prints.
+
 ## What storage is
 
 Two interfaces with the same three verbs. A resource's own storage class
@@ -375,10 +516,15 @@ first:
 
 - `Drupal\data_surface\Pipeline\DataSurfaceStorageInterface`, what the
   pipeline writes to, over the data surface. The engine's storage
-  classes below implement it, all but `ConfigObjectStorage`, and
-  `StorageAdapter` adapts a resource's storage to it.
+  classes below implement it, all but `ConfigObjectStorage` and
+  `ConfigEntityStorage`, and `StorageAdapter` adapts a resource's
+  storage to it.
 - `Drupal\data_surface\Resource\ResourceStorageInterface`, what
-  `#[Resource(storage:)]` names, over the context.
+  `#[Resource(storage:)]` names, over the context; its write verbs,
+  `prepare()` and `commit()` (and a deleting storage's
+  `prepareDelete()` and `delete()`), are handed the account the write
+  is made as, and it never reads the current user
+  ([No door-specific context](resources.md#no-door-specific-context)).
 
 The pipeline's:
 
@@ -390,8 +536,8 @@ The pipeline's:
 
 The data surface is an argument rather than something the storage
 holds. Storage describes a destination and a data surface describes
-values: the same node type is the destination of the add operation and
-the edit operation, and storage holding the built resource for one of
+values: the same node type is the destination of the create operation and
+the update operation, and storage holding the built resource for one of
 them could not serve both.
 
 `load()` is what makes a partial update legal. It is the `current`
@@ -409,7 +555,8 @@ entity, and creates or updates by whether the context creates.
 `StorageAdapter` binds the context and makes it this interface;
 [Prepare](resources.md#prepare) says what each storage class here
 checks. A resource's storage class is where its own storage logic lives:
-`NodeTypeStorage`, `FieldInstanceStorage`, `FieldStorageStorage` and
+`BlockPlacementStorage` and `NodeTypeStorage` extend `ConfigEntityStorage`,
+and `FieldInstanceStorage`, `FieldStorageStorage` and
 `AddressFieldSettingsStorage` each rehearse a config entity in
 `prepare()` and hold it to its config schema with `SchemaViolations`,
 and a resource's storage class may delegate to an engine storage class
@@ -426,7 +573,7 @@ among the field storage's settings.
 
 ```php
 $resources = \Drupal::service('data_surface.resources');
-$context = $resources->operation(NodeTypeResource::class, 'edit', ['type' => 'article']);
+$context = $resources->operation(NodeTypeResource::class, 'update', ['type' => 'article']);
 $storage = $resources->storage(NodeTypeResource::class, $context);
 ```
 
@@ -464,7 +611,7 @@ and nothing would have been stored.
 
 ### When the destination is named by the submission
 
-An add operation knows no identity, because the thing it creates does
+A create operation knows no identity, because the thing it creates does
 not exist to be named, and yet its destination may depend on what is
 being created. The node type demo is the worked example: a content
 type's base field overrides belong to a bundle, and the bundle IS the
@@ -472,7 +619,7 @@ machine name being submitted.
 
 The answer is that storage reads the identity in `prepare()`, not
 before. `NodeTypeStorage` loads by the machine name the context knows,
-and on add, where it knows none, loads nothing; `prepare()` builds the
+and on a create, where it knows none, loads nothing; `prepare()` builds the
 node type around the machine name the accepted values carry, and has
 `BaseFieldOverrideStorage` plan the overrides for that bundle, which
 need not exist yet. Storage taking the accepted values when it is made
@@ -525,13 +672,13 @@ class returns that clone's exported array from `prepare()`, which a
 PHP caller reads on the result; a derived tool's dry run answers the
 accepted values instead ([decision](decisions.md#every-door-projects-what-the-read-tool-projects)).
 
-## The seven engine storage classes
+## The engine storage classes
 
 | Storage | Destination | Artifact | Used by |
 | --- | --- | --- | --- |
 | `ConfigObjectStorage` | One simple config object, named by a subclass. A `ResourceStorageInterface`, named by a resource. | The values to write, plus the language code when the schema asks for one. | the examples, `data_surface_first` |
+| `ConfigEntityStorage` | One config entity, named by a subclass with its properties, plus core's third party settings. A `ResourceStorageInterface` that can delete, named by a resource. | The entity's exported array, its dependencies calculated. | `BlockPlacementStorage`, `NodeTypeStorage` |
 | `StateStorage` | One State key. | The accepted values. | the demo form |
-| `ConfigEntityStorage` | One config entity's properties, plus core's third party settings. | An unsaved clone of the entity. | no shipped resource yet |
 | `FieldSettingsStorage` | One field instance's settings. | The settings array. | the field type host |
 | `BaseFieldOverrideStorage` | A bundle's overrides of an entity type's base fields. | The overrides to save, as exported arrays, and the fields whose override goes. | `NodeTypeStorage` |
 | `PluginConfigurationStorage` | A plugin's configuration array. | The complete configuration. | the plugin hosts |
@@ -540,11 +687,16 @@ accepted values instead ([decision](decisions.md#every-door-projects-what-the-re
 `ConfigObjectStorage` came back once every settings resource had
 written the same class: the examples' three, and the one the first
 fresh-eyes reader had to write ([the log](fresh-eyes-2026-10-18.md)).
+`ConfigEntityStorage` became one a resource names when the placed block
+became a resource (2026-10-23); until then it was an engine class no
+host used, with the same short name as core's
+([decision](decisions.md#a-placed-block-is-a-resource)).
 
 The namespace says which kind a class is. A class in `Storage\` is one
-you name on `#[Resource(storage:)]` or extend: `ConfigObjectStorage`,
-and beside it what such a class works with, the layouts, the secret
-codec and `SchemaViolations`. The other six implement the pipeline's
+you name on `#[Resource(storage:)]` or extend: `ConfigObjectStorage`
+and `ConfigEntityStorage`, and beside them what such a class works
+with, the layouts, the secret codec and `SchemaViolations`. The other
+five implement the pipeline's
 `DataSurfaceStorageInterface` and live beside it in `Pipeline\Storage\`
 (`use Drupal\data_surface\Pipeline\Storage\StateStorage;`): a plugin's
 host supplies one, and a resource's storage class may delegate to one,
@@ -556,9 +708,10 @@ A few things each of them is opinionated about:
 - **`ConfigEntityStorage`** maps an input key to an entity property
   name, or to `['method' => 'setX']` for a property that needs a real
   setter. The method form is a string rather than a callable on purpose:
-  it survives serialization, and it is the spelling core's config
+  it is a constant on a class, and it is the spelling core's config
   actions use, so a key a resource can write is a key a recipe can
-  write.
+  write. A setter is asked only for a value the entity does not hold
+  already.
 - **`BaseFieldOverrideStorage`** is the translation nobody had written
   down: a content type's "published by default" is the default value of
   the node status base field narrowed to one bundle, and its title label
@@ -587,7 +740,7 @@ A few things each of them is opinionated about:
 - **`CompositeStorage` ordering is load-bearing.** Children run in the
   order they were listed, which matters when a later write needs an
   earlier one to have happened: base field overrides belong to a bundle,
-  so on an add operation the storage that creates the bundle must be
+  so on a create operation the storage that creates the bundle must be
   listed first. A resource's own children are composed by
   `StorageAdapter` instead, which routes variants by their deciding
   key's value; a composite hands each child only the keys it claims.
@@ -646,6 +799,9 @@ An implementation must be pure layout: no services, no current user, no
 site state. The two halves are expected to round-trip, and where they
 cannot the implementation says so in its own documentation.
 
+For how this fits with the other kinds of transformation, see
+[Transformations](transformations.md).
+
 ### A layout for settings another module mounted
 
 An alter that adds keys may ask for a value in one layout and store it
@@ -666,9 +822,9 @@ layout for a module that mounts nothing is refused.
 for a content type's review deadline as an amount and a unit, and its
 `ReviewDeadlineLayout` stores seconds, through `NodeTypeStorage`, which
 knows nothing about it. `StorageAdapter` applies the layout for a
-resource's own storage class; of the engine's storage classes, only
-`ConfigEntityStorage` writes third party settings, so it is the only one
-that reads it.
+resource's own storage class, `ConfigEntityStorage` and its subclasses
+among them; none of the engine's storage classes writes third party
+settings.
 
 ## Secrets at the codec
 
@@ -784,10 +940,11 @@ back to its declared default.
 Every storage class also composes core's `DependencySerializationTrait`,
 as a safety net for adopters who do put one on a form: its services
 then store as service ids and come back as the container's own objects
-rather than as dead copies. Two of them cannot be made fully safe that
-way, because what they hold is not a service: `ConfigEntityStorage` and
-`FieldSettingsStorage` each carry a config entity. The rule for
-those is the one each class documents: hand it an object you own.
+rather than as dead copies. One of them cannot be made fully safe that
+way, because what it holds is not a service: `FieldSettingsStorage`
+carries a config entity. The rule for it is the one it documents: hand
+it an object you own. `ConfigEntityStorage` holds none: it loads the
+entity its context names, at each verb.
 
 ## Writing a storage class
 

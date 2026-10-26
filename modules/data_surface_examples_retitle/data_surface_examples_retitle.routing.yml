@@ -1,0 +1,10 @@
+# Example 17: the retitle operation, served by the generic operation form,
+# with the examples' panels beside it.
+data_surface_examples.step17:
+  path: '/surface-examples/17'
+  defaults:
+    _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
+    _title: 'Example 17: retitle in bulk, access borrowed'
+    _data_surface_resource: 'Drupal\data_surface_examples_retitle\Resource\RetitleResource'
+    _data_surface_operation: 'retitle'
+    _data_surface_panel: 'data_surface_examples.panels'

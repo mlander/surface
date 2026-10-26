@@ -57,7 +57,11 @@ final class Sentences implements MarkupInterface {
   }
 
   /**
-   * Renders a refusal for a machine: keys by path, values as sent.
+   * Renders a refusal for a machine: values as sent.
+   *
+   * A value is named by what is sent, its label beside it, and a key a
+   * computed key reads or variants are chosen by, by its path; a key a
+   * condition reads is named by its label in either rendering.
    *
    * The one place the machine renderer is chosen: for as long as the
    * message renders, every Named in it, at any depth, is spelled the

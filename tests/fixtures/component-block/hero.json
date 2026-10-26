@@ -1,0 +1,338 @@
+{
+    "full": {
+        "component.props.data_surface_examples:call_to_action": {
+            "title": "component.props.data_surface_examples:call_to_action",
+            "type": "object",
+            "properties": {
+                "text": {
+                    "title": "Button text",
+                    "type": "string",
+                    "maxLength": 40
+                },
+                "url": {
+                    "title": "Address",
+                    "type": "string",
+                    "format": "uri"
+                },
+                "style": {
+                    "title": "Style",
+                    "type": "string",
+                    "oneOf": [
+                        {
+                            "const": "primary",
+                            "title": "Primary"
+                        },
+                        {
+                            "const": "secondary",
+                            "title": "Secondary"
+                        }
+                    ],
+                    "default": "primary"
+                },
+                "new_window": {
+                    "title": "Open in a new window",
+                    "type": "boolean",
+                    "default": false
+                },
+                "tags": {
+                    "title": "Tags",
+                    "description": "Up to three words the button is filed under.",
+                    "type": [
+                        "array",
+                        "null"
+                    ],
+                    "items": {
+                        "type": "string"
+                    },
+                    "maxItems": 3
+                }
+            },
+            "additionalProperties": false,
+            "required": [
+                "text",
+                "url"
+            ]
+        },
+        "component.slots.data_surface_examples:call_to_action.2": {
+            "title": "component.slots.data_surface_examples:call_to_action.2",
+            "type": "object",
+            "properties": {},
+            "additionalProperties": false
+        },
+        "component.nested.data_surface_examples:call_to_action.1": {
+            "title": "component.nested.data_surface_examples:call_to_action.1",
+            "type": "object",
+            "properties": {
+                "component": {
+                    "title": "Component",
+                    "type": "string",
+                    "oneOf": [
+                        {
+                            "const": "data_surface_examples:call_to_action",
+                            "title": "Call to action"
+                        }
+                    ]
+                },
+                "props": {
+                    "title": "Props",
+                    "anyOf": [
+                        {
+                            "$ref": "#/$defs/component.props.data_surface_examples:call_to_action"
+                        },
+                        {
+                            "type": "null"
+                        }
+                    ],
+                    "x-surface": {
+                        "dependsOn": [
+                            "component"
+                        ],
+                        "by": "component",
+                        "variants": {
+                            "data_surface_examples:call_to_action": "#/$defs/component.props.data_surface_examples:call_to_action"
+                        }
+                    }
+                },
+                "slots": {
+                    "title": "Slots",
+                    "anyOf": [
+                        {
+                            "$ref": "#/$defs/component.slots.data_surface_examples:call_to_action.2"
+                        },
+                        {
+                            "type": "null"
+                        }
+                    ],
+                    "x-surface": {
+                        "dependsOn": [
+                            "component"
+                        ],
+                        "by": "component",
+                        "variants": {
+                            "data_surface_examples:call_to_action": "#/$defs/component.slots.data_surface_examples:call_to_action.2"
+                        }
+                    }
+                }
+            },
+            "additionalProperties": false,
+            "required": [
+                "component"
+            ],
+            "allOf": [
+                {
+                    "if": {
+                        "properties": {
+                            "component": {
+                                "const": "data_surface_examples:call_to_action"
+                            }
+                        },
+                        "required": [
+                            "component"
+                        ]
+                    },
+                    "then": {
+                        "properties": {
+                            "props": {
+                                "title": "Props",
+                                "$ref": "#/$defs/component.props.data_surface_examples:call_to_action"
+                            }
+                        }
+                    }
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "component": {
+                                "const": "data_surface_examples:call_to_action"
+                            }
+                        },
+                        "required": [
+                            "component"
+                        ]
+                    },
+                    "then": {
+                        "properties": {
+                            "slots": {
+                                "title": "Slots",
+                                "$ref": "#/$defs/component.slots.data_surface_examples:call_to_action.2"
+                            }
+                        }
+                    }
+                }
+            ]
+        },
+        "component.slot.data_surface_examples:hero.actions.1": {
+            "title": "component.slot.data_surface_examples:hero.actions.1",
+            "type": "object",
+            "properties": {
+                "kind": {
+                    "title": "Holds",
+                    "type": "string",
+                    "oneOf": [
+                        {
+                            "const": "text",
+                            "title": "Text"
+                        },
+                        {
+                            "const": "component",
+                            "title": "A component"
+                        },
+                        {
+                            "const": "components",
+                            "title": "Components"
+                        }
+                    ],
+                    "default": "text"
+                },
+                "text": {
+                    "title": "Text",
+                    "type": [
+                        "string",
+                        "null"
+                    ],
+                    "x-surface": {
+                        "dependsOn": [
+                            "kind"
+                        ]
+                    }
+                },
+                "component": {
+                    "title": "Component",
+                    "$ref": "#/$defs/component.nested.data_surface_examples:call_to_action.1",
+                    "x-surface": {
+                        "dependsOn": [
+                            "kind"
+                        ]
+                    }
+                },
+                "components": {
+                    "title": "Components",
+                    "type": "array",
+                    "maxItems": 2,
+                    "items": {
+                        "$ref": "#/$defs/component.nested.data_surface_examples:call_to_action.1"
+                    },
+                    "x-surface": {
+                        "dependsOn": [
+                            "kind"
+                        ],
+                        "collection": true
+                    }
+                }
+            },
+            "additionalProperties": false,
+            "allOf": [
+                {
+                    "if": {
+                        "not": {
+                            "properties": {
+                                "kind": {
+                                    "const": "text"
+                                }
+                            },
+                            "required": [
+                                "kind"
+                            ]
+                        }
+                    },
+                    "then": {
+                        "properties": {
+                            "text": false
+                        }
+                    }
+                },
+                {
+                    "if": {
+                        "not": {
+                            "properties": {
+                                "kind": {
+                                    "const": "component"
+                                }
+                            },
+                            "required": [
+                                "kind"
+                            ]
+                        }
+                    },
+                    "then": {
+                        "properties": {
+                            "component": false
+                        }
+                    }
+                },
+                {
+                    "if": {
+                        "not": {
+                            "properties": {
+                                "kind": {
+                                    "const": "components"
+                                }
+                            },
+                            "required": [
+                                "kind"
+                            ]
+                        }
+                    },
+                    "then": {
+                        "properties": {
+                            "components": false
+                        }
+                    }
+                }
+            ],
+            "x-surface": {
+                "rules": [
+                    0,
+                    1,
+                    2
+                ]
+            }
+        },
+        "block.data_surface_component.slots.data_surface_examples:hero": {
+            "title": "block.data_surface_component.slots.data_surface_examples:hero",
+            "type": "object",
+            "properties": {
+                "actions": {
+                    "title": "Actions",
+                    "description": "Up to two buttons under the title.",
+                    "$ref": "#/$defs/component.slot.data_surface_examples:hero.actions.1"
+                }
+            },
+            "additionalProperties": false
+        }
+    },
+    "now": {
+        "title": "Slots",
+        "anyOf": [
+            {
+                "$ref": "#/$defs/block.data_surface_component.slots.data_surface_examples:call_to_action"
+            },
+            {
+                "$ref": "#/$defs/block.data_surface_component.slots.data_surface_examples:card"
+            },
+            {
+                "$ref": "#/$defs/block.data_surface_component.slots.data_surface_examples:hero"
+            },
+            {
+                "$ref": "#/$defs/block.data_surface_component.slots.data_surface_examples:section"
+            },
+            {
+                "type": "null"
+            }
+        ],
+        "x-surface": {
+            "dependsOn": [
+                "component"
+            ],
+            "refined": true,
+            "by": "component",
+            "variants": {
+                "data_surface_examples:call_to_action": "#/$defs/block.data_surface_component.slots.data_surface_examples:call_to_action",
+                "data_surface_examples:card": "#/$defs/block.data_surface_component.slots.data_surface_examples:card",
+                "data_surface_examples:hero": "#/$defs/block.data_surface_component.slots.data_surface_examples:hero",
+                "data_surface_examples:section": "#/$defs/block.data_surface_component.slots.data_surface_examples:section"
+            },
+            "chosen": "data_surface_examples:hero"
+        }
+    }
+}

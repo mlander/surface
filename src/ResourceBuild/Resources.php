@@ -7,10 +7,13 @@ namespace Drupal\data_surface\ResourceBuild;
 use Drupal\Core\Access\AccessResult;
 use Drupal\Core\Access\AccessResultInterface;
 use Drupal\Core\Cache\Cache;
+use Drupal\Core\Cache\CacheBackendInterface;
+use Drupal\Core\Language\LanguageManagerInterface;
 use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\Cache\RefinableCacheableDependencyInterface;
 use Drupal\Core\DependencyInjection\ClassResolverInterface;
 use Drupal\Core\Session\AccountInterface;
+use Drupal\Core\Session\AccountProxyInterface;
 use Drupal\Core\Session\PermissionsHashGeneratorInterface;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
@@ -22,7 +25,9 @@ use Drupal\data_surface\DataSurfaceBuilder;
 use Drupal\data_surface\DataSurfaceBuilderInterface;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\DefinitionMetadata;
+use Drupal\data_surface\SettledCacheability;
 use Drupal\data_surface\Pipeline\DataSurfaceStorageInterface;
+use Drupal\data_surface\Reference\References;
 use Drupal\data_surface\Refinement\ChoiceSet;
 use Drupal\data_surface\Refinement\Condition;
 use Drupal\data_surface\Refinement\DeclaredRefiner;
@@ -30,18 +35,19 @@ use Drupal\data_surface\Refinement\DoesNotApply;
 use Drupal\data_surface\Refinement\Narrowing;
 use Drupal\data_surface\Refinement\Rule;
 use Drupal\data_surface\Refinement\RuntimeRefiner;
-use Drupal\data_surface\Refinement\StaticRefinerContainer;
+use Drupal\data_surface\Pipeline\PipelineGuard;
 use Drupal\data_surface\Refinement\WatchedValueCheckInterface;
-use Drupal\data_surface\Resource\AltersOutputsInterface;
 use Drupal\data_surface\Resource\DefinesOutputsInterface;
 use Drupal\data_surface\Resource\AltersStorageLayoutInterface;
-use Drupal\data_surface\Resource\KeyedList;
-use Drupal\data_surface\Resource\KeysFromSiteInterface;
+use Drupal\data_surface\Resource\SiteList;
+use Drupal\data_surface\Resource\SiteListInterface;
+use Drupal\data_surface\Resource\ClosedSiteListInterface;
+use Drupal\data_surface\Contract\SchemaReader;
+use Drupal\data_surface\Contract\SchemaResolver;
 use Drupal\data_surface\Resource\KnowsClearableKeysInterface;
 use Drupal\data_surface\Resource\AccessAnswer;
 use Drupal\data_surface\Resource\Attribute\Variant;
 use Drupal\data_surface\Resource\OperationAccessInterface;
-use Drupal\data_surface\Resource\AltersAccessInterface;
 use Drupal\data_surface\Resource\AltersInputsInterface;
 use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface\Resource\DefinesInputsInterface;
@@ -68,7 +74,7 @@ use Drupal\data_surface\Port;
  *    into the same builder, where the call stands.
  * 2. The alters #[Alters] names for this class, in discovery order,
  *    skipping one whose operations leave this context's id out:
- *    alterInputs() and alterOutputs() over a ResourceBlueprintAdditions,
+ *    alterInputs() over a ResourceBlueprintAdditions,
  *    which mounts what they add under the alter's module. A structure an
  *    alter attached at its own mount is built here, in its own frame, its
  *    keys the mount's and its ports wired to the owner's keys
@@ -76,11 +82,11 @@ use Drupal\data_surface\Port;
  *    glue reads its keys.
  * 3. The seal-time checks on the shape: every identity key is a declared
  *    input, and no operation id is provided twice.
- * 4. The context. Starting values become the declared defaults, when
- *    the context creates; each constraint is added to its key and held
- *    to the narrowing check; each identity key the context knows becomes
- *    that key's default and is locked, which is the engine's lock: the
- *    value fixed to the declared default.
+ * 4. The site's defaults, `data_surface.defaults`, written over the
+ *    declared ones (SiteDefaults). Then the context: each constraint is
+ *    added to its key and held to the narrowing check; each identity key
+ *    the context knows becomes that key's default and is locked, which is
+ *    the engine's lock: the value fixed to the declared default.
  * 5. Each structure mixed in (mixIn()): its ports' wiring checked, built
  *    by itself for its def and its access, which holds its members to
  *    what is stored or takes them back out; then what of the owner's names
@@ -116,10 +122,15 @@ use Drupal\data_surface\Port;
  *    aside and its keys marked, and only the static ones apply.
  * 8. The seal.
  *
- * The engine's builder is the whole state of a build. Nothing is cached
- * across requests, because a shape describes live site state; what that
- * state is, a shape or an alter says with addCacheableDependency(). Two
- * things are kept within one: a static access answer, an access class's
+ * A variant the site lists (a provider's, or one read from a schema) is
+ * not built in step 7: its access is asked, and it is sealed as what
+ * builds it (VariantToSettle), built the first time a door reads it.
+ *
+ * The engine's builder is the whole state of a build. A build for no
+ * account (buildDeclared()) is kept across requests in the build cache,
+ * under the tags of everything it was read from (keep()); what that state
+ * is, a shape or an alter says with addCacheableDependency(). Two things
+ * are kept within a request: a static access answer, an access class's
  * or an alter's, which by its own cacheability depends on nothing but the
  * account, asked once per context and account kind (the account's roles
  * and permissions) and reused; and each sealed build asked for at the top,
@@ -128,7 +139,8 @@ use Drupal\data_surface\Port;
  * than the account (memo()). Both are bounded, so a worker that outlives a
  * request keeps only the latest.
  *
- * Decision: see docs/decisions.md#a-build-is-not-cached-across-requests.
+ * Decision: see
+ * docs/decisions.md#the-static-build-is-cached-the-rest-is-per-request.
  */
 final class Resources implements ResourcesInterface {
 
@@ -147,14 +159,19 @@ final class Resources implements ResourcesInterface {
    * @param \Drupal\data_surface\ResourceBuild\OperationArguments $operationArguments
    *   What turns a route's or a tool's values into an operation's
    *   arguments, an entity's id into the entity among them.
-   * @param \Drupal\data_surface\ResourceBuild\DerivedVariants $derivedVariants
-   *   What derives variants for the values no declared variant covers.
    * @param \Drupal\data_surface\Refinement\WatchedValueCheckInterface $watchedValueCheck
    *   What a watched value passes before a refiner is handed it, sealed
    *   into every data surface and every child this step builds.
    * @param \Drupal\Core\Session\PermissionsHashGeneratorInterface|null $permissionsHashGenerator
    *   What tells two accounts' permissions apart, which a static access
    *   answer is kept by; NULL keeps none.
+   * @param \Drupal\data_surface\ResourceBuild\SiteDefaults|null $siteDefaults
+   *   The defaults the site sets over the declared ones; NULL reads none.
+   * @param \Drupal\Core\Cache\CacheBackendInterface|null $buildCache
+   *   The bin a build for no account is kept in across requests; NULL
+   *   keeps none.
+   * @param \Drupal\Core\Language\LanguageManagerInterface|null $languageManager
+   *   What tells the language a kept build's labels were read in.
    */
   /**
    * What resolves a shape, with its alters, once asked for.
@@ -196,7 +213,7 @@ final class Resources implements ResourcesInterface {
    * The static access answers asked lately, by class, context and account kind.
    *
    * Keyed by what the context knows, since an answer may read its
-   * identity, and so bounded: an edit context per entity would otherwise
+   * identity, and so bounded: an update context per entity would otherwise
    * add one entry per entity for the life of a worker. The most recently
    * asked last.
    *
@@ -225,13 +242,73 @@ final class Resources implements ResourcesInterface {
   protected array $builds = [];
 
   /**
+   * How many read structures are kept, the least recently built let go.
+   */
+  protected const READ_KEPT = 4096;
+
+  /**
+   * The structures read from a schema built lately, by how they were asked.
+   *
+   * A read structure is its schema and nothing more: no class, alter,
+   * storage, access class or provider of its own, and its name holds the
+   * hash of the document it was read from. So one built in a context is
+   * the same wherever it is attached, and a def a document uses at many
+   * sites (a component's props in every slot that offers it) is built
+   * once and held at each.
+   *
+   * @var array<string, array{surface: \Drupal\data_surface\DataSurfaceInterface, tags: string[]}>
+   */
+  protected array $readBuilds = [];
+
+  /**
+   * The ports and keys of each read structure, once read, by name.
+   *
+   * @var array<string, array{0: array<string, \Drupal\data_surface\Port>, 1: string[]}>
+   */
+  protected array $readPorts = [];
+
+  /**
    * How many builds were made and how many were answered from the memo.
    *
-   * With the builds made of each resource, by name.
+   * With how many were read from the cache bin, how many variants held
+   * unsettled were built when read, and the builds made of each
+   * resource, by name.
    *
-   * @var array{built: int, reused: int, resources: array<string, int>}
+   * @var array{built: int, reused: int, cached: int, settled: int, resources: array<string, int>}
    */
-  protected array $buildCounts = ['built' => 0, 'reused' => 0, 'resources' => []];
+  protected array $buildCounts = ['built' => 0, 'reused' => 0, 'cached' => 0, 'settled' => 0, 'resources' => []];
+
+  /**
+   * The account a variant held unsettled was built for, while it is built.
+   */
+  protected ?AccountInterface $settlingAs = NULL;
+
+  /**
+   * The resources and structures the build under way built, by name.
+   *
+   * What the build cache tags a kept build with, beside what the build
+   * read: each one's discovery entry.
+   *
+   * @var array<string, true>|null
+   */
+  protected ?array $visited = NULL;
+
+  /**
+   * The cache tags every kept build carries, whatever it read.
+   *
+   * Which modules are installed, the module's settings (the limits) and
+   * the site's defaults.
+   */
+  protected const KEPT_TAGS = ['config:core.extension', 'config:data_surface.settings', 'config:data_surface.defaults'];
+
+  /**
+   * The containers a kept build must not hold, which a whole service brings.
+   */
+  protected const CONTAINERS = [
+    'Drupal\\Component\\DependencyInjection\\Container',
+    'Drupal\\Core\\DependencyInjection\\Container',
+    'Symfony\\Component\\DependencyInjection\\Container',
+  ];
 
   /**
    * What each resource or structure holds, once declared.
@@ -247,15 +324,31 @@ final class Resources implements ResourcesInterface {
    */
   protected array $refusing = [];
 
+  /**
+   * Where each operation's gates are asked, once read, by name and id.
+   *
+   * @var array<string, array<int, array{gate: \Drupal\data_surface\ResourceBuild\Gate, type: string|null, top: string|null, list: string|null, item: string|null}>>
+   */
+  protected array $gatePlaces = [];
+
+  /**
+   * The operations whose gates are being asked, so a cycle refuses.
+   *
+   * @var array<string, true>
+   */
+  protected array $gating = [];
+
   public function __construct(
     protected readonly ResourceRegistry $registry,
     protected readonly TypedDataManagerInterface $typedDataManager,
     protected readonly ClassResolverInterface $classResolver,
     protected readonly AccountInterface $currentUser,
     protected readonly OperationArguments $operationArguments,
-    protected readonly DerivedVariants $derivedVariants,
     protected readonly WatchedValueCheckInterface $watchedValueCheck,
     protected readonly ?PermissionsHashGeneratorInterface $permissionsHashGenerator = NULL,
+    protected readonly ?SiteDefaults $siteDefaults = NULL,
+    protected readonly ?CacheBackendInterface $buildCache = NULL,
+    protected readonly ?LanguageManagerInterface $languageManager = NULL,
   ) {
   }
 
@@ -279,7 +372,7 @@ final class Resources implements ResourcesInterface {
    * @see \Drupal\data_surface\Storage\ConfigSchemaGenerator::including()
    */
   public function withRegistry(ResourceRegistry $registry, ClassResolverInterface $classResolver): static {
-    return new static($registry, $this->typedDataManager, $classResolver, $this->currentUser, $this->operationArguments, $this->derivedVariants, $this->watchedValueCheck, $this->permissionsHashGenerator);
+    return new static($registry, $this->typedDataManager, $classResolver, $this->currentUser, $this->operationArguments, $this->watchedValueCheck, $this->permissionsHashGenerator, $this->siteDefaults);
   }
 
   /**
@@ -368,18 +461,36 @@ final class Resources implements ResourcesInterface {
       $this->buildCounts['reused']++;
       return $kept['surface'];
     }
-    [$was_alone, $was_declaring] = [$this->accountAlone, $this->declaring];
-    [$this->accountAlone, $this->declaring] = [$alone, $declaring];
-    try {
-      $built = $this->buildResource($resource, $context, [], top: TRUE);
-      $this->assertHeldToSchema($resource, $context, $built);
+    // A build for no account is the same in every request until a tag it
+    // was read from is invalidated: kept in the build cache.
+    // Decision: see
+    // docs/decisions.md#the-static-build-is-cached-the-rest-is-per-request.
+    $cid = $declaring && $key !== NULL ? $this->cacheId($resource, $key) : NULL;
+    $built = $cid === NULL ? NULL : $this->cached($cid);
+    if ($built !== NULL) {
+      $this->buildCounts['cached']++;
     }
-    finally {
-      [$this->accountAlone, $this->declaring] = [$was_alone, $was_declaring];
+    else {
+      [$was_alone, $was_declaring, $outer] = [$this->accountAlone, $this->declaring, $this->visited];
+      [$this->accountAlone, $this->declaring, $this->visited] = [$alone, $declaring, []];
+      try {
+        $built = $this->buildResource($resource, $context, [], top: TRUE);
+        $this->assertHeldToSchema($resource, $context, $built);
+        $visited = $this->visited;
+      }
+      finally {
+        $this->accountAlone = $was_alone;
+        $this->declaring = $was_declaring;
+        // What an inner build built, its outer one built too.
+        $this->visited = $outer === NULL ? NULL : $outer + ($this->visited ?? []);
+      }
+      $this->buildCounts['built']++;
+      $name = $this->registry->getDefinition($resource)->name();
+      $this->buildCounts['resources'][$name] = ($this->buildCounts['resources'][$name] ?? 0) + 1;
+      if ($cid !== NULL) {
+        $this->keep($cid, $resource, $context, $built, $visited);
+      }
     }
-    $this->buildCounts['built']++;
-    $name = $this->registry->getDefinition($resource)->name();
-    $this->buildCounts['resources'][$name] = ($this->buildCounts['resources'][$name] ?? 0) + 1;
     if ($key !== NULL && static::keepable($built)) {
       $this->builds[$key] = ['surface' => $built, 'tags' => $built->getCacheTags()];
       if (count($this->builds) > self::BUILDS_KEPT) {
@@ -393,7 +504,8 @@ final class Resources implements ResourcesInterface {
    * Names what a sealed build is kept by within the request.
    *
    * The resource's name, everything the context says, the kind of build,
-   * whether it is held to its config schema, and the account kind: none
+   * whether it is held to its config schema, the limit up to which a
+   * reference key lists its candidates, and the account kind: none
    * for a build for no account, the roles and permissions for one for the
    * account alone, and the account itself beside them for a build with
    * every answer applied, which a runtime answer may read.
@@ -423,7 +535,18 @@ final class Resources implements ResourcesInterface {
         sort($roles);
         $kind = [$roles, $this->permissionsHashGenerator->generate($account), $alone ? NULL : (string) $account->id()];
       }
-      return hash('xxh3', serialize([$name, $context, $alone, $declaring, $this->holdsToSchema, $kind]));
+      // Whether a reference key lists its candidates is the limit's.
+      // Decision: see
+      // docs/decisions.md#a-reference-is-an-id-with-a-list-the-site-decides-listed-or-looked-up.
+      return hash('xxh3', serialize([
+        $name,
+        $context,
+        $alone,
+        $declaring,
+        $this->holdsToSchema,
+        $kind,
+        $this->references()->limit(),
+      ]));
     }
     catch (\Throwable) {
       return NULL;
@@ -456,6 +579,175 @@ final class Resources implements ResourcesInterface {
   }
 
   /**
+   * Names a build for no account in the build cache.
+   *
+   * The memo key, which says the resource, the context and its
+   * parameters, the kind of build and the reference limit, with the
+   * languages a label read from configuration is in.
+   *
+   * @param string $resource
+   *   The class, or its id.
+   * @param string $key
+   *   Its memo key.
+   *
+   * @return string|null
+   *   The cache id, or NULL when there is no bin, or the build is not the
+   *   container's (another registry's, for the config schema generator).
+   */
+  protected function cacheId(string $resource, string $key): ?string {
+    if ($this->buildCache === NULL || !$this->holdsToSchema) {
+      return NULL;
+    }
+    $languages = $this->languageManager === NULL ? [] : [
+      $this->languageManager->getCurrentLanguage()->getId(),
+      $this->languageManager->getConfigOverrideLanguage()->getId(),
+    ];
+    return 'declared:' . $this->registry->getDefinition($resource)->id . ':' . hash('xxh3', serialize([$key, $languages]));
+  }
+
+  /**
+   * Reads a build for no account from the build cache.
+   *
+   * @param string $cid
+   *   Its cache id.
+   *
+   * @return \Drupal\data_surface\DataSurfaceInterface|null
+   *   The sealed build, or NULL when none is kept.
+   */
+  protected function cached(string $cid): ?DataSurfaceInterface {
+    $hit = $this->buildCache?->get($cid);
+    if ($hit === FALSE || $hit === NULL || !is_string($hit->data)) {
+      return NULL;
+    }
+    // The module's own bin, written by keep() alone.
+    // phpcs:ignore DrupalPractice.FunctionCalls.InsecureUnserialize.InsecureUnserialize
+    $kept = unserialize($hit->data);
+    if (!is_array($kept) || !($kept['surface'] ?? NULL) instanceof DataSurfaceInterface) {
+      return NULL;
+    }
+    // What it names that only building it registers.
+    $this->registry->rememberRead($kept['read'] ?? []);
+    return $kept['surface'];
+  }
+
+  /**
+   * Collects the structures a build names that only building registers.
+   *
+   * Every child built at every depth, by the name it was built by; those
+   * read from a schema or made for a reference key are what a request
+   * that did not build their owner cannot name. Not a variant held
+   * unsettled: the request that builds it registers it again from its
+   * owner's list (settleVariant()), so the document the site's list read
+   * (a theme's components, every one a def of it) is not stored with
+   * every build that holds them.
+   *
+   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   *   The build.
+   * @param array<string, \Drupal\data_surface\ResourceBuild\ResourceDefinition> $read
+   *   Filled with those definitions, by name.
+   * @param array<int, true> $seen
+   *   The frames walked, by object id.
+   */
+  protected function readNamed(DataSurfaceInterface $surface, array &$read, array &$seen = []): void {
+    if (isset($seen[spl_object_id($surface)])) {
+      return;
+    }
+    $seen[spl_object_id($surface)] = TRUE;
+    foreach ($surface->getDefinitions()->entries() as $entry) {
+      $children = [
+        ...($entry->attachment === NULL ? [] : [$entry->attachment]),
+        ...array_values($entry->mounted),
+        ...array_values($entry->variants->variants ?? []),
+        ...($entry->list === NULL ? [] : [$entry->list->item]),
+      ];
+      foreach ($children as $attachment) {
+        if ($attachment->isDeferred() && !$attachment->isSettled()) {
+          continue;
+        }
+        if ($attachment->source !== NULL && !isset($read[$attachment->source])) {
+          $definition = $this->registry->readDefinition($attachment->source);
+          if ($definition !== NULL) {
+            $read[$attachment->source] = $definition;
+          }
+        }
+        $child = $attachment->settledChild();
+        if ($child !== NULL) {
+          $this->readNamed($child, $read, $seen);
+        }
+      }
+    }
+    foreach ($surface->getDefinitions()->mixins() as $mixin) {
+      $child = $mixin->structure->settledChild();
+      if ($mixin->structure->source !== NULL && ($definition = $this->registry->readDefinition($mixin->structure->source)) !== NULL) {
+        $read[$mixin->structure->source] = $definition;
+      }
+      if ($child !== NULL) {
+        $this->readNamed($child, $read, $seen);
+      }
+    }
+  }
+
+  /**
+   * Keeps a build for no account in the build cache, or refuses it.
+   *
+   * Only one that stays true until a tag of it is invalidated and varies
+   * by nothing: no expiry and no cache context. Tagged with what it read
+   * (each provider's list, the site's defaults), what discovery found for
+   * each resource and structure it built, discovery's index, and
+   * KEPT_TAGS.
+   *
+   * @param string $cid
+   *   Its cache id.
+   * @param string $resource
+   *   The class, or its id.
+   * @param \Drupal\data_surface\Resource\OperationContext $context
+   *   Its context.
+   * @param \Drupal\data_surface\DataSurfaceInterface $built
+   *   The build.
+   * @param array<string, true> $visited
+   *   What it built, by name.
+   *
+   * @throws \LogicException
+   *   When it holds what cannot be stored: a closure, or a service held as
+   *   an object rather than by its id.
+   */
+  protected function keep(string $cid, string $resource, OperationContext $context, DataSurfaceInterface $built, array $visited): void {
+    if ($built->getCacheMaxAge() !== Cache::PERMANENT || $built->getCacheContexts() !== []) {
+      return;
+    }
+    $tags = Cache::mergeTags($built->getCacheTags(), $this->registry->getIndexCacheTags(), self::KEPT_TAGS);
+    foreach (array_keys($visited) as $name) {
+      if ($this->registry->hasDefinition($name)) {
+        $tags = Cache::mergeTags($tags, $this->registry->getDefinition($name)->cacheTags);
+      }
+    }
+    $id = $this->registry->getDefinition($resource)->id;
+    $read = [];
+    $this->readNamed($built, $read);
+    try {
+      $serialized = serialize(['surface' => $built, 'read' => $this->registry->exportRead($read)]);
+    }
+    catch (\Throwable $e) {
+      throw new \LogicException(sprintf(
+        'The %s resource, built for its "%s" operation, cannot be kept in the build cache: %s. A sealed data surface holds definitions, class and method names, services by their id and plain data, never a closure or an object that cannot be stored; find what its declaration, an alter or a refiner put on it.',
+        $id,
+        $context->id,
+        $e->getMessage(),
+      ), 0, $e);
+    }
+    foreach (self::CONTAINERS as $container) {
+      if (str_contains($serialized, '"' . $container . '"')) {
+        throw new \LogicException(sprintf(
+          'The %s resource, built for its "%s" operation, cannot be kept in the build cache: it holds the service container, which a service held as an object rather than by its id brings with it. An alter, a refiner or a storage layout that holds services composes core\'s DependencySerializationTrait, or is a service the container built.',
+          $id,
+          $context->id,
+        ));
+      }
+    }
+    $this->buildCache?->set($cid, $serialized, Cache::PERMANENT, $tags);
+  }
+
+  /**
    * Forgets the builds that read what is being invalidated.
    *
    * ResourceRegistryInvalidator calls this for every invalidation, so a
@@ -468,9 +760,28 @@ final class Resources implements ResourcesInterface {
    * @internal
    */
   public function invalidateTags(array $tags): void {
+    // What a kept build read, with what each variant built since read.
+    // Decision: see
+    // docs/decisions.md#the-static-build-is-cached-the-rest-is-per-request.
     foreach ($this->builds as $key => $kept) {
-      if (array_intersect($tags, $kept['tags']) !== []) {
+      if (array_intersect($tags, SettledCacheability::of($kept['surface'])->getCacheTags()) !== []) {
         unset($this->builds[$key]);
+      }
+    }
+    // A read structure built since it was held is kept here by itself:
+    // only when one of them read a tag are those holding it asked.
+    $dropped = FALSE;
+    foreach ($this->readBuilds as $key => $kept) {
+      if (array_intersect($tags, $kept['tags']) !== []) {
+        unset($this->readBuilds[$key]);
+        $dropped = TRUE;
+      }
+    }
+    if ($dropped) {
+      foreach ($this->readBuilds as $key => $kept) {
+        if (array_intersect($tags, SettledCacheability::of($kept['surface'])->getCacheTags()) !== []) {
+          unset($this->readBuilds[$key]);
+        }
       }
     }
   }
@@ -485,8 +796,11 @@ final class Resources implements ResourcesInterface {
    */
   public function forgetBuilds(): void {
     $this->builds = [];
+    $this->readBuilds = [];
+    $this->readPorts = [];
     $this->childrenDeclared = [];
     $this->refusing = [];
+    $this->gatePlaces = [];
   }
 
   /**
@@ -495,7 +809,7 @@ final class Resources implements ResourcesInterface {
    * For a performance budget, never for behavior: counts since the
    * service was made, and the builds made of each resource.
    *
-   * @return array{built: int, reused: int, resources: array<string, int>}
+   * @return array{built: int, reused: int, cached: int, settled: int, resources: array<string, int>}
    *   The counts.
    *
    * @internal
@@ -532,7 +846,9 @@ final class Resources implements ResourcesInterface {
     }
     $definition = $this->registry->getDefinition($resource);
     $memo = $definition->name() . ' ' . $context->id;
-    if ($definition->storage === NULL || isset($this->heldToSchema[$memo])) {
+    // An operation's own values are not what the config schema describes:
+    // they are a query or a list over the things, which storage reads.
+    if ($definition->storage === NULL || isset($this->heldToSchema[$memo]) || $this->shapeOf($definition, $context) !== $definition) {
       return;
     }
     $storage = $this->instance($definition->storage, ResourceStorageInterface::class);
@@ -556,6 +872,46 @@ final class Resources implements ResourcesInterface {
   }
 
   /**
+   * Gives what declares an operation's keys: the resource, or a structure.
+   *
+   * An operation that names `structure:` takes the keys of that structure in
+   * place of the resource's: a listing's paging and filter, a reorder's
+   * list. The structure has no identity and no storage of its own; the
+   * resource's storage stores what it takes.
+   *
+   * Decision: see
+   * docs/decisions.md#a-listing-is-a-read-only-operation-with-outputs-a-reorder-is-an-update-over-the-collection.
+   *
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   *   The resource.
+   * @param \Drupal\data_surface\Resource\OperationContext $context
+   *   The operation it is asked for in.
+   *
+   * @return \Drupal\data_surface\ResourceBuild\ResourceDefinition
+   *   The structure the operation names, or the resource itself.
+   *
+   * @throws \LogicException
+   *   When the operation names a class that is no structure, or one with
+   *   identity or storage.
+   */
+  public function shapeOf(ResourceDefinition $definition, OperationContext $context): ResourceDefinition {
+    $values = $this->registry->getOperations($definition->name())[$context->id]->structure ?? NULL;
+    if ($values === NULL) {
+      return $definition;
+    }
+    $shape = $this->registry->hasDefinition($values) ? $this->registry->getDefinition($values) : NULL;
+    if ($shape === NULL || $shape->isResource() || $shape->identity !== [] || $shape->storage !== NULL) {
+      throw new \LogicException(sprintf(
+        'The "%s" operation of %s takes the keys of %s, which is no structure: what an operation\'s `structure:` names is a #[Structure] class, with no identity and no storage, which the resource\'s storage stores.',
+        $context->id,
+        $definition->id,
+        $values,
+      ));
+    }
+    return $shape;
+  }
+
+  /**
    * Builds one resource or structure, or one child inside its parent.
    *
    * @param string $resource
@@ -573,14 +929,33 @@ final class Resources implements ResourcesInterface {
    *   TRUE for the resource an operation is asked of on its own, which
    *   asks its own access class and states how its operation behaves;
    *   FALSE for a child, and for a structure mixed in, built by itself.
+   * @param array{resource: string, at: string, values: array<string, mixed>}|null $siteDefaults
+   *   For a child attached at a fixed key, the defaults the site sets on
+   *   its keys, from its parent's (SiteDefaults::write()); NULL reads the
+   *   site's for one built at the top, and none for any other.
    *
    * @return \Drupal\data_surface\DataSurfaceInterface
    *   The sealed data surface.
    */
-  protected function buildResource(string $resource, OperationContext $context, array $ancestry, string|\Stringable|null $locked = NULL, bool $top = FALSE): DataSurfaceInterface {
+  protected function buildResource(string $resource, OperationContext $context, array $ancestry, string|\Stringable|null $locked = NULL, bool $top = FALSE, ?array $siteDefaults = NULL): DataSurfaceInterface {
     $definition = $this->registry->getDefinition($resource);
+    if ($this->visited !== NULL) {
+      $this->visited[$definition->name()] = TRUE;
+    }
     // Refuses two providers of one operation id, whichever is asked for.
     $this->registry->getOperations($definition->name());
+    // The resource the operation is asked of: its permission, its storage,
+    // its access and how its operation behaves stay its own when the
+    // operation takes the keys of a structure in place of the resource's.
+    // Decision: see
+    // docs/decisions.md#a-listing-is-a-read-only-operation-with-outputs-a-reorder-is-an-update-over-the-collection.
+    $own = $definition;
+    if ($top) {
+      $definition = $this->shapeOf($definition, $context);
+      if ($this->visited !== NULL) {
+        $this->visited[$definition->name()] = TRUE;
+      }
+    }
 
     $builder = (new DataSurfaceBuilder())->setWatchedValueCheck($this->watchedValueCheck);
     $inputs = $this->blueprint($builder, $definition);
@@ -600,12 +975,10 @@ final class Resources implements ResourcesInterface {
       if (!$alter->appliesIn($context->id)) {
         continue;
       }
-      $instance = $this->classResolver->getInstanceFromDefinition($alter->class);
+      $instance = $this->alter($alter->class);
       if ($instance instanceof AltersInputsInterface) {
-        $instance->alterInputs($additions[$alter->module][0] ??= (new ResourceBlueprintAdditions($builder, $this->typedDataManager, $alter->module))->useShapes($this->shapes()));
-      }
-      if ($instance instanceof AltersOutputsInterface) {
-        $instance->alterOutputs($additions[$alter->module][1] ??= (new ResourceBlueprintAdditions($builder, $this->typedDataManager, $alter->module, TRUE))->useShapes($this->shapes()));
+        $blueprint = $additions[$alter->module] ??= (new ResourceBlueprintAdditions($builder, $this->typedDataManager, $alter->module))->useShapes($this->shapes())->useReferences($this->references());
+        PipelineGuard::onBehalf(PipelineGuard::ALTER, $alter->class, 'alterInputs', static fn () => $instance->alterInputs($blueprint));
       }
       if ($instance instanceof AltersStorageLayoutInterface) {
         $builder->setThirdPartyLayout($alter->module, $instance->storageLayout());
@@ -613,10 +986,8 @@ final class Resources implements ResourcesInterface {
       $links[] = [$instance, $alter->refiners, $alter->module];
     }
     $declaring = ['' => $inputs, 'output ' => $outputs];
-    foreach ($additions as $module => $blueprints) {
-      foreach ($blueprints as $output => $blueprint) {
-        $declaring[sprintf('%s.%s.', $output === 1 ? DataSurfaceBuilderInterface::THIRD_PARTY_OUTPUTS : 'third_party_settings', $module)] = $blueprint;
-      }
+    foreach ($additions as $module => $blueprint) {
+      $declaring[sprintf('third_party_settings.%s.', $module)] = $blueprint;
     }
     static::assertShapesNarrowed($definition, $declaring);
 
@@ -647,18 +1018,23 @@ final class Resources implements ResourcesInterface {
         ));
       }
     }
-    $variantKeys = $this->variantKeysOf($definition, $inputs, $input_keys);
+    $variantKeys = $this->variantKeysOf($definition, $inputs, $input_keys, $builder);
 
+    // The site's defaults over the declared ones, before a known identity
+    // key is locked to what the context knows.
+    // Decision: see docs/decisions.md#a-site-sets-a-default-in-configuration.
+    $childDefaults = $this->writeSiteDefaults($builder, $definition, $inputs, $top, $siteDefaults);
     $this->applyContext($builder, $definition, $context, $input_keys, $attached, $lists);
     $ports = $inputs->ports();
     $frame = ['class' => $definition->name(), 'id' => $definition->id, 'key' => '', 'inputs' => $input_keys];
-    $permission = $this->registry->getOperations($definition->name())[$context->id]->permission ?? NULL;
+    $permission = $this->registry->getOperations($own->name())[$context->id]->permission ?? NULL;
     $frame['permission'] = $permission === NULL ? NULL : static::resolvePermission($permission, $context);
     // Which keys the storage always holds, asked of the storage that
     // stores them: this resource's own, or its parent's, under the key
     // the parent stores it at.
     // Decision: see docs/decisions.md#a-key-its-storage-always-holds.
-    $frame['held'] = $this->heldBy($definition, $context, $ancestry);
+    // An operation's own values are no keys the storage holds.
+    $frame['held'] = $definition === $own ? $this->heldBy($definition, $context, $ancestry) : NULL;
     $this->markAlwaysHeld($builder, $input_keys, $frame['held']);
     // Each structure mixed in, built by itself for its def and its access,
     // which locks its members or takes them back out; then nothing of the
@@ -671,12 +1047,10 @@ final class Resources implements ResourcesInterface {
     foreach (array_keys($inputs->attachments()) as $key) {
       $wirings[(string) $key] = $inputs->wiring((string) $key);
     }
-    foreach ($additions as $contributor => $blueprints) {
-      if (isset($blueprints[0])) {
-        $owned_rules[] = $blueprints[0]->rules();
-        foreach (array_keys($blueprints[0]->attachments()) as $key) {
-          $wirings[(string) $key] = $blueprints[0]->wiring((string) $key);
-        }
+    foreach ($additions as $blueprint) {
+      $owned_rules[] = $blueprint->rules();
+      foreach (array_keys($blueprint->attachments()) as $key) {
+        $wirings[(string) $key] = $blueprint->wiring((string) $key);
       }
     }
     $this->assertMixinsUnnamed($definition, $mixins, $links, array_merge(...$owned_rules), $wirings);
@@ -685,16 +1059,16 @@ final class Resources implements ResourcesInterface {
     // rule is bound, since the alter's glue reads its keys.
     // Decision: see docs/decisions.md#an-alter-attaches-at-its-own-mount.
     $readable = [];
-    foreach ($additions as $contributor => $blueprints) {
-      foreach (isset($blueprints[0]) ? $blueprints[0]->attachments() : [] as $key => $child) {
-        $readable[(string) $contributor] = $this->mountStructure($builder, $definition, (string) $contributor, (string) $key, (string) $child, $blueprints[0]->wiring((string) $key), $context, $frame, $ancestry, $input_keys, $attached, $lists);
+    foreach ($additions as $contributor => $blueprint) {
+      foreach ($blueprint->attachments() as $key => $child) {
+        $readable[(string) $contributor] = $this->mountStructure($builder, $definition, (string) $contributor, (string) $key, (string) $child, $blueprint->wiring((string) $key), $context, $frame, $ancestry, $input_keys, $attached, $lists);
       }
     }
     // What each module mounted, so an alter's method may watch its own
     // module's keys and is told so when it names another's.
     $mounted_by = [];
-    foreach ($additions as $contributor => $blueprints) {
-      foreach ([...(isset($blueprints[0]) ? $blueprints[0]->keys() : []), ...($readable[(string) $contributor] ?? [])] as $key) {
+    foreach ($additions as $contributor => $blueprint) {
+      foreach ([...$blueprint->keys(), ...($readable[(string) $contributor] ?? [])] as $key) {
         $mounted_by[$key][] = (string) $contributor;
       }
     }
@@ -723,18 +1097,18 @@ final class Resources implements ResourcesInterface {
     foreach ($links as [, , $module]) {
       $contributors[$module ?? ''] ??= $module;
     }
-    foreach ($additions as $module => $blueprints) {
+    foreach (array_keys($additions) as $module) {
       $contributors[(string) $module] ??= (string) $module;
     }
     foreach ($contributors as $contributor) {
-      $extended = $contributor !== NULL && isset($additions[$contributor][0]) ? $additions[$contributor][0]->extended() : [];
-      $mounted = $contributor !== NULL && isset($additions[$contributor][0]) ? $additions[$contributor][0]->keys() : [];
+      $extended = $contributor !== NULL && isset($additions[$contributor]) ? $additions[$contributor]->extended() : [];
+      $mounted = $contributor !== NULL && isset($additions[$contributor]) ? $additions[$contributor]->keys() : [];
       foreach ($links as [$instance, $refiners, $module]) {
         if ($module === $contributor) {
           $this->bindRefiners($builder, $definition, $instance, $refiners, $input_keys, $outputs->keys(), $attached, $ancestry === [] ? NULL : $ancestry[count($ancestry) - 1], $module, $extended, $mounted, $module === NULL ? [] : $mounted_by, $lists, $ports, $module === NULL ? [] : ($readable[$module] ?? []));
         }
       }
-      $rules = $contributor === NULL ? $inputs->rules() : (isset($additions[$contributor][0]) ? $additions[$contributor][0]->rules() : []);
+      $rules = $contributor === NULL ? $inputs->rules() : (isset($additions[$contributor]) ? $additions[$contributor]->rules() : []);
       $this->bindRules($builder, $definition, $rules, $contributor, $input_keys, $attached, $lists, $extended, $mounted, $contributor === NULL ? [] : $mounted_by, $ruling, $ports, $contributor === NULL ? [] : ($readable[$contributor] ?? []));
     }
 
@@ -746,7 +1120,7 @@ final class Resources implements ResourcesInterface {
       // Decision: see docs/decisions.md#a-port-is-a-live-sibling-value.
       $reads = $inputs->wiring((string) $key);
       $this->assertWiring($builder, $definition, NULL, (string) $key, (string) $child, $reads, $input_keys, $attached, $lists);
-      [$attachment, $access, , $runtime] = $this->buildChild((string) $child, $context, $key, $frame, $ancestry);
+      [$attachment, $access, , $runtime] = $this->buildChild((string) $child, $context, $key, $frame, $ancestry, siteDefaults: $childDefaults[(string) $key] ?? NULL);
       if ($access !== NULL) {
         // What the child's access answer read is what this data surface,
         // and everything emitted from it, varies by.
@@ -781,14 +1155,23 @@ final class Resources implements ResourcesInterface {
         }
       }
     }
-    foreach ($variantKeys as $key => ['by' => $by, 'children' => $children]) {
+    foreach ($variantKeys as $key => ['by' => $by, 'children' => $children, 'site' => $site]) {
       $variants = [];
       $withheld = [];
       $runtime_variant = FALSE;
+      // What every variant the site lists at the key is built in when read.
+      $at = $site === [] ? NULL : new VariantsToSettle($this, [...$ancestry, array_replace($frame, ['key' => $key])], $key, $this->accountAlone, $this->declaring, $this->holdsToSchema, $this->declaring ? NULL : $this->underlyingAccount());
       foreach ($children as $value => $child) {
-        // Nothing wires a variant's ports yet.
-        $this->assertWiring($builder, $definition, NULL, $key, $child, [], $input_keys, $attached, $lists, 'variant');
-        [$attachment, $access, , $runtime] = $this->buildChild($child, $context, $key, $frame, $ancestry, TRUE);
+        // A variant the site lists is built when read, its wiring checked
+        // then; any other is built now.
+        // Decision: see
+        // docs/decisions.md#the-static-build-is-cached-the-rest-is-per-request.
+        $deferred = isset($site[(string) $value]) ? $at : NULL;
+        if ($deferred === NULL) {
+          // Nothing wires a variant's ports yet.
+          $this->assertWiring($builder, $definition, NULL, $key, $child, [], $input_keys, $attached, $lists, 'variant');
+        }
+        [$attachment, $access, , $runtime] = $this->buildChild($child, $context, $key, $frame, $ancestry, TRUE, deferred: $deferred);
         if ($access !== NULL) {
           $builder->addCacheableDependency($access);
         }
@@ -804,17 +1187,9 @@ final class Resources implements ResourcesInterface {
         }
         $variants[(string) $value] = $attachment;
       }
-      $deriver = $this->derivedVariants->for($definition->name(), $key);
-      if ($deriver !== NULL) {
-        // A withheld variant is still declared: nothing derives in its
-        // place.
-        foreach ($deriver->variants([...array_keys($variants), ...$withheld]) as $value => $definitions) {
-          $variants[(string) $value] ??= new Attachment((new DataSurfaceBuilder($definitions))->setWatchedValueCheck($this->watchedValueCheck)->seal());
-        }
-      }
       $declared = [...array_map('strval', array_keys($variants)), ...$withheld];
       static::assertListNarrowsVariants($builder, $definition, $key, $by, $declared);
-      $builder->attachVariants($key, $by, $variants, static::variantLabels($children));
+      $builder->attachVariants($key, $by, $variants, $variantKeys[$key]['labels'] + static::variantLabels($children));
       if ($runtime_variant) {
         $builder->markRuntimeAccess($key);
       }
@@ -824,6 +1199,10 @@ final class Resources implements ResourcesInterface {
     // answers once for the list, since field access is per field and not
     // per delta.
     // Decision: see docs/decisions.md#access-once-per-list.
+    // A gate the operation asks once per item is settled per thing: built
+    // for the account alone or for none, the list is marked.
+    // Decision: see docs/decisions.md#a-gate-is-borrowed-never-copied.
+    $gated_lists = $top && ($this->accountAlone || $this->declaring) ? $this->itemGatedLists($own, $context) : [];
     foreach ($inputs->lists() as $key => $child) {
       // Nothing wires an item's ports yet.
       $this->assertWiring($builder, $definition, NULL, $key, $child, [], $input_keys, $attached, $lists, 'collection');
@@ -839,7 +1218,7 @@ final class Resources implements ResourcesInterface {
       if ($access !== NULL && $access->isLocked()) {
         $builder->lock($key, $access->getReason());
       }
-      if ($runtime) {
+      if ($runtime || isset($gated_lists[(string) $key])) {
         $builder->markRuntimeAccess($key);
       }
     }
@@ -847,11 +1226,11 @@ final class Resources implements ResourcesInterface {
     // Decision: see docs/decisions.md#a-resource-evolves-in-the-open.
     $builder->setVersion($definition->version);
     // Decision: see docs/decisions.md#an-operation-states-how-it-behaves.
-    if ($top && ($this->registry->getOperations($definition->name())[$context->id]->readOnly ?? FALSE)) {
+    if ($top && ($this->registry->getOperations($own->name())[$context->id]->readOnly ?? FALSE)) {
       $builder->markChangesNothing();
     }
     // Decision: see docs/decisions.md#locked-at-the-top.
-    $locked ??= $top ? $this->lockedAtTheTop($builder, $definition, $context) : NULL;
+    $locked ??= $top ? $this->lockedAtTheTop($builder, $own, $context) : NULL;
     if ($locked !== NULL) {
       $builder->lockWhole($locked);
     }
@@ -880,6 +1259,19 @@ final class Resources implements ResourcesInterface {
    *   Why it is locked, or NULL when it is not.
    */
   protected function lockedAtTheTop(DataSurfaceBuilderInterface $builder, ResourceDefinition $definition, OperationContext $context): ?string {
+    // A gate asked about the thing the context knows refuses rather than
+    // locks, and access() asks it; built for the account alone or for no
+    // account, one the subject decides marks every key.
+    // Decision: see docs/decisions.md#a-gate-is-borrowed-never-copied.
+    if ($this->accountAlone || $this->declaring) {
+      [$aside, $read] = $this->gatesAside($definition, $context, $this->currentUser, $this->declaring);
+      if ($aside) {
+        $builder->markRuntimeAccessWhole();
+      }
+      if ($read !== NULL) {
+        $builder->addCacheableDependency($read);
+      }
+    }
     $answering = static::answering($definition, $context, TRUE);
     if ($answering === []) {
       return NULL;
@@ -954,7 +1346,7 @@ final class Resources implements ResourcesInterface {
     if ($definition->storage !== NULL) {
       $storage = $this->instance((string) $definition->storage, ResourceStorageInterface::class);
       return $storage instanceof KnowsClearableKeysInterface
-        ? ['storage' => $storage, 'context' => $context, 'prefix' => '']
+        ? ['storage' => $storage, 'class' => (string) $definition->storage, 'context' => $context, 'prefix' => '']
         : NULL;
     }
     $parent = $ancestry === [] ? NULL : $ancestry[count($ancestry) - 1];
@@ -1014,6 +1406,12 @@ final class Resources implements ResourcesInterface {
    *   Where the parent's storage keeps the child's keys, by dotted path
    *   from the parent, when that is not the key: an entry of a map of keys
    *   from the site, `<key>.<entry>`. NULL for the key.
+   * @param array{resource: string, at: string, values: array<string, mixed>}|null $siteDefaults
+   *   The defaults the site sets on the child's keys, from its parent's;
+   *   NULL for none. A child with some is built here, never reused.
+   * @param \Drupal\data_surface\ResourceBuild\VariantsToSettle|null $deferred
+   *   For a variant the site lists, what it is built in when a door reads
+   *   it, its access asked now; NULL to build the child now.
    *
    * @return array{0: \Drupal\data_surface\Attachment|null, 1: \Drupal\data_surface\Resource\AccessAnswer|null, 2: \Drupal\data_surface\Resource\OperationContext, 3: bool}
    *   The sealed child, or NULL when its access omits it; that access
@@ -1022,10 +1420,10 @@ final class Resources implements ResourcesInterface {
    *   context the child was invoked in; and whether, built for the account
    *   alone, a runtime answer was set aside, so the key is marked.
    */
-  protected function buildChild(string $child, OperationContext $context, string $key, array $frame, array $ancestry, bool $whole = FALSE, ?string $storedAt = NULL): array {
+  protected function buildChild(string $child, OperationContext $context, string $key, array $frame, array $ancestry, bool $whole = FALSE, ?string $storedAt = NULL, ?array $siteDefaults = NULL, ?VariantsToSettle $deferred = NULL): array {
     $definition = $this->registry->getDefinition($child);
     [$child_context, $operation] = $this->invokeChild($definition, $context, $key, $frame['id']);
-    [$access, $runtime] = $this->childAccess($definition, $operation, $child_context, $this->currentUser, $frame['permission'] ?? NULL);
+    [$access, $runtime] = $this->childAccess($definition, $operation, $child_context, $this->account(), $frame['permission'] ?? NULL);
     if ($access !== NULL && $access->isOmitted()) {
       return [NULL, $access, $child_context, FALSE];
     }
@@ -1033,9 +1431,29 @@ final class Resources implements ResourcesInterface {
     if ($storedAt !== NULL) {
       $frame['storedAt'] = $storedAt;
     }
+    $locked = $whole && $access?->isLocked() ? static::lockReason($access) : NULL;
+    $read = $definition->isRead() && $access === NULL && $locked === NULL && $siteDefaults === NULL;
+    if ($deferred !== NULL) {
+      // A variant the site lists is built when a door reads it, in the
+      // build this one is, for the account this one is for.
+      // Decision: see
+      // docs/decisions.md#the-static-build-is-cached-the-rest-is-per-request.
+      return [
+        new Attachment(
+          new VariantToSettle($deferred, $definition->name(), $deferred->shared($child_context), $locked === NULL ? NULL : (string) $locked, $read),
+          $definition->name(),
+          $definition->id,
+        ),
+        $access,
+        $child_context,
+        $runtime,
+      ];
+    }
     return [
       new Attachment(
-        $this->buildResource($definition->name(), $child_context, [...$ancestry, $frame], $whole && $access?->isLocked() ? static::lockReason($access) : NULL),
+        $read
+          ? $this->buildRead($definition->name(), $child_context, [...$ancestry, $frame])
+          : $this->buildResource($definition->name(), $child_context, [...$ancestry, $frame], $locked, siteDefaults: $siteDefaults),
         $definition->name(),
         $definition->id,
       ),
@@ -1043,6 +1461,150 @@ final class Resources implements ResourcesInterface {
       $child_context,
       $runtime,
     ];
+  }
+
+  /**
+   * Builds a variant the build held unsettled, now that a door reads it.
+   *
+   * In the build it was held in: for no account, for the account alone
+   * or with every answer, for the account that build was for, and held to
+   * its config schema as that build was; what the variant's own build
+   * refuses is refused here, its wiring among it.
+   *
+   * Decision: see
+   * docs/decisions.md#the-static-build-is-cached-the-rest-is-per-request.
+   *
+   * @param \Drupal\data_surface\ResourceBuild\VariantsToSettle $at
+   *   Where the variant sits and the build it was held in.
+   * @param string $name
+   *   The variant, by name.
+   * @param \Drupal\data_surface\Resource\OperationContext $context
+   *   The context it is invoked in.
+   * @param string|null $locked
+   *   Why its access locked it whole, or NULL.
+   * @param bool $read
+   *   Whether it is a structure read from a schema, built through
+   *   buildRead().
+   *
+   * @return \Drupal\data_surface\DataSurfaceInterface
+   *   The sealed variant.
+   *
+   * @internal
+   */
+  public function settleVariant(VariantsToSettle $at, string $name, OperationContext $context, ?string $locked, bool $read): DataSurfaceInterface {
+    $ancestry = $at->ancestry;
+    // A storage a frame names is a service, kept by its class when the
+    // variants were stored.
+    foreach ($ancestry as $level => $frame) {
+      if (is_array($frame['held'] ?? NULL) && !isset($frame['held']['storage'])) {
+        $ancestry[$level]['held']['storage'] = $this->instance($frame['held']['class'], ResourceStorageInterface::class);
+      }
+    }
+    $parent = $ancestry[count($ancestry) - 1];
+    if (!$this->registry->hasDefinition($name)) {
+      // Kept with a build read from the build cache: a structure the
+      // owner's list reads from a schema is registered by listing it.
+      $this->registerVariantsOf($parent['class']);
+    }
+    $was = [$this->accountAlone, $this->declaring, $this->holdsToSchema, $this->settlingAs];
+    $this->accountAlone = $at->alone;
+    $this->declaring = $at->declaring;
+    $this->holdsToSchema = $at->holdsToSchema;
+    $this->settlingAs = $at->account;
+    try {
+      // Nothing wires a variant's ports yet.
+      $this->assertWiring(new DataSurfaceBuilder(), $this->registry->getDefinition($parent['class']), NULL, $at->key, $name, [], [], [], [], 'variant');
+      $built = $read
+        ? $this->buildRead($name, $context, $ancestry)
+        : $this->buildResource($name, $context, $ancestry, $locked);
+    }
+    finally {
+      [$this->accountAlone, $this->declaring, $this->holdsToSchema, $this->settlingAs] = $was;
+    }
+    $this->buildCounts['settled']++;
+    return $built;
+  }
+
+  /**
+   * Registers the structures an owner's variants are read from, by listing.
+   *
+   * What building the owner registers (variantKeysOf()), for a request
+   * that read the owner from the build cache and builds one of its
+   * variants now. The lists are the ones the kept build was made from:
+   * a change to one is a tag that dropped it.
+   *
+   * @param string $owner
+   *   The owner, by name.
+   */
+  protected function registerVariantsOf(string $owner): void {
+    $definition = $this->registry->getDefinition($owner);
+    $builder = (new DataSurfaceBuilder())->setWatchedValueCheck($this->watchedValueCheck);
+    $inputs = $this->blueprint($builder, $definition);
+    $this->fillBlueprints($definition, $inputs);
+    $this->variantKeysOf($definition, $inputs, $inputs->keys(), $builder);
+  }
+
+  /**
+   * Gets the account the build under way asks access for.
+   *
+   * @return \Drupal\Core\Session\AccountInterface
+   *   The account a variant being built when read was held for, or the
+   *   current user.
+   */
+  protected function account(): AccountInterface {
+    return $this->settlingAs ?? $this->currentUser;
+  }
+
+  /**
+   * Gets the account itself, not the proxy that follows the current user.
+   *
+   * @return \Drupal\Core\Session\AccountInterface
+   *   What a variant held unsettled is built for, whoever is the current
+   *   user when it is read.
+   */
+  protected function underlyingAccount(): AccountInterface {
+    $account = $this->account();
+    return $account instanceof AccountProxyInterface ? $account->getAccount() : $account;
+  }
+
+  /**
+   * Builds a structure read from a schema once for every site it is at.
+   *
+   * Kept for the rest of the request by its name, its context and the
+   * kind of build, as a top build is (memo()), when it reads no port of a
+   * container, which each site would bind its own way, and may be kept.
+   *
+   * @param string $name
+   *   The read structure's name.
+   * @param \Drupal\data_surface\Resource\OperationContext $context
+   *   The context it is invoked in.
+   * @param array $ancestry
+   *   Where it is first attached, for messages and the cycle check.
+   *
+   * @return \Drupal\data_surface\DataSurfaceInterface
+   *   The sealed structure.
+   */
+  protected function buildRead(string $name, OperationContext $context, array $ancestry): DataSurfaceInterface {
+    $key = hash('xxh3', serialize([
+      $name,
+      $context,
+      $this->accountAlone,
+      $this->declaring,
+      $this->holdsToSchema,
+      $this->references()->limit(),
+    ]));
+    if (isset($this->readBuilds[$key])) {
+      $this->buildCounts['reused']++;
+      return $this->readBuilds[$key]['surface'];
+    }
+    $built = $this->buildResource($name, $context, $ancestry);
+    if ($built->getPortValues() === [] && static::keepable($built)) {
+      $this->readBuilds[$key] = ['surface' => $built, 'tags' => $built->getCacheTags()];
+      if (count($this->readBuilds) > self::READ_KEPT) {
+        unset($this->readBuilds[array_key_first($this->readBuilds)]);
+      }
+    }
+    return $built;
   }
 
   /**
@@ -1064,7 +1626,7 @@ final class Resources implements ResourcesInterface {
    *   The owner.
    * @param string $key
    *   The key the map sits at.
-   * @param array{each: string, from: class-string<\Drupal\data_surface\Resource\KeysFromSiteInterface>, default: mixed, child: bool, reads: array<string, string>} $each
+   * @param array{each: string, from: class-string<\Drupal\data_surface\Resource\SiteListInterface>, default: mixed, child: bool, reads: array<string, string>} $each
    *   What the blueprint recorded for it.
    * @param \Drupal\data_surface\Resource\OperationContext $context
    *   The owner's context.
@@ -1090,7 +1652,8 @@ final class Resources implements ResourcesInterface {
    *
    * @throws \LogicException
    *   When the provider's list cannot be cached or varies by the account,
-   *   or an entry of a structure says what it starts from, or the
+   *   or names an entry no key can be (keysFrom()), or an entry of a
+   *   structure says what it starts from, or the
    *   structure stores itself, or its ports are wired to what an entry
    *   cannot read (assertEachWiring()).
    */
@@ -1101,7 +1664,7 @@ final class Resources implements ResourcesInterface {
     // schema is written from.
     $shell = $builder->getDefinition($key);
     if ($shell !== NULL) {
-      DefinitionMetadata::setEach($shell, $each['child'] ? $each['each'] : (new ResourceBlueprint(new DataSurfaceBuilder(), $this->typedDataManager))->useShapes($this->shapes())->add($key, $each['each'], $shell->getLabel() ?? $key, $each['default']));
+      DefinitionMetadata::setEach($shell, $each['child'] ? $each['each'] : (new ResourceBlueprint(new DataSurfaceBuilder(), $this->typedDataManager))->useShapes($this->shapes())->useReferences($this->references())->add($key, $each['each'], $shell->getLabel() ?? $key, $each['default']));
     }
     $entries = $keys->entries();
     $map = (new DataSurfaceBuilder())->setWatchedValueCheck($this->watchedValueCheck);
@@ -1156,7 +1719,7 @@ final class Resources implements ResourcesInterface {
       }
     }
     else {
-      $blueprint = (new ResourceBlueprint($map, $this->typedDataManager))->useShapes($this->shapes());
+      $blueprint = (new ResourceBlueprint($map, $this->typedDataManager))->useShapes($this->shapes())->useReferences($this->references());
       foreach ($entries as $id => $entry) {
         $blueprint->add((string) $id, $each['each'], $entry['label'], $entry['default'] ?? $each['default']);
         if ($entry['locked']) {
@@ -1165,7 +1728,9 @@ final class Resources implements ResourcesInterface {
       }
       // Decision: see docs/decisions.md#a-key-its-storage-always-holds.
       $held = $frame['held'] ?? NULL;
-      $this->markAlwaysHeld($map, array_map('strval', array_keys($entries)), is_array($held) ? ['prefix' => $held['prefix'] . $key . '.'] + $held : NULL);
+      $this->markAlwaysHeld($map, array_map('strval', array_keys($entries)), is_array($held) ? [
+        'prefix' => $held['prefix'] . $key . '.',
+      ] + $held : NULL);
     }
     $sealed = $map->seal();
     $reads = [];
@@ -1266,25 +1831,63 @@ final class Resources implements ResourcesInterface {
    *   The owner, for the messages.
    * @param string $key
    *   The key the map sits at, for the messages.
-   * @param class-string<\Drupal\data_surface\Resource\KeysFromSiteInterface> $from
+   * @param class-string<\Drupal\data_surface\Resource\SiteListInterface> $from
    *   The provider's class.
    *
-   * @return \Drupal\data_surface\Resource\KeyedList
+   * @return \Drupal\data_surface\Resource\SiteList
    *   What it listed.
    *
    * @throws \LogicException
-   *   When the list cannot be cached, or varies by the account.
+   *   When the list cannot be cached, or varies by the account, or names
+   *   an entry no key can be, or one with a schema or a structure, which a
+   *   key per thing does not read.
    */
-  protected function keysFrom(ResourceDefinition $definition, string $key, string $from): KeyedList {
-    $keys = $this->instance($from, KeysFromSiteInterface::class)->keys();
+  protected function keysFrom(ResourceDefinition $definition, string $key, string $from): SiteList {
+    $keys = $this->siteList($from);
     if ($keys->getCacheMaxAge() === 0) {
       throw new \LogicException(sprintf('%s lists the keys of "%s" on %s with max-age 0. Keys from the site must be cacheable, since the form, both schema documents and the tool listing are kept with them: declare the cache tags of what it reads (a configuration object\'s, an entity type\'s list) instead.', $from, $key, $definition->id));
     }
-    $accounts = array_filter($keys->getCacheContexts(), static fn (string $context): bool => $context === 'user' || str_starts_with($context, 'user.') || $context === 'session' || str_starts_with($context, 'session.'));
+    $accounts = static::accountContexts($keys);
     if ($accounts !== []) {
       throw new \LogicException(sprintf('%s lists the keys of "%s" on %s varying by %s. Which keys there are is the site\'s, the same for every account; an entry an account may not change is access, which the structure\'s access class answers.', $from, $key, $definition->id, implode(', ', $accounts)));
     }
+    foreach ($keys->entries() as $id => $entry) {
+      $id = (string) $id;
+      if (strpbrk($id, '.:') !== FALSE) {
+        throw new \LogicException(sprintf('%s lists "%s" for the keys of "%s" on %s. "%s" cannot be the id of an entry: it becomes a key, which is not empty and holds no dot or colon.', $from, $id, $key, $definition->id, $id));
+      }
+      if ($entry['schema'] !== NULL || $entry['structure'] !== NULL) {
+        throw new \LogicException(sprintf('%s lists "%s" for the keys of "%s" on %s with a %s, which a key from the site does not read: each entry is the type or structure the blueprint names at "%s", with an id, a label, and optionally a start and a lock.', $from, $id, $key, $definition->id, $entry['schema'] !== NULL ? 'schema' : 'structure', $key));
+      }
+    }
     return $keys;
+  }
+
+  /**
+   * Asks a provider named by `from:` for what it lists.
+   *
+   * @param class-string<\Drupal\data_surface\Resource\SiteListInterface> $from
+   *   The provider's class.
+   *
+   * @return \Drupal\data_surface\Resource\SiteList
+   *   What it listed.
+   */
+  protected function siteList(string $from): SiteList {
+    $provider = $this->instance($from, SiteListInterface::class);
+    return PipelineGuard::onBehalf(PipelineGuard::PROVIDER, $from, 'list', static fn (): SiteList => $provider->list());
+  }
+
+  /**
+   * Gets the cache contexts of a list that vary by the account.
+   *
+   * @param \Drupal\data_surface\Resource\SiteList $list
+   *   The list.
+   *
+   * @return string[]
+   *   Its contexts that name the user or the session.
+   */
+  protected static function accountContexts(SiteList $list): array {
+    return array_values(array_filter($list->getCacheContexts(), static fn (string $context): bool => $context === 'user' || str_starts_with($context, 'user.') || $context === 'session' || str_starts_with($context, 'session.')));
   }
 
   /**
@@ -1332,7 +1935,7 @@ final class Resources implements ResourcesInterface {
       // By itself, as if on its own: what its def is written from, in the
       // context its owner's hands it, and what its access answers there.
       $child_context = static::childContext($context, $structure->id);
-      [$access, $runtime] = $this->childAccess($structure, NULL, $child_context, $this->currentUser, $frame['permission'] ?? NULL);
+      [$access, $runtime] = $this->childAccess($structure, NULL, $child_context, $this->account(), $frame['permission'] ?? NULL);
       if ($access !== NULL) {
         $builder->addCacheableDependency($access);
       }
@@ -1617,20 +2220,17 @@ final class Resources implements ResourcesInterface {
         $ruling[] = $refiner->key;
       }
     }
-    $this->bindRefiners($builder, $structure, static::resourceClass($structure), $structure->refiners, $keys, [], ports: $ports, translated: $reads);
+    $this->bindRefiners($builder, $structure, $structure->isDerived() ? $structure->name() : static::resourceClass($structure), $structure->refiners, $keys, [], ports: $ports, translated: $reads);
     $this->bindRules($builder, $structure, $mixin['blueprint']->rules(), NULL, $keys, [], [], [], [], [], $ruling, $ports, translated: $reads);
     foreach ($structure->alters as $alter) {
       if (!$alter->appliesIn($context->id)) {
         continue;
       }
-      $instance = $this->classResolver->getInstanceFromDefinition($alter->class);
+      $instance = $this->alter($alter->class);
       $within = [$structure->id, $definition->id, $keys];
-      $additions = (new ResourceBlueprintAdditions($builder, $this->typedDataManager, $alter->module, FALSE, $within))->useShapes($this->shapes());
+      $additions = (new ResourceBlueprintAdditions($builder, $this->typedDataManager, $alter->module, $within))->useShapes($this->shapes())->useReferences($this->references());
       if ($instance instanceof AltersInputsInterface) {
         $instance->alterInputs($additions);
-      }
-      if ($instance instanceof AltersOutputsInterface) {
-        $instance->alterOutputs((new ResourceBlueprintAdditions($builder, $this->typedDataManager, $alter->module, TRUE, $within))->useShapes($this->shapes()));
       }
       $this->bindRefiners($builder, $structure, $instance, $alter->refiners, $keys, [], [], NULL, $alter->module, $additions->extended(), ports: $ports, translated: $reads);
       $this->bindRules($builder, $structure, $additions->rules(), $alter->module, $keys, [], [], $additions->extended(), [], [], $ruling, $ports, translated: $reads);
@@ -1877,9 +2477,17 @@ final class Resources implements ResourcesInterface {
    */
   protected function portsOf(string $child): array {
     $definition = $this->registry->getDefinition($child);
+    // A read structure's name holds the hash of what it was read from.
+    if ($definition->isRead() && isset($this->readPorts[$definition->name()])) {
+      return $this->readPorts[$definition->name()];
+    }
     $blueprint = $this->blueprint(new DataSurfaceBuilder(), $definition);
     $this->fillBlueprints($definition, $blueprint);
-    return [$blueprint->ports(), $blueprint->declared()];
+    $ports = [$blueprint->ports(), $blueprint->declared()];
+    if ($definition->isRead()) {
+      $this->readPorts[$definition->name()] = $ports;
+    }
+    return $ports;
   }
 
   /**
@@ -1958,7 +2566,12 @@ final class Resources implements ResourcesInterface {
    *    permission is asked of it (its access class still is, by
    *    childAccess()).
    * 2. The child's operation whose id is the parent context's id.
-   * 3. The child's default operation, #[Operation(default: TRUE)].
+   * 3. The child's operation with the standard id of the parent
+   *    operation's kind (OperationDefinition::defaultIds()): `create` for
+   *    a parent that creates, `update` (or `configure` for a child with no
+   *    identity keys) for one that updates, `read` or `list` for one that
+   *    reads, `delete` for one that deletes. A parent context that is no
+   *    declared operation (a host's verb) is read by whether it creates.
    * 4. None: the child sees its parent's context id, `creates` and known
    *    identity, exactly as a child always did (childContext()).
    *
@@ -1967,7 +2580,7 @@ final class Resources implements ResourcesInterface {
    * the parent's known identity; the context it returns then knows that
    * identity too, its own known keys winning on a clash. A context handed
    * whole is taken as it is. An operation found by the parent's id or by
-   * default that cannot be given an argument it needs is passed over, for
+   * its kind that cannot be given an argument it needs is passed over, for
    * the next step; one the parent named is refused.
    *
    * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $child
@@ -2013,14 +2626,14 @@ final class Resources implements ResourcesInterface {
       // is asked. The child's access class still answers.
       return [$handed, NULL];
     }
-    // The parent's id is a hint, and so is the default: either is
-    // passed over when the parent knows too little to invoke it, as a
-    // context that knows nothing yet, which a static tool definition or
-    // a catalog builds, does.
+    // The parent's id is a hint, and so is its kind: either is passed
+    // over when the parent knows too little to invoke it, as a context
+    // that knows nothing yet, which a static tool definition or a catalog
+    // builds, does.
     $candidates = isset($operations[$context->id]) ? [$operations[$context->id]] : [];
-    foreach ($operations as $candidate) {
-      if ($candidate->default && $candidate->id !== $context->id) {
-        $candidates[] = $candidate;
+    foreach (OperationDefinition::defaultIds($this->parentKind($parent, $context), $child->identity === []) as $id) {
+      if (isset($operations[$id]) && $id !== $context->id) {
+        $candidates[] = $operations[$id];
       }
     }
     foreach ($candidates as $operation) {
@@ -2030,6 +2643,24 @@ final class Resources implements ResourcesInterface {
       }
     }
     return [static::childContext($context, $key), NULL];
+  }
+
+  /**
+   * Reads the kind of the operation a parent is built in.
+   *
+   * @param string $parent
+   *   The parent's id.
+   * @param \Drupal\data_surface\Resource\OperationContext $context
+   *   The parent's context.
+   *
+   * @return string
+   *   The kind of the parent's operation of the context's id; for a
+   *   context that is no declared operation of the parent's, create when
+   *   it creates and update otherwise.
+   */
+  protected function parentKind(string $parent, OperationContext $context): string {
+    $operation = $this->registry->hasDefinition($parent) ? ($this->registry->getOperations($parent)[$context->id] ?? NULL) : NULL;
+    return $operation?->kind() ?? ($context->creates ? OperationDefinition::CREATE : OperationDefinition::UPDATE);
   }
 
   /**
@@ -2172,8 +2803,8 @@ final class Resources implements ResourcesInterface {
    * Lists what answers access for a resource or structure, in order.
    *
    * Its access class first, then each of its alters that answers access
-   * (AltersAccessInterface) and applies in the context, in discovery
-   * order.
+   * (an alter implementing OperationAccessInterface) and applies in the
+   * context, in discovery order.
    *
    * Decision: see
    * docs/decisions.md#an-alter-may-answer-access-and-the-stricter-stands.
@@ -2186,17 +2817,19 @@ final class Resources implements ResourcesInterface {
    *   TRUE to list only those that can answer locked (mayLock()), as the
    *   top asks.
    *
-   * @return array<int, array{0: class-string, 1: class-string}>
-   *   Each class that answers, with the interface it answers through.
+   * @return array<int, array{0: class-string, 1: string}>
+   *   Each class that answers, with the role it answers in:
+   *   PipelineGuard::ACCESS for the access class, PipelineGuard::ALTER for
+   *   an alter.
    */
   protected static function answering(ResourceDefinition $definition, OperationContext $context, bool $locking = FALSE): array {
     $answering = [];
     if ($definition->access !== NULL && (!$locking || static::mayLock($definition->access))) {
-      $answering[] = [$definition->access, OperationAccessInterface::class];
+      $answering[] = [$definition->access, PipelineGuard::ACCESS];
     }
     foreach ($definition->alters as $alter) {
       if ($alter->answersAccess && $alter->appliesIn($context->id) && (!$locking || static::mayLock($alter->class))) {
-        $answering[] = [$alter->class, AltersAccessInterface::class];
+        $answering[] = [$alter->class, PipelineGuard::ALTER];
       }
     }
     return $answering;
@@ -2212,7 +2845,7 @@ final class Resources implements ResourcesInterface {
    * left out before it. A static omission settles it: nothing set aside
    * could narrow it further.
    *
-   * @param array<int, array{0: class-string, 1: class-string}> $answering
+   * @param array<int, array{0: class-string, 1: string}> $answering
    *   What answering() listed.
    * @param \Drupal\data_surface\Resource\OperationContext $context
    *   The context.
@@ -2235,8 +2868,8 @@ final class Resources implements ResourcesInterface {
     $applied = NULL;
     $aside = FALSE;
     $contexts = [];
-    foreach ($answering as [$class, $interface]) {
-      $answer = $this->ask($class, $interface, $context, $account);
+    foreach ($answering as [$class, $role]) {
+      $answer = $this->ask($class, $role, $context, $account);
       if ($this->accountAlone && !$answer->isStatic()) {
         $aside = TRUE;
         array_push($contexts, ...$answer->getCacheContexts());
@@ -2256,7 +2889,7 @@ final class Resources implements ResourcesInterface {
    * A static answer depends on nothing but the account, so it is asked
    * once for a context and an account kind (the account's roles and its
    * permissions) and kept. With assertions on, it is asked a second time
-   * with the global container guarded (StaticRefinerContainer::guardAccess())
+   * with the global container guarded (PipelineGuard::guardAccess())
    * and must answer the same, static again, having asked for no service
    * that reads site state: an answer whose cacheability left out what it
    * read is refused, naming the class.
@@ -2266,9 +2899,10 @@ final class Resources implements ResourcesInterface {
    *
    * @param class-string $class
    *   The access class, or the alter.
-   * @param class-string $interface
-   *   What it answers through: OperationAccessInterface for an access
-   *   class, AltersAccessInterface for an alter.
+   * @param string $role
+   *   The role it answers in: PipelineGuard::ACCESS for an access class,
+   *   PipelineGuard::ALTER for an alter. Both implement
+   *   OperationAccessInterface; an alter's neutral is read as open.
    * @param \Drupal\data_surface\Resource\OperationContext $context
    *   The context of what it answers for.
    * @param \Drupal\Core\Session\AccountInterface $account
@@ -2281,20 +2915,19 @@ final class Resources implements ResourcesInterface {
    *   With assertions on, when a static answer asked again differs, or
    *   asks for a service that reads site state.
    */
-  protected function ask(string $class, string $interface, OperationContext $context, AccountInterface $account): AccessAnswer {
+  protected function ask(string $class, string $role, OperationContext $context, AccountInterface $account): AccessAnswer {
     $kept = $this->keptAs($class, $context, $account);
     if ($kept !== NULL && isset($this->staticAnswers[$kept])) {
       $answer = $this->staticAnswers[$kept];
       unset($this->staticAnswers[$kept]);
       return $this->staticAnswers[$kept] = $answer;
     }
-    $instance = $this->instance($class, $interface);
-    assert($instance instanceof OperationAccessInterface || $instance instanceof AltersAccessInterface);
-    $answer = AccessAnswer::fromAnswer($instance->access($context, $account));
+    $instance = $this->instance($class, OperationAccessInterface::class, $role);
+    $answer = AccessAnswer::fromAnswer(PipelineGuard::onBehalf($role, $class, 'access', static fn (): AccessResultInterface|AccessAnswer => $instance->access($context, $account)));
     if (!$answer->isStatic()) {
       return $answer;
     }
-    assert($this->answersAgain($class, $instance, $context, $account, $answer));
+    assert($this->answersAgain($class, $instance, $role, $context, $account, $answer));
     if ($kept !== NULL) {
       $this->staticAnswers[$kept] = $answer;
       if (count($this->staticAnswers) > self::STATIC_ANSWERS_KEPT) {
@@ -2341,8 +2974,10 @@ final class Resources implements ResourcesInterface {
    *
    * @param string $class
    *   The access class, or the alter.
-   * @param \Drupal\data_surface\Resource\OperationAccessInterface|\Drupal\data_surface\Resource\AltersAccessInterface $instance
+   * @param \Drupal\data_surface\Resource\OperationAccessInterface $instance
    *   It, as built.
+   * @param string $role
+   *   PipelineGuard::ACCESS or PipelineGuard::ALTER, as ask() takes it.
    * @param \Drupal\data_surface\Resource\OperationContext $context
    *   The context.
    * @param \Drupal\Core\Session\AccountInterface $account
@@ -2356,12 +2991,12 @@ final class Resources implements ResourcesInterface {
    * @throws \LogicException
    *   When it answers otherwise, or asks for a service reading site state.
    */
-  protected function answersAgain(string $class, OperationAccessInterface|AltersAccessInterface $instance, OperationContext $context, AccountInterface $account, AccessAnswer $first): bool {
-    $again = AccessAnswer::fromAnswer(StaticRefinerContainer::guardAccess($class, static fn (): AccessResultInterface|AccessAnswer => $instance->access($context, $account)));
+  protected function answersAgain(string $class, OperationAccessInterface $instance, string $role, OperationContext $context, AccountInterface $account, AccessAnswer $first): bool {
+    $again = AccessAnswer::fromAnswer(PipelineGuard::guardAccess($class, static fn (): AccessResultInterface|AccessAnswer => $instance->access($context, $account)));
     if ($again->getAnswer() !== $first->getAnswer() || !$again->isStatic()) {
       throw new \LogicException(sprintf(
         'The %s %s answered %s, static by its cacheability, and asked again for the same account in the same context answered %s, %s. A static answer depends on the account alone and is the same every time it is asked; one that depends on anything else says so in its cacheability.',
-        $instance instanceof OperationAccessInterface ? 'access class' : 'alter',
+        $role === PipelineGuard::ALTER ? 'alter' : 'access class',
         $class,
         $first->getAnswer(),
         $again->getAnswer(),
@@ -2407,15 +3042,22 @@ final class Resources implements ResourcesInterface {
    *   The owner's input blueprint.
    * @param string[] $input_keys
    *   The owner's plain input keys.
+   * @param \Drupal\data_surface\DataSurfaceBuilderInterface $builder
+   *   The owner's builder, which what a provider of variants read reaches.
    *
-   * @return array<string, array{by: string, children: array<string, class-string>}>
+   * @return array<string, array{by: string, children: array<string, string>, labels: array<string, string|\Stringable>, site: array<string, true>}>
    *   The variants at each key, filled from discovery's #[Variant]
-   *   classes.
+   *   classes, then from what a schema read into the blueprint states and
+   *   what a provider of variants from the site lists, each of those a
+   *   read structure by name, with the label each of those gives its
+   *   value, and the values whose variant the site's list names rather
+   *   than a class, which are built when read.
    *
    * @throws \LogicException
-   *   When a deciding key is not a plain input of the owner.
+   *   When a deciding key is not a plain input of the owner, or a provider
+   *   of variants answers what cannot be kept.
    */
-  protected function variantKeysOf(ResourceDefinition $definition, ResourceBlueprint $inputs, array $input_keys): array {
+  protected function variantKeysOf(ResourceDefinition $definition, ResourceBlueprint $inputs, array $input_keys, DataSurfaceBuilderInterface $builder): array {
     $variantKeys = [];
     foreach ($inputs->variants() as $key => $by) {
       if (!in_array($by, $input_keys, TRUE)) {
@@ -2429,12 +3071,120 @@ final class Resources implements ResourcesInterface {
       // Every structure whose #[Variant] names this class and key is
       // one of the variants; the parent names none.
       // Decision: see docs/decisions.md#variants-nothing-declares.
+      $children = $this->registry->getVariants($definition->name(), $key);
+      $labels = [];
+      // The values whose variant the site's list names, not a class.
+      $site = [];
+      // A variant a schema read into the blueprint states, or one a
+      // provider lists from the site: a structure read from its schema,
+      // beside the declared ones, which win for a value both name.
+      // Decision: see
+      // docs/decisions.md#a-schema-can-be-read-back-into-a-structure.
+      foreach ($inputs->readVariants()[$key] ?? [] as $value => ['name' => $name, 'label' => $label]) {
+        if (!isset($children[(string) $value])) {
+          $site[(string) $value] = TRUE;
+        }
+        $children[(string) $value] ??= $name;
+        if ($label !== NULL) {
+          $labels[(string) $value] = $label;
+        }
+      }
+      $from = $inputs->variantsFrom()[$key] ?? NULL;
+      if ($from !== NULL) {
+        $list = $this->variantsFrom($definition, (string) $key, $from);
+        $builder->addCacheableDependency($list);
+        // The defs the entries share, read once for all of them.
+        $shared = $list->defs() === [] ? NULL : SchemaReader::prepared(['$defs' => $list->defs()]);
+        $shared_hash = $shared === NULL ? NULL : ResourceBlueprint::documentHash($shared);
+        foreach ($list->entries() as $value => $entry) {
+          $value = (string) $value;
+          if (isset($children[$value])) {
+            continue;
+          }
+          // A structure the site's code declares is built as declared; any
+          // other is read from its schema.
+          $id = $definition->id . '.' . $key . '.' . $value;
+          $schema = $entry['schema'] ?? [];
+          $reference = is_string($schema['$ref'] ?? NULL) && count($schema) === 1 ? SchemaResolver::defName($schema['$ref']) : NULL;
+          $shared_def = $shared !== NULL && $reference !== NULL && isset($shared['$defs'][$reference]);
+          $pointer = '/$defs/' . str_replace(['~', '/'], ['~0', '~1'], (string) $reference);
+          $children[$value] = match (TRUE) {
+            isset($entry['structure']) => $this->registry->getDefinition($entry['structure'])->name(),
+            $shared_def => $inputs->readStructure($id, $shared, $pointer, $shared_hash),
+            default => $inputs->readStructure($id, SchemaReader::prepared($schema + ($list->defs() === [] ? [] : ['$defs' => $list->defs()])), ''),
+          };
+          $labels[$value] = $entry['label'];
+          $site[$value] = TRUE;
+        }
+      }
       $variantKeys[$key] = [
         'by' => $by,
-        'children' => $this->registry->getVariants($definition->name(), $key),
+        'children' => $children,
+        'labels' => $labels,
+        'site' => $site,
       ];
     }
     return $variantKeys;
+  }
+
+  /**
+   * Asks a provider for its variants, refusing a list that cannot be kept.
+   *
+   * Decision: see docs/decisions.md#a-schema-can-be-read-back-into-a-structure.
+   *
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   *   The owner, for the messages.
+   * @param string $key
+   *   The key the variants sit at, for the messages.
+   * @param class-string<\Drupal\data_surface\Resource\SiteListInterface> $from
+   *   The provider's class.
+   *
+   * @return \Drupal\data_surface\Resource\SiteList
+   *   What it listed, each entry of a closed provider naming the structure
+   *   its structures() names for it.
+   *
+   * @throws \LogicException
+   *   When the list cannot be cached, or varies by the account, or names
+   *   an entry with a start or a lock, which a variant does not read, or
+   *   an entry of an open provider names no schema and no structure, or
+   *   one of a closed provider names one, or a value its structures() do
+   *   not name.
+   */
+  protected function variantsFrom(ResourceDefinition $definition, string $key, string $from): SiteList {
+    $list = $this->siteList($from);
+    if ($list->getCacheMaxAge() === 0) {
+      throw new \LogicException(sprintf('%s lists the variants at "%s" on %s with max-age 0. Variants from the site must be cacheable, since the form, both schema documents and the tool listing are kept with them: declare the cache tags of what it reads instead.', $from, $key, $definition->id));
+    }
+    $accounts = static::accountContexts($list);
+    if ($accounts !== []) {
+      throw new \LogicException(sprintf('%s lists the variants at "%s" on %s varying by %s. Which variants there are is the site\'s, the same for every account; one an account may not choose is access, which the variant\'s access class answers.', $from, $key, $definition->id, implode(', ', $accounts)));
+    }
+    $closed = is_subclass_of($from, ClosedSiteListInterface::class) ? $from::structures() : NULL;
+    $named = new SiteList();
+    $named->addCacheableDependency($list)->addDefs($list->defs());
+    foreach ($list->entries() as $value => $entry) {
+      $value = (string) $value;
+      if ($entry['default'] !== NULL || $entry['locked']) {
+        throw new \LogicException(sprintf('%s lists "%s" for the variants at "%s" on %s with a %s, which a variant does not read: each entry is a value of the deciding key, its label, and the schema or structure it chooses.', $from, $value, $key, $definition->id, $entry['locked'] ? 'lock' : 'start'));
+      }
+      if ($closed === NULL) {
+        if ($entry['schema'] === NULL && $entry['structure'] === NULL) {
+          throw new \LogicException(sprintf('%s lists "%s" for the variants at "%s" on %s with no schema and no structure: each variant from the site is one of them, SiteList::add(..., schema: ...) or add(..., structure: ...).', $from, $value, $key, $definition->id));
+        }
+        $named->add($value, $entry['label'], schema: $entry['schema'], structure: $entry['structure']);
+        continue;
+      }
+      // Decision: see
+      // docs/decisions.md#an-extension-is-a-variant-the-site-adds-or-an-alter.
+      if ($entry['schema'] !== NULL || $entry['structure'] !== NULL) {
+        throw new \LogicException(sprintf('%s lists "%s" for the variants at "%s" on %s with a %s of its own. A closed provider names each structure once, in its structures(); its list names a value and its label.', $from, $value, $key, $definition->id, $entry['schema'] !== NULL ? 'schema' : 'structure'));
+      }
+      if (!isset($closed[$value])) {
+        throw new \LogicException(sprintf('%s lists "%s" for the variants at "%s" on %s, which its structures() does not name. A closed provider lists only the structures it names.', $from, $value, $key, $definition->id));
+      }
+      $named->add($value, $entry['label'], structure: $closed[$value]);
+    }
+    return $named;
   }
 
   /**
@@ -2572,7 +3322,14 @@ final class Resources implements ResourcesInterface {
    * {@inheritdoc}
    */
   public function isRuntimeAtTheTop(string $resource, OperationContext $context, AccountInterface $account): bool {
-    $answering = static::answering($this->registry->getDefinition($resource), $context, TRUE);
+    $definition = $this->registry->getDefinition($resource);
+    $answering = static::answering($definition, $context, TRUE);
+    // A gate asked about the thing the context knows is an answer at the
+    // top too, of the kind its cacheability says.
+    // Decision: see docs/decisions.md#a-gate-is-borrowed-never-copied.
+    if ($this->gatesAside($definition, $context, $account, FALSE)[0]) {
+      return TRUE;
+    }
     if ($answering === []) {
       return FALSE;
     }
@@ -2595,6 +3352,290 @@ final class Resources implements ResourcesInterface {
       ? $found->staticPermission()
       : static::resolvePermission($found->permission, $context);
     return $permission === NULL ? NULL : AccessResult::allowedIfHasPermission($account ?? $this->currentUser, $permission);
+  }
+
+  /**
+   * Gets what answers the gates an operation borrows.
+   *
+   * @return \Drupal\data_surface\ResourceBuild\Gates
+   *   The gates.
+   */
+  protected function gates(): Gates {
+    return $this->classResolver->getInstanceFromDefinition(Gates::class);
+  }
+
+  /**
+   * Says where each gate of an operation is asked, and about what.
+   *
+   * At the top when the context names the thing: an identity key that
+   * refers to an entity of the type the gate asks about, or the
+   * `entity_type` and `id` a content entity resource knows. Otherwise
+   * once per item of a collection whose item has a key referring to one,
+   * the first such collection and key. A gate that asks about nothing (an
+   * operation gate whose operation needs nothing) is asked at the top. A
+   * gate whose thing nothing names is refused when the operation is
+   * built or asked: it could never be answered. Read from what the
+   * resource and its items declare, nothing built.
+   *
+   * Decision: see docs/decisions.md#a-gate-is-borrowed-never-copied.
+   *
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   *   The resource the operation is of.
+   * @param string $operation
+   *   The operation id.
+   *
+   * @return array<int, array{gate: \Drupal\data_surface\ResourceBuild\Gate, type: string|null, top: string|null, list: string|null, item: string|null}>
+   *   Per gate: the entity type it asks about (NULL for none); for one
+   *   asked at the top, the identity key naming the thing (empty for the
+   *   `entity_type` and `id` pair); for one asked per item, the
+   *   collection's key and the item's key.
+   *
+   * @throws \LogicException
+   *   When nothing the operation is handed names what a gate asks about.
+   */
+  protected function gatePlaces(ResourceDefinition $definition, string $operation): array {
+    $memo = $definition->name() . ':' . $operation;
+    if (isset($this->gatePlaces[$memo])) {
+      return $this->gatePlaces[$memo];
+    }
+    $found = $this->registry->getOperations($definition->name())[$operation] ?? NULL;
+    if ($found === NULL || $found->gates === []) {
+      return $this->gatePlaces[$memo] = [];
+    }
+    $builder = new DataSurfaceBuilder();
+    $inputs = $this->blueprint($builder, $definition);
+    $this->fillBlueprints($definition, $inputs);
+    $top = [];
+    foreach ($definition->identity as $key) {
+      $declared = $builder->getDefinition($key);
+      $target = $declared === NULL ? NULL : References::target($declared);
+      if ($target !== NULL) {
+        $top[$target['entityType']] ??= $key;
+      }
+    }
+    $pair = in_array('entity_type', $definition->identity, TRUE) && in_array('id', $definition->identity, TRUE);
+    // The keys a call takes: the resource's, or a structure's in their
+    // place.
+    $shaped = $found->structure === NULL ? $definition : $this->registry->getDefinition($found->structure);
+    if ($shaped !== $definition) {
+      $builder = new DataSurfaceBuilder();
+      $inputs = $this->blueprint($builder, $shaped);
+      $this->fillBlueprints($shaped, $inputs);
+    }
+    $items = [];
+    foreach ($inputs->lists() as $key => $child) {
+      $item = $this->registry->getDefinition((string) $child);
+      $item_builder = new DataSurfaceBuilder();
+      $item_inputs = $this->blueprint($item_builder, $item);
+      $this->fillBlueprints($item, $item_inputs);
+      foreach ($item_inputs->keys() as $item_key) {
+        $declared = $item_builder->getDefinition($item_key);
+        $target = $declared === NULL ? NULL : References::target($declared);
+        if ($target !== NULL) {
+          $items[$target['entityType']] ??= [(string) $key, $item_key];
+        }
+      }
+    }
+    $places = [];
+    foreach ($found->gates as $gate) {
+      [$type] = $this->gates()->subjectOf($gate);
+      $place = ['gate' => $gate, 'type' => $type, 'top' => NULL, 'list' => NULL, 'item' => NULL];
+      if ($type === NULL) {
+        $places[] = $place;
+        continue;
+      }
+      if (isset($top[$type]) || $pair) {
+        $places[] = ['top' => $top[$type] ?? ''] + $place;
+        continue;
+      }
+      if (isset($items[$type])) {
+        $places[] = ['list' => $items[$type][0], 'item' => $items[$type][1]] + $place;
+        continue;
+      }
+      throw new \LogicException(sprintf(
+        'The gate "%s" on the "%s" operation of %s asks about %s %s, and nothing the operation is handed names one: no identity key refers to one, and no item of a collection has a key that does. Declare the key that names it as a reference, such as $inputs->add(\'%s\', \'entity:%s\', ...).',
+        $gate->spelled,
+        $operation,
+        $definition->id,
+        static::article($type),
+        $type,
+        $type,
+        $type,
+      ));
+    }
+    return $this->gatePlaces[$memo] = $places;
+  }
+
+  /**
+   * Finds the thing a gate asked at the top asks about.
+   *
+   * @param array{gate: \Drupal\data_surface\ResourceBuild\Gate, type: string|null, top: string|null, list: string|null, item: string|null} $place
+   *   Where the gate is asked (gatePlaces()).
+   * @param \Drupal\data_surface\Resource\OperationContext $context
+   *   The context, which knows the identity.
+   *
+   * @return array{0: bool, 1: \Drupal\Core\Entity\EntityInterface|null}
+   *   Whether the context names the thing, and the thing, NULL when it
+   *   names none or one that is not there.
+   */
+  protected function subjectAtTheTop(array $place, OperationContext $context): array {
+    if ($place['type'] === NULL) {
+      return [TRUE, NULL];
+    }
+    if ($place['top'] === '') {
+      $named = ($context->known['entity_type'] ?? NULL) === $place['type'] && isset($context->known['id']);
+      return [$named, $named ? $this->gates()->load((string) $place['type'], $context->known['id']) : NULL];
+    }
+    $id = $context->known[(string) $place['top']] ?? NULL;
+    return [$id !== NULL, $id === NULL ? NULL : $this->gates()->load((string) $place['type'], $id)];
+  }
+
+  /**
+   * Asks each gate the operation asks about the thing its context knows.
+   *
+   * Each answered by what owns it (Gates::answer()); a refusal says what
+   * may not be done to what and why. A gate whose thing the context does
+   * not name, or names and is not there, refuses: an operation whose gate
+   * cannot be asked is not let through unasked. An operation gate that
+   * leads back to an operation being asked refuses too.
+   *
+   * Decision: see docs/decisions.md#a-gate-is-borrowed-never-copied.
+   *
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   *   The resource.
+   * @param \Drupal\data_surface\Resource\OperationContext $context
+   *   Its context.
+   * @param \Drupal\Core\Session\AccountInterface $account
+   *   The account.
+   *
+   * @return \Drupal\Core\Access\AccessResultInterface|null
+   *   The gates' answers combined with andIf(), or NULL when no gate is
+   *   asked at the top.
+   */
+  protected function gatesAtTheTop(ResourceDefinition $definition, OperationContext $context, AccountInterface $account): ?AccessResultInterface {
+    $memo = $definition->name() . ':' . $context->id;
+    $answer = NULL;
+    foreach ($this->gatePlaces($definition, $context->id) as $place) {
+      if ($place['list'] !== NULL) {
+        continue;
+      }
+      $gate = $place['gate'];
+      [$named, $subject] = $this->subjectAtTheTop($place, $context);
+      if (isset($this->gating[$memo])) {
+        $one = AccessResult::forbidden(sprintf('The gate "%s" leads back to the "%s" operation of %s, which is being asked already.', $gate->spelled, $context->id, $definition->id));
+      }
+      elseif ($place['type'] !== NULL && $subject === NULL) {
+        $one = AccessResult::forbidden($named
+          ? sprintf('There is no %s the gate "%s" can ask about.', $place['type'], $gate->spelled)
+          : sprintf('Nothing names the %s the gate "%s" asks about.', $place['type'], $gate->spelled));
+      }
+      else {
+        $this->gating[$memo] = TRUE;
+        try {
+          $one = $this->gates()->answer($gate, $subject, $account, $this);
+        }
+        finally {
+          unset($this->gating[$memo]);
+        }
+        if (!$one->isAllowed()) {
+          $one = AccessResult::forbidden($this->gates()->refusal($gate, $subject, $one))->addCacheableDependency($one);
+        }
+      }
+      $answer = $answer === NULL ? $one : $answer->andIf($one);
+    }
+    return $answer;
+  }
+
+  /**
+   * Answers whether a gate asked at the top waits for the subject.
+   *
+   * For no account, any gate asked at the top does: nothing is asked. For
+   * the account alone, a gate whose thing the context does not name yet
+   * does (a tool's static definition, built before any subject), and so
+   * does one whose answer is runtime by its cacheability; a static answer
+   * is the account's, and access() refuses with it.
+   *
+   * Decision: see docs/decisions.md#a-gate-is-borrowed-never-copied.
+   *
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   *   The resource.
+   * @param \Drupal\data_surface\Resource\OperationContext $context
+   *   Its context.
+   * @param \Drupal\Core\Session\AccountInterface $account
+   *   The account.
+   * @param bool $declaring
+   *   TRUE when built for no account.
+   *
+   * @return array{0: bool, 1: \Drupal\Core\Cache\CacheableMetadata|null}
+   *   Whether one waits, and what the static answers read, which the build
+   *   varies by; NULL when nothing was asked.
+   */
+  protected function gatesAside(ResourceDefinition $definition, OperationContext $context, AccountInterface $account, bool $declaring): array {
+    $aside = FALSE;
+    $read = NULL;
+    foreach ($this->gatePlaces($definition, $context->id) as $place) {
+      if ($place['list'] !== NULL) {
+        continue;
+      }
+      [$named, $subject] = $this->subjectAtTheTop($place, $context);
+      if ($declaring || !$named || ($place['type'] !== NULL && $subject === NULL)) {
+        $aside = TRUE;
+        continue;
+      }
+      $answer = AccessAnswer::fromAnswer($this->gates()->answer($place['gate'], $subject, $account, $this));
+      $read ??= new CacheableMetadata();
+      if (!$answer->isStatic()) {
+        $aside = TRUE;
+        $read->addCacheContexts($answer->getCacheContexts());
+        continue;
+      }
+      $read->addCacheableDependency($answer);
+    }
+    return [$aside, $read];
+  }
+
+  /**
+   * Lists the collections whose items an operation's gates are asked of.
+   *
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   *   The resource the operation is of.
+   * @param \Drupal\data_surface\Resource\OperationContext $context
+   *   Its context.
+   *
+   * @return array<string, true>
+   *   The collections' keys.
+   */
+  protected function itemGatedLists(ResourceDefinition $definition, OperationContext $context): array {
+    $lists = [];
+    foreach ($this->gatePlaces($definition, $context->id) as $place) {
+      if ($place['list'] !== NULL) {
+        $lists[(string) $place['list']] = TRUE;
+      }
+    }
+    return $lists;
+  }
+
+  /**
+   * Gets the gates an operation asks once per item, for its storage.
+   *
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   *   The resource the operation is of.
+   * @param \Drupal\data_surface\Resource\OperationContext $context
+   *   Its context.
+   *
+   * @return \Drupal\data_surface\ResourceBuild\ItemGates|null
+   *   The gates by collection, or NULL when none is asked per item.
+   */
+  protected function itemGates(ResourceDefinition $definition, OperationContext $context): ?ItemGates {
+    $lists = [];
+    foreach ($this->gatePlaces($definition, $context->id) as $place) {
+      if ($place['list'] !== NULL) {
+        $lists[(string) $place['list']]['item'] = (string) $place['item'];
+        $lists[(string) $place['list']]['type'] = (string) $place['type'];
+        $lists[(string) $place['list']]['gates'][] = $place['gate'];
+      }
+    }
+    return $lists === [] ? NULL : new ItemGates($this->gates(), $this, $lists);
   }
 
   /**
@@ -2633,9 +3674,20 @@ final class Resources implements ResourcesInterface {
         return $result;
       }
     }
+    // Then each gate the operation borrows, asked about the thing the
+    // context knows; a gate asked per item of a collection waits for the
+    // items. The access class then narrows on top, never widening.
+    // Decision: see docs/decisions.md#a-gate-is-borrowed-never-copied.
+    $gated = $this->gatesAtTheTop($definition, $context, $account);
+    if ($gated !== NULL) {
+      $result = $permission === NULL ? $gated : $result->andIf($gated);
+      if (!$result->isAllowed()) {
+        return $result;
+      }
+    }
     if ($definition->access !== NULL) {
-      $answer = static::atTheTop($this->instance($definition->access, OperationAccessInterface::class)->access($context, $account));
-      $result = $permission === NULL ? $answer : $result->andIf($answer);
+      $answer = static::atTheTop($this->answerAccess($definition->access, $context, $account));
+      $result = $permission === NULL && $gated === NULL ? $answer : $result->andIf($answer);
     }
     // Then each alter that answers access, which may refuse and never
     // allow what was refused: core's andIf() keeps a refusal.
@@ -2665,9 +3717,9 @@ final class Resources implements ResourcesInterface {
    *   The answer with every alter's.
    */
   protected function alteredAtTheTop(AccessResultInterface $result, ResourceDefinition $definition, OperationContext $context, AccountInterface $account): AccessResultInterface {
-    foreach (static::answering($definition, $context) as [$class, $interface]) {
-      if ($interface === AltersAccessInterface::class && !$result->isForbidden()) {
-        $result = $result->andIf(static::atTheTop($this->ask($class, $interface, $context, $account)));
+    foreach (static::answering($definition, $context) as [$class, $role]) {
+      if ($role === PipelineGuard::ALTER && !$result->isForbidden()) {
+        $result = $result->andIf(static::atTheTop($this->ask($class, $role, $context, $account)));
       }
     }
     return $result;
@@ -2788,9 +3840,9 @@ final class Resources implements ResourcesInterface {
     try {
       $this->fillBlueprints($definition, $inputs);
       foreach ($definition->alters as $alter) {
-        $instance = $this->classResolver->getInstanceFromDefinition($alter->class);
+        $instance = $this->alter($alter->class);
         if ($instance instanceof AltersInputsInterface) {
-          $instance->alterInputs($blueprints[] = (new ResourceBlueprintAdditions($builder, $this->typedDataManager, $alter->module))->useShapes($this->shapes()));
+          $instance->alterInputs($blueprints[] = (new ResourceBlueprintAdditions($builder, $this->typedDataManager, $alter->module))->useShapes($this->shapes())->useReferences($this->references()));
         }
       }
     }
@@ -2851,7 +3903,7 @@ final class Resources implements ResourcesInterface {
         $variant = $this->registry->getDefinition($class);
         [$variant_context] = $this->invokeChild($variant, $context, $key, $parent->id);
         if ($variant->answersAccess()) {
-          $answer = $variant->access === NULL ? AccessResult::allowed() : static::atTheTop($this->instance($variant->access, OperationAccessInterface::class)->access($variant_context, $account));
+          $answer = $variant->access === NULL ? AccessResult::allowed() : static::atTheTop($this->answerAccess($variant->access, $variant_context, $account));
           $answer = $this->alteredAtTheTop($answer, $variant, $variant_context, $account);
           $answers[] = $answer;
           if ($answer->isForbidden()) {
@@ -2887,7 +3939,7 @@ final class Resources implements ResourcesInterface {
   /**
    * {@inheritdoc}
    */
-  public function storage(string $resource, OperationContext $context, ?DataSurfaceInterface $built = NULL): DataSurfaceStorageInterface {
+  public function storage(string $resource, OperationContext $context, ?DataSurfaceInterface $built = NULL, ?AccountInterface $account = NULL): DataSurfaceStorageInterface {
     $definition = $this->registry->getDefinition($resource);
     if ($definition->storage === NULL) {
       throw new \LogicException(sprintf(
@@ -2897,7 +3949,7 @@ final class Resources implements ResourcesInterface {
         $definition->id,
       ));
     }
-    return $this->storageFor($definition, $context, $built ?? $this->build($definition->name(), $context));
+    return $this->storageFor($definition, $context, $built ?? $this->build($definition->name(), $context), $account ?? $this->currentUser, $this->itemGates($definition, $context));
   }
 
   /**
@@ -2915,11 +3967,15 @@ final class Resources implements ResourcesInterface {
    *   Its context.
    * @param \Drupal\data_surface\DataSurfaceInterface $built
    *   The resource as built, whose entries carry the children.
+   * @param \Drupal\Core\Session\AccountInterface $account
+   *   The account each level writes as.
+   * @param \Drupal\data_surface\ResourceBuild\ItemGates|null $gates
+   *   The gates the operation asks per item, for the top level alone.
    *
    * @return \Drupal\data_surface\ResourceBuild\StorageAdapter
    *   The storage.
    */
-  protected function storageFor(ResourceDefinition $definition, OperationContext $context, DataSurfaceInterface $built): StorageAdapter {
+  protected function storageFor(ResourceDefinition $definition, OperationContext $context, DataSurfaceInterface $built, AccountInterface $account, ?ItemGates $gates = NULL): StorageAdapter {
     $routes = [];
     foreach ($built->getDefinitions()->entries() as $key => $entry) {
       $children = $entry->attachment !== NULL
@@ -2928,16 +3984,20 @@ final class Resources implements ResourcesInterface {
       foreach ($children as $id => $attachment) {
         $child = $attachment->source === NULL ? NULL : $this->registry->getDefinition($attachment->source);
         if ($child?->storage !== NULL) {
-          $routes[(string) $key][(string) $id] = $this->storageFor($child, $this->invokeChild($child, $context, (string) $key, $definition->id)[0], $attachment->child);
+          $routes[(string) $key][(string) $id] = $this->storageFor($child, $this->invokeChild($child, $context, (string) $key, $definition->id)[0], $attachment->child, $account);
         }
       }
     }
+    $operation = $this->registry->getOperations($definition->name())[$context->id] ?? NULL;
     return new StorageAdapter(
       $this->instance((string) $definition->storage, ResourceStorageInterface::class),
       $context,
       $routes,
       $definition->identity,
-      $this->omittedKeys($definition, $built),
+      $this->omittedKeys($this->shapeOf($definition, $context), $built),
+      $operation?->kind() === OperationDefinition::DELETE,
+      $account,
+      $gates,
     );
   }
 
@@ -2991,6 +4051,47 @@ final class Resources implements ResourcesInterface {
   }
 
   /**
+   * Writes the defaults the site sets over a frame's declared ones.
+   *
+   * Every build carries the config object's cache tag, so a change to it
+   * reaches every door at the next request. Read for what is built at the
+   * top, by its id, or handed down by the parent for a child attached at a
+   * fixed key; never while a config schema is written from the resource,
+   * whose install file holds the module's defaults.
+   *
+   * Decision: see docs/decisions.md#a-site-sets-a-default-in-configuration.
+   *
+   * @param \Drupal\data_surface\DataSurfaceBuilderInterface $builder
+   *   The builder, its keys and its alters' declared.
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   *   What is being built.
+   * @param \Drupal\data_surface\ResourceBuild\ResourceBlueprint $inputs
+   *   Its blueprint, which says which keys hold no plain value.
+   * @param bool $top
+   *   Whether it is built at the top.
+   * @param array{resource: string, at: string, values: array<string, mixed>}|null $siteDefaults
+   *   What the parent handed down, or NULL.
+   *
+   * @return array<string, array{resource: string, at: string, values: array<string, mixed>}>
+   *   The defaults for each child attached at a fixed key, by its key.
+   */
+  protected function writeSiteDefaults(DataSurfaceBuilderInterface $builder, ResourceDefinition $definition, ResourceBlueprint $inputs, bool $top, ?array $siteDefaults): array {
+    if ($this->siteDefaults === NULL || !$this->holdsToSchema) {
+      return [];
+    }
+    $builder->addCacheableDependency($this->siteDefaults->cacheability());
+    $defaults = $siteDefaults ?? ($top ? $this->siteDefaults->of($definition->id) : NULL);
+    if ($defaults === NULL || $defaults['values'] === []) {
+      return [];
+    }
+    $kinds = array_fill_keys(array_map('strval', array_keys($inputs->attachments())), 'child')
+      + array_fill_keys(array_map('strval', array_keys($inputs->variants())), 'variants')
+      + array_fill_keys(array_map('strval', array_keys($inputs->lists())), 'collection')
+      + array_fill_keys(array_map('strval', array_keys($inputs->fromSite())), 'site');
+    return $this->siteDefaults->write($builder, $defaults, $kinds);
+  }
+
+  /**
    * Applies what a context says about where it is asked for.
    *
    * @param \Drupal\data_surface\DataSurfaceBuilderInterface $builder
@@ -3004,33 +4105,22 @@ final class Resources implements ResourcesInterface {
    * @param string[] $attached
    *   The owner's keys holding an attached child or variants.
    * @param string[] $lists
-   *   The owner's collection keys, which a context may narrow and not
-   *   start.
+   *   The owner's collection keys, which a context may narrow.
    *
    * @throws \LogicException
-   *   When the context names a key the shape does not declare, carries
-   *   starting values without creating, or widens a key.
+   *   When the context names a key the shape does not declare, or widens
+   *   a key.
    */
   protected function applyContext(DataSurfaceBuilderInterface $builder, ResourceDefinition $definition, OperationContext $context, array $input_keys, array $attached = [], array $lists = []): void {
     $assert_input = static function (string $key, string $what) use ($definition, $context, $input_keys, $attached, $lists): void {
       if (in_array($key, $lists, TRUE)) {
         // The list key is the parent's, so where the parent is asked for
-        // may narrow it (its Count); its items are the child's, so no
-        // starting value can be given for them here.
-        if ($what === 'constraint') {
-          return;
-        }
-        throw new \LogicException(sprintf(
-          'The "%s" context gives a %s for "%s", which is a collection in %s: its items are each the child\'s, accepted in the child\'s own frame, and a list of them starts empty.',
-          $context->id,
-          $what,
-          $key,
-          $definition->id,
-        ));
+        // may narrow it (its Count).
+        return;
       }
       if (in_array($key, $attached, TRUE)) {
         throw new \LogicException(sprintf(
-          'The "%s" context gives a %s for "%s", which holds a child in %s: a child is narrowed and started by its own context, handed to it with withChild(\'%s\', ...).',
+          'The "%s" context gives a %s for "%s", which holds a child in %s: a child is narrowed by its own context, handed to it with withChild(\'%s\', ...).',
           $context->id,
           $what,
           $key,
@@ -3049,23 +4139,7 @@ final class Resources implements ResourcesInterface {
       }
     };
 
-    if ($context->defaults !== []) {
-      if (!$context->creates) {
-        throw new \LogicException(sprintf(
-          'The "%s" context carries starting values for %s but does not create. Starting values are where a new thing begins; a thing that exists begins from what its storage loads.',
-          $context->id,
-          implode(', ', array_keys($context->defaults)),
-        ));
-      }
-      // A starting value is the value a caller sees before choosing, and
-      // may replace: exactly what a declared default is to the engine.
-      foreach ($context->defaults as $key => $value) {
-        $assert_input((string) $key, 'starting value');
-        $builder->setDefault((string) $key, $value);
-      }
-    }
-
-    foreach ($context->constraints as $key => $constraints) {
+    foreach ($context->constraints() as $key => $constraints) {
       $assert_input((string) $key, 'constraint');
       $target = $builder->getDefinition((string) $key);
       assert($target !== NULL);
@@ -3490,7 +4564,9 @@ final class Resources implements ResourcesInterface {
    * with, so the language holds it to that promise where it can: an
    * instance method can read whatever its alter was injected with, and
    * is only allowed as a runtime refiner. A static method may still
-   * declare runtime, since it can reach the global container.
+   * declare runtime, since it can reach the global container. A method
+   * that takes the account is runtime too: it is handed the account the
+   * operation runs as, which no schema knows ahead of time.
    *
    * Decision: see docs/decisions.md#static-by-default-runtime-by-declaration.
    *
@@ -3509,6 +4585,15 @@ final class Resources implements ResourcesInterface {
         '%s is an instance method of an alter of %s and does not declare runtime: TRUE. A static refiner is a pure function of the siblings it watches, which the served contract runs ahead of time, and an instance method can read the services its alter was built with: make it `public static` (translating with t()), or, if its answer depends on site state, declare #[RefinesInput(\'%s\', runtime: TRUE)].',
         $refiner->describe(),
         $definition->id,
+        $refiner->key,
+      ));
+    }
+    if ($refiner->takesAccount && !$refiner->runtime) {
+      // Decision: see
+      // docs/decisions.md#nothing-an-operation-runs-reads-the-request.
+      throw new \LogicException(sprintf(
+        '%s takes the account and does not declare runtime: TRUE. What the account may choose is a fact about the account, which no schema states ahead of time: declare #[RefinesInput(\'%s\', runtime: TRUE)].',
+        $refiner->describe(),
         $refiner->key,
       ));
     }
@@ -3706,14 +4791,6 @@ final class Resources implements ResourcesInterface {
           $definition->id,
         ));
     }
-    if ($refiner->watches !== NULL && $refiner->watches !== $refiner->parameters) {
-      throw new \LogicException(sprintf(
-        '%s lists watches [%s], but its parameters after the definition are (%s). The watches list names those parameters in order, so a renamed parameter is refused here rather than silently never watched.',
-        $refiner->describe(),
-        implode(', ', $refiner->watches),
-        implode(', ', array_map(static fn (string $name): string => '$' . $name, $refiner->parameters)),
-      ));
-    }
     foreach ($refiner->watched() as $watched) {
       if (!in_array($watched, $watchable ?? $input_keys, TRUE)) {
         throw new \LogicException(sprintf(
@@ -3765,7 +4842,7 @@ final class Resources implements ResourcesInterface {
    *   The blueprint, which names a structure mixed in by discovery's id.
    */
   protected function blueprint(DataSurfaceBuilderInterface $builder, ResourceDefinition $definition, bool $outputs = FALSE): ResourceBlueprint {
-    return (new ResourceBlueprint($builder, $this->typedDataManager, $outputs, $this->registry, $definition->name()))->useShapes($this->shapes());
+    return (new ResourceBlueprint($builder, $this->typedDataManager, $outputs, $this->registry, $definition->name()))->useShapes($this->shapes())->useReferences($this->references());
   }
 
   /**
@@ -3776,6 +4853,18 @@ final class Resources implements ResourcesInterface {
    */
   protected function shapes(): Shapes {
     return $this->shapes ??= new Shapes($this->registry, $this->classResolver);
+  }
+
+  /**
+   * Gets what builds a key that refers to an entity, for a blueprint.
+   *
+   * @return \Drupal\data_surface\Reference\References
+   *   The service.
+   */
+  protected function references(): References {
+    $references = $this->classResolver->getInstanceFromDefinition('data_surface.references');
+    assert($references instanceof References);
+    return $references;
   }
 
   /**
@@ -3868,6 +4957,9 @@ final class Resources implements ResourcesInterface {
    *   The class.
    * @param class-string<T> $interface
    *   What it has to implement.
+   * @param string|null $role
+   *   What it runs as, for the guard (PipelineGuard::ALTER for an alter
+   *   answering access); NULL reads it from the interface.
    *
    * @return T
    *   The instance.
@@ -3877,12 +4969,52 @@ final class Resources implements ResourcesInterface {
    * @throws \LogicException
    *   When it does not implement the interface.
    */
-  protected function instance(string $class, string $interface): object {
+  protected function instance(string $class, string $interface, ?string $role = NULL): object {
     $instance = $this->classResolver->getInstanceFromDefinition($class);
     if (!$instance instanceof $interface) {
       throw new \LogicException(sprintf('%s is named as a %s but does not implement it.', $class, $interface));
     }
+    // Decision: see
+    // docs/decisions.md#nothing-an-operation-runs-reads-the-request.
+    assert(PipelineGuard::holdsNothingDoorSpecific($instance, $role ?? match ($interface) {
+      ResourceStorageInterface::class => PipelineGuard::STORAGE,
+      OperationAccessInterface::class => PipelineGuard::ACCESS,
+      default => PipelineGuard::PROVIDER,
+    }));
     return $instance;
+  }
+
+  /**
+   * Gets an alter, held to holding no door-specific service.
+   *
+   * @param class-string $class
+   *   The alter's class.
+   *
+   * @return object
+   *   The instance.
+   */
+  protected function alter(string $class): object {
+    $instance = $this->classResolver->getInstanceFromDefinition($class);
+    assert(PipelineGuard::holdsNothingDoorSpecific($instance, PipelineGuard::ALTER));
+    return $instance;
+  }
+
+  /**
+   * Asks an access class at the top, guarded as everything an operation runs.
+   *
+   * @param class-string $class
+   *   The access class.
+   * @param \Drupal\data_surface\Resource\OperationContext $context
+   *   The context it answers for.
+   * @param \Drupal\Core\Session\AccountInterface $account
+   *   The account.
+   *
+   * @return \Drupal\Core\Access\AccessResultInterface|\Drupal\data_surface\Resource\AccessAnswer
+   *   Its answer.
+   */
+  protected function answerAccess(string $class, OperationContext $context, AccountInterface $account): AccessResultInterface|AccessAnswer {
+    $instance = $this->instance($class, OperationAccessInterface::class);
+    return PipelineGuard::onBehalf(PipelineGuard::ACCESS, $class, 'access', static fn (): AccessResultInterface|AccessAnswer => $instance->access($context, $account));
   }
 
 }

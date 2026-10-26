@@ -52,6 +52,7 @@ class OperationKindsTest extends DataSurfaceKernelTestBase {
     'create' => 'Create: a key left out takes its default, and every key marked required must be sent.',
     'update' => 'Update: send only the keys to change; a key left out keeps its value, null clears it, and values {} changes nothing. The read tool returns the current values.',
     'read' => 'Read only: nothing is written; a key left out is checked at its current value.',
+    'delete' => 'Delete: send only what names it; the values it held are answered, and a dry run removes nothing.',
   ];
 
   /**
@@ -112,6 +113,12 @@ class OperationKindsTest extends DataSurfaceKernelTestBase {
       if ($operation->needsNothing()) {
         $this->assertSame($operation->creates, $context->creates, $id . ': the context says what the attribute says.');
       }
+      if ($kind === OperationDefinition::DELETE) {
+        // A delete takes no values: the parameters name what it removes.
+        $this->assertArrayNotHasKey(OperationInputs::VALUES, $definition->getInputDefinitions(), $id);
+        $this->assertFalse($manager->hasDefinition($id . ResourceOperationReadTool::SUFFIX), $id . ': nothing is left to read after a delete.');
+        continue;
+      }
       $values = $definition->getInputDefinition(OperationInputs::VALUES);
       $this->assertInstanceOf(MapInputDefinition::class, $values, $id);
       $built = $resources->buildStatic($resource->name(), $context);
@@ -154,21 +161,29 @@ class OperationKindsTest extends DataSurfaceKernelTestBase {
       'data_surface:event.bulletin:configure' => 'update',
       'data_surface:event.desk:configure' => 'update',
       'data_surface:event.doors:configure' => 'update',
+      'data_surface:event.mailer:configure' => 'update',
       'data_surface:event.press:configure' => 'update',
       'data_surface:event.program:check' => 'read',
       'data_surface:event.program:configure' => 'update',
       'data_surface:event.sales:configure' => 'update',
-      'data_surface:field.instance:add' => 'create',
-      'data_surface:field.instance:edit' => 'update',
+      'data_surface:event.spotlight:configure' => 'update',
+      'data_surface:event.venue:create' => 'create',
+      'data_surface:event.venue:delete' => 'delete',
+      'data_surface:event.venue:list' => 'read',
+      'data_surface:event.venue:reorder' => 'update',
+      'data_surface:event.venue:update' => 'update',
+      'data_surface:event.webhook:configure' => 'update',
+      'data_surface:field.instance:create' => 'create',
       'data_surface:field.instance:reuse' => 'create',
-      'data_surface:field.storage:edit' => 'update',
+      'data_surface:field.instance:update' => 'update',
+      'data_surface:field.storage:update' => 'update',
       'data_surface:first.newsletter:configure' => 'update',
       'data_surface:first.store:configure' => 'update',
       'data_surface:registration.step1:configure' => 'update',
       'data_surface:registration.step2:configure' => 'update',
       'data_surface:registration.step3:configure' => 'update',
       'data_surface:tool_test.cabinet:count' => 'read',
-      'data_surface:tool_test.cabinet:edit' => 'update',
+      'data_surface:tool_test.cabinet:update' => 'update',
       'data_surface:tool_test.logbook:append' => 'update',
       'data_surface:tool_test.logbook:clear' => 'update',
       'data_surface:tool_test.logbook:configure' => 'update',

@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<meta name="description" content="Seven small, still drawings of Data Surface, one relationship each: resources, access, layers, markers, composition, doors and the pipeline.">
+<title>Data Surface Visuals</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root {
+  --bg: #E8EDF1; --bg-2: #D9E1E8; --panel: #F5F8FA; --ink: #12202C; --ink-2: #4B5C6B;
+  --line: #B7C4CF; --slab: #C3CED8; --owner: #0A6EB4; --part: #1B978F; --alter: #D48F12;
+  --refine: #C93A6E; --contract: #2C95E0; --shape: #6A55B8; --old: #7B8998; --code-bg: #E9EEF2;
+  --f-display: "Archivo", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --f-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0E151B; --bg-2: #16212B; --panel: #131C24; --ink: #E6EDF2; --ink-2: #9DB1C0;
+    --line: #2E3E4C; --slab: #25333F; --owner: #2F93DB; --part: #35BDB4; --alter: #EDB23C;
+    --refine: #EE5C8F; --contract: #7CC8FF; --shape: #A895F2; --old: #73869A; --code-bg: #0B1116; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0E151B; --bg-2: #16212B; --panel: #131C24; --ink: #E6EDF2; --ink-2: #9DB1C0;
+    --line: #2E3E4C; --slab: #25333F; --owner: #2F93DB; --part: #35BDB4; --alter: #EDB23C;
+    --refine: #EE5C8F; --contract: #7CC8FF; --shape: #A895F2; --old: #73869A; --code-bg: #0B1116; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 var(--f-body); }
+a { color: var(--owner); }
+a:focus-visible { outline: 2px solid var(--contract); outline-offset: 2px; }
+code { font: 400 0.92em var(--f-mono); }
+.page { max-width: 1010px; margin: 0 auto; padding: 22px 24px 26px; display: flex; flex-direction: column; gap: 14px; }
+.top { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.eyebrow { font: 500 11px/1 var(--f-mono); letter-spacing: .12em; text-transform: uppercase; color: var(--ink-2); margin: 0; }
+.eyebrow a { color: inherit; text-decoration: none; }
+.eyebrow a:hover { color: var(--ink); }
+.pager { font: 500 12px/1 var(--f-mono); display: flex; gap: 14px; }
+.pager a { text-decoration: none; }
+h1 { font: 750 30px/1.04 var(--f-display); font-stretch: 122%; letter-spacing: -.01em; margin: 6px 0 0; text-wrap: balance; }
+.plate { margin: 0; background: var(--panel); border: 1px solid var(--line); padding: 14px; display: flex; justify-content: center; }
+.plate svg { display: block; width: 100%; height: auto; }
+.plate svg.tall { display: none; max-width: 420px; }
+.caption { margin: 0; max-width: 78ch; font-size: 15.5px; }
+.caption strong { font-weight: 600; }
+.more { margin: 0; font-size: 13.5px; color: var(--ink-2); padding-left: 10px; border-left: 2px solid var(--line); max-width: 92ch; }
+.more b { font: 500 11px/1 var(--f-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--ink-2); margin-right: 4px; }
+.foot { margin: 4px 0 0; padding-top: 12px; border-top: 1px solid var(--line); font-size: 12.5px; color: var(--ink-2); }
+@media (max-width: 899px) {
+  .plate svg.wide { display: none; }
+  .plate svg.tall { display: block; }
+}
+@media (max-width: 600px) {
+  .page { padding: 16px 16px 22px; gap: 12px; }
+  h1 { font-size: 24px; }
+  .plate { padding: 10px 6px; }
+  .caption { font-size: 15px; }
+}
+/* The drawing */
+svg text { font-family: var(--f-body); fill: var(--ink); }
+svg .m { font-family: var(--f-mono); }
+svg .d { font-family: var(--f-display); font-weight: 700; font-stretch: 112%; }
+svg .b { font-weight: 600; }
+svg .k { fill: var(--ink-2); }
+svg .box { fill: var(--panel); stroke: var(--line); stroke-width: 1; }
+svg .card { fill: var(--bg); stroke: var(--line); stroke-width: 1; }
+svg .chip { fill: var(--panel); stroke: var(--line); stroke-width: 1; }
+svg .slab { fill: var(--slab); stroke: var(--line); stroke-width: 1; }
+svg .wire { fill: none; stroke: var(--ink-2); stroke-width: 1.5; }
+svg .wire.dash { stroke-dasharray: 5 4; }
+svg .ghost { fill: none; stroke: var(--ink-2); stroke-width: 1.2; stroke-dasharray: 4 3; }
+svg .hatch-bg { fill: var(--panel); }
+svg .hatch-line { stroke: var(--ink-2); stroke-width: 1.6; stroke-opacity: .45; }
+svg .none { fill: none; }
+.fill-ink { fill: var(--ink); } .stroke-ink { stroke: var(--ink); } .tint-ink { fill: var(--ink); fill-opacity: .1; stroke: var(--ink); stroke-width: 1.4; }
+.fill-ink-2 { fill: var(--ink-2); } .stroke-ink-2 { stroke: var(--ink-2); } .tint-ink-2 { fill: var(--ink-2); fill-opacity: .1; stroke: var(--ink-2); stroke-width: 1.4; }
+.fill-owner { fill: var(--owner); } .stroke-owner { stroke: var(--owner); } .tint-owner { fill: var(--owner); fill-opacity: .1; stroke: var(--owner); stroke-width: 1.4; }
+.fill-part { fill: var(--part); } .stroke-part { stroke: var(--part); } .tint-part { fill: var(--part); fill-opacity: .1; stroke: var(--part); stroke-width: 1.4; }
+.fill-shape { fill: var(--shape); } .stroke-shape { stroke: var(--shape); } .tint-shape { fill: var(--shape); fill-opacity: .1; stroke: var(--shape); stroke-width: 1.4; }
+.fill-alter { fill: var(--alter); } .stroke-alter { stroke: var(--alter); } .tint-alter { fill: var(--alter); fill-opacity: .1; stroke: var(--alter); stroke-width: 1.4; }
+.fill-refine { fill: var(--refine); } .stroke-refine { stroke: var(--refine); } .tint-refine { fill: var(--refine); fill-opacity: .1; stroke: var(--refine); stroke-width: 1.4; }
+.fill-contract { fill: var(--contract); } .stroke-contract { stroke: var(--contract); } .tint-contract { fill: var(--contract); fill-opacity: .1; stroke: var(--contract); stroke-width: 1.4; }
+.fill-line { fill: var(--line); } .stroke-line { stroke: var(--line); } .tint-line { fill: var(--line); fill-opacity: .1; stroke: var(--line); stroke-width: 1.4; }
+svg .wire.c-owner { stroke: var(--owner); } svg .wire.c-part { stroke: var(--part); } svg .wire.c-shape { stroke: var(--shape); }
+svg .wire.c-contract { stroke: var(--contract); } svg .wire.c-alter { stroke: var(--alter); } svg .wire.c-refine { stroke: var(--refine); }
+svg .t-owner { fill: var(--owner); } svg .t-part { fill: var(--part); } svg .t-shape { fill: var(--shape); } svg .t-contract { fill: var(--contract); }
+svg .t-alter { fill: var(--alter); } svg .t-refine { fill: var(--refine); }
+
+.list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; counter-reset: n; }
+.list li { background: var(--panel); border: 1px solid var(--line); border-left: 3px solid var(--contract); padding: 12px 14px; counter-increment: n;
+  display: grid; grid-template-columns: 28px minmax(0, 1fr); column-gap: 8px; }
+.list li::before { content: counter(n); font: 500 13px/1.5 var(--f-mono); color: var(--ink-2); grid-row: span 2; }
+.list a { font: 700 17px/1.25 var(--f-display); font-stretch: 112%; text-decoration: none; }
+.list a:hover { text-decoration: underline; }
+.list p { margin: 3px 0 0; font-size: 14px; color: var(--ink-2); }
+.intro { margin: 0; max-width: 72ch; }
+</style>
+</head>
+<body>
+<main class="page">
+  <header>
+    <p class="eyebrow">Data Surface</p>
+    <h1>Data Surface visuals</h1>
+  </header>
+  <p class="intro">One relationship per page, each a still drawing with a short caption and links to the page of the docs and the decision behind it.</p>
+  <ol class="list">
+    <li><a href="resource-structure-shape.html">Resource, structure, shape</a><p>What has identity, storage and operations, what is only ever attached, and what is one named value used at many keys.</p></li>
+    <li><a href="access.html">Who may ask, what may they see</a><p>An operation&#x27;s permission and its gates decide whether you may ask; the access answers decide, per key, what you may see and change.</p></li>
+    <li><a href="layers.html">Layered, then sealed</a><p>Declared, contributed, narrowed, access, sealed: the layers a data surface is built from, and the doors reading the top.</p></li>
+    <li><a href="markers.html">The four markers</a><p>enumerated, deferred, refine and live, with checkedOnServer beside: what each promises and what a client does.</p></li>
+    <li><a href="composition.html">Six ways to compose</a><p>Attach, variants, mix in, port, collection and keys from the site, one small drawing each.</p></li>
+    <li><a href="doors.html">Every door reads one surface</a><p>The form, the tool, MCP, ECA, HTTP and OpenAPI, and React all read one sealed data surface, and what every door keeps.</p></li>
+    <li><a href="pipeline.html">What a key goes through</a><p>Coerce, accept, refine, validate, prepare and commit, with where a computed key is filled and where a dry run stops.</p></li>
+  </ol>
+  <p class="foot">Part of Data Surface; see the <a href="../every-door/index.html">full explainer</a>.</p>
+</main>
+</body>
+</html>

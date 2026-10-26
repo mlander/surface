@@ -1,0 +1,39 @@
+$schema: https://git.drupalcode.org/project/drupal/-/raw/HEAD/core/assets/schemas/v1/metadata.schema.json
+name: Call to action
+status: stable
+description: 'One button that sends a visitor somewhere. Example 12 reads its props into a structure.'
+props:
+  type: object
+  required:
+    - text
+    - url
+  properties:
+    text:
+      type: string
+      title: Button text
+      maxLength: 40
+    url:
+      type: string
+      format: uri
+      title: Address
+    style:
+      type: string
+      title: Style
+      enum:
+        - primary
+        - secondary
+      meta:enum:
+        primary: Primary
+        secondary: Secondary
+      default: primary
+    new_window:
+      type: boolean
+      title: Open in a new window
+      default: false
+    tags:
+      type: array
+      title: Tags
+      description: 'Up to three words the button is filed under.'
+      maxItems: 3
+      items:
+        type: string

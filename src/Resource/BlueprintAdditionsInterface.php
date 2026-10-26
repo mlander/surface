@@ -13,7 +13,7 @@ use Drupal\data_surface\Refinement\Rule;
 /**
  * What anyone may do to a blueprint: add to it.
  *
- * Handed to alterInputs() and alterOutputs(). The owner gets
+ * Handed to alterInputs(). The owner gets
  * BlueprintInterface, which adds attachVariants().
  *
  * Neither the owner nor an alter may add a key twice: adding is never
@@ -147,8 +147,7 @@ interface BlueprintAdditionsInterface {
    * @param string $key
    *   The key: an owner's key by its name, this blueprint's own key by its
    *   name, or another alter's key by its mounted path,
-   *   `third_party_settings.<module>.<key>` (for an output,
-   *   `third_party_outputs.<module>.<key>`). A module's mount itself,
+   *   `third_party_settings.<module>.<key>`. A module's mount itself,
    *   the fieldset its keys are drawn in, is
    *   `third_party_settings.<module>`: titled with the module's name
    *   until its alter names it, once it has added a key.
@@ -324,28 +323,6 @@ interface BlueprintAdditionsInterface {
    * @see docs/decisions.md#a-mixin-is-merged-flat
    */
   public function mixIn(string $structure, array $reads = []): static;
-
-  // No drupal.org issue tracks the rename yet: the project page stands in.
-  // phpcs:disable Drupal.Commenting.Deprecated.DeprecatedWrongSeeUrlFormat
-
-  /**
-   * Mixes a structure in: the earlier name of mixIn().
-   *
-   * @param string $structure
-   *   The structure's class.
-   * @param array<string, string> $reads
-   *   Its ports, each mapped to the owner's key it reads, by name.
-   *
-   * @return $this
-   *
-   * @deprecated in data_surface:1.0.0 and is removed from data_surface:2.0.0.
-   *   Use ::mixIn() instead.
-   *
-   * @see https://www.drupal.org/project/data_surface
-   */
-  public function with(string $structure, array $reads = []): static;
-
-  // phpcs:enable
 
   /**
    * Offers more values on a key someone else declared, as an alter.

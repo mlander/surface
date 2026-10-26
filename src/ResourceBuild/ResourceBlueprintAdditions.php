@@ -17,9 +17,8 @@ use Drupal\data_surface\Resource\Arrangement;
  *
  * The pattern draws an alter's key beside the owner's. The engine keeps
  * every contribution in the contributor's own namespace instead
- * (third_party_settings.<module>.<key> for an input,
- * third_party_outputs.<module>.<key> for an output), and that is the
- * spelling kept here, because it is what lets the owner's storage and
+ * (third_party_settings.<module>.<key>), and that is the spelling kept
+ * here, because it is what lets the owner's storage and
  * config schema store a contribution without knowing its keys, and what
  * lets two modules add a key of the same name without colliding.
  *
@@ -45,8 +44,6 @@ final class ResourceBlueprintAdditions extends BlueprintAdapterBase {
    *   The typed data manager.
    * @param string $provider
    *   The module the alter is in, which its keys are mounted under.
-   * @param bool $outputs
-   *   TRUE when this blueprint describes outputs rather than inputs.
    * @param array{0: string, 1: string, 2: string[]}|null $mixedIn
    *   For an alter of a structure mixed into an owner, the structure's
    *   id, the owner's id and the members the structure brought, which are
@@ -56,10 +53,9 @@ final class ResourceBlueprintAdditions extends BlueprintAdapterBase {
     DataSurfaceBuilderInterface $builder,
     TypedDataManagerInterface $typed_data_manager,
     protected readonly string $provider,
-    bool $outputs = FALSE,
     protected readonly ?array $mixedIn = NULL,
   ) {
-    parent::__construct($builder, $typed_data_manager, $outputs);
+    parent::__construct($builder, $typed_data_manager);
   }
 
   /**
@@ -129,9 +125,6 @@ final class ResourceBlueprintAdditions extends BlueprintAdapterBase {
     $this->assertWithinMixin('attaches ' . $child, NULL);
     static::assertReads($key, $reads);
     $mount = 'third_party_settings.' . $this->provider;
-    if ($this->outputs) {
-      throw new \LogicException(sprintf('The %s alter cannot attach %s at the output "%s": outputs do not hold attached structures yet.', $this->provider, $child, $key));
-    }
     if ($key !== $mount) {
       throw new \LogicException(sprintf(
         'The %s alter attaches %s at "%s". An alter attaches under its own mount, and only at the mount itself, %s: at the owner\'s level the structure\'s keys would be the owner\'s, and a structure at a key inside the mount is not built.',
@@ -198,9 +191,6 @@ final class ResourceBlueprintAdditions extends BlueprintAdapterBase {
    */
   public function extendChoices(string $key, array $choices): static {
     $this->assertWithinMixin('offers more values on', $key);
-    if ($this->outputs) {
-      throw new \LogicException(sprintf('The %s alter cannot offer more values on the output "%s": outputs are never sent, so they have nothing to choose from.', $this->provider, $key));
-    }
     if ($this->builder->getDefinition($key) === NULL) {
       throw new \LogicException(sprintf('The %s alter offers more values on "%s", which the owner does not declare as an input.', $this->provider, $key));
     }
@@ -230,7 +220,7 @@ final class ResourceBlueprintAdditions extends BlueprintAdapterBase {
    */
   protected function find(string $key): ?DataDefinitionInterface {
     if (in_array($key, $this->keys, TRUE)) {
-      return $this->builder->getThirdPartyDefinition($this->provider, $key, $this->outputs);
+      return $this->builder->getThirdPartyDefinition($this->provider, $key);
     }
     return parent::find($key);
   }
@@ -238,8 +228,8 @@ final class ResourceBlueprintAdditions extends BlueprintAdapterBase {
   /**
    * {@inheritdoc}
    */
-  protected function ownMount(): ?string {
-    return $this->outputs ? NULL : 'third_party_settings.' . $this->provider;
+  protected function ownMount(): string {
+    return 'third_party_settings.' . $this->provider;
   }
 
   /**
@@ -256,13 +246,6 @@ final class ResourceBlueprintAdditions extends BlueprintAdapterBase {
       ));
     }
     // Decision: see docs/decisions.md#where-an-alters-keys-live.
-    if ($this->outputs) {
-      if ($default !== NULL) {
-        DefinitionMetadata::setDefaultValue($definition, $default);
-      }
-      $this->builder->setThirdPartyOutputDefinition($this->provider, $key, $definition);
-      return;
-    }
     $this->builder->setThirdPartyDefinition($this->provider, $key, $definition, $default);
   }
 

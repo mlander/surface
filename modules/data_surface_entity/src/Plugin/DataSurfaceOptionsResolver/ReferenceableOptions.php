@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Drupal\data_surface_entity\Plugin\DataSurfaceOptionsResolver;
 
-use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\Entity\EntityFieldManagerInterface;
 use Drupal\Core\Entity\EntityReferenceSelection\SelectionInterface;
 use Drupal\Core\Entity\EntityReferenceSelection\SelectionPluginManagerInterface;
@@ -12,9 +11,9 @@ use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\Validation\ConstraintManager;
 use Drupal\data_surface\Attribute\DataSurfaceOptionsResolver;
-use Drupal\data_surface\Contract\ContractEmitter;
 use Drupal\data_surface\Options\DataSurfaceOptionsResolverBase;
 use Drupal\data_surface\Options\OptionSet;
+use Drupal\data_surface\Reference\References;
 use Drupal\data_surface_entity\Plugin\Validation\Constraint\ReferenceableConstraint;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\Validator\Constraint;
@@ -23,19 +22,20 @@ use Symfony\Component\Validator\Constraint;
  * Lists what a reference field may point at, when it is few enough.
  *
  * The field's selection handler is asked, for the account asking: core's
- * autocomplete and select widgets ask it the same way. Up to the served
- * contract's enumeration cap the targets are the key's options, labeled;
- * past it this resolver does not apply, so the key takes any id and the
- * constraint's validator decides, which the contract says is checked on
- * the server.
+ * autocomplete and select widgets ask it the same way. Up to the site's
+ * limit, `data_surface.settings:reference_list_limit`, the targets are the
+ * key's options, labeled; past it this resolver does not apply, so the key
+ * takes any id and the constraint's validator decides, which the contract
+ * says is checked on the server. The limit is the one a reference key a
+ * resource declares, `entity:<type>`, lists up to (References).
  *
  * What the list varies by is what the selection read: the account's
  * permissions decide whether unpublished or blocked targets are offered,
  * and the query's access tag lets a module narrow it further, node grants
  * by the account's grants. Core's handlers for these target types read
- * no more than that (CONTEXTS); any other type's handler may read the
- * account itself (a file's selection offers what the account uploaded),
- * so its list varies by the account, `user`.
+ * no more than that (CONTEXTS, References::CONTEXTS); any other type's
+ * handler may read the account itself (a file's selection offers what the
+ * account uploaded), so its list varies by the account, `user`.
  */
 #[DataSurfaceOptionsResolver(
   id: 'data_surface_referenceable',
@@ -47,21 +47,13 @@ final class ReferenceableOptions extends DataSurfaceOptionsResolverBase {
   /**
    * The cache contexts core's selection of each target type varies by.
    *
-   * Node grants, for a node and for a comment (whose selection asks the
-   * commented node's access), vary by the account's grants, which core
-   * says with `user.node_grants:view`; the rest by permissions alone. A
-   * type not listed varies by the account.
+   * References::CONTEXTS, which a reference key a resource declares
+   * varies by too.
    *
    * Decision: see
    * docs/decisions.md#every-door-projects-what-the-read-tool-projects.
    */
-  public const CONTEXTS = [
-    'node' => ['user.permissions', 'user.node_grants:view'],
-    'comment' => ['user.permissions', 'user.node_grants:view'],
-    'user' => ['user.permissions'],
-    'taxonomy_term' => ['user.permissions'],
-    'media' => ['user.permissions'],
-  ];
+  public const CONTEXTS = References::CONTEXTS;
 
   /**
    * Constructs a ReferenceableOptions resolver.
@@ -78,6 +70,8 @@ final class ReferenceableOptions extends DataSurfaceOptionsResolverBase {
    *   The field manager.
    * @param \Drupal\Core\Entity\EntityReferenceSelection\SelectionPluginManagerInterface $selection
    *   The selection handlers.
+   * @param \Drupal\data_surface\Reference\References $references
+   *   The limit, and what a target type's list varies by.
    */
   public function __construct(
     array $configuration,
@@ -86,6 +80,7 @@ final class ReferenceableOptions extends DataSurfaceOptionsResolverBase {
     ConstraintManager $constraint_manager,
     protected readonly EntityFieldManagerInterface $entityFieldManager,
     protected readonly SelectionPluginManagerInterface $selection,
+    protected readonly References $references,
   ) {
     parent::__construct($configuration, $plugin_id, $plugin_definition, $constraint_manager);
   }
@@ -101,6 +96,7 @@ final class ReferenceableOptions extends DataSurfaceOptionsResolverBase {
       $container->get('validation.constraint'),
       $container->get('entity_field.manager'),
       $container->get('plugin.manager.entity_reference_selection'),
+      $container->get('data_surface.references'),
     );
   }
 
@@ -115,7 +111,7 @@ final class ReferenceableOptions extends DataSurfaceOptionsResolverBase {
     }
     assert($constraint instanceof ReferenceableConstraint);
     $handler = $this->handler($constraint);
-    return $handler !== NULL && $handler->countReferenceableEntities() <= ContractEmitter::ENUMERATION_CAP;
+    return $handler !== NULL && $handler->countReferenceableEntities() <= $this->references->limit();
   }
 
   /**
@@ -131,10 +127,7 @@ final class ReferenceableOptions extends DataSurfaceOptionsResolverBase {
     }
     $field = $this->entityFieldManager->getFieldDefinitions($constraint->entityTypeId, $constraint->bundle)[$constraint->fieldName] ?? NULL;
     $target = (string) $field?->getSetting('target_type');
-    $cacheability = (new CacheableMetadata())
-      ->addCacheTags($target === '' ? [] : [$target . '_list'])
-      ->addCacheContexts(self::CONTEXTS[$target] ?? ['user']);
-    return new OptionSet($options, [], $cacheability);
+    return new OptionSet($options, [], $target === '' ? $this->references->limitCacheability() : $this->references->cacheability($target));
   }
 
   /**

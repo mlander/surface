@@ -1,0 +1,9 @@
+name: 'Data Surface block placement test'
+type: module
+description: 'A block plugin that reads a context, which the placement resource does not offer yet.'
+package: Testing
+version: VERSION
+core_version_requirement: ^11.3 || ^12
+dependencies:
+  - drupal:block
+  - drupal:user

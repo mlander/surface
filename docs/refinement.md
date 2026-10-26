@@ -192,8 +192,8 @@ things set it apart:
   and a rule requiring a key a refiner may rule out.
 
 The full schema states each rule as written, one conditional whose
-index the parent's `x-surface.rules` lists, without running anything,
-and the key carries `x-surface.declared: true`
+index the parent's `x-surface.rules` lists, without running anything;
+the key carries no marker of its own
 ([served contract](served-contract.md#x-surface)). The schema for one
 set of values evaluates it, as the pipeline does. The decision, with
 what was weighed: [A rule declared as data](decisions.md#a-rule-declared-as-data).
@@ -267,11 +267,14 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
   value its watched siblings could take, and writes each answer down as
   a JSON Schema conditional (`enumerated`), or, where the values cannot
   be listed, says the key is `refine`: it can be asked about with
-  values, at `/refine`. Which rooms a venue has is static.
+  values, at `POST .../schema`. Which rooms a venue has is static.
 - **Runtime, `runtime: TRUE`.** A rule whose answer depends on something
   no schema can state: a lookup in the database or a remote service,
-  uniqueness (a machine name nobody has taken), the current account,
-  the time, any service. It promises the schema nothing. The served
+  uniqueness (a machine name nobody has taken), the account, the time,
+  any service. The account is handed to a last parameter typed
+  `AccountInterface`; the request, the route, the session and the
+  current user are never read
+  ([No door-specific context](resources.md#no-door-specific-context)). It promises the schema nothing. The served
   contract never runs it ahead of time, in either document, and marks
   the key `live`; only the pipeline, a form and the schema for one
   set of values run it, against those values. Which rooms are closed
@@ -327,7 +330,7 @@ trust; three layers hold a static refiner to it
    compiled), every call to a static refiner, from the build, the
    engine's refinement, the pipeline or the emitter's enumeration, runs
    with the global container replaced by
-   `Refinement\StaticRefinerContainer`, which throws when asked for a
+   `Pipeline\PipelineGuard`, which throws when asked for a
    service or a parameter:
 
    > The refiner `Class::method()` is declared static but asked for the
@@ -373,6 +376,20 @@ fills from storage, say. What they make is the honest spelling the easy
 one: a refiner that needs anything but its arguments is a runtime
 refiner, said on the method.
 
+The class that computes a computed key is held to the same promise by the first two
+layers: its `compute()` is static, it runs with the container guarded
+(`PipelineGuard::guardCompute()`), and the PHPStan rule flags
+`\Drupal::` in it ([Computed keys](declaring-a-resource.md#computed-keys)).
+
+A runtime refiner may read site state, and nothing a door has: with
+assertions on it runs guarded too, its class refused the request, the
+route, the session, the form being built, the theme and the current
+user, and a second PHPStan rule flags the same reads. One that narrows
+by account takes the account as its last parameter, typed
+`AccountInterface`, and is handed the account the operation runs as;
+that parameter is no watched key, and a static refiner that takes it is
+refused at build ([No door-specific context](resources.md#no-door-specific-context)).
+
 Access has the same split, read from an answer's cacheability rather
 than declared, and the same three layers: the build for the account
 alone applies only static answers, the guard above asks a static answer
@@ -380,6 +397,9 @@ again with the container guarded (refusing services that read site
 state, since an access class holds injected ones), and
 `StaticAccessAgreementTrait` holds the full schema's access marks to the
 build ([Static and runtime access](resources.md#static-and-runtime-access)).
+An access answer of either kind is for the account it is handed and
+reads nothing a door has
+([No door-specific context](resources.md#no-door-specific-context)).
 
 ## When a key does not apply
 
@@ -550,7 +570,7 @@ enters it:
   says max-age 0: a data surface refined through it holds for the request
   that refined it.
 - **Option resolvers.** Each resolved option list carries its own
-  metadata on its `OptionSet`, which the options widget applies to the
+  metadata on its `OptionSet`, which the select widget applies to the
   element it builds.
 
 The form builder applies the refined data surface's metadata to its

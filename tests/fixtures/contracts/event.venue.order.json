@@ -1,0 +1,39 @@
+{
+    "resource": "event.venue.order",
+    "module": "data_surface_examples",
+    "contract": 4,
+    "documents": [
+        {
+            "resource": "event.venue.order",
+            "operation": null,
+            "label": null,
+            "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "x-surface": {
+                    "contract": 4,
+                    "version": 1
+                },
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "title": "Venue",
+                        "description": "The machine name of a venue the site has.",
+                        "type": "string"
+                    },
+                    "weight": {
+                        "title": "Weight",
+                        "description": "Its place among the venues: lighter first.",
+                        "type": "integer",
+                        "minimum": -1000,
+                        "maximum": 1000
+                    }
+                },
+                "additionalProperties": false,
+                "required": [
+                    "id",
+                    "weight"
+                ]
+            }
+        }
+    ]
+}

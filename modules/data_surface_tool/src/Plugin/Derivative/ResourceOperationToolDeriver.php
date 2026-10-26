@@ -20,6 +20,7 @@ use Drupal\data_surface\ResourceBuild\ResourceDefinition;
 use Drupal\data_surface\ResourceBuild\ResourcePlugins;
 use Drupal\data_surface\ResourceBuild\ResourceRegistry;
 use Drupal\data_surface_tool\Plugin\tool\Tool\ResourceOperationReadTool;
+use Drupal\data_surface_tool\Plugin\tool\Tool\ResourceOperationSchemaTool;
 use Drupal\data_surface_tool\OperationInputs;
 use Drupal\data_surface_tool\ToolDefinitionsInvalidator;
 use Drupal\tool\Tool\ToolDefinition;
@@ -35,7 +36,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * resources discovery found, the operations on each, and what each
  * operation's signature says it needs. The derivative id is
  * `<resource id>:<operation id>`, so a plugin id reads
- * `data_surface:node.type:add`: the address the pattern gives an
+ * `data_surface:node.type:create`: the address the pattern gives an
  * operation.
  *
  * Two rules say which operations are not tools, and the catalog
@@ -394,7 +395,9 @@ final class ResourceOperationToolDeriver extends DeriverBase implements Containe
           // Once the operation's parameters arrive, the values input is
           // the resource built in the operation's real context.
           $parameters = array_map(static fn ($parameter): string => $parameter->name, $operation->parameters);
-          $definition->setInputDefinitionRefiners($parameters === [] ? [] : [OperationInputs::VALUES => $parameters]);
+          // A delete has no values input to refine.
+          $values = $definition->getInputDefinitions(TRUE)[OperationInputs::VALUES] ?? NULL;
+          $definition->setInputDefinitionRefiners($parameters === [] || $values === NULL ? [] : [OperationInputs::VALUES => $parameters]);
         }
         catch (\LogicException | \InvalidArgumentException $e) {
           $this->skip($id, $e);
@@ -404,6 +407,7 @@ final class ResourceOperationToolDeriver extends DeriverBase implements Containe
         if ($this->catalog->reads($resource, $operation, $plugins)) {
           $this->read($base_plugin_definition, $resource, $operation, $title);
         }
+        $this->narrowing($base_plugin_definition, $resource, $operation, $title);
       }
       return [$this->derivatives, $this->skipped];
     }
@@ -439,6 +443,51 @@ final class ResourceOperationToolDeriver extends DeriverBase implements Containe
         ->setDestructive(FALSE)
         ->setInputDefinitionRefiners([]);
       $definition->setClass(ResourceOperationReadTool::class);
+    }
+    catch (\LogicException | \InvalidArgumentException $e) {
+      $this->skip($id, $e);
+      return;
+    }
+    $this->derivatives[$id] = $definition;
+  }
+
+  /**
+   * Derives the narrowing tool beside an operation's write tool, if any.
+   *
+   * Only where the operation's listing states a key open, its list the
+   * site's and past the budget (OperationInputs::narrows()): a resource
+   * whose every list is spelled out adds no tool. Read only and
+   * idempotent, so the MCP bridge annotates it so.
+   *
+   * Decision: see docs/decisions.md#a-budget-for-what-the-site-decides.
+   *
+   * @param \Drupal\tool\Tool\ToolDefinition $base_plugin_definition
+   *   The write tool's base definition.
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $resource
+   *   The resource.
+   * @param \Drupal\data_surface\ResourceBuild\OperationDefinition $operation
+   *   The operation.
+   * @param \Drupal\Core\StringTranslation\TranslatableMarkup $title
+   *   The write tool's title, which the narrowing tool's names.
+   */
+  protected function narrowing(ToolDefinition $base_plugin_definition, ResourceDefinition $resource, OperationDefinition $operation, TranslatableMarkup $title): void {
+    $id = $resource->id . ':' . $operation->id . ResourceOperationSchemaTool::SUFFIX;
+    try {
+      if (!$this->operationInputs->narrows($resource, $operation)) {
+        return;
+      }
+      $definition = $this->definition(
+        $base_plugin_definition,
+        $this->t('Schema for these values: @label', ['@label' => $title]),
+        $this->operationInputs->schemaDescription($resource, $operation),
+        $this->operationInputs->schemaInputs($resource, $operation),
+        $this->operationInputs->schemaOutputs(),
+        $operation,
+      )
+        ->setOperation(ToolOperation::Read)
+        ->setDestructive(FALSE)
+        ->setInputDefinitionRefiners([]);
+      $definition->setClass(ResourceOperationSchemaTool::class);
     }
     catch (\LogicException | \InvalidArgumentException $e) {
       $this->skip($id, $e);

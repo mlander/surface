@@ -48,16 +48,21 @@ class ReadToolTest extends DataSurfaceKernelTestBase {
     'data_surface:event.bulletin:configure:read',
     'data_surface:event.desk:configure:read',
     'data_surface:event.doors:configure:read',
+    'data_surface:event.mailer:configure:read',
     'data_surface:event.press:configure:read',
     'data_surface:event.program:configure:read',
     'data_surface:event.sales:configure:read',
-    'data_surface:field.instance:edit:read',
-    'data_surface:field.storage:edit:read',
-    'data_surface:node.type:edit:read',
+    'data_surface:event.spotlight:configure:read',
+    'data_surface:event.venue:reorder:read',
+    'data_surface:event.venue:update:read',
+    'data_surface:event.webhook:configure:read',
+    'data_surface:field.instance:update:read',
+    'data_surface:field.storage:update:read',
+    'data_surface:node.type:update:read',
     'data_surface:registration.step1:configure:read',
     'data_surface:registration.step2:configure:read',
     'data_surface:registration.step3:configure:read',
-    'data_surface:tool_test.cabinet:edit:read',
+    'data_surface:tool_test.cabinet:update:read',
     'data_surface:tool_test.logbook:append:read',
     'data_surface:tool_test.logbook:clear:read',
     'data_surface:tool_test.logbook:configure:read',
@@ -185,7 +190,7 @@ class ReadToolTest extends DataSurfaceKernelTestBase {
     // type's add needs nothing and says so; the field's add leaves its
     // name to the caller, and its reuse is an add on another bundle.
     $definitions = $this->container->get('plugin.manager.tool')->getDefinitions();
-    foreach (['node.type:add', 'field.instance:add', 'field.instance:reuse'] as $operation) {
+    foreach (['node.type:create', 'field.instance:create', 'field.instance:reuse'] as $operation) {
       $this->assertArrayHasKey('data_surface:' . $operation, $definitions);
       $this->assertArrayNotHasKey('data_surface:' . $operation . ':read', $definitions);
     }
@@ -223,8 +228,21 @@ class ReadToolTest extends DataSurfaceKernelTestBase {
       $this->assertTrue($values->isRequired(), $id);
       $written = $write->getInputDefinition(OperationInputs::VALUES);
       $this->assertInstanceOf(MapInputDefinition::class, $written, $id);
-      $expected = array_values(array_diff(self::properties($written), $id === 'data_surface:tool_test.vault:configure:read' ? ['token'] : []));
-      $this->assertSame($expected, self::properties($values), $id);
+      // A secret at the top is left out of the read.
+      $secrets = match ($id) {
+        'data_surface:tool_test.vault:configure:read' => ['token'],
+        'data_surface:event.webhook:configure:read' => ['api_key'],
+        default => [],
+      };
+      // A computed key is in the read and not in the write: nobody types it.
+      $computed = match ($id) {
+        'data_surface:event.venue:update:read' => ['slug'],
+        default => [],
+      };
+      $expected = array_values(array_diff(self::properties($written), $secrets));
+      $this->assertSame($expected, array_values(array_diff(self::properties($values), $computed)), $id);
+      $this->assertSame($computed, array_values(array_intersect(self::properties($values), $computed)), $id);
+      $this->assertSame([], array_values(array_intersect(self::properties($written), $computed)), $id);
       foreach ($values->getPropertyDefinitions() as $name => $property) {
         $this->assertFalse($property->isRequired(), $id . ' ' . $name);
         $promises = array_intersect_key($property->getConstraints(), array_flip(self::PROMISES));
@@ -234,10 +252,10 @@ class ReadToolTest extends DataSurfaceKernelTestBase {
 
     // The keys less the identity the operation knows: the content type's
     // machine name, and everything that says which field it is.
-    $this->assertSame(['type'], array_keys($this->definition('data_surface:node.type:edit:read')->getInputDefinitions(TRUE)));
-    $this->assertNotContains('type', self::properties($this->readValues('data_surface:node.type:edit:read')));
-    $this->assertSame(['field'], array_keys($this->definition('data_surface:field.instance:edit:read')->getInputDefinitions(TRUE)));
-    $field = self::properties($this->readValues('data_surface:field.instance:edit:read'));
+    $this->assertSame(['type'], array_keys($this->definition('data_surface:node.type:update:read')->getInputDefinitions(TRUE)));
+    $this->assertNotContains('type', self::properties($this->readValues('data_surface:node.type:update:read')));
+    $this->assertSame(['field'], array_keys($this->definition('data_surface:field.instance:update:read')->getInputDefinitions(TRUE)));
+    $field = self::properties($this->readValues('data_surface:field.instance:update:read'));
     $this->assertSame([], array_intersect(['entity_type_id', 'bundle', 'field_name', 'field_type'], $field));
     $this->assertContains('settings', $field);
     $this->assertContains('storage', $field);
@@ -326,7 +344,7 @@ class ReadToolTest extends DataSurfaceKernelTestBase {
     ])->save();
     NodeType::create(['type' => 'page', 'name' => 'Basic page'])->save();
 
-    $read = $this->runTool('data_surface:node.type:edit:read', ['type' => 'article']);
+    $read = $this->runTool('data_surface:node.type:update:read', ['type' => 'article']);
     $this->assertTrue($read['success'], $read['message']);
     $this->assertSame('Edit a content type: the stored values were read, and nothing was written.', $read['message']);
     $this->assertArrayNotHasKey('type', $read['values']);
@@ -334,7 +352,7 @@ class ReadToolTest extends DataSurfaceKernelTestBase {
     $this->assertSame('News and such.', $read['values']['description']);
     $this->assertSame(NodePreviewMode::Required->value, $read['values']['preview_mode']);
 
-    $read = $this->runTool('data_surface:node.type:edit:read', ['type' => 'page']);
+    $read = $this->runTool('data_surface:node.type:update:read', ['type' => 'page']);
     $this->assertSame('Basic page', $read['values']['name']);
   }
 
@@ -346,8 +364,8 @@ class ReadToolTest extends DataSurfaceKernelTestBase {
    * agent reads as final; a wrong id is input to correct.
    */
   public function testUnknownParameterFailsAsTheWriteToolDoes(): void {
-    $read = $this->runTool('data_surface:node.type:edit:read', ['type' => 'nowhere']);
-    $write = $this->runTool('data_surface:node.type:edit', [
+    $read = $this->runTool('data_surface:node.type:update:read', ['type' => 'nowhere']);
+    $write = $this->runTool('data_surface:node.type:update', [
       'type' => 'nowhere',
       OperationInputs::VALUES => [
         'name' => 'Nowhere',
@@ -372,7 +390,7 @@ class ReadToolTest extends DataSurfaceKernelTestBase {
   public function testAccessIsTheWriteTools(): void {
     NodeType::create(['type' => 'article', 'name' => 'Article'])->save();
     $this->setUpCurrentUser([], ['access content']);
-    foreach ([ExampleCalls::READ_TOOL => [], 'data_surface:node.type:edit:read' => ['type' => 'article']] as $id => $inputs) {
+    foreach ([ExampleCalls::READ_TOOL => [], 'data_surface:node.type:update:read' => ['type' => 'article']] as $id => $inputs) {
       $read = $this->runTool($id, $inputs);
       $this->assertFalse($read['tool']->access(), $id);
       $this->assertFalse($read['success'], $id);
@@ -383,9 +401,9 @@ class ReadToolTest extends DataSurfaceKernelTestBase {
     // The content type's operation asks for the demo's permission beside
     // core's, so core's alone is not enough, here as for a write.
     $this->setUpCurrentUser([], ['administer content types']);
-    $this->assertFalse($this->runTool('data_surface:node.type:edit:read', ['type' => 'article'])['tool']->access());
+    $this->assertFalse($this->runTool('data_surface:node.type:update:read', ['type' => 'article'])['tool']->access());
     $this->setUpCurrentUser([], ['administer content types', 'administer data surface node type demo']);
-    $read = $this->runTool('data_surface:node.type:edit:read', ['type' => 'article']);
+    $read = $this->runTool('data_surface:node.type:update:read', ['type' => 'article']);
     $this->assertTrue($read['tool']->access());
     $this->assertTrue($read['success'], $read['message']);
 

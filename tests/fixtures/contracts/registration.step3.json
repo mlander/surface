@@ -1,7 +1,7 @@
 {
     "resource": "registration.step3",
     "module": "data_surface_examples",
-    "contract": 2,
+    "contract": 4,
     "documents": [
         {
             "resource": "registration.step3",
@@ -12,7 +12,7 @@
                 "title": "Configure registration (step 3)",
                 "description": "Sets the event registration: its title, whether it is open, the venue and room, the capacity, the pricing with its ticket, and the contact.",
                 "x-surface": {
-                    "contract": 2,
+                    "contract": 4,
                     "operation": {
                         "id": "configure",
                         "label": "Configure registration (step 3)",
@@ -31,11 +31,7 @@
                 "properties": {
                     "title": {
                         "title": "Public event title",
-                        "type": "string",
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": []
-                        }
+                        "type": "string"
                     },
                     "open": {
                         "title": "Registration open",
@@ -43,11 +39,7 @@
                             "boolean",
                             "null"
                         ],
-                        "default": true,
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": []
-                        }
+                        "default": true
                     },
                     "venue": {
                         "title": "Venue",
@@ -65,11 +57,7 @@
                                 "const": "harbour",
                                 "title": "Harbour Centre"
                             }
-                        ],
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": []
-                        }
+                        ]
                     },
                     "room": {
                         "title": "Room",
@@ -101,7 +89,6 @@
                             }
                         ],
                         "x-surface": {
-                            "locked": false,
                             "dependsOn": [
                                 "venue"
                             ],
@@ -118,13 +105,11 @@
                         "minimum": 1,
                         "default": 50,
                         "x-surface": {
-                            "locked": false,
                             "dependsOn": [
                                 "room",
                                 "third_party_settings.data_surface_examples_compliance.license"
                             ],
-                            "enumerated": true,
-                            "declared": true
+                            "enumerated": true
                         }
                     },
                     "pricing": {
@@ -140,11 +125,7 @@
                                 "title": "Paid"
                             }
                         ],
-                        "default": "free",
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": []
-                        }
+                        "default": "free"
                     },
                     "ticket": {
                         "title": "Ticket",
@@ -160,7 +141,6 @@
                             }
                         ],
                         "x-surface": {
-                            "locked": false,
                             "dependsOn": [
                                 "pricing"
                             ],
@@ -173,11 +153,7 @@
                     },
                     "contact": {
                         "title": "Contact",
-                        "$ref": "#/$defs/registration.contact",
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": []
-                        }
+                        "$ref": "#/$defs/registration.contact"
                     },
                     "third_party_settings": {
                         "type": [
@@ -189,8 +165,6 @@
                                 "title": "Compliance",
                                 "$ref": "#/$defs/registration.compliance",
                                 "x-surface": {
-                                    "locked": false,
-                                    "dependsOn": [],
                                     "after": "capacity",
                                     "reads": {
                                         "capacity": "capacity"
@@ -200,7 +174,6 @@
                         },
                         "additionalProperties": false,
                         "x-surface": {
-                            "locked": false,
                             "dependsOn": [
                                 "capacity"
                             ],
@@ -531,11 +504,7 @@
                                 "type": [
                                     "string",
                                     "null"
-                                ],
-                                "x-surface": {
-                                    "locked": false,
-                                    "dependsOn": []
-                                }
+                                ]
                             }
                         },
                         "additionalProperties": false
@@ -547,11 +516,7 @@
                             "price": {
                                 "title": "Price",
                                 "type": "number",
-                                "minimum": 0.01,
-                                "x-surface": {
-                                    "locked": false,
-                                    "dependsOn": []
-                                }
+                                "minimum": 0.01
                             },
                             "currency": {
                                 "title": "Currency",
@@ -570,11 +535,7 @@
                                         "title": "USD"
                                     }
                                 ],
-                                "default": "EUR",
-                                "x-surface": {
-                                    "locked": false,
-                                    "dependsOn": []
-                                }
+                                "default": "EUR"
                             }
                         },
                         "additionalProperties": false,
@@ -590,22 +551,14 @@
                             "email": {
                                 "title": "Email",
                                 "type": "string",
-                                "format": "idn-email",
-                                "x-surface": {
-                                    "locked": false,
-                                    "dependsOn": []
-                                }
+                                "format": "idn-email"
                             },
                             "phone": {
                                 "title": "Phone",
                                 "type": [
                                     "string",
                                     "null"
-                                ],
-                                "x-surface": {
-                                    "locked": false,
-                                    "dependsOn": []
-                                }
+                                ]
                             }
                         },
                         "additionalProperties": false,
@@ -621,8 +574,6 @@
                                 "$ref": "#/$defs/event.license",
                                 "title": "Event license",
                                 "x-surface": {
-                                    "locked": false,
-                                    "dependsOn": [],
                                     "patternMessage": "A license number is four digits, such as 2048."
                                 }
                             },
@@ -631,7 +582,6 @@
                                 "type": "integer",
                                 "default": 1,
                                 "x-surface": {
-                                    "locked": false,
                                     "dependsOn": [
                                         "capacity"
                                     ]

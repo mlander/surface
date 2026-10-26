@@ -6,8 +6,8 @@ namespace Drupal\data_surface_resource_test\Keys;
 
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\DependencyInjection\ContainerInjectionInterface;
-use Drupal\data_surface\Resource\KeyedList;
-use Drupal\data_surface\Resource\KeysFromSiteInterface;
+use Drupal\data_surface\Resource\SiteList;
+use Drupal\data_surface\Resource\SiteListInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -18,7 +18,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * resource that asks for one per bench. A bench marked locked there is an
  * entry shown and held to what is stored.
  */
-final class WorkshopBenches implements KeysFromSiteInterface, ContainerInjectionInterface {
+final class WorkshopBenches implements SiteListInterface, ContainerInjectionInterface {
 
   /**
    * The configuration object the benches are listed in.
@@ -45,9 +45,9 @@ final class WorkshopBenches implements KeysFromSiteInterface, ContainerInjection
   /**
    * {@inheritdoc}
    */
-  public function keys(): KeyedList {
+  public function list(): SiteList {
     $config = $this->configFactory->get(self::CONFIG);
-    $keys = (new KeyedList())->addCacheableDependency($config);
+    $keys = (new SiteList())->addCacheableDependency($config);
     foreach ($config->get('benches') ?? [] as $id => $bench) {
       $keys->add((string) $id, (string) $bench['label'], locked: (bool) ($bench['locked'] ?? FALSE));
     }

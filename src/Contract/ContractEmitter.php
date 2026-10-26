@@ -16,10 +16,13 @@ use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\Core\Validation\ConstraintManager;
 use Drupal\data_surface\DataSurface;
+use Drupal\data_surface\Computed;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\DefinitionMap;
 use Drupal\data_surface\DefinitionMetadata;
+use Drupal\data_surface\Plugin\DataSurfaceWidget\AutocompleteWidget;
 use Drupal\data_surface\Plugin\DataSurfaceWidget\CheckboxesWidget;
+use Drupal\data_surface\Plugin\Validation\Constraint\JsonSchemaConstraint;
 use Drupal\data_surface\Plugin\DataSurfaceWidget\OptionsWidget;
 use Drupal\data_surface\Plugin\DataSurfaceWidget\RadiosWidget;
 use Drupal\data_surface\Plugin\DataSurfaceWidget\TimeWidget;
@@ -27,6 +30,8 @@ use Drupal\data_surface\Form\DataSurfaceFormBuilderInterface;
 use Drupal\data_surface\Options\DataSurfaceOptions;
 use Drupal\data_surface\Options\OptionSet;
 use Drupal\data_surface\Pipeline\ValueState;
+use Drupal\data_surface\Reference\EntityReferenceStructure;
+use Drupal\data_surface\Reference\References;
 use Drupal\data_surface\Resource\Arrangement;
 use Drupal\data_surface\Refinement\DeclaredRefiner;
 use Drupal\data_surface\Refinement\DoesNotApply;
@@ -36,6 +41,8 @@ use Drupal\data_surface\Port;
 use Drupal\data_surface\ResourceBuild\RefinesInputRefiner;
 use Drupal\data_surface\Entry;
 use Drupal\data_surface\Collection;
+use Drupal\data_surface\Pipeline\ResultDocument;
+use Drupal\data_surface\Widget\DataSurfaceWidgetManager;
 
 /**
  * Turns a sealed data surface and its values into the served contract.
@@ -117,7 +124,10 @@ use Drupal\data_surface\Collection;
  * checkbox. A list of values is checkboxes or a multiple select, and one
  * value radios when it asks for them, by the widgets' own rule
  * (CheckboxesWidget::drawsList(), RadiosWidget::drawsOne()); a list with
- * no option list is `list`, rows to add and remove. One hint has no
+ * no option list is `list`, rows to add and remove. A key a module's
+ * widget claims (DataSurfaceWidgetManager::claimed()) is that widget's
+ * word, ahead of the stock rule, unless its owner asked for one with the
+ * `widget` setting. One hint has no
  * Form API counterpart here: `variants`, for a key with variants, whose
  * shape a sibling chooses.
  *
@@ -153,10 +163,14 @@ final class ContractEmitter {
    * its stored values: this counts the changes to how every document is
    * spelled. Stated as `x-surface.contract` at the top of both documents
    * and answered as the `Contract-Version` header by the routes serving
-   * them. Contract 1 is what the module served until 2026-10-20.
-   * Decision: see docs/decisions.md#contract-2.
+   * them. Contract 1 is what the module served until 2026-10-20, contract
+   * 2 until 2026-10-22, contract 3 (the operation is the method, every
+   * path a JSON Pointer) until 2026-10-24; contract 4 cut the `x-surface`
+   * keywords that said nothing or said it twice, and moved no path.
+   * Decision: see
+   * docs/decisions.md#contract-4-fewer-keywords-nothing-new-on-the-wire.
    */
-  public const CONTRACT = 2;
+  public const CONTRACT = 4;
 
   /**
    * The keywords whose subschemas carry no `x-surface` in contract 2.
@@ -241,7 +255,9 @@ final class ContractEmitter {
    * are the data type's own, which `type` states; the three list
    * constraints are `oneOf`. Anything not here and not stated by a
    * keyword is named under `x-surface.checkedOnServer`, so a client knows
-   * the schema is not the whole story for that key.
+   * the schema is not the whole story for that key, unless the resolver
+   * reading it says its list is the whole of it, which is its `oneOf`
+   * (DataSurfaceOptions::isStatedByList()).
    */
   protected const STATED = [
     'NotNull',
@@ -276,6 +292,29 @@ final class ContractEmitter {
   protected array $refineCounts = ['refined' => 0, 'reused' => 0];
 
   /**
+   * The choices the full schema being written states in full, if any.
+   */
+  protected ?Choices $choices = NULL;
+
+  /**
+   * The URL of the full schema, which a deferred key's `fetch` adds to.
+   *
+   * NULL while a document no route serves is written: `fetch` is then
+   * only its query, read against the full schema's URL.
+   */
+  protected ?string $fetchBase = NULL;
+
+  /**
+   * Where the frame being described is.
+   *
+   * Its pointer, and the choices on the way to it, each a pointer and a
+   * value.
+   *
+   * @var array{pointer: string, steps: list<array{0: string, 1: string}>}
+   */
+  protected array $site = ['pointer' => '', 'steps' => []];
+
+  /**
    * Constructs a ContractEmitter.
    *
    * @param \Drupal\data_surface\Options\DataSurfaceOptions $options
@@ -285,11 +324,19 @@ final class ContractEmitter {
    * @param \Drupal\Core\Validation\ConstraintManager|null $constraints
    *   The constraint plugin manager, for what a constraint only the server
    *   checks says it checks (its label); without it, its id.
+   * @param \Drupal\data_surface\Contract\SiteListBudget|null $budget
+   *   How many entries of a list the site decides are spelled out; without
+   *   it, every one.
+   * @param \Drupal\data_surface\Widget\DataSurfaceWidgetManager|null $widgets
+   *   The widget manager, which says what a module's widget claims;
+   *   without it, the stock rule alone names the widget.
    */
   public function __construct(
     protected readonly DataSurfaceOptions $options,
     TranslationInterface $string_translation,
     protected readonly ?ConstraintManager $constraints = NULL,
+    protected readonly ?SiteListBudget $budget = NULL,
+    protected readonly ?DataSurfaceWidgetManager $widgets = NULL,
   ) {
     $this->stringTranslation = $string_translation;
   }
@@ -331,15 +378,22 @@ final class ContractEmitter {
    *   local references resolve wherever it is embedded; NULL for a
    *   document no route serves (the contract panel, a baseline), which
    *   has none.
+   * @param string|null $schema_url
+   *   The URL the operation's full schema is served at, which a deferred
+   *   key's `fetch` template is written against; NULL writes the template
+   *   as its query alone.
    *
    * @return \Drupal\data_surface\Contract\ServedContract
    *   The contract, and what it depends on.
    */
-  public function emit(DataSurfaceInterface $surface, array $values, string $resource_id, ?string $operation_id = NULL, string|\Stringable|null $label = NULL, bool $widgets = FALSE, array $operation = [], ?string $id = NULL): ServedContract {
+  public function emit(DataSurfaceInterface $surface, array $values, string $resource_id, ?string $operation_id = NULL, string|\Stringable|null $label = NULL, bool $widgets = FALSE, array $operation = [], ?string $id = NULL, ?string $schema_url = NULL): ServedContract {
     // Refined surfaces are remembered for this one document.
     // Decision: see docs/decisions.md#what-is-paid-once-and-what-per-request.
-    $was = $this->refined;
+    $was = [$this->refined, $this->choices, $this->fetchBase, $this->site];
     $this->refined = new \WeakMap();
+    $this->choices = NULL;
+    $this->fetchBase = $schema_url;
+    $this->site = ['pointer' => '', 'steps' => []];
     try {
       $cacheability = new CacheableMetadata();
       $stale = [];
@@ -358,7 +412,9 @@ final class ContractEmitter {
         'label' => $label === NULL ? NULL : PlainText::of($label),
         'schema' => $this->top($surface, $schema, $label, $operation, $id),
         'values' => $shown,
-        'stale' => $stale,
+        // Each a JSON Pointer, the one spelling a path has on the wire.
+        // Decision: see docs/decisions.md#one-result-at-every-door.
+        'stale' => array_map(ResultDocument::pointer(...), $stale),
       ];
       $outputs = $this->outputs($surface, $cacheability);
       if ($outputs !== NULL) {
@@ -367,7 +423,7 @@ final class ContractEmitter {
       return new ServedContract($document, $cacheability);
     }
     finally {
-      $this->refined = $was;
+      [$this->refined, $this->choices, $this->fetchBase, $this->site] = $was;
     }
   }
 
@@ -394,18 +450,22 @@ final class ContractEmitter {
    *   static refiners give it, wider than the pipeline for some values;
    * - access is the account's: emitted from a data surface built for the
    *   account alone (ResourcesInterface::buildStatic()), a key a static
-   *   answer locked is `readOnly` and `x-surface.locked`, one it left out
-   *   is not there, and one a runtime answer may still lock or leave out
-   *   is there, as the static answers leave it, marked
-   *   `x-surface.access: "live"`; the schema for these answers settles
-   *   it;
-   * - `x-surface` carries only what holds for any values: `locked`,
-   *   `access`, `dependsOn`, `enumerated`, `refine`, `live`, the variants'
-   *   `by` and `variants`, `group`, `after`, `patternMessage`,
-   *   `checkedOnServer`, and the widget hints when asked for. What is
-   *   only true of a moment (`refined`, `stale`, `emptyOption`, the
-   *   variants' `chosen`) is not written, and there is no `values` and no
-   *   `stale` beside the schema.
+   *   answer locked is `readOnly`, one it left out is not there, and one a
+   *   runtime answer may still lock or leave out is there, as the static
+   *   answers leave it, marked `live`, as a key a runtime refiner narrows
+   *   is; the schema for these answers settles it;
+   * - a list the site decides past the site list limit is `deferred`:
+   *   open, its `deferred` object holding a `fetch` template naming the
+   *   choice that states one of its entries; with choices, each one chosen
+   *   is stated in full at its key, as under the limit, and every other
+   *   entry is still left out;
+   * - `x-surface` carries only what holds for any values: `dependsOn`,
+   *   `enumerated`, `deferred`, `refine`, `live`, the variants' `by` and
+   *   `variants`, `group`, `after`, `patternMessage`, `checkedOnServer`,
+   *   and the widget hints when asked for, each only where it says
+   *   something. What is only true of a moment (`refined`, `stale`,
+   *   `emptyOption`, the variants' `chosen`) is not written, and there is
+   *   no `values` and no `stale` beside the schema.
    *
    * Decision: see
    * docs/decisions.md#two-documents-never-stricter-than-the-runtime.
@@ -427,6 +487,12 @@ final class ContractEmitter {
    *   How the operation behaves, as for emit().
    * @param string|null $id
    *   The URI the document is served at, as for emit().
+   * @param \Drupal\data_surface\Contract\Choices|null $choices
+   *   The choices to state in full (`?choose=`), resolved against the same
+   *   data surface; NULL or none for the plain full schema.
+   * @param string|null $schema_url
+   *   The URL of the plain full schema, which a deferred key's `fetch`
+   *   template is written against; NULL for `$id`.
    *
    * @return \Drupal\data_surface\Contract\ServedContract
    *   The document (`resource`, `operation`, `label`, `schema` and, when
@@ -434,11 +500,14 @@ final class ContractEmitter {
    *   on: the data surface and every option list read, never a stored
    *   value.
    */
-  public function emitFull(DataSurfaceInterface $surface, string $resource_id, ?string $operation_id = NULL, string|\Stringable|null $label = NULL, bool $widgets = FALSE, array $operation = [], ?string $id = NULL): ServedContract {
+  public function emitFull(DataSurfaceInterface $surface, string $resource_id, ?string $operation_id = NULL, string|\Stringable|null $label = NULL, bool $widgets = FALSE, array $operation = [], ?string $id = NULL, ?Choices $choices = NULL, ?string $schema_url = NULL): ServedContract {
     // Refined surfaces are remembered for this one document.
     // Decision: see docs/decisions.md#what-is-paid-once-and-what-per-request.
-    $was = $this->refined;
+    $was = [$this->refined, $this->choices, $this->fetchBase, $this->site];
     $this->refined = new \WeakMap();
+    $this->choices = $choices === NULL || $choices->isEmpty() ? NULL : $choices;
+    $this->fetchBase = $schema_url ?? $id;
+    $this->site = ['pointer' => '', 'steps' => []];
     try {
       $cacheability = new CacheableMetadata();
       $ignored = [];
@@ -463,7 +532,7 @@ final class ContractEmitter {
       return new ServedContract($document, $cacheability);
     }
     finally {
-      $this->refined = $was;
+      [$this->refined, $this->choices, $this->fetchBase, $this->site] = $was;
     }
   }
 
@@ -877,8 +946,8 @@ final class ContractEmitter {
   /**
    * Says at the top that the whole is locked, when an access answer said so.
    *
-   * Every key is already `readOnly` and `x-surface.locked`; the top says
-   * it too, so a client reading the document offers no submit.
+   * Every key is already `readOnly`; the top says it too, so a client
+   * reading the document offers no submit.
    *
    * Decision: see docs/decisions.md#locked-at-the-top.
    *
@@ -888,13 +957,12 @@ final class ContractEmitter {
    *   The top frame.
    *
    * @return array
-   *   The top frame, `readOnly` and `x-surface.locked` when locked whole.
+   *   The top frame, `readOnly` when locked whole.
    */
   protected function lockedWhole(DataSurfaceInterface $surface, array $schema): array {
     if ($surface->lockedWhole() === NULL) {
       return $schema;
     }
-    $schema[self::EXTENSION]['locked'] = TRUE;
     return ['readOnly' => TRUE] + $schema;
   }
 
@@ -1005,7 +1073,7 @@ final class ContractEmitter {
    *   a bare reference to its own def.
    * @param bool $frozen
    *   Whether the frame is a child its access locked, or is inside one:
-   *   every key is then described locked (`readOnly`, `x-surface.locked`)
+   *   every key is then described locked (`readOnly`, `const` where held)
    *   and holds what it was given, which is what is stored.
    * @param bool $blank
    *   Whether the frame stands for every item of a collection rather than
@@ -1103,31 +1171,73 @@ final class ContractEmitter {
           $enumerated = $this->enumerate($declared, $static, $entry, $values, $properties[$name], $prefix . $name, $cacheability, $kinds);
         }
       }
+      elseif ($entry->attachment !== NULL && ($full || $declaring) && $this->budget?->over($entry, $cacheability)) {
+        // Keys from the site, more than the site's list budget: an open
+        // map, `deferred`, its entries named by id and label alone, and
+        // how to fetch one entry's structure. The schema for these answers
+        // states every one; a full schema with a choice here, the entry
+        // chosen.
+        // Decision: see
+        // docs/decisions.md#a-list-left-out-for-size-is-deferred-not-refined.
+        $properties[$name] = $this->describe($current->definition) + ['type' => $this->nullable('object', $current->definition)];
+        if ($locked) {
+          $properties[$name]['readOnly'] = TRUE;
+        }
+        $pointer = $this->site['pointer'] . '/' . Choices::escape($name);
+        $picked = $this->choices?->entries($entry->attachment->child, $pointer) ?? [];
+        if ($picked !== []) {
+          [$stated, $requiring] = $this->entriesChosen($name, $entry->attachment, $owner . '.' . $name, $picked, $cacheability, $subschemas);
+          $properties[$name]['properties'] = $stated;
+          if ($requiring !== []) {
+            $properties[$name]['required'] = $requiring;
+          }
+        }
+        $entries = [];
+        foreach ($entry->attachment->child->getDefinitions()->entries() as $id => $each) {
+          $entries[] = ['id' => (string) $id, 'label' => (string) $each->definition->getLabel()];
+        }
+        $properties[$name][self::EXTENSION] = $this->extension('fieldset', $depends, FALSE) + [
+          'deferred' => [
+            'fetch' => $this->fetch($pointer),
+            'entries' => $entries,
+          ],
+        ];
+        $shown[$name] = new \stdClass();
+        if ($ahead_of_time) {
+          $enumerated = $this->enumerate($declared, $static, $entry, $values, $properties[$name], $prefix . $name, $cacheability, $kinds, TRUE);
+        }
+      }
       elseif ($entry->attachment !== NULL) {
         $attachment = $entry->attachment;
         $fallback = $owner . '.' . $name;
-        $key = $this->define($attachment, $fallback, $cacheability, $subschemas);
-        if ($declaring) {
-          $instance = $subschemas->get($key) ?? [];
-          $reference = $this->reference($key, NULL, $subschemas);
-          $shown[$name] = new \stdClass();
+        $around = $this->enter($name);
+        try {
+          $key = $this->define($attachment, $fallback, $cacheability, $subschemas);
+          if ($declaring) {
+            $instance = $subschemas->get($key) ?? [];
+            $reference = $this->reference($key, NULL, $subschemas);
+            $shown[$name] = new \stdClass();
+          }
+          else {
+            // Bound as the refinement of this frame bound it: a value its
+            // own key refuses is no value for a port either.
+            $child = ($current->attachment ?? $attachment)->bound($values);
+            $held = $values[$name] ?? NULL;
+            $inside = $full || $blank ? $this->known($child) : array_replace($child->getDefaultValues(), is_array($held) ? $held : []);
+            // A child its access locked is described locked through and
+            // through: every key inside it fixed to what it holds.
+            [$instance, $shown[$name]] = $this->instance($child, $key, $inside, $prefix . $name . '.', $attachment->id ?? $fallback, $cacheability, $stale, $subschemas, $standing, $locked, $blank);
+            $reference = $this->reference($key, $instance, $subschemas);
+          }
         }
-        else {
-          // Bound as the refinement of this frame bound it: a value its
-          // own key refuses is no value for a port either.
-          $child = ($current->attachment ?? $attachment)->bound($values);
-          $held = $values[$name] ?? NULL;
-          $inside = $full || $blank ? $this->known($child) : array_replace($child->getDefaultValues(), is_array($held) ? $held : []);
-          // A child its access locked is described locked through and
-          // through: every key inside it fixed to what it holds.
-          [$instance, $shown[$name]] = $this->instance($child, $key, $inside, $prefix . $name . '.', $attachment->id ?? $fallback, $cacheability, $stale, $subschemas, $standing, $locked, $blank);
-          $reference = $this->reference($key, $instance, $subschemas);
+        finally {
+          $this->site = $around;
         }
         $properties[$name] = $this->describe($current->definition) + $reference;
         if ($locked) {
           $properties[$name]['readOnly'] = TRUE;
         }
-        $properties[$name][self::EXTENSION] = $this->extension('fieldset', $locked, $depends, $this->anyRefined($instance));
+        $properties[$name][self::EXTENSION] = $this->extension('fieldset', $depends, $this->anyRefined($instance));
         if ($ahead_of_time) {
           // A parent's refiner of an attached key says only whether it
           // applies.
@@ -1183,7 +1293,7 @@ final class ContractEmitter {
           // whatever its widget, and shown as nothing. The caller sends
           // the path back and an empty answer there stands for the stored
           // value again, as for any stale key.
-          if (!$properties[$name][self::EXTENSION]['stale']) {
+          if (empty($properties[$name][self::EXTENSION]['stale'])) {
             $properties[$name][self::EXTENSION]['stale'] = TRUE;
             $stale[] = $prefix . $name;
           }
@@ -1216,10 +1326,11 @@ final class ContractEmitter {
         // An access answer only the subject decides was set aside for the
         // account alone: the key is as the static answers leave it, and
         // may be locked or left out once the subject is known, which the
-        // schema for these answers settles.
+        // schema for these answers settles: `live`, as a key a runtime
+        // refiner narrows, since a client does the same for both.
         // Decision: see
         // docs/decisions.md#access-is-static-or-runtime-read-from-its-cacheability.
-        $properties[$name][self::EXTENSION]['access'] = 'live';
+        $properties[$name][self::EXTENSION]['live'] = TRUE;
       }
       if ($at_site) {
         // Not stated here, so wherever its coded refiners may rule it
@@ -1245,19 +1356,15 @@ final class ContractEmitter {
         // coded refiners answer, as the pipeline runs them. One reading a
         // port is the site's to state.
         // Decision: see docs/decisions.md#a-rule-declared-as-data.
-        [$properties[$name], $stating, $requires, $stated] = $this->rules($entry, $current->definition, $properties[$name], $stating, $requires, $prefix . $name, $cacheability, array_keys($ports));
-        if ($stated) {
-          $properties[$name][self::EXTENSION]['declared'] = TRUE;
-        }
+        // The frame's `x-surface.rules` lists each conditional that states
+        // one; the key itself carries no marker.
+        [$properties[$name], $stating, $requires] = $this->rules($entry, $current->definition, $properties[$name], $stating, $requires, $prefix . $name, $cacheability, array_keys($ports));
       }
       if ($entry->mounted !== [] && !$declaring) {
         // The structures alters attached at their mounts: each module's
         // property a site of the structure's def, and what the structure
         // answers for keys its ports read stated here, on this frame.
         [$properties[$name], $branches] = $this->mounts($declared, $static, $entry, $current, $properties[$name], $values, $prefix, $owner, $cacheability, $subschemas, $standing, $locked, $blank, $kinds, $runtime);
-        if (array_filter($branches, static fn (array $branch): bool => ($branch[self::EXTENSION]['declared'] ?? FALSE) === TRUE) !== []) {
-          $properties[$name][self::EXTENSION]['declared'] = TRUE;
-        }
         array_push($stating, ...$branches);
       }
       array_push($conditions, ...$stating);
@@ -1299,6 +1406,13 @@ final class ContractEmitter {
         'type' => $port->type,
         'required' => $port->required,
       ] + ($port->shape === NULL ? [] : ['shape' => $port->shape]), $listed);
+    }
+    if ($advertised->frameConstraints() !== []) {
+      // What a schema read into this frame says of the object as a whole,
+      // which no keyword here states: checked by the pipeline.
+      // Decision: see
+      // docs/decisions.md#a-schema-can-be-read-back-into-a-structure.
+      $schema[self::EXTENSION]['checkedOnServer'] = array_map(fn (array $foreign): array => static::foreign($foreign, $this->stringTranslation), $advertised->frameConstraints());
     }
     if ($advertised->mixins() !== []) {
       // Decision: see docs/decisions.md#a-mixin-is-merged-flat.
@@ -1392,25 +1506,38 @@ final class ContractEmitter {
    *
    * @param \Drupal\data_surface\DataSurfaceInterface $surface
    *   The data surface.
+   * @param array<int, true> $seen
+   *   The frames walked, by object id.
    *
    * @return string[]
    *   Their ids: each one's def is written open in this document.
    */
-  protected function mixedIn(DataSurfaceInterface $surface): array {
+  protected function mixedIn(DataSurfaceInterface $surface, array &$seen = []): array {
+    // A sealed child may be held at many keys: each is walked once.
+    if (isset($seen[spl_object_id($surface)])) {
+      return [];
+    }
+    $seen[spl_object_id($surface)] = TRUE;
     $ids = [];
     foreach ($surface->getDefinitions()->mixins() as $mixin) {
       $ids[] = (string) ($mixin->structure->id ?? $mixin->structure->source);
-      array_push($ids, ...$this->mixedIn($mixin->structure->child));
+      array_push($ids, ...$this->mixedIn($mixin->structure->child, $seen));
     }
     foreach ($surface->getDefinitions()->entries() as $entry) {
       $children = match (TRUE) {
+        // A list the site decides past its budget is stated by value, and
+        // a variant of it only where a door chose it, which walks it then
+        // (Subschemas::openAlso()): one not built yet is not built here.
+        // Decision: see
+        // docs/decisions.md#the-static-build-is-cached-the-rest-is-per-request.
+        $entry->variants !== NULL && $this->budget?->variantsOver($entry->variants) => array_filter($entry->variants->variants, static fn (Attachment $variant): bool => $variant->isSettled()),
         $entry->variants !== NULL => $entry->variants->variants,
         $entry->attachment !== NULL => [$entry->attachment],
         $entry->list !== NULL => [$entry->list->item],
         default => [],
       };
       foreach ([...$children, ...$entry->mounted] as $child) {
-        array_push($ids, ...$this->mixedIn($child->child));
+        array_push($ids, ...$this->mixedIn($child->child, $seen));
       }
     }
     return array_values(array_unique($ids));
@@ -1481,7 +1608,7 @@ final class ContractEmitter {
    *
    * @return array{0: array, 1: array<string, true>}
    *   The conditionals, and the markers the site carries: `enumerated`
-   *   or `refine`, and `declared`.
+   *   or `refine`.
    */
   protected function site(DataSurfaceInterface $declared, DataSurfaceInterface $static, Entry $entry, Attachment $attachment, string $below, array $values, string $path, CacheableMetadata $cacheability, int $kinds, bool $runtime, ?array $inline = NULL): array {
     $map = $attachment->child->getDefinitions();
@@ -1561,7 +1688,6 @@ final class ContractEmitter {
       $pseudo = new Entry($entry->name, $definition, refiners: [DataSurfaceInterface::OWNER => $links]);
       [, $stated] = $this->rules($pseudo, $definition, $base, [], FALSE, $path, $cacheability);
       array_push($branches, ...$stated);
-      $markers['declared'] = TRUE;
     }
     return [$branches, $markers];
   }
@@ -1750,12 +1876,18 @@ final class ContractEmitter {
         [$stated, $markers] = $this->site($declared, $static, $entry, $attachment, $module, $values, $path, $cacheability, $kinds, $runtime, $property);
         array_push($branches, ...$stated);
       }
-      $key = $this->define($attachment, $owner . '.' . $entry->name . '.' . $module, $cacheability, $subschemas);
-      $child = $attachment->bound($values);
-      $held = NestedArray::getValue($values, [$entry->name, $module]);
-      $inside = $subschemas->full || $blank ? $this->known($child) : array_replace($child->getDefaultValues(), is_array($held) ? $held : []);
-      $ignored = [];
-      [$instance] = $this->instance($child, $key, $inside, $path . '.' . $module . '.', $attachment->id ?? $key, $cacheability, $ignored, $subschemas, $standing, $locked, $blank);
+      $around = $this->enter($entry->name, $module);
+      try {
+        $key = $this->define($attachment, $owner . '.' . $entry->name . '.' . $module, $cacheability, $subschemas);
+        $child = $attachment->bound($values);
+        $held = NestedArray::getValue($values, [$entry->name, $module]);
+        $inside = $subschemas->full || $blank ? $this->known($child) : array_replace($child->getDefaultValues(), is_array($held) ? $held : []);
+        $ignored = [];
+        [$instance] = $this->instance($child, $key, $inside, $path . '.' . $module . '.', $attachment->id ?? $key, $cacheability, $ignored, $subschemas, $standing, $locked, $blank);
+      }
+      finally {
+        $this->site = $around;
+      }
       $map = $current->definition instanceof ComplexDataDefinitionInterface ? $current->definition->getPropertyDefinition($module) : NULL;
       $site = ($map === NULL ? [] : $this->describe($map)) + $this->reference($key, $instance, $subschemas);
       if (isset($inline['readOnly'])) {
@@ -1866,10 +1998,9 @@ final class ContractEmitter {
    *   site that wires it states it, and a key it may rule out is not
    *   required here.
    *
-   * @return array{0: array, 1: array, 2: bool, 3: bool}
-   *   The property, the key's conditionals, the coded ones first,
-   *   whether the frame still requires the key, and whether any rule was
-   *   stated here.
+   * @return array{0: array, 1: array, 2: bool}
+   *   The property, the key's conditionals, the coded ones first, and
+   *   whether the frame still requires the key.
    */
   protected function rules(Entry $entry, DataDefinitionInterface $definition, array $property, array $branches, bool $requires, string $path, CacheableMetadata $cacheability, array $ports = []): array {
     $name = $entry->name;
@@ -1877,7 +2008,6 @@ final class ContractEmitter {
     $base = $applicability ? [] : $this->stated($entry, $definition, $path, $cacheability);
     $declared = [];
     $ruling = [];
-    $stated = FALSE;
     foreach ($entry->refiners as $chain) {
       foreach ($chain as $link) {
         if (!$link instanceof DeclaredRefiner) {
@@ -1898,7 +2028,6 @@ final class ContractEmitter {
             }
             continue;
           }
-          $stated = TRUE;
           $paths = [];
           foreach ($condition->keys() as $key) {
             $paths[$key] = $link->pathOf($key);
@@ -1972,7 +2101,7 @@ final class ContractEmitter {
         ];
       }
     }
-    return [$property, $branches, $requires, $stated];
+    return [$property, $branches, $requires];
   }
 
   /**
@@ -2088,7 +2217,7 @@ final class ContractEmitter {
    * The list is the parent's key, so its own property says what the
    * parent says about it: its title and description, `minItems` and
    * `maxItems` from its Count as the parent's refiners left it, whether
-   * it is locked, and `x-surface.list`. Its `items` refer to the child's
+   * it is locked, and `x-surface.collection`. Its `items` refer to the child's
    * def, as an attached child's property does, narrowed by composition
    * only where every item differs from the def (a key the child's
    * operation locked, a list locked whole): described from the child's
@@ -2141,14 +2270,22 @@ final class ContractEmitter {
   protected function collection(DataSurfaceInterface $declared, Collection $list, Entry $current, Entry $entry, array $values, string $path, string $owner, CacheableMetadata $cacheability, array &$stale, Subschemas $subschemas, array $standing, bool $declaring, bool $locked, array $depends): array {
     $child = $list->child();
     $fallback = $owner . '.' . $entry->name;
-    $key = $this->define($list->item, $fallback, $cacheability, $subschemas);
-    if ($declaring) {
-      $items = $this->reference($key, NULL, $subschemas);
+    // Every item is one structure: a key inside one is named by the
+    // first item's index.
+    $around = $this->enter($entry->name, '0');
+    try {
+      $key = $this->define($list->item, $fallback, $cacheability, $subschemas);
+      if ($declaring) {
+        $items = $this->reference($key, NULL, $subschemas);
+      }
+      else {
+        $ignored = [];
+        [$instance] = $this->instance($child, $key, $this->known($child), $path . '.*.', $list->item->id ?? $fallback, $cacheability, $ignored, $subschemas, [], $locked, TRUE);
+        $items = $this->reference($key, $instance, $subschemas);
+      }
     }
-    else {
-      $ignored = [];
-      [$instance] = $this->instance($child, $key, $this->known($child), $path . '.*.', $list->item->id ?? $fallback, $cacheability, $ignored, $subschemas, [], $locked, TRUE);
-      $items = $this->reference($key, $instance, $subschemas);
+    finally {
+      $this->site = $around;
     }
     $definition = $current->definition;
     [$schema, $extras] = $this->listKeywords($definition);
@@ -2159,7 +2296,7 @@ final class ContractEmitter {
     if ($locked) {
       $schema['readOnly'] = TRUE;
     }
-    $schema[self::EXTENSION] = $this->extension('list', $locked, $depends, $this->signature($entry->definition) !== $this->signature($definition)) + ['list' => TRUE] + $extras;
+    $schema[self::EXTENSION] = $this->extension('list', $depends, $this->signature($entry->definition) !== $this->signature($definition)) + ['collection' => TRUE] + $extras;
 
     $shown = NULL;
     $held = $values[$entry->name] ?? $declared->getDefault($entry->name);
@@ -2300,6 +2437,21 @@ final class ContractEmitter {
    *   TRUE when a key of it, or of a child inside it, is locked or marked.
    */
   protected function locks(DataSurfaceInterface $surface): bool {
+    static $asked = NULL;
+    $asked ??= new \WeakMap();
+    return $asked[$surface] ??= $this->locksBelow($surface);
+  }
+
+  /**
+   * Answers locks() for a data surface not asked about before.
+   *
+   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   *   The data surface.
+   *
+   * @return bool
+   *   TRUE when a key of it, or of a child inside it, is locked or marked.
+   */
+  protected function locksBelow(DataSurfaceInterface $surface): bool {
     foreach ($surface->getDefinitions()->entries() as $entry) {
       $children = match (TRUE) {
         $entry->variants !== NULL => $entry->variants->variants,
@@ -2449,6 +2601,98 @@ final class ContractEmitter {
   }
 
   /**
+   * Moves where the frame being described is, one key down.
+   *
+   * @param string $name
+   *   The key the next frame is at.
+   * @param string|null $below
+   *   A segment past the key: a collection's item, a mount's module.
+   * @param string|null $chosen
+   *   The variant the next frame is, reached by choosing it at the key.
+   *
+   * @return array{pointer: string, steps: list<array{0: string, 1: string}>}
+   *   Where the frame was, to put back once the next one is described.
+   */
+  protected function enter(string $name, ?string $below = NULL, ?string $chosen = NULL): array {
+    $was = $this->site;
+    $pointer = $was['pointer'] . '/' . Choices::escape($name);
+    $steps = $was['steps'];
+    if ($chosen !== NULL) {
+      $steps[] = [$pointer, $chosen];
+    }
+    $this->site = [
+      'pointer' => $below === NULL ? $pointer : $pointer . '/' . Choices::escape($below),
+      'steps' => $steps,
+    ];
+    return $was;
+  }
+
+  /**
+   * Writes how to fetch the full schema with one entry of a key stated.
+   *
+   * An RFC 6570 template: the full schema's URL with `choose` added for
+   * every variant on the way to the key and one for the key itself, its
+   * value the expression `{value}`, which a client fills with the
+   * deciding key's value or the entry's id.
+   *
+   * Decision: see
+   * docs/decisions.md#a-list-left-out-for-size-is-deferred-not-refined.
+   *
+   * @param string $pointer
+   *   The key's JSON Pointer.
+   *
+   * @return string
+   *   The template.
+   */
+  protected function fetch(string $pointer): string {
+    $choices = [];
+    foreach ($this->site['steps'] as [$at, $value]) {
+      $choices[$at][] = $value;
+    }
+    $query = Choices::query($choices);
+    $query .= ($query === '' ? '' : '&') . Choices::PARAMETER . '=' . Choices::encode($pointer) . '=' . Choices::VALUE;
+    $base = $this->fetchBase ?? '';
+    return $base . (str_contains($base, '?') ? '&' : '?') . $query;
+  }
+
+  /**
+   * States the entries chosen of a map of keys from the site.
+   *
+   * Each as the map's def states it under the limit, read from the map's
+   * own frame for no values; the rest are left out.
+   *
+   * @param string $name
+   *   The map's key.
+   * @param \Drupal\data_surface\Attachment $attachment
+   *   The map, attached at its key.
+   * @param string $fallback
+   *   The id to describe it under when it has none of its own.
+   * @param list<string> $picked
+   *   The ids chosen.
+   * @param \Drupal\Core\Cache\CacheableMetadata $cacheability
+   *   Collects what the description depends on.
+   * @param \Drupal\data_surface\Contract\Subschemas $subschemas
+   *   The document's defs, which an entry's structure is filed in.
+   *
+   * @return array{0: array<string, mixed>, 1: list<string>}
+   *   The entries' properties, in the map's order, and those required.
+   */
+  protected function entriesChosen(string $name, Attachment $attachment, string $fallback, array $picked, CacheableMetadata $cacheability, Subschemas $subschemas): array {
+    $around = $this->enter($name);
+    try {
+      $ignored = [];
+      [$map] = $this->frame($attachment->child, [], '', $attachment->id ?? $fallback, $cacheability, $ignored, $subschemas, [], TRUE);
+    }
+    finally {
+      $this->site = $around;
+    }
+    $chosen = array_flip($picked);
+    $properties = array_intersect_key(is_array($map['properties'] ?? NULL) ? $map['properties'] : [], $chosen);
+    $required = array_values(array_filter(is_array($map['required'] ?? NULL) ? $map['required'] : [], static fn (mixed $id): bool => isset($chosen[(string) $id])));
+    return [$properties, $required];
+  }
+
+  /**
    * Gives the document its `$defs`, when it has any.
    *
    * @param \Drupal\data_surface\Contract\Subschemas $subschemas
@@ -2530,36 +2774,78 @@ final class ContractEmitter {
     if ($frozen) {
       $property['readOnly'] = TRUE;
     }
-    $property[self::EXTENSION] = $this->extension('variants', $frozen, $depends, $chosen !== NULL) + [
+    $property[self::EXTENSION] = $this->extension('variants', $depends, $chosen !== NULL) + [
       'by' => $variants->by,
       'variants' => [],
-      'chosen' => $chosen,
     ];
-    $union = [];
+    if ($chosen !== NULL) {
+      $property[self::EXTENSION]['chosen'] = $chosen;
+    }
     // Variants nothing has chosen keep what the key holds: it has no
     // element, so it says nothing about it.
     $shown = $held;
-    $branches = [];
-    foreach ($variants->variants as $id => $variant) {
-      $id = (string) $id;
-      $child = $variant->child;
-      $fallback = $owner . '.' . $entry->name . '.' . $id;
-      $key = $this->define($variant, $fallback, $cacheability, $subschemas);
-      $is_chosen = !$full && !$declaring && !$blank && $id === $chosen;
-      if ($declaring) {
-        $instance = $subschemas->get($key) ?? [];
-        $reference = $this->reference($key, NULL, $subschemas);
+    $listed = $variants->variants;
+    $deferred = FALSE;
+    if ($this->budget?->variantsOver($variants, $cacheability)) {
+      // More than the site's list budget: no def and no conditional per
+      // variant. With nothing chosen (and in the full schema, which chooses
+      // nothing) the key is an open object, `deferred`, its deciding key
+      // named and how to fetch one variant written beside it; a full
+      // schema fetched with a choice here states the variants chosen, each
+      // its def and its conditional, and leaves the key open for the rest.
+      // With a value chosen, the schema for these answers states the
+      // chosen variant alone.
+      // Decision: see
+      // docs/decisions.md#a-list-left-out-for-size-is-deferred-not-refined.
+      if ($full || $declaring || $blank || $chosen === NULL) {
+        $pointer = $this->site['pointer'] . '/' . Choices::escape($entry->name);
+        $property[self::EXTENSION]['deferred'] = ['fetch' => $this->fetch($pointer)];
+        $picked = $this->choices?->variants($variants, $pointer) ?? [];
+        if ($picked === []) {
+          unset($property[self::EXTENSION]['variants']);
+          return [$property, $shown, []];
+        }
+        $deferred = TRUE;
+        $listed = array_intersect_key($variants->variants, array_flip($picked));
       }
       else {
-        $own = $is_chosen && $variants->fits($id, $held) ? $held : [];
-        $variant_stale = [];
-        $inside = $full || $blank ? $this->known($child) : array_replace($child->getDefaultValues(), $own);
-        [$instance, $variant_values] = $this->instance($child, $key, $inside, $path . '.', $variant->id ?? $fallback, $cacheability, $variant_stale, $subschemas, $is_chosen ? $standing : [], $frozen, $blank);
-        if ($is_chosen) {
-          $shown = $variant_values;
-          array_push($stale, ...$variant_stale);
+        $listed = [$chosen => $variants->variant($chosen)];
+      }
+    }
+    $union = [];
+    $branches = [];
+    foreach ($listed as $id => $variant) {
+      $id = (string) $id;
+      $child = $variant->child;
+      if ($listed !== $variants->variants) {
+        // Chosen past the budget: built now, so what it mixes in is known
+        // now, before its def is written.
+        $subschemas->openAlso($this->mixedIn($child));
+      }
+      $fallback = $owner . '.' . $entry->name . '.' . $id;
+      $is_chosen = !$full && !$declaring && !$blank && $id === $chosen;
+      // Below a variant, a key is reached through the choice of it.
+      $around = $this->enter($entry->name, NULL, $id);
+      try {
+        $key = $this->define($variant, $fallback, $cacheability, $subschemas);
+        if ($declaring) {
+          $instance = $subschemas->get($key) ?? [];
+          $reference = $this->reference($key, NULL, $subschemas);
         }
-        $reference = $this->reference($key, $instance, $subschemas);
+        else {
+          $own = $is_chosen ? ($variants->held($id, $held) ?? []) : [];
+          $variant_stale = [];
+          $inside = $full || $blank ? $this->known($child) : array_replace($child->getDefaultValues(), $own);
+          [$instance, $variant_values] = $this->instance($child, $key, $inside, $path . '.', $variant->id ?? $fallback, $cacheability, $variant_stale, $subschemas, $is_chosen ? $standing : [], $frozen, $blank);
+          if ($is_chosen) {
+            $shown = $variant_values;
+            array_push($stale, ...$variant_stale);
+          }
+          $reference = $this->reference($key, $instance, $subschemas);
+        }
+      }
+      finally {
+        $this->site = $around;
       }
       $schema = $shell + $reference;
       // Which def each value chooses, said on the key: nothing below the
@@ -2576,7 +2862,9 @@ final class ContractEmitter {
         ],
       ];
     }
-    if ($union !== []) {
+    // A deferred key keeps its type: the union of the variants chosen
+    // would refuse every other, which the pipeline accepts.
+    if ($union !== [] && !$deferred) {
       if (in_array('null', (array) $property['type'], TRUE)) {
         $union[] = ['type' => 'null'];
       }
@@ -2587,8 +2875,14 @@ final class ContractEmitter {
       unset($property[self::EXTENSION], $property['type']);
       $property += ['anyOf' => $union, self::EXTENSION => $extension];
     }
-    // A map whose keys are numeric strings is still a map.
-    $property[self::EXTENSION]['variants'] = (object) $property[self::EXTENSION]['variants'];
+    if ($property[self::EXTENSION]['variants'] === []) {
+      // No variant to name: absent says the same as empty.
+      unset($property[self::EXTENSION]['variants']);
+    }
+    else {
+      // A map whose keys are numeric strings is still a map.
+      $property[self::EXTENSION]['variants'] = (object) $property[self::EXTENSION]['variants'];
+    }
     return [$property, $shown, $branches];
   }
 
@@ -3126,9 +3420,9 @@ final class ContractEmitter {
       // Decision: see docs/decisions.md#a-widget-is-chosen-from-the-definition.
       $checkboxes = $set !== NULL && CheckboxesWidget::drawsList($definition, $set);
       $extension = match (TRUE) {
-        $checkboxes => $this->extension('checkboxes', $locked, $depends, $refined),
-        $listed => $this->extension('select', $locked, $depends, $refined) + ['multiple' => TRUE],
-        default => $this->extension('list', $locked, $depends, $refined),
+        $checkboxes => $this->extension('checkboxes', $depends, $refined),
+        $listed => $this->extension('select', $depends, $refined) + ['multiple' => TRUE],
+        default => $this->extension('list', $depends, $refined),
       };
       $shown = is_array($value) ? array_values($value) : $value;
     }
@@ -3157,7 +3451,7 @@ final class ContractEmitter {
       if ($required !== []) {
         $schema['required'] = $required;
       }
-      $extension = $this->extension('fieldset', $locked, $depends, $refined || $this->anyRefined($schema));
+      $extension = $this->extension('fieldset', $depends, $refined || $this->anyRefined($schema));
       if (DefinitionMetadata::isGrouping($definition)) {
         // Only groups the fieldsets inside it, as on the form: no title
         // and no description to draw, and `group` says to draw none.
@@ -3181,8 +3475,38 @@ final class ContractEmitter {
       }
       $schema += $type + $this->keywords($definition, $type['type'] ?? NULL);
       $radios = $listed && RadiosWidget::drawsOne($definition);
-      $extension = $this->extension($listed ? ($radios ? 'radios' : 'select') : $this->widget($definition), $locked, $depends, $refined);
-      if ($listed) {
+      $fixed = $listed && OptionsWidget::drawsFixed($definition, $set, $value);
+      // A reference with too many candidates to list is looked up.
+      // Decision: see
+      // docs/decisions.md#a-reference-is-an-id-with-a-list-the-site-decides-listed-or-looked-up.
+      // A module's widget that claims the key, unless its owner asked for
+      // one by name: the word it answers to.
+      // Decision: see docs/decisions.md#a-widget-is-chosen-from-the-definition.
+      $claimed = $this->widgets?->claimed($definition);
+      $widget = match (TRUE) {
+        $claimed !== NULL => DataSurfaceWidgetManager::wordOf($claimed),
+        $fixed => 'fixed',
+        $listed => $radios ? 'radios' : 'select',
+        // A bare reference's id is drawn once its entity type is chosen:
+        // listed, or looked up.
+        AutocompleteWidget::draws($definition), $definition->getSetting(EntityReferenceStructure::TARGETS) !== NULL => 'autocomplete',
+        default => $this->widget($definition),
+      };
+      $extension = $this->extension($widget, $depends, $refined);
+      $reference = static::referenceMarker($definition);
+      if ($reference !== NULL) {
+        $extension['reference'] = $reference;
+      }
+      if ($fixed) {
+        // A deciding key whose variants offer one value: that value, and
+        // the label it is offered as, which the form draws fixed.
+        // Decision: see
+        // docs/decisions.md#an-extension-is-a-variant-the-site-adds-or-an-alter.
+        $only = $this->choices($set, $definition)[0];
+        $schema['const'] = $only['const'];
+        $extension['fixed'] = $only['title'];
+      }
+      elseif ($listed) {
         $schema['oneOf'] = $this->choices($set, $definition);
         // Decision: see docs/decisions.md#the-empty-option-rule.
         $configured = ValueState::isConfigured($value);
@@ -3230,6 +3554,15 @@ final class ContractEmitter {
       if (ValueState::isConfigured($value)) {
         $schema['const'] = $value;
       }
+    }
+    $computed = Computed::of($definition);
+    if ($computed !== NULL && !$locked) {
+      // Shown, never offered: a value nobody types, with no `const`, since
+      // what it holds follows the keys it is computed from.
+      // Decision: see
+      // docs/decisions.md#a-computed-key-is-a-pure-function-of-its-sources.
+      $schema['readOnly'] = TRUE;
+      $extension['computed'] = $computed->marker();
     }
     if (isset($schema[self::EXTENSION . '-checked'])) {
       $extension['checkedOnServer'] = $schema[self::EXTENSION . '-checked'];
@@ -3391,12 +3724,17 @@ final class ContractEmitter {
   }
 
   /**
-   * Builds the `x-surface` keyword's always-present part.
+   * Builds a key's `x-surface` keyword, each part only where it says something.
+   *
+   * A locked key says it with `readOnly`, and a key with nothing to say
+   * of a part leaves it out: no `dependsOn: []`, no `refined: false`, and
+   * `stale` only where it is stale (frame(), property()).
+   *
+   * Decision: see
+   * docs/decisions.md#contract-4-fewer-keywords-nothing-new-on-the-wire.
    *
    * @param string|null $widget
    *   The widget hint, or NULL when no widget would claim the key.
-   * @param bool $locked
-   *   Whether the key is locked.
    * @param string[] $depends
    *   The sibling keys its refiners watch; a mounted one by its dotted
    *   path in the frame.
@@ -3406,14 +3744,41 @@ final class ContractEmitter {
    * @return array
    *   The keyword.
    */
-  protected function extension(?string $widget, bool $locked, array $depends, bool $refined): array {
-    return [
-      'widget' => $widget,
-      'locked' => $locked,
-      'dependsOn' => array_values($depends),
-      'refined' => $refined,
-      'stale' => FALSE,
-    ];
+  protected function extension(?string $widget, array $depends, bool $refined): array {
+    $extension = ['widget' => $widget];
+    if ($depends !== []) {
+      $extension['dependsOn'] = array_values($depends);
+    }
+    if ($refined) {
+      $extension['refined'] = TRUE;
+    }
+    return $extension;
+  }
+
+  /**
+   * Says what a key that refers to an entity refers to.
+   *
+   * `{entityType, bundles?}` for a key that names one entity type, as
+   * `entity:<type>[:<bundle>]` builds it and a bare `entity` key's id is
+   * once its entity type is chosen; `{by: "entity_type"}` for that id
+   * before it is, its entity type its sibling's value. The id is the value
+   * either way.
+   *
+   * Decision: see
+   * docs/decisions.md#a-reference-is-an-id-with-a-list-the-site-decides-listed-or-looked-up.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The key.
+   *
+   * @return array|null
+   *   The marker, or NULL for a key that refers to nothing.
+   */
+  protected static function referenceMarker(DataDefinitionInterface $definition): ?array {
+    $target = References::target($definition);
+    if ($target !== NULL) {
+      return $target['bundles'] === [] ? ['entityType' => $target['entityType']] : $target;
+    }
+    return $definition->getSetting(EntityReferenceStructure::TARGETS) !== NULL ? ['by' => 'entity_type'] : NULL;
   }
 
   /**
@@ -3481,7 +3846,8 @@ final class ContractEmitter {
    *   Whether the schema requires it.
    */
   protected static function required(DataDefinitionInterface $definition): bool {
-    return $definition->isRequired() && !DefinitionMetadata::isSecret($definition);
+    // Nor is a computed key asked of a caller.
+    return $definition->isRequired() && !DefinitionMetadata::isSecret($definition) && Computed::of($definition) === NULL;
   }
 
   /**
@@ -3663,7 +4029,9 @@ final class ContractEmitter {
           break;
 
         default:
-          if (!in_array($name, self::STATED, TRUE)) {
+          // A constraint whose resolver says it is its list is the `oneOf`
+          // the list is written as.
+          if (!in_array($name, self::STATED, TRUE) && !$this->options->isStatedByList((string) $name)) {
             $unstated[] = $this->checked((string) $name, $options);
           }
       }
@@ -3692,6 +4060,14 @@ final class ContractEmitter {
    *   The entry.
    */
   protected function checked(string $name, mixed $options): array {
+    if ($name === 'JsonSchema' && is_array($options)) {
+      // What a structure read from a schema kept of it and no keyword of
+      // this document states: the keywords, and the schema itself, so a
+      // reader reads it back as the same constraint.
+      // Decision: see
+      // docs/decisions.md#a-schema-can-be-read-back-into-a-structure.
+      return static::foreign(is_array($options['schema'] ?? NULL) ? $options['schema'] : [], $this->stringTranslation);
+    }
     $message = is_array($options) ? ($options['message'] ?? NULL) : NULL;
     if (is_string($message) && $message !== '') {
       // phpcs:ignore Drupal.Semantics.FunctionT.NotLiteralString
@@ -3702,6 +4078,26 @@ final class ContractEmitter {
       $message = $label instanceof \Stringable || (is_string($label) && $label !== '') ? $label : $name;
     }
     return ['constraint' => $name, 'message' => PlainText::of($message)];
+  }
+
+  /**
+   * Names a JSON Schema only the server checks, and says which keywords.
+   *
+   * @param array $schema
+   *   The schema a JsonSchema constraint holds a value, or a frame, to.
+   * @param \Drupal\Core\StringTranslation\TranslationInterface $translation
+   *   The string translation service, for the message.
+   *
+   * @return array{constraint: string, message: string, schema: array|\stdClass}
+   *   The entry: `checkedOnServer`'s, with the schema beside the message.
+   */
+  public static function foreign(array $schema, TranslationInterface $translation): array {
+    $keywords = JsonSchemaConstraint::keywords($schema);
+    return [
+      'constraint' => 'JsonSchema',
+      'message' => PlainText::of(new TranslatableMarkup('Checked on the server against the schema it was read from: @keywords.', ['@keywords' => implode(', ', $keywords)], [], $translation)),
+      'schema' => $schema === [] ? new \stdClass() : $schema,
+    ];
   }
 
   /**
@@ -3780,7 +4176,9 @@ final class ContractEmitter {
   protected function choices(OptionSet $set, DataDefinitionInterface $definition): array {
     $choices = [];
     foreach ($set->options as $value => $label) {
-      $choice = ['const' => $this->cast($value, $definition), 'title' => PlainText::of($label)];
+      // A Choice of numbers is labeled by them, as numbers.
+      $title = PlainText::of(is_int($label) || is_float($label) ? (string) $label : $label);
+      $choice = ['const' => $this->cast($value, $definition), 'title' => $title];
       if (isset($set->descriptions[$value])) {
         $choice['description'] = PlainText::of($set->descriptions[$value]);
       }
@@ -3900,7 +4298,8 @@ final class ContractEmitter {
    *
    * @return array
    *   The schema, its `x-surface` keywords without `refined`, `stale`,
-   *   `emptyOption` and the variants' `chosen`.
+   *   `emptyOption` and the variants' `chosen`, and with no `x-surface`
+   *   where nothing else was said.
    */
   protected function withoutPresent(array $schema): array {
     foreach ($schema as $key => $value) {
@@ -3909,6 +4308,10 @@ final class ContractEmitter {
       }
       if ($key === self::EXTENSION) {
         unset($value['refined'], $value['stale'], $value['emptyOption'], $value['chosen']);
+        if ($value === []) {
+          unset($schema[$key]);
+          continue;
+        }
         $schema[$key] = $value;
       }
       else {
@@ -3957,7 +4360,8 @@ final class ContractEmitter {
    *
    * @return array
    *   The schema, its `x-surface` keywords without `widget`, `multiple`
-   *   and `arrangement`.
+   *   and `arrangement`, and with no `x-surface` where nothing else was
+   *   said.
    */
   protected function withoutWidgets(array $schema): array {
     foreach ($schema as $key => $value) {
@@ -3966,6 +4370,10 @@ final class ContractEmitter {
       }
       if ($key === self::EXTENSION) {
         unset($value['widget'], $value['multiple'], $value['arrangement']);
+        if ($value === []) {
+          unset($schema[$key]);
+          continue;
+        }
         $schema[$key] = $value;
       }
       else {

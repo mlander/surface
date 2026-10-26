@@ -1,0 +1,9 @@
+# The keys the site manages: example 14's stand-in for the Key module. Each
+# is named here; its value is never stored by the resource that uses it.
+keys:
+  -
+    id: mail_service
+    label: 'Mail service'
+  -
+    id: webhook_signing
+    label: 'Webhook signing'

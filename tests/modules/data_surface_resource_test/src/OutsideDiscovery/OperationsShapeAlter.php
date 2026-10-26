@@ -12,7 +12,7 @@ use Drupal\data_surface_resource_test\Shape\Sku;
 /**
  * Alters a shape in one operation only, which a shape has none of.
  */
-#[Alters(Sku::class, operations: ['edit'])]
+#[Alters(Sku::class, operations: ['update'])]
 final class OperationsShapeAlter implements AltersInputsInterface {
 
   /**

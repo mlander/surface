@@ -1,26 +1,19 @@
 services:
   data_surface_tool.input_definitions:
     class: Drupal\data_surface_tool\InputDefinitions
-    arguments: ['@data_surface.options', '@string_translation']
+    arguments: ['@data_surface.options', '@string_translation', '@data_surface.references', '@data_surface.site_list_budget']
   # What a tool generated for one operation of one resource takes and
   # answers with; the deriver writes it statically, the tool refines it.
   data_surface_tool.operation_inputs:
     class: Drupal\data_surface_tool\OperationInputs
-    arguments: ['@data_surface.resources', '@data_surface.operation_arguments', '@data_surface_tool.input_definitions', '@string_translation']
-  # Adds the field instance resource's settings variants from config
-  # schema, for every field type no #[Variant] declares.
-  data_surface_tool.field_settings_schema_variants:
-    class: Drupal\data_surface_tool\FieldSettingsSchemaVariants
-    arguments: ['@plugin.manager.field.field_type', '@config.typed', '@typed_data_manager']
-    tags:
-      - { name: data_surface.derived_variants }
-  # The same, for the field storage resource's settings, from
-  # field.storage_settings.<type>.
-  data_surface_tool.field_storage_settings_schema_variants:
-    class: Drupal\data_surface_tool\FieldStorageSettingsSchemaVariants
-    arguments: ['@plugin.manager.field.field_type', '@config.typed', '@typed_data_manager']
-    tags:
-      - { name: data_surface.derived_variants }
+    arguments: ['@data_surface.resources', '@data_surface.operation_arguments', '@data_surface_tool.input_definitions', '@string_translation', '@module_handler', '@data_surface.site_list_budget', '@?data_surface_react.served_paths']
+  # The field instance resource's and the field storage resource's
+  # settings variants, one per UI field type, read from its config schema:
+  # providers their attachVariants(from:) names.
+  Drupal\data_surface_tool\FieldSettingsSchemaVariants:
+    arguments: ['@plugin.manager.field.field_type', '@data_surface.config_schema_document']
+  Drupal\data_surface_tool\FieldStorageSettingsSchemaVariants:
+    arguments: ['@plugin.manager.field.field_type', '@data_surface.config_schema_document']
   # A read-only panel an operation route can name in _data_surface_panel:
   # the contract the form's data surface emits, rebuilt with the form, and
   # what the derived tool can advertise of it.
@@ -34,3 +27,9 @@ services:
     arguments: ['@service_container']
     tags:
       - { name: cache_tags_invalidator }
+  # The tool and the read tool an operation reaches, for the site catalog.
+  data_surface_tool.catalog_doors:
+    class: Drupal\data_surface_tool\ToolDoors
+    arguments: ['@plugin.manager.tool']
+    tags:
+      - { name: data_surface.catalog_doors, priority: 20 }

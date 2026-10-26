@@ -10,19 +10,27 @@ use Drupal\data_surface\Contract\ContractChange;
 use Drupal\data_surface\DataSurfaceBuilder;
 use Drupal\data_surface_examples\Resource\RegistrationStep1Resource;
 use Drupal\Tests\user\Traits\UserCreationTrait;
+use Drupal\user\Entity\Role;
+use Drupal\user\Entity\User;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
 /**
- * Tests the examples' and the first module's contracts against baselines.
+ * Tests the examples', the first module's and the blocks' contracts.
  *
  * The additive-diff lint, as a test any module can copy: every resource
- * and structure the three modules declare has its full schema committed
+ * and structure the five modules declare has its full schema committed
  * under tests/fixtures/contracts/, and today's emission may differ from
  * it only compatibly, or by a breaking change with its owner's version
  * raised or an allowance recorded. Any other breaking change fails here;
  * `drush data_surface:contract-diff --write` pins a change once it is
- * accepted.
+ * accepted. Run with DATA_SURFACE_CONTRACT_WRITE=1, this test writes the
+ * baselines instead, from the modules it installs alone: how a
+ * declaration whose variants come from the site (example 12's
+ * components, and the component block's) is pinned, since a site's own
+ * themes would add theirs. Example 14's resources are pinned with the
+ * module that manages keys on, its second source and its alter's key in
+ * them: one baseline per declaration, so one state.
  *
  * @see docs/evolution.md
  * @see \Drupal\data_surface\Contract\ContractDiff
@@ -48,6 +56,16 @@ class ContractBaselineTest extends DataSurfaceKernelTestBase {
     'data_surface_examples_compliance',
     'data_surface_examples_workflow',
     'data_surface_first',
+    'block',
+    'path_alias',
+    'data_surface_component_block',
+    'data_surface_block',
+    'data_surface_examples_keys',
+    'text',
+    'filter',
+    'node',
+    'data_surface_examples_references',
+    'data_surface_examples_retitle',
   ];
 
   /**
@@ -57,6 +75,10 @@ class ContractBaselineTest extends DataSurfaceKernelTestBase {
     'data_surface_examples',
     'data_surface_examples_compliance',
     'data_surface_first',
+    'data_surface_component_block',
+    'data_surface_block',
+    'data_surface_examples_references',
+    'data_surface_examples_retitle',
   ];
 
   /**
@@ -65,8 +87,28 @@ class ContractBaselineTest extends DataSurfaceKernelTestBase {
   protected function setUp(): void {
     parent::setUp();
     $this->installEntitySchema('user');
-    $this->installConfig(['data_surface_examples', 'data_surface_first']);
-    $this->setUpCurrentUser(admin: TRUE);
+    // Example 16's bare reference counts what each content entity type
+    // holds, and its keys list the site's users, roles and articles: each
+    // of a fixed name, so its baseline is the same on every run.
+    $this->installEntitySchema('node');
+    $this->installEntitySchema('path_alias');
+    $this->installSchema('node', ['node_access']);
+    $this->installConfig([
+      'data_surface_examples',
+      'data_surface_first',
+      'node',
+      'filter',
+      'data_surface_examples_references',
+      'data_surface_examples_retitle',
+    ]);
+    // A theme, so the placement's themes and regions are pinned.
+    $this->container->get('theme_installer')->install(['stark']);
+    User::create(['uid' => 0, 'name' => '', 'status' => 0])->save();
+    User::create(['uid' => 1, 'name' => 'admin', 'status' => 1])->save();
+    Role::create(['id' => 'administrator', 'label' => 'Administrator', 'is_admin' => TRUE])->save();
+    $sponsor = User::create(['name' => 'sponsor', 'status' => 1, 'roles' => ['administrator']]);
+    $sponsor->save();
+    $this->setCurrentUser($sponsor);
   }
 
   /**
@@ -76,18 +118,45 @@ class ContractBaselineTest extends DataSurfaceKernelTestBase {
     $baselines = $this->container->get('data_surface.contract_baselines');
     $current = $baselines->emit(self::PINNED);
     $committed = $baselines->read($baselines->directory('data_surface'));
+    if (getenv('DATA_SURFACE_CONTRACT_WRITE')) {
+      // A declaration whose variants come from the site is pinned where
+      // the site holds only these modules: the drush command, run on a
+      // site with more, would pin that site's.
+      foreach ($current as $id => $baseline) {
+        $baselines->write($baselines->directory('data_surface'), $baseline + [
+          'allowed' => $committed[$id]['allowed'] ?? [],
+        ]);
+      }
+      $this->markTestSkipped(sprintf('%d baselines written.', count($current)));
+    }
     $this->assertSame(array_keys($committed), array_keys($current), 'Every declaration is pinned, and every baseline still declared.');
     $this->assertSame([
+      'ai.retitle',
+      'ai.retitle.item',
+      'block.data_surface_component',
+      'block.placement',
+      'block.placement.condition',
       'event.bulletin',
       'event.desk',
       'event.doors',
       'event.fees',
+      'event.mailer',
+      'event.mailer.credential.managed',
+      'event.mailer.credential.pasted',
       'event.person',
       'event.press',
       'event.program',
       'event.review',
       'event.sales',
+      'event.sponsorship',
+      'event.spotlight',
       'event.ticket_limit',
+      'event.venue',
+      'event.venue.listing',
+      'event.venue.order',
+      'event.venue.reorder',
+      'event.venue.room',
+      'event.webhook',
       'first.newsletter',
       'first.store',
       'registration.compliance',
@@ -154,7 +223,7 @@ class ContractBaselineTest extends DataSurfaceKernelTestBase {
    *
    * Nothing stored or sent before held it. On `configure`, an update, the
    * lint passes it and says what it asks of a write, since a key left out
-   * keeps what is stored; on a create of the same declaration (an `add`
+   * keeps what is stored; on a create of the same declaration (an `create`
    * document beside it, as `node.type` has) every old create leaves it
    * out and is refused, so it is breaking there, and an allowance with a
    * reason answers it. A default answers for both. An optional key made
@@ -167,8 +236,8 @@ class ContractBaselineTest extends DataSurfaceKernelTestBase {
 
     // The same declaration in a create beside its update.
     $create = static function (array $document): array {
-      $document['operation'] = 'add';
-      $document['schema']['x-surface']['operation'] = ['id' => 'add', 'kind' => 'create', 'creates' => TRUE] + $document['schema']['x-surface']['operation'];
+      $document['operation'] = 'create';
+      $document['schema']['x-surface']['operation'] = ['id' => 'create', 'kind' => 'create', 'creates' => TRUE] + $document['schema']['x-surface']['operation'];
       return $document;
     };
     $committed['registration.step2']['documents'][] = $create($committed['registration.step2']['documents'][0]);
@@ -193,7 +262,7 @@ class ContractBaselineTest extends DataSurfaceKernelTestBase {
         ContractChange::COMPATIBLE,
       ],
       [
-        'add#/properties/organizer',
+        'create#/properties/organizer',
         'required key added with no default: a create that leaves organizer out is refused',
         'narrows',
         ContractChange::BREAKING,
@@ -202,7 +271,10 @@ class ContractBaselineTest extends DataSurfaceKernelTestBase {
 
     $allowing = $committed;
     $allowing['registration.step2']['allowed'] = [
-      ['path' => 'add#/properties/organizer', 'reason' => 'Every caller that creates one names its organizer already.'],
+      [
+        'path' => 'create#/properties/organizer',
+        'reason' => 'Every caller that creates one names its organizer already.',
+      ],
     ];
     $this->assertSame(ContractChange::ALLOWED, $organizer($baselines->compare($allowing, $added))[1][3]);
 
@@ -212,7 +284,7 @@ class ContractBaselineTest extends DataSurfaceKernelTestBase {
     unset($document);
     $this->assertSame([
       ['configure#/properties/organizer', 'required key added, with a default', 'note', ContractChange::COMPATIBLE],
-      ['add#/properties/organizer', 'required key added, with a default', 'note', ContractChange::COMPATIBLE],
+      ['create#/properties/organizer', 'required key added, with a default', 'note', ContractChange::COMPATIBLE],
     ], $organizer($baselines->compare($committed, $added)));
 
     $made = $baselines->emit(self::PINNED);
@@ -235,7 +307,7 @@ class ContractBaselineTest extends DataSurfaceKernelTestBase {
     $this->assertSame(1, $built->version());
     $full = $emitter->emitFull($built, 'registration.step1', 'configure', 'Configure', operation: ['id' => 'configure'])->document['schema'];
     $this->assertSame(['contract', 'operation', 'version'], array_keys($full['x-surface']));
-    $this->assertSame(['contract' => 2, 'version' => 1], $emitter->emit($built, [], 'registration.step1')->document['schema']['x-surface']);
+    $this->assertSame(['contract' => 4, 'version' => 1], $emitter->emit($built, [], 'registration.step1')->document['schema']['x-surface']);
 
     $later = new DataSurfaceBuilder();
     $later->setDefinition('depth', DataDefinition::create('integer'));
@@ -251,7 +323,7 @@ class ContractBaselineTest extends DataSurfaceKernelTestBase {
       $emitter->emitFull($surface, 'versioned')->document['schema'],
       $emitter->emit($surface, $surface->getDefaultValues(), 'versioned')->document['schema'],
     ] as $schema) {
-      $this->assertSame(['contract' => 2, 'version' => 3], $schema['x-surface']);
+      $this->assertSame(['contract' => 4, 'version' => 3], $schema['x-surface']);
       $this->assertSame(['version' => 2], $schema['$defs']['versioned.later']['x-surface']);
       $this->assertArrayNotHasKey('x-surface', $schema['$defs']['versioned.first'], 'A def at 1 says nothing.');
     }
@@ -260,17 +332,17 @@ class ContractBaselineTest extends DataSurfaceKernelTestBase {
   /**
    * Tests baselines of another contract version are re-pinned, not compared.
    *
-   * Every keyword of a contract 1 baseline may be spelled anew in contract
-   * 2, so the lint says so once, for every such baseline, and fails until
-   * the baselines are written again; it never reports a breaking change
-   * per keyword, and writing needs no reason.
+   * Every keyword of a contract 1 baseline may be spelled anew in a later
+   * contract, so the lint says so once, for every such baseline, and fails
+   * until the baselines are written again; it never reports a breaking
+   * change per keyword, and writing needs no reason.
    */
   public function testAnotherContractVersionIsSaidOnce(): void {
     $baselines = $this->container->get('data_surface.contract_baselines');
     $current = $baselines->emit(self::PINNED);
     $old = [];
     foreach ($baselines->read($baselines->directory('data_surface')) as $id => $baseline) {
-      $this->assertSame(2, $baseline['contract'], $id . ' is pinned in contract 2.');
+      $this->assertSame(4, $baseline['contract'], $id . ' is pinned in contract 4.');
       // As contract 1 spelled it.
       $documents = [];
       foreach ($baseline['documents'] as $document) {
@@ -284,7 +356,7 @@ class ContractBaselineTest extends DataSurfaceKernelTestBase {
     $this->assertCount(1, $changes);
     [$change] = $changes;
     $said = [$change->surface, $change->path, $change->change, $change->status];
-    $this->assertSame(['*', '#', 'contract version 1 to 2', ContractChange::CONTRACT], $said);
+    $this->assertSame(['*', '#', 'contract version 1 to 4', ContractChange::CONTRACT], $said);
     $this->assertTrue($change->fails());
     $this->assertFalse($change->needsAllowance());
   }

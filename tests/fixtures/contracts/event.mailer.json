@@ -1,0 +1,175 @@
+{
+    "resource": "event.mailer",
+    "module": "data_surface_examples",
+    "contract": 4,
+    "documents": [
+        {
+            "resource": "event.mailer",
+            "operation": "configure",
+            "label": "Configure the mailer",
+            "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "title": "Configure the mailer",
+                "description": "Sets who the event's mail is sent from, the mail service it is sent through, and the credential that service is called with: a key pasted here, or a key the site manages.",
+                "x-surface": {
+                    "contract": 4,
+                    "operation": {
+                        "id": "configure",
+                        "label": "Configure the mailer",
+                        "description": "Sets who the event's mail is sent from, the mail service it is sent through, and the credential that service is called with: a key pasted here, or a key the site manages.",
+                        "kind": "update",
+                        "creates": false,
+                        "destructive": false,
+                        "idempotent": true
+                    },
+                    "version": 1
+                },
+                "type": "object",
+                "properties": {
+                    "sender": {
+                        "title": "Sender",
+                        "type": "string",
+                        "format": "idn-email",
+                        "default": "tickets@example.com"
+                    },
+                    "endpoint": {
+                        "title": "Mail service",
+                        "type": "string",
+                        "format": "uri",
+                        "default": "https://mail.example.com/v1/send"
+                    },
+                    "source": {
+                        "title": "Credential source",
+                        "type": "string",
+                        "oneOf": [
+                            {
+                                "const": "pasted",
+                                "title": "Pasted here"
+                            },
+                            {
+                                "const": "managed",
+                                "title": "A managed key"
+                            }
+                        ],
+                        "default": "pasted"
+                    },
+                    "credential": {
+                        "title": "Credential",
+                        "anyOf": [
+                            {
+                                "$ref": "#/$defs/event.mailer.credential.pasted"
+                            },
+                            {
+                                "$ref": "#/$defs/event.mailer.credential.managed"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "x-surface": {
+                            "dependsOn": [
+                                "source"
+                            ],
+                            "by": "source",
+                            "variants": {
+                                "pasted": "#/$defs/event.mailer.credential.pasted",
+                                "managed": "#/$defs/event.mailer.credential.managed"
+                            }
+                        }
+                    }
+                },
+                "additionalProperties": false,
+                "required": [
+                    "sender",
+                    "endpoint",
+                    "source"
+                ],
+                "allOf": [
+                    {
+                        "if": {
+                            "properties": {
+                                "source": {
+                                    "const": "pasted"
+                                }
+                            },
+                            "required": [
+                                "source"
+                            ]
+                        },
+                        "then": {
+                            "properties": {
+                                "credential": {
+                                    "title": "Credential",
+                                    "$ref": "#/$defs/event.mailer.credential.pasted"
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "if": {
+                            "properties": {
+                                "source": {
+                                    "const": "managed"
+                                }
+                            },
+                            "required": [
+                                "source"
+                            ]
+                        },
+                        "then": {
+                            "properties": {
+                                "credential": {
+                                    "title": "Credential",
+                                    "$ref": "#/$defs/event.mailer.credential.managed"
+                                }
+                            }
+                        }
+                    }
+                ],
+                "$defs": {
+                    "event.mailer.credential.pasted": {
+                        "title": "event.mailer.credential.pasted",
+                        "type": "object",
+                        "properties": {
+                            "api_key": {
+                                "title": "API key",
+                                "description": "The key the mail service issued, pasted here.",
+                                "type": "string",
+                                "writeOnly": true
+                            }
+                        },
+                        "additionalProperties": false
+                    },
+                    "event.mailer.credential.managed": {
+                        "title": "event.mailer.credential.managed",
+                        "type": "object",
+                        "properties": {
+                            "key_id": {
+                                "title": "Key",
+                                "description": "A key the site manages; its value is read where it is used, never stored here.",
+                                "type": "string",
+                                "oneOf": [
+                                    {
+                                        "const": null
+                                    }
+                                ],
+                                "x-surface": {
+                                    "checkedOnServer": [
+                                        {
+                                            "constraint": "ManagedKey",
+                                            "message": "Managed key"
+                                        }
+                                    ]
+                                }
+                            }
+                        },
+                        "additionalProperties": false,
+                        "required": [
+                            "key_id"
+                        ]
+                    }
+                }
+            }
+        }
+    ]
+}

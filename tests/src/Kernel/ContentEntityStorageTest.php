@@ -143,7 +143,7 @@ class ContentEntityStorageTest extends DataSurfaceKernelTestBase {
    * Tests that add creates a page with the values, and edit changes them.
    */
   public function testAddCreatesAndEditChanges(): void {
-    [$surface, $storage] = $this->operation('add');
+    [$surface, $storage] = $this->operation('create');
     $violations = $this->submit($surface, $storage, [
       'title' => ['value' => 'Made by a resource'],
       'field_description' => ['value' => 'Described.'],
@@ -159,8 +159,8 @@ class ContentEntityStorageTest extends DataSurfaceKernelTestBase {
     $body = array_intersect_key($body, array_flip(['value', 'summary', 'format']));
     $this->assertSame(['value' => '<p>Body.</p>', 'summary' => 'Short.', 'format' => 'basic'], $body);
     $this->assertFalse($node->isPublished());
-    // A field nobody answered keeps the entity's own default: the owner
-    // from its default value callback.
+    // A new node is the account's it is written as: the current user,
+    // since the storage was asked for none.
     $this->assertSame((int) $this->container->get('current_user')->id(), (int) $node->getOwnerId());
     // The storage describes what it saved, so the id output answers.
     $this->assertInstanceOf(StorageAdapter::class, $storage);
@@ -168,7 +168,7 @@ class ContentEntityStorageTest extends DataSurfaceKernelTestBase {
     $this->assertSame((int) $node->id(), $outputs['id']);
 
     $revision = (int) $node->getRevisionId();
-    [$surface, $storage] = $this->operation('edit', ['id' => $node->id()]);
+    [$surface, $storage] = $this->operation('update', ['id' => $node->id()]);
     $stored = $storage->load($surface);
     $this->assertSame(['value' => 'Made by a resource'], $stored['title']);
     $this->assertSame((int) $node->id(), $stored['id']);
@@ -186,10 +186,51 @@ class ContentEntityStorageTest extends DataSurfaceKernelTestBase {
   }
 
   /**
+   * Tests a write is made as the account the storage is handed.
+   *
+   * The account travels as an argument: a storage made for another account
+   * than the current user writes as that one, the new node its owner's and
+   * the revision of an edit by it, and never reads the current user.
+   *
+   * @see docs/decisions.md#nothing-an-operation-runs-reads-the-request
+   */
+  public function testTheWriteIsMadeAsTheAccountItIsHanded(): void {
+    $writer = $this->createUser([
+      'access content',
+      'create page content',
+      'edit any page content',
+      'administer nodes',
+      'use text format basic',
+      'bypass surface entity test field access',
+    ]);
+    $this->assertNotSame((int) $writer->id(), (int) $this->container->get('current_user')->id());
+    $context = $this->resources()->operation(self::RESOURCE, 'create');
+    $surface = $this->resources()->build(self::RESOURCE, $context);
+    $storage = $this->resources()->storage(self::RESOURCE, $context, $surface, $writer);
+    $this->assertSame([], $this->submit($surface, $storage, [
+      'title' => ['value' => 'Written as another'],
+      'field_description' => ['value' => 'x'],
+    ]));
+    $node = $this->newest();
+    $this->assertSame((int) $writer->id(), (int) $node->getOwnerId());
+
+    $context = $this->resources()->operation(self::RESOURCE, 'update', ['id' => $node->id()]);
+    $surface = $this->resources()->build(self::RESOURCE, $context);
+    $storage = $this->resources()->storage(self::RESOURCE, $context, $surface, $writer);
+    $this->assertSame([], $this->submit($surface, $storage, [
+      'title' => ['value' => 'Edited as another'],
+      'revision_log' => ['value' => 'By the account handed in.'],
+    ]));
+    $node = $this->newest();
+    $this->assertSame('Edited as another', $node->label());
+    $this->assertSame((int) $writer->id(), (int) $node->getRevisionUserId());
+  }
+
+  /**
    * Tests that a constraint the entity declares reaches its key.
    */
   public function testAnEntityViolationLandsOnItsKey(): void {
-    [$surface, $storage] = $this->operation('add');
+    [$surface, $storage] = $this->operation('create');
     $this->assertSame(
       ['title.value' => 'A node may not be called Forbidden.'],
       $this->submit($surface, $storage, ['title' => ['value' => 'Forbidden'], 'field_description' => ['value' => 'x']]),
@@ -214,7 +255,7 @@ class ContentEntityStorageTest extends DataSurfaceKernelTestBase {
    * Tests a dry run: prepared, checked, nothing written.
    */
   public function testDryRunWritesNothing(): void {
-    [$surface, $storage] = $this->operation('add');
+    [$surface, $storage] = $this->operation('create');
     $values = ['title' => ['value' => 'Rehearsed'], 'field_description' => ['value' => 'x']];
     $result = $this->pipeline()->submit($surface, $values, $storage, TRUE);
     $this->assertTrue($result->isValid());
@@ -227,13 +268,13 @@ class ContentEntityStorageTest extends DataSurfaceKernelTestBase {
    */
   public function testTheDerivedToolsWriteAndRead(): void {
     $ids = array_keys($this->container->get('plugin.manager.tool')->getDefinitions());
-    foreach (['add', 'edit', 'edit:read'] as $suffix) {
+    foreach (['create', 'update', 'update:read'] as $suffix) {
       $this->assertContains('data_surface:' . self::RESOURCE . ':' . $suffix, $ids);
     }
     // A field item is no tool: its parent stores it.
     $this->assertEmpty(preg_grep('/^data_surface:field\.item:/', $ids));
 
-    $added = $this->runTool('data_surface:' . self::RESOURCE . ':add', [
+    $added = $this->runTool('data_surface:' . self::RESOURCE . ':create', [
       OperationInputs::VALUES => [
         'title' => ['value' => 'Made by a tool'],
         'field_description' => ['value' => 'By the tool.'],
@@ -244,7 +285,7 @@ class ContentEntityStorageTest extends DataSurfaceKernelTestBase {
     $this->assertSame('Made by a tool', $node->label());
     $this->assertSame((int) $node->id(), $added['outputs']['id']);
 
-    $edited = $this->runTool('data_surface:' . self::RESOURCE . ':edit', [
+    $edited = $this->runTool('data_surface:' . self::RESOURCE . ':update', [
       'id' => (string) $node->id(),
       OperationInputs::VALUES => [
         'title' => ['value' => 'Changed by a tool'],
@@ -254,19 +295,19 @@ class ContentEntityStorageTest extends DataSurfaceKernelTestBase {
     $this->assertTrue($edited['success'], $edited['message']);
     $this->assertSame('Changed by a tool', $this->newest()->label());
 
-    $read = $this->runTool('data_surface:' . self::RESOURCE . ':edit:read', ['id' => (string) $node->id()]);
+    $read = $this->runTool('data_surface:' . self::RESOURCE . ':update:read', ['id' => (string) $node->id()]);
     $this->assertTrue($read['success'], $read['message']);
     $this->assertSame(['value' => 'Changed by a tool'], $read['outputs'][OperationInputs::VALUES]['title']);
     $this->assertSame(['value' => 'By the tool.'], $read['outputs'][OperationInputs::VALUES]['field_description']);
     // The identity is the tool's input, not its values.
     $this->assertArrayNotHasKey('id', $read['outputs'][OperationInputs::VALUES]);
 
-    $refused = $this->runTool('data_surface:' . self::RESOURCE . ':edit', [
+    $refused = $this->runTool('data_surface:' . self::RESOURCE . ':update', [
       'id' => (string) $node->id(),
       OperationInputs::VALUES => ['title' => ['value' => 'Forbidden'], 'field_description' => ['value' => 'x']],
     ]);
     $this->assertFalse($refused['success']);
-    $this->assertStringContainsString('title.value', $refused['message']);
+    $this->assertStringContainsString('/title/value', $refused['message']);
   }
 
   /**
@@ -274,7 +315,7 @@ class ContentEntityStorageTest extends DataSurfaceKernelTestBase {
    */
   public function testTheServedAddSaysWhereThePageNowLives(): void {
     $served = $this->container->get('data_surface_react.served_operations');
-    $operation = $served->resolve(self::RESOURCE, 'add', []);
+    $operation = $served->resolve(self::RESOURCE, 'create', []);
     $this->assertNotNull($operation->storage);
     $values = ['title' => ['value' => 'Served'], 'field_description' => ['value' => 'x']];
     $result = $this->pipeline()->submit($operation->surface, $values, $operation->storage);
@@ -283,7 +324,7 @@ class ContentEntityStorageTest extends DataSurfaceKernelTestBase {
     $outputs = $operation->storage->outputs($operation->surface, $result->values);
     $node = $this->newest();
     $this->assertSame(
-      ['resource' => self::RESOURCE, 'operation' => 'edit', 'parameters' => ['id' => (int) $node->id()]],
+      ['resource' => self::RESOURCE, 'operation' => 'update', 'parameters' => ['id' => (int) $node->id()]],
       $served->created($operation, $result->values, $outputs),
     );
   }
@@ -297,12 +338,12 @@ class ContentEntityStorageTest extends DataSurfaceKernelTestBase {
     foreach (['First', 'Second'] as $title) {
       $node = Node::create(['type' => 'page', 'title' => $title, 'field_description' => $title . ' description']);
       $node->save();
-      [$surface, $storage] = $this->operation('edit', ['id' => $node->id()]);
-      $now = $emitter->emit($surface, array_replace($surface->getDefaultValues(), $storage->load($surface)), self::RESOURCE, 'edit')->document;
+      [$surface, $storage] = $this->operation('update', ['id' => $node->id()]);
+      $now = $emitter->emit($surface, array_replace($surface->getDefaultValues(), $storage->load($surface)), self::RESOURCE, 'update')->document;
       $this->assertSame(['value' => $title], $now['values']['title']);
       $this->assertSame((int) $node->id(), $now['values']['id']);
       $this->assertSame((int) $node->id(), $now['schema']['properties']['id']['const'] ?? NULL);
-      $full[$title] = $emitter->emitFull($this->resources()->build(self::RESOURCE, new OperationContext('edit')), self::RESOURCE, 'edit')->document;
+      $full[$title] = $emitter->emitFull($this->resources()->build(self::RESOURCE, new OperationContext('update')), self::RESOURCE, 'update')->document;
       $this->assertArrayNotHasKey('values', $full[$title]);
     }
     $this->assertSame($full['First'], $full['Second']);

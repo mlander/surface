@@ -48,7 +48,11 @@ class SchemaComponentsTest extends UnitTestCase {
             'ports' => ['p' => ['required' => TRUE]],
           ],
         ],
-        'rows' => ['type' => 'array', 'items' => ['$ref' => '#/$defs/test.contact'], 'x-surface' => ['list' => TRUE]],
+        'rows' => [
+          'type' => 'array',
+          'items' => ['$ref' => '#/$defs/test.contact'],
+          'x-surface' => ['collection' => TRUE],
+        ],
       ],
       'required' => ['kind'],
       'additionalProperties' => FALSE,

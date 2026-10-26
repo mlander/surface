@@ -224,7 +224,7 @@ class ShapesTest extends DataSurfaceKernelTestBase {
       ],
       'an alter answering access' => [
         ['shapes' => [Sku::class => $module], 'alters' => [AccessShapeAlter::class => $module]],
-        AccessShapeAlter::class . ' alters the shape resource_test.sku and implements Drupal\data_surface\Resource\AltersAccessInterface, and a shape is one value with no access of its own: answer for the resource or structure that asks for it.',
+        AccessShapeAlter::class . ' alters the shape resource_test.sku and implements Drupal\data_surface\Resource\OperationAccessInterface, and a shape is one value with no access of its own: answer for the resource or structure that asks for it.',
       ],
     ] as $case => [$classes, $message]) {
       try {
@@ -424,7 +424,7 @@ class ShapesTest extends DataSurfaceKernelTestBase {
       'title' => 'Stock code',
       'type' => 'string',
       'minLength' => 4,
-      'x-surface' => ['locked' => FALSE, 'dependsOn' => [], 'patternMessage' => self::PATTERN['message']],
+      'x-surface' => ['patternMessage' => self::PATTERN['message']],
     ], $full['properties']['sku']);
     $this->assertSame([
       '$ref' => '#/$defs/resource_test.sku',
@@ -432,7 +432,7 @@ class ShapesTest extends DataSurfaceKernelTestBase {
       'description' => 'Printed on the back of the shelf.',
       'maxLength' => 6,
       'default' => 'ZZ9',
-      'x-surface' => ['locked' => FALSE, 'dependsOn' => [], 'patternMessage' => self::PATTERN['message']],
+      'x-surface' => ['patternMessage' => self::PATTERN['message']],
     ], $full['properties']['spare']);
     $this->assertSame(['code' => ['type' => 'string', 'required' => TRUE, 'shape' => 'resource_test.sku']], $full['$defs']['resource_test.shelf_tag']['x-surface']['ports']);
 
@@ -444,10 +444,6 @@ class ShapesTest extends DataSurfaceKernelTestBase {
       'type' => 'string',
       'minLength' => 4,
       'x-surface' => [
-        'locked' => FALSE,
-        'dependsOn' => [],
-        'refined' => FALSE,
-        'stale' => FALSE,
         'patternMessage' => self::PATTERN['message'],
       ],
     ], $these['properties']['sku']);
@@ -517,7 +513,7 @@ class ShapesTest extends DataSurfaceKernelTestBase {
     $tool->execute();
     $this->assertFalse($tool->getResult()->isSuccess());
     // The pipeline holds it to the shape's pattern, in the shape's words.
-    $this->assertSame("The values were refused:\n" . 'sku: A stock code is two capitals and digits, such as AB12.', strip_tags((string) $tool->getResult()->getMessage()));
+    $this->assertSame("The values were refused:\n" . '/sku: A stock code is two capitals and digits, such as AB12.', strip_tags((string) $tool->getResult()->getMessage()));
     $tool = $manager->createInstance('data_surface:resource_test.depot:configure');
     $tool->setInputValue(OperationInputs::VALUES, ['sku' => 'XY99', 'spare' => 'ZZ1'] + self::DEPOT);
     $tool->execute();

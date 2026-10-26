@@ -33,6 +33,46 @@ final class OperationDefinition {
   public const READ = 'read';
 
   /**
+   * The kind of an operation that removes the thing it names.
+   */
+  public const DELETE = 'delete';
+
+  /**
+   * The ids that are a kind's default by their name, by kind.
+   *
+   * Each kind's own name, and `list` for a read: the ids an agent and a
+   * client generator expect. An update on a singleton may also be named
+   * `configure` (defaultIds()).
+   *
+   * Decision: see
+   * docs/decisions.md#the-ids-are-the-standard-five-the-labels-are-drupals.
+   */
+  public const STANDARD_IDS = [
+    self::CREATE => ['create'],
+    self::UPDATE => ['update'],
+    self::READ => ['read', 'list'],
+    self::DELETE => ['delete'],
+  ];
+
+  /**
+   * The id an update on a singleton may carry beside `update`.
+   */
+  public const CONFIGURE = 'configure';
+
+  /**
+   * Ids refused at discovery, each with the standard id that replaces it.
+   *
+   * Drupal's words for the kinds, which belong in the label, where
+   * people read them: "Add a venue" is the label of `create`.
+   */
+  public const RETIRED_IDS = [
+    'add' => 'create',
+    'edit' => 'update',
+    'remove' => 'delete',
+    'get' => 'read',
+  ];
+
+  /**
    * Constructs an OperationDefinition.
    *
    * @param string $id
@@ -55,9 +95,6 @@ final class OperationDefinition {
    * @param \Drupal\data_surface\ResourceBuild\OperationParameter[] $parameters
    *   The method's parameters, in order: what a route or a tool has to
    *   supply, by name.
-   * @param bool $default
-   *   Whether it is the operation a child is invoked through when nothing
-   *   else picks one.
    * @param \Drupal\data_surface\Resource\ResourceCallable|null $context
    *   For a derived resource's operation, the method and the arguments it
    *   is bound to, called with the resolved arguments by name first;
@@ -76,10 +113,20 @@ final class OperationDefinition {
    * @param string|\Stringable|null $description
    *   What a call does to what, for whoever chooses between operations;
    *   NULL for none.
+   * @param bool $deletes
+   *   Whether a call removes the thing it names, taking no values.
+   * @param string|null $structure
+   *   The structure whose keys a call takes in place of the resource's,
+   *   or NULL for the resource's own.
+   * @param \Drupal\data_surface\ResourceBuild\Gate[] $gates
+   *   The access it borrows from other things, asked after its
+   *   permission for the thing a call is about.
    *
    * @throws \LogicException
-   *   When the facts contradict each other: a read only operation that
-   *   destroys, or that is not idempotent.
+   *   When the id is a retired one (RETIRED_IDS), or the facts contradict
+   *   each other: a read only operation that destroys, or that is not
+   *   idempotent; a delete that does not say it destroys, that creates or
+   *   that is read only.
    */
   public function __construct(
     public readonly string $id,
@@ -90,14 +137,50 @@ final class OperationDefinition {
     public readonly ?string $permission,
     public readonly string $module,
     public readonly array $parameters = [],
-    public readonly bool $default = FALSE,
     public readonly ?ResourceCallable $context = NULL,
     public readonly bool $destructive = FALSE,
     public readonly bool $readOnly = FALSE,
     public readonly ?bool $idempotent = NULL,
     public readonly bool $creates = FALSE,
     public readonly string|\Stringable|null $description = NULL,
+    public readonly bool $deletes = FALSE,
+    public readonly ?string $structure = NULL,
+    public readonly array $gates = [],
   ) {
+    // Decision: see
+    // docs/decisions.md#the-ids-are-the-standard-five-the-labels-are-drupals.
+    if (isset(self::RETIRED_IDS[$id])) {
+      throw new \LogicException(sprintf(
+        'The "%s" operation, %s, is named with a word the module retired as an id. Name it "%s", the standard id an agent and a client generator expect, and keep Drupal\'s word in its label, where people read it.',
+        $id,
+        $this->describe(),
+        self::RETIRED_IDS[$id],
+      ));
+    }
+    // Decision: see
+    // docs/decisions.md#a-listing-is-a-read-only-operation-with-outputs-a-reorder-is-an-update-over-the-collection.
+    if ($structure !== NULL && ($creates || $deletes)) {
+      throw new \LogicException(sprintf(
+        'The "%s" operation, %s, takes the keys of %s and %s. An operation that creates or deletes is about the thing\'s own keys, so it takes the resource\'s.',
+        $id,
+        $this->describe(),
+        $structure,
+        $creates ? 'creates' : 'deletes',
+      ));
+    }
+    // Decision: see docs/decisions.md#a-placed-block-is-a-resource.
+    if ($deletes && (!$destructive || $creates || $readOnly)) {
+      throw new \LogicException(sprintf(
+        'The "%s" operation, %s, says it deletes, and %s. A delete removes the thing it names: it says destructive: TRUE, and it neither creates nor is read only.',
+        $id,
+        $this->describe(),
+        match (TRUE) {
+          $creates => 'also that it creates',
+          $readOnly => 'also that it changes nothing',
+          default => 'not that it is destructive',
+        },
+      ));
+    }
     if ($readOnly && ($destructive || $idempotent === FALSE)) {
       throw new \LogicException(sprintf(
         'The "%s" operation, %s, says it changes nothing and also that it %s: a read only operation destroys nothing, and asking it twice leaves what asking it once did.',
@@ -126,10 +209,11 @@ final class OperationDefinition {
   }
 
   /**
-   * Names what kind of call the operation is: a create, an update or a read.
+   * Names what kind of call the operation is.
    *
    * Derived, never declared: a read only operation is a read, one that
-   * creates is a create, and every other changes what exists, an update.
+   * creates is a create, one that deletes is a delete, and every other
+   * changes what exists, an update.
    * Read off the attribute, so it is known before anything is built.
    * What a generated tool asks for at its door follows from it: a create
    * requires the keys the resource requires, and an update requires
@@ -138,14 +222,40 @@ final class OperationDefinition {
    * Decision: see docs/decisions.md#an-operation-states-how-it-behaves.
    *
    * @return string
-   *   self::CREATE, self::UPDATE or self::READ.
+   *   self::CREATE, self::UPDATE, self::READ or self::DELETE.
    */
   public function kind(): string {
     return match (TRUE) {
       $this->readOnly => self::READ,
       $this->creates => self::CREATE,
+      $this->deletes => self::DELETE,
       default => self::UPDATE,
     };
+  }
+
+  /**
+   * Lists the ids that make an operation its kind's default by name.
+   *
+   * The kind's standard ids (STANDARD_IDS), and, for an update on a
+   * singleton, `configure` too: every settings page says it.
+   *
+   * Decision: see
+   * docs/decisions.md#the-ids-are-the-standard-five-the-labels-are-drupals.
+   *
+   * @param string $kind
+   *   self::CREATE, self::UPDATE, self::READ or self::DELETE.
+   * @param bool $singleton
+   *   Whether the resource has no identity keys.
+   *
+   * @return string[]
+   *   The ids.
+   */
+  public static function defaultIds(string $kind, bool $singleton): array {
+    $ids = self::STANDARD_IDS[$kind] ?? [];
+    if ($kind === self::UPDATE && $singleton) {
+      $ids[] = self::CONFIGURE;
+    }
+    return $ids;
   }
 
   /**

@@ -71,8 +71,6 @@ data_surface_first.store:
     _title: 'Store location'
     _data_surface_resource: 'Drupal\data_surface_first\Resource\StoreResource'
     _data_surface_operation: 'configure'
-  requirements:
-    _data_surface_operation_access: 'TRUE'
 ```
 
 ## The resource, and its one rule
@@ -195,7 +193,7 @@ the method below it:
 
   ```
   Failed: The values were refused:
-  region: The value you selected is not a valid choice. This applies when country is US (United States). Choose US-CA (California), US-NY (New York) or US-TX (Texas).
+  /region: The value you selected is not a valid choice. This applies when Country is US (United States). Choose US-CA (California), US-NY (New York) or US-TX (Texas).
   ```
 
   ```

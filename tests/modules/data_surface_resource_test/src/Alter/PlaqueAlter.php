@@ -7,7 +7,7 @@ namespace Drupal\data_surface_resource_test\Alter;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\State\StateInterface;
 use Drupal\data_surface\Resource\AccessAnswer;
-use Drupal\data_surface\Resource\AltersAccessInterface;
+use Drupal\data_surface\Resource\OperationAccessInterface;
 use Drupal\data_surface\Resource\Attribute\Alters;
 use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface_resource_test\Structure\Gallery\PlaqueStructure;
@@ -19,7 +19,7 @@ use Drupal\data_surface_resource_test\Structure\Gallery\PlaqueStructure;
  * Runtime: once the plaques are fixed, a State flag, they are locked.
  */
 #[Alters(PlaqueStructure::class)]
-final class PlaqueAlter implements AltersAccessInterface {
+final class PlaqueAlter implements OperationAccessInterface {
 
   /**
    * The State key that fixes the plaques.

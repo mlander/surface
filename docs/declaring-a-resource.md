@@ -95,9 +95,9 @@ declares; the test module's `TestBlockStructure`, a structure, uses two.
   value declared once for every key that asks for it ([Named
   shapes](#named-shapes)).
 - **A `#[RefinesInput]` method takes the key's definition first, then one
-  parameter per sibling it watches**, matched by name, or listed as
-  `watches:` when a renamed parameter should be refused rather than
-  silently stop watching. Its signature is its dependency declaration.
+  parameter per sibling it watches**, matched by name: a parameter that
+  names no declared key is refused, so a renamed one never silently
+  stops watching. Its signature is its dependency declaration.
   One rule per method, its docblock stating the rule.
 - **The class has no constructor and holds no service**, and is never
   instantiated: the build step calls its static methods on the class,
@@ -324,7 +324,7 @@ whatever a plugin uses is never generated as a tool of its own.
 
 ## Operations and identity
 
-A context's **id** is either an operation id (`add`, `edit`, `reuse`)
+A context's **id** is either an operation id (`create`, `update`, `reuse`)
 or a host's own verb (`configure`, `field_settings`). It **never
 carries identity**. An id that names the thing it acts on is a
 vocabulary nobody can enumerate, and a discovery document cannot
@@ -335,7 +335,7 @@ which of them it knows. An identity key the context knows is locked to
 that value; one it does not know stays open. That is the whole
 difference between add and edit, and it is why an operation, a route and
 a tool address a resource the same way: by its id and an operation id,
-`data_surface:node.type:edit`, with the operation's parameters saying
+`data_surface:node.type:update`, with the operation's parameters saying
 which content type.
 
 ## Names
@@ -476,14 +476,65 @@ one: the data surface's `getDefault()` and
 `getDefaultValues()` read it, and `accept()` merges it under the stored
 values; an example is stated by both documents and drawn as no
 placeholder, which is the key's declared
-[arrangement](forms.md#arranging-the-keys). An operation that creates may give starting values with
-`withDefaults()`, which become the key's defaults in that context.
+[arrangement](forms.md#arranging-the-keys).
 
 Two consequences worth knowing before you declare one. A map's declared
 default merges *over* the defaults its properties declare rather than
 replacing them, and a list key absent from a payload keeps the stored
 list rather than falling back to its default. Both rules, and why, are in
 [Value semantics](semantics.md).
+
+### A site's own defaults
+
+A declared default is the module's. A site that wants a key to start
+from another value sets it in configuration, `data_surface.defaults`,
+not in an alter: an alter may not change an owner's default. Each entry
+names the resource (or a plugin's structure, by the id the catalog
+lists), a key path from it, and the value as a form posts it:
+
+```
+drush config:set data_surface.defaults defaults.0 \
+  '{resource: registration.step3, key: capacity, value: "40"}' --input-format=yaml
+drush config:set data_surface.defaults defaults.1 \
+  '{resource: registration.step3, key: contact.phone, value: "+1 555 0100"}' --input-format=yaml
+drush config:delete data_surface.defaults defaults.1
+```
+
+The value is text. The build reads it through [the coercion
+table](semantics.md#the-coercion-table), as a form's values are read:
+`40` is an integer for an integer key, `true` or `false` a boolean, a
+JSON list `["a","b"]` a list, a JSON object a map, and an empty value
+none. Quote it in YAML, so `false` stays the word and not a boolean
+that config stores as the empty string. A path names a key the resource
+declares, a key inside a map it declares or a structure it attaches
+(`contact.phone`), or a key an alter mounts
+(`third_party_settings.<module>.<key>`).
+
+The build writes the site's value over the declared default of what it
+builds, so the form, both documents and the tool listing of a create
+start from it. A key that holds a stored value keeps it: a default is
+what a key with nothing stored starts from, and the read tool answers
+what is stored. The declaration a config schema and an install file are
+written from keeps the module's, so `drush data_surface:config-schema
+--write` never writes a site's value into a module, and so do a
+plugin's static defaults (`defaultConfiguration()`, `defaultSettings()`),
+which its host asks of the class with no build.
+
+An entry the resource cannot honor refuses the build, naming the key,
+and the catalog lists the refusal:
+
+- a path that names no key: "data_surface.defaults: registration.step3
+  has no key "contact.fax". ...";
+- a value the key does not accept, in the key's own rule: "data_surface.defaults
+  sets "venue" on registration.step3 to "nowhere", which the key does
+  not accept: The value you selected is not a valid choice.";
+- a key inside variants, a collection or a map of keys from the site,
+  each starting from its own defaults; a whole attached structure (set
+  each of its keys); a secret; and a computed key.
+
+Every build carries the config object's cache tag,
+`config:data_surface.defaults`, so a change reaches every door at the
+next request ([decision](decisions.md#a-site-sets-a-default-in-configuration)).
 
 ## Locking
 
@@ -498,8 +549,8 @@ move the value. `DataSurfaceInterface::isLocked()` answers it.
 
 Locking is context rather than an intrinsic property of a definition,
 which is why it lives on the data surface rather than on the
-definition: the same machine name key is locked in the edit operation
-and open in the add operation, and one class declares both.
+definition: the same machine name key is locked in the update operation
+and open in the create operation, and one class declares both.
 
 ## Secrets
 
@@ -545,7 +596,7 @@ both flags with JSON Schema's own keywords:
 | Flag | Keyword |
 | --- | --- |
 | `secret` | `writeOnly: true`, never in `required`, no default |
-| locked | `readOnly: true`, with `x-surface.locked` |
+| locked | `readOnly: true`, with `const` where it holds a value |
 
 The other doors say it in their own terms: a locked key carries "Fixed
 for this operation." in its form description and the Tool API's own
@@ -563,6 +614,55 @@ It is worth being plain about the edges:
   exists to send one.
 - **It is not retroactive.** Values written before the key was declared
   secret are plaintext in storage until the next save of that thing.
+
+## Computed keys
+
+A key whose value follows other keys, and that nobody types, is declared
+with `compute()`: typed and labeled as `add()` declares a key, and
+computed by a class from the keys `from:` names. Example 15's venue
+computes its slug from its name:
+
+```php
+$inputs->compute('slug', 'string', t('Slug'), from: ['label'], using: Slugify::class)
+  ->addConstraint('Regex', ['pattern' => '/^[a-z0-9]+(-[a-z0-9]+)*$/D']);
+```
+
+Each class's `use` line: [Namespaces](concepts.md#namespaces).
+
+The class implements `ComputesValueInterface`, whose one method is static,
+`compute(array $from): mixed`: handed the value of each key `from:`
+names, it answers the value. It is a pure function of those values, held
+to it as a static refiner is: with assertions on it runs with the
+container guarded (`PipelineGuard::guardCompute()`), and the
+module's PHPStan rule flags a `\Drupal::` call in it. A value that needs
+a service, the clock or the request, such as a changed time, is no
+computed key: a storage's `prepare()` adds it.
+
+- **When.** `when: Compute::ON_CREATE`, the default, computes it while
+  storage holds nothing for it, which is when the thing is created, and
+  keeps it after: renaming a venue leaves its slug, and every link to
+  it, as it was. `when: Compute::ON_CHANGE` computes it again on every
+  write that changes a key in `from`. A write that changes none of them
+  keeps what is stored either way.
+- **Judged like any key.** The pipeline computes it once the other keys
+  are accepted, then validates it by its own constraints and rules, and
+  storage writes it. A refusal of it names the keys it is computed from,
+  the ones a caller can change: "The slug riverside-hall is held
+  already, by riverside: a slug is held once across the venues. This is
+  computed from Name."
+- **Never typed.** Both documents state it `readOnly` with
+  `x-surface.computed: {"from": ["label"], "when": "create"}` and never
+  in `required`; the write tool's `values` leaves it out and the read
+  answers it; the form draws it fixed; `POST .../schema` answers the
+  value it would compute for the values in progress. A value sent for it
+  equal to the one it holds is noted, code `computed`, and not taken, so
+  a client that writes back the document it read is not refused; any
+  other is refused with the same code
+  ([decision](decisions.md#a-computed-key-is-a-pure-function-of-its-sources)).
+
+A computed key is a resource's own key, at its top: `compute()` is on the
+owner's blueprint only, and refused in a structure, a structure mixed in
+and outputs.
 
 ## Required
 

@@ -1,0 +1,167 @@
+{
+    "resource": "ai.retitle",
+    "operation": "retitle",
+    "label": "Retitle nodes",
+    "schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "Retitle nodes",
+        "description": "Rewrites the titles of one to fifty nodes in the style chosen, each node one the account may update and whose title it may edit; a new title sent is written as sent.",
+        "x-surface": {
+            "contract": 4,
+            "operation": {
+                "id": "retitle",
+                "label": "Retitle nodes",
+                "description": "Rewrites the titles of one to fifty nodes in the style chosen, each node one the account may update and whose title it may edit; a new title sent is written as sent.",
+                "kind": "update",
+                "creates": false,
+                "destructive": false,
+                "idempotent": true
+            },
+            "version": 1
+        },
+        "type": "object",
+        "properties": {
+            "items": {
+                "title": "Nodes",
+                "description": "Each node to retitle, one to fifty.",
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 50,
+                "items": {
+                    "$ref": "#/$defs/ai.retitle.item"
+                },
+                "x-surface": {
+                    "widget": "list",
+                    "collection": true,
+                    "live": true
+                }
+            },
+            "style": {
+                "title": "Style",
+                "description": "How the title of a node sent no new title is rewritten.",
+                "type": [
+                    "string",
+                    "null"
+                ],
+                "oneOf": [
+                    {
+                        "const": "sentence",
+                        "title": "Sentence case"
+                    },
+                    {
+                        "const": "title",
+                        "title": "Title case"
+                    },
+                    {
+                        "const": "prefixed",
+                        "title": "Title case, after the prefix \"Festival:\""
+                    },
+                    {
+                        "const": null
+                    }
+                ],
+                "default": "title",
+                "x-surface": {
+                    "widget": "select"
+                }
+            }
+        },
+        "additionalProperties": false,
+        "required": [
+            "items"
+        ],
+        "$defs": {
+            "ai.retitle.item": {
+                "title": "ai.retitle.item",
+                "type": "object",
+                "properties": {
+                    "node": {
+                        "title": "Node",
+                        "description": "The node to retitle.",
+                        "type": "integer",
+                        "oneOf": [
+                            {
+                                "const": 3,
+                                "title": "menu of the food stalls"
+                            },
+                            {
+                                "const": 1,
+                                "title": "volunteer briefing for the night shift"
+                            },
+                            {
+                                "const": 2,
+                                "title": "WHERE TO PARK ON FESTIVAL DAYS"
+                            }
+                        ],
+                        "x-surface": {
+                            "widget": "select",
+                            "reference": {
+                                "entityType": "node"
+                            },
+                            "checkedOnServer": [
+                                {
+                                    "constraint": "DataSurfaceValidReference",
+                                    "message": "Refers to an entity the account may reference"
+                                }
+                            ]
+                        }
+                    },
+                    "new_title": {
+                        "title": "New title",
+                        "description": "Written as sent; left out, the node's title is rewritten in the style chosen.",
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 255,
+                        "x-surface": {
+                            "widget": "text"
+                        }
+                    }
+                },
+                "additionalProperties": false,
+                "required": [
+                    "node"
+                ]
+            }
+        }
+    },
+    "outputs": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+            "titles": {
+                "title": "Titles",
+                "description": "Each node's title before and after, in the order sent: what a dry run would write, or what was written.",
+                "type": "array",
+                "items": {
+                    "title": "Title",
+                    "type": "object",
+                    "properties": {
+                        "node": {
+                            "title": "Node",
+                            "type": "integer"
+                        },
+                        "old": {
+                            "title": "Old title",
+                            "type": "string"
+                        },
+                        "new": {
+                            "title": "New title",
+                            "type": "string"
+                        }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                        "node",
+                        "old",
+                        "new"
+                    ]
+                }
+            }
+        },
+        "required": [
+            "titles"
+        ]
+    }
+}

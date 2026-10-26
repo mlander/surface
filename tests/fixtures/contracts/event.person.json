@@ -1,7 +1,7 @@
 {
     "resource": "event.person",
     "module": "data_surface_examples",
-    "contract": 2,
+    "contract": 4,
     "documents": [
         {
             "resource": "event.person",
@@ -10,7 +10,7 @@
             "schema": {
                 "$schema": "https://json-schema.org/draft/2020-12/schema",
                 "x-surface": {
-                    "contract": 2,
+                    "contract": 4,
                     "version": 1,
                     "ports": {
                         "listed": {
@@ -23,11 +23,7 @@
                 "properties": {
                     "name": {
                         "title": "Name",
-                        "type": "string",
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": []
-                        }
+                        "type": "string"
                     },
                     "email": {
                         "title": "Email",
@@ -37,7 +33,6 @@
                         ],
                         "format": "idn-email",
                         "x-surface": {
-                            "locked": false,
                             "dependsOn": [
                                 "listed"
                             ]
@@ -47,8 +42,6 @@
                         "$ref": "#/$defs/event.phone",
                         "title": "Phone",
                         "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
                             "patternMessage": "Write the number in digits, such as +1 555 0100."
                         }
                     }

@@ -114,7 +114,7 @@ final class DemoBlockStructure implements StructureInterface {
    * is refused when the structure is built. Runs once both have a value,
    * and again when either changes.
    */
-  #[RefinesInput('field', watches: ['entity_type', 'bundle'])]
+  #[RefinesInput('field')]
   public static function fieldOfBundle(DataDefinitionInterface $field, string $entity_type, string $bundle): DataDefinitionInterface {
     $field->addConstraint('DataSurfaceDemoBundleField', [
       'entityTypeId' => $entity_type,

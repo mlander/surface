@@ -96,7 +96,7 @@ class ToolDefinitionsPerResourceTest extends DataSurfaceKernelTestBase {
     assert($field !== NULL);
     $field->set('label', 'Summary')->save();
     $this->assertSame(['entity.content:node.page' => $cold['entity.content:node.page']], $this->listInNewRequest());
-    $listing = $this->container->get('plugin.manager.tool')->getDefinition('data_surface:entity.content:node.page:add');
+    $listing = $this->container->get('plugin.manager.tool')->getDefinition('data_surface:entity.content:node.page:create');
     $this->assertArrayHasKey('field_description', $listing->getInputDefinition('values')->getPropertyDefinitions());
 
     // Nothing saved, nothing derived: every resource reads its entry.
@@ -126,7 +126,7 @@ class ToolDefinitionsPerResourceTest extends DataSurfaceKernelTestBase {
   public function testBurstWaitsForOneRebuild(): void {
     $tools = $this->container->get('plugin.manager.tool');
     $this->listInNewRequest();
-    $base = clone $tools->getDefinition('data_surface:entity.content:node.page:add');
+    $base = clone $tools->getDefinition('data_surface:entity.content:node.page:create');
     // A deploy: the bin emptied, every request after it cold.
     $this->container->get('cache.discovery')->deleteAll();
     $tools->clearCachedDefinitions();
@@ -146,8 +146,8 @@ class ToolDefinitionsPerResourceTest extends DataSurfaceKernelTestBase {
       ['acquire', ResourceOperationToolDeriver::LOCK],
       ['release', ResourceOperationToolDeriver::LOCK],
     ], $this->lock->asked, 'After the wait this request read what the other wrote, and derived nothing.');
-    $this->assertArrayHasKey('data_surface:entity.content:node.page:edit', $tools->getDefinitions());
-    $this->assertArrayHasKey('data_surface:entity.content:node.kitchen:edit:read', $tools->getDefinitions());
+    $this->assertArrayHasKey('data_surface:entity.content:node.page:update', $tools->getDefinitions());
+    $this->assertArrayHasKey('data_surface:entity.content:node.kitchen:update:read', $tools->getDefinitions());
   }
 
 }

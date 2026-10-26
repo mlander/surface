@@ -14,7 +14,6 @@ use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface\ResourceBuild\Resources;
 use Drupal\data_surface\ResourceBuild\ResourcesInterface;
 use Drupal\data_surface_resource_test\Structure\Broken\MisnamingLarderStructure;
-use Drupal\data_surface_resource_test\Structure\Broken\TwoDefaultsStructure;
 use Drupal\data_surface_resource_test\Resource\Larder\LarderResource;
 use Drupal\data_surface_resource_test\Resource\Larder\SpiceRackResource;
 use Drupal\data_surface_resource_test\Resource\Pantry\LabelResource;
@@ -36,11 +35,13 @@ use Symfony\Component\HttpFoundation\Request;
  * Tests a child invoked through an operation of its own, and its access.
  *
  * The larder attaches the same spice rack twice. Editing it, the rack at
- * `rack` is invoked through the rack's own `edit`, by the context's id,
+ * `rack` is invoked through the rack's own `update`, by the context's id,
  * and the one at `spare_rack` through `restock`, which the larder's
- * operation names; adding one, both fall to the rack's default, `browse`;
- * stocking one, the larder hands both a context whole, built by calling
- * the rack's own `browse` and `restock`. The rack's access class answers
+ * operation names; adding one, both are invoked through the rack's own
+ * `create`, by the context's id, and copying one through `create` again,
+ * the rack's operation of the parent's kind; stocking one, the larder
+ * hands both a context whole, built by calling the rack's own `browse`
+ * and `restock`. The rack's access class answers
  * open, locked or omitted from three permissions however the rack was
  * invoked, and `restock` asks a permission of its own where the build
  * resolves it.
@@ -59,14 +60,14 @@ class ChildOperationTest extends DataSurfaceKernelTestBase {
   use UserCreationTrait;
 
   /**
-   * The write tool for the larder's edit operation.
+   * The write tool for the larder's update operation.
    */
-  protected const TOOL = 'data_surface:resource_test.larder:edit';
+  protected const TOOL = 'data_surface:resource_test.larder:update';
 
   /**
    * The read tool beside it.
    */
-  protected const READ_TOOL = 'data_surface:resource_test.larder:edit:read';
+  protected const READ_TOOL = 'data_surface:resource_test.larder:update:read';
 
   /**
    * What the larder holds before each test.
@@ -135,7 +136,7 @@ class ChildOperationTest extends DataSurfaceKernelTestBase {
    *   The larder.
    */
   protected function edit(): DataSurfaceInterface {
-    return $this->resources()->buildOperation(LarderResource::class, 'edit', ['larder' => 'main']);
+    return $this->resources()->buildOperation(LarderResource::class, 'update', ['larder' => 'main']);
   }
 
   /**
@@ -178,7 +179,7 @@ class ChildOperationTest extends DataSurfaceKernelTestBase {
    * @return \Drupal\data_surface\Contract\ServedContract
    *   The contract.
    */
-  protected function contract(DataSurfaceInterface $surface, bool $full = FALSE, string $operation = 'edit'): mixed {
+  protected function contract(DataSurfaceInterface $surface, bool $full = FALSE, string $operation = 'update'): mixed {
     $emitter = $this->container->get('data_surface.contract_emitter');
     if ($full) {
       return $emitter->emitFull($surface, 'resource_test.larder', $operation);
@@ -197,11 +198,11 @@ class ChildOperationTest extends DataSurfaceKernelTestBase {
    * @return array
    *   The resource's part of the built form.
    */
-  protected function form(string $operation = 'edit'): array {
+  protected function form(string $operation = 'update'): array {
     $name = 'data_surface_resource_test.larder.' . $operation;
     $route = $this->container->get('router.route_provider')->getRouteByName($name);
     $stack = $this->container->get('request_stack');
-    $request = Request::create($operation === 'edit' ? '/surface-test/larder/main' : '/surface-test/larder/main/' . $operation);
+    $request = Request::create($operation === 'update' ? '/surface-test/larder/main' : '/surface-test/larder/main/' . $operation);
     $request->setSession($stack->getSession());
     $request->attributes->set(RouteObjectInterface::ROUTE_NAME, $name);
     $request->attributes->set(RouteObjectInterface::ROUTE_OBJECT, $route);
@@ -268,8 +269,8 @@ class ChildOperationTest extends DataSurfaceKernelTestBase {
    * Tests the order a child's operation is resolved in.
    *
    * By name from the parent's operation, then by the parent context's id,
-   * then the child's default; an alter naming one child operation applies
-   * where that operation is invoked and nowhere else.
+   * then by the parent operation's kind; an alter naming one child
+   * operation applies where that operation is invoked and nowhere else.
    */
   public function testResolutionOrder(): void {
     $this->actAs('stock spice rack');
@@ -290,19 +291,28 @@ class ChildOperationTest extends DataSurfaceKernelTestBase {
     $this->assertSame('top', $spare->getDefault('shelf'));
     $this->assertSame(['min' => 0, 'max' => 40], $spare->getDefinition('spices')->getConstraints()['Range']);
 
-    // The default: adding a larder names nothing, and the rack has no add.
-    $add = $this->resources()->buildOperation(LarderResource::class, 'add');
+    // By the context's id again: adding a larder names nothing, and the
+    // rack has its own create.
+    $add = $this->resources()->buildOperation(LarderResource::class, 'create');
     foreach (['rack', 'spare_rack'] as $key) {
       $child = self::child($add, $key);
       $this->assertSame(['shelf', 'spices', 'label'], $child->getDefinitions()->names(), $key);
       $this->assertSame(['min' => 0, 'max' => 10], $child->getDefinition('spices')->getConstraints()['Range'], $key);
     }
 
-    // A context that knows no larder cannot invoke the rack's edit, which
-    // needs one: the hint is passed over for the default.
-    $bare = $this->resources()->build(LarderResource::class, new OperationContext('edit'));
+    // By the parent's kind: copying a larder creates, the rack has no
+    // copy, so its create.
+    $copy = $this->resources()->buildOperation(LarderResource::class, 'copy');
     foreach (['rack', 'spare_rack'] as $key) {
-      $this->assertSame(['min' => 0, 'max' => 10], self::child($bare, $key)->getDefinition('spices')->getConstraints()['Range'], $key);
+      $this->assertSame(['min' => 0, 'max' => 10], self::child($copy, $key)->getDefinition('spices')->getConstraints()['Range'], $key);
+    }
+
+    // A context that knows no larder cannot invoke the rack's edit, which
+    // needs one, nor the rack's operation of an update's kind, the same
+    // edit: both are passed over, and the rack sees the larder's context.
+    $bare = $this->resources()->build(LarderResource::class, new OperationContext('update'));
+    foreach (['rack', 'spare_rack'] as $key) {
+      $this->assertSame(['min' => 0, 'max' => 40], self::child($bare, $key)->getDefinition('spices')->getConstraints()['Range'], $key);
     }
 
     // The access answer of a child reaches the parent's cacheability.
@@ -319,7 +329,7 @@ class ChildOperationTest extends DataSurfaceKernelTestBase {
    */
   public function testChildWithoutOperationsInherits(): void {
     $emitter = $this->container->get('data_surface.contract_emitter');
-    $context = PantryResource::edit('cellar');
+    $context = PantryResource::update('cellar');
     $pantry = $this->resources()->build(PantryResource::class, $context);
     foreach (['shelf' => ShelfStructure::class, 'label' => LabelResource::class] as $key => $class) {
       $direct = $this->resources()->build($class, Resources::childContext($context, $key));
@@ -343,10 +353,10 @@ class ChildOperationTest extends DataSurfaceKernelTestBase {
     $this->assertFalse($edit->isLocked('spare_rack'));
 
     $schema = $this->contract($edit)->document['schema'];
-    $this->assertFalse($schema['properties']['rack']['x-surface']['locked']);
     $this->assertArrayNotHasKey('readOnly', $schema['properties']['rack']);
     $rack = SchemaResolver::inline($schema['properties']['rack'], $schema);
-    $this->assertFalse($rack['properties']['spices']['x-surface']['locked']);
+    $this->assertArrayNotHasKey('readOnly', $rack['properties']['spices']);
+    $this->assertArrayNotHasKey('const', $rack['properties']['spices']);
 
     $form = $this->form();
     $this->assertArrayNotHasKey('#disabled', $form['rack']);
@@ -377,11 +387,9 @@ class ChildOperationTest extends DataSurfaceKernelTestBase {
     $contract = $this->contract($edit);
     $schema = $contract->document['schema'];
     $this->assertTrue($schema['properties']['rack']['readOnly']);
-    $this->assertTrue($schema['properties']['rack']['x-surface']['locked']);
     $rack = SchemaResolver::inline($schema['properties']['rack'], $schema);
     foreach (['shelf' => 'low', 'spices' => 7, 'label' => 'Everyday'] as $key => $value) {
       $this->assertTrue($rack['properties'][$key]['readOnly'], $key);
-      $this->assertTrue($rack['properties'][$key]['x-surface']['locked'], $key);
       $this->assertSame($value, $rack['properties'][$key]['const'], $key);
     }
     $this->assertSame(7, $contract->document['values']['rack']['spices']);
@@ -392,7 +400,6 @@ class ChildOperationTest extends DataSurfaceKernelTestBase {
     $full = $this->contract($edit, TRUE);
     $schema = $full->document['schema'];
     $this->assertTrue($schema['properties']['rack']['readOnly']);
-    $this->assertTrue($schema['properties']['rack']['x-surface']['locked']);
     $rack = SchemaResolver::inline($schema['properties']['rack'], $schema);
     $this->assertTrue($rack['properties']['spices']['readOnly']);
     $this->assertArrayNotHasKey('const', $rack['properties']['spices']);
@@ -440,7 +447,7 @@ class ChildOperationTest extends DataSurfaceKernelTestBase {
     $this->assertSame(['larder', 'note'], $edit->getDefinitions()->names());
 
     // The parent is still open to the account; only the children went.
-    $context = $this->resources()->operation(LarderResource::class, 'edit', ['larder' => 'main']);
+    $context = $this->resources()->operation(LarderResource::class, 'update', ['larder' => 'main']);
     $this->assertTrue($this->resources()->access(LarderResource::class, $context)->isAllowed());
 
     foreach ([FALSE, TRUE] as $full) {
@@ -544,7 +551,7 @@ class ChildOperationTest extends DataSurfaceKernelTestBase {
       $contract = $this->contract($stock, $full, 'stock');
       $schema = $contract->document['schema'];
       $this->assertTrue($schema['properties']['rack']['readOnly']);
-      $this->assertTrue($schema['properties']['spare_rack']['x-surface']['locked']);
+      $this->assertTrue($schema['properties']['spare_rack']['readOnly']);
       $this->assertContains('user.permissions', $contract->getCacheContexts());
     }
     $form = $this->form('stock');
@@ -584,19 +591,11 @@ class ChildOperationTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests the two refusals: two defaults, and an operation not declared.
+   * Tests the refusal of an operation the child does not declare.
    */
   public function testRefusals(): void {
-    try {
-      $this->resources()->build(TwoDefaultsStructure::class, new OperationContext('first'));
-      $this->fail('Two default operations were accepted.');
-    }
-    catch (\LogicException $e) {
-      $this->assertStringStartsWith('resource_test.broken.two_defaults marks two operations the default, "first" from ' . TwoDefaultsStructure::class . '::first() in data_surface_resource_test and "second" from ' . TwoDefaultsStructure::class . '::second()', $e->getMessage());
-    }
-
     $this->expectException(\LogicException::class);
-    $this->expectExceptionMessage('resource_test.broken.misnaming_larder, in its "clean" context, names the "dust" operation for its "rack" child, which resource_test.larder.rack does not declare; it declares edit, browse, restock.');
+    $this->expectExceptionMessage('resource_test.broken.misnaming_larder, in its "clean" context, names the "dust" operation for its "rack" child, which resource_test.larder.rack does not declare; it declares update, create, browse, restock.');
     $this->resources()->buildOperation(MisnamingLarderStructure::class, 'clean');
   }
 

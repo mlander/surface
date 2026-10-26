@@ -1,8 +1,10 @@
-import type { Arrangement, ArrangementGroup, Schema, Values } from '../contract';
+import type { Arrangement, ArrangementGroup, Schema, Values, Widget } from '../contract';
 import { fieldId, isObject, jsonType, resolveVariants } from '../contract';
 import {
+  AutocompleteField,
   CheckboxesField,
   CheckboxField,
+  FixedField,
   MultipleSelectField,
   NumberField,
   RadiosField,
@@ -46,8 +48,54 @@ export function Field(props: FieldProps): JSX.Element | null {
       return <VariantsField {...props} />;
     case 'list':
       return <ListField {...props} />;
+    case 'fixed':
+      return <FixedField {...props} />;
+    case 'autocomplete':
+      return <AutocompleteField {...props} />;
+    default: {
+      // A module's widget claimed the key, and this page has no field of
+      // its own for it: the stock field for the key's type.
+      // Decision: see docs/decisions.md#a-widget-is-chosen-from-the-definition.
+      const stock = extension?.widget === null || extension?.widget === undefined ? null : stockWidget(props.schema);
+      if (stock === null) {
+        return <UnsupportedField {...props} />;
+      }
+      const multiple = stock === 'select' && jsonType(props.schema) === 'array';
+      return <Field {...props} schema={{ ...props.schema, 'x-surface': { ...extension, widget: stock, ...(multiple ? { multiple: true } : {}) } }} />;
+    }
+  }
+}
+
+/**
+ * The stock field for a key whose widget word this page draws nothing for.
+ *
+ * A module's widget that claims the key is named by its own word, which
+ * the Form API draws with that widget and this page cannot. The page reads
+ * the stock field off the schema, as the stock widgets read the
+ * definition: a list of choices a multiple select, a list rows, choices a
+ * select, an object a fieldset, a boolean a checkbox, a number a number
+ * input, an address an email input, any other string a text input.
+ */
+export function stockWidget(schema: Schema): Widget | null {
+  const type = jsonType(schema);
+  if (type === 'array') {
+    return schema.items?.oneOf !== undefined ? 'select' : 'list';
+  }
+  if (schema.oneOf !== undefined) {
+    return 'select';
+  }
+  switch (type) {
+    case 'object':
+      return 'fieldset';
+    case 'boolean':
+      return 'checkbox';
+    case 'integer':
+    case 'number':
+      return 'number';
+    case 'string':
+      return schema.format === 'idn-email' ? 'email' : 'text';
     default:
-      return <UnsupportedField {...props} />;
+      return null;
   }
 }
 
@@ -150,7 +198,7 @@ export function Properties({
             group,
             isObject(held) ? held : {},
             `${prefix}${entry.group}.${entry.name}`,
-            disabled || Boolean(group['x-surface']?.locked || group.readOnly),
+            disabled || Boolean(group.readOnly),
           );
         }),
       ],
@@ -302,7 +350,7 @@ function newItem(items: Schema): unknown {
 /**
  * A list with no option list: a repeatable, rows added and removed.
  *
- * A collection (`x-surface.list`) draws each item as the child's
+ * A collection (`x-surface.collection`) draws each item as the child's
  * fieldset, titled with the list's title and the item's number, at least
  * `minItems` of them; removing stops at `minItems` and adding at
  * `maxItems`. Its items' schema is the child's def, dereferenced.
@@ -310,7 +358,7 @@ function newItem(items: Schema): unknown {
 export function ListField(props: FieldProps): JSX.Element {
   const id = fieldId(props.path);
   const items = props.schema.items ?? {};
-  const collection = Boolean(props.schema['x-surface']?.list);
+  const collection = Boolean(props.schema['x-surface']?.collection);
   const atLeast = collection ? props.schema.minItems ?? 0 : 0;
   const held = Array.isArray(props.value) ? props.value : [];
   const rows = held.length >= atLeast ? held : [...held, ...Array.from({ length: atLeast - held.length }, () => ({}))];

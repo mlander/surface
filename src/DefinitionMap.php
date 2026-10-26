@@ -64,6 +64,18 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
   private array $mixins = [];
 
   /**
+   * What the frame as a whole is held to, beyond its keys: JSON Schema.
+   *
+   * Each the part of a schema document read into the frame that no key
+   * and no rule could say (SchemaReader), held to the frame's accepted
+   * values by the pipeline and named under the frame's own
+   * `x-surface.checkedOnServer`.
+   *
+   * @var array<int, array>
+   */
+  private array $frameConstraints = [];
+
+  /**
    * Constructs a DefinitionMap.
    *
    * This is where a data surface's shape is checked, once: afterwards every
@@ -176,6 +188,9 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
    * @param array<string, string|\Stringable> $lockReasons
    *   Why a locked key is locked, keyed by definition key, for a key an
    *   access answer locked and said why.
+   * @param array<int, array> $frameConstraints
+   *   What the frame as a whole is held to beyond its keys, each a JSON
+   *   Schema (frameConstraints()).
    *
    * @return static
    *   The map.
@@ -201,6 +216,7 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
     array $held = [],
     array $runtimeAccess = [],
     array $lockReasons = [],
+    array $frameConstraints = [],
   ): static {
     foreach (array_merge(array_keys($refiners), array_keys($contributions), $locked, array_keys($attachments), array_keys($variants), array_keys($lists), array_keys($mounted)) as $key) {
       if (!isset($definitions[$key])) {
@@ -254,7 +270,22 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
         lockedBecause: in_array($name, $locked, TRUE) ? ($lockReasons[$name] ?? NULL) : NULL,
       );
     }
-    return new static($entries, $ports, $mixins);
+    $map = new static($entries, $ports, $mixins);
+    $map->frameConstraints = array_values($frameConstraints);
+    return $map;
+  }
+
+  /**
+   * Gets what the frame as a whole is held to, beyond its keys.
+   *
+   * Decision: see docs/decisions.md#a-schema-can-be-read-back-into-a-structure.
+   *
+   * @return array<int, array>
+   *   Each a JSON Schema the frame's accepted values are held to, as
+   *   SchemaReader kept it; none for a frame declared in code.
+   */
+  public function frameConstraints(): array {
+    return $this->frameConstraints;
   }
 
   /**

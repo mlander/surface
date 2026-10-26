@@ -90,7 +90,7 @@ class VariantsOfThisResourceTest extends DataSurfaceKernelTestBase {
    */
   public function testOnlyTheHoldersAccessBuilds(): void {
     $this->assertSame([CabinetResource::class => TRUE], $this->container->get('data_surface.resource_registry')->getRefusingVariantHolders());
-    $this->assertSame(1, $this->buildsForAccess(CabinetResource::class, 'edit'));
+    $this->assertSame(1, $this->buildsForAccess(CabinetResource::class, 'update'));
     $this->assertSame(0, $this->buildsForAccess(VaultResource::class, 'configure'));
   }
 

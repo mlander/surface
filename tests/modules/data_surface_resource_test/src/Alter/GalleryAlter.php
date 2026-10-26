@@ -7,7 +7,7 @@ namespace Drupal\data_surface_resource_test\Alter;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\State\StateInterface;
 use Drupal\data_surface\Resource\AccessAnswer;
-use Drupal\data_surface\Resource\AltersAccessInterface;
+use Drupal\data_surface\Resource\OperationAccessInterface;
 use Drupal\data_surface\Resource\Attribute\Alters;
 use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface_resource_test\Resource\Gallery\GalleryResource;
@@ -21,7 +21,7 @@ use Drupal\data_surface_resource_test\Resource\Gallery\GalleryResource;
  * caller; set aside for the account alone, it marks every key.
  */
 #[Alters(GalleryResource::class, operations: ['curate'])]
-final class GalleryAlter implements AltersAccessInterface {
+final class GalleryAlter implements OperationAccessInterface {
 
   /**
    * The State key that closes the gallery.

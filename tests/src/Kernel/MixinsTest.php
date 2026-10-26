@@ -9,7 +9,6 @@ use Drupal\data_surface\Contract\SchemaResolver;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\Refinement\DoesNotApply;
 use Drupal\data_surface\Resource\OperationContext;
-use Drupal\data_surface\ResourceBuild\ShapeBlueprint;
 use Drupal\data_surface_resource_test\Resource\Journal\JournalResource;
 use Drupal\data_surface_resource_test\Resource\Journal\LedgerResource;
 use Drupal\data_surface_resource_test\Structure\Broken\MixesMountingStructure;
@@ -392,14 +391,16 @@ class MixinsTest extends DataSurfaceKernelTestBase {
     $full = $this->schema(JournalResource::class);
     $keys = ['$schema', 'x-surface', 'type', 'properties', 'unevaluatedProperties', 'required', 'allOf', '$defs'];
     $this->assertSame($keys, array_keys($full));
-    $this->assertSame(['contract' => 2, 'version' => 1, 'rules' => [2, 4, 5]], $full['x-surface'], 'Asked for in no operation: the contract and the version, and which conditionals are rules.');
+    $this->assertSame(['contract' => 4, 'version' => 1, 'rules' => [2, 4, 5]], $full['x-surface'], 'Asked for in no operation: the contract and the version, and which conditionals are rules.');
     // Each marker where the emitter's pass wrote it, as the rest reads it.
     // Decision: see docs/decisions.md#contract-2.
     $full = SchemaResolver::restored($full);
     $this->assertSame(['resource_test.timestamps', 'resource_test.ownership', 'resource_test.archive'], array_keys($full['$defs']), 'The archive\'s stamps first, then what it mixes in.');
     $this->assertSame(self::KEYS, array_keys($full['properties']), 'Every member keeps its place among the owner\'s keys.');
     $this->assertTrue($full['properties']['changed'], 'The def says all there is.');
-    $this->assertSame(['x-surface' => ['locked' => FALSE, 'dependsOn' => ['published'], 'declared' => TRUE]], $full['properties']['created'], 'The owner narrows it: said beside the def.');
+    // Its declared rule's conditional is one the frame's rules name, marked
+    // there (below); the key carries no marker.
+    $this->assertSame(['x-surface' => ['dependsOn' => ['published']]], $full['properties']['created'], 'The owner narrows it: said beside the def.');
     $this->assertFalse($full['unevaluatedProperties']);
     $this->assertArrayNotHasKey('additionalProperties', $full);
     $this->assertSame(['title', 'visibility'], $full['required'], 'What the defs require, they say.');
@@ -427,10 +428,9 @@ class MixinsTest extends DataSurfaceKernelTestBase {
           "title": "resource_test.timestamps",
           "type": "object",
           "properties": {
-            "created": {"title": "Created", "description": "Seconds since the epoch.", "type": ["integer", "null"], "minimum": 0,
-                        "x-surface": {"locked": false, "dependsOn": []}},
+            "created": {"title": "Created", "description": "Seconds since the epoch.", "type": ["integer", "null"], "minimum": 0},
             "changed": {"title": "Changed", "type": ["integer", "null"], "minimum": 0,
-                        "x-surface": {"locked": false, "dependsOn": ["created"], "refine": true, "declared": true}}
+                        "x-surface": {"dependsOn": ["created"], "refine": true}}
           },
           "allOf": [
             {"if": {"properties": {"created": {"not": {"type": "null"}}}, "required": ["created"]},
@@ -442,9 +442,9 @@ class MixinsTest extends DataSurfaceKernelTestBase {
           "title": "resource_test.ownership",
           "type": "object",
           "properties": {
-            "owner": {"title": "Owner", "type": "string", "x-surface": {"locked": false, "dependsOn": ["audience"]}},
+            "owner": {"title": "Owner", "type": "string", "x-surface": {"dependsOn": ["audience"]}},
             "shared": {"title": "Shared with editors", "type": ["boolean", "null"], "default": false,
-                       "x-surface": {"locked": false, "dependsOn": ["audience"]}}
+                       "x-surface": {"dependsOn": ["audience"]}}
           },
           "required": ["owner"],
           "x-surface": {"ports": {"audience": {"type": "string", "required": true}}}
@@ -454,8 +454,8 @@ class MixinsTest extends DataSurfaceKernelTestBase {
     $this->assertSame($expected['resource_test.timestamps'], $full['$defs']['resource_test.timestamps']);
     $this->assertSame($expected['resource_test.ownership'], $full['$defs']['resource_test.ownership']);
     // What reads the port is stated on the owner, at its key.
-    $this->assertSame(['x-surface' => ['locked' => FALSE, 'dependsOn' => ['visibility'], 'declared' => TRUE]], $full['properties']['owner']);
-    $this->assertSame(['x-surface' => ['locked' => FALSE, 'dependsOn' => ['visibility'], 'enumerated' => TRUE]], $full['properties']['shared']);
+    $this->assertSame(['x-surface' => ['dependsOn' => ['visibility']]], $full['properties']['owner']);
+    $this->assertSame(['x-surface' => ['dependsOn' => ['visibility'], 'enumerated' => TRUE]], $full['properties']['shared']);
     // Less the declared type each narrowing states beside a keyword one
     // type reads, which narrows nothing.
     $stated = array_map(self::untyped(...), array_slice($full['allOf'], 2));
@@ -554,23 +554,13 @@ class MixinsTest extends DataSurfaceKernelTestBase {
     $tool->setInputValue(OperationInputs::VALUES, ['changed' => 1600000000] + self::JOURNAL);
     $tool->execute();
     $this->assertFalse($tool->getResult()->isSuccess());
-    $this->assertSame("The values were refused:\n" . 'changed: This value should be 1700000000 or more. This applies when created is 1700000000.', strip_tags((string) $tool->getResult()->getMessage()));
+    $this->assertSame("The values were refused:\n" . '/changed: This value should be 1700000000 or more. This applies when Created is 1700000000.', strip_tags((string) $tool->getResult()->getMessage()));
     $tool = $manager->createInstance('data_surface:resource_test.journal:configure');
     $tool->setInputValue(OperationInputs::VALUES, ['owner' => 'bea', 'changed' => 1700000900] + self::JOURNAL);
     $tool->execute();
     $this->assertTrue($tool->getResult()->isSuccess(), (string) $tool->getResult()->getMessage());
     $stored = $this->config('data_surface_resource_test.journal');
     $this->assertSame(['bea', 1700000900], [$stored->get('owner'), $stored->get('changed')]);
-  }
-
-  /**
-   * Tests with(), the earlier name, still mixes in, and says it is deprecated.
-   */
-  public function testWithIsTheDeprecatedNameOfMixIn(): void {
-    $this->expectUserDeprecationMessage('BlueprintAdditionsInterface::with() is deprecated in data_surface:1.0.0 and is removed from data_surface:2.0.0. Use ::mixIn() instead. See https://www.drupal.org/project/data_surface');
-    $this->expectException(\LogicException::class);
-    $this->expectExceptionMessage('calls mixIn(). A shape is one value');
-    (new ShapeBlueprint('resource_test.sku', 'Drupal\some_module\Alter\SkuAlter'))->with(EntryStructure::class);
   }
 
   /**

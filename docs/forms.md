@@ -100,7 +100,8 @@ its own form without writing a line of access code; a structure with no
 access class answers neutral, and the
 host's own gates stand exactly as they stood. `data_surface_demo_node_type`
 is the worked example: its routes' `_data_surface_operation_access`
-requirement, the operation link in the content type listing, the
+requirement (which every route naming a resource and an operation has
+without saying it), the operation link in the content type listing, the
 operation form on its way in and out, and the generated tool all ask
 `NodeTypeResource`'s access in the same operation, so nothing in that
 module spells the permission twice.
@@ -206,7 +207,7 @@ with what its alter calls it
 (`describe('third_party_settings.<module>', label: ...)`; the examples'
 compliance module says "Compliance"). The `third_party_settings` map
 around them only groups, and is marked so
-(`DefinitionMetadata::isGrouping()`): the map widget renders it as a
+(`DefinitionMetadata::isGrouping()`): the fieldset widget renders it as a
 plain `container`, with no title and no description, so a person sees
 one fieldset per contributing module and nothing above them. The served
 contract says the same, with no `title` and `x-surface.group`
@@ -220,7 +221,7 @@ lists every key by its dotted path.
 An alter that places its mount
 (`describe('third_party_settings.<module>', after: 'capacity')`, see
 [Alters](resources.md#alters)) has its fieldset drawn
-directly after that key. The map widget builds the `details` where its
+directly after that key. The fieldset widget builds the `details` where its
 values live, inside the grouping container, and marks it with the key it
 follows (`PLACED_AFTER_KEY`). The container's `#pre_render`
 (`preRenderSurfaceContainer()`, after its type's own) moves it when the
@@ -236,7 +237,7 @@ to it). A grouping container left with nothing in it is not drawn.
 The move happens at render time and only then, because it is a matter
 of drawing. By then Form API has processed, validated and submitted the
 form, so everything that walks the container by path finds the
-fieldset where the map widget built it: extraction, `flagSurfaceErrors()`,
+fieldset where the fieldset widget built it: extraction, `flagSurfaceErrors()`,
 the trigger's inline error, the stale marker, `settle()`, and the AJAX
 callback's walk to each dependent. What is kept:
 
@@ -268,7 +269,7 @@ Every key another key refines against gets an `#ajax` with
 a chosen variant's own dependency is wired too, as a trigger of the
 child's own refiners. One exception, on purpose: an element whose
 `#type` is a grouping type (`details`, `fieldset`, `container`, which
-is what the map widget renders) is left unwired. A `details` is not an
+is what the fieldset widget renders) is left unwired. A `details` is not an
 input, emits no change event, and an `#ajax` on it never fires, which is
 worse than nothing because the form looks wired and is not. Attaching to
 each leaf inside it was considered and rejected: a refiner depends on the
@@ -402,7 +403,7 @@ loses focus. Each idiom, and what differs:
 | `disabled` | Locked: the operation knows the value (an identity key), or an access answer locks the key or its child. | A locked key posts nothing that counts: extraction keeps what is stored, whatever arrives, where `#states` disabled only the browser's element. It depends on what is stored or who asks, never on another element's live value. |
 | `enabled` | Not locked. | As for `disabled`. |
 | `checked`, `unchecked` | A refiner or a rule that narrows the key to one value, or the stored value, drawn as it is. | Nothing is ticked for the person: a value is what is stored or sent, and the pipeline refuses one the rule does not allow, rather than the browser ticking a box nobody touched. |
-| `access` (by `#access`) | Access: an access answer omits the key (or locks it), asked of the account and, at runtime, of the thing ([Access](resources.md#access)). | Decided on the server for the account, before anything is drawn; the full schema says which answers wait for the thing, `x-surface.access: "live"`. |
+| `access` (by `#access`) | Access: an access answer omits the key (or locks it), asked of the account and, at runtime, of the thing ([Access](resources.md#access)). | Decided on the server for the account, before anything is drawn; the full schema says which answers wait for the thing, `x-surface.live`. |
 
 Two habits do not carry over. A rule is not a matter of drawing, so a
 rule `#states` would only have shown is checked here: a value a hidden
@@ -767,7 +768,7 @@ of losing the value:
   back is `DataSurfaceWidgetBase`'s job rather than the options
   widget's: extraction resolves widgets from the data surface as advertised,
   having no values yet to refine with, so a key that is only a choice
-  once a refiner has narrowed it is built by the options widget and read
+  once a refiner has narrowed it is built by the select widget and read
   back by another.
 - **The container says which selects those are**, in a hidden input,
   `DataSurfaceFormBuilderInterface::STALE_MARKER_KEY`, holding their
@@ -882,10 +883,8 @@ example.edit:
     _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
     _title: 'Edit example'
     _data_surface_resource: 'Drupal\example\Resource\ExampleResource'
-    _data_surface_operation: 'edit'
+    _data_surface_operation: 'update'
     _data_surface_cosmetics: 'example.surface_form_cosmetics'
-  requirements:
-    _data_surface_operation_access: 'TRUE'
   options:
     parameters:
       example:
@@ -903,7 +902,7 @@ The defaults:
 
 The route's parameters are the operation method's, by name: an upcast
 entity parameter arrives as the entity, a plain one as its value, so
-`edit(NodeTypeInterface $type)` is served by a route with a `{type}`
+`update(NodeTypeInterface $type)` is served by a route with a `{type}`
 parameter upcast to a node type. The defaults are underscore-prefixed
 because Drupal's routing treats such defaults as its own: no parameter
 converter tries to upcast them and no argument resolver tries to hand
@@ -911,7 +910,13 @@ them to `buildForm()`.
 
 The form builds the context with the operation, builds the resource in
 it, loads current values from the resource's composed storage, and
-submits through the pipeline to that storage. A locked identity key
+submits through the pipeline to that storage. Its validation runs the
+whole run dry, access and storage's own `prepare()` included, so every
+refusal is said on its element while Form API still takes errors, and
+the submit runs it again and writes; a refusal that arrives only then,
+what is stored having moved in between, is said as a message
+([Nothing an operation runs reads the
+request](decisions.md#nothing-an-operation-runs-reads-the-request)). A locked identity key
 renders as a disabled element holding the value the operation knows,
 and extraction keeps that value whatever is posted. A resource its
 access locks at the top renders every element disabled, says why above
@@ -965,7 +970,10 @@ Both sit under the one key, so one rebuild replaces both.
 ### Access, twice
 
 The route's requirement, `_data_surface_operation_access`, is the
-operation's permission and then the resource's access class. The form
+operation's permission and then the resource's access class. A route
+whose defaults name a resource and an operation has it without saying it
+(`OperationRouteSubscriber` adds it); a routing file may still say
+`_data_surface_operation_access: 'TRUE'`. The form
 asks the same answer again on its way in, as the floor under the route
 for a caller that reached the form another way, and hands it to the
 pipeline on its way out. The second is the one that matters, for the

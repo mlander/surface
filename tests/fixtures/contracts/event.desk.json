@@ -1,7 +1,7 @@
 {
     "resource": "event.desk",
     "module": "data_surface_examples",
-    "contract": 2,
+    "contract": 4,
     "documents": [
         {
             "resource": "event.desk",
@@ -12,7 +12,7 @@
                 "title": "Configure the information desk",
                 "description": "Sets the information desk: its phone, whether it is listed in the printed program, its lead and up to four volunteers.",
                 "x-surface": {
-                    "contract": 2,
+                    "contract": 4,
                     "operation": {
                         "id": "configure",
                         "label": "Configure the information desk",
@@ -34,8 +34,6 @@
                         "title": "Desk phone",
                         "type": "string",
                         "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
                             "patternMessage": "Write the number in digits, such as +1 555 0100."
                         }
                     },
@@ -45,24 +43,18 @@
                             "boolean",
                             "null"
                         ],
-                        "default": false,
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": []
-                        }
+                        "default": false
                     },
                     "lead": {
                         "title": "Desk lead",
                         "$ref": "#/$defs/event.person",
                         "x-surface": {
-                            "locked": false,
                             "dependsOn": [
                                 "in_program"
                             ],
                             "reads": {
                                 "listed": "in_program"
-                            },
-                            "declared": true
+                            }
                         }
                     },
                     "volunteers": {
@@ -76,9 +68,7 @@
                             "$ref": "#/$defs/event.person"
                         },
                         "x-surface": {
-                            "locked": false,
-                            "dependsOn": [],
-                            "list": true
+                            "collection": true
                         }
                     }
                 },
@@ -123,11 +113,7 @@
                         "properties": {
                             "name": {
                                 "title": "Name",
-                                "type": "string",
-                                "x-surface": {
-                                    "locked": false,
-                                    "dependsOn": []
-                                }
+                                "type": "string"
                             },
                             "email": {
                                 "title": "Email",
@@ -137,7 +123,6 @@
                                 ],
                                 "format": "idn-email",
                                 "x-surface": {
-                                    "locked": false,
                                     "dependsOn": [
                                         "listed"
                                     ]
@@ -147,8 +132,6 @@
                                 "$ref": "#/$defs/event.phone",
                                 "title": "Phone",
                                 "x-surface": {
-                                    "locked": false,
-                                    "dependsOn": [],
                                     "patternMessage": "Write the number in digits, such as +1 555 0100."
                                 }
                             }

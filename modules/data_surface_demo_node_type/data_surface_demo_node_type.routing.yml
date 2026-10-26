@@ -2,10 +2,11 @@
 #
 # Neither route names a form class of this module's own. The generic
 # form builds both from the resource class and the operation; the route's
-# parameters are the operation method's, by name, so the edit route's
-# {type} is upcast to the node type that NodeTypeResource::edit() takes.
+# parameters are the operation method's, by name, so the update route's
+# {type} is upcast to the node type that NodeTypeResource::update() takes.
 #
-# One requirement, and it is the operation's: its permission, this
+# One requirement, and it is the operation's, which a route naming a
+# resource and an operation has without saying it: its permission, this
 # module's own, then the resource's access class, which asks the node type
 # entity whether one may be created or this one updated. Both have to
 # allow. The entity answer is the one that decides whether these values
@@ -16,27 +17,23 @@
 # same operation read the same answer.
 #
 # What stays this module's is the cosmetic layer the last default names.
-data_surface_demo_node_type.add:
+data_surface_demo_node_type.create:
   path: '/admin/structure/types/surface-add'
   defaults:
     _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
     _title: 'Add content type (resource)'
     _data_surface_resource: 'Drupal\data_surface_demo_node_type\Resource\NodeTypeResource'
-    _data_surface_operation: 'add'
+    _data_surface_operation: 'create'
     _data_surface_cosmetics: 'data_surface_demo_node_type.form_cosmetics'
-  requirements:
-    _data_surface_operation_access: 'TRUE'
 
-data_surface_demo_node_type.edit:
+data_surface_demo_node_type.update:
   path: '/admin/structure/types/manage/{type}/surface-edit'
   defaults:
     _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
     _title: 'Edit content type (resource)'
     _data_surface_resource: 'Drupal\data_surface_demo_node_type\Resource\NodeTypeResource'
-    _data_surface_operation: 'edit'
+    _data_surface_operation: 'update'
     _data_surface_cosmetics: 'data_surface_demo_node_type.form_cosmetics'
-  requirements:
-    _data_surface_operation_access: 'TRUE'
   options:
     parameters:
       type:

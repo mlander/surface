@@ -12,7 +12,7 @@ use Drupal\data_surface_resource_test\Resource\RecipeResource;
 /**
  * Adds a revision note, only where a recipe is edited.
  */
-#[Alters(RecipeResource::class, operations: ['edit'])]
+#[Alters(RecipeResource::class, operations: ['update'])]
 final class EditOnlyRecipeAlter implements AltersInputsInterface {
 
   /**

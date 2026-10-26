@@ -18,6 +18,10 @@ caller gets that answer too. The unit test
 as a table of cases, and the kernel test `InputCoercionMatrixTest` holds
 the form and the tool to the same accepted value row by row; if this
 page and those files ever disagree, the files are the ones that run.
+The value every door reads and writes is the stored one: a
+`settings.php` override or config split changes what the site runs on,
+not what is stored, so a key overridden on a site reads here as stored
+([Storage](storage.md#config-overrides-change-what-the-site-runs-on)).
 
 ## Configured, or not
 
@@ -328,11 +332,17 @@ Two consequences:
   write loop sends, since no read returns the secret). With items added
   or removed, a position may hold another item, so an item that leaves
   out a secret stored where it now sits is refused by the secret's path
-  (`mirrors.0.password`): send it again, or the marker
+  (`/mirrors/0/password`): send it again, or the marker
   ([decision](decisions.md#every-door-projects-what-the-read-tool-projects)).
 - **No door answers it.** The read leaves a secret out, and so does
   every other answer: the write tool's `values`, dry run or written, and
-  React's `/validate`.
+  the API's, a dry run's included.
+- **Across a switch of variants, kept.** A secret of a variant the
+  deciding key moves away from is kept as stored, beside the chosen
+  variant's keys, and taken up again when its variant is chosen back,
+  since no caller could send it again: example 14's pasted key survives a
+  switch to a managed key and back. A plain value of the other variant
+  goes, as before ([decision](decisions.md#an-extension-is-a-variant-the-site-adds-or-an-alter)).
 
 Encryption is a separate concern and lives one layer down, at the
 storage layout: see [Storage](storage.md#secrets-at-the-codec).
@@ -520,8 +530,8 @@ key, or the mounted property the refusal is about, is watched by a
 refiner and the refiners changed its constraints for these values; a
 rule the key declared itself names no condition. A watched value its
 own key refused was handed over as nothing, and is said so: "... This
-applies when Room is Main hall and Event license is empty (EV-2048 was
-refused)." A value not on its key's list is followed by what may be
+applies when Room is Main hall and Compliance: Event license is empty
+(EV-2048 was refused)." A value not on its key's list is followed by what may be
 chosen, as refined for the values sent, at most ten and then how many
 more: "The value you selected is not a valid choice. This applies when
 Venue is Riverside Hall. Choose Main hall or East room." The
@@ -530,18 +540,21 @@ and each sentence added is one source a translator sees entire, never a
 concatenation of translated fragments
 ([decision](decisions.md#a-refusal-names-what-it-depends-on)).
 
-The same sentence has two renderings. Rendered for a form, the
-default, a key it depends on is named by its label and a value by its
-option label, as above. Rendered for a machine
+A key it depends on is named by its label; a key held by another (an
+alter's mounted key, a key of a child, a variant or an item) by the
+label of what holds it, then its own, "Compliance: Event license"; a key
+with no label by its JSON Pointer. The same sentence has two renderings,
+which differ in the values alone. Rendered for a form, the default, a
+value is named by its option label, as above. Rendered for a machine
 (`Sentences::machine()`), which the tool's text and the `message` of
-its result are, a key is named by its dotted path in the
-values a caller sends and a value by what is sent, its label beside
-it: "... This applies when venue is riverside (Riverside Hall). Choose
-riverside_main (Main hall) or riverside_east (East room)." The keys and
-values are `Pipeline\Named` placeholders, so a translator still meets
-one source per sentence. The renderer is the door's choice: React's
-`/validate` and `/submit`, a person's door, render `message` as the
-form does, with the same `path` and `code` as the tool.
+its result are, a value is named by what is sent, its label beside it:
+"... This applies when Venue is riverside (Riverside Hall). Choose
+riverside_main (Main hall) or riverside_east (East room)." The path of
+the refused key is the result's `path`. The values are
+`Pipeline\Named` placeholders, so a translator still meets one source
+per sentence. The renderer is the door's choice: the API, a
+person's door through the React page, renders `message` as the form
+does, with the same `path` and `code` as the tool.
 
 There are exactly three places a message becomes text, all of them
 exception messages, because PHP has nowhere to put an object in one:
@@ -566,24 +579,41 @@ sets no code is named for itself, in snake case
 makes itself has one of its own (`Pipeline\Violation`'s constants). A
 refusal of the whole call has an empty path.
 
+Every path a result carries, at every door, is a JSON Pointer
+(RFC 6901) into the values: `/contact/email`, `/shelves/1/unit`,
+`/third_party_settings/data_surface_examples_compliance/license`, a `~`
+or a `/` inside a key written `~0` and `~1`, and the whole call the
+empty pointer. So is each entry of `changes`. The write tool's result
+and its text lines, `drush tool:run --json`, the API's results and
+problem details all spell it so; inside the pipeline a violation keeps
+its dotted path (`Violation::fullPath()`), which the door writes as a
+pointer (`ResultDocument::pointer()`), and the form names an element as
+the form does. Until contract 3 every door answered the dotted path
+([decision](decisions.md#one-result-at-every-door)). In the table, "the
+key" is that key's pointer.
+
 | Code | Path | Says |
 | --- | --- | --- |
 | `required` | the key | A key, or a property of a map, that must hold a value holds none; also a required output not emitted. |
 | `does_not_apply` | the key | A value was sent for a key a rule ruled out for the values sent. |
-| `unknown_key` | the key | A key the resource does not declare, at any depth; within two edits of a key declared beside it, and fewer than half its length, the message names that key: "Unknown key venue_nmae. Did you mean venue_name?" |
+| `unknown_key` | the key | A key the resource does not declare, at any depth, or any key sent to a delete, which takes none; within two edits of a key declared beside it, and fewer than half its length, the message names that key: "Unknown key venue_nmae. Did you mean venue_name?" |
 | `type_mismatch` | the key | A value in a shape its definition cannot hold. |
 | `wrong_variant` | the key | A key sent for a variant its deciding key did not choose. |
 | `no_variant` | the key | A key with variants holds a value while its deciding key holds none. |
 | `cannot_clear` | the key | Null sent for a key its storage always holds. |
 | `secret_in_item` | the secret | A secret stored for a collection's item whose position items added or removed have moved. |
 | `no_schema` | the module's mount | A storage holds settings no config schema describes. |
+| `not_valid` | the key, or the object | A value, or an object's values, a JSON Schema read into the structure refuses, where no constraint of the vocabulary says it ([Reading a schema](reading-a-schema.md#what-is-kept)). |
+| `unresolved` | the key, or the object | A value only a document the schema refers to could decide, which is never fetched. |
 | `has_data` | `settings` | A field's storage settings would change its columns while it has data. |
 | `access` | empty | The resource's access answer refused the whole call. |
 | `permission` | empty | The operation's permission refused the whole call. |
 | `locked` | empty | The resource may be seen and not changed, so nothing was written. |
 | `not_found` | empty | The call's parameters name nothing, or a read is asked of what an operation creates. |
-| `conflict` | empty | What storage holds changed since the caller read it (React's fingerprint). |
+| `conflict` | empty | What storage holds changed since the caller read it: the API's `If-Match` no longer names it, a 412. |
+| `taken` | the key | A create names a thing that exists already: its machine name is in use (`ConfigEntityStorage`), or a list holds a thing twice that may be held once (a placed block's condition). |
 | `locked` | the key | In `notes`: a value sent for a locked key, not taken. |
+| `computed` | the key | A value sent for a computed key other than the one it holds; in `notes`, the one it holds, sent and not taken ([Computed keys](declaring-a-resource.md#computed-keys)). |
 | `stale` | the key | In `stale`: a stored value kept that the key no longer offers, with `stored`. |
 | `not_in_range`, `too_high`, `too_low` | the key | Range: a number outside its bounds. |
 | `too_long`, `too_short` | the key | Length: a string outside its bounds. |
@@ -607,7 +637,7 @@ the value. This is why editing an entity whose id is locked no longer
 resets it to the default. A value sent for it that is not what it holds
 is said, though, once per key and blocking nothing: the run's notes
 (`DataSurfaceResult::$notes`), which the tool puts after its message
-and the React `/validate` and `/submit` answer as `notes`, say "Machine
+and the API answers as `notes`, say "Machine
 name is locked and kept as stored; the value sent was not taken." The
 form says nothing, since it draws the key disabled
 ([decision](decisions.md#locked-at-the-top)).
@@ -624,7 +654,7 @@ may answer that its keys are shown and fixed, or not there at all.
   posted for it. It is still validated, like any locked key. The form
   draws its fieldset disabled, every element inside with it, showing
   what is stored; the contract marks the fieldset and every key inside
-  it `readOnly` and `x-surface.locked`, each holding its stored value
+  it `readOnly`, each holding its stored value
   as `const` (the full schema, which reads no stored value, holds none);
   the tool's `values` input marks the map and every property in it
   locked.
@@ -653,7 +683,7 @@ runtime one (the subject or site state does) alike, and a locked key
 keeps what is stored however it was posted. The kind decides only what
 is said ahead of time: the full schema and the tool listing state a
 static answer for the account that asks and mark a runtime one, its key
-there and writable with `x-surface.access: "live"`, so a document
+there and writable with `x-surface.live`, so a document
 valid against the full schema may still post a key the runtime answer
 then locks (kept) or omits (refused as an unknown key)
 ([Static and runtime access](resources.md#static-and-runtime-access)).
@@ -662,7 +692,7 @@ then locks (kept) or omits (refused as an unknown key)
 
 | Stage | Decides |
 | --- | --- |
-| `accept()` | Whether a key was configured, what type its value takes (the coercion table), whether its type is acceptable at all, and how input merges over what is stored. Keeps what a key left out, a list or a secret holds; clears an optional key sent nothing. Leaves out a key that does not apply to what it accepted, unless it was sent another value. Refuses undeclared keys and type mismatches. Asks only the options service, for the values a near miss snaps onto. |
+| `accept()` | Whether a key was configured, what type its value takes (the coercion table), whether its type is acceptable at all, and how input merges over what is stored. Keeps what a key left out, a list or a secret holds; clears an optional key sent nothing. Leaves out a key that does not apply to what it accepted, unless it was sent another value. Computes each computed key from what it accepted, last. Refuses undeclared keys and type mismatches. Asks only the options service, for the values a near miss snaps onto. |
 | `validate()` | Whether a required key was answered, and whether the answers satisfy the constraints of the data surface **refined against those same answers**. Given the stored values, it also tells a stale reference from a refusal, and refuses a value sent for a key that does not apply. |
 | `refine()` | Which definitions narrow, given which dependencies are configured. A dependency holding `FALSE` or `[]` is an answer and does narrow. |
 | `prepare()` / `commit()` | Nothing about values; the storage layout and the write. |

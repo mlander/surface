@@ -4,31 +4,34 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\data_surface\Kernel\Matrix;
 
+use Drupal\Core\Cache\Cache;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\data_surface\Contract\SchemaResolver;
 use Drupal\data_surface\DataSurfaceBuilder;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\DefinitionMetadata;
-use Drupal\data_surface\Pipeline\TypeMismatchException;
 use Drupal\data_surface\Pipeline\UnknownKeysException;
-use Drupal\data_surface\Pipeline\VariantMismatchException;
 use Drupal\data_surface\Pipeline\Storage\StateStorage;
 use Drupal\data_surface_examples_compliance\Alter\RegistrationComplianceAlter;
 use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface_resource_test\Access\ExhibitAccess;
 use Drupal\data_surface_resource_test\Alter\PlaqueAlter;
 use Drupal\data_surface_resource_test\Alter\WallAlter;
+use Drupal\data_surface_resource_test\Keys\WorkshopBenches;
 use Drupal\data_surface_resource_test\Resource\Cellar\CellarResource;
 use Drupal\data_surface_resource_test\Resource\Exhibit\ExhibitResource;
 use Drupal\data_surface_resource_test\Resource\Gallery\GalleryResource;
 use Drupal\data_surface_resource_test\Storage\CellarStorage;
+use Drupal\data_surface_resource_test\Variants\PosterLayouts;
 use Drupal\data_surface_resource_test\Structure\Notice\NoticeStructure;
 use Drupal\Tests\data_surface\Kernel\DataSurfaceKernelTestBase;
-use Drupal\Tests\data_surface\Traits\ContractValidationTrait;
+use Drupal\Tests\data_surface\Traits\NeverStricterTrait;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\IgnoreDeprecations;
+use Drupal\data_surface_examples_references\Sponsorship;
+use Drupal\data_surface_examples_retitle\Retitle;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
 /**
@@ -44,7 +47,13 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * a structure's ports on the venue and the hall, structures mixed in on
  * the journal and attached on the ledger, a shape at two keys on the
  * depot, access of both kinds on the exhibit and an alter's on the
- * gallery, keys that come from the site on the workshop),
+ * gallery, keys that come from the site on the workshop, variants chosen
+ * by a plugin and a region by a theme on a placed block, and on example
+ * 14 a source with one value and then two, a secret in a variant, and an
+ * alter's key ruling the owner's out, on example 15 a venue added, a
+ * listing's query and a reorder's list, on example 16 references
+ * listed, past the limit and of any type, and variants and keys from the
+ * site past the site list limit),
  * a table of documents the pipeline accepts and documents it refuses.
  * Each row is asserted three times: against the pipeline (accept(), then
  * validate() over what is stored), against the full
@@ -68,7 +77,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 #[IgnoreDeprecations]
 class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
 
-  use ContractValidationTrait;
+  use NeverStricterTrait;
   use UserCreationTrait;
 
   /**
@@ -131,6 +140,13 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
     'data_surface_react',
     'data_surface_resource_test',
     'data_surface_tool_test',
+    'data_surface_component_block',
+    'data_surface_block',
+    'text',
+    'filter',
+    'node',
+    'data_surface_examples_references',
+    'data_surface_examples_retitle',
   ];
 
   /**
@@ -141,55 +157,6 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
     $this->installEntitySchema('user');
     $this->installConfig(['data_surface_examples']);
     $this->setUpCurrentUser(admin: TRUE);
-  }
-
-  /**
-   * Holds one data surface to its table of documents.
-   *
-   * @param string $id
-   *   The resource's id, for the documents.
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
-   *   The data surface, built in its operation.
-   * @param array $stored
-   *   What storage holds.
-   * @param array<string, array{0: array, 1: bool, 2?: bool, 3?: bool}> $rows
-   *   By label: the input, whether the pipeline accepts it, and, for a
-   *   refused one, whether the full schema and the schema for these
-   *   answers accept its document anyway (both FALSE, exact, unless
-   *   given).
-   * @param \Drupal\data_surface\DataSurfaceInterface|null $declared
-   *   The data surface the full schema is emitted from, built for the
-   *   account alone, when access in it differs from $surface's; NULL for
-   *   $surface.
-   */
-  protected function assertTable(string $id, DataSurfaceInterface $surface, array $stored, array $rows, ?DataSurfaceInterface $declared = NULL): void {
-    $emitter = $this->container->get('data_surface.contract_emitter');
-    // As a client holds them: an empty object stays one.
-    $full = json_decode((string) json_encode($emitter->emitFull($declared ?? $surface, $id)->document['schema']));
-    foreach ($rows as $label => $row) {
-      [$input, $accepts] = $row;
-      try {
-        $accepted = $this->pipeline()->accept($surface, $input, $stored);
-        $violations = $this->pipeline()->validate($surface, $accepted, $stored);
-        $verdict = $violations->isEmpty();
-        // As the pipeline writes it: every map an object, an empty one too.
-        $document = $this->pipeline()->document($surface, $accepted);
-        $these = (array) json_decode((string) json_encode($emitter->emit($surface, $accepted, $id)->document));
-      }
-      catch (UnknownKeysException | TypeMismatchException | VariantMismatchException) {
-        $document = $input;
-        $verdict = FALSE;
-        $these = (array) json_decode((string) json_encode($emitter->emit($surface, $this->pipeline()->accept($surface, [], $stored), $id)->document));
-      }
-      $this->assertSame($accepts, $verdict, $label . ': the pipeline ' . ($accepts ? 'accepts' : 'refuses') . ' it.');
-      $wide_full = $accepts || ($row[2] ?? FALSE);
-      $wide_these = $accepts || ($row[3] ?? FALSE);
-      $this->assertSame($wide_full, $this->validates($full, $document), $label . ': the full schema ' . ($wide_full ? 'accepts' : 'refuses') . ' its document.');
-      $this->assertSame($wide_these, $this->validates($these['schema'], $document), $label . ': the schema for these answers ' . ($wide_these ? 'accepts' : 'refuses') . ' its document.');
-      if ($accepts) {
-        $this->assertTrue($this->validates($these['schema'], $these['values']), $label . ': the schema for these answers accepts its own values.');
-      }
-    }
   }
 
   /**
@@ -428,7 +395,7 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
     $this->actAsLarderKeeper();
     $rack = self::CELLAR['racks'][0];
     $blank = ['shelf' => NULL, 'spices' => NULL, 'label' => ''];
-    $this->assertTable('resource_test.cellar', $this->build(CellarResource::class, 'edit', ['larder' => 'main']), self::CELLAR, [
+    $this->assertTable('resource_test.cellar', $this->build(CellarResource::class, 'update', ['larder' => 'main']), self::CELLAR, [
       'as stored' => [self::CELLAR, TRUE],
       'four racks and a blank row' => [['racks' => [$rack, $rack, $rack, $rack, $blank]], TRUE],
       'the racks as JSON' => [['racks' => (string) json_encode([$rack])], TRUE],
@@ -674,6 +641,401 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
   }
 
   /**
+   * Lists the site decides, past the site list limit: open, and `deferred`.
+   *
+   * Twenty-five poster layouts and twenty-five benches. The full schema
+   * states the panels and each map of benches open and marks them
+   * `deferred`, so it accepts what only a chosen variant or a listed entry
+   * refuses, which the marker documents; the schema for these answers is
+   * built for the chosen layout and every bench, so it is exact. The
+   * grid's columns sent for the strip are refused by the pipeline by name
+   * and accepted by both documents: the full schema is open there, and the
+   * schema for these answers is built for what is stored, the grid.
+   *
+   * @see docs/decisions.md#a-budget-for-what-the-site-decides
+   */
+  public function testListsPastTheSiteListLimit(): void {
+    $this->installConfig(['data_surface_resource_test']);
+    $this->setUpCurrentUser([], ['administer site configuration']);
+    $layouts = [];
+    for ($n = 1; $n <= 22; $n++) {
+      $layouts['extra_' . $n] = [
+        'label' => 'Extra ' . $n,
+        'schema' => [
+          'type' => 'object',
+          'properties' => ['caption' => ['type' => 'string', 'title' => 'Caption', 'maxLength' => 20]],
+          'additionalProperties' => FALSE,
+        ],
+      ];
+    }
+    $this->container->get('state')->set(PosterLayouts::STATE, $layouts);
+    Cache::invalidateTags([PosterLayouts::TAG]);
+    $poster = $this->build('resource_test.poster');
+    $full = $this->decoded($this->container->get('data_surface.contract_emitter')->emitFull($poster, 'resource_test.poster')->document);
+    $this->assertSame(['fetch' => '?choose=/panels={value}'], $full['schema']['properties']['panels']['x-surface']['deferred']);
+    $this->assertTable('resource_test.poster', $poster, $this->stored('resource_test.poster'), [
+      'as stored' => [[], TRUE],
+      'the strip with a caption' => [['layout' => 'strip', 'panels' => ['caption' => 'Spring']], TRUE],
+      'a layout the site added' => [['layout' => 'extra_7', 'panels' => ['caption' => 'Summer']], TRUE],
+      'five columns on the grid' => [['panels' => ['columns' => 5]], FALSE, NULL],
+      'a caption too long on a layout the site added' => [
+        ['layout' => 'extra_7', 'panels' => ['caption' => str_repeat('a', 21)]],
+        FALSE,
+        NULL,
+      ],
+      'the grid\'s columns sent for the strip' => [
+        ['layout' => 'strip', 'panels' => ['columns' => 3]],
+        FALSE,
+        TRUE,
+        TRUE,
+      ],
+      'a layout the site does not list' => [['layout' => 'mural'], FALSE],
+    ]);
+
+    $benches = (array) $this->config(WorkshopBenches::CONFIG)->get('benches');
+    for ($n = 1; $n <= 22; $n++) {
+      $benches['bench_' . $n] = ['label' => 'Bench ' . $n];
+    }
+    $this->config(WorkshopBenches::CONFIG)->set('benches', $benches)->save();
+    $this->assertTable('resource_test.workshop', $this->build('resource_test.workshop'), $this->stored('resource_test.workshop'), [
+      'as stored' => [[], TRUE],
+      'a light switched on' => [['lights' => ['bench_3' => TRUE]], TRUE],
+      'a bench the site added put to use' => [['benches' => ['bench_9' => ['enabled' => TRUE, 'hours' => 6]]], TRUE],
+      'hours on a bench out of use' => [['benches' => ['bench_9' => ['enabled' => FALSE, 'hours' => 3]]], FALSE, NULL],
+      'a light the site does not list' => [['lights' => ['drill' => TRUE]], FALSE, TRUE],
+    ]);
+  }
+
+  /**
+   * Example 14: a credential pasted or a key the site manages.
+   *
+   * The mailer with the module that manages keys off, one source stated as
+   * `const`, then on, two sources and a managed key from the keys it
+   * lists; the webhook with the module on, its pasted key ruled out by the
+   * alter's key. A pasted key sent for the managed source is another
+   * variant's key, refused by both documents; a pasted key beside a
+   * managed key is refused by the rule both state.
+   */
+  public function testExampleFourteen(): void {
+    $this->installConfig(['data_surface_examples']);
+    $pasted = ['credential' => ['api_key' => 'mk-1']];
+    $managed = static fn (string $key, array $more = []): array => [
+      'source' => 'managed',
+      'credential' => ['key_id' => $key] + $more,
+    ];
+    $this->assertTable('event.mailer', $this->build('event.mailer'), $this->stored('event.mailer'), [
+      // A required secret never set: the one place the schema is wider.
+      'as stored, no key ever pasted' => [[], FALSE, TRUE, TRUE],
+      'a pasted key' => [['credential' => ['api_key' => 'mk-1']], TRUE],
+      'the one source, and a pasted key' => [['source' => 'pasted', 'credential' => ['api_key' => 'mk-1']], TRUE],
+      'the managed source, which the site does not offer' => [$managed('mail_service'), FALSE],
+      'a sender that is no address' => [['sender' => 'tickets'] + $pasted, FALSE, TRUE, TRUE],
+    ]);
+
+    $this->container->get('module_installer')->install(['data_surface_examples_keys']);
+    $this->setUpCurrentUser(admin: TRUE);
+    $this->assertTable('event.mailer', $this->build('event.mailer'), $this->stored('event.mailer'), [
+      'a pasted key' => [['source' => 'pasted', 'credential' => ['api_key' => 'mk-1']], TRUE],
+      'a managed key' => [$managed('mail_service'), TRUE],
+      'the managed source, no key' => [['source' => 'managed', 'credential' => []], FALSE],
+      'a key the site does not manage' => [$managed('vault'), FALSE],
+      'a pasted key for the managed source' => [$managed('mail_service', ['api_key' => 'mk-1']), FALSE],
+      'a source no variant is for' => [['source' => 'vault', 'credential' => ['api_key' => 'mk-1']], FALSE],
+    ]);
+    $mount = static fn (?string $key): array => [
+      'third_party_settings' => ['data_surface_examples_keys' => ['key_id' => $key]],
+    ];
+    $this->assertTable('event.webhook', $this->build('event.webhook'), $this->stored('event.webhook'), [
+      'as stored' => [[], TRUE],
+      'a pasted key' => [['api_key' => 'wh-1'], TRUE],
+      'a managed key' => [$mount('webhook_signing'), TRUE],
+      'a managed key, the pasted key sent empty' => [['api_key' => ''] + $mount('webhook_signing'), TRUE],
+      'a pasted key beside a managed key' => [['api_key' => 'wh-1'] + $mount('webhook_signing'), FALSE],
+      'a key the site does not manage' => [$mount('vault'), FALSE],
+      'no managed key, and a pasted key' => [['api_key' => 'wh-1'] + $mount(NULL), TRUE],
+    ]);
+  }
+
+  /**
+   * Example 12: each component's props, read from its schema, as variants.
+   *
+   * The full schema states every component's def and one conditional per
+   * component, so both documents refuse what the pipeline refuses of the
+   * props: a bound, a length, a count, a value not on a list, a required
+   * prop missing, another component's prop; and of the slots: a kind a
+   * slot does not offer, more items than it holds, a component it does
+   * not expect, by id or by tag, another component's slot. A URI is a
+   * format, advisory in both documents and checked by the pipeline's own
+   * type.
+   */
+  public function testExampleTwelve(): void {
+    $hero = ['component' => 'data_surface_examples:hero', 'props' => ['title' => 'Doors open at six']];
+    $cta = static fn (array $tags): array => [
+      'component' => 'data_surface_examples:call_to_action',
+      'props' => ['text' => 'Buy a ticket', 'url' => 'https://example.com/tickets', 'tags' => $tags],
+    ];
+    $actions = static fn (string $kind, array $held): array => [
+      'slots' => ['actions' => ['kind' => $kind, $kind => $held]],
+    ];
+    $text = ['body' => ['kind' => 'text', 'text' => 'Bring your ticket.']];
+    $card = ['component' => 'data_surface_examples:card', 'props' => ['heading' => 'Talks']];
+    $section = static fn (array $held): array => [
+      'component' => 'data_surface_examples:section',
+      'props' => [],
+      'slots' => ['content' => ['kind' => 'component', 'component' => $held]],
+    ];
+    $this->assertTable('event.spotlight', $this->build('event.spotlight'), $this->stored('event.spotlight'), [
+      'as stored' => [[], TRUE],
+      'the hero, its title given' => [$hero, TRUE],
+      'the hero, as dark as its schema allows' => [['props' => ['overlay' => 100] + $hero['props']] + $hero, TRUE],
+      'the call to action with three tags' => [$cta(['music', 'film', 'talks']), TRUE],
+      'the card with its link cleared' => [['props' => ['link' => NULL]], TRUE],
+      'the call to action with four tags' => [$cta(['music', 'film', 'talks', 'food']), FALSE],
+      'a hero too dark' => [['props' => ['overlay' => 140] + $hero['props']] + $hero, FALSE],
+      'a hero with no title' => [['component' => 'data_surface_examples:hero', 'props' => ['align' => 'start']], FALSE],
+      'a heading too long' => [['props' => ['heading' => str_repeat('a', 81)]], FALSE],
+      'a tone the card does not offer' => [['props' => ['tone' => 'loud']], FALSE],
+      'a link with no address' => [['props' => ['link' => ['label' => 'Tickets']]], TRUE],
+      'a hero\'s prop sent for the card' => [['props' => ['overlay' => 60]], FALSE],
+      'a component the site does not have' => [['component' => 'data_surface_examples:banner'], FALSE],
+      'the card with text in its slot' => [['slots' => $text], TRUE],
+      'a component in the card\'s text slot' => [['slots' => ['body' => ['kind' => 'component']]], FALSE],
+      'the hero with two calls to action' => [$actions('components', [$cta(['music']), $cta([])]) + $hero, TRUE],
+      'the hero with three calls to action' => [$actions('components', [$cta([]), $cta([]), $cta([])]) + $hero, FALSE],
+      'a hero in the hero\'s actions' => [$actions('component', $hero) + $hero, FALSE],
+      'a section holding a card' => [$section($card), TRUE],
+      'a section holding a call to action, which has no tag block' => [$section($cta([])), FALSE],
+      'a hero\'s slot sent for the card' => [['slots' => ['actions' => ['kind' => 'text']]], FALSE],
+      'format is advisory: an address that is no URI' => [
+        ['props' => ['link' => ['url' => 'not a uri']]],
+        FALSE,
+        TRUE,
+        TRUE,
+      ],
+    ]);
+  }
+
+  /**
+   * A placed block: its plugin chooses its settings, its theme its region.
+   *
+   * Placed in Stark, which is installed for the table: the region is
+   * enumerated per theme, so one of another theme is refused by both
+   * documents; the component block's props are its components' variants
+   * in turn; a condition reads its context. The machine name's pattern
+   * looks ahead, which no ECMA pattern both engines read alike says, so
+   * it is checked on the server alone and both documents are wider there.
+   */
+  public function testBlockPlacement(): void {
+    $this->container->get('theme_installer')->install(['stark']);
+    $hero = [
+      'label' => 'Doors',
+      'id' => 'doors_hero',
+      'plugin' => 'data_surface_component',
+      'settings' => ['component' => 'data_surface_examples:hero', 'props' => ['title' => 'Doors open at six']],
+      'theme' => 'stark',
+      'region' => 'sidebar_first',
+    ];
+    $branding = [
+      'label' => 'Branding',
+      'id' => 'branding',
+      'plugin' => 'system_branding_block',
+      'theme' => 'stark',
+      'region' => 'header',
+    ];
+    $administrators = ['visibility' => [['id' => 'user_role', 'settings' => ['roles' => ['administrator']]]]];
+    $dark = ['component' => 'data_surface_examples:hero', 'props' => ['title' => 'Doors', 'overlay' => 140]];
+    $cta = [
+      'component' => 'data_surface_examples:call_to_action',
+      'props' => ['text' => 'Buy a ticket', 'url' => 'https://example.com/tickets'],
+    ];
+    $holding = static fn (array $held): array => [
+      'settings' => ['slots' => ['actions' => ['kind' => 'component', 'component' => $held]]] + $hero['settings'],
+    ] + $hero;
+    $this->assertTable('block.placement', $this->build('block.placement', 'create'), [], [
+      'a branding block in the header' => [$branding, TRUE],
+      'the branding block, its slogan off' => [['settings' => ['use_site_slogan' => FALSE]] + $branding, TRUE],
+      'a hero in the left sidebar' => [$hero, TRUE],
+      'a hero shown to administrators alone' => [$administrators + $hero, TRUE],
+      'a region of another theme' => [['region' => 'pre_content'] + $hero, FALSE],
+      'a hero too dark' => [['settings' => $dark] + $hero, FALSE],
+      'a hero with a call to action in its actions' => [$holding($cta), TRUE],
+      'a hero with a hero in its actions' => [$holding($hero['settings']), FALSE],
+      'the branding block sent a hero\'s props' => [
+        ['settings' => ['props' => ['title' => 'Doors']]] + $branding,
+        FALSE,
+      ],
+      'a plugin the layout does not offer' => [['plugin' => 'broken'] + $branding, FALSE],
+      'no title' => [array_diff_key($branding, ['label' => TRUE]), FALSE],
+      'a condition the layout does not offer' => [['visibility' => [['id' => 'current_theme']]] + $branding, FALSE],
+      'a machine name with a capital, checked on the server' => [['id' => 'Branding'] + $branding, FALSE, TRUE, TRUE],
+    ]);
+  }
+
+  /**
+   * Example 15's venues: a venue added, a listing's query, a reorder.
+   *
+   * The machine name and a room's id are patterns both engines read alike,
+   * so both documents refuse a capital; a room is a collection item, sent
+   * whole. The listing's query is its own structure's keys, bounded; the
+   * reorder's list asks for one venue at least. That a venue named exists
+   * and is named once is the storage's to say, after validation: both
+   * documents accept a list naming one twice, as the pipeline does.
+   */
+  public function testVenues(): void {
+    $town = ['label' => 'Town Hall', 'id' => 'town_hall', 'capacity' => 300];
+    $council = ['id' => 'council', 'label' => 'Council chamber', 'seats' => 120];
+    $harbour = ['id' => 'harbour', 'weight' => -1];
+    $this->assertTable('event.venue', $this->build('event.venue', 'create'), [], [
+      'a venue' => [$town, TRUE],
+      'a venue with a room' => [$town + ['rooms' => [$council]], TRUE],
+      'no capacity' => [array_diff_key($town, ['capacity' => TRUE]), FALSE],
+      'a capacity of none' => [['capacity' => 0] + $town, FALSE],
+      'a machine name with a capital' => [['id' => 'Town'] + $town, FALSE],
+      'a room with no seats' => [$town + ['rooms' => [['id' => 'council', 'label' => 'Council chamber']]], FALSE],
+      'a room id with a space' => [$town + ['rooms' => [['id' => 'council room'] + $council]], FALSE],
+      // A computed key: left out it is computed (a venue, above), sent as
+      // computed it is noted, and any other is refused, which neither
+      // document can say, since what it holds follows the name.
+      'the slug it computes, sent' => [$town + ['slug' => 'town-hall'], TRUE],
+      'another slug, sent' => [$town + ['slug' => 'city-hall'], FALSE, TRUE, TRUE],
+      'a slug its pattern refuses, sent' => [$town + ['slug' => 'Town Hall'], FALSE],
+    ]);
+    $this->assertTable('event.venue', $this->build('event.venue', 'list'), [], [
+      'nothing: every venue, from the first' => [[], TRUE],
+      'a page' => [['offset' => 2, 'limit' => 1], TRUE],
+      'the disabled ones' => [['status' => FALSE], TRUE],
+      'a limit too high' => [['limit' => 51], FALSE],
+      'an offset below none' => [['offset' => -1], FALSE],
+      'a key the venue has, which the listing does not take' => [['capacity' => 3], FALSE],
+    ]);
+    $resources = $this->container->get('data_surface.resources');
+    $context = $resources->operation('event.venue', 'reorder');
+    $surface = $resources->build('event.venue', $context);
+    $this->assertTable('event.venue', $surface, $resources->storage('event.venue', $context, $surface)->load($surface), [
+      'as stored' => [[], TRUE],
+      'one venue moved' => [['venues' => [$harbour]], TRUE],
+      'one venue named twice, which storage refuses' => [['venues' => [$harbour, ['weight' => 3] + $harbour]], TRUE],
+      'no venue' => [['venues' => []], FALSE],
+      'a weight too light' => [['venues' => [['id' => 'harbour', 'weight' => -5000]]], FALSE],
+      'a venue with no weight' => [['venues' => [['id' => 'harbour']]], FALSE],
+    ]);
+  }
+
+  /**
+   * A computed key, once and on every change, over what is stored.
+   *
+   * Left out, each holds what a write would store; sent as it holds it is
+   * noted and accepted; sent otherwise it is refused by the pipeline,
+   * which both documents leave wide, since no keyword states what it
+   * follows. The handle's own length refuses a long name, and so do both
+   * documents, which state its maximum.
+   */
+  public function testComputedKeys(): void {
+    $stored = ['first' => 'Ada', 'last' => 'Byron', 'code' => 'ADA', 'handle' => 'ada.byron', 'color' => 'blue'];
+    $ann = ['first' => 'Ann', 'last' => 'Byron'];
+    foreach (['nothing stored' => [], 'stored' => $stored] as $label => $held) {
+      $this->assertTable('resource_test.badge', $this->build('resource_test.badge'), $held, [
+        $label . ': left out' => [$ann, TRUE],
+        $label . ': the handle as computed, sent' => [$ann + ['handle' => 'ann.byron'], TRUE],
+        $label . ': another handle, sent' => [$ann + ['handle' => 'ann'], FALSE, TRUE, TRUE],
+        $label . ': a name too long for the handle' => [['first' => 'Ann', 'last' => 'Montgomery'], FALSE],
+      ]);
+    }
+  }
+
+  /**
+   * Example 16's references: listed, past the limit, and of any type.
+   *
+   * Up to the limit, a reference's candidates are its `oneOf`, so both
+   * documents refuse an id the site does not offer, a page where an
+   * article is asked for among them; past it, both take any id of the
+   * key's type and the pipeline's check refuses it. A bare key's entity
+   * type is a list, its id stated per entity type, required once one is
+   * chosen and ruled out while none is.
+   */
+  public function testReferences(): void {
+    $this->installEntitySchema('node');
+    $this->installSchema('node', ['node_access']);
+    $this->installConfig(['node', 'filter', 'data_surface_examples_references']);
+    $this->container->get('class_resolver')->getInstanceFromDefinition(Sponsorship::class)->writeNodes();
+    $nodes = $this->container->get('class_resolver')->getInstanceFromDefinition(Sponsorship::class)->ids();
+    $rows = [
+      'a venue the site has' => [['venue' => 'library'], TRUE],
+      'a venue it does not' => [['venue' => 'concert_hall'], FALSE],
+      'an article' => [['page' => $nodes['article']], TRUE],
+      'a page where an article is asked for' => [['page' => $nodes['page']], FALSE],
+      'a node of any content type' => [['thing' => ['entity_type' => 'node', 'id' => (string) $nodes['page']]], TRUE],
+      'an entity type no content type' => [['thing' => ['entity_type' => 'event_venue', 'id' => 'library']], FALSE],
+      'a node where a config entity is asked for' => [
+        ['setting' => ['entity_type' => 'node', 'id' => (string) $nodes['article']]],
+        FALSE,
+      ],
+      'an entity type and no id' => [['thing' => ['entity_type' => 'node', 'id' => NULL]], FALSE],
+      'an id and no entity type' => [['thing' => ['id' => (string) $nodes['article']]], FALSE],
+    ];
+    $this->assertTable('event.sponsorship', $this->build('event.sponsorship'), $this->stored('event.sponsorship'), $rows);
+
+    // Past the limit: an id of the key's type, which only the server
+    // holds to what the account may reference.
+    $resources = $this->container->get('data_surface.resources');
+    $this->container->get('data_surface.references')->withLimit(1, function () use ($resources, $nodes): void {
+      $resources->forgetBuilds();
+      $this->assertTable('event.sponsorship', $this->build('event.sponsorship'), $this->stored('event.sponsorship'), [
+        'a venue the site has' => [['venue' => 'library'], TRUE],
+        'a venue it does not, wider in both documents' => [['venue' => 'concert_hall'], FALSE, TRUE, TRUE],
+        'a page where an article is asked for, wider in both documents' => [
+          ['page' => $nodes['page']],
+          FALSE,
+          TRUE,
+          TRUE,
+        ],
+        'an id of another type' => [['page' => 'sponsor'], FALSE],
+      ]);
+    });
+    $resources->forgetBuilds();
+  }
+
+  /**
+   * Example 17's retitle: a list of nodes, each one's gates asked later.
+   *
+   * Both documents hold the list to its count, each node to the site's
+   * candidates and each title to its length, as the pipeline does. The
+   * gates are asked of each node after validation, before storage, so a
+   * node whose title is locked is valid here: both documents accept it,
+   * the full schema marking the list `live`, and the call refuses it on
+   * its item (ExamplesConceptsToolTest).
+   *
+   * @see docs/decisions.md#a-gate-is-borrowed-never-copied
+   */
+  public function testRetitle(): void {
+    $this->installEntitySchema('node');
+    $this->installSchema('node', ['node_access']);
+    $this->installConfig(['node', 'filter', 'data_surface_examples_retitle']);
+    $this->container->get('class_resolver')->getInstanceFromDefinition(Retitle::class)->writeNodes();
+    $pages = $this->container->get('class_resolver')->getInstanceFromDefinition(Retitle::class)->ids();
+    $this->container->get('state')->set(Retitle::LOCKED, TRUE);
+    $three = [['node' => $pages['one']], ['node' => $pages['two']], ['node' => $pages['three']]];
+    $built = $this->build('ai.retitle', 'retitle');
+    $this->assertTable('ai.retitle', $built, [], [
+      'three pages, no title sent' => [['items' => $three], TRUE],
+      'a title sent' => [
+        ['items' => [['node' => $pages['one'], 'new_title' => 'Night shift']], 'style' => 'sentence'],
+        TRUE,
+      ],
+      'the third page while its title is locked, which its gate refuses later' => [
+        ['items' => [['node' => $pages['three']]]],
+        TRUE,
+      ],
+      'no page' => [['items' => []], FALSE],
+      'fifty-one pages' => [['items' => array_fill(0, 51, ['node' => $pages['one']])], FALSE],
+      'a node the site does not have' => [['items' => [['node' => 999]]], FALSE],
+      'a title too long' => [['items' => [['node' => $pages['one'], 'new_title' => str_repeat('a', 256)]]], FALSE],
+      'a style not offered' => [['items' => $three, 'style' => 'shouting'], FALSE],
+    ], $this->container->get('data_surface.resources')->buildStatic('ai.retitle', $this->container->get('data_surface.resources')->operation('ai.retitle', 'retitle')));
+    $this->container->get('state')->delete(Retitle::LOCKED);
+  }
+
+  /**
    * The exhibit: a key under each kind of access answer, posted.
    *
    * The full schema is emitted from the exhibit built for the account
@@ -683,7 +1045,7 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
    * stored, so its document is accepted by both. An omitted one posted is
    * an unknown key, refused by both where the omission is static; where
    * it is runtime the full schema has the key, marked
-   * `x-surface.access: "live"`, and accepts it: wider, never narrower.
+   * `x-surface.live`, and accepts it: wider, never narrower.
    *
    * @see docs/decisions.md#access-is-static-or-runtime-read-from-its-cacheability
    */
@@ -855,7 +1217,7 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
    */
   public function testLockedCollectionItemsCarryNoConst(): void {
     $this->actAsLarderKeeper('inspect spice rack');
-    $cellar = $this->build(CellarResource::class, 'edit', ['larder' => 'main']);
+    $cellar = $this->build(CellarResource::class, 'update', ['larder' => 'main']);
     $this->assertTrue($cellar->isLocked('racks'));
     $document = $this->decoded($this->container->get('data_surface.contract_emitter')->emit($cellar, array_replace($cellar->getDefaultValues(), self::CELLAR), 'resource_test.cellar')->document);
     $racks = $document['schema']['properties']['racks'];
@@ -976,7 +1338,9 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
       // A modifier left out is wider, never narrower.
       ['/^[a-z]+$/iD', 'A1', FALSE, TRUE],
     ] as [$regex, $value, $pipeline, $schema]) {
-      $surface = $this->surface(['k' => DataDefinition::create('string')->setLabel('K')->addConstraint('Regex', ['pattern' => $regex])]);
+      $surface = $this->surface([
+        'k' => DataDefinition::create('string')->setLabel('K')->addConstraint('Regex', ['pattern' => $regex]),
+      ]);
       $label = $regex . ' ' . json_encode($value);
       $accepted = $this->pipeline()->accept($surface, ['k' => $value]);
       $this->assertSame($pipeline, $this->pipeline()->validate($surface, $accepted)->isEmpty(), $label . ': the pipeline.');
@@ -1029,7 +1393,7 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
     $this->assertNull($this->pipeline()->accept($surface, ['pick' => NULL], ['pick' => 'z'])['pick']);
     $emitter = $this->container->get('data_surface.contract_emitter');
     $document = $this->decoded($emitter->emit($surface, ['pick' => 'z'], 'audit')->document);
-    $this->assertSame(['pick'], $document['stale']);
+    $this->assertSame(['/pick'], $document['stale']);
     $this->assertNull($document['values']['pick']);
     // The document as served and sent back, the optional stale key null:
     // accepted, null being a value an optional key takes.
@@ -1052,7 +1416,7 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
     $step3 = $resources->build('registration.step3', $context);
     $stored = $this->stored('registration.step3');
     $served = $this->decoded($emitter->emit($step3, $stored, 'registration.step3')->document);
-    $this->assertSame(['room'], $served['stale']);
+    $this->assertSame(['/room'], $served['stale']);
     $back = $this->container->get('data_surface_react.served_operations')->keepStale($served['values'], $stored, $served['stale']);
     $result = $this->pipeline()->submit($step3, $back, $resources->storage('registration.step3', $context, $step3));
     $this->assertTrue($result->committed, 'Untouched, the stale room is kept.');
@@ -1079,7 +1443,7 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
       'aisles' => [$aisle('North', [['unit' => $unit, 'height' => $height]])],
     ];
     $three = array_fill(0, 3, ['unit' => 'cm', 'height' => 10]);
-    $this->assertTable('resource_test.storeroom', $this->build('resource_test.storeroom', 'edit'), $stored, [
+    $this->assertTable('resource_test.storeroom', $this->build('resource_test.storeroom', 'update'), $stored, [
       'as stored' => [[], TRUE],
       'a tall shelf in centimeters' => [$shelf('cm', 150), TRUE],
       'as tall in inches' => [$shelf('in', 150), FALSE],
@@ -1231,14 +1595,18 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
       'AuditRuleNobodyDeclares',
     ];
     foreach ($names as $name) {
-      $property = $full($this->surface(['k' => DataDefinition::create('string')->setLabel('K')->addConstraint($name, [])]))['properties']['k'];
+      $property = $full($this->surface([
+        'k' => DataDefinition::create('string')->setLabel('K')->addConstraint($name, []),
+      ]))['properties']['k'];
       $this->assertSame([$name], array_column($property['x-surface']['checkedOnServer'], 'constraint'), $name);
       $this->assertNotSame('', $property['x-surface']['checkedOnServer'][0]['message'], $name . ': what it checks is said.');
       $this->assertSame(array_diff_key($bare, ['x-surface' => TRUE]), array_diff_key($property, ['x-surface' => TRUE]), $name . ': no keyword.');
     }
 
     // The languages the site has: as narrow as the validator.
-    $language = $this->surface(['k' => DataDefinition::create('string')->setLabel('K')->addConstraint('LanguageExists', [])]);
+    $language = $this->surface([
+      'k' => DataDefinition::create('string')->setLabel('K')->addConstraint('LanguageExists', []),
+    ]);
     $schema = $full($language);
     $offered = array_values(array_filter(array_column($schema['properties']['k']['oneOf'], 'const'), static fn (mixed $value): bool => $value !== NULL));
     $this->assertSame(array_keys($this->container->get('language_manager')->getLanguages()), $offered);
@@ -1260,7 +1628,9 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
     $this->assertTrue($this->pipeline()->validate($plugin, ['k' => 'no_such_block'])->isEmpty());
     $this->assertTrue($this->validates($schema, ['k' => 'no_such_block']));
     // Without it, the defined blocks are the list, as before.
-    $strict = $this->surface(['k' => DataDefinition::create('string')->setLabel('K')->addConstraint('PluginExists', ['manager' => 'plugin.manager.block'])]);
+    $strict = $this->surface([
+      'k' => DataDefinition::create('string')->setLabel('K')->addConstraint('PluginExists', ['manager' => 'plugin.manager.block']),
+    ]);
     $this->assertNotNull($this->options()->resolve($strict->getDefinitions()->get('k')));
   }
 
@@ -1335,7 +1705,7 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
       ['pattern' => '^[a-zA-Z][-_a-zA-Z0-9]+$'],
       ['not' => ['pattern' => '^(name|pass|website)$']],
     ], $property['allOf']);
-    $this->assertArrayNotHasKey('checkedOnServer', $property['x-surface']);
+    $this->assertArrayNotHasKey('checkedOnServer', $property['x-surface'] ?? []);
     foreach (['as written' => $as_written, 'carried' => $carried] as $which => $surface) {
       // Left to the server, a refused name is accepted by both schemas.
       $wide = $which === 'as written';

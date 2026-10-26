@@ -12,6 +12,13 @@ services:
   data_surface.options:
     class: Drupal\data_surface\Options\DataSurfaceOptions
     arguments: ['@plugin.manager.data_surface_options_resolver', '@validation.constraint', '@logger.channel.data_surface']
+  # What a key that refers to an entity is (`entity:<type>[:<bundle>]` and
+  # the bare `entity`), its candidates through core's selection handler,
+  # the limit up to which it lists them, and the lookup past it.
+  data_surface.references:
+    class: Drupal\data_surface\Reference\References
+    arguments: ['@entity_type.manager', '@entity_field.manager', '@plugin.manager.entity_reference_selection', '@config.factory', '@typed_data_manager']
+  Drupal\data_surface\Reference\References: '@data_surface.references'
   data_surface.secret_codec:
     class: Drupal\data_surface\Storage\SodiumSecretCodec
   Drupal\data_surface\Storage\SecretCodecInterface: '@data_surface.secret_codec'
@@ -28,7 +35,7 @@ services:
   # and seals them.
   data_surface.resource_registry:
     class: Drupal\data_surface\ResourceBuild\ResourceRegistry
-    arguments: ['%data_surface.resource_classes%', '@cache.discovery', '@data_surface.resource_plugins', '@class_resolver']
+    arguments: ['%data_surface.resource_classes%', '@cache.discovery', '@data_surface.resource_plugins', '@class_resolver', '@entity_type.manager']
   # A derived resource is read from site state; when its cache tags are
   # invalidated, the registry this request already read forgets it.
   data_surface.resource_registry_invalidator:
@@ -38,18 +45,26 @@ services:
       - { name: cache_tags_invalidator }
   data_surface.resources:
     class: Drupal\data_surface\ResourceBuild\Resources
-    arguments: ['@data_surface.resource_registry', '@typed_data_manager', '@class_resolver', '@current_user', '@data_surface.operation_arguments', '@data_surface.derived_variants', '@data_surface.watched_value_check', '@user_permissions_hash_generator']
+    arguments: ['@data_surface.resource_registry', '@typed_data_manager', '@class_resolver', '@current_user', '@data_surface.operation_arguments', '@data_surface.watched_value_check', '@user_permissions_hash_generator', '@data_surface.site_defaults', '@cache.data_surface_build', '@language_manager']
+  # Each build for no account (buildDeclared()) and the OpenAPI document,
+  # kept across requests under the tags of what they were read from.
+  cache.data_surface_build:
+    class: Drupal\Core\Cache\CacheBackendInterface
+    tags:
+      - { name: cache.bin }
+    factory: ['@cache_factory', 'get']
+    arguments: [data_surface_build]
   Drupal\data_surface\ResourceBuild\ResourcesInterface: '@data_surface.resources'
+  # The defaults a site sets over the declared ones, data_surface.defaults,
+  # which every build reads and carries the cache tag of.
+  data_surface.site_defaults:
+    class: Drupal\data_surface\ResourceBuild\SiteDefaults
+    arguments: ['@config.factory', '@typed_data_manager']
   # Sealed into every data surface the build step makes: a watched value its
   # own definition refuses is handed to no refiner.
   data_surface.watched_value_check:
     class: Drupal\data_surface\Refinement\WatchedValueCheck
     arguments: ['@typed_data_manager']
-  # What adds variants for the values no #[Variant] declares:
-  # every service tagged data_surface.derived_variants.
-  data_surface.derived_variants:
-    class: Drupal\data_surface\ResourceBuild\DerivedVariants
-    arguments: [!tagged_iterator data_surface.derived_variants]
   # An operation's arguments from a route's parameters or a tool's inputs,
   # by name; an entity's id becomes the entity a parameter is typed with.
   data_surface.operation_arguments:
@@ -62,12 +77,39 @@ services:
     arguments: ['@data_surface.resources', '@data_surface.resource_registry', '@data_surface.operation_arguments']
     tags:
       - { name: access_check, applies_to: _data_surface_operation_access }
+  # Adds that access check to every route naming a resource and an
+  # operation, so a routing file need not.
+  data_surface.operation_route_subscriber:
+    class: Drupal\data_surface\Access\OperationRouteSubscriber
+    tags:
+      - { name: event_subscriber }
   # Turns a sealed data surface and its values into the served contract: JSON
   # Schema 2020-12 with the x-surface extension, values and stale paths;
   # widget hints only when a renderer asks for them.
   data_surface.contract_emitter:
     class: Drupal\data_surface\Contract\ContractEmitter
-    arguments: ['@data_surface.options', '@string_translation', '@validation.constraint']
+    arguments: ['@data_surface.options', '@string_translation', '@validation.constraint', '@data_surface.site_list_budget', '@plugin.manager.data_surface_widget']
+  # How many entries of a list the site decides (variants from the site,
+  # keys from the site) the documents and the tool listing spell out.
+  data_surface.site_list_budget:
+    class: Drupal\data_surface\Contract\SiteListBudget
+    arguments: ['@config.factory']
+  Drupal\data_surface\Contract\SiteListBudget: '@data_surface.site_list_budget'
+  # The emitter run backwards: a JSON Schema document read into the keys,
+  # children and rules of a structure, what it cannot say kept as a
+  # JsonSchema constraint. A variant from the site is read with it; a
+  # caller with a document of its own registers it here to build it.
+  data_surface.schema_reader:
+    class: Drupal\data_surface\Contract\SchemaReader
+    arguments: ['@data_surface.resource_registry', '@typed_data_manager']
+  Drupal\data_surface\Contract\SchemaReader: '@data_surface.schema_reader'
+  # Writes a config schema type as JSON Schema, for the schema reader: a
+  # plugin's settings (data_surface_block), a config object a resource is
+  # first written from (drush generate surface:resource).
+  data_surface.config_schema_document:
+    class: Drupal\data_surface\Contract\ConfigSchemaDocument
+    arguments: ['@config.typed']
+  Drupal\data_surface\Contract\ConfigSchemaDocument: '@data_surface.config_schema_document'
   # The additive-diff lint: each module's committed contract baselines,
   # and today's full schemas judged against them.
   data_surface.contract_baselines:
@@ -77,7 +119,7 @@ services:
   # config object, written from the resource (drush data_surface:config-schema).
   data_surface.config_schema:
     class: Drupal\data_surface\Storage\ConfigSchemaGenerator
-    arguments: ['@data_surface.resource_registry', '@data_surface.resources', '@extension.list.module', '%app.root%', '%container.modules%', '@service_container', '@class_resolver', '@data_surface.resource_plugins']
+    arguments: ['@data_surface.resource_registry', '@data_surface.resources', '@extension.list.module', '%app.root%', '%container.modules%', '@service_container', '@class_resolver', '@data_surface.resource_plugins', '@entity_type.manager']
   # Creates the config objects a module's config/install ships that the
   # site does not have, for a post-update hook (data_surface_install_missing_config()).
   data_surface.missing_config_installer:
@@ -87,7 +129,28 @@ services:
   # variants, as one array: what docs/catalog.md is generated from.
   data_surface.resource_catalog:
     class: Drupal\data_surface\ResourceBuild\ResourceCatalog
-    arguments: ['@data_surface.resource_registry', '@data_surface.resource_plugins', '@data_surface.derived_variants']
+    arguments: ['@data_surface.resource_registry', '@data_surface.resource_plugins']
+  # The live map of the site (drush surface:catalog): the static layer,
+  # the doors each operation reaches as the modules tagged
+  # data_surface.catalog_doors name them, and every build refusal.
+  data_surface.site_catalog:
+    class: Drupal\data_surface\ResourceBuild\SiteCatalog
+    arguments:
+      - '@data_surface.resource_catalog'
+      - '@data_surface.resource_registry'
+      - '@data_surface.resources'
+      - '@data_surface.resource_plugins'
+      - '@account_switcher'
+      - !tagged_iterator data_surface.catalog_doors
+      - '%app.root%'
+      - '@data_surface.site_list_budget'
+      - '@plugin.manager.data_surface_widget'
+  # The form routes a module declares for an operation.
+  data_surface.form_route_doors:
+    class: Drupal\data_surface\ResourceBuild\FormRouteDoors
+    arguments: ['@router.route_provider']
+    tags:
+      - { name: data_surface.catalog_doors, priority: 40 }
   # Which plugins name which structure with #[UsesStructure], read from the
   # definitions of every host that reads the attribute (the keys of
   # ResourcePluginHooks::HOSTS).

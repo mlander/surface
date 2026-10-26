@@ -101,7 +101,7 @@ class ExamplesWorkflowTest extends DataSurfaceKernelTestBase {
     // Every permission: the fees' own access and the alter both wait for
     // what is stored.
     $fees = $this->full()['properties']['fees'];
-    $this->assertSame('live', $fees[ContractEmitter::EXTENSION]['access']);
+    $this->assertTrue($fees[ContractEmitter::EXTENSION]['live']);
     $this->assertArrayNotHasKey('readOnly', $fees);
     $this->assertContains('fees', $this->listed());
 
@@ -119,7 +119,7 @@ class ExamplesWorkflowTest extends DataSurfaceKernelTestBase {
     $this->setUpCurrentUser(permissions: ['administer site configuration', 'see event fees']);
     $fees = $this->full()['properties']['fees'];
     $this->assertTrue($fees['readOnly']);
-    $this->assertSame('live', $fees[ContractEmitter::EXTENSION]['access']);
+    $this->assertTrue($fees[ContractEmitter::EXTENSION]['live']);
   }
 
   /**
@@ -139,7 +139,7 @@ class ExamplesWorkflowTest extends DataSurfaceKernelTestBase {
     $this->assertArrayNotHasKey('readOnly', $full, 'The full schema states no lock for what only the call settles.');
     $this->assertArrayNotHasKey('readOnly', $full['properties']['headline']);
     foreach (['headline', 'sessions', 'published', 'fees'] as $key) {
-      $this->assertSame('live', $full['properties'][$key][ContractEmitter::EXTENSION]['access'], $key . ': marked, since the whole program may be found locked.');
+      $this->assertTrue($full['properties'][$key][ContractEmitter::EXTENSION]['live'], $key . ': marked, since the whole program may be found locked.');
     }
     $these = $this->container->get('data_surface.contract_emitter')->emit($built, $built->getDefaultValues(), 'event.program', 'configure')->document['schema'];
     $this->assertTrue($these['readOnly'], 'The schema for these answers settles it.');
@@ -197,7 +197,7 @@ class ExamplesWorkflowTest extends DataSurfaceKernelTestBase {
     $this->assertStringContainsString('see event fees', (string) $panel['workflow']['#markup']);
     $accounts = json_decode(htmlspecialchars_decode((string) $panel['accounts']['content']['#value']), TRUE);
     $this->assertNull($accounts['without the permission']['property'], 'Left out for the account without either permission.');
-    $this->assertSame('live', $accounts['you']['property'][ContractEmitter::EXTENSION]['access']);
+    $this->assertTrue($accounts['you']['property'][ContractEmitter::EXTENSION]['live']);
     $this->assertArrayHasKey('event.program:published_in_workflow', $panel['calls']);
     $this->assertStringContainsString('The program is published in its workflow', (string) $panel['calls']['event.program:published_in_workflow']['answer']['#value']);
     $this->assertNull($this->container->get('state')->get(ProgramWorkflowAlter::STATE), 'The State the call was made in is put back.');

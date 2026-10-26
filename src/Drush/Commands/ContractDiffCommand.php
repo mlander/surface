@@ -26,7 +26,8 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
  * every resource and structure the named modules declare, for one fixed
  * account (`--uid`, the site's first by default, printed with the
  * verdicts), compares each with its baseline in the first module's
- * `tests/fixtures/contracts/` or `--dir`, and classifies each
+ * `tests/fixtures/contracts/` or `--baselines` (`--dir` before), and
+ * classifies each
  * difference. A breaking change fails unless its owner's version was
  * raised or the baseline allows its path. It fails closed: a directory
  * that is not there fails, and a declaration with no baseline fails
@@ -82,7 +83,8 @@ final class ContractDiffCommand extends Command {
    */
   protected function configure(): void {
     $this->addOption('module', NULL, InputOption::VALUE_REQUIRED, 'The modules whose resources and structures are compared, separated by commas.');
-    $this->addOption('dir', NULL, InputOption::VALUE_REQUIRED, 'The directory the baselines are kept in, from the Drupal root; by default the first module\'s tests/fixtures/contracts. It must exist, unless --write makes it.');
+    $this->addOption('baselines', NULL, InputOption::VALUE_REQUIRED, 'The directory the baselines are kept in, from the Drupal root; by default the first module\'s tests/fixtures/contracts. It must exist, unless --write makes it.');
+    $this->addOption('dir', NULL, InputOption::VALUE_REQUIRED, 'The earlier name of --baselines, still read.');
     $this->addOption('write', NULL, InputOption::VALUE_NONE, 'Pin today\'s full schemas as the baselines of the named modules.');
     $this->addOption('allow', NULL, InputOption::VALUE_REQUIRED, 'With --write: the reason each breaking change with no version raised is accepted, recorded in its baseline.');
     $this->addOption('uid', NULL, InputOption::VALUE_REQUIRED, 'The account the full schemas are emitted for.', '1');
@@ -124,14 +126,15 @@ final class ContractDiffCommand extends Command {
     if ($modules === []) {
       return $fail('Name the modules to compare with --module, separated by commas.');
     }
-    $directory = (string) ($input->getOption('dir') ?: $this->baselines->directory($modules[0]));
+    $directory = (string) ($input->getOption('baselines') ?: $input->getOption('dir') ?: $this->baselines->directory($modules[0]));
     $write = (bool) $input->getOption('write');
     $report['modules'] = $modules;
     $report['directory'] = $directory;
     // A directory that is not there holds no baseline, and comparing with
-    // none would pass every declaration as new: a mistyped --dir fails.
+    // none would pass every declaration as new: a mistyped --baselines
+    // fails.
     if (!$write && !is_dir($directory)) {
-      return $fail(sprintf('The baselines directory %s does not exist; nothing was compared. --dir is read from the Drupal root, and --write makes it.', $directory));
+      return $fail(sprintf('The baselines directory %s does not exist; nothing was compared. --baselines is read from the Drupal root, and --write makes it.', $directory));
     }
 
     // One fixed account, so the documents do not depend on who runs the

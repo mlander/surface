@@ -11,6 +11,7 @@ use Drupal\Core\TypedData\TypedDataManagerInterface;
 use Drupal\data_surface\DataSurfaceBuilderInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\data_surface\DefinitionMetadata;
+use Drupal\data_surface\Reference\References;
 use Drupal\data_surface\Refinement\Rule;
 use Drupal\data_surface\Resource\Arrangement;
 use Drupal\data_surface\Resource\BlueprintAdditionsInterface;
@@ -32,8 +33,6 @@ use Drupal\data_surface\Resource\DefinesInputsInterface;
  * @internal
  */
 abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
-
-  use DeprecatedWithTrait;
 
   /**
    * The keys added through this blueprint, in order.
@@ -83,6 +82,11 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
   protected ?Shapes $shapes = NULL;
 
   /**
+   * What builds a key that refers to an entity; NULL declares none.
+   */
+  protected ?References $references = NULL;
+
+  /**
    * Constructs a blueprint over a builder.
    *
    * @param \Drupal\data_surface\DataSurfaceBuilderInterface $builder
@@ -114,6 +118,19 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
   }
 
   /**
+   * Hands the blueprint what builds a key that refers to an entity.
+   *
+   * @param \Drupal\data_surface\Reference\References|null $references
+   *   The service; NULL refuses a reference key.
+   *
+   * @return $this
+   */
+  public function useReferences(?References $references): static {
+    $this->references = $references;
+    return $this;
+  }
+
+  /**
    * {@inheritdoc}
    *
    * The type may be a shape's class: the key then starts from the shape
@@ -121,6 +138,14 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
    * Decision: see docs/decisions.md#a-shape-is-a-named-definition.
    */
   public function add(string $key, string $type, string|\Stringable $label, mixed $default = NULL): DataDefinition {
+    if (References::spells($type)) {
+      // Decision: see
+      // docs/decisions.md#a-reference-is-an-id-with-a-list-the-site-decides-listed-or-looked-up.
+      if ($type !== 'entity') {
+        return $this->addReference($key, $type, $label, $default);
+      }
+      return $this->addEntity($key, $label, $default) ?? throw new \LogicException(sprintf('add("%s", "entity") declares a reference to an entity of any type, which is two keys, its entity type and its id, attached at the key; only a resource or a structure attaches it. An alter declares one entity type, "entity:<type>".', $key));
+    }
     if (str_contains($type, '\\')) {
       $definition = $this->fromShape($key, $type);
       $definition->setLabel($label);
@@ -139,6 +164,56 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
     $definition->setLabel($label);
     $this->addDefinition($key, $definition, $default);
     return $definition;
+  }
+
+  /**
+   * Adds a key that holds one entity's id, of a type the string names.
+   *
+   * @param string $key
+   *   The key.
+   * @param string $type
+   *   The data type string, `entity:<type>` or `entity:<type>:<bundle>`.
+   * @param string|\Stringable $label
+   *   The label.
+   * @param mixed $default
+   *   The id it starts from, or NULL.
+   *
+   * @return \Drupal\Core\TypedData\DataDefinition
+   *   The key's definition: the id, typed as the entity type's id key,
+   *   with the constraint naming the type and the bundle.
+   *
+   * @throws \LogicException
+   *   When the blueprint cannot build one, or the string names nothing the
+   *   site has.
+   */
+  protected function addReference(string $key, string $type, string|\Stringable $label, mixed $default): DataDefinition {
+    if ($this->references === NULL) {
+      throw new \LogicException(sprintf('add("%s", "%s") declares a reference key where nothing builds one: a reference is declared by a resource, a structure or an alter.', $key, $type));
+    }
+    $definition = $this->references->definition($key, $type);
+    $definition->setLabel($label);
+    $this->addDefinition($key, $definition, $default);
+    return $definition;
+  }
+
+  /**
+   * Adds a key that refers to an entity of any type, where one may.
+   *
+   * Only a resource's or a structure's own blueprint attaches the two
+   * parts a bare `entity` key is, so this one adds none.
+   *
+   * @param string $key
+   *   The key.
+   * @param string|\Stringable $label
+   *   The label.
+   * @param mixed $default
+   *   What it starts from.
+   *
+   * @return \Drupal\Core\TypedData\DataDefinition|null
+   *   The map at the key, or NULL where this blueprint attaches none.
+   */
+  protected function addEntity(string $key, string|\Stringable $label, mixed $default): ?DataDefinition {
+    return NULL;
   }
 
   /**
@@ -371,10 +446,10 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
     $definition = $this->find($key);
     if ($definition === NULL) {
       throw new \LogicException(sprintf(
-        'describe() was asked to reword the %1$s "%2$s", which nothing has declared. A key is described by its name when its owner declared it or this blueprint added it, and by its mounted path, %3$s.<module>.<key>, when another alter did; a module\'s mount is %3$s.<module>, once the module has added a key.',
-        $this->outputs ? 'output' : 'input',
+        $this->outputs
+          ? 'describe() was asked to reword the output "%s", which nothing has declared. An output is described by its name, as its owner declared it.'
+          : 'describe() was asked to reword the input "%s", which nothing has declared. A key is described by its name when its owner declared it or this blueprint added it, and by its mounted path, third_party_settings.<module>.<key>, when another alter did; a module\'s mount is third_party_settings.<module>, once the module has added a key.',
         $key,
-        $this->outputs ? DataSurfaceBuilderInterface::THIRD_PARTY_OUTPUTS : 'third_party_settings',
       ));
     }
     if (!$definition instanceof DataDefinition) {
@@ -543,18 +618,20 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
    *   The definition, or NULL when nothing answers to the name.
    */
   protected function find(string $key): ?DataDefinitionInterface {
-    $own = $this->outputs ? $this->builder->getOutputDefinition($key) : $this->builder->getDefinition($key);
+    if ($this->outputs) {
+      return $this->builder->getOutputDefinition($key);
+    }
+    $own = $this->builder->getDefinition($key);
     if ($own !== NULL) {
       return $own;
     }
     $parts = explode('.', $key, 3);
-    $mount = $this->outputs ? DataSurfaceBuilderInterface::THIRD_PARTY_OUTPUTS : 'third_party_settings';
-    if ($parts[0] !== $mount) {
+    if ($parts[0] !== 'third_party_settings') {
       return NULL;
     }
     return match (count($parts)) {
-      3 => $this->builder->getThirdPartyDefinition($parts[1], $parts[2], $this->outputs),
-      2 => $this->builder->getThirdPartyMount($parts[1], $this->outputs),
+      3 => $this->builder->getThirdPartyDefinition($parts[1], $parts[2]),
+      2 => $this->builder->getThirdPartyMount($parts[1]),
       default => NULL,
     };
   }

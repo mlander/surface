@@ -44,6 +44,7 @@ class ConfigSchemaDriftTest extends DataSurfaceKernelTestBase {
     'data_surface_examples',
     'data_surface_examples_compliance',
     'data_surface_examples_workflow',
+    'data_surface_examples_keys',
     'data_surface_first',
     'data_surface_resource_test',
   ];
@@ -54,6 +55,7 @@ class ConfigSchemaDriftTest extends DataSurfaceKernelTestBase {
   protected const GENERATED = [
     'data_surface_examples',
     'data_surface_examples_compliance',
+    'data_surface_examples_keys',
     'data_surface_first',
     'data_surface_resource_test',
   ];
@@ -102,21 +104,28 @@ class ConfigSchemaDriftTest extends DataSurfaceKernelTestBase {
       if (!in_array($definition->module, self::GENERATED, TRUE)) {
         continue;
       }
-      $name = constant($definition->storage . '::CONFIG');
-      $data = $this->config($name)->getRawData();
-      if ($data === []) {
-        continue;
+      // A config object, or each thing of a config entity type the
+      // module declares.
+      $names = defined($definition->storage . '::CONFIG')
+        ? [constant($definition->storage . '::CONFIG')]
+        : $this->container->get('config.factory')->listAll($this->container->get('entity_type.manager')->getDefinition(constant($definition->storage . '::ENTITY_TYPE_ID'))->getConfigPrefix() . '.');
+      foreach ($names as $name) {
+        $data = $this->config($name)->getRawData();
+        if ($data === []) {
+          continue;
+        }
+        $messages = [];
+        foreach ($typed->createFromNameAndData($name, $data)->validate() as $violation) {
+          $messages[] = $violation->getPropertyPath() . ': ' . strip_tags((string) $violation->getMessage());
+        }
+        $this->assertSame([], $messages, $name);
+        $checked[] = $name;
       }
-      $messages = [];
-      foreach ($typed->createFromNameAndData($name, $data)->validate() as $violation) {
-        $messages[] = $violation->getPropertyPath() . ': ' . strip_tags((string) $violation->getMessage());
-      }
-      $this->assertSame([], $messages, $name);
-      $checked[] = $name;
     }
     $this->assertContains('data_surface_first.newsletter', $checked);
     $this->assertContains('data_surface_examples.registration_step3', $checked);
     $this->assertContains('data_surface_resource_test.opening_hours', $checked);
+    $this->assertContains('data_surface_examples.event_venue.riverside', $checked, 'A config entity type the module declares: each thing it ships.');
   }
 
   /**

@@ -180,7 +180,7 @@ class FieldToolsComparisonTest extends DataSurfaceKernelTestBase {
    * its range, and the field name's length.
    */
   public function testTheDerivedToolsSayAtLeastWhatTheRetiredOnesDid(): void {
-    $add = $this->toolManager->createInstance('data_surface:field.instance:add');
+    $add = $this->toolManager->createInstance('data_surface:field.instance:create');
     $add->setInputValue('entity_type_id', 'entity_test');
     $add->setInputValue('bundle', 'entity_test');
     $schema = $this->container->get('tool.definition_serializer')->normalizeInputSchema($add);

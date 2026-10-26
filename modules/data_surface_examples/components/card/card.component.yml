@@ -1,0 +1,42 @@
+$schema: https://git.drupalcode.org/project/drupal/-/raw/HEAD/core/assets/schemas/v1/metadata.schema.json
+name: Card
+status: stable
+description: 'A heading, a line of text and a link. Example 12 reads its props into a structure, and its slot beside them.'
+tags:
+  - block
+props:
+  type: object
+  required:
+    - heading
+  properties:
+    heading:
+      type: string
+      title: Heading
+      maxLength: 80
+    tone:
+      type: string
+      title: Tone
+      enum:
+        - plain
+        - highlight
+      meta:enum:
+        plain: Plain
+        highlight: Highlighted
+      default: plain
+    link:
+      type: object
+      title: Link
+      properties:
+        url:
+          type: string
+          format: uri
+          title: Address
+        label:
+          type: ['string', 'null']
+          title: Link text
+slots:
+  body:
+    title: Text
+    description: 'A line under the heading.'
+    # No component: the slot holds text alone.
+    expected: []

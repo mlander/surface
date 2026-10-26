@@ -1,0 +1,16 @@
+$schema: https://git.drupalcode.org/project/drupal/-/raw/HEAD/core/assets/schemas/v1/metadata.schema.json
+name: Section
+status: stable
+description: 'A band of a page holding other components. Its slot takes any component tagged block, so a section nests one.'
+props:
+  type: object
+  properties:
+    heading:
+      type: ['string', 'null']
+      title: Heading
+slots:
+  content:
+    title: Content
+    description: 'The components the section holds.'
+    expected:
+      - block

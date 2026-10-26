@@ -1,6 +1,6 @@
 name: Data Surface - React
 type: module
-description: 'Serves a resource operation as a JSON contract with refine and validate endpoints, and renders its form in React from that contract.'
+description: 'Serves a resource over HTTP as a JSON contract, the path its resource and the method its operation, with a narrowing and a dry run, and renders its form in React from that contract.'
 package: Data Surface
 lifecycle: experimental
 lifecycle_link: 'https://git.drupalcode.org/project/data_surface/-/blob/1.0.x/README.md#experimental-submodules'

@@ -1,0 +1,239 @@
+{
+    "resource": "resource_test.poster",
+    "operation": "configure",
+    "label": "Configure the poster",
+    "schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "Configure the poster",
+        "x-surface": {
+            "contract": 4,
+            "version": 1
+        },
+        "type": "object",
+        "properties": {
+            "layout": {
+                "title": "Layout",
+                "type": "string",
+                "oneOf": [
+                    {
+                        "const": "banner",
+                        "title": "Banner"
+                    },
+                    {
+                        "const": "grid",
+                        "title": "Grid"
+                    },
+                    {
+                        "const": "strip",
+                        "title": "Strip"
+                    }
+                ],
+                "default": "grid",
+                "x-surface": {
+                    "emptyOption": {
+                        "show": false,
+                        "label": "- Select -"
+                    }
+                }
+            },
+            "panels": {
+                "title": "Panels",
+                "anyOf": [
+                    {
+                        "$ref": "#/$defs/resource_test.poster.banner"
+                    },
+                    {
+                        "$ref": "#/$defs/resource_test.poster.panels.grid"
+                    },
+                    {
+                        "$ref": "#/$defs/resource_test.poster.panels.strip"
+                    },
+                    {
+                        "type": "null"
+                    }
+                ],
+                "x-surface": {
+                    "dependsOn": [
+                        "layout"
+                    ],
+                    "refined": true,
+                    "by": "layout",
+                    "variants": {
+                        "banner": "#/$defs/resource_test.poster.banner",
+                        "grid": "#/$defs/resource_test.poster.panels.grid",
+                        "strip": "#/$defs/resource_test.poster.panels.strip"
+                    },
+                    "chosen": "grid"
+                }
+            }
+        },
+        "additionalProperties": false,
+        "required": [
+            "layout"
+        ],
+        "allOf": [
+            {
+                "if": {
+                    "properties": {
+                        "layout": {
+                            "const": "banner"
+                        }
+                    },
+                    "required": [
+                        "layout"
+                    ]
+                },
+                "then": {
+                    "properties": {
+                        "panels": {
+                            "title": "Panels",
+                            "$ref": "#/$defs/resource_test.poster.banner"
+                        }
+                    }
+                }
+            },
+            {
+                "if": {
+                    "properties": {
+                        "layout": {
+                            "const": "grid"
+                        }
+                    },
+                    "required": [
+                        "layout"
+                    ]
+                },
+                "then": {
+                    "properties": {
+                        "panels": {
+                            "title": "Panels",
+                            "$ref": "#/$defs/resource_test.poster.panels.grid"
+                        }
+                    }
+                }
+            },
+            {
+                "if": {
+                    "properties": {
+                        "layout": {
+                            "const": "strip"
+                        }
+                    },
+                    "required": [
+                        "layout"
+                    ]
+                },
+                "then": {
+                    "properties": {
+                        "panels": {
+                            "title": "Panels",
+                            "$ref": "#/$defs/resource_test.poster.panels.strip"
+                        }
+                    }
+                }
+            }
+        ],
+        "$defs": {
+            "resource_test.poster.banner": {
+                "title": "resource_test.poster.banner",
+                "type": "object",
+                "properties": {
+                    "headline": {
+                        "title": "Headline",
+                        "type": "string"
+                    }
+                },
+                "additionalProperties": false,
+                "required": [
+                    "headline"
+                ]
+            },
+            "resource_test.poster.panels.grid": {
+                "title": "resource_test.poster.panels.grid",
+                "type": "object",
+                "properties": {
+                    "columns": {
+                        "title": "Columns",
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 4,
+                        "default": 2
+                    },
+                    "gap": {
+                        "title": "Gap",
+                        "type": "string",
+                        "oneOf": [
+                            {
+                                "const": "none",
+                                "title": "none"
+                            },
+                            {
+                                "const": "small",
+                                "title": "small"
+                            },
+                            {
+                                "const": "large",
+                                "title": "large"
+                            }
+                        ],
+                        "default": "small",
+                        "x-surface": {
+                            "emptyOption": {
+                                "show": false,
+                                "label": "- Select -"
+                            }
+                        }
+                    }
+                },
+                "additionalProperties": false,
+                "required": [
+                    "columns"
+                ]
+            },
+            "resource_test.poster.panels.strip": {
+                "title": "resource_test.poster.panels.strip",
+                "type": "object",
+                "properties": {
+                    "caption": {
+                        "title": "Caption",
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 60
+                    },
+                    "tags": {
+                        "title": "Tags",
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "items": {
+                            "type": "string"
+                        },
+                        "x-surface": {
+                            "checkedOnServer": [
+                                {
+                                    "constraint": "JsonSchema",
+                                    "message": "Checked on the server against the schema it was read from: uniqueItems.",
+                                    "schema": {
+                                        "uniqueItems": true
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                },
+                "additionalProperties": false
+            }
+        }
+    },
+    "values": {
+        "layout": "grid",
+        "panels": {
+            "columns": 3,
+            "gap": "small"
+        }
+    },
+    "stale": []
+}

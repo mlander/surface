@@ -42,8 +42,8 @@ leaves out and why, read from the registry.
 | What | From |
 | --- | --- |
 | The content entity resource's keys | the identity (`entity_type`, `bundle`, `id`), then one child per component of the bundle's default form display, in its weight order |
-| Its operations | `add`, knowing the entity type, the bundle and that there is no id yet (`id` known as NULL, so locked empty); `edit`, taking the entity as `id`, typed `entity:<entity type>` |
-| Its access | the entity's: create access for the bundle on add, update access for the entity on edit |
+| Its operations | `create`, knowing the entity type, the bundle and that there is no id yet (`id` known as NULL, so locked empty); `update`, taking the entity as `id`, typed `entity:<entity type>` |
+| Its access | the entity's: create access for the bundle on create, update access for the entity on update |
 | Its storage | `ContentEntityStorage`, below |
 | Its outputs | `id`, the entity's id once saved |
 | A field item structure's keys | the item's property definitions the field type stores and a caller sets, typed as the coercion table carries them (the table below) |
@@ -53,7 +53,7 @@ leaves out and why, read from the registry.
 | Default | the field's literal default (`getDefaultValueLiteral()`), cast to the key's type |
 | Constraints | `Length`, `Range`, `Regex` and `Choice` from the property definitions and from the field type's own `getConstraints()` (its `ComplexData` per property); the rest are checked when its storage validates the entity |
 | What settings narrow | a list field's allowed values (`LabeledChoice`), a text field's formats (`LabeledChoice`, then a runtime refiner), a reference's targets (a constraint and its options resolver), a date's form (`Regex`) |
-| Its operations | `add` and `edit`, which the parent invokes to match its own; each knows the entity type, the bundle and the field, and `edit` the entity's id |
+| Its operations | `create` and `update`, which the parent invokes to match its own; each knows the entity type, the bundle and the field, and `update` the entity's id |
 | Its access | field access, as the child's access: open, locked or omitted |
 
 The parent labels each child's key with the field's label and
@@ -131,8 +131,8 @@ not allowed, `fieldAccess('view')`:
 | not allowed | allowed | locked: drawn disabled, `readOnly` in both contracts, locked in the tool, a posted value ignored |
 | not allowed | not allowed | omitted: in no form, contract or tool input, a posted value an unknown key, and what is stored left as it was |
 
-The items are the entity's own on edit, and a throwaway entity of the
-bundle's on add, as core's own form makes one. What both answers read
+The items are the entity's own on an update, and a throwaway entity of
+the bundle's on a create, as core's own form makes one. What both answers read
 is carried on the data surface, so a contract and a form vary by it.
 Core's node field access lets only an account with `administer nodes`
 change the author, the creation date and the promotion flags (the
@@ -165,11 +165,11 @@ item derivation's keys, which the engine does not own
   carried field's first item, property by property, cast to the key's
   type. An empty field is absent, so it starts from its default.
 - **Prepare** sets the accepted values on an entity: a new one of the
-  bundle on add, a fresh copy of the stored one on edit
+  bundle on a create, a fresh copy of the stored one on an update
   (`loadUnchanged()`), never the object a route or a form holds. Each
   field goes through the entity's own `set()`, its first item merged
   over what the item holds, so a property the resource does not carry (a
-  link's options) keeps its value. On add, a field nobody answered is
+  link's options) keeps its value. On a create, a field nobody answered is
   not set at all, so the entity's own default applies: a default value
   callback, the field type's own. Then the entity validates itself, and
   every violation is filed under the key it is about, by its property
@@ -182,10 +182,14 @@ item derivation's keys, which the engine does not own
   describes what it saved: a load that knows no id reads the entity it
   just created, so the `id` output answers with the new id, the derived
   tool returns it and the React app can open the page it made.
-- **Revisions**: on edit, a resource that carries the revision log field
-  makes a new revision, by the current account, at the request time,
-  with the log the caller gave; one that does not leaves revisions to
-  the entity type's default (none, for a node saved outside a form).
+- **Revisions**: on an update, a resource that carries the revision log field
+  makes a new revision, by the account the write is made as, at the
+  request time, with the log the caller gave; one that does not leaves
+  revisions to the entity type's default (none, for a node saved
+  outside a form). A new entity with an owner is that account's too,
+  unless the values name one. The account is handed to `prepare()` and
+  `commit()`, the current user when the caller names none
+  ([No door-specific context](resources.md#no-door-specific-context)).
 - **Secrets**: none; a node has no secret field.
 
 A dry run stops after prepare; a PHP caller reads the prepared values
@@ -198,15 +202,15 @@ would, a field whose view access is denied left out
 
 - **The form**: `/surface-entity/node/page/add` and
   `/surface-entity/node/{id}/edit`, the generic operation form with the
-  contract panel. The edit route upcasts `{id}` to the node; a node of
-  another bundle is refused by the page's edit operation, so the route
+  contract panel. The update route upcasts `{id}` to the node; a node of
+  another bundle is refused by the page's update operation, so the route
   answers 403.
-- **The tools**: `data_surface:entity.content:node.page:add`, `:edit`
-  and `:edit:read`, derived like every other operation's. The field item
+- **The tools**: `data_surface:entity.content:node.page:create`, `:update`
+  and `:update:read`, derived like every other operation's. The field item
   structures have no storage, so they are no tools. Every bundle with a form
   display has its three.
-- **The React app**: `/surface-react/entity.content:node.page/add` and
-  `/surface-react/entity.content:node.page/edit?id=<nid>`. The derived id
+- **The React app**: `/surface-react/entity.content:node.page/create` and
+  `/surface-react/entity.content:node.page/update?id=<nid>`. The derived id
   holds a colon, which a route parameter takes as it is.
 - **The landing page**: `/surface-entity`.
 
@@ -235,7 +239,7 @@ done about it.
    made, because a callback may read it; `getDefaultValueLiteral()` has
    only the literal. A field whose default is a callback (a node's
    author) states no default here; the storage leaves the field unset on
-   add, and the entity applies the callback when it is created. The
+   a create, and the entity applies the callback when it is created. The
    item's notes say so. Drafted as a core issue: a subject-less tier of
    the default value API.
 2. **Field access takes items.** `fieldAccess()` takes a field's items,
@@ -277,7 +281,10 @@ done about it.
     selection handler checks access, so the list is live: a constraint,
     `DataSurfaceReferenceable`, points at it, and its options resolver
     lists the targets for the account asking while there are at most
-    64 (the served contract's cap), carrying what the selection read:
+    `data_surface.settings:reference_list_limit` (50 as shipped, the
+    limit a reference key a resource declares lists up to,
+    [Options](options.md#a-key-that-refers-to-an-entity)), carrying what
+    the selection read:
     `user.permissions`, and `user.node_grants:view` for a node or a
     comment, `user` for a target type core does not list
     ([decided](decisions.md#every-door-projects-what-the-read-tool-projects));
@@ -290,19 +297,19 @@ done about it.
     renders through the fallback format.
 12. **A static tool definition is no account's.**
     [Decided](decisions.md#a-static-tool-definition-is-no-accounts):
-    the `add` tool's cached `values`, which no parameter refines, is
+    the `create` tool's cached `values`, which no parameter refines, is
     built for no account, every field there and the ones field access
     may lock or leave out marked, and derived as the anonymous account.
     A tool instance lists `values` again for the account that asks, its
     static field access stated and its runtime field access marked.
 13. **Tool definitions are cached apart.** The registry clears itself
     when a field or a display changes, and the tool plugin manager's
-    cache did not, so a new field reached the `add` tool's static
+    cache did not, so a new field reached the `create` tool's static
     definition only at the next cache rebuild. Settled 2026-10-19:
     `data_surface_tool` clears the tool definitions when a tag they were
     derived from is invalidated
     ([decision](decisions.md#tool-definitions-after-a-field-changes)).
-14. **The entity's id is storage's.** The add operation knows `id` as
+14. **The entity's id is storage's.** The create operation knows `id` as
     nothing, so it is locked empty, and the new id is an output the
     storage reads back after the commit. React's `created` used to hold
     every identity key the write accepted against where the thing now
@@ -338,7 +345,7 @@ display, the item structure per covered type, what is left out, defaults,
 the registry cache and its tags), `ContentEntityAccessTest` (locked and
 omitted children from field access, the parent's entity access, an
 alter by base id, an override by field type), `ContentEntityStorageTest`
-(add, edit with a revision, an entity violation on its key, a dry run,
+(create, update with a revision, an entity violation on its key, a dry run,
 the derived tools, the React door's `created`, the contracts) and
 `ContentEntityResourceFormTest` (the two routes and the landing page in
 a browser). No field refines another, so there is no browser test of a

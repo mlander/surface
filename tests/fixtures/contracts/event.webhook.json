@@ -1,0 +1,146 @@
+{
+    "resource": "event.webhook",
+    "module": "data_surface_examples",
+    "contract": 4,
+    "documents": [
+        {
+            "resource": "event.webhook",
+            "operation": "configure",
+            "label": "Configure the sales webhook",
+            "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "title": "Configure the sales webhook",
+                "description": "Sets the address the event's sales are posted to, and the key each post is signed with.",
+                "x-surface": {
+                    "contract": 4,
+                    "operation": {
+                        "id": "configure",
+                        "label": "Configure the sales webhook",
+                        "description": "Sets the address the event's sales are posted to, and the key each post is signed with.",
+                        "kind": "update",
+                        "creates": false,
+                        "destructive": false,
+                        "idempotent": true
+                    },
+                    "version": 1,
+                    "rules": [
+                        0
+                    ]
+                },
+                "type": "object",
+                "properties": {
+                    "endpoint": {
+                        "title": "Endpoint",
+                        "type": "string",
+                        "format": "uri",
+                        "default": "https://hooks.example.com/sales"
+                    },
+                    "api_key": {
+                        "title": "API key",
+                        "description": "The key each post is signed with, pasted here.",
+                        "type": "string",
+                        "writeOnly": true,
+                        "x-surface": {
+                            "dependsOn": [
+                                "third_party_settings.data_surface_examples_keys.key_id"
+                            ]
+                        }
+                    },
+                    "third_party_settings": {
+                        "type": [
+                            "object",
+                            "null"
+                        ],
+                        "properties": {
+                            "data_surface_examples_keys": {
+                                "title": "Managed key",
+                                "type": [
+                                    "object",
+                                    "null"
+                                ],
+                                "properties": {
+                                    "key_id": {
+                                        "title": "Key",
+                                        "description": "A key the site manages, used in place of a pasted one.",
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
+                                        "oneOf": [
+                                            {
+                                                "const": null
+                                            }
+                                        ],
+                                        "x-surface": {
+                                            "checkedOnServer": [
+                                                {
+                                                    "constraint": "ManagedKey",
+                                                    "message": "Managed key"
+                                                }
+                                            ]
+                                        }
+                                    }
+                                },
+                                "additionalProperties": false,
+                                "x-surface": {
+                                    "after": "api_key"
+                                }
+                            }
+                        },
+                        "additionalProperties": false,
+                        "x-surface": {
+                            "group": true
+                        }
+                    }
+                },
+                "additionalProperties": false,
+                "required": [
+                    "endpoint"
+                ],
+                "allOf": [
+                    {
+                        "if": {
+                            "properties": {
+                                "third_party_settings": {
+                                    "type": [
+                                        "object",
+                                        "null"
+                                    ],
+                                    "properties": {
+                                        "data_surface_examples_keys": {
+                                            "type": [
+                                                "object",
+                                                "null"
+                                            ],
+                                            "properties": {
+                                                "key_id": {
+                                                    "not": {
+                                                        "type": "null"
+                                                    }
+                                                }
+                                            },
+                                            "required": [
+                                                "key_id"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data_surface_examples_keys"
+                                    ]
+                                }
+                            },
+                            "required": [
+                                "third_party_settings"
+                            ]
+                        },
+                        "then": {
+                            "properties": {
+                                "api_key": false
+                            }
+                        }
+                    }
+                ]
+            }
+        }
+    ]
+}

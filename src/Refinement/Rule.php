@@ -41,7 +41,7 @@ use Drupal\data_surface\Contract\PatternTranslation;
  * - require(): the key must hold a value; `required`, and its type
  *   without `null`.
  * - doesNotApply(): the key does not apply; the key `false`.
- * - describe($text): says why, under the field; `description`. Only
+ * - because($text): says why, under the field; `description`. Only
  *   where the rule did something for these values: a constraint the key
  *   already held at or inside the rule's leaves the key's own words.
  *   A rule that requires, or describes alone, always says it.

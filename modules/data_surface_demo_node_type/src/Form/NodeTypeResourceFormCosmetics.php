@@ -85,7 +85,7 @@ final class NodeTypeResourceFormCosmetics implements DataSurfaceFormCosmeticsInt
     // #element_validate is what keeps this layer cosmetic. Only an add
     // has anything to mirror; on edit the key is locked and the
     // generated element is already disabled.
-    if ($operation === 'add') {
+    if ($operation === 'create') {
       $form[$key]['type']['#type'] = 'machine_name';
       $form[$key]['type']['#machine_name'] = [
         'source' => [$key, 'name'],
@@ -104,7 +104,7 @@ final class NodeTypeResourceFormCosmetics implements DataSurfaceFormCosmeticsInt
    * this layer always has something to say.
    */
   public function surfaceFormMessage(DataSurfaceResult $result, string $operation, ?string $subject): \Stringable {
-    return $operation === 'add'
+    return $operation === 'create'
       ? $this->t('The content type %name has been added.', ['%name' => $result->values['name']])
       : $this->t('The content type %name has been updated.', ['%name' => $result->values['name']]);
   }

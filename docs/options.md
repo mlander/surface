@@ -202,6 +202,8 @@ still refuses invalid values when they are validated.
 | `entity_bundle_exists` | `EntityBundleExists` | bundle info for the constraint's `entityTypeId` | bundle labels | tag `entity_bundles` |
 | `language_exists` | `LanguageExists` | the language manager; locked languages only when `allowLocked` is set | language names | tag `config:configurable_language_list` |
 | `country` | `Country` (the address module's) | `address.country_repository`, narrowed to the constraint's `availableCountries` when it names any | localized country names | tag `countries`, context `languages:language_interface` |
+| `data_surface_reference` | `DataSurfaceValidReference` | core's selection handler for its `entityTypeId` and `bundles`, for the account asking, while there are at most `data_surface.settings:reference_list_limit` ([below](#a-key-that-refers-to-an-entity)) | the entities' labels, sorted | the type's list tags, `References::CONTEXTS` for it, the settings' tag |
+| `data_surface_referenceable_type` | `DataSurfaceReferenceableType` | the entity types of its `interface` and its `targets` of which the account may reference one, `exact` | entity type labels | tag `entity_types`, each type's list tags and contexts |
 
 "Permanent" means the default `CacheableMetadata`: no tags, no contexts,
 `PERMANENT` max-age. A list read from the constraint alone cannot go
@@ -239,6 +241,100 @@ It is written to be module-agnostic, in core's own style (`allowLocked`
 as the permission option, a placeholder message), for the same reason
 `LabeledChoice` is.
 
+## A key that refers to an entity
+
+A key that refers to an entity is declared by the data type string of
+what it refers to, and holds the entity's id
+([decision](decisions.md#a-reference-is-an-id-with-a-list-the-site-decides-listed-or-looked-up)):
+
+```php
+$inputs->add('venue', 'entity:event_venue', t('Venue'));    // a venue's machine name
+$inputs->add('contact', 'entity:user', t('Contact'));       // a user's id
+$inputs->add('page', 'entity:node:article', t('Announcement'));
+$inputs->add('thing', 'entity', t('Featured beside'))
+  ->addConstraint('DataSurfaceReferenceableType', ['interface' => ContentEntityInterface::class]);
+```
+
+- **`entity:<type>` and `entity:<type>:<bundle>`** build one key: the
+  id, typed as the entity type keeps it (an integer where a content
+  entity type's id field is one, a string for a config entity), with
+  `DataSurfaceValidReference` naming the entity type and the bundle.
+  An entity type the site does not have is refused when the resource
+  is built; a bundle it does not have yet is no refusal, and the key
+  offers nothing until it has.
+- **The bare `entity`** is two keys attached at the key, `entity_type`
+  and `id`. `entity_type` lists the entity types the account may
+  reference one of, by `DataSurfaceReferenceableType`, which the
+  author writes on the key and the build moves onto it: `interface`
+  (`ContentEntityInterface` or `ConfigEntityInterface`) and `targets`,
+  each entity type allowed with its bundles (`['node' => ['article'],
+  'user' => []]`). Internal entity types are never offered. `id` is a
+  string, and a static refiner narrows it to the entity type chosen with
+  the same `DataSurfaceValidReference`, so the three spellings are one
+  mechanism, and the full schema states the id once per entity type, as
+  a conditional. The id does not apply while no entity type is chosen,
+  and is required once one is. Stored as `{entity_type, id}`.
+
+The candidates are core's entity reference selection handler's: the
+`default` handler for the entity type, the bundles as its
+`target_bundles`, the label as its `sort` (`References::handler()`),
+for the account asking. Its query carries the entity type's access tag,
+so what the selection plugin gives for nothing is the access filtering:
+a node's leaves out unpublished nodes for an account without "bypass
+node access" (with no node grants module), a user's leaves out blocked
+users without "administer users", and node grants narrow both lists for
+a site that has them. What this module adds: the key spellings, the
+labels sorted, the limit, the lookup, the type list and its filters, and
+one message for every refusal, "This entity (node: 7) cannot be
+referenced.", whether the id names nothing, another bundle or an entity
+the account may not reference, so a refusal never says whether an
+entity the account cannot see exists (core's own `ValidReference` tells
+the first apart).
+
+**The limit.** While the handler counts at most
+`data_surface.settings:reference_list_limit` candidates (50 as
+shipped), the resolver lists them: the key's options, a select on the
+form, a `oneOf` in both documents and an enum in the tool listing. Past
+it, the resolver does not apply: the key takes an id, which the
+constraint's validator holds to the handler, drawn by core's
+`entity_autocomplete` element ([Widgets](widgets.md#the-stock-widgets)),
+`x-surface.widget: autocomplete` in both documents, and looked up with
+the resource's lookup ([The served contract](served-contract.md#a-lookup)).
+The list's cacheability is what the handler read: the entity type's list
+tags, the contexts `References::CONTEXTS` names for it
+(`user.permissions`, and `user.node_grants:view` for a node), and the
+settings' tag, since whether a key lists at all is the limit's. An
+answer past the limit lists nothing and carries none of them: it is the
+wider answer, so a cached one is never stricter than the site. The
+validator, the options and the lookup all ask the same handler, so what
+a key lists, what the lookup finds and what a write accepts are one
+answer. `References::withLimit()` holds another limit for one call,
+saving nothing, which example 16's page uses to show a key past it.
+
+## A list the site decides, past its budget
+
+A reference key's limit has a sibling for variants and keys the site
+lists: `data_surface.settings:site_list_limit`, 20 as shipped. A key
+whose variants come from the site (`attachVariants(from:)`, a component
+per single-directory component) or whose keys do (`addEach()`,
+`attachEach()`) is spelled out in the full schema and the tool listing
+while the site lists at most that many; past it, both state the key
+open and mark it `deferred`, and the deciding key keeps its list of ids
+and labels ([decision](decisions.md#a-budget-for-what-the-site-decides)).
+Where a reference key past its limit is looked up by label, such a key
+is fetched per choice: choose the deciding key, then fetch the full
+schema with that choice stated, `GET .../schema?choose=/props=<value>`,
+the key's `x-surface.deferred.fetch` filled, once per value, and keep it until
+the site's list changes
+([the fetch per choice](served-contract.md#the-fetch-per-choice)). Or
+ask with values, `POST .../schema` over HTTP or the narrowing tool,
+`data_surface:<resource>:<operation>:schema`; both answer the chosen
+variant's keys exactly
+([asking again at the tool door](served-contract.md#asking-again-at-the-tool-door),
+[decision](decisions.md#a-list-left-out-for-size-is-deferred-not-refined)).
+`SiteListBudget::withLimit()` holds another limit for one call, saving
+nothing, as `References::withLimit()` does.
+
 ## Writing a resolver
 
 ```php
@@ -271,6 +367,21 @@ updates when a role is added and one that does not. The distinction
 between tags, which travel into a shared cache, and contexts, which mean
 "this answer was for one request", is in
 [Refinement](refinement.md#site-state-versus-per-request).
+
+**A list that is the whole constraint.** Both documents state a
+resolved list as `oneOf`, and name the constraint under
+`x-surface.checkedOnServer` besides, since the schema cannot know the
+constraint checks nothing more. A resolver whose list is every value its
+constraint accepts and nothing else, as a `Choice`'s is, says so with
+`exact: TRUE` on its attribute, and the constraint, and every subclass of
+it the resolver reads, is then named under no `checkedOnServer`. Example
+2's venue and room do: their constraints are `Choice`s whose list is the
+venues the site has, read by `EventVenueOptions`
+([decision](decisions.md#a-listing-is-a-read-only-operation-with-outputs-a-reorder-is-an-update-over-the-collection)).
+A memoized answer is dropped when a tag it was read under is
+invalidated, so a definition kept for the rest of a request is answered
+afresh, and a tool's definition carrying the list as its enum is cleared
+with the tag.
 
 To take a resolver out of circulation site-wide, or point it at a
 different source:

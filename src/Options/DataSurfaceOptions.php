@@ -8,6 +8,7 @@ use Drupal\Component\Plugin\Exception\PluginNotFoundException;
 use Drupal\Core\DependencyInjection\DependencySerializationTrait;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\Validation\ConstraintManager;
+use Drupal\data_surface\Pipeline\PipelineGuard;
 use Psr\Log\LoggerInterface;
 
 /**
@@ -131,15 +132,76 @@ final class DataSurfaceOptions {
         continue;
       }
       foreach ($this->resolvers() as $resolver) {
-        if (!$resolver->applies($constraint)) {
+        // Decision: see
+        // docs/decisions.md#nothing-an-operation-runs-reads-the-request.
+        if (!PipelineGuard::onBehalf(PipelineGuard::OPTIONS, get_class($resolver), 'applies', static fn (): bool => $resolver->applies($constraint))) {
           continue;
         }
-        $set = $resolver->resolve($constraint, $definition);
+        $set = PipelineGuard::onBehalf(PipelineGuard::OPTIONS, get_class($resolver), 'resolve', static fn (): OptionSet => $resolver->resolve($constraint, $definition));
         $resolved = $resolved === NULL ? $set : $resolved->intersect($set);
       }
     }
     $this->resolved[$definition] = $resolved ?? FALSE;
     return $resolved;
+  }
+
+  /**
+   * Forgets the answers read from what is being invalidated.
+   *
+   * A list read from the site (a module's config entities, say) is
+   * answered with its cacheability; a definition kept for the rest of the
+   * request is asked again once a tag that list named is invalidated, so
+   * a venue added by one call is offered by the next in the same worker.
+   *
+   * @param string[] $tags
+   *   The tags being invalidated.
+   *
+   * @internal
+   *
+   * @see \Drupal\data_surface\ResourceBuild\ResourceRegistryInvalidator
+   */
+  public function invalidateTags(array $tags): void {
+    $forget = [];
+    foreach ($this->resolved as $definition => $set) {
+      if ($set instanceof OptionSet && array_intersect($set->getCacheTags(), $tags) !== []) {
+        $forget[] = $definition;
+      }
+    }
+    foreach ($forget as $definition) {
+      unset($this->resolved[$definition]);
+    }
+  }
+
+  /**
+   * Answers whether a constraint is stated whole by the list read from it.
+   *
+   * A constraint a resolver says is its list (`exact: TRUE` on the
+   * resolver's attribute) accepts every value of that list and nothing
+   * else, so a schema stating the list states the constraint.
+   *
+   * @param string $constraint
+   *   The constraint plugin ID.
+   *
+   * @return bool
+   *   TRUE when a resolver reading it says its list is exact.
+   */
+  public function isStatedByList(string $constraint): bool {
+    $class = $this->constraintManager->getDefinition($constraint, FALSE)['class'] ?? NULL;
+    if (!is_string($class)) {
+      return FALSE;
+    }
+    foreach ($this->optionsManager->getDefinitions() as $definition) {
+      if (empty($definition['exact']) || !is_string($definition['constraint'] ?? NULL)) {
+        continue;
+      }
+      // A resolver reads its constraint and every subclass of it, as
+      // applies() does.
+      $read = $this->constraintManager->getDefinition($definition['constraint'], FALSE)['class'] ?? NULL;
+      if (is_string($read) && is_a($class, $read, TRUE)) {
+        return TRUE;
+      }
+    }
+    return FALSE;
   }
 
   /**
@@ -174,6 +236,7 @@ final class DataSurfaceOptions {
       foreach (array_keys($this->optionsManager->getDefinitions()) as $id) {
         /** @var \Drupal\data_surface\Options\DataSurfaceOptionsResolverInterface $resolver */
         $resolver = $this->optionsManager->createInstance($id);
+        assert(PipelineGuard::holdsNothingDoorSpecific($resolver, PipelineGuard::OPTIONS));
         $this->resolvers[$id] = $resolver;
       }
     }

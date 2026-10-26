@@ -36,17 +36,6 @@ use Drupal\data_surface\Storage\StorageLayoutInterface;
 interface DataSurfaceBuilderInterface {
 
   /**
-   * The output key the namespaced third-party outputs are mounted under.
-   *
-   * The output side's mirror of the input side's 'third_party_settings'
-   * map, and spelled differently on purpose: an output is not a setting,
-   * and a host that emits both would otherwise have one key meaning two
-   * things. The owner may not declare an output of this name, because
-   * the key belongs to everybody who mounts under it.
-   */
-  const THIRD_PARTY_OUTPUTS = 'third_party_outputs';
-
-  /**
    * Gets a definition, so alters can inspect or modify it.
    *
    * @param string $name
@@ -100,7 +89,7 @@ interface DataSurfaceBuilderInterface {
   /**
    * Locks a key: its value is fixed to the declared default.
    *
-   * Locking is build-time context (an edit operation locking an
+   * Locking is build-time context (an update operation locking an
    * identifier, say): the degenerate refinement, narrowing the value
    * space to exactly one value. Locked keys stay advertised: consumers
    * see the key and its value, rendered disabled in generated forms,
@@ -287,6 +276,27 @@ interface DataSurfaceBuilderInterface {
   public function addMixin(Mixin $mixin): static;
 
   /**
+   * Holds the frame as a whole to a JSON Schema its keys cannot say.
+   *
+   * What a schema document read into the frame says of the object rather
+   * than of one key (a conditional outside the vocabulary of declared
+   * rules, `dependentSchemas`, `not` over the object), checked by the
+   * pipeline against the frame's accepted values, and named under the
+   * frame's `x-surface.checkedOnServer` in both documents.
+   *
+   * Decision: see docs/decisions.md#a-schema-can-be-read-back-into-a-structure.
+   *
+   * @param array $schema
+   *   The JSON Schema 2020-12, as decoded with objects as arrays.
+   *
+   * @return $this
+   *
+   * @throws \LogicException
+   *   When the builder is already sealed.
+   */
+  public function constrainFrame(array $schema): static;
+
+  /**
    * Extends an existing definition's declared choices with more values.
    *
    * The contribution API for widening at build time (decision D2): the
@@ -425,11 +435,10 @@ interface DataSurfaceBuilderInterface {
    * Adds or replaces an output definition.
    *
    * What the host's execution emits, declared in the same vocabulary as
-   * what it accepts. The owner's verb, exactly as setDefinition() is: an
-   * alter adding an output of its own mounts it under its
-   * namespace with setThirdPartyOutputDefinition() instead, and never
-   * replaces one the owner declared — a consumer reading the owner's
-   * output schema has to keep reading true.
+   * what it accepts. The owner's verb alone: what a call answers is the
+   * operation's, and no alter adds to it (a reaction to a save belongs to
+   * ECA), so a consumer reading the owner's output schema keeps reading
+   * true.
    *
    * Two differences from an input definition, both enforced:
    * - An output carries no default. A default is what a value starts
@@ -448,39 +457,11 @@ interface DataSurfaceBuilderInterface {
    * @return $this
    *
    * @throws \InvalidArgumentException
-   *   When the definition declares a default value, or when the name is
-   *   the reserved third-party outputs key.
+   *   When the definition declares a default value.
    * @throws \LogicException
    *   When the builder is already sealed.
    */
   public function setOutputDefinition(string $name, DataDefinitionInterface $definition): static;
-
-  /**
-   * Mounts a third-party output under the provider's namespace.
-   *
-   * The output side's mirror of setThirdPartyDefinition(): a contributor
-   * may *add* to what a host emits, under its own provider namespace, so
-   * the emitted value lands at
-   * third_party_outputs.<provider>.<key> — advertised, conformance
-   * checked, and machine-visible. What it may never do is alter the
-   * owner's outputs, which is why there is a namespace at all.
-   *
-   * @param string $provider
-   *   The module mounting the output.
-   * @param string $key
-   *   The output's key within that provider's namespace.
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The definition describing what is emitted.
-   *
-   * @return $this
-   *
-   * @throws \InvalidArgumentException
-   *   When the provider id is empty or claims the owner's name, or the
-   *   definition declares a default value.
-   * @throws \LogicException
-   *   When the builder is already sealed.
-   */
-  public function setThirdPartyOutputDefinition(string $provider, string $key, DataDefinitionInterface $definition): static;
 
   /**
    * Gets a definition a provider mounted, by provider and key.
@@ -489,13 +470,11 @@ interface DataSurfaceBuilderInterface {
    *   The module that mounted it.
    * @param string $key
    *   The key within that provider's namespace.
-   * @param bool $output
-   *   TRUE for a mounted output, FALSE for a mounted setting.
    *
    * @return \Drupal\Core\TypedData\DataDefinitionInterface|null
    *   The definition, or NULL when the provider mounted no such key.
    */
-  public function getThirdPartyDefinition(string $provider, string $key, bool $output = FALSE): ?DataDefinitionInterface;
+  public function getThirdPartyDefinition(string $provider, string $key): ?DataDefinitionInterface;
 
   /**
    * Gets the map one provider's mounted keys are sealed into.
@@ -507,13 +486,11 @@ interface DataSurfaceBuilderInterface {
    *
    * @param string $provider
    *   The module that mounted the keys.
-   * @param bool $output
-   *   TRUE for the map of its mounted outputs, FALSE for its settings.
    *
    * @return \Drupal\Core\TypedData\MapDataDefinition|null
-   *   The map, or NULL when the provider mounted nothing on that side.
+   *   The map, or NULL when the provider mounted nothing.
    */
-  public function getThirdPartyMount(string $provider, bool $output = FALSE): ?MapDataDefinition;
+  public function getThirdPartyMount(string $provider): ?MapDataDefinition;
 
   /**
    * Holds one provider's input mount, before it has a key in it.

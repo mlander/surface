@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Drupal\data_surface\Resource;
 
+use Drupal\Core\Session\AccountInterface;
+
 /**
  * Where a resource's values live.
  *
@@ -23,8 +25,14 @@ namespace Drupal\data_surface\Resource;
  * by its parent under its key.
  *
  * Registered as an autowired service when the resource naming it is
- * discovered, so it may hold services. The engine's pipeline reaches it
- * through \Drupal\data_surface\ResourceBuild\StorageAdapter.
+ * discovered, so it may hold services, and none bound to the request a
+ * door answers: each write verb is handed the account it writes as, and
+ * the current user is never read here.
+ * The engine's pipeline reaches it through
+ * \Drupal\data_surface\ResourceBuild\StorageAdapter.
+ *
+ * Decision: see
+ * docs/decisions.md#nothing-an-operation-runs-reads-the-request.
  */
 interface ResourceStorageInterface {
 
@@ -51,6 +59,9 @@ interface ResourceStorageInterface {
    *   Where the resource is being asked for.
    * @param array $values
    *   The accepted, validated, canonical values, keyed by input key.
+   * @param \Drupal\Core\Session\AccountInterface $account
+   *   The account the write is made as, which a storage that records who
+   *   wrote reads here and never from the current user.
    *
    * @return array
    *   What commit() would store, in storage's own layout. A dry run
@@ -60,7 +71,7 @@ interface ResourceStorageInterface {
    *   When storage would refuse the values, its violations filed under
    *   the input keys that own them.
    */
-  public function prepare(OperationContext $context, array $values): array;
+  public function prepare(OperationContext $context, array $values, AccountInterface $account): array;
 
   /**
    * Writes what prepare() returned.
@@ -69,7 +80,9 @@ interface ResourceStorageInterface {
    *   Where the resource is being asked for.
    * @param array $prepared
    *   What prepare() returned for this context.
+   * @param \Drupal\Core\Session\AccountInterface $account
+   *   The account the write is made as.
    */
-  public function commit(OperationContext $context, array $prepared): void;
+  public function commit(OperationContext $context, array $prepared, AccountInterface $account): void;
 
 }

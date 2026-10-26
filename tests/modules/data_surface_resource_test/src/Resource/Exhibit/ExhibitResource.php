@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\data_surface_resource_test\Resource\Exhibit;
 
+use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\data_surface\Resource\Attribute\Operation;
 use Drupal\data_surface\Resource\Attribute\RefinesInput;
@@ -70,13 +71,15 @@ final class ExhibitResource implements ResourceInterface {
    *
    * Narrowing what a key allows by account is a runtime refiner, not
    * access: access answers whether the key may be changed, seen, or
-   * neither, never which of its values. It reads the current user, which
-   * no schema can state, so it says runtime and the full schema keeps the
-   * vault, marked `runtime`.
+   * neither, never which of its values. It reads the account, which no
+   * schema can state, so it says runtime and the full schema keeps the
+   * vault, marked `runtime`. The account is the one the operation runs
+   * as, handed to the parameter typed for it; the refiner never reads the
+   * current user itself.
    */
   #[RefinesInput('room', runtime: TRUE)]
-  public static function roomsForAccount(DataDefinitionInterface $room): DataDefinitionInterface {
-    if (\Drupal::currentUser()->hasPermission('use the vault')) {
+  public static function roomsForAccount(DataDefinitionInterface $room, AccountInterface $account): DataDefinitionInterface {
+    if ($account->hasPermission('use the vault')) {
       return $room;
     }
     return $room->addConstraint('LabeledChoice', ['choices' => array_diff_key(self::ROOMS, ['vault' => TRUE])]);

@@ -390,3 +390,177 @@ data_surface_examples.registration_step3.ticket.paid:
     currency:
       type: string
       label: 'Currency'
+
+# Generated from the event.spotlight resource by drush data_surface:config-schema.
+data_surface_examples.spotlight:
+  type: config_object
+  label: 'Spotlight, example 12'
+  constraints:
+    FullyValidatable: ~
+  mapping:
+    component:
+      type: string
+      label: 'Component'
+    props:
+      type: ignore
+      label: 'Props'
+    slots:
+      type: ignore
+      label: 'Slots'
+
+# Example 14, the owner's way: the credential is a variant its source chooses,
+# and both sources are written here, whichever the site offers.
+# Generated from the event.mailer resource by drush data_surface:config-schema.
+data_surface_examples.mailer:
+  type: config_object
+  label: 'Mailer, example 14'
+  constraints:
+    FullyValidatable: ~
+  mapping:
+    sender:
+      type: email
+      label: 'Sender'
+    endpoint:
+      type: uri
+      label: 'Mail service'
+    source:
+      type: string
+      label: 'Credential source'
+    credential:
+      type: 'data_surface_examples.mailer.credential.[%parent.source]'
+      label: 'Credential'
+
+# Example 14, the alter's way: a pasted key, and a mount for another module.
+# Generated from the event.webhook resource by drush data_surface:config-schema.
+data_surface_examples.webhook:
+  type: config_object
+  label: 'Sales webhook, example 14'
+  constraints:
+    FullyValidatable: ~
+  mapping:
+    endpoint:
+      type: uri
+      label: 'Endpoint'
+    api_key:
+      type: string
+      label: 'API key'
+      nullable: true
+    third_party_settings:
+      type: sequence
+      label: 'Third party settings'
+      requiredKey: false
+      sequence:
+        type: 'data_surface_examples.webhook.third_party.[%key]'
+
+# Generated from the event.mailer resource by drush data_surface:config-schema.
+data_surface_examples.mailer.credential.pasted:
+  type: mapping
+  label: 'Pasted here'
+  constraints:
+    FullyValidatable: ~
+  mapping:
+    api_key:
+      type: string
+      label: 'API key'
+      nullable: true
+
+# Generated from the event.mailer resource by drush data_surface:config-schema.
+data_surface_examples.mailer.credential.managed:
+  type: mapping
+  label: 'A managed key'
+  constraints:
+    FullyValidatable: ~
+  mapping:
+    key_id:
+      type: string
+      label: 'Key'
+    api_key:
+      type: string
+      label: 'API key'
+      requiredKey: false
+
+# Generated from the event.venue resource by drush data_surface:config-schema.
+data_surface_examples.event_venue.*:
+  type: config_entity
+  label: 'Venue'
+  constraints:
+    FullyValidatable: ~
+  mapping:
+    id:
+      type: string
+      label: 'Machine name'
+      constraints:
+        Regex:
+          pattern: '/^[a-z0-9_]+$/D'
+        Length:
+          max: 32
+    label:
+      type: string
+      label: 'Name'
+      constraints:
+        Length:
+          max: 128
+    slug:
+      type: string
+      label: 'Slug'
+      nullable: true
+      constraints:
+        Regex:
+          pattern: '/^[a-z0-9]+(-[a-z0-9]+)*$/D'
+        Length:
+          max: 128
+    capacity:
+      type: integer
+      label: 'Capacity'
+      constraints:
+        Range:
+          min: 1
+          max: 100000
+    address:
+      type: string
+      label: 'Address'
+      nullable: true
+      constraints:
+        Length:
+          max: 255
+    rooms:
+      type: sequence
+      label: 'Rooms'
+      constraints:
+        Count:
+          max: 20
+      sequence:
+        type: mapping
+        label: 'Rooms'
+        mapping:
+          id:
+            type: string
+            label: 'Room id'
+            constraints:
+              Regex:
+                pattern: '/^[a-z0-9_]+$/D'
+              Length:
+                max: 64
+          label:
+            type: string
+            label: 'Room name'
+            constraints:
+              Length:
+                max: 128
+          seats:
+            type: integer
+            label: 'Seats'
+            constraints:
+              Range:
+                min: 1
+                max: 10000
+    weight:
+      type: integer
+      label: 'Weight'
+      constraints:
+        Range:
+          min: -1000
+          max: 1000
+    status:
+      type: boolean
+      label: 'Enabled'

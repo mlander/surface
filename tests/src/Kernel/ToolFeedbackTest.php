@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\data_surface\Kernel;
 
+use Drupal\data_surface\Pipeline\ResultDocument;
 use Drupal\Component\Render\PlainTextOutput;
 use Drupal\Component\Utility\NestedArray;
 use Drupal\data_surface\Pipeline\DataSurfacePipeline;
@@ -151,7 +152,7 @@ class ToolFeedbackTest extends DataSurfaceKernelTestBase {
     else {
       throw new \LogicException('Nothing in "' . $sentence . '" says what to send.');
     }
-    NestedArray::setValue($values, explode('.', $path), $fixed);
+    NestedArray::setValue($values, explode('.', ResultDocument::dotted($path)), $fixed);
     return $values;
   }
 
@@ -248,31 +249,31 @@ class ToolFeedbackTest extends DataSurfaceKernelTestBase {
     $refusals = [
       'a value on no list' => [
         ['venue' => 'riverside_hall'] + $event,
-        'venue: ' . $not_valid . '. ' . self::VENUES . '.',
+        '/venue: ' . $not_valid . '. ' . self::VENUES . '.',
       ],
       'a value on another venue\'s list' => [
         ['room' => 'library_reading'] + $event,
-        'room: ' . $not_valid . '. This applies when venue is riverside (Riverside Hall). ' . $rooms . '.',
+        '/room: ' . $not_valid . '. This applies when Venue is riverside (Riverside Hall). ' . $rooms . '.',
       ],
       'a value on no room\'s list' => [
         ['room' => 'main_hall'] + $event,
-        'room: ' . $not_valid . '. This applies when venue is riverside (Riverside Hall). ' . $rooms . '.',
+        '/room: ' . $not_valid . '. This applies when Venue is riverside (Riverside Hall). ' . $rooms . '.',
       ],
       'a bound siblings set' => [
         ['capacity' => 500] + $event,
-        'capacity: This value should be between 1 and 100. This applies when room is riverside_east (East room) and ' . self::COMPLIANCE . '.license is empty.',
+        '/capacity: This value should be between 1 and 100. This applies when Room is riverside_east (East room) and Compliance: Event license is empty.',
       ],
       'a pattern' => [
         $compliance(['license' => 'EV-2048', 'stewards' => 1]) + $event,
-        self::COMPLIANCE . '.license: A license number is four digits, such as 2048.',
+        ResultDocument::pointer(self::COMPLIANCE) . '/license: A license number is four digits, such as 2048.',
       ],
       'a bound through a port' => [
         $compliance(['stewards' => 1]) + ['capacity' => 100] + $event,
-        self::COMPLIANCE . '.stewards: This value should be 2 or more. This applies when capacity is 100.',
+        ResultDocument::pointer(self::COMPLIANCE) . '/stewards: This value should be 2 or more. This applies when Capacity is 100.',
       ],
       'a key its own declaration requires names no condition' => [
         ['title' => ''] + $event,
-        'title: Public event title is required.',
+        '/title: Public event title is required.',
       ],
     ];
     foreach ($refusals as $which => [$values, $expected]) {
@@ -283,18 +284,18 @@ class ToolFeedbackTest extends DataSurfaceKernelTestBase {
     $this->assertSame(
       [
         FALSE,
-        "The values were refused:\n" . 'shelf: ' . $not_valid . '. Choose ' . implode(', ', $shelves) . ' or one of 2 more.',
+        "The values were refused:\n" . '/shelf: ' . $not_valid . '. Choose ' . implode(', ', $shelves) . ' or one of 2 more.',
       ],
       $this->call('data_surface:tool_test.logbook:configure', ['shelf' => 'z9']),
       'A long list is capped, and says how many more.',
     );
     $this->assertSame(
-      [FALSE, "The values were refused:\n" . 'pages: This value should be between 1 and 500.'],
+      [FALSE, "The values were refused:\n" . '/pages: This value should be between 1 and 500.'],
       $this->call('data_surface:tool_test.logbook:configure', ['pages' => 900]),
       'A bound no sibling sets says itself.',
     );
     $this->assertSame(
-      [FALSE, "The values were refused:\n" . 'send_day: Send day does not apply when frequency is monthly (Monthly).'],
+      [FALSE, "The values were refused:\n" . '/send_day: Send day does not apply when Frequency is monthly (Monthly).'],
       $this->call('data_surface:resource_test.bulletin:configure', ['frequency' => 'monthly', 'send_day' => 'monday']),
       'A key that does not apply says so, in the sentence it always said.',
     );
@@ -318,7 +319,7 @@ class ToolFeedbackTest extends DataSurfaceKernelTestBase {
     $this->assertSame([TRUE, $dry_run], $this->call(ExampleCalls::TOOL, ['capacity' => 40]), 'The required keys left out keep what is stored.');
     [$success, $message] = $this->call(ExampleCalls::TOOL, ['venue' => 'riverside_hall'] + $event);
     $this->assertFalse($success);
-    $this->assertSame("The values were refused:\n" . 'venue: The value you selected is not a valid choice. ' . self::VENUES . '.', $message);
+    $this->assertSame("The values were refused:\n" . '/venue: The value you selected is not a valid choice. ' . self::VENUES . '.', $message);
     $listed = $this->container->get('plugin.manager.tool')->getDefinition(ExampleCalls::TOOL)->getInputDefinition(OperationInputs::VALUES);
     $this->assertInstanceOf(MapInputDefinition::class, $listed);
     $venue = $listed->getPropertyDefinition('venue');
@@ -361,19 +362,19 @@ class ToolFeedbackTest extends DataSurfaceKernelTestBase {
     }
     $this->assertSame([
       'the venue, by name' => [
-        'venue',
+        '/venue',
         'no_such_choice',
         'The value you selected is not a valid choice. ' . self::VENUES . '.',
       ],
       'a room of another venue' => [
-        'room',
+        '/room',
         'no_such_choice',
-        'The value you selected is not a valid choice. This applies when venue is riverside (Riverside Hall). Choose riverside_main (Main hall) or riverside_east (East room).',
+        'The value you selected is not a valid choice. This applies when Venue is riverside (Riverside Hall). Choose riverside_main (Main hall) or riverside_east (East room).',
       ],
       'twice the capacity' => [
-        self::COMPLIANCE . '.stewards',
+        ResultDocument::pointer(self::COMPLIANCE) . '/stewards',
         'too_low',
-        'This value should be 5 or more. This applies when capacity is 240.',
+        'This value should be 5 or more. This applies when Capacity is 240.',
       ],
     ], $said);
     $this->assertSame(['riverside', 'riverside_main', 240, 5], [

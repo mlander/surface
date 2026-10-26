@@ -18,7 +18,6 @@ use Drupal\Core\StringTranslation\TranslationInterface;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
 use Drupal\Core\Validation\Plugin\Validation\Constraint\ComplexDataConstraint;
-use Drupal\data_surface\Contract\ContractEmitter;
 
 /**
  * What a resource can carry of a bundle's fields, read from typed data.
@@ -327,9 +326,7 @@ final class FieldItemDerivation {
       $notes['decimal'] = $this->t('A decimal travels as a float, so a value with more digits than a float holds loses them; its precision and scale are checked when the entity is validated.');
     }
     if ($field->getType() === 'entity_reference') {
-      $notes['target_id'] = $this->t("Its targets are its selection handler's, for the account asking: listed when there are at most @cap, otherwise any id is taken and the handler checks it.", [
-        '@cap' => ContractEmitter::ENUMERATION_CAP,
-      ]);
+      $notes['target_id'] = $this->t("Its targets are its selection handler's, for the account asking: listed up to the site's limit, data_surface.settings:reference_list_limit, otherwise any id is taken and the handler checks it.");
     }
     return $notes;
   }

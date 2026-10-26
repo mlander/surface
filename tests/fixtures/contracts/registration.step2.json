@@ -1,7 +1,7 @@
 {
     "resource": "registration.step2",
     "module": "data_surface_examples",
-    "contract": 2,
+    "contract": 4,
     "documents": [
         {
             "resource": "registration.step2",
@@ -12,7 +12,7 @@
                 "title": "Configure registration (step 2)",
                 "description": "Sets the event title, whether registration is open, the venue, a room at that venue and a capacity the room can hold.",
                 "x-surface": {
-                    "contract": 2,
+                    "contract": 4,
                     "operation": {
                         "id": "configure",
                         "label": "Configure registration (step 2)",
@@ -28,11 +28,7 @@
                 "properties": {
                     "title": {
                         "title": "Event title",
-                        "type": "string",
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": []
-                        }
+                        "type": "string"
                     },
                     "open": {
                         "title": "Registration open",
@@ -40,11 +36,7 @@
                             "boolean",
                             "null"
                         ],
-                        "default": true,
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": []
-                        }
+                        "default": true
                     },
                     "venue": {
                         "title": "Venue",
@@ -62,11 +54,7 @@
                                 "const": "harbour",
                                 "title": "Harbour Centre"
                             }
-                        ],
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": []
-                        }
+                        ]
                     },
                     "room": {
                         "title": "Room",
@@ -98,7 +86,6 @@
                             }
                         ],
                         "x-surface": {
-                            "locked": false,
                             "dependsOn": [
                                 "venue"
                             ],
@@ -114,7 +101,6 @@
                         "minimum": 1,
                         "default": 50,
                         "x-surface": {
-                            "locked": false,
                             "dependsOn": [
                                 "room"
                             ],

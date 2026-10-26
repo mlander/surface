@@ -102,7 +102,7 @@ class FieldToolsAccessTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Creates the field instance the edit tool works on.
+   * Creates the field instance the update tool works on.
    *
    * @return \Drupal\field\Entity\FieldConfig
    *   The saved field.
@@ -147,11 +147,11 @@ class FieldToolsAccessTest extends DataSurfaceKernelTestBase {
     // Holding everything core asks for, both tools are allowed.
     $this->assertTrue($this->checkAccess('data_surface:field.instance:reuse', $reuse, $account)->isAllowed());
     $this->createField();
-    $this->assertTrue($this->checkAccess('data_surface:field.instance:edit', $edit, $account)->isAllowed());
+    $this->assertTrue($this->checkAccess('data_surface:field.instance:update', $edit, $account)->isAllowed());
 
     // The field type refuses, and nothing else changed.
     $this->setFieldTypeRefusal(TRUE);
-    $refused = $this->checkAccess('data_surface:field.instance:edit', $edit, $account);
+    $refused = $this->checkAccess('data_surface:field.instance:update', $edit, $account);
     $this->assertTrue($refused->isForbidden());
     $reason = $refused instanceof AccessResultReasonInterface ? (string) $refused->getReason() : '';
     $this->assertStringContainsString('gated test field type', $reason);
@@ -167,7 +167,7 @@ class FieldToolsAccessTest extends DataSurfaceKernelTestBase {
   public function testExecuteIsRefusedAndWritesNothing(): void {
     $field = $this->createField();
     $this->setFieldTypeRefusal(TRUE);
-    $tool = $this->toolManager->createInstance('data_surface:field.instance:edit');
+    $tool = $this->toolManager->createInstance('data_surface:field.instance:update');
     $tool->setInputValue('field', 'entity_test.entity_test.field_gated');
     $tool->setInputValue(OperationInputs::VALUES, ['label' => 'Gated', 'settings' => ['note' => 'Refused.']]);
 
@@ -193,7 +193,7 @@ class FieldToolsAccessTest extends DataSurfaceKernelTestBase {
    */
   public function testTheSameCallSucceedsWhenTheFieldTypeAllows(): void {
     $this->createField();
-    $tool = $this->toolManager->createInstance('data_surface:field.instance:edit');
+    $tool = $this->toolManager->createInstance('data_surface:field.instance:update');
     $tool->setInputValue('field', 'entity_test.entity_test.field_gated');
     $tool->setInputValue(OperationInputs::VALUES, ['label' => 'Gated', 'settings' => ['note' => 'Allowed.']]);
 
@@ -242,7 +242,7 @@ class FieldToolsAccessTest extends DataSurfaceKernelTestBase {
   public function testRuntimeVariantIsOfferedForTheAccountAlone(): void {
     $resources = $this->container->get('data_surface.resources');
     $arguments = ['entity_type_id' => 'entity_test', 'bundle' => 'entity_test'];
-    $context = $resources->operation('field.instance', 'add', $arguments);
+    $context = $resources->operation('field.instance', 'create', $arguments);
     $this->setFieldTypeRefusal(TRUE);
     $built = $resources->build('field.instance', $context)->getDefinitions()->entry('settings');
     $this->assertArrayNotHasKey('data_surface_gated', $built->variants->variants);

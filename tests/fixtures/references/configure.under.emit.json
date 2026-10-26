@@ -1,0 +1,780 @@
+{
+    "resource": "event.sponsorship",
+    "operation": "configure",
+    "label": "Configure the sponsorship",
+    "schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "Configure the sponsorship",
+        "description": "Sets the sponsor's venue, contact and announcement, and what the sponsor is featured beside, linked to and credited on.",
+        "x-surface": {
+            "contract": 4,
+            "operation": {
+                "id": "configure",
+                "label": "Configure the sponsorship",
+                "description": "Sets the sponsor's venue, contact and announcement, and what the sponsor is featured beside, linked to and credited on.",
+                "kind": "update",
+                "creates": false,
+                "destructive": false,
+                "idempotent": true
+            },
+            "version": 1
+        },
+        "type": "object",
+        "properties": {
+            "venue": {
+                "title": "Venue",
+                "description": "Where the sponsor's stand is.",
+                "type": "string",
+                "oneOf": [
+                    {
+                        "const": "harbour",
+                        "title": "Harbour Centre"
+                    },
+                    {
+                        "const": "library",
+                        "title": "Old Library"
+                    },
+                    {
+                        "const": "riverside",
+                        "title": "Riverside Hall"
+                    }
+                ],
+                "default": "riverside",
+                "x-surface": {
+                    "widget": "select",
+                    "reference": {
+                        "entityType": "event_venue"
+                    },
+                    "emptyOption": {
+                        "show": false,
+                        "label": "- Select -"
+                    },
+                    "checkedOnServer": [
+                        {
+                            "constraint": "DataSurfaceValidReference",
+                            "message": "Refers to an entity the account may reference"
+                        }
+                    ]
+                }
+            },
+            "contact": {
+                "title": "Contact",
+                "description": "Who answers for the sponsor.",
+                "type": [
+                    "integer",
+                    "null"
+                ],
+                "oneOf": [
+                    {
+                        "const": 0,
+                        "title": ""
+                    },
+                    {
+                        "const": 1,
+                        "title": "admin"
+                    },
+                    {
+                        "const": 2,
+                        "title": "sponsor"
+                    },
+                    {
+                        "const": null
+                    }
+                ],
+                "x-surface": {
+                    "widget": "select",
+                    "reference": {
+                        "entityType": "user"
+                    },
+                    "emptyOption": {
+                        "show": true,
+                        "label": "- None -"
+                    },
+                    "checkedOnServer": [
+                        {
+                            "constraint": "DataSurfaceValidReference",
+                            "message": "Refers to an entity the account may reference"
+                        }
+                    ]
+                }
+            },
+            "page": {
+                "title": "Announcement",
+                "description": "The article that announces the sponsor.",
+                "type": [
+                    "integer",
+                    "null"
+                ],
+                "oneOf": [
+                    {
+                        "const": 2,
+                        "title": "Draft sponsor terms"
+                    },
+                    {
+                        "const": 1,
+                        "title": "Sponsor packages"
+                    },
+                    {
+                        "const": null
+                    }
+                ],
+                "x-surface": {
+                    "widget": "select",
+                    "reference": {
+                        "entityType": "node",
+                        "bundles": [
+                            "article"
+                        ]
+                    },
+                    "emptyOption": {
+                        "show": true,
+                        "label": "- None -"
+                    },
+                    "checkedOnServer": [
+                        {
+                            "constraint": "DataSurfaceValidReference",
+                            "message": "Refers to an entity the account may reference"
+                        }
+                    ]
+                }
+            },
+            "thing": {
+                "title": "Featured beside",
+                "description": "Any content the sponsor is featured beside.",
+                "allOf": [
+                    {
+                        "$ref": "#/$defs/event.sponsorship.thing"
+                    },
+                    {
+                        "type": "object",
+                        "properties": {
+                            "id": false
+                        }
+                    }
+                ],
+                "x-surface": {
+                    "widget": "fieldset",
+                    "within": {
+                        "/allOf/1": {
+                            "doesNotApply": {
+                                "id": [
+                                    "entity_type"
+                                ]
+                            }
+                        }
+                    }
+                }
+            },
+            "setting": {
+                "title": "Linked to",
+                "description": "A venue or a role the sponsorship is linked to.",
+                "allOf": [
+                    {
+                        "$ref": "#/$defs/event.sponsorship.setting"
+                    },
+                    {
+                        "type": "object",
+                        "properties": {
+                            "id": false
+                        }
+                    }
+                ],
+                "x-surface": {
+                    "widget": "fieldset",
+                    "within": {
+                        "/allOf/1": {
+                            "doesNotApply": {
+                                "id": [
+                                    "entity_type"
+                                ]
+                            }
+                        }
+                    }
+                }
+            },
+            "credit": {
+                "title": "Credited on",
+                "description": "An article or a user the sponsor is credited on.",
+                "allOf": [
+                    {
+                        "$ref": "#/$defs/event.sponsorship.credit"
+                    },
+                    {
+                        "type": "object",
+                        "properties": {
+                            "id": false
+                        }
+                    }
+                ],
+                "x-surface": {
+                    "widget": "fieldset",
+                    "within": {
+                        "/allOf/1": {
+                            "doesNotApply": {
+                                "id": [
+                                    "entity_type"
+                                ]
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "additionalProperties": false,
+        "required": [
+            "venue"
+        ],
+        "$defs": {
+            "event.sponsorship.thing": {
+                "title": "event.sponsorship.thing",
+                "type": "object",
+                "properties": {
+                    "entity_type": {
+                        "title": "Entity type",
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "oneOf": [
+                            {
+                                "const": "node",
+                                "title": "Content"
+                            },
+                            {
+                                "const": "user",
+                                "title": "User"
+                            },
+                            {
+                                "const": null
+                            }
+                        ],
+                        "x-surface": {
+                            "widget": "select",
+                            "emptyOption": {
+                                "show": true,
+                                "label": "- None -"
+                            }
+                        }
+                    },
+                    "id": {
+                        "title": "ID",
+                        "description": "The id of an entity of the entity type chosen.",
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "x-surface": {
+                            "widget": "autocomplete",
+                            "dependsOn": [
+                                "entity_type"
+                            ],
+                            "reference": {
+                                "by": "entity_type"
+                            },
+                            "enumerated": true
+                        }
+                    }
+                },
+                "additionalProperties": false,
+                "allOf": [
+                    {
+                        "if": {
+                            "properties": {
+                                "entity_type": {
+                                    "const": "node"
+                                }
+                            },
+                            "required": [
+                                "entity_type"
+                            ]
+                        },
+                        "then": {
+                            "properties": {
+                                "id": {
+                                    "oneOf": [
+                                        {
+                                            "const": "2",
+                                            "title": "Draft sponsor terms"
+                                        },
+                                        {
+                                            "const": "1",
+                                            "title": "Sponsor packages"
+                                        },
+                                        {
+                                            "const": "3",
+                                            "title": "Sponsor stand map"
+                                        },
+                                        {
+                                            "const": null
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "if": {
+                            "properties": {
+                                "entity_type": {
+                                    "const": "user"
+                                }
+                            },
+                            "required": [
+                                "entity_type"
+                            ]
+                        },
+                        "then": {
+                            "properties": {
+                                "id": {
+                                    "oneOf": [
+                                        {
+                                            "const": "0",
+                                            "title": ""
+                                        },
+                                        {
+                                            "const": "1",
+                                            "title": "admin"
+                                        },
+                                        {
+                                            "const": "2",
+                                            "title": "sponsor"
+                                        },
+                                        {
+                                            "const": null
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "if": {
+                            "properties": {
+                                "entity_type": {
+                                    "type": "null"
+                                }
+                            }
+                        },
+                        "then": {
+                            "properties": {
+                                "id": false
+                            }
+                        }
+                    },
+                    {
+                        "if": {
+                            "allOf": [
+                                {
+                                    "properties": {
+                                        "entity_type": {
+                                            "not": {
+                                                "type": "null"
+                                            }
+                                        }
+                                    },
+                                    "required": [
+                                        "entity_type"
+                                    ]
+                                },
+                                {
+                                    "not": {
+                                        "properties": {
+                                            "entity_type": {
+                                                "type": "null"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        },
+                        "then": {
+                            "properties": {
+                                "id": {
+                                    "type": "string"
+                                }
+                            },
+                            "required": [
+                                "id"
+                            ]
+                        }
+                    }
+                ],
+                "x-surface": {
+                    "rules": [
+                        2,
+                        3
+                    ]
+                }
+            },
+            "event.sponsorship.setting": {
+                "title": "event.sponsorship.setting",
+                "type": "object",
+                "properties": {
+                    "entity_type": {
+                        "title": "Entity type",
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "oneOf": [
+                            {
+                                "const": "event_venue",
+                                "title": "Venue"
+                            },
+                            {
+                                "const": "user_role",
+                                "title": "Role"
+                            },
+                            {
+                                "const": null
+                            }
+                        ],
+                        "x-surface": {
+                            "widget": "select",
+                            "emptyOption": {
+                                "show": true,
+                                "label": "- None -"
+                            }
+                        }
+                    },
+                    "id": {
+                        "title": "ID",
+                        "description": "The id of an entity of the entity type chosen.",
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "x-surface": {
+                            "widget": "autocomplete",
+                            "dependsOn": [
+                                "entity_type"
+                            ],
+                            "reference": {
+                                "by": "entity_type"
+                            },
+                            "enumerated": true
+                        }
+                    }
+                },
+                "additionalProperties": false,
+                "allOf": [
+                    {
+                        "if": {
+                            "properties": {
+                                "entity_type": {
+                                    "const": "event_venue"
+                                }
+                            },
+                            "required": [
+                                "entity_type"
+                            ]
+                        },
+                        "then": {
+                            "properties": {
+                                "id": {
+                                    "oneOf": [
+                                        {
+                                            "const": "harbour",
+                                            "title": "Harbour Centre"
+                                        },
+                                        {
+                                            "const": "library",
+                                            "title": "Old Library"
+                                        },
+                                        {
+                                            "const": "riverside",
+                                            "title": "Riverside Hall"
+                                        },
+                                        {
+                                            "const": null
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "if": {
+                            "properties": {
+                                "entity_type": {
+                                    "const": "user_role"
+                                }
+                            },
+                            "required": [
+                                "entity_type"
+                            ]
+                        },
+                        "then": {
+                            "properties": {
+                                "id": {
+                                    "oneOf": [
+                                        {
+                                            "const": "administrator",
+                                            "title": "Administrator"
+                                        },
+                                        {
+                                            "const": "event_sponsorship_editor",
+                                            "title": "Sponsorship editor"
+                                        },
+                                        {
+                                            "const": null
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "if": {
+                            "properties": {
+                                "entity_type": {
+                                    "type": "null"
+                                }
+                            }
+                        },
+                        "then": {
+                            "properties": {
+                                "id": false
+                            }
+                        }
+                    },
+                    {
+                        "if": {
+                            "allOf": [
+                                {
+                                    "properties": {
+                                        "entity_type": {
+                                            "not": {
+                                                "type": "null"
+                                            }
+                                        }
+                                    },
+                                    "required": [
+                                        "entity_type"
+                                    ]
+                                },
+                                {
+                                    "not": {
+                                        "properties": {
+                                            "entity_type": {
+                                                "type": "null"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        },
+                        "then": {
+                            "properties": {
+                                "id": {
+                                    "type": "string"
+                                }
+                            },
+                            "required": [
+                                "id"
+                            ]
+                        }
+                    }
+                ],
+                "x-surface": {
+                    "rules": [
+                        2,
+                        3
+                    ]
+                }
+            },
+            "event.sponsorship.credit": {
+                "title": "event.sponsorship.credit",
+                "type": "object",
+                "properties": {
+                    "entity_type": {
+                        "title": "Entity type",
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "oneOf": [
+                            {
+                                "const": "node",
+                                "title": "Content"
+                            },
+                            {
+                                "const": "user",
+                                "title": "User"
+                            },
+                            {
+                                "const": null
+                            }
+                        ],
+                        "x-surface": {
+                            "widget": "select",
+                            "emptyOption": {
+                                "show": true,
+                                "label": "- None -"
+                            }
+                        }
+                    },
+                    "id": {
+                        "title": "ID",
+                        "description": "The id of an entity of the entity type chosen.",
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "x-surface": {
+                            "widget": "autocomplete",
+                            "dependsOn": [
+                                "entity_type"
+                            ],
+                            "reference": {
+                                "by": "entity_type"
+                            },
+                            "enumerated": true
+                        }
+                    }
+                },
+                "additionalProperties": false,
+                "allOf": [
+                    {
+                        "if": {
+                            "properties": {
+                                "entity_type": {
+                                    "const": "node"
+                                }
+                            },
+                            "required": [
+                                "entity_type"
+                            ]
+                        },
+                        "then": {
+                            "properties": {
+                                "id": {
+                                    "oneOf": [
+                                        {
+                                            "const": "2",
+                                            "title": "Draft sponsor terms"
+                                        },
+                                        {
+                                            "const": "1",
+                                            "title": "Sponsor packages"
+                                        },
+                                        {
+                                            "const": null
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "if": {
+                            "properties": {
+                                "entity_type": {
+                                    "const": "user"
+                                }
+                            },
+                            "required": [
+                                "entity_type"
+                            ]
+                        },
+                        "then": {
+                            "properties": {
+                                "id": {
+                                    "oneOf": [
+                                        {
+                                            "const": "0",
+                                            "title": ""
+                                        },
+                                        {
+                                            "const": "1",
+                                            "title": "admin"
+                                        },
+                                        {
+                                            "const": "2",
+                                            "title": "sponsor"
+                                        },
+                                        {
+                                            "const": null
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "if": {
+                            "properties": {
+                                "entity_type": {
+                                    "type": "null"
+                                }
+                            }
+                        },
+                        "then": {
+                            "properties": {
+                                "id": false
+                            }
+                        }
+                    },
+                    {
+                        "if": {
+                            "allOf": [
+                                {
+                                    "properties": {
+                                        "entity_type": {
+                                            "not": {
+                                                "type": "null"
+                                            }
+                                        }
+                                    },
+                                    "required": [
+                                        "entity_type"
+                                    ]
+                                },
+                                {
+                                    "not": {
+                                        "properties": {
+                                            "entity_type": {
+                                                "type": "null"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        },
+                        "then": {
+                            "properties": {
+                                "id": {
+                                    "type": "string"
+                                }
+                            },
+                            "required": [
+                                "id"
+                            ]
+                        }
+                    }
+                ],
+                "x-surface": {
+                    "rules": [
+                        2,
+                        3
+                    ]
+                }
+            }
+        }
+    },
+    "values": {
+        "venue": "riverside",
+        "contact": null,
+        "page": null,
+        "thing": {
+            "entity_type": null
+        },
+        "setting": {
+            "entity_type": null
+        },
+        "credit": {
+            "entity_type": null
+        }
+    },
+    "stale": []
+}

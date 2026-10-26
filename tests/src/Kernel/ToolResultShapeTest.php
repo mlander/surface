@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\data_surface\Kernel;
 
+use Drupal\Tests\data_surface\Traits\ServedControllerTrait;
 use Drupal\Component\Render\PlainTextOutput;
 use Drupal\data_surface\Pipeline\ResultDocument;
 use Drupal\data_surface\Pipeline\Violation;
-use Drupal\data_surface_react\Controller\ResourceApiController;
 use Drupal\data_surface_tool\OperationInputs;
 use Drupal\data_surface_tool_test\Storage\CabinetStorage;
 use Drupal\Tests\user\Traits\UserCreationTrait;
@@ -15,7 +15,6 @@ use Drupal\tool\ExecutableResult;
 use Drupal\tool\FailureCategory;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
-use Symfony\Component\HttpFoundation\Request;
 
 /**
  * Tests what a derived tool answers: its category, its lines, its outputs.
@@ -33,6 +32,8 @@ use Symfony\Component\HttpFoundation\Request;
 #[Group('data_surface')]
 #[RunTestsInSeparateProcesses]
 class ToolResultShapeTest extends DataSurfaceKernelTestBase {
+
+  use ServedControllerTrait;
 
   use UserCreationTrait;
 
@@ -96,7 +97,7 @@ class ToolResultShapeTest extends DataSurfaceKernelTestBase {
    */
   public function testAccessAndLockedWholeAreAccess(): void {
     $this->setUpCurrentUser([], []);
-    $refused = $this->runTool('edit', ['drawers' => 5]);
+    $refused = $this->runTool('update', ['drawers' => 5]);
     $this->assertFalse($refused->isSuccess());
     $this->assertSame(FailureCategory::Access, $refused->getFailureCategory());
     $this->assertFalse($refused->getFailureCategory()->isCorrectable());
@@ -107,7 +108,7 @@ class ToolResultShapeTest extends DataSurfaceKernelTestBase {
     ], $answered['violations']);
 
     $this->setUpCurrentUser([], ['audit cabinet']);
-    $locked = $this->runTool('edit', ['drawers' => 5]);
+    $locked = $this->runTool('update', ['drawers' => 5]);
     $this->assertFalse($locked->isSuccess());
     $this->assertSame("The values were refused:\nThis may be seen and not changed, so nothing was written: The cabinet may be audited, not changed.", PlainTextOutput::renderFromHtml((string) $locked->getMessage()));
     $this->assertSame(FailureCategory::Access, $locked->getFailureCategory());
@@ -129,20 +130,20 @@ class ToolResultShapeTest extends DataSurfaceKernelTestBase {
    */
   public function testRefusedValuesAreInputOnePerLine(): void {
     $this->setUpCurrentUser([], ['keep cabinet', 'set cabinet codes']);
-    $result = $this->runTool('edit', ['drawers' => 40, 'lock' => 'padlock']);
+    $result = $this->runTool('update', ['drawers' => 40, 'lock' => 'padlock']);
     $this->assertFalse($result->isSuccess());
     $this->assertSame(FailureCategory::Input, $result->getFailureCategory());
     $lines = explode("\n", PlainTextOutput::renderFromHtml((string) $result->getMessage()));
     $this->assertSame('The values were refused:', $lines[0]);
     $this->assertCount(3, $lines, implode("\n", $lines));
-    $this->assertStringStartsWith('drawers: ', $lines[1]);
-    $this->assertStringStartsWith('lock: ', $lines[2]);
+    $this->assertStringStartsWith('/drawers: ', $lines[1]);
+    $this->assertStringStartsWith('/lock: ', $lines[2]);
 
     // The same refusal as data, in the one shape, each line an entry.
     $answered = $result->getContextValues();
     $this->assertSame(ResultDocument::KEYS, array_keys($answered));
     $this->assertFalse($answered['ok']);
-    $this->assertSame(['drawers' => 'not_in_range', 'lock' => 'no_such_choice'], array_column($answered['violations'], 'code', 'path'));
+    $this->assertSame(['/drawers' => 'not_in_range', '/lock' => 'no_such_choice'], array_column($answered['violations'], 'code', 'path'));
     foreach ($answered['violations'] as $index => $violation) {
       $this->assertSame(['path', 'code', 'message'], array_keys($violation));
       $this->assertSame($violation['path'] . ': ' . $violation['message'], $lines[$index + 1]);
@@ -157,7 +158,7 @@ class ToolResultShapeTest extends DataSurfaceKernelTestBase {
    */
   public function testOutputsAreDeclared(): void {
     $tools = $this->container->get('plugin.manager.tool');
-    $edit = $tools->createInstance('data_surface:tool_test.cabinet:edit');
+    $edit = $tools->createInstance('data_surface:tool_test.cabinet:update');
     $outputs = $edit->getOutputDefinitions();
     $this->assertSame(ResultDocument::KEYS, array_keys($outputs), 'The result shape, in its order, and nothing else: the cabinet declares no outputs of its own.');
     foreach ($outputs as $name => $output) {
@@ -167,9 +168,9 @@ class ToolResultShapeTest extends DataSurfaceKernelTestBase {
     $this->assertArrayHasKey(OperationInputs::DRY_RUN, $edit->getInputDefinitions());
 
     $this->setUpCurrentUser([], ['keep cabinet', 'set cabinet codes']);
-    $answered = $this->runTool('edit', ['drawers' => 5])->getContextValues();
+    $answered = $this->runTool('update', ['drawers' => 5])->getContextValues();
     $this->assertSame(ResultDocument::KEYS, array_keys($answered));
-    $this->assertSame(['ok' => TRUE, 'committed' => TRUE, 'changed' => TRUE, 'changes' => ['drawers']], array_slice($answered, 0, 4));
+    $this->assertSame(['ok' => TRUE, 'committed' => TRUE, 'changed' => TRUE, 'changes' => ['/drawers']], array_slice($answered, 0, 4));
     $this->assertSame(['violations' => [], 'notes' => [], 'stale' => []], array_slice($answered, 5));
 
     // A read only operation writes nothing at any door: no dry run, and
@@ -189,11 +190,11 @@ class ToolResultShapeTest extends DataSurfaceKernelTestBase {
    * Tests `values` is always sent: never null, and {} changes nothing.
    */
   public function testValuesIsRequiredAndNeverNull(): void {
-    $definition = $this->container->get('plugin.manager.tool')->createInstance('data_surface:tool_test.cabinet:edit')->getInputDefinitions()[OperationInputs::VALUES];
+    $definition = $this->container->get('plugin.manager.tool')->createInstance('data_surface:tool_test.cabinet:update')->getInputDefinitions()[OperationInputs::VALUES];
     $this->assertTrue($definition->isRequired());
     $this->assertArrayHasKey('NotNull', $definition->getConstraints());
     $this->assertStringContainsString('never null', (string) $definition->getDescription());
-    $schema = $this->container->get('tool.definition_serializer')->normalizeInputSchema($this->container->get('plugin.manager.tool')->createInstance('data_surface:tool_test.cabinet:edit'));
+    $schema = $this->container->get('tool.definition_serializer')->normalizeInputSchema($this->container->get('plugin.manager.tool')->createInstance('data_surface:tool_test.cabinet:update'));
     $this->assertContains(OperationInputs::VALUES, $schema['required']);
     $this->assertSame('object', $schema['properties'][OperationInputs::VALUES]['type']);
 
@@ -202,14 +203,14 @@ class ToolResultShapeTest extends DataSurfaceKernelTestBase {
     // before the tool runs, and nothing written.
     $runner = $this->container->get('tool.runner');
     foreach ([['values' => NULL], []] as $inputs) {
-      $result = $runner->run('data_surface:tool_test.cabinet:edit', $inputs)->getResult();
+      $result = $runner->run('data_surface:tool_test.cabinet:update', $inputs)->getResult();
       $this->assertFalse($result->isSuccess());
       $this->assertSame("Invalid input:\nvalues: This value should not be null.", PlainTextOutput::renderFromHtml((string) $result->getMessage()));
     }
     $this->assertSame(self::STORED, $this->container->get('state')->get(CabinetStorage::KEY));
 
     // {} is an update with nothing to change: accepted, nothing written.
-    $result = $runner->run('data_surface:tool_test.cabinet:edit', ['values' => []])->getResult();
+    $result = $runner->run('data_surface:tool_test.cabinet:update', ['values' => []])->getResult();
     $this->assertTrue($result->isSuccess(), (string) $result->getMessage());
     $answered = $result->getContextValues();
     $this->assertSame(['ok' => TRUE, 'committed' => TRUE, 'changed' => FALSE, 'changes' => []], array_slice($answered, 0, 4));
@@ -217,22 +218,22 @@ class ToolResultShapeTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests React's validate and submit answer the same shape.
+   * Tests the HTTP door answers the same entries, a refusal as problem details.
    */
   public function testReactAnswersTheSameShape(): void {
     $this->setUpCurrentUser([], ['keep cabinet', 'set cabinet codes']);
-    $controller = ResourceApiController::create($this->container);
-    $request = static fn (string $endpoint, array $values): Request => Request::create('/surface-api/tool_test.cabinet/edit/' . $endpoint, 'POST', [], [], [], ['CONTENT_TYPE' => 'application/json'], (string) json_encode(['values' => (object) $values]));
-    $tool = $this->runTool('edit', ['drawers' => 40, 'lock' => 'padlock']);
-    $validate = json_decode((string) $controller->validate($request('validate', ['drawers' => 40, 'lock' => 'padlock']), 'tool_test.cabinet', 'edit')->getContent(), TRUE);
-    $this->assertSame(ResultDocument::KEYS, array_keys($validate));
-    $this->assertSame($tool->getContextValues()['violations'], $validate['violations'], 'The same entries at both doors.');
-    $submit = json_decode((string) $controller->submit($request('submit', ['drawers' => 40]), 'tool_test.cabinet', 'edit')->getContent(), TRUE);
-    $this->assertSame([...ResultDocument::KEYS, 'outputs', 'contract', 'created'], array_keys($submit));
-    $this->assertFalse($submit['ok']);
+    $tool = $this->runTool('update', ['drawers' => 40, 'lock' => 'padlock']);
+    $sent = ['drawers' => 40, 'lock' => 'padlock'];
+    $validate = $this->servedJson('PATCH', '/surface-api/tool_test.cabinet?dryRun=true', $sent);
+    $this->assertSame(['type', 'title', 'status', 'detail', 'errors', 'notes', 'stale'], array_keys($validate), 'A refusal is problem details.');
+    $this->assertSame($tool->getContextValues()['violations'], $validate['errors'], 'The same entries at both doors.');
+    $this->assertSame($tool->getContextValues()['notes'], $validate['notes']);
+    $this->assertSame($tool->getContextValues()['stale'], $validate['stale']);
+    $submit = $this->servedJson('PATCH', '/surface-api/tool_test.cabinet', ['drawers' => 40]);
+    $this->assertSame(422, $submit['status']);
     $this->assertSame([
-      ['path' => 'drawers', 'code' => 'not_in_range', 'message' => 'This value should be between 1 and 12.'],
-    ], $submit['violations']);
+      ['path' => '/drawers', 'code' => 'not_in_range', 'message' => 'This value should be between 1 and 12.'],
+    ], $submit['errors']);
     // The same refusal reads by labels at React, a person's door, and by
     // paths and values as sent at the tool; the paths and codes are one.
     $this->setUpCurrentUser([], ['administer site configuration']);
@@ -242,27 +243,27 @@ class ToolResultShapeTest extends DataSurfaceKernelTestBase {
     $tool->setInputValue(OperationInputs::DRY_RUN, TRUE);
     $tool->execute();
     $at_tool = $tool->getResult()->getContextValues()['violations'];
-    $step2 = Request::create('/surface-api/registration.step2/configure/validate', 'POST', [], [], [], ['CONTENT_TYPE' => 'application/json'], (string) json_encode(['values' => $sent]));
-    $at_react = json_decode((string) $controller->validate($step2, 'registration.step2', 'configure')->getContent(), TRUE)['violations'];
+    $at_react = $this->servedJson('PATCH', '/surface-api/registration.step2?dryRun=true', $sent)['errors'];
     $not_valid = 'The value you selected is not a valid choice. ';
     $this->assertSame([
       [
-        'path' => 'room',
+        'path' => '/room',
         'code' => 'no_such_choice',
-        'message' => $not_valid . 'This applies when venue is harbour (Harbour Centre). Choose harbour_auditorium (Auditorium) or harbour_deck (Upper deck).',
+        'message' => $not_valid . 'This applies when Venue is harbour (Harbour Centre). Choose harbour_auditorium (Auditorium) or harbour_deck (Upper deck).',
       ],
     ], $at_tool);
     $this->assertSame([
       [
-        'path' => 'room',
+        'path' => '/room',
         'code' => 'no_such_choice',
         'message' => $not_valid . 'This applies when Venue is Harbour Centre. Choose Auditorium or Upper deck.',
       ],
     ], $at_react);
     $this->setUpCurrentUser([], ['keep cabinet', 'set cabinet codes']);
 
-    $written = json_decode((string) $controller->submit($request('submit', ['drawers' => 5]), 'tool_test.cabinet', 'edit')->getContent(), TRUE);
-    $this->assertSame(['ok' => TRUE, 'committed' => TRUE, 'changed' => TRUE, 'changes' => ['drawers']], array_slice($written, 0, 4));
+    $written = $this->servedJson('PATCH', '/surface-api/tool_test.cabinet', ['drawers' => 5]);
+    $this->assertSame([...ResultDocument::KEYS, 'outputs', 'contract', 'created'], array_keys($written));
+    $this->assertSame(['ok' => TRUE, 'committed' => TRUE, 'changed' => TRUE, 'changes' => ['/drawers']], array_slice($written, 0, 4));
     $this->assertSame(5, $written['values']['drawers']);
   }
 

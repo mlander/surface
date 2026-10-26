@@ -1,0 +1,28 @@
+{% autoescape false %}
+<?php
+
+declare(strict_types=1);
+
+namespace Drupal\{{ r.module }}\Structure;
+
+{% for use in s.uses %}
+use {{ use }};
+{% endfor %}
+
+/**
+{% for line in s.summary %}
+ *{{ line ? ' ' ~ line : '' }}
+{% endfor %}
+ */
+#[Structure({{ s.id_literal }})]
+final class {{ s.class }} implements StructureInterface {
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function defineInputs(BlueprintInterface $inputs): void {
+{{ s.inputs }}
+  }
+
+}
+{% endautoescape %}

@@ -77,32 +77,13 @@ class OutputsTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * The module the fixture's mounted output is answered for under.
-   */
-  protected const PROVIDER = 'data_surface_test';
-
-  /**
-   * Seals the fixture, optionally with an alter's mounted output.
-   *
-   * @param bool $mounted
-   *   TRUE to mount a badge output under this module, as an alter's
-   *   alterOutputs() would.
+   * Seals the fixture.
    *
    * @return \Drupal\data_surface\DataSurfaceInterface
    *   The data surface.
    */
-  protected function outputSurface(bool $mounted = FALSE): DataSurfaceInterface {
-    $builder = $this->outputBuilder();
-    if ($mounted) {
-      $builder->setThirdPartyOutputDefinition(
-        self::PROVIDER,
-        'badge',
-        DataDefinition::create('string')
-          ->setLabel('Badge')
-          ->addConstraint('Choice', ['choices' => ['star', 'flame']]),
-      );
-    }
-    return $builder->seal();
+  protected function outputSurface(): DataSurfaceInterface {
+    return $this->outputBuilder()->seal();
   }
 
   /**
@@ -217,67 +198,6 @@ class OutputsTest extends DataSurfaceKernelTestBase {
     $this->expectException(\LogicException::class);
     $this->expectExceptionMessage('The "text" output cannot be locked');
     $builder->lock('text');
-  }
-
-  /**
-   * Tests that the mounting key belongs to the contributors, not the owner.
-   */
-  public function testTheThirdPartyOutputKeyIsReserved(): void {
-    $builder = new DataSurfaceBuilder();
-
-    $this->expectException(\InvalidArgumentException::class);
-    $this->expectExceptionMessage('is reserved for the outputs other modules mount');
-    $builder->setOutputDefinition(DataSurfaceBuilderInterface::THIRD_PARTY_OUTPUTS, MapDataDefinition::create());
-  }
-
-  /**
-   * Tests that a contributor mounts an output under its own namespace.
-   *
-   * The output side of the contribution model. A module that owns
-   * neither the host nor its execution adds to what the host emits, and
-   * the addition is addressed under the name of whoever answers for it,
-   * so it can collide with nothing the owner declared and nothing
-   * another contributor mounted.
-   */
-  public function testThirdPartyMountsOutputUnderItsNamespace(): void {
-    $outputs = $this->outputSurface(TRUE)->getOutputDefinitions();
-
-    $this->assertSame(
-      ['text', 'note', 'meta', 'tags', DataSurfaceBuilderInterface::THIRD_PARTY_OUTPUTS],
-      $outputs->names(),
-    );
-    $mounted = $outputs->get(DataSurfaceBuilderInterface::THIRD_PARTY_OUTPUTS);
-    $this->assertInstanceOf(MapDataDefinition::class, $mounted);
-    $provider = $mounted->getPropertyDefinitions()[self::PROVIDER] ?? NULL;
-    $this->assertInstanceOf(MapDataDefinition::class, $provider);
-    $badge = $provider->getPropertyDefinitions()['badge'] ?? NULL;
-    $this->assertNotNull($badge);
-    $this->assertSame(['star', 'flame'], $badge->getConstraints()['Choice']['choices']);
-
-    // And what is mounted is conformance checked like anything else, at
-    // its own path, by the key nobody else can claim.
-    $emitted = [
-      'text' => 'hi',
-      DataSurfaceBuilderInterface::THIRD_PARTY_OUTPUTS => [
-        self::PROVIDER => ['badge' => 'sash'],
-      ],
-    ];
-    $violations = $this->pipeline()->conformOutput($this->outputSurface(TRUE), $emitted);
-    $this->assertSame(
-      [DataSurfaceBuilderInterface::THIRD_PARTY_OUTPUTS . '.' . self::PROVIDER . '.badge'],
-      $this->paths($violations),
-    );
-  }
-
-  /**
-   * Tests that a mounted output is named by a module, not by anybody.
-   */
-  public function testMountedOutputNeedsProviderName(): void {
-    $builder = new DataSurfaceBuilder();
-
-    $this->expectException(\InvalidArgumentException::class);
-    $this->expectExceptionMessage('must be named by its module name');
-    $builder->setThirdPartyOutputDefinition('', 'badge', DataDefinition::create('string'));
   }
 
   /**

@@ -1,11 +1,21 @@
-# The page and the five endpoints of one operation of one resource, both
-# named by id: /surface-react/registration.step2/configure. An operation's
-# parameters arrive in the query string (and, on a POST, in the body's
-# "parameters"), by the operation method's parameter names.
+# The page an operation's React form mounts on, and the API it calls.
 #
-# One requirement on all six, the operation's: its permission, then the
-# resource's access class, and no opinion is a refusal. The three POSTs also
-# want the X-CSRF-Token header a session token from /session/token is.
+# The page names the resource and the operation by id:
+# /surface-react/registration.step3/configure, its parameters in the query
+# string. The API addresses the resource, not the operation, and the
+# method is the operation (contract 3): /surface-api/{resource} for a
+# singleton or a collection, /surface-api/{resource}/{id} for one thing, up
+# to four identity segments, then `schema`; `:{operation}` after the last
+# segment names an operation the method does not imply; DELETE on a thing's
+# path is its default delete. ServedPaths reads
+# the path; ResourceApiController answers it.
+#
+# One requirement on both, the operation's: its permission, then the
+# resource's access class, and no opinion is a refusal. A POST, a PATCH or
+# a DELETE also wants the X-CSRF-Token header a session token from /session/token
+# is, when it carries the session cookie.
+#
+# Decision: see docs/decisions.md#contract-3-the-operation-is-the-method.
 
 data_surface_react.page:
   path: '/surface-react/{resource}/{operation}'
@@ -15,45 +25,23 @@ data_surface_react.page:
   requirements:
     _data_surface_react_access: 'TRUE'
 
-data_surface_react.contract:
-  path: '/surface-api/{resource}/{operation}'
+data_surface_react.api:
+  path: '/surface-api/{resource}/{s1}/{s2}/{s3}/{s4}/{s5}'
   defaults:
-    _controller: '\Drupal\data_surface_react\Controller\ResourceApiController::contract'
-  methods: [GET]
+    _controller: '\Drupal\data_surface_react\Controller\ResourceApiController::handle'
+    s1: ''
+    s2: ''
+    s3: ''
+    s4: ''
+    s5: ''
+  methods: [GET, POST, PATCH, DELETE]
   requirements:
-    _data_surface_react_access: 'TRUE'
-
-data_surface_react.schema:
-  path: '/surface-api/{resource}/{operation}/schema'
-  defaults:
-    _controller: '\Drupal\data_surface_react\Controller\ResourceApiController::schema'
-  methods: [GET]
-  requirements:
-    _data_surface_react_access: 'TRUE'
-
-data_surface_react.refine:
-  path: '/surface-api/{resource}/{operation}/refine'
-  defaults:
-    _controller: '\Drupal\data_surface_react\Controller\ResourceApiController::refine'
-  methods: [POST]
-  requirements:
-    _data_surface_react_access: 'TRUE'
-    _csrf_request_header_token: 'TRUE'
-
-data_surface_react.validate:
-  path: '/surface-api/{resource}/{operation}/validate'
-  defaults:
-    _controller: '\Drupal\data_surface_react\Controller\ResourceApiController::validate'
-  methods: [POST]
-  requirements:
-    _data_surface_react_access: 'TRUE'
-    _csrf_request_header_token: 'TRUE'
-
-data_surface_react.submit:
-  path: '/surface-api/{resource}/{operation}/submit'
-  defaults:
-    _controller: '\Drupal\data_surface_react\Controller\ResourceApiController::submit'
-  methods: [POST]
-  requirements:
+    # One segment each; a colon in the last one names an operation.
+    resource: '[^/]+'
+    s1: '[^/]+'
+    s2: '[^/]+'
+    s3: '[^/]+'
+    s4: '[^/]+'
+    s5: '[^/]+'
     _data_surface_react_access: 'TRUE'
     _csrf_request_header_token: 'TRUE'

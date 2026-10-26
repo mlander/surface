@@ -12,12 +12,15 @@ use Drupal\data_surface\Resource\ResourceInterface;
 use Drupal\data_surface_resource_test\Access\SpiceRackAccess;
 
 /**
- * A spice rack: a child with three operations and an access class.
+ * A spice rack: a child with four operations and an access class.
  *
- * - `edit` matches the larder's operation, and takes the larder from the
+ * - `update` matches the larder's operation, and takes the larder from the
  *   identity the larder knows;
- * - `browse` is the default, for a larder whose operation it has none for,
- *   and holds no more than ten spices, which is how a test tells it apart;
+ * - `create` matches a larder being added, and is the operation of its
+ *   kind for a larder whose creating operation it has none for (`copy`);
+ *   it holds no more than ten spices, which is how a test tells it apart;
+ * - `browse` holds no more than ten spices too, and is reached only when
+ *   the larder hands its context whole;
  * - `restock` is reached only when the larder names it, needs the shelf
  *   the larder hands it, and asks a permission of its own.
  *
@@ -34,15 +37,23 @@ final class SpiceRackResource implements ResourceInterface {
    * as a tool's static definition is built in, cannot give it: there the
    * rack is passed on to its default.
    */
-  #[Operation('edit', label: 'Edit a spice rack')]
-  public static function edit(string $larder): OperationContext {
-    return new OperationContext('edit', known: ['larder' => $larder]);
+  #[Operation('update', label: 'Edit a spice rack')]
+  public static function update(string $larder): OperationContext {
+    return new OperationContext('update', known: ['larder' => $larder]);
   }
 
   /**
-   * The rack, when nothing else picks an operation: a small one.
+   * A new rack: a small one.
    */
-  #[Operation('browse', label: 'Browse a spice rack', default: TRUE)]
+  #[Operation('create', label: 'Add a spice rack', creates: TRUE)]
+  public static function create(): OperationContext {
+    return (new OperationContext())->withConstraint('spices', 'Range', ['min' => 0, 'max' => 10]);
+  }
+
+  /**
+   * The rack browsed: a small one.
+   */
+  #[Operation('browse', label: 'Browse a spice rack')]
   public static function browse(): OperationContext {
     return (new OperationContext('browse'))->withConstraint('spices', 'Range', ['min' => 0, 'max' => 10]);
   }

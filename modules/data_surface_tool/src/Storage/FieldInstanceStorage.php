@@ -11,6 +11,7 @@ use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface\Resource\ResourceStorageInterface;
 use Drupal\data_surface\Storage\SchemaViolations;
 use Drupal\field\Entity\FieldConfig;
+use Drupal\Core\Session\AccountInterface;
 
 /**
  * A field instance's values live on its field config entity.
@@ -68,7 +69,7 @@ final class FieldInstanceStorage implements ResourceStorageInterface {
    * does not exist yet is stood in for by an unsaved one built from the
    * same identity, which is what the field is checked against.
    */
-  public function prepare(OperationContext $context, array $values): array {
+  public function prepare(OperationContext $context, array $values, AccountInterface $account): array {
     $identity = $context->known + $values;
     $field = $this->field($identity);
     if ($field === NULL) {
@@ -106,7 +107,7 @@ final class FieldInstanceStorage implements ResourceStorageInterface {
    * displays, with the field type's default widget and formatter, as
    * Field UI does when it adds one.
    */
-  public function commit(OperationContext $context, array $prepared): void {
+  public function commit(OperationContext $context, array $prepared, AccountInterface $account): void {
     $identity = $context->known + [
       'entity_type_id' => $prepared['entity_type'] ?? NULL,
       'bundle' => $prepared['bundle'] ?? NULL,

@@ -7,9 +7,11 @@ namespace Drupal\data_surface_tool\Plugin\tool\Tool;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\TypedDataInterface;
+use Drupal\Core\Validation\Plugin\Validation\Constraint\PrimitiveTypeConstraint;
 use Drupal\data_surface\Pipeline\DataSurfacePipelineInterface;
 use Drupal\data_surface\Pipeline\ResultDocument;
 use Drupal\data_surface\Pipeline\Violation;
+use Drupal\data_surface\ResourceBuild\OperationDefinition;
 use Drupal\data_surface\ResourceBuild\StorageAdapter;
 use Drupal\data_surface_tool\Plugin\Derivative\ResourceOperationToolDeriver;
 use Drupal\data_surface_tool\InputDefinitions;
@@ -22,13 +24,14 @@ use Drupal\tool\Tool\ToolOperation;
 use Drupal\tool\TypedData\InputDefinitionInterface;
 use Drupal\tool\TypedData\InputDefinitionRefinerInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
+use Symfony\Component\Validator\ConstraintViolation;
 use Symfony\Component\Validator\ConstraintViolationListInterface;
 
 /**
  * A tool for one operation of one resource, generated from the operation.
  *
  * One class, one tool per (resource, operation) the deriver finds:
- * `data_surface:node.type:add`, `data_surface:field.instance:edit`.
+ * `data_surface:node.type:create`, `data_surface:field.instance:update`.
  * Nothing here names a resource, a key or an operation; all of it is read
  * from the derivative id and the static layer.
  *
@@ -72,6 +75,16 @@ use Symfony\Component\Validator\ConstraintViolationListInterface;
 final class ResourceOperationTool extends ResourceOperationToolBase implements InputDefinitionRefinerInterface {
 
   use ResultReportingTrait;
+
+  /**
+   * The Tool API's messages that carry a position inside an input.
+   */
+  protected const POSITIONED = ['(property @position) @message', '(item @position) @message'];
+
+  /**
+   * The refusal of a value of another type, the pipeline's sentence.
+   */
+  protected const TYPE_MISMATCH = 'This value must be of type @expected, @actual given.';
 
   /**
    * The pipeline that accepts, validates, prepares and commits values.
@@ -187,13 +200,21 @@ final class ResourceOperationTool extends ResourceOperationToolBase implements I
     if ($shape instanceof DataDefinition) {
       $shape->setRequired(TRUE);
     }
+    // A map or a list sent for a scalar key is refused here, by its path,
+    // before core's validators read it as a scalar and throw.
+    [$values[OperationInputs::VALUES], $mismatched] = InputDefinitions::withoutNonScalars($shape, $values[OperationInputs::VALUES], OperationInputs::VALUES);
     $this->inputDefinitions[OperationInputs::VALUES] = $shape;
     try {
-      return parent::validateInputValues($values);
+      $violations = parent::validateInputValues($values);
     }
     finally {
       $this->inputDefinitions[OperationInputs::VALUES] = $listed;
     }
+    foreach ($mismatched as $path => [$expected, $actual]) {
+      $arguments = ['@expected' => $expected, '@actual' => $actual];
+      $violations->add(new ConstraintViolation($this->t('This value must be of type @expected, @actual given.', $arguments), self::TYPE_MISMATCH, $arguments, NULL, $path, NULL));
+    }
+    return $violations;
   }
 
   /**
@@ -221,10 +242,24 @@ final class ResourceOperationTool extends ResourceOperationToolBase implements I
     foreach ($result->getViolations() as $violation) {
       $path = (string) $violation->getPropertyPath();
       $message = $violation->getMessage();
+      // The Tool API names a map property's or a list item's position in
+      // the message, "(property room) ...", until #3583065 moves it onto
+      // the path: read it back off the message's own arguments.
+      while ($message instanceof TranslatableMarkup && in_array($message->getUntranslatedString(), self::POSITIONED, TRUE)) {
+        $arguments = $message->getArguments();
+        $path .= '.' . $arguments['@position'];
+        $message = $arguments['@message'];
+      }
       $constraint = $violation->getConstraint();
-      $code = $constraint === NULL && $message instanceof TranslatableMarkup && $message->getUntranslatedString() === 'This property is required.'
-        ? Violation::REQUIRED
-        : Violation::codeOf($violation);
+      $code = match (TRUE) {
+        $constraint === NULL && $message instanceof TranslatableMarkup && $message->getUntranslatedString() === 'This property is required.' => Violation::REQUIRED,
+        // A value of another type than the key's, as the pipeline names it.
+        $constraint === NULL && in_array($violation->getMessageTemplate(), [
+          (new PrimitiveTypeConstraint())->message,
+          self::TYPE_MISMATCH,
+        ], TRUE) => Violation::TYPE_MISMATCH,
+        default => Violation::codeOf($violation),
+      };
       if ($path === OperationInputs::VALUES || str_starts_with($path, OperationInputs::VALUES . '.')) {
         [$key, $below] = array_pad(explode('.', substr($path, strlen(OperationInputs::VALUES) + 1), 2), 2, '');
         $refused[] = new Violation($key, $below, $message, $code);
@@ -302,14 +337,23 @@ final class ResourceOperationTool extends ResourceOperationToolBase implements I
       $category = $result->isAccessRefused() || $built->lockedWhole() !== NULL ? FailureCategory::Access : FailureCategory::Input;
       return ExecutableResult::failure($this->refusedMessage($result->violations, $result->notes), $answer, $category);
     }
-    // The resource's own outputs, beside the shape and never over it.
-    $outputs = $result->committed && $storage instanceof StorageAdapter
-      ? $storage->outputs($built, $result->values)
-      : [];
+    // The resource's own outputs, beside the shape and never over it: read
+    // back once committed, and for an operation that changes nothing or a
+    // dry run, what its prepare answered.
+    // Decision: see docs/decisions.md#who-produces-outputs.
+    $outputs = match (TRUE) {
+      !$storage instanceof StorageAdapter => [],
+      $result->committed => $storage->outputs($built, $result->values),
+      $result->prepared !== NULL => $storage->outputs($built, $result->values, $result->prepared),
+      default => [],
+    };
     $answer += $outputs;
     // Decision: see docs/decisions.md#locked-at-the-top.
     return ExecutableResult::success(
       $this->withNotes(match (TRUE) {
+        // Decision: see docs/decisions.md#a-placed-block-is-a-resource.
+        $operation->kind() === OperationDefinition::DELETE && $result->committed => $this->t('@label: removed. The values it held are answered.', ['@label' => (string) $operation->label]),
+        $operation->kind() === OperationDefinition::DELETE => $this->t('Dry run of @label: the removal was rehearsed, and nothing was removed. The values it holds are answered.', ['@label' => (string) $operation->label]),
         $result->committed && !$result->changed() => $this->t('@label: the values were accepted, and they are what is stored, so nothing was written.', ['@label' => (string) $operation->label]),
         $result->committed => $this->t('@label: the values were accepted and written.', ['@label' => (string) $operation->label]),
         // Decision: see docs/decisions.md#an-operation-states-how-it-behaves.

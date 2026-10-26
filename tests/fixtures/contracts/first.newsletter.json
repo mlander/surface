@@ -1,7 +1,7 @@
 {
     "resource": "first.newsletter",
     "module": "data_surface_first",
-    "contract": 2,
+    "contract": 4,
     "documents": [
         {
             "resource": "first.newsletter",
@@ -12,7 +12,7 @@
                 "title": "Configure the newsletter",
                 "description": "Sets who the newsletter is sent from, how often it goes out and how many recipients one send reaches.",
                 "x-surface": {
-                    "contract": 2,
+                    "contract": 4,
                     "operation": {
                         "id": "configure",
                         "label": "Configure the newsletter",
@@ -29,20 +29,12 @@
                     "sender_name": {
                         "title": "Sender name",
                         "type": "string",
-                        "maxLength": 64,
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": []
-                        }
+                        "maxLength": 64
                     },
                     "sender_email": {
                         "title": "Sender email",
                         "type": "string",
-                        "format": "idn-email",
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": []
-                        }
+                        "format": "idn-email"
                     },
                     "frequency": {
                         "title": "Frequency",
@@ -57,11 +49,7 @@
                                 "title": "Monthly"
                             }
                         ],
-                        "default": "weekly",
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": []
-                        }
+                        "default": "weekly"
                     },
                     "max_recipients": {
                         "title": "Maximum recipients per send",
@@ -72,11 +60,7 @@
                         ],
                         "minimum": 1,
                         "maximum": 10000,
-                        "default": 500,
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": []
-                        }
+                        "default": 500
                     }
                 },
                 "additionalProperties": false,

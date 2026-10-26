@@ -1,0 +1,18 @@
+langcode: en
+status: true
+dependencies: {  }
+id: harbour
+label: 'Harbour Centre'
+slug: harbour-centre
+capacity: 950
+address: 'Pier 3, Harbour Road'
+rooms:
+  -
+    id: harbour_auditorium
+    label: Auditorium
+    seats: 800
+  -
+    id: harbour_deck
+    label: 'Upper deck'
+    seats: 150
+weight: 2

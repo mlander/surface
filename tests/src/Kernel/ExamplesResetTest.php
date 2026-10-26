@@ -35,6 +35,7 @@ class ExamplesResetTest extends DataSurfaceKernelTestBase {
     'data_surface_tool',
     'data_surface_examples',
     'data_surface_examples_compliance',
+    'data_surface_examples_keys',
   ];
 
   /**
@@ -95,6 +96,20 @@ class ExamplesResetTest extends DataSurfaceKernelTestBase {
     // Examples 7 to 11 too, and the ticket types example 9 reads.
     $this->config('data_surface_examples.bulletin')->set('frequency', 'monthly')->save();
     $this->config('data_surface_examples.ticket_types')->set('types.vip', ['label' => 'VIP', 'locked' => FALSE])->save();
+    // Example 14's managed key, its pasted key kept beside it, and the
+    // managed key another module stored on the webhook.
+    $this->config('data_surface_examples.mailer')
+      ->set('source', 'managed')
+      ->set('credential', ['key_id' => 'mail_service', 'api_key' => 'mk-1'])
+      ->save();
+    $this->config('data_surface_examples.webhook')->set('third_party_settings', ['data_surface_examples_keys' => ['key_id' => 'webhook_signing']])->save();
+    // Example 15's venues: one changed, one removed, one added.
+    $venues = $this->container->get('entity_type.manager')->getStorage('event_venue');
+    $riverside = $venues->load('riverside');
+    $uuid = $riverside->uuid();
+    $riverside->set('capacity', 9)->set('weight', 7)->save();
+    $venues->load('library')->delete();
+    $venues->create(['id' => 'town_hall', 'label' => 'Town Hall', 'capacity' => 300])->save();
 
     $form_state = new FormState();
     $this->container->get('form_builder')->submitForm(ResetExamplesForm::class, $form_state);
@@ -106,6 +121,8 @@ class ExamplesResetTest extends DataSurfaceKernelTestBase {
       $three,
       'data_surface_examples.bulletin',
       'data_surface_examples.ticket_types',
+      'data_surface_examples.mailer',
+      'data_surface_examples.webhook',
     ];
     foreach ($names as $name) {
       $this->assertSame($this->shipped($name), $this->stored($name), $name);
@@ -113,6 +130,17 @@ class ExamplesResetTest extends DataSurfaceKernelTestBase {
     $this->assertArrayNotHasKey('third_party_settings', $this->stored($three));
     $this->assertNull($this->container->get('state')->get('data_surface_examples_compliance.closed_rooms'));
     $this->assertNull($this->container->get('state')->get('data_surface_examples_workflow.state'));
+    // The venues shipped, as shipped, and no other; a venue kept keeps its
+    // uuid.
+    $venues->resetCache();
+    $kept = array_keys($venues->loadMultiple());
+    sort($kept);
+    $this->assertSame(['harbour', 'library', 'riverside'], $kept);
+    foreach (['riverside', 'library', 'harbour'] as $id) {
+      $name = 'data_surface_examples.event_venue.' . $id;
+      $this->assertSame($this->shipped($name), array_diff_key($this->stored($name), ['uuid' => TRUE]), $name);
+    }
+    $this->assertSame($uuid, $venues->load('riverside')->uuid());
     // Riverside Hall's main hall seats 400, more than example 4 allows
     // without a license, so its ceiling is what the shipped room shows.
     foreach ([$two, $three] as $name) {

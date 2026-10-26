@@ -7,25 +7,49 @@ namespace Drupal\data_surface_examples\Controller;
 use Drupal\Core\Controller\ControllerBase;
 use Drupal\Core\Extension\ModuleExtensionList;
 use Drupal\Core\Link;
+use Drupal\Core\Routing\RouteProviderInterface;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\Url;
+use Drupal\data_surface\Reference\References;
 use Drupal\data_surface_examples\CodeLines;
+use Drupal\data_surface_examples\ConceptPanel;
 use Drupal\data_surface_examples\ConfigSchemaPanel;
+use Drupal\data_surface_examples\Entity\EventVenue;
 use Drupal\data_surface_examples\ExampleCalls;
+use Drupal\data_surface_examples\FilesPanel;
 use Drupal\data_surface_examples\Form\RegistrationStep1ClassicForm;
 use Drupal\data_surface_examples\Form\RegistrationStep2ClassicForm;
+use Drupal\data_surface_examples\Hook\SpotlightBlockHooks;
 use Drupal\data_surface_examples\Resource\BulletinResource;
 use Drupal\data_surface_examples\Resource\DoorsResource;
+use Drupal\data_surface_examples\Resource\MailerResource;
 use Drupal\data_surface_examples\Resource\ProgramResource;
 use Drupal\data_surface_examples\Resource\RegistrationStep1Resource;
 use Drupal\data_surface_examples\Resource\RegistrationStep2Resource;
 use Drupal\data_surface_examples\Resource\RegistrationStep3Resource;
+use Drupal\data_surface_examples\Resource\SpotlightResource;
 use Drupal\data_surface_examples\Resource\TicketSalesResource;
+use Drupal\data_surface_examples\Resource\VenueResource;
+use Drupal\data_surface_examples\Resource\WebhookResource;
+use Drupal\data_surface_examples\Series;
 use Drupal\data_surface_examples\Shape\PhoneNumber;
 use Drupal\data_surface_examples\Storage\RegistrationStep1Storage;
 use Drupal\data_surface_examples\Storage\RegistrationStep2Storage;
+use Drupal\data_surface_examples\Storage\MailerStorage;
+use Drupal\data_surface_examples\Storage\SpotlightStorage;
+use Drupal\data_surface_examples\Storage\VenueStorage;
+use Drupal\data_surface_examples\Storage\WebhookStorage;
+use Drupal\data_surface_examples\Structure\ManagedCredentialStructure;
+use Drupal\data_surface_examples\Structure\PastedCredentialStructure;
 use Drupal\data_surface_examples\Structure\PersonStructure;
 use Drupal\data_surface_examples\Structure\ReviewStructure;
+use Drupal\data_surface_examples\Structure\VenueListingStructure;
+use Drupal\data_surface_examples\Structure\VenueOrderStructure;
+use Drupal\data_surface_examples\Structure\VenueReorderStructure;
+use Drupal\data_surface_examples\Structure\VenueRoomStructure;
+use Drupal\data_surface_examples\Variants\CredentialSources;
+use Drupal\data_surface\Variants\ComponentProps;
+use Drupal\data_surface\Variants\ComponentSlots;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -34,9 +58,11 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * Those are the two examples with no form, and the classic twins of
  * examples 1 and 2 with what config schema says under each.
  *
- * Plain on purpose: one sentence per example, where it is, and how many
- * lines of code it took, counted from the files by CodeLines rather than
- * written down, so an example that grows says so here.
+ * Plain on purpose: the order to read the examples in, then one sentence
+ * per example, where it is, and how many lines of code it took, counted
+ * from the files by CodeLines rather than written down, so an example that
+ * grows says so here. The order, each example's title and the files it is
+ * made of are Series'; each page lists those files (FilesPanel).
  */
 final class ExamplesController extends ControllerBase {
 
@@ -76,6 +102,50 @@ final class ExamplesController extends ControllerBase {
   public const OPENAPI = 'data_surface_openapi';
 
   /**
+   * The module the component block of example 13 lives in.
+   */
+  public const COMPONENT_BLOCK = SpotlightBlockHooks::MODULE;
+
+  /**
+   * The module the placement resource of example 13's calls lives in.
+   */
+  public const PLACEMENT = SpotlightBlockHooks::PLACEMENT;
+
+  /**
+   * Example 13's structure and block plugin, relative to that module.
+   */
+  public const COMPONENT_BLOCK_FILES = [
+    'src/Structure/ComponentBlockStructure.php',
+    'src/Plugin/Block/ComponentBlock.php',
+  ];
+
+  /**
+   * The module that manages keys, for example 14.
+   */
+  public const KEYS = ConceptPanel::KEYS;
+
+  /**
+   * Example 16's module, which needs node.
+   */
+  public const REFERENCES = 'data_surface_examples_references';
+
+  /**
+   * Example 17's module, which needs node.
+   */
+  public const RETITLE = 'data_surface_examples_retitle';
+
+  /**
+   * That module's list, constraint, validator, resolver and alter.
+   */
+  public const KEYS_FILES = [
+    'src/Keys/ManagedKeys.php',
+    'src/Plugin/Validation/Constraint/ManagedKeyConstraint.php',
+    'src/Plugin/Validation/Constraint/ManagedKeyConstraintValidator.php',
+    'src/Plugin/DataSurfaceOptionsResolver/ManagedKeyOptions.php',
+    'src/Alter/WebhookKeyAlter.php',
+  ];
+
+  /**
    * Constructs the controller.
    *
    * @param \Drupal\Core\Extension\ModuleExtensionList $moduleList
@@ -83,10 +153,22 @@ final class ExamplesController extends ControllerBase {
    *   enabled.
    * @param \Drupal\data_surface_examples\ConfigSchemaPanel $configSchemaPanel
    *   The panel of what config schema can say, for the classic twins.
+   * @param \Drupal\data_surface_examples\ConceptPanel $conceptPanel
+   *   The panel saying what an example shows, for example 13's parts.
+   * @param \Drupal\data_surface_examples\FilesPanel $filesPanel
+   *   The panel listing the files an example is made of.
+   * @param \Drupal\Core\Routing\RouteProviderInterface $routeProvider
+   *   The route provider, which says whether an example's module is on.
+   * @param \Drupal\data_surface\Reference\References $references
+   *   What reference keys are, for example 16's limit.
    */
   public function __construct(
     protected readonly ModuleExtensionList $moduleList,
     protected readonly ConfigSchemaPanel $configSchemaPanel,
+    protected readonly ConceptPanel $conceptPanel,
+    protected readonly FilesPanel $filesPanel,
+    protected readonly RouteProviderInterface $routeProvider,
+    protected readonly References $references,
   ) {}
 
   /**
@@ -96,6 +178,10 @@ final class ExamplesController extends ControllerBase {
     return new static(
       $container->get('extension.list.module'),
       $container->get('data_surface_examples.config_schema_panel'),
+      $container->get('data_surface_examples.concept_panel'),
+      $container->get('data_surface_examples.files_panel'),
+      $container->get('router.route_provider'),
+      $container->get('data_surface.references'),
     );
   }
 
@@ -108,9 +194,34 @@ final class ExamplesController extends ControllerBase {
   public function index(): array {
     $steps = [];
     foreach ($this->steps() as $number => $step) {
+      if ($number === 17) {
+        $steps['gates'] = [
+          '#markup' => '<h2>' . $this->t('Access borrowed') . '</h2><p>' . $this->t("Example 17 is a resource of its own that acts on nodes: a bulk retitle, which asks each node's own access, core's and every module's, rather than copying it.") . '</p>',
+        ];
+      }
+      if ($number === 16) {
+        $steps['references'] = [
+          '#markup' => '<h2>' . $this->t('References') . '</h2><p>' . $this->t("Example 16 is a key that refers to an entity: declared by the data type string of what it refers to, its candidates the selection handler's for the account, listed while there are few and looked up past that.") . '</p>',
+        ];
+      }
+      if ($number === 15) {
+        $steps['entity'] = [
+          '#markup' => '<h2>' . $this->t('A config entity of your own') . '</h2><p>' . $this->t("Example 15 is a module's own config entity type with a resource over it from the start: one venue added, edited and removed, the venues listed a page at a time and reordered in one write. Example 2's venues and rooms are these venues.") . '</p>',
+        ];
+      }
+      if ($number === 14) {
+        $steps['extension'] = [
+          '#markup' => '<h2>' . $this->t('An optional extension') . '</h2><p>' . $this->t("Example 14 is the Key module's pattern: a credential pasted as a secret, or a key the site manages once a module that manages keys is on, which a submodule of the examples stands in for. Its page says how to enable that module, and shows the two ways to reach the same form, the owner declaring both sources or another module's alter, with the module off and on.") . '</p>',
+        ];
+      }
+      if ($number === 13) {
+        $steps['block'] = [
+          '#markup' => '<h2>' . $this->t('The same three lines in a block') . '</h2><p>' . $this->t("Example 13 is a block plugin in a submodule of its own, whose settings are example 12's three lines: a component, its props and its slots. Its page says how to enable it, then shows the block's structure beside example 12's resource, its contract, its tools and the block placed.") . '</p>',
+        ];
+      }
       if ($number === 7) {
         $steps['concepts'] = [
-          '#markup' => '<h2>' . $this->t('One small resource per concept') . '</h2><p>' . $this->t('Examples 7 to 11 leave the registration behind. Each is a small resource of its own for one or two concepts the registration does not need, and its page says first, above the contract, what it shows, where the docs explain it, and what its tool answers.') . '</p>',
+          '#markup' => '<h2>' . $this->t('One small resource per concept') . '</h2><p>' . $this->t('Examples 7 to 12 leave the registration behind. Each is a small resource of its own for one or two concepts the registration does not need, and its page says first, above the contract, what it shows, where the docs explain it, and what its tool answers.') . '</p>',
         ];
       }
       $steps[$number] = [
@@ -134,7 +245,62 @@ final class ExamplesController extends ControllerBase {
         'link' => Link::fromTextAndUrl($this->t('Reset to defaults'), Url::fromRoute('data_surface_examples.reset'))->toRenderable(),
         'why' => ['#markup' => ' ' . $this->t('puts every example back to the settings the module ships with, for a retake.')],
       ],
+      'order' => $this->order(),
     ] + $steps;
+  }
+
+  /**
+   * Says what order to read the examples in, one row per example.
+   *
+   * Each row is read from Series, as the Files panel on each page is, so
+   * the two cannot disagree: the example, the concept it introduces, the
+   * docs page that explains it, the decision that says why, and how many
+   * files it is made of.
+   *
+   * @return array
+   *   A render array: a heading, the table and how to read it.
+   */
+  protected function order(): array {
+    $branch = Series::branch();
+    $github = static fn (string $page, string $text): array => Link::fromTextAndUrl($text, Url::fromUri(Series::url($page, $branch)))->toRenderable();
+    $rows = [];
+    foreach (Series::examples() as $number => $example) {
+      $title = $this->t('@number. @title', ['@number' => $number, '@title' => $example['title']]);
+      $rows[] = [
+        'data' => [
+          [
+            'data' => $example['routes'] === [] || !$this->routed($example['routes'][0]) ? ['#markup' => $title] : Link::fromTextAndUrl($title, Url::fromRoute($example['routes'][0]))->toRenderable(),
+          ],
+          (string) $example['concept'],
+          ['data' => $github($example['docs'], $example['docs'])],
+          ['data' => $github('docs/decisions.md#' . $example['decision'], 'decisions.md#' . $example['decision'])],
+          count($example['files']),
+        ],
+        'data-example' => (string) $number,
+      ];
+    }
+    return [
+      '#type' => 'container',
+      '#attributes' => ['class' => ['data-surface-reading-order']],
+      'title' => ['#markup' => '<h2>' . $this->t('Read in this order') . '</h2>'],
+      'table' => [
+        '#type' => 'table',
+        '#header' => [
+          $this->t('Example'),
+          $this->t('It introduces'),
+          $this->t('Explained in'),
+          $this->t('Why'),
+          $this->t('Files'),
+        ],
+        '#rows' => $rows,
+      ],
+      'how' => [
+        '#markup' => '<p>' . $this->t('Start at <a href=":first">Your first resource</a>: one settings page from a resource, an operation, a storage and add(), and nothing else. Then read the examples in order, each adding one idea to what the last showed, and on each page open the files it is made of before the contract. Keep <a href=":concepts">Concepts</a> open beside them as the map: one row per idea, the question that makes you need it, and the example that shows it.', [
+          ':first' => Series::url('docs/first-resource.md', $branch),
+          ':concepts' => Series::url('docs/concepts.md', $branch),
+        ]) . '</p>',
+      ],
+    ];
   }
 
   /**
@@ -149,6 +315,7 @@ final class ExamplesController extends ControllerBase {
   public function step1Classic(): array {
     return [
       'form' => $this->formBuilder()->getForm(RegistrationStep1ClassicForm::class),
+      'files' => $this->filesPanel->build(1),
       'today' => $this->configSchemaPanel->build(
         RegistrationStep1Storage::CONFIG,
         note: $this->t('This form requires the event title and holds the capacity between 1 and 1000, in its own code. The config schema below states the bounds only because it is written from the resource of example 1; written for this form alone, it would state neither rule.'),
@@ -177,6 +344,7 @@ final class ExamplesController extends ControllerBase {
         ]) . '</p>',
       ],
       'form' => $this->formBuilder()->getForm(RegistrationStep2ClassicForm::class),
+      'files' => $this->filesPanel->build(2),
       'today' => $this->configSchemaPanel->build(
         RegistrationStep2Storage::CONFIG,
         note: $this->t("This form offers the rooms of the chosen venue, refuses a room of another venue, and holds the capacity between 1 and the room's seats, in its own code. The config schema below states the lower bound only because it is written from the resource of example 2; written for this form alone, it would state no rule, and it cannot say that the rooms depend on the venue."),
@@ -207,6 +375,7 @@ final class ExamplesController extends ControllerBase {
           $this->t('The structure and the alter: @lines lines of code.', ['@lines' => $this->complianceLines()]),
         ],
       ],
+      'files' => $this->filesPanel->build(4),
     ];
   }
 
@@ -241,19 +410,184 @@ final class ExamplesController extends ControllerBase {
         '#tag' => 'pre',
         '#value' => htmlspecialchars(implode("\n\n", $commands)),
       ],
+      'files' => $this->filesPanel->build(5),
+    ];
+  }
+
+  /**
+   * Shows example 13: a block that embeds a component, or how to see it.
+   *
+   * The block lives in data_surface_component_block and the placement
+   * resource in data_surface_block, neither of which the examples depend
+   * on. While the block is off the page says how to enable both and what
+   * the block costs, counted from its files; once it is on, the block's two
+   * lines beside example 12's, its contract, its tools and where to place
+   * it; once the placement resource is on too, the calls that place the
+   * Spotlight and Tonight blocks, change the Spotlight's props, refuse a
+   * component its slot does not expect and remove it, each a dry run, and
+   * the two blocks themselves, shown on this page alone, below it.
+   *
+   * @return array
+   *   A render array.
+   */
+  public function step13(): array {
+    $enabled = $this->moduleHandler()->moduleExists(self::COMPONENT_BLOCK);
+    $placement = $this->moduleHandler()->moduleExists(self::PLACEMENT);
+    $modules = ['@module' => self::COMPONENT_BLOCK, '@placement' => self::PLACEMENT];
+    $build = [
+      'what' => [
+        '#markup' => '<p>' . $this->t("Example 12's three lines are the settings of a block: a component chosen from those the site has, its props, read from the schema the component declares, and its slots, read from its metadata, each holding text, one component or a list of them. The block plugin names the structure with <code>#[UsesStructure]</code> and renders the component; its settings form, their validation and their storage come from the structure, through the block host. The block lives in @module. A placed block, of this plugin or any other, is placed, configured and removed through the placement resource of @placement, the general case: its plugin chooses its settings, here the block's structure.", [
+          '@module' => self::COMPONENT_BLOCK,
+          '@placement' => self::PLACEMENT,
+        ]) . '</p>',
+      ],
+      'how' => [
+        '#theme' => 'item_list',
+        '#items' => [
+          ['#markup' => $this->t('Enable both: <code>ddev drush pm:install @module @placement</code>', $modules)],
+          match (TRUE) {
+            $enabled && $placement => $this->t('Both are enabled on this site now.'),
+            $enabled => $this->t('The block is enabled on this site, the placement resource not yet. Once it is, this page also shows the calls that place, change and remove the Spotlight block.'),
+            default => $this->t('The block is not enabled on this site yet. Once it is, this page shows the block beside example 12, its contract, its tools and the block placed.'),
+          },
+          $this->t('The structure and the block plugin: @lines lines of code.', ['@lines' => $this->componentBlockLines()]),
+        ],
+      ],
+      'files' => $this->filesPanel->build(13),
+    ];
+    if (!$enabled) {
+      return $build;
+    }
+    $theme = (string) $this->config('system.theme')->get('default');
+    $layout = Url::fromRoute('block.admin_display');
+    $build['how']['#items'][] = Link::fromTextAndUrl($this->t('The block layout: @path', ['@path' => $layout->toString()]), $layout)->toRenderable();
+    $add = Url::fromRoute('block.admin_add', ['plugin_id' => 'data_surface_component', 'theme' => $theme]);
+    $place = $this->t('Place a component block in @theme: @path', ['@theme' => $theme, '@path' => $add->toString()]);
+    $build['how']['#items'][] = Link::fromTextAndUrl($place, $add)->toRenderable();
+    $build['parts'] = $this->conceptPanel->componentBlock();
+    if (!$placement) {
+      return $build;
+    }
+    $build['calls'] = $this->conceptPanel->calls('block.placement');
+    $placed = $this->entityTypeManager()->getStorage('block')->load(SpotlightBlockHooks::BLOCK);
+    $section = $this->entityTypeManager()->getStorage('block')->load(SpotlightBlockHooks::SECTION);
+    $build['placed'] = [
+      '#markup' => '<p>' . ($placed !== NULL
+        ? $this->t('Below, the Spotlight block, @block, placed through the create operation in the content region of @theme when the modules were enabled, and shown on this page alone: the card, drawn with the props its settings hold and a line of text in its slot. Change it at @path.', [
+          '@block' => SpotlightBlockHooks::BLOCK,
+          '@theme' => (string) $placed->get('theme'),
+          '@path' => Url::fromRoute('data_surface_block.update', ['id' => SpotlightBlockHooks::BLOCK])->toString(),
+        ])
+        : $this->t('No Spotlight block is placed on this site: the default theme has no content region, or the block was taken away.')) . '</p>',
+    ];
+    if ($section !== NULL) {
+      $build['section'] = [
+        '#markup' => '<p>' . $this->t('Below it, the Tonight block, @block, placed the same way: a section whose slot holds a card, whose own slot holds a line of text. Change it at @path.', [
+          '@block' => SpotlightBlockHooks::SECTION,
+          '@path' => Url::fromRoute('data_surface_block.update', ['id' => SpotlightBlockHooks::SECTION])->toString(),
+        ]) . '</p>',
+      ];
+    }
+    return $build;
+  }
+
+  /**
+   * Shows example 15: a config entity of the module's own, and its resource.
+   *
+   * @return array
+   *   A render array.
+   */
+  public function step15(): array {
+    $react = $this->moduleHandler()->moduleExists(self::REACT);
+    $rows = [];
+    $venues = array_filter($this->entityTypeManager()->getStorage('event_venue')->loadMultiple(), static fn ($venue): bool => $venue instanceof EventVenue);
+    uasort($venues, static fn (EventVenue $a, EventVenue $b): int => EventVenue::sort($a, $b));
+    foreach ($venues as $id => $venue) {
+      $links = [
+        Link::fromTextAndUrl($this->t('Edit'), Url::fromRoute('data_surface_examples.step15_update', ['id' => $id]))->toRenderable(),
+        ['#markup' => ' '],
+        Link::fromTextAndUrl($this->t('Remove'), Url::fromRoute('data_surface_examples.step15_delete', ['id' => $id]))->toRenderable(),
+      ];
+      if ($react) {
+        $links[] = ['#markup' => ' '];
+        $react_edit = Url::fromRoute('data_surface_react.page', ['resource' => 'event.venue', 'operation' => 'update'], [
+          'query' => ['id' => $id],
+        ]);
+        $links[] = Link::fromTextAndUrl($this->t('Edit in React'), $react_edit)->toRenderable();
+      }
+      $rows[] = [
+        (string) $venue->label(),
+        (string) $id,
+        (string) $venue->get('capacity'),
+        implode(', ', array_map(static fn (array $room): string => sprintf('%s (%d)', $room['label'], $room['seats']), $venue->rooms())),
+        (string) $venue->weight(),
+        $venue->status() ? $this->t('Enabled') : $this->t('Disabled'),
+        ['data' => $links],
+      ];
+    }
+    $add = [$this->route('data_surface_examples.step15_create')];
+    if ($react) {
+      $react_add = Url::fromRoute('data_surface_react.page', ['resource' => 'event.venue', 'operation' => 'create']);
+      $add[] = Link::fromTextAndUrl($this->t('Add in React: @path', ['@path' => $react_add->toString()]), $react_add)->toRenderable();
+    }
+    else {
+      $add[] = $this->t('In React at /surface-react/event.venue/create and /surface-react/event.venue/update?id=riverside, once @module is enabled.', ['@module' => self::REACT]);
+    }
+    $add[] = $this->route('data_surface_examples.step2');
+    return [
+      // The calls are made as the page is drawn, and the venues read now.
+      '#cache' => ['max-age' => 0],
+      'what' => [
+        '#type' => 'details',
+        '#open' => TRUE,
+        '#title' => $this->t('What this example shows'),
+        '#attributes' => ['class' => ['data-surface-contract-panel', 'data-surface-concept-panel']],
+        '#attached' => ['library' => ['data_surface_tool/contract_panel']],
+        'what' => ['#markup' => '<p>' . $this->conceptPanel->paragraph('event.venue') . '</p>'],
+        'docs' => [
+          '#theme' => 'item_list',
+          '#title' => $this->t('Where the docs explain it'),
+          '#items' => array_map(static fn (string $page): array => ['#markup' => '<code>' . $page . '</code>'], ConceptPanel::DOCS['event.venue']),
+        ],
+      ],
+      'venues' => [
+        '#type' => 'table',
+        '#caption' => $this->t('The venues on this site now, lighter first: the three the module ships, and any added since.'),
+        '#header' => [
+          $this->t('Name'),
+          $this->t('Machine name'),
+          $this->t('Capacity'),
+          $this->t('Rooms'),
+          $this->t('Weight'),
+          $this->t('Status'),
+          $this->t('Operations'),
+        ],
+        '#rows' => $rows,
+        '#attributes' => ['class' => ['data-surface-venues']],
+      ],
+      'forms' => [
+        '#theme' => 'item_list',
+        '#title' => $this->t('Add one, and see it in example 2'),
+        '#items' => $add,
+      ],
+      'files' => $this->filesPanel->build(15),
+      'served' => $this->conceptPanel->venues(),
+      'calls' => $this->conceptPanel->calls('event.venue'),
     ];
   }
 
   /**
    * Describes the examples, with where each is and what it cost.
    *
-   * @return array<int, array{title: \Drupal\Core\StringTranslation\TranslatableMarkup, sentence: \Drupal\Core\StringTranslation\TranslatableMarkup, items: array}>
+   * @return array<int, array{title: \Stringable, sentence: \Drupal\Core\StringTranslation\TranslatableMarkup, items: array}>
    *   The examples, keyed by number.
    */
   protected function steps(): array {
+    // The titles are the series', which the reading order shows too.
+    $series = Series::examples();
     return [
       1 => [
-        'title' => $this->t('declare what you accept'),
+        'title' => $series[1]['title'],
         'sentence' => $this->t('Three settings, each with its type, its label and what it allows, declared once; the form, its validation and a tool are all read from that one class.'),
         'items' => [
           $this->route('data_surface_examples.step1'),
@@ -264,7 +598,7 @@ final class ExamplesController extends ControllerBase {
         ],
       ],
       2 => [
-        'title' => $this->t('answers depend on answers'),
+        'title' => $series[2]['title'],
         'sentence' => $this->t('The venue narrows the rooms on offer, and the room narrows how many people fit: one small method each, whose signature says what it reads.'),
         'items' => [
           $this->route('data_surface_examples.step2'),
@@ -278,7 +612,7 @@ final class ExamplesController extends ControllerBase {
         ],
       ],
       3 => [
-        'title' => $this->t('made of parts'),
+        'title' => $series[3]['title'],
         'sentence' => $this->t('The pricing chooses between two ticket structures, the variants at one key, and a contact structure is always attached; each part is a class of its own.'),
         'items' => [
           $this->route('data_surface_examples.step3'),
@@ -287,7 +621,7 @@ final class ExamplesController extends ControllerBase {
         ],
       ],
       4 => [
-        'title' => $this->t('others get a say'),
+        'title' => $series[4]['title'],
         'sentence' => $this->t('Another module adds two keys to example 3, rewords a label, caps the capacity at a hundred until an event license is given, and asks for stewards as the capacity grows, without touching example 3.'),
         'items' => [
           $this->route('data_surface_examples.step4'),
@@ -295,7 +629,7 @@ final class ExamplesController extends ControllerBase {
         ],
       ],
       5 => [
-        'title' => $this->t('same contract, no form'),
+        'title' => $series[5]['title'],
         'sentence' => $this->t('Example 3 is already a tool, @tool, which takes what the form takes and refuses what it refuses, with a read tool beside it, @read, which answers with what is stored. Drush describes them with tool:info and calls them with tool:run.', [
           '@tool' => ExampleCalls::TOOL,
           '@read' => ExampleCalls::READ_TOOL,
@@ -303,12 +637,12 @@ final class ExamplesController extends ControllerBase {
         'items' => [$this->route('data_surface_examples.step5'), $this->t('Nothing to write: 0 lines of code.')],
       ],
       6 => [
-        'title' => $this->t('every door'),
+        'title' => $series[6]['title'],
         'sentence' => $this->t('The same contract through every door. The decoupled page is the "In React" links above: the contract served as JSON and drawn by a React app. ECA and an AI agent, through the tool of example 5, are yours to show on your own site.'),
-        'items' => [$this->openApi()],
+        'items' => [$this->openApi(), $this->openApiDocs()],
       ],
       7 => [
-        'title' => $this->t('a rule written as data'),
+        'title' => $series[7]['title'],
         'sentence' => $this->t('A bulletin whose two rules read its frequency, each a condition and an effect declared beside the keys, which both schemas state as written: at most five items a week, and no send day for a monthly issue.'),
         'items' => [
           $this->route('data_surface_examples.step7'),
@@ -317,7 +651,7 @@ final class ExamplesController extends ControllerBase {
         ],
       ],
       8 => [
-        'title' => $this->t('one part, used twice'),
+        'title' => $series[8]['title'],
         'sentence' => $this->t('A person structure attached by two resources, its port wired to a different key by each; a phone shape asked for at two keys; a review mixed in; and a collection of volunteers.'),
         'items' => [
           $this->route('data_surface_examples.step8'),
@@ -327,7 +661,7 @@ final class ExamplesController extends ControllerBase {
         ],
       ],
       9 => [
-        'title' => $this->t('keys that come from the site'),
+        'title' => $series[9]['title'],
         'sentence' => $this->t('A checkbox and a set of limits per ticket type the site has, listed by a provider; a type added is a key at the next request, and a locked one is kept as stored.'),
         'items' => [
           $this->route('data_surface_examples.step9'),
@@ -336,7 +670,7 @@ final class ExamplesController extends ControllerBase {
         ],
       ],
       10 => [
-        'title' => $this->t('who may change what'),
+        'title' => $series[10]['title'],
         'sentence' => $this->t('Fees locked for an account without a permission, stated ahead of time for that account, and once the program is published, settled only by what is stored; and a check that changes nothing, and says so. With @module enabled, another module answers too, with no change to the program: the fees left out for an account that may not see them, and the whole program fixed once its workflow publishes it.', ['@module' => self::WORKFLOW]),
         'items' => [
           $this->route('data_surface_examples.step10'),
@@ -347,7 +681,7 @@ final class ExamplesController extends ControllerBase {
         ],
       ],
       11 => [
-        'title' => $this->t('the stock widgets, and what nothing means'),
+        'title' => $series[11]['title'],
         'sentence' => $this->t('A time, checkboxes, radios, a text area and rows of free values, each drawn from what its key declares; and a key left out, sent null, or sent a value.'),
         'items' => [
           $this->route('data_surface_examples.step11'),
@@ -355,6 +689,112 @@ final class ExamplesController extends ControllerBase {
           $this->lines(DoorsResource::class),
         ],
       ],
+      12 => [
+        'title' => $series[12]['title'],
+        'sentence' => $this->t("A component chosen from the single-directory components the site has, and below it that component's props, read from the JSON Schema the component declares: one variant per component, which no class lists."),
+        'items' => [
+          $this->route('data_surface_examples.step12'),
+          $this->react('event.spotlight'),
+          $this->t("The resource, its two providers and its storage: @lines lines of code; the components' schemas and metadata are no code.", ['@lines' => $this->spotlightLines()]),
+        ],
+      ],
+      13 => [
+        'title' => $series[13]['title'],
+        'sentence' => $this->t("Example 12's three lines as a block's settings: a block plugin names them with #[UsesStructure] and renders the chosen component with its props and slots, a section holding a card among them, and a placed block is placed, configured and removed through the general placement resource. In @module and @placement, which the page tells you to enable.", [
+          '@module' => self::COMPONENT_BLOCK,
+          '@placement' => self::PLACEMENT,
+        ]),
+        'items' => [
+          $this->route('data_surface_examples.step13'),
+          $this->t('The structure and the block plugin: @lines lines of code.', ['@lines' => $this->componentBlockLines()]),
+        ],
+      ],
+      14 => [
+        'title' => $series[14]['title'],
+        'sentence' => $this->t("A credential pasted as a secret, or a key the site manages once @module is on. The mailer declares both sources and a provider lists the second only while the module is on; a source with one value is drawn as that value. The webhook declares a pasted key alone, and the module's alter offers a managed key and rules the pasted one out once it is chosen.", ['@module' => self::KEYS]),
+        'items' => [
+          $this->route('data_surface_examples.step14'),
+          $this->route('data_surface_examples.step14_webhook'),
+          $this->react('event.mailer'),
+          $this->t("The mailer, its provider, its two sources and its storage: @mailer lines of code; the webhook and its storage: @webhook; the keys module's list, constraint, validator, resolver and alter: @keys.", $this->extensionLines()),
+        ],
+      ],
+      15 => [
+        'title' => $series[15]['title'],
+        'sentence' => $this->t('A config entity type the module declares, a venue, and a resource over it from the start: add, edit and remove one venue; list a page of them, a read only operation with outputs that GET on the collection answers; and reorder them, an update over the collection written in one commit. Its config schema is written from the resource, and example 2 chooses its venue and room from these venues.'),
+        'items' => [
+          $this->route('data_surface_examples.step15'),
+          $this->route('data_surface_examples.step15_create'),
+          $this->t('The entity type, the resource, its three structures and its storage: @lines lines of code.', ['@lines' => $this->venueLines()]),
+        ],
+      ],
+      16 => [
+        'title' => $series[16]['title'],
+        'sentence' => $this->t("A key that refers to an entity, declared by the data type string of what it refers to and holding its id: a venue, a user, an article, or an entity of any type, filtered by what kind of entity type it is and by bundle. While the site has at most @limit candidates the key lists them; past that it is looked up, on the form with core's entity autocomplete and over HTTP with the resource's lookup. It lives in @module, which needs node.", [
+          '@limit' => $this->references->limit(),
+          '@module' => self::REFERENCES,
+        ]),
+        'items' => $this->moduleHandler()->moduleExists(self::REFERENCES)
+          ? [$this->route('data_surface_examples.step16'), $this->react('event.sponsorship')]
+          : [
+            [
+              '#markup' => $this->t('Enable it: <code>ddev drush pm:install @module</code>; its page is then /surface-examples/16.', ['@module' => self::REFERENCES]),
+            ],
+          ],
+      ],
+      17 => [
+        'title' => $series[17]['title'],
+        'sentence' => $this->t("A bulk retitle of nodes with its own keys, storage and permission, which may retitle only a node the account may update and whose title it may edit. It names those two answers as gates, core's update access and its field access for the title, and asks them of each node in the list, so a module that changes node access changes what it may do without being named. A refusal lands on the node's own item. The new titles come from a deterministic rewriter, not a model. It lives in @module, which needs node.", [
+          '@module' => self::RETITLE,
+        ]),
+        'items' => $this->moduleHandler()->moduleExists(self::RETITLE)
+          ? [$this->route('data_surface_examples.step17'), $this->react('ai.retitle', 'retitle')]
+          : [
+            [
+              '#markup' => $this->t('Enable it: <code>ddev drush pm:install @module</code>; its page is then /surface-examples/17.', ['@module' => self::RETITLE]),
+            ],
+          ],
+      ],
+    ];
+  }
+
+  /**
+   * Counts the lines of example 15's entity type, resource and storage.
+   *
+   * @return int
+   *   The lines of code of the entity type, the resource, the room, the
+   *   listing, the reorder and its item, and the storage.
+   */
+  protected function venueLines(): int {
+    return array_sum(array_map(fn (string $class): int => CodeLines::count($this->file($class)), [
+      EventVenue::class,
+      VenueResource::class,
+      VenueRoomStructure::class,
+      VenueListingStructure::class,
+      VenueReorderStructure::class,
+      VenueOrderStructure::class,
+      VenueStorage::class,
+    ]));
+  }
+
+  /**
+   * Counts the lines of example 14's two resources and its keys module.
+   *
+   * @return array{'@mailer': int, '@webhook': int, '@keys': int}
+   *   The lines of code of each part, the keys module's enabled or not.
+   */
+  protected function extensionLines(): array {
+    $path = DRUPAL_ROOT . '/' . $this->moduleList->getPath(self::KEYS) . '/';
+    return [
+      '@mailer' => array_sum(array_map(fn (string $class): int => CodeLines::count($this->file($class)), [
+        MailerResource::class,
+        CredentialSources::class,
+        PastedCredentialStructure::class,
+        ManagedCredentialStructure::class,
+        MailerStorage::class,
+      ])),
+      '@webhook' => CodeLines::count($this->file(WebhookResource::class)) + CodeLines::count($this->file(WebhookStorage::class)),
+      '@keys' => array_sum(array_map(static fn (string $file): int => CodeLines::count($path . $file), self::KEYS_FILES)),
     ];
   }
 
@@ -373,6 +813,19 @@ final class ExamplesController extends ControllerBase {
   }
 
   /**
+   * Answers whether a route is there: an example in a module may be off.
+   *
+   * @param string $route
+   *   The route name.
+   *
+   * @return bool
+   *   TRUE when the router has it.
+   */
+  protected function routed(string $route): bool {
+    return $this->routeProvider->getRoutesByNames([$route]) !== [];
+  }
+
+  /**
    * Links an example's form in React, or says where it will be.
    *
    * The same operation, rendered by data_surface_react from the contract
@@ -381,25 +834,28 @@ final class ExamplesController extends ControllerBase {
    *
    * @param string $resource
    *   The example's resource id.
+   * @param string $operation
+   *   The operation, configure unless named.
    *
    * @return array|\Drupal\Core\StringTranslation\TranslatableMarkup
    *   A link render array, or the sentence naming the path.
    */
-  protected function react(string $resource): array|TranslatableMarkup {
+  protected function react(string $resource, string $operation = 'configure'): array|TranslatableMarkup {
     if (!$this->moduleHandler()->moduleExists(self::REACT)) {
-      return $this->t('In React at /surface-react/@resource/configure, once @module is enabled.', [
+      return $this->t('In React at /surface-react/@resource/@operation, once @module is enabled.', [
         '@resource' => $resource,
+        '@operation' => $operation,
         '@module' => self::REACT,
       ]);
     }
-    $url = Url::fromRoute('data_surface_react.page', ['resource' => $resource, 'operation' => 'configure']);
+    $url = Url::fromRoute('data_surface_react.page', ['resource' => $resource, 'operation' => $operation]);
     return Link::fromTextAndUrl($this->t('In React: @path', ['@path' => $url->toString()]), $url)->toRenderable();
   }
 
   /**
    * Links the OpenAPI document, or says where it will be.
    *
-   * Every example's endpoints, described for any OpenAPI client; the
+   * Every example's paths, described for any OpenAPI client; the
    * examples do not depend on that module, so while it is off the path is
    * named rather than linked.
    *
@@ -412,6 +868,23 @@ final class ExamplesController extends ControllerBase {
     }
     $url = Url::fromRoute('data_surface_openapi.json');
     return Link::fromTextAndUrl($this->t('As OpenAPI: @path', ['@path' => $url->toString()]), $url)->toRenderable();
+  }
+
+  /**
+   * Links Swagger UI over the OpenAPI document, or says where it will be.
+   *
+   * Each example's calls, to try with the logged-in session; named rather
+   * than linked while the module is off.
+   *
+   * @return array|\Drupal\Core\StringTranslation\TranslatableMarkup
+   *   A link render array, or the sentence naming the path.
+   */
+  protected function openApiDocs(): array|TranslatableMarkup {
+    if (!$this->moduleHandler()->moduleExists(self::OPENAPI)) {
+      return $this->t('To try out at /surface-api/docs, once @module is enabled.', ['@module' => self::OPENAPI]);
+    }
+    $url = Url::fromRoute('data_surface_openapi.docs');
+    return Link::fromTextAndUrl($this->t('To try out: @path', ['@path' => $url->toString()]), $url)->toRenderable();
   }
 
   /**
@@ -442,6 +915,27 @@ final class ExamplesController extends ControllerBase {
       'classic' => CodeLines::count($this->file(RegistrationStep2ClassicForm::class)),
       'resource' => CodeLines::count($this->file(RegistrationStep2Resource::class)) + CodeLines::count($this->file(RegistrationStep2Storage::class)),
     ];
+  }
+
+  /**
+   * Counts the lines of example 12's resource, provider and storage.
+   *
+   * @return int
+   *   The lines of code; the components' schemas are none.
+   */
+  protected function spotlightLines(): int {
+    return CodeLines::count($this->file(SpotlightResource::class)) + CodeLines::count($this->file(ComponentProps::class)) + CodeLines::count($this->file(ComponentSlots::class)) + CodeLines::count($this->file(SpotlightStorage::class));
+  }
+
+  /**
+   * Counts the lines of example 13's structure and block, enabled or not.
+   *
+   * @return int
+   *   The lines of code.
+   */
+  protected function componentBlockLines(): int {
+    $path = DRUPAL_ROOT . '/' . $this->moduleList->getPath(self::COMPONENT_BLOCK) . '/';
+    return array_sum(array_map(static fn (string $file): int => CodeLines::count($path . $file), self::COMPONENT_BLOCK_FILES));
   }
 
   /**

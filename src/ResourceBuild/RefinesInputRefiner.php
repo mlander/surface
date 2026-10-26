@@ -5,13 +5,15 @@ declare(strict_types=1);
 namespace Drupal\data_surface\ResourceBuild;
 
 use Drupal\Core\DependencyInjection\DependencySerializationTrait;
+use Drupal\Core\Session\AccountInterface;
+use Drupal\Core\Session\AnonymousUserSession;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\data_surface\DataSurfaceRefinerInterface;
 use Drupal\data_surface\Refinement\ApplicabilityInterface;
 use Drupal\data_surface\Refinement\DoesNotApply;
-use Drupal\data_surface\Refinement\StaticRefinerContainer;
+use Drupal\data_surface\Pipeline\PipelineGuard;
 
 /**
  * The engine's refiner, spoken by one class's #[RefinesInput] methods.
@@ -51,9 +53,12 @@ use Drupal\data_surface\Refinement\StaticRefinerContainer;
  *
  * With assertions on, a static refiner, one not declared runtime (and
  * so, the build has made sure, a static method), is called with the
- * global container guarded (StaticRefinerContainer): asking it for a
- * service throws, naming the method. Production, where assert() is not
- * compiled, makes the call as it is.
+ * global container guarded (PipelineGuard): asking it for a
+ * service throws, naming the method. A runtime refiner is called guarded
+ * too, its class refused the services bound to the request a door
+ * answers. Production, where assert() is not compiled, makes the call as
+ * it is. A runtime refiner whose last parameter is typed AccountInterface
+ * is handed the account the operation runs as.
  *
  * An alter's method on a key the alter itself added is bound under the
  * mount, `third_party_settings`, the one key the engine knows the
@@ -190,6 +195,21 @@ final class RefinesInputRefiner implements DataSurfaceRefinerInterface, Applicab
   }
 
   /**
+   * Gets the account the operation runs as: the current user every door set.
+   *
+   * @return \Drupal\Core\Session\AccountInterface
+   *   The account; anonymous with no container, in a unit test.
+   */
+  protected static function account(): AccountInterface {
+    // @phpstan-ignore globalDrupalDependencyInjection.useDependencyInjection
+    if (!\Drupal::hasContainer()) {
+      return new AnonymousUserSession();
+    }
+    // @phpstan-ignore globalDrupalDependencyInjection.useDependencyInjection
+    return \Drupal::currentUser()->getAccount();
+  }
+
+  /**
    * Calls one method with the definition and the siblings it watches.
    *
    * @param \Drupal\data_surface\ResourceBuild\RefinerDefinition $refiner
@@ -213,15 +233,28 @@ final class RefinesInputRefiner implements DataSurfaceRefinerInterface, Applicab
     foreach ($refiner->watched() as $key) {
       $arguments[] = $values[$this->paths[$key] ?? $key] ?? NULL;
     }
+    if ($refiner->takesAccount) {
+      // The account the operation runs as, which every door sets as the
+      // current user before it asks: read here, once, so the refiner is
+      // handed it and never reads it itself.
+      // Decision: see
+      // docs/decisions.md#nothing-an-operation-runs-reads-the-request.
+      $arguments[] = static::account();
+    }
     $method = new \ReflectionMethod($this->instance, $refiner->method);
     $object = $method->isStatic() || !is_object($this->instance) ? NULL : $this->instance;
     $call = static fn (): mixed => $method->invokeArgs($object, $arguments);
     // In development and tests only: a static refiner runs with the
     // global container guarded, so one that reaches for a service is
-    // caught rather than written into the schema.
+    // caught rather than written into the schema; a runtime one is
+    // refused the services bound to the request a door answers.
     $guarded = FALSE;
-    assert(StaticRefinerContainer::asserting($guarded));
-    $refined = $guarded && !$refiner->runtime ? StaticRefinerContainer::guard($refiner->describe(), $call) : $call();
+    assert(PipelineGuard::asserting($guarded));
+    $refined = match (TRUE) {
+      !$guarded => $call(),
+      !$refiner->runtime => PipelineGuard::guard($refiner->describe(), $call),
+      default => PipelineGuard::onBehalf(PipelineGuard::RUNTIME_REFINER, $refiner->class, $refiner->method, $call),
+    };
     if ($refined instanceof DoesNotApply) {
       if (!$refiner->mayNotApply) {
         throw new \LogicException(sprintf(

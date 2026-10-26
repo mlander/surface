@@ -6,11 +6,15 @@ namespace Drupal\data_surface\ResourceBuild;
 
 use Drupal\Component\Utility\NestedArray;
 use Drupal\Core\DependencyInjection\DependencySerializationTrait;
+use Drupal\Core\Session\AccountInterface;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\Pipeline\CreatingStorageInterface;
+use Drupal\data_surface\Pipeline\DeletingStorageInterface;
+use Drupal\data_surface\Pipeline\PipelineGuard;
 use Drupal\data_surface\Pipeline\PreparedValues;
 use Drupal\data_surface\Pipeline\StorageViolationsException;
 use Drupal\data_surface\Pipeline\ViolationSet;
+use Drupal\data_surface\Resource\DeletableStorageInterface;
 use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface\Resource\ResourceStorageInterface;
 use Drupal\data_surface\Entry;
@@ -45,12 +49,16 @@ use Drupal\data_surface\Entry;
  * under `third_party_settings` and nothing else: fromStorage() on what
  * the storage loads, toStorage() in prepare. So the storage reads and
  * writes a contributor's settings in the layout they are stored in, and
- * never has to know the contributor exists, the way the engine's own
- * ConfigEntityStorage applies the same layout.
+ * never has to know the contributor exists.
+ *
+ * For an operation that deletes, prepare() and commit() are the storage's
+ * prepareDelete() and delete(), handed what is stored: a delete takes no
+ * values. A child stored apart is not routed; removing it with its parent
+ * is the parent's storage's to do.
  *
  * @internal
  */
-final class StorageAdapter implements CreatingStorageInterface {
+final class StorageAdapter implements CreatingStorageInterface, DeletingStorageInterface {
 
   use DependencySerializationTrait;
 
@@ -83,6 +91,18 @@ final class StorageAdapter implements CreatingStorageInterface {
    *   child it stores by its dotted path: what is stored under each is
    *   handed back to the storage untouched, because the caller could not
    *   see it.
+   * @param bool $deletes
+   *   Whether the operation removes the thing: prepare() and commit() are
+   *   then the storage's prepareDelete() and delete().
+   * @param \Drupal\Core\Session\AccountInterface|null $account
+   *   The account the write is made as, handed to each write verb; NULL
+   *   for one that only loads.
+   * @param \Drupal\data_surface\ResourceBuild\ItemGates|null $gates
+   *   The gates the operation asks once per item of a collection, asked
+   *   before the storage prepares anything; NULL for none.
+   *
+   * @throws \LogicException
+   *   When the operation deletes and the storage cannot.
    */
   public function __construct(
     protected ResourceStorageInterface $storage,
@@ -90,7 +110,13 @@ final class StorageAdapter implements CreatingStorageInterface {
     protected array $routes = [],
     protected array $identity = [],
     protected array $omitted = [],
+    protected bool $deletes = FALSE,
+    protected ?AccountInterface $account = NULL,
+    protected ?ItemGates $gates = NULL,
   ) {
+    if ($deletes && !$storage instanceof DeletableStorageInterface) {
+      throw new \LogicException(sprintf('The "%s" operation deletes, and %s cannot: a storage that removes what it holds implements %s.', $context->id, get_class($storage), DeletableStorageInterface::class));
+    }
   }
 
   /**
@@ -103,8 +129,15 @@ final class StorageAdapter implements CreatingStorageInterface {
   /**
    * {@inheritdoc}
    */
+  public function deletes(): bool {
+    return $this->deletes;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
   public function load(DataSurfaceInterface $surface): array {
-    $values = self::applyThirdPartyLayouts($surface, array_intersect_key($this->storage->load($this->context), $surface->getDefinitions()->toArray()), FALSE);
+    $values = self::applyThirdPartyLayouts($surface, array_intersect_key($this->loaded($this->context), $surface->getDefinitions()->toArray()), FALSE);
     foreach ($this->routes as $key => $routes) {
       $entry = $surface->getDefinitions()->entry($key);
       $id = $entry === NULL ? NULL : $this->routeOf($entry, $values + $surface->getDefaultValues());
@@ -134,12 +167,28 @@ final class StorageAdapter implements CreatingStorageInterface {
    * storage refuses, at any level, is collected before anything is
    * thrown, and a child's violations are filed under the key it sits
    * at, the way the pipeline files a child's own.
+   *
+   * Before any of it, the gates the operation asks per item of a
+   * collection: an item a gate refused is refused at its path, and the
+   * storage is not asked, so it only ever sees items every gate allowed.
    */
   public function prepare(DataSurfaceInterface $surface, array $values): PreparedValues {
+    if ($this->storage instanceof DeletableStorageInterface && $this->deletes) {
+      // Decision: see docs/decisions.md#a-placed-block-is-a-resource.
+      $storage = $this->storage;
+      $context = $this->context;
+      $account = $this->account();
+      return new PreparedValues($values, $this->onBehalf('prepareDelete', static fn (): array => $storage->prepareDelete($context, $account)));
+    }
+    // Decision: see docs/decisions.md#a-gate-is-borrowed-never-copied.
+    $gated = $this->gates?->refusals($values, $this->account()) ?? [];
+    if ($gated !== []) {
+      throw new StorageViolationsException(new ViolationSet($gated));
+    }
     $own = self::applyThirdPartyLayouts($surface, $values, TRUE);
     if ($this->omitted !== []) {
       // Decision: see docs/decisions.md#omitted-is-omitted-both-ways.
-      $stored = $this->storage->load($this->context);
+      $stored = $this->loaded($this->context);
       foreach ($this->omitted as $path) {
         $parents = explode('.', $path);
         $inside = count($parents) === 1 || is_array(NestedArray::getValue($own, array_slice($parents, 0, -1)));
@@ -173,7 +222,10 @@ final class StorageAdapter implements CreatingStorageInterface {
       }
     }
     try {
-      $artifact = $this->storage->prepare($this->context, $own);
+      $storage = $this->storage;
+      $context = $this->context;
+      $account = $this->account();
+      $artifact = $this->onBehalf('prepare', static fn (): array => $storage->prepare($context, $own, $account));
     }
     catch (StorageViolationsException $e) {
       $refused = [...iterator_to_array($e->getViolations(), FALSE), ...$refused];
@@ -190,11 +242,18 @@ final class StorageAdapter implements CreatingStorageInterface {
    */
   public function commit(PreparedValues $prepared): void {
     $artifact = $prepared->artifact;
+    if ($this->storage instanceof DeletableStorageInterface && $this->deletes) {
+      if (!is_array($artifact)) {
+        throw new \InvalidArgumentException('The prepared values did not come from this storage.');
+      }
+      $this->written('delete', $artifact);
+      return;
+    }
     if ($this->routes === []) {
       if (!is_array($artifact)) {
         throw new \InvalidArgumentException('The prepared values did not come from this storage.');
       }
-      $this->storage->commit($this->context, $artifact);
+      $this->written('commit', $artifact);
       return;
     }
     $own = is_array($artifact) ? ($artifact['own'] ?? NULL) : NULL;
@@ -220,7 +279,7 @@ final class StorageAdapter implements CreatingStorageInterface {
     foreach ($before as [$route, $child_prepared]) {
       $route->withParentIdentity($known)->commit($child_prepared);
     }
-    $this->storage->commit($this->context, $own);
+    $this->written('commit', $own);
     foreach ($after as [$route, $child_prepared]) {
       $route->withParentIdentity($known)->commit($child_prepared);
     }
@@ -245,7 +304,7 @@ final class StorageAdapter implements CreatingStorageInterface {
     if (!is_array($artifact)) {
       throw new \InvalidArgumentException('The prepared values did not come from this storage.');
     }
-    if ($this->routes === []) {
+    if ($this->routes === [] || $this->deletes) {
       return $artifact;
     }
     $children = [];
@@ -278,25 +337,41 @@ final class StorageAdapter implements CreatingStorageInterface {
    * The values of the declared outputs that the storage's load()
    * hands back, in the context the values were committed in: this
    * context plus the identity the values accepted, so a thing just
-   * created is found by the identity it was given.
+   * created is found by the identity it was given. An operation that
+   * changes nothing is never committed: its outputs are what its
+   * storage's prepare() answered under an output's name, prepare being
+   * the last stage it runs, and one with no side effects. A dry run is
+   * answered the same way, with what prepare() rehearsed under an
+   * output's name, which is what the write would have answered as far
+   * as the storage can say before it writes.
+   *
+   * Decision: see docs/decisions.md#who-produces-outputs.
    *
    * @param \Drupal\data_surface\DataSurfaceInterface $surface
    *   The data surface, whose output definitions say which keys are
    *   outputs.
    * @param array $values
    *   The accepted values.
+   * @param \Drupal\data_surface\Pipeline\PreparedValues|null $prepared
+   *   What prepare() returned, for an operation that changes nothing or a
+   *   dry run; NULL for one that was committed.
    *
    * @return array
    *   The outputs the storage could say, keyed by output name; empty for
    *   a data surface that declares none.
    */
-  public function outputs(DataSurfaceInterface $surface, array $values): array {
+  public function outputs(DataSurfaceInterface $surface, array $values, ?PreparedValues $prepared = NULL): array {
     $outputs = $surface->getOutputDefinitions()->toArray();
     if ($outputs === []) {
       return [];
     }
+    if ($surface->changesNothing() || $prepared !== NULL) {
+      $answered = $prepared === NULL ? NULL : $this->preview($prepared);
+      $answered = $this->routes === [] ? $answered : ($answered['own'] ?? NULL);
+      return is_array($answered) ? array_intersect_key($answered, $outputs) : [];
+    }
     $known = $this->knownWith($values);
-    return array_intersect_key($this->storage->load($this->context->withKnown($known)->withId($this->context->id, FALSE)), $outputs);
+    return array_intersect_key($this->loaded($this->context->withKnown($known)->withId($this->context->id, FALSE)), $outputs);
   }
 
   /**
@@ -313,6 +388,76 @@ final class StorageAdapter implements CreatingStorageInterface {
     $copy = clone $this;
     $copy->context = $this->context->withKnown(array_diff_key($known, $this->context->known));
     return $copy;
+  }
+
+  /**
+   * Gets the account the write is made as.
+   *
+   * @return \Drupal\Core\Session\AccountInterface
+   *   The account handed in.
+   *
+   * @throws \LogicException
+   *   When none was: this storage was made to load only.
+   */
+  protected function account(): AccountInterface {
+    if ($this->account === NULL) {
+      throw new \LogicException(sprintf('%s was asked to write with no account to write as: a storage that writes is made with the account, ResourcesInterface::storage() handing it the current user when none is named.', get_class($this->storage)));
+    }
+    return $this->account;
+  }
+
+  /**
+   * Loads from the storage, guarded as everything an operation runs.
+   *
+   * @param \Drupal\data_surface\Resource\OperationContext $context
+   *   The context it loads by.
+   *
+   * @return array
+   *   What it holds.
+   */
+  protected function loaded(OperationContext $context): array {
+    $storage = $this->storage;
+    return $this->onBehalf('load', static fn (): array => $storage->load($context));
+  }
+
+  /**
+   * Writes through the storage's commit() or delete(), guarded.
+   *
+   * @param string $verb
+   *   The verb: commit or delete.
+   * @param array $prepared
+   *   What its prepare returned.
+   */
+  protected function written(string $verb, array $prepared): void {
+    $storage = $this->storage;
+    $context = $this->context;
+    $account = $this->account();
+    $this->onBehalf($verb, static function () use ($storage, $verb, $context, $prepared, $account): void {
+      if ($verb === 'delete') {
+        assert($storage instanceof DeletableStorageInterface);
+        $storage->delete($context, $prepared, $account);
+        return;
+      }
+      $storage->commit($context, $prepared, $account);
+    });
+  }
+
+  /**
+   * Calls the storage with the door-specific services refused it.
+   *
+   * Decision: see
+   * docs/decisions.md#nothing-an-operation-runs-reads-the-request.
+   *
+   * @param string $verb
+   *   The verb called, for a refusal.
+   * @param callable $call
+   *   The call.
+   *
+   * @return mixed
+   *   What it answered.
+   */
+  protected function onBehalf(string $verb, callable $call): mixed {
+    return PipelineGuard::onBehalf(PipelineGuard::STORAGE, get_class($this->storage), $verb, $call);
   }
 
   /**

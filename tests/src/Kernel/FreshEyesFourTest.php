@@ -4,13 +4,12 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\data_surface\Kernel;
 
-use Drupal\data_surface_react\Controller\ResourceApiController;
+use Drupal\Tests\data_surface\Traits\ServedControllerTrait;
 use Drupal\data_surface_tool\OperationInputs;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use Drupal\tool\Tool\ToolInterface;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
-use Symfony\Component\HttpFoundation\Request;
 
 /**
  * Tests what the fourth fresh-eyes log found at the tool and React doors.
@@ -26,6 +25,8 @@ use Symfony\Component\HttpFoundation\Request;
 #[Group('data_surface')]
 #[RunTestsInSeparateProcesses]
 class FreshEyesFourTest extends DataSurfaceKernelTestBase {
+
+  use ServedControllerTrait;
 
   use UserCreationTrait;
 
@@ -107,9 +108,7 @@ class FreshEyesFourTest extends DataSurfaceKernelTestBase {
    *   The decoded answer.
    */
   protected function validate(string $resource, array $values): array {
-    $request = Request::create('/surface-api/' . $resource . '/configure/validate', 'POST', [], [], [], ['CONTENT_TYPE' => 'application/json'], (string) json_encode(['values' => (object) $values]));
-    $response = ResourceApiController::create($this->container)->validate($request, $resource, 'configure');
-    return json_decode((string) $response->getContent(), TRUE, 512, JSON_THROW_ON_ERROR);
+    return $this->httpDryRun($resource, 'configure', $values);
   }
 
   /**
@@ -140,7 +139,7 @@ class FreshEyesFourTest extends DataSurfaceKernelTestBase {
     foreach (['headline', 'sessions', 'published'] as $key) {
       $this->assertStringNotContainsString(self::OWN, $read['properties'][OperationInputs::VALUES]['properties'][$key]['description'] ?? '', 'Nor does the read tool say it on ' . $key);
     }
-    $this->assertStringNotContainsString(self::ONCE, (string) $tools->getDefinition('data_surface:tool_test.cabinet:edit')->getDescription(), 'A static answer at the top marks nothing.');
+    $this->assertStringNotContainsString(self::ONCE, (string) $tools->getDefinition('data_surface:tool_test.cabinet:update')->getDescription(), 'A static answer at the top marks nothing.');
 
     $check = $tools->createInstance('data_surface:event.program:check')->getInputDefinition(OperationInputs::VALUES);
     $this->assertStringContainsString(self::OWN, (string) $check->getPropertyDefinition('fees')->getDescription(), 'A mark that is the key\'s own stays on the key.');
@@ -175,7 +174,7 @@ class FreshEyesFourTest extends DataSurfaceKernelTestBase {
 
     $written = $this->runTool($id, [OperationInputs::VALUES => ['title' => 'Autumn meetup']]);
     $this->assertTrue($written['success'], $written['message']);
-    $this->assertSame(['title'], $written['outputs']['changes']);
+    $this->assertSame(['/title'], $written['outputs']['changes']);
     $read = $this->runTool($id . ':read', []);
     $this->assertSame($read['outputs'][OperationInputs::VALUES], $written['outputs'][OperationInputs::VALUES], 'The write answers what the read tool answers after it.');
     $this->assertSame($read['outputs'][OperationInputs::VALUES], $dry['outputs'][OperationInputs::VALUES] + ['title' => 'Autumn meetup'], 'And so did the dry run.');
@@ -200,13 +199,13 @@ class FreshEyesFourTest extends DataSurfaceKernelTestBase {
     $this->assertFalse($refused['success']);
     $this->assertSame([
       [
-        'path' => 'days.1',
+        'path' => '/days/1',
         'code' => 'no_such_choice',
         'message' => 'The value you selected is not a valid choice. Choose fri (Friday), sat (Saturday) or sun (Sunday).',
       ],
     ], $refused['outputs']['violations']);
     $validated = $this->validate('event.doors', ['days' => ['fri', 'mon']]);
-    $this->assertSame('The value you selected is not a valid choice. Choose Friday, Saturday or Sunday.', $validated['violations'][0]['message'], 'React, a person\'s door, names each by its label.');
+    $this->assertSame('The value you selected is not a valid choice. Choose Friday, Saturday or Sunday.', $validated['errors'][0]['message'], 'React, a person\'s door, names each by its label.');
   }
 
   /**
@@ -226,10 +225,10 @@ class FreshEyesFourTest extends DataSurfaceKernelTestBase {
     ]);
     $this->assertFalse($refused['success']);
     $this->assertSame([
-      'titel' => 'Unknown key titel. Did you mean title?',
-      'capacty' => 'Unknown key capacty. Did you mean capacity?',
-      'zz' => 'Unknown key zz.',
-      'nonsense' => 'Unknown key nonsense.',
+      '/titel' => 'Unknown key titel. Did you mean title?',
+      '/capacty' => 'Unknown key capacty. Did you mean capacity?',
+      '/zz' => 'Unknown key zz.',
+      '/nonsense' => 'Unknown key nonsense.',
     ], array_column($refused['outputs']['violations'], 'message', 'path'), 'A short key, or one far from any, gets no guess.');
     $this->assertSame(['unknown_key'], array_values(array_unique(array_column($refused['outputs']['violations'], 'code'))));
 
@@ -240,7 +239,7 @@ class FreshEyesFourTest extends DataSurfaceKernelTestBase {
     ]);
     $this->assertSame([
       [
-        'path' => 'contact.emial',
+        'path' => '/contact/emial',
         'code' => 'unknown_key',
         'message' => 'Unknown key contact.emial. Did you mean contact.email?',
       ],

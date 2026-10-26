@@ -49,8 +49,8 @@ values, such as one simple config object. A
 storage of its own, such as a block's settings, which the block plugin
 stores in its configuration; the module calls that plugin the
 structure's [host](../README.md#glossary). A resource is asked for
-through its [operations](../README.md#glossary) (`configure`, `add`,
-`edit`), each carrying a permission, and from each operation the module
+through its [operations](../README.md#glossary) (`configure`, `create`,
+`update`), each carrying a permission, and from each operation the module
 generates a route with a form, a tool for the contributed Tool API
 (which agents, MCP clients and Drush call) and two JSON Schema
 documents, written by the module's emitter
@@ -439,7 +439,7 @@ static](decisions.md#a-resource-or-structure-is-static)). The guard that
 stops a static refiner reading site state lets `t()` through, because
 `t()` only builds the lazy object; the language and the translation are
 read when it is rendered, after the refiner has returned
-(`src/Refinement/StaticRefinerContainer.php`).
+(`src/Pipeline/PipelineGuard.php`).
 
 **The core change.** None in core: the standards name `t()` as the
 sanctioned spelling in static and declarative context.

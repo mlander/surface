@@ -31,9 +31,9 @@ use Drupal\data_surface_entity\Structure\Attribute\FieldItemStructure;
  * for a field type someone wrote one for, from the class marked
  * #[FieldItemStructure(type:)], whose static #[RefinesInput] methods refine
  * it. Either way the field's own facts stay derived: its label, and its
- * two operations, `add` and `edit`, which the content entity resource
+ * two operations, `create` and `update`, which the content entity resource
  * invokes it through by name. Each knows the entity type, the bundle
- * and the field, and `edit` the entity's id, which is what its access
+ * and the field, and `update` the entity's id, which is what its access
  * class asks field access with: open, locked, or omitted.
  *
  * Such a structure has no storage: its parent, the content entity
@@ -85,9 +85,9 @@ final class FieldItemStructures implements ResourceDeriverInterface, KnowsDeriva
             inputs: new ResourceCallable(self::class, 'defineInputs', [...$bound, $override]),
             operations: [
               new DerivedOperation(
-                'add',
+                'create',
                 $this->t('Enter @field on a new item', ['@field' => $field->getLabel()]),
-                new ResourceCallable(self::class, 'add', $bound),
+                new ResourceCallable(self::class, 'create', $bound),
                 creates: TRUE,
                 description: $this->t('Enters the @field field of a new @bundle item.', [
                   '@field' => $field->getLabel(),
@@ -95,9 +95,9 @@ final class FieldItemStructures implements ResourceDeriverInterface, KnowsDeriva
                 ]),
               ),
               new DerivedOperation(
-                'edit',
+                'update',
                 $this->t('Change @field', ['@field' => $field->getLabel()]),
-                new ResourceCallable(self::class, 'edit', $bound),
+                new ResourceCallable(self::class, 'update', $bound),
                 ['id' => 'string'],
                 description: $this->t('Changes the @field field of a @bundle item, named by its id.', [
                   '@field' => $field->getLabel(),
@@ -176,8 +176,8 @@ final class FieldItemStructures implements ResourceDeriverInterface, KnowsDeriva
    * @return \Drupal\data_surface\Resource\OperationContext
    *   A context that creates, knowing which field.
    */
-  public static function add(array $arguments, string $entity_type_id, string $bundle, string $field_name): OperationContext {
-    return new OperationContext('add', creates: TRUE, known: [
+  public static function create(array $arguments, string $entity_type_id, string $bundle, string $field_name): OperationContext {
+    return new OperationContext('create', creates: TRUE, known: [
       'entity_type' => $entity_type_id,
       'bundle' => $bundle,
       'field_name' => $field_name,
@@ -188,7 +188,7 @@ final class FieldItemStructures implements ResourceDeriverInterface, KnowsDeriva
    * The item on an entity that exists.
    *
    * @param array{id: int|string} $arguments
-   *   The entity's id, which the parent's edit operation knows.
+   *   The entity's id, which the parent's update operation knows.
    * @param string $entity_type_id
    *   The entity type id.
    * @param string $bundle
@@ -199,8 +199,8 @@ final class FieldItemStructures implements ResourceDeriverInterface, KnowsDeriva
    * @return \Drupal\data_surface\Resource\OperationContext
    *   A context knowing which field of which entity.
    */
-  public static function edit(array $arguments, string $entity_type_id, string $bundle, string $field_name): OperationContext {
-    return new OperationContext('edit', known: [
+  public static function update(array $arguments, string $entity_type_id, string $bundle, string $field_name): OperationContext {
+    return new OperationContext('update', known: [
       'entity_type' => $entity_type_id,
       'bundle' => $bundle,
       'field_name' => $field_name,

@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace Drupal\data_surface_openapi;
 
+use Drupal\Core\Cache\Cache;
+use Drupal\Core\Cache\CacheBackendInterface;
 use Drupal\Core\Cache\CacheableMetadata;
+use Drupal\Core\Cache\Context\CacheContextsManager;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Extension\ModuleHandlerInterface;
 use Drupal\Core\Session\AccountSwitcherInterface;
@@ -12,12 +15,14 @@ use Drupal\Core\Session\AnonymousUserSession;
 use Drupal\Core\Session\SessionConfigurationInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslationInterface;
-use Drupal\Core\Url;
+use Drupal\data_surface\Contract\Choices;
 use Drupal\data_surface\Contract\ContractEmitter;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\Pipeline\DataSurfacePipelineInterface;
 use Drupal\data_surface\Pipeline\ResultDocument;
 use Drupal\data_surface\Pipeline\Violation;
+use Drupal\data_surface\Reference\References;
+use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface\ResourceBuild\OperationDefinition;
 use Drupal\data_surface\ResourceBuild\ResourceCatalog;
 use Drupal\data_surface\ResourceBuild\ResourceDefinition;
@@ -25,44 +30,56 @@ use Drupal\data_surface\ResourceBuild\ResourcePlugins;
 use Drupal\data_surface\ResourceBuild\ResourceRegistry;
 use Drupal\data_surface\ResourceBuild\ResourcesInterface;
 use Drupal\data_surface_react\Controller\ResourceApiController;
+use Drupal\data_surface_react\ProblemDetails;
+use Drupal\data_surface_react\ServedPaths;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\Request;
 
 /**
- * Describes every resource operation's HTTP endpoints as OpenAPI 3.1.
+ * Describes every resource operation's HTTP paths as OpenAPI 3.1.
  *
- * One more door onto the same contract: the five endpoints of
- * data_surface_react for every operation that can be asked on its own
- * (ResourceCatalog::standalone(), the rule the tool deriver follows) and
- * needs no subject. OpenAPI 3.1, because its schema objects are JSON
- * Schema 2020-12, the dialect both documents are written in; 3.0 has no
- * `$defs`, `if`/`then`, `const`, type arrays or `unevaluatedProperties`.
+ * One more door onto the same contract: the API of data_surface_react,
+ * contract 3, for every operation that can be asked on its own
+ * (ResourceCatalog::standalone(), the rule the tool deriver follows).
+ * OpenAPI 3.1, because its schema objects are JSON Schema 2020-12, the
+ * dialect both documents are written in; 3.0 has no `$defs`, `if`/`then`,
+ * `const`, type arrays or `unevaluatedProperties`.
  *
+ * - **One path item per resource path.** A singleton or a collection is
+ *   `/surface-api/{resource}`, one thing `/surface-api/{resource}/{id}`,
+ *   its identity as path parameters; the methods on it are the
+ *   operations its defaults are (ServedPaths): `GET` the envelope,
+ *   `PATCH` the default update, `POST` the default create. Each has a
+ *   `/schema` path item, `GET` the full schema and `POST` the schema for
+ *   values sent. Any other operation is a custom method,
+ *   `.../{x}:{operation}`, a path item of its own.
  * - **Built for no account**, as the tool definitions are
  *   (ResourcesInterface::buildDeclared()), and as the anonymous account,
  *   so an option list is never a privileged account's: every key as
  *   declared, each one an access answer could lock or leave out marked
- *   `x-surface.access: "live"`. The document is the same for everyone and
- *   cacheable; the per-request GET and the full schema route answer for
- *   the account that asks.
+ *   `x-surface.live`. An operation that addresses one thing is
+ *   built knowing none, as its tool's listing is. The document is the
+ *   same for everyone and cacheable; the per-request read and schema
+ *   answer for the account that asks.
  * - **The full schema as components.** Each operation's full schema
  *   (ContractEmitter::emitFull(), no widget hints, no `$id`) is split by
  *   SchemaComponents: each def a component named by its def id, the root
- *   the operation's values component. A create's submit and validate take
- *   it as it is; an update's take its patch, since a key left out keeps
- *   what is stored.
+ *   the operation's values component. A create's body takes it as it is;
+ *   any other's its patch, since a key left out keeps what is stored.
  * - **The resource in every answer.** Each answer composes its shared
  *   envelope with the operation's components: `values` is the values
- *   component or any object (a contract shows a key that holds nothing
+ *   component or any object (an envelope shows a key that holds nothing
  *   as null), and `schema` and `outputs`, JSON Schema documents, are
  *   objects whose example is the component. Declared outputs are a
  *   component of their own.
- * - **Facts to HTTP.** A read only operation has its two GETs alone; how
- *   the operation behaves is stated as `x-surface-kind`,
- *   `x-surface-idempotent`, `x-surface-destructive` and
- *   `x-surface-creates`; its label is the summary and its description the
- *   description. Every submit answers 200, a refusal and a create
- *   included, so that is what the document says.
+ * - **Facts to HTTP.** How the operation behaves is stated as
+ *   `x-surface-kind` on every call, and `x-surface-idempotent`,
+ *   `x-surface-destructive` and `x-surface-creates` on its run; its label
+ *   is the summary and its description the description. A run answers
+ *   200, a written create 201 with `Location`, a refusal 422 and access
+ *   403 as `ProblemDetails`, a stale `If-Match` 412; `?dryRun=true` is a
+ *   query parameter. A delete is `DELETE` on the thing's path, with no
+ *   request body.
  * - **Permission as security.** The session cookie, and basic auth where
  *   `basic_auth` is on, as security schemes; each operation requires one
  *   of them, or none when the anonymous role holds its permission, and
@@ -90,20 +107,19 @@ final class OpenApiDocument {
   public const BASIC = 'basic';
 
   /**
-   * The five endpoints, by suffix: the method and the route.
+   * The shared problem details component.
    */
-  public const ENDPOINTS = [
-    'contract' => ['get', 'data_surface_react.contract'],
-    'schema' => ['get', 'data_surface_react.schema'],
-    'refine' => ['post', 'data_surface_react.refine'],
-    'validate' => ['post', 'data_surface_react.validate'],
-    'submit' => ['post', 'data_surface_react.submit'],
-  ];
+  public const PROBLEM = 'ProblemDetails';
 
   /**
    * The cache contexts of an account, which a document for none drops.
    */
   protected const ACCOUNT_CONTEXTS = '/^user(\.|$)/';
+
+  /**
+   * What the document varies by, which the kept one is keyed by.
+   */
+  protected const KEYED_BY = ['url.site', 'languages:language_interface'];
 
   /**
    * Constructs an OpenApiDocument.
@@ -118,6 +134,8 @@ final class OpenApiDocument {
    *   The contract emitter.
    * @param \Drupal\data_surface\Pipeline\DataSurfacePipelineInterface $pipeline
    *   The pipeline, which writes the declared defaults as a door does.
+   * @param \Drupal\data_surface_react\ServedPaths $paths
+   *   The API's paths, and which operation each method is.
    * @param \Drupal\Core\Config\ConfigFactoryInterface $configFactory
    *   The config factory, for the site's name.
    * @param \Drupal\Core\Extension\ModuleHandlerInterface $moduleHandler
@@ -130,6 +148,11 @@ final class OpenApiDocument {
    *   Where an operation that cannot be described is reported.
    * @param \Drupal\Core\StringTranslation\TranslationInterface $stringTranslation
    *   The string translation service.
+   * @param \Drupal\Core\Cache\CacheBackendInterface|null $cache
+   *   The bin the document is kept in, by what it varies by; NULL keeps
+   *   none.
+   * @param \Drupal\Core\Cache\Context\CacheContextsManager|null $cacheContexts
+   *   What reads the request's site and language into a cache key.
    */
   public function __construct(
     protected readonly ResourceRegistry $registry,
@@ -137,12 +160,15 @@ final class OpenApiDocument {
     protected readonly ResourcePlugins $plugins,
     protected readonly ContractEmitter $emitter,
     protected readonly DataSurfacePipelineInterface $pipeline,
+    protected readonly ServedPaths $paths,
     protected readonly ConfigFactoryInterface $configFactory,
     protected readonly ModuleHandlerInterface $moduleHandler,
     protected readonly SessionConfigurationInterface $sessionConfiguration,
     protected readonly AccountSwitcherInterface $accountSwitcher,
     protected readonly LoggerInterface $logger,
     TranslationInterface $stringTranslation,
+    protected readonly ?CacheBackendInterface $cache = NULL,
+    protected readonly ?CacheContextsManager $cacheContexts = NULL,
   ) {
     $this->stringTranslation = $stringTranslation;
   }
@@ -158,14 +184,55 @@ final class OpenApiDocument {
    *   The document and what it was read from.
    */
   public function build(Request $request): OpenApiDescription {
+    // Kept by what it varies by and the contract it is written in, until
+    // a tag of what it was read from is invalidated.
+    // Decision: see
+    // docs/decisions.md#the-static-build-is-cached-the-rest-is-per-request.
+    $cid = $this->cacheId($request);
+    $hit = $cid === NULL ? FALSE : $this->cache?->get($cid);
+    if ($hit !== FALSE && $hit !== NULL && $hit->data instanceof OpenApiDescription) {
+      return $hit->data;
+    }
     // Decision: see docs/decisions.md#a-static-tool-definition-is-no-accounts.
     $this->accountSwitcher->switchTo(new AnonymousUserSession());
     try {
-      return $this->describe($request);
+      $described = $this->describe($request);
     }
     finally {
       $this->accountSwitcher->switchBack();
     }
+    $description = new OpenApiDescription(
+      $described->document,
+      $described->cacheability,
+      $described->operations,
+      hash('xxh128', (string) json_encode($described->document, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)),
+    );
+    if ($cid !== NULL && $description->getCacheMaxAge() === Cache::PERMANENT && array_diff($description->getCacheContexts(), self::KEYED_BY) === []) {
+      $this->cache?->set($cid, $description, Cache::PERMANENT, $description->getCacheTags());
+    }
+    return $description;
+  }
+
+  /**
+   * Names the document kept for a request in the cache bin.
+   *
+   * The contract version, the site and language the request reached
+   * (KEYED_BY), and the session cookie's name, which the security scheme
+   * names.
+   *
+   * @param \Symfony\Component\HttpFoundation\Request $request
+   *   The request.
+   *
+   * @return string|null
+   *   The cache id, or NULL when there is no bin.
+   */
+  protected function cacheId(Request $request): ?string {
+    if ($this->cache === NULL || $this->cacheContexts === NULL) {
+      return NULL;
+    }
+    $keys = $this->cacheContexts->convertTokensToKeys(self::KEYED_BY)->getKeys();
+    $session = $this->sessionConfiguration->getOptions($request)['name'] ?? '';
+    return 'openapi:' . ContractEmitter::CONTRACT . ':' . hash('xxh3', serialize([$keys, $session]));
   }
 
   /**
@@ -186,7 +253,6 @@ final class OpenApiDocument {
     $paths = [];
     $tags = [];
     $described = [];
-    $subject = [];
     $unavailable = [];
     foreach ($this->registry->getIndex() as $name => $indexed) {
       if (!$indexed['stored'] || $this->plugins->usedBy($name) !== []) {
@@ -206,14 +272,6 @@ final class OpenApiDocument {
         if (!ResourceCatalog::standalone($definition, $operation, [])) {
           continue;
         }
-        if (!$operation->needsNothing()) {
-          $subject[] = [
-            'resource' => $definition->id,
-            'operation' => $operation->id,
-            'parameters' => array_map(static fn ($parameter): string => $parameter->name, $operation->parameters),
-          ];
-          continue;
-        }
         try {
           [$operation_paths, $entry] = $this->operation($definition, $operation, $components, $cacheability);
         }
@@ -222,7 +280,9 @@ final class OpenApiDocument {
           $unavailable[] = ['resource' => $definition->id, 'operation' => $operation->id];
           continue;
         }
-        $paths += $operation_paths;
+        foreach ($operation_paths as $path => $item) {
+          $paths[$path] = ($paths[$path] ?? []) + $item;
+        }
         $described[$definition->id . ':' . $operation->id] = $entry;
         $tags[$definition->id] ??= $this->tag($definition);
       }
@@ -237,31 +297,17 @@ final class OpenApiDocument {
       'paths' => $paths === [] ? new \stdClass() : $paths,
       'components' => [
         'schemas' => $this->shared() + $components->all(),
-        'headers' => [
-          'ContractVersion' => [
-            'description' => (string) $this->t('The version of the wire format the documents are written in; a client refuses one it does not know.'),
-            'schema' => ['type' => 'string', 'const' => (string) ContractEmitter::CONTRACT],
-          ],
-        ],
-        'parameters' => [
-          'CsrfToken' => [
-            'name' => 'X-CSRF-Token',
-            'in' => 'header',
-            'required' => FALSE,
-            'description' => (string) $this->t('The token GET /session/token answers. Required when the request carries a session cookie; not asked with basic auth.'),
-            'schema' => ['type' => 'string'],
-          ],
-        ],
+        'headers' => $this->headers(),
+        'parameters' => $this->parameters(),
         'securitySchemes' => $this->securitySchemes($request),
       ],
       ContractEmitter::EXTENSION => [
         'contract' => ContractEmitter::CONTRACT,
         'builtFor' => 'no account',
         'perAccount' => [
-          'GET /surface-api/{resource}/{operation}',
-          'GET /surface-api/{resource}/{operation}/schema',
+          'GET /surface-api/{resource}[/{id}]',
+          'GET /surface-api/{resource}[/{id}]/schema',
         ],
-        'withASubject' => $subject,
         'unavailable' => $unavailable,
       ],
     ];
@@ -276,23 +322,41 @@ final class OpenApiDocument {
   }
 
   /**
-   * Describes one operation: its full schema and its endpoints.
+   * Builds an operation for no account, its subject unknown.
    *
    * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
    *   The resource.
    * @param \Drupal\data_surface\ResourceBuild\OperationDefinition $operation
-   *   An operation of it that needs nothing.
+   *   The operation.
+   *
+   * @return \Drupal\data_surface\DataSurfaceInterface
+   *   The resource, built in the operation's context with nothing known
+   *   when it takes parameters, as its tool's listing is built.
+   */
+  public function neutral(ResourceDefinition $definition, OperationDefinition $operation): DataSurfaceInterface {
+    $context = $operation->parameters === []
+      ? $this->resources->operation($definition->name(), $operation->id)
+      : new OperationContext($operation->id);
+    return $this->resources->buildDeclared($definition->name(), $context);
+  }
+
+  /**
+   * Describes one operation: its full schema and its calls.
+   *
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   *   The resource.
+   * @param \Drupal\data_surface\ResourceBuild\OperationDefinition $operation
+   *   An operation of it that can be asked on its own.
    * @param \Drupal\data_surface_openapi\SchemaComponents $components
    *   The components so far; added to.
    * @param \Drupal\Core\Cache\CacheableMetadata $cacheability
    *   What the document was read from; added to.
    *
-   * @return array{0: array<string, array>, 1: array{resource: string, operation: string, schema: string, request: string|null, outputs: string|null}}
-   *   The paths, and what the operation became.
+   * @return array{0: array<string, array>, 1: array{resource: string, operation: string, schema: string, request: string, outputs: string|null}}
+   *   The path items it adds to, and what the operation became.
    */
   protected function operation(ResourceDefinition $definition, OperationDefinition $operation, SchemaComponents $components, CacheableMetadata $cacheability): array {
-    $context = $this->resources->operation($definition->name(), $operation->id);
-    $built = $this->resources->buildDeclared($definition->name(), $context);
+    $built = $this->neutral($definition, $operation);
     $full = $this->emitter->emitFull($built, $definition->id, $operation->id, $operation->label, operation: $operation->facts());
     $cacheability->addCacheableDependency($built)->addCacheableDependency($full);
     $schema = $components->add($full->document['schema'], $definition->id . '.' . $operation->id);
@@ -300,11 +364,9 @@ final class OpenApiDocument {
       ? $components->add($full->document['outputs'], $definition->id . '.' . $operation->id . '.outputs')
       : NULL;
     $kind = $operation->kind();
-    $request = match ($kind) {
-      OperationDefinition::READ => NULL,
-      OperationDefinition::CREATE => $schema,
-      default => $components->patch($schema),
-    };
+    // A key a create leaves out takes its default; any other's keeps what
+    // is stored, a read's too: it is checked at its current value.
+    $request = $kind === OperationDefinition::CREATE ? $schema : $components->patch($schema);
     $label = (string) $operation->label;
     $description = $operation->description === NULL ? '' : (string) $operation->description;
     $permission = $operation->permission === NULL || $operation->permission === '' ? NULL : $operation->permission;
@@ -319,15 +381,21 @@ final class OpenApiDocument {
       'x-surface-destructive' => $operation->destructive,
       'x-surface-creates' => $operation->creates,
     ];
-    $denied = [
-      '403' => ['description' => (string) $this->t("Refused: the operation's permission, then the resource's access, said by Drupal's own error page.")],
-    ];
-    $malformed = [
-      '400' => ['description' => (string) $this->t('A body that is not a JSON object, or a part of it of the wrong shape.')],
-    ];
-    $token = [['$ref' => '#/components/parameters/CsrfToken']];
+    $problems = static fn (array $statuses): array => array_map(static fn (string $description): array => [
+      'description' => $description,
+      'content' => [ProblemDetails::MEDIA_TYPE => ['schema' => ['$ref' => SchemaComponents::POINTER . self::PROBLEM]]],
+    ], $statuses);
+    $denied = $problems([
+      '403' => (string) $this->t("Refused: the operation's permission, then the resource's access."),
+      '404' => (string) $this->t('The path, or the thing it names, names nothing.'),
+    ]);
+    $malformed = $problems([
+      '400' => (string) $this->t('A body that is not a JSON object, or a parameter the operation needs given nowhere.'),
+      '415' => (string) $this->t('A body of a media type the call does not take.'),
+    ]);
     $declared = ['$ref' => SchemaComponents::POINTER . $schema];
     $id = $definition->id . ':' . $operation->id;
+    $creates = $kind === OperationDefinition::CREATE;
     // The resource in the answers: its values, and its schema documents
     // shown by example.
     $documents = ['schema' => static::document($components->get($schema), (string) $this->t('JSON Schema 2020-12; its example is the full schema built for no account.'))];
@@ -335,92 +403,195 @@ final class OpenApiDocument {
       $documents['outputs'] = static::document($components->get($outputs), (string) $this->t('JSON Schema 2020-12; its example is the output schema.'));
     }
     $contractValues = $this->shaped($schema, (string) $this->t('Values not valid against it: a key that holds nothing is null.'));
-    $resultValues = $this->shaped($schema, (string) $this->t('Values not valid against it: a refused run answers what it accepted.'));
-    $endpoints = [];
-    $endpoints['contract'] = $common + [
-      'operationId' => $id . ':contract',
-      'summary' => (string) $this->t('@label: the contract for what is stored', ['@label' => $label]),
-      'description' => $this->joined($description, (string) $this->t('The schema for these answers, narrowed for the account that asks and for the stored values, with the values, the stale paths and the fingerprint a submit may send back. Never cached.')),
-    ] + ($kind === OperationDefinition::READ ? $facts : []) + [
-      'responses' => [
-        '200' => $this->answer(
-          (string) $this->t('The contract.'),
-          static::composed('Contract', ['values' => $contractValues] + $documents, ['values', 'stale', 'fingerprint']),
-        ),
-      ] + $denied,
-      'x-surface-schema' => $declared,
+    $resultValues = $this->shaped($schema, (string) $this->t('Values not valid against it: a run answers what it accepted.'));
+    $tagged = $creates ? [] : ['ETag' => ['$ref' => '#/components/headers/ETag']];
+
+    $read = [
+      'get' => $common + [
+        'operationId' => $id . ':read',
+        'summary' => (string) $this->t('@label: what is stored', ['@label' => $label]),
+        'description' => $this->joined($description, $creates
+          ? (string) $this->t('The envelope: the declared defaults a create starts from, and the schema for them, narrowed for the account that asks. Never cached.')
+          : (string) $this->t('The envelope: what is stored and the schema for it, narrowed for the account that asks and for the stored values, with the stale paths; its ETag is what a write sends back in If-Match. Never cached.')),
+        'responses' => [
+          '200' => $this->answer(
+            (string) $this->t('The envelope.'),
+            static::composed('Contract', ['values' => $contractValues] + $documents, ['values', 'stale', 'notes']),
+            [],
+            $tagged + ['Link' => ['$ref' => '#/components/headers/Link']],
+          ),
+        ] + $denied,
+        'x-surface-schema' => $declared,
+      ],
     ];
-    $endpoints['schema'] = $common + [
-      'operationId' => $id . ':schema',
-      'summary' => (string) $this->t('@label: the full schema', ['@label' => $label]),
-      'description' => $this->joined($description, (string) $this->t('The full schema for any values, for the account that asks: its static access applied, a runtime answer marked. Built for no account, it is the component x-surface-schema names. Cacheable.')),
-      'responses' => [
-        '200' => $this->answer(
-          (string) $this->t('The full schema.'),
-          static::composed('FullSchema', $documents),
+    $schemaItem = [
+      'get' => $common + [
+        'operationId' => $id . ':schema',
+        'summary' => (string) $this->t('@label: the full schema', ['@label' => $label]),
+        'description' => $this->joined($description, (string) $this->t('The full schema for any values, for the account that asks: its static access applied, a runtime answer marked. Built for no account, it is the component x-surface-schema names. Cacheable: its ETag is a hash of its bytes, and If-None-Match answers 304 while it holds.')),
+        'parameters' => [
           [
-            'declared' => [
-              'summary' => (string) $this->t('Built for no account'),
-              'value' => static::fullSchema($full->document, $components, $schema, $outputs),
+            'name' => Choices::PARAMETER,
+            'in' => 'query',
+            'required' => FALSE,
+            'description' => (string) $this->t("A choice of a key marked deferred, its list too long to write out: the key's JSON Pointer, =, then a value of its deciding key or an entry's id, choose=/props=card. The answer is the full schema with that variant or entry stated in full, the rest as without it. Once per choice; a key inside a variant is named with the variant's choice beside it, choose=/settings=data_surface_component&choose=/settings/props=card. The key's x-surface.deferred.fetch is this URL as an RFC 6570 template. A choice of no such key or value is a 404 naming the pointer."),
+            'style' => 'form',
+            'explode' => TRUE,
+            'schema' => ['type' => 'array', 'items' => ['type' => 'string', 'pattern' => '^/?[^=]+=.+$']],
+          ],
+        ],
+        'responses' => [
+          '200' => [
+            'description' => (string) $this->t('The full schema.'),
+            'headers' => [
+              ResourceApiController::VERSION_HEADER => ['$ref' => '#/components/headers/ContractVersion'],
+              'ETag' => [
+                'description' => (string) $this->t('A hash of the bytes: sent back in If-None-Match, answered 304 while the schema is the same.'),
+                'schema' => ['type' => 'string'],
+              ],
+            ],
+            'content' => [
+              ResourceApiController::SCHEMA_TYPE => [
+                'schema' => ['$ref' => SchemaComponents::POINTER . 'FullSchema'],
+                'examples' => [
+                  'declared' => [
+                    'summary' => (string) $this->t('Built for no account'),
+                    'value' => $components->get($schema),
+                  ],
+                ],
+              ],
             ],
           ],
-        ),
-      ] + $denied,
-      'x-surface-schema' => $declared,
-    ];
-    if ($request !== NULL) {
-      $endpoints['refine'] = $common + [
-        'operationId' => $id . ':refine',
-        'summary' => (string) $this->t('@label: re-narrow for answers in progress', ['@label' => $label]),
-        'description' => (string) $this->t("The contract re-narrowed against values not yet sent, laid over what is stored, as the form's rebuild narrows it; an answer the new choices orphan is listed under discarded."),
-        'parameters' => $token,
+          '304' => [
+            'description' => (string) $this->t('Not modified: the schema If-None-Match names still holds.'),
+          ],
+        ] + $problems(['400' => (string) $this->t('A choice that is not a pointer, =, then a value.')]) + $denied,
+        'x-surface-schema' => $declared,
+      ],
+      'post' => ['x-surface-kind' => OperationDefinition::READ] + $common + [
+        'operationId' => $id . ':narrow',
+        'summary' => (string) $this->t('@label: the schema, given these values', ['@label' => $label]),
+        'description' => (string) $this->t("The envelope narrowed for values not yet written, laid over what is stored, as the form's rebuild narrows it; an answer the new choices orphan is listed under discarded. A query: nothing is written."),
+        'parameters' => [
+          ['$ref' => '#/components/parameters/CsrfToken'],
+          ['$ref' => '#/components/parameters/SurfaceStale'],
+        ],
         'requestBody' => [
           'required' => FALSE,
-          'content' => ['application/json' => ['schema' => ['$ref' => SchemaComponents::POINTER . 'RefineRequest']]],
+          'content' => ['application/json' => ['schema' => ['$ref' => SchemaComponents::POINTER . 'NarrowRequest']]],
         ],
         'responses' => [
           '200' => $this->answer(
-            (string) $this->t('The contract, re-narrowed.'),
-            static::composed('Contract', ['values' => $contractValues] + $documents, ['values', 'stale', 'discarded']),
+            (string) $this->t('The envelope, narrowed.'),
+            static::composed('Contract', ['values' => $contractValues] + $documents, [
+              'values',
+              'stale',
+              'notes',
+              'discarded',
+            ]),
           ),
-        ] + $malformed + $denied,
-      ];
-      $endpoints['validate'] = $common + [
-        'operationId' => $id . ':validate',
-        'summary' => (string) $this->t('@label: rehearse, writing nothing', ['@label' => $label]),
-        'description' => (string) $this->t("The pipeline's dry run: the result a submit would answer, and nothing written. A refusal is an answer: 200, ok false."),
-        'parameters' => $token,
-        'requestBody' => $this->body($request, $kind, FALSE, NULL),
-        'responses' => [
-          '200' => $this->answer((string) $this->t('The result.'), static::composed('Result', ['values' => $resultValues])),
-        ] + $malformed + $denied,
-      ];
-      $written = $kind === OperationDefinition::CREATE
-        ? (string) $this->t('The write. A refusal is an answer: 200, ok false and committed false, nothing written. A write answers 200 too, with the contract rebuilt from what is stored now and, under created, where the created thing now lives.')
-        : (string) $this->t('The write. A refusal is an answer: 200, ok false and committed false, nothing written. A write answers the contract rebuilt from what is stored now.');
-      $endpoints['submit'] = $common + [
-        'operationId' => $id . ':submit',
+        ] + $problems(['400' => (string) $this->t('A body that is not a JSON object.')]) + $denied,
+      ],
+    ];
+
+    [$method, $named] = $this->paths->writes($definition, $operation);
+    $written = match (TRUE) {
+      $creates => (string) $this->t("The write: 201 with the created thing's Location, the envelope rebuilt and, under created, where it now lives. With dryRun, the same run stopped before anything is written, 200. A refusal is 422, nothing written."),
+      $kind === OperationDefinition::READ => (string) $this->t('The run: the values checked, and nothing written at all. A refusal is 422.'),
+      $kind === OperationDefinition::DELETE => (string) $this->t('The removal, with no body, held by If-Match to the stored values its ETag named (412 when they changed): 200 with the values the thing held, and no envelope, since it is gone. With dryRun, the same run stopped before anything is removed. A refusal is 422, nothing removed.'),
+      default => (string) $this->t('The write, held by If-Match to the stored values its ETag named (412 when they changed): 200 with the envelope rebuilt and the new ETag. With dryRun, the same run stopped before anything is written. A refusal is 422, nothing written.'),
+    };
+    $answers = [
+      '200' => $this->answer(
+        match (TRUE) {
+          $creates => (string) $this->t('A dry run: the result, nothing written.'),
+          $kind === OperationDefinition::DELETE => (string) $this->t('The result, its values what the thing held; contract and created are null.'),
+          default => (string) $this->t('The result, then outputs, contract and created.'),
+        },
+        $this->submitted($resultValues, $outputs),
+        [],
+        $creates || $kind === OperationDefinition::DELETE ? [] : $tagged,
+      ),
+    ];
+    if ($creates) {
+      $answers['201'] = $this->answer(
+        (string) $this->t('Written: the result, then outputs, contract and created.'),
+        $this->submitted($resultValues, $outputs),
+        [],
+        ['Location' => ['$ref' => '#/components/headers/Location']],
+      );
+    }
+    $answers += $problems(array_filter([
+      '412' => $creates ? NULL : (string) $this->t('If-Match no longer names what is stored: nothing written.'),
+      '422' => (string) $this->t('The values were refused: each error a JSON Pointer, a code and a message; nothing written.'),
+    ]));
+    $deletes = $kind === OperationDefinition::DELETE;
+    $parameters = [
+      ['$ref' => '#/components/parameters/CsrfToken'],
+      ['$ref' => '#/components/parameters/DryRun'],
+    ];
+    // A delete sends no values, so nothing of them is stale.
+    if (!$deletes) {
+      $parameters[] = ['$ref' => '#/components/parameters/SurfaceStale'];
+    }
+    if (!$creates) {
+      $parameters[] = ['$ref' => '#/components/parameters/IfMatch'];
+    }
+    $run = [
+      strtolower($method) => $common + [
+        'operationId' => $id . ':write',
         'summary' => $label,
         'description' => $this->joined($description, $written),
       ] + $facts + [
-        'parameters' => $token,
-        'requestBody' => $this->body($request, $kind, TRUE, $this->example($built, $full->document['schema'], $kind)),
-        'responses' => [
-          '200' => $this->answer(
-            (string) $this->t('The result, then outputs, contract and created.'),
-            static::composed('SubmitResult', ['values' => $resultValues] + ($outputs === NULL ? [] : [
-              'outputs' => $this->shaped($outputs, (string) $this->t('Outputs not valid against it: a refused run answers none.')),
-            ])),
-          ),
-        ] + $malformed + $denied,
-      ];
+        'parameters' => $parameters,
+      ] + ($deletes ? [] : [
+        'requestBody' => $this->body($request, $kind, $method, $this->example($built, $full->document['schema'], $kind)),
+      ]) + [
+        'responses' => $answers + $malformed + $denied,
+      ],
+    ];
+
+    $readNamed = !$this->paths->readsPlain($definition, $operation);
+    $items = [
+      [$readNamed, FALSE, $read],
+      [$readNamed, TRUE, $schemaItem],
+      [$named, FALSE, $run],
+    ];
+    // A listing: GET on the collection runs it, its query the values, and
+    // answers its outputs; its envelope is its custom method's.
+    // Decision: see
+    // docs/decisions.md#a-listing-is-a-read-only-operation-with-outputs-a-reorder-is-an-update-over-the-collection.
+    if ($this->paths->listing($definition) === $operation->id && $outputs !== NULL) {
+      $items[0] = [TRUE, FALSE, $read];
+      $listed = $this->listed($id, $label, $description, $common, $components->get($schema), $outputs, $problems, $denied);
+      $items[] = [FALSE, FALSE, $listed];
     }
     $paths = [];
-    foreach ($endpoints as $suffix => $described) {
-      [$method, $route] = self::ENDPOINTS[$suffix];
-      $url = Url::fromRoute($route, ['resource' => $definition->id, 'operation' => $operation->id])->toString(TRUE);
+    // The lookup of the keys that refer to an entity, at the path GET
+    // serves this operation at.
+    // Decision: see
+    // docs/decisions.md#a-reference-is-an-id-with-a-list-the-site-decides-listed-or-looked-up.
+    $references = static::references($full->document['schema']);
+    if (!$readNamed && $references !== []) {
+      [$path, $names, $url] = $this->paths->lookupTemplate($definition, $operation);
       $cacheability->addCacheableDependency($url);
-      $paths[$url->getGeneratedUrl()][$method] = $described;
+      $lookup = $this->lookup($definition, $common, $references, $denied);
+      $lookup['get']['parameters'] = [
+        ...$this->operationParameters($operation, $names),
+        ...$lookup['get']['parameters'],
+      ];
+      $paths[$path] = $lookup;
+    }
+    foreach ($items as [$custom, $isSchema, $calls]) {
+      [$path, $names, $url] = $this->paths->template($definition, $operation, $custom, $isSchema);
+      $cacheability->addCacheableDependency($url);
+      foreach ($calls as $verb => $call) {
+        $call['parameters'] = [...$this->operationParameters($operation, $names), ...($call['parameters'] ?? [])];
+        if ($call['parameters'] === []) {
+          unset($call['parameters']);
+        }
+        $paths[$path][$verb] = $call;
+      }
     }
     $entry = [
       'resource' => $definition->id,
@@ -430,6 +601,232 @@ final class OpenApiDocument {
       'outputs' => $outputs,
     ];
     return [$paths, $entry];
+  }
+
+  /**
+   * Describes a listing: GET on a collection, its query the values.
+   *
+   * @param string $id
+   *   The operation's `<resource>:<operation>`.
+   * @param string $label
+   *   Its label.
+   * @param string $description
+   *   Its description, or empty.
+   * @param array $common
+   *   What every call of it says: tags, security, permission and kind.
+   * @param array $schema
+   *   Its full schema, built for no account, whose properties are the
+   *   query's.
+   * @param string $outputs
+   *   The component of its outputs, which it answers.
+   * @param callable $problems
+   *   Writes problem details answers by status.
+   * @param array $denied
+   *   The 403 and 404 answers.
+   *
+   * @return array
+   *   The path item's one call, `get`.
+   */
+  protected function listed(string $id, string $label, string $description, array $common, array $schema, string $outputs, callable $problems, array $denied): array {
+    $query = [];
+    foreach (is_array($schema['properties'] ?? NULL) ? $schema['properties'] : [] as $name => $property) {
+      $property = is_array($property) ? array_diff_key($property, [ContractEmitter::EXTENSION => TRUE]) : [];
+      $query[] = [
+        'name' => (string) $name,
+        'in' => 'query',
+        'required' => FALSE,
+      ] + (isset($property['description']) ? ['description' => $property['description']] : []) + [
+        'schema' => $property,
+      ];
+    }
+    return [
+      'get' => $common + [
+        'operationId' => $id . ':list',
+        'summary' => $label,
+        'description' => $this->joined($description, (string) $this->t('The listing: the query string is its values, checked as a write checks them, and the answer is its outputs. Nothing is written. A refusal is 422.')),
+        'parameters' => $query,
+        'responses' => [
+          '200' => [
+            'description' => (string) $this->t('The outputs.'),
+            'headers' => [
+              ResourceApiController::VERSION_HEADER => ['$ref' => '#/components/headers/ContractVersion'],
+              'Link' => ['$ref' => '#/components/headers/Link'],
+            ],
+            'content' => ['application/json' => ['schema' => ['$ref' => SchemaComponents::POINTER . $outputs]]],
+          ],
+        ] + $problems(['422' => (string) $this->t('A value of the query was refused: each error a JSON Pointer, a code and a message.')]) + $denied,
+      ],
+    ];
+  }
+
+  /**
+   * Finds the keys of a full schema that refer to an entity.
+   *
+   * @param array $schema
+   *   The full schema.
+   * @param array|null $frame
+   *   The object being read; NULL for the top.
+   * @param string $prefix
+   *   Its JSON Pointer.
+   *
+   * @return string[]
+   *   The JSON Pointer of each key `x-surface.reference` marks, and of the
+   *   object a bare reference's id is in, which names it too.
+   */
+  protected static function references(array $schema, ?array $frame = NULL, string $prefix = ''): array {
+    $frame ??= $schema;
+    $found = [];
+    foreach (is_array($frame['properties'] ?? NULL) ? $frame['properties'] : [] as $name => $property) {
+      if (!is_array($property)) {
+        continue;
+      }
+      $at = $prefix . '/' . str_replace(['~', '/'], ['~0', '~1'], (string) $name);
+      if (isset($property['$ref']) && is_string($property['$ref']) && str_starts_with($property['$ref'], ContractEmitter::DEFS)) {
+        $def = $schema['$defs'][substr($property['$ref'], strlen(ContractEmitter::DEFS))] ?? NULL;
+        $inside = is_array($def) ? static::references($schema, $def, $at) : [];
+        if (in_array($at . '/id', $inside, TRUE) && (($def['properties']['id'][ContractEmitter::EXTENSION]['reference']['by'] ?? NULL) !== NULL)) {
+          $found[] = $at;
+        }
+        array_push($found, ...$inside);
+        continue;
+      }
+      if (isset($property[ContractEmitter::EXTENSION]['reference'])) {
+        $found[] = $at;
+      }
+    }
+    return $found;
+  }
+
+  /**
+   * Describes the lookup: candidates for one reference key, by label.
+   *
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   *   The resource.
+   * @param array $common
+   *   What every call of the operation says.
+   * @param string[] $references
+   *   The JSON Pointers of its reference keys.
+   * @param array $denied
+   *   The 403 and 404 answers.
+   *
+   * @return array
+   *   The path item's one call, `get`.
+   */
+  protected function lookup(ResourceDefinition $definition, array $common, array $references, array $denied): array {
+    return [
+      'get' => ['x-surface-kind' => OperationDefinition::READ] + $common + [
+        'operationId' => $definition->id . ':lookup',
+        'summary' => (string) $this->t('@resource: look up an entity a key may refer to', ['@resource' => $definition->id]),
+        'description' => (string) $this->t("The candidates of one reference key whose label contains q, for the account that asks: the selection handler the key's options and its check ask. A key with too many candidates to list states none, and this is where a client finds one. Nothing is written."),
+        'parameters' => [
+          [
+            'name' => 'key',
+            'in' => 'query',
+            'required' => TRUE,
+            'description' => (string) $this->t('The JSON Pointer of the reference key.'),
+            'schema' => ['type' => 'string', 'enum' => $references],
+          ],
+          [
+            'name' => 'q',
+            'in' => 'query',
+            'required' => FALSE,
+            'description' => (string) $this->t('Text the label contains; none for the first candidates.'),
+            'schema' => ['type' => 'string'],
+          ],
+          [
+            'name' => 'type',
+            'in' => 'query',
+            'required' => FALSE,
+            'description' => (string) $this->t('For a key that refers to an entity of any type: the entity type, one its entity_type allows.'),
+            'schema' => ['type' => 'string'],
+          ],
+          [
+            'name' => 'limit',
+            'in' => 'query',
+            'required' => FALSE,
+            'description' => (string) $this->t('The most to answer.'),
+            'schema' => [
+              'type' => 'integer',
+              'minimum' => 1,
+              'maximum' => References::LOOKUP_MAX,
+              'default' => ResourceApiController::LOOKUP_LIMIT,
+            ],
+          ],
+        ],
+        'responses' => [
+          '200' => [
+            'description' => (string) $this->t('The candidates found, sorted by label.'),
+            'headers' => [ResourceApiController::VERSION_HEADER => ['$ref' => '#/components/headers/ContractVersion']],
+            'content' => [
+              'application/json' => [
+                'schema' => [
+                  'type' => 'object',
+                  'properties' => [
+                    'key' => ['type' => 'string'],
+                    'entityType' => ['type' => 'string'],
+                    'bundles' => ['type' => 'array', 'items' => ['type' => 'string']],
+                    'items' => [
+                      'type' => 'array',
+                      'items' => [
+                        'type' => 'object',
+                        'properties' => ['id' => ['type' => ['integer', 'string']], 'label' => ['type' => 'string']],
+                        'required' => ['id', 'label'],
+                      ],
+                    ],
+                  ],
+                  'required' => ['key', 'entityType', 'bundles', 'items'],
+                ],
+              ],
+            ],
+          ],
+        ] + $denied,
+      ],
+    ];
+  }
+
+  /**
+   * Writes an operation's own parameters: in the path, then the query.
+   *
+   * @param \Drupal\data_surface\ResourceBuild\OperationDefinition $operation
+   *   The operation.
+   * @param string[] $inPath
+   *   The names its path carries as `{name}`.
+   *
+   * @return list<array>
+   *   The parameter objects.
+   */
+  protected function operationParameters(OperationDefinition $operation, array $inPath): array {
+    $parameters = [];
+    foreach ($operation->parameters as $parameter) {
+      $path = in_array($parameter->name, $inPath, TRUE);
+      $parameters[] = [
+        'name' => $parameter->name,
+        'in' => $path ? 'path' : 'query',
+        'required' => $path || !$parameter->optional,
+        'description' => $path
+          ? (string) $this->t('The identity of the thing: the @name the operation takes.', ['@name' => $parameter->name])
+          : (string) $this->t('The @name the operation takes.', ['@name' => $parameter->name]),
+        'schema' => ['type' => 'string'],
+      ];
+    }
+    return $parameters;
+  }
+
+  /**
+   * Writes the schema of a run's answer.
+   *
+   * @param array $values
+   *   The schema of its values.
+   * @param string|null $outputs
+   *   The outputs component, or NULL when none are declared.
+   *
+   * @return array
+   *   The schema.
+   */
+  protected function submitted(array $values, ?string $outputs): array {
+    return static::composed('SubmitResult', ['values' => $values] + ($outputs === NULL ? [] : [
+      'outputs' => $this->shaped($outputs, (string) $this->t('Outputs not valid against it: a refused run answers none.')),
+    ]));
   }
 
   /**
@@ -498,78 +895,42 @@ final class OpenApiDocument {
   }
 
   /**
-   * Writes the full schema endpoint's answer, built for no account.
-   *
-   * @param array $document
-   *   The full schema document, as emitted.
-   * @param \Drupal\data_surface_openapi\SchemaComponents $components
-   *   The components.
-   * @param string $schema
-   *   The values component.
-   * @param string|null $outputs
-   *   The outputs component, or NULL when none are declared.
-   *
-   * @return array
-   *   The document, its schema and outputs as their components.
-   */
-  protected static function fullSchema(array $document, SchemaComponents $components, string $schema, ?string $outputs): array {
-    $document['schema'] = $components->get($schema);
-    if ($outputs !== NULL) {
-      $document['outputs'] = $components->get($outputs);
-    }
-    return $document;
-  }
-
-  /**
-   * Writes a request body of validate or submit.
+   * Writes a run's request body: the values document itself.
    *
    * @param string $values
    *   The component the values take.
    * @param string $kind
    *   The operation's kind.
-   * @param bool $submit
-   *   Whether it is the submit's, which may send the fingerprint back.
-   * @param array|null $example
-   *   The submit's example, or NULL for none.
+   * @param string $method
+   *   `PATCH`, which takes a JSON Merge Patch or JSON, or `POST`, JSON.
+   * @param \stdClass|null $example
+   *   The example, or NULL for none.
    *
    * @return array
    *   The request body.
    */
-  protected function body(string $values, string $kind, bool $submit, ?array $example): array {
-    $properties = [
-      'values' => [
+  protected function body(string $values, string $kind, string $method, ?\stdClass $example): array {
+    $media = [
+      'schema' => [
         '$ref' => SchemaComponents::POINTER . $values,
-        'description' => $kind === OperationDefinition::CREATE
-          ? (string) $this->t('Create: a key left out takes its default, and every required key must be sent.')
-          : (string) $this->t('Update: send only the keys to change; a key left out keeps its value, null clears it, and {} changes nothing.'),
-      ],
-      'stale' => [
-        'type' => 'array',
-        'items' => ['type' => 'string'],
-        'description' => (string) $this->t('The stale paths the contract named; a path sent empty stands for the stored value.'),
-      ],
-      'parameters' => [
-        'type' => 'object',
-        'description' => (string) $this->t("The operation's parameters; none for an operation that needs no subject."),
+        'description' => match ($kind) {
+          OperationDefinition::CREATE => (string) $this->t('Create: a key left out takes its default, and every required key must be sent.'),
+          OperationDefinition::READ => (string) $this->t('Read only: a key left out is checked at its current value, and nothing is written.'),
+          default => (string) $this->t('Update: send only the keys to change; a key left out keeps its value, null clears it, and {} changes nothing.'),
+        },
       ],
     ];
-    if ($submit) {
-      $properties['fingerprint'] = [
-        'type' => ['string', 'null'],
-        'description' => (string) $this->t('The fingerprint the contract was served with: when sent and storage changed since, the submit is refused. Not checked when left out.'),
-      ];
-    }
-    $media = ['schema' => ['type' => 'object', 'properties' => $properties]];
     if ($example !== NULL) {
       $media['examples'] = [
         'declared' => ['summary' => (string) $this->t('The declared defaults'), 'value' => $example],
       ];
     }
-    return ['required' => TRUE, 'content' => ['application/json' => $media]];
+    $types = $method === 'PATCH' ? [ResourceApiController::MERGE_PATCH, 'application/json'] : ['application/json'];
+    return ['required' => TRUE, 'content' => array_fill_keys($types, $media)];
   }
 
   /**
-   * Writes the submit's example from the declared defaults.
+   * Writes a run's example from the declared defaults.
    *
    * The defaults the operation is built with, the tool listing's source,
    * accepted and validated by the pipeline with nothing stored, and
@@ -587,10 +948,10 @@ final class OpenApiDocument {
    * @param string $kind
    *   The operation's kind.
    *
-   * @return array|null
+   * @return \stdClass|null
    *   The example body, or NULL.
    */
-  protected function example(DataSurfaceInterface $built, array $schema, string $kind): ?array {
+  protected function example(DataSurfaceInterface $built, array $schema, string $kind): ?\stdClass {
     // The defaults as the pipeline takes them, with nothing stored: a key
     // they leave not applying is dropped, and defaults it would refuse
     // give no example.
@@ -625,7 +986,100 @@ final class OpenApiDocument {
     if ($kind === OperationDefinition::CREATE && array_diff($schema['required'] ?? [], array_keys(get_object_vars($values))) !== []) {
       return NULL;
     }
-    return ['values' => $values];
+    return $values;
+  }
+
+  /**
+   * Writes an answer with the contract version header.
+   *
+   * @param string $description
+   *   What the answer is.
+   * @param array $schema
+   *   Its body's schema.
+   * @param array<string, array> $examples
+   *   Its body's examples, by name; none by default.
+   * @param array<string, array> $headers
+   *   More headers it carries, by name.
+   *
+   * @return array
+   *   The response.
+   */
+  protected function answer(string $description, array $schema, array $examples = [], array $headers = []): array {
+    $media = ['schema' => $schema];
+    if ($examples !== []) {
+      $media['examples'] = $examples;
+    }
+    return [
+      'description' => $description,
+      'headers' => [ResourceApiController::VERSION_HEADER => ['$ref' => '#/components/headers/ContractVersion']] + $headers,
+      'content' => ['application/json' => $media],
+    ];
+  }
+
+  /**
+   * Writes the headers the answers share.
+   *
+   * @return array<string, array>
+   *   The header objects, by name.
+   */
+  protected function headers(): array {
+    return [
+      'ContractVersion' => [
+        'description' => (string) $this->t('The version of the wire format the documents are written in; a client refuses one it does not know.'),
+        'schema' => ['type' => 'string', 'const' => (string) ContractEmitter::CONTRACT],
+      ],
+      'ETag' => [
+        'description' => (string) $this->t('The fingerprint of what is stored, a keyed hash: sent back in If-Match, a write is refused with 412 when storage changed since. A proxy may weaken it, W/; it is compared by its value.'),
+        'schema' => ['type' => 'string'],
+      ],
+      'Link' => [
+        'description' => (string) $this->t('The full schema, rel="describedby".'),
+        'schema' => ['type' => 'string'],
+      ],
+      'Location' => [
+        'description' => (string) $this->t('Where the created thing is now read; absent when no operation of the resource addresses it.'),
+        'schema' => ['type' => 'string', 'format' => 'uri'],
+      ],
+    ];
+  }
+
+  /**
+   * Writes the parameters the calls share.
+   *
+   * @return array<string, array>
+   *   The parameter objects, by name.
+   */
+  protected function parameters(): array {
+    return [
+      'CsrfToken' => [
+        'name' => 'X-CSRF-Token',
+        'in' => 'header',
+        'required' => FALSE,
+        'description' => (string) $this->t('The token GET /session/token answers. Required on a POST or a PATCH that carries a session cookie; not asked with basic auth.'),
+        'schema' => ['type' => 'string'],
+      ],
+      'IfMatch' => [
+        'name' => 'If-Match',
+        'in' => 'header',
+        'required' => FALSE,
+        'description' => (string) $this->t('The ETag the envelope was read with: when storage changed since, the write is refused with 412 and nothing is written. Not checked when left out.'),
+        'schema' => ['type' => 'string'],
+      ],
+      'DryRun' => [
+        'name' => ServedPaths::DRY_RUN,
+        'in' => 'query',
+        'required' => FALSE,
+        'description' => (string) $this->t('true runs the write through prepare and stops before commit: the answer a write would give, x-surface-dry-run true, nothing written.'),
+        'schema' => ['type' => 'boolean'],
+      ],
+      'SurfaceStale' => [
+        'name' => ServedPaths::STALE_HEADER,
+        'in' => 'header',
+        'required' => FALSE,
+        'description' => (string) $this->t('The stale paths the envelope named, as JSON Pointers separated by commas: a path sent empty stands for the stored value.'),
+        'schema' => ['type' => 'string'],
+      ],
+    ];
   }
 
   /**
@@ -651,31 +1105,6 @@ final class OpenApiDocument {
       return $kept;
     }
     return is_array($value) ? array_map(static::withoutNulls(...), $value) : $value;
-  }
-
-  /**
-   * Writes an answer with the contract version header.
-   *
-   * @param string $description
-   *   What the answer is.
-   * @param array $schema
-   *   Its body's schema.
-   * @param array<string, array> $examples
-   *   Its body's examples, by name; none by default.
-   *
-   * @return array
-   *   The response.
-   */
-  protected function answer(string $description, array $schema, array $examples = []): array {
-    $media = ['schema' => $schema];
-    if ($examples !== []) {
-      $media['examples'] = $examples;
-    }
-    return [
-      'description' => $description,
-      'headers' => [ResourceApiController::VERSION_HEADER => ['$ref' => '#/components/headers/ContractVersion']],
-      'content' => ['application/json' => $media],
-    ];
   }
 
   /**
@@ -758,7 +1187,7 @@ final class OpenApiDocument {
     $site = (string) $this->configFactory->get('system.site')->get('name');
     return [
       'title' => (string) $this->t('@site: resources', ['@site' => $site === '' ? $request->getHttpHost() : $site]),
-      'description' => (string) $this->t('Every operation of every resource on this site that can be asked on its own and needs no subject, at the endpoints of the Data Surface React module, written by the Data Surface OpenAPI module. Built for no account: every key as declared, each one an access answer could lock or leave out marked x-surface.access "live", so the document is the same for everyone. GET /surface-api/{resource}/{operation} and its /schema answer for the account that asks: its static access applied, a key it may not see left out, and the first narrowed to the stored values. info.version is the version of the contract the schemas are written in.'),
+      'description' => (string) $this->t('Every operation of every resource on this site that can be asked on its own, on the API of the Data Surface React module, written by the Data Surface OpenAPI module. The path is the resource, the method the operation: GET reads, PATCH updates, POST to the collection creates, and :{operation} names any other. Built for no account: every key as declared, each one an access answer could lock or leave out marked x-surface.live, so the document is the same for everyone. GET /surface-api/{resource}[/{id}] and its /schema answer for the account that asks: its static access applied, a key it may not see left out, and the first narrowed to the stored values. info.version is the version of the contract the schemas are written in.'),
       'version' => (string) ContractEmitter::CONTRACT,
     ];
   }
@@ -789,7 +1218,7 @@ final class OpenApiDocument {
    * Writes the components every operation shares.
    *
    * @return array<string, array>
-   *   The envelope, the result and their parts, by name.
+   *   The envelope, the result, problem details and their parts, by name.
    */
   protected function shared(): array {
     $paths = ['type' => 'array', 'items' => ['type' => 'string']];
@@ -803,7 +1232,7 @@ final class OpenApiDocument {
     $entry = [
       'type' => 'object',
       'properties' => [
-        'path' => ['type' => 'string'] + $this->said($this->t('The full dotted path; empty for the whole call.')),
+        'path' => ['type' => 'string'] + $this->said($this->t('A JSON Pointer into the values; empty for the whole call.')),
         'code' => ['type' => 'string'] + $this->said($this->t('A stable code to branch on.')),
         'message' => ['type' => 'string'] + $this->said($this->t('What a person is told, as plain text.')),
       ],
@@ -816,7 +1245,7 @@ final class OpenApiDocument {
         'ok' => ['type' => 'boolean'] + $this->said($this->t('Whether nothing was refused.')),
         'committed' => ['type' => 'boolean'] + $this->said($this->t('Whether the values were written.')),
         'changed' => ['type' => 'boolean'] + $this->said($this->t('Whether the write moved a stored value.')),
-        'changes' => $paths + $this->said($this->t('The path of each stored value the write changes, or would.')),
+        'changes' => $paths + $this->said($this->t('The JSON Pointer of each stored value the write changes, or would.')),
         'values' => $object + $this->said($this->t('The accepted values, as the read tool answers them: no secret, nothing left out for the caller.')),
         'violations' => $entries('ResultEntry', (string) $this->t('Each refusal.')),
         'notes' => $entries('ResultEntry', (string) $this->t('Each value sent for a locked key and not taken, code locked.')),
@@ -833,17 +1262,17 @@ final class OpenApiDocument {
     return [
       'Contract' => [
         'type' => 'object',
-        'description' => (string) $this->t('The served contract: the schema for these answers and the values it describes.'),
+        'description' => (string) $this->t('The envelope: the schema for these answers and the values it describes.'),
         'properties' => [
           'resource' => ['type' => 'string'],
           'operation' => $nullable,
           'label' => $nullable,
           'schema' => $object + $this->said($this->t('JSON Schema 2020-12 for the values, for the account that asks and these values; x-surface on every property.')),
           'values' => $object + $this->said($this->t('Every key: what is stored over the declared defaults; a secret and a stale value are null.')),
-          'stale' => $paths + $this->said($this->t('The paths shown on the empty option in place of a stored value.')),
+          'stale' => $paths + $this->said($this->t('The JSON Pointers shown on the empty option in place of a stored value.')),
           'outputs' => $object + $this->said($this->t('The output schema, when outputs are declared.')),
-          'fingerprint' => $nullable + $this->said($this->t('A keyed hash of the stored values, for a submit to send back.')),
-          'discarded' => $paths + $this->said($this->t('On a refine: the keys whose answer the new choices orphaned.')),
+          'notes' => $entries('ResultEntry', (string) $this->t('What the caller is told about the values: each stale path, code stale.')),
+          'discarded' => $paths + $this->said($this->t('On POST .../schema: the JSON Pointer of each answer the new choices orphaned.')),
         ],
         'required' => ['resource', 'operation', 'label', 'schema'],
       ],
@@ -859,23 +1288,31 @@ final class OpenApiDocument {
       ],
       'FullSchema' => [
         'type' => 'object',
-        'description' => (string) $this->t('The full schema: the contract for any values, reading none.'),
-        'properties' => [
-          'resource' => ['type' => 'string'],
-          'operation' => $nullable,
-          'label' => $nullable,
-          'schema' => $object + $this->said($this->t('JSON Schema 2020-12 for any values, for the account that asks.')),
-          'outputs' => $object,
-        ],
-        'required' => ['resource', 'operation', 'label', 'schema'],
+        'description' => (string) $this->t('The full schema itself, JSON Schema 2020-12 for any values, for the account that asks; it reads no stored value.'),
       ],
-      'RefineRequest' => [
+      'NarrowRequest' => [
         'type' => 'object',
+        'description' => (string) $this->t('Answers in progress, partial or whole, laid over what is stored; a key the resource does not declare is left out.'),
+      ],
+      self::PROBLEM => [
+        'type' => 'object',
+        'description' => (string) $this->t('Problem details (RFC 9457), application/problem+json.'),
         'properties' => [
-          'values' => $object + $this->said($this->t('Answers in progress, laid over what is stored; a key the resource does not declare is left out.')),
-          'stale' => $paths + $this->said($this->t('The stale paths the contract named; a path sent empty stands for the stored value.')),
-          'parameters' => $object,
+          'type' => ['type' => 'string'] + $this->said($this->t("The problem type: the module's own for a refusal, a conflict and a path gone; about:blank for the rest.")),
+          'title' => ['type' => 'string'],
+          'status' => ['type' => 'integer'],
+          'detail' => ['type' => 'string'],
+          'errors' => $entries('ResultEntry', (string) $this->t('Each refusal, as the result has it.')),
+          'notes' => $entries('ResultEntry', (string) $this->t('Each value sent for a locked key and not taken, code locked.')),
+          'stale' => $entries('StaleEntry', (string) $this->t('Each stale reference kept, code stale.')),
+          'moved' => [
+            'type' => 'object',
+            'description' => (string) $this->t('On a contract 2 path, gone: the method and the path that replace it.'),
+            'properties' => ['method' => ['type' => 'string'], 'href' => ['type' => 'string']],
+            'required' => ['method', 'href'],
+          ],
         ],
+        'required' => ['type', 'title', 'status'],
       ],
       'Result' => $result,
       'ResultEntry' => $entry,
@@ -891,8 +1328,9 @@ final class OpenApiDocument {
             'type' => 'object',
             'properties' => [
               'outputs' => $object + $this->said($this->t('The declared outputs, as storage reads them back after the write.')),
-              'contract' => $either('Contract') + $this->said($this->t('On a write, the contract rebuilt from what is stored now.')),
+              'contract' => $either('Contract') + $this->said($this->t('On a write, the envelope rebuilt from what is stored now.')),
               'created' => $either('Created') + $this->said($this->t('On a create that was written, where the created thing now lives.')),
+              ResourceApiController::DRY_RUN => ['type' => 'boolean', 'const' => TRUE] + $this->said($this->t('On a dry run only: nothing was written.')),
             ],
             'required' => ['outputs', 'contract', 'created'],
           ],

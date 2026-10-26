@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Drupal\data_surface\Resource;
 
 use Drupal\Core\Cache\CacheableDependencyInterface;
+use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
 
 /**
@@ -36,20 +37,39 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
    * #[RefinesInput] method on an `any` key returning the narrower
    * definition itself; no verb is needed for it.
    *
+   * Variants from the site: `from:` names a provider implementing
+   * SiteListInterface, asked at every build as for keys from the site,
+   * whose entries are one variant each, read from the JSON Schema each
+   * carries (SchemaReader) or built from the structure it names, beside
+   * every #[Variant] at the key; a declared variant wins for a value both
+   * name. Each entry's label is what $by offers its value as; an entry
+   * that says a start or a lock is refused, since a variant reads
+   * neither.
+   *
+   * @code
+   * $inputs->attachVariants('props', by: 'component', from: ComponentProps::class)
+   *   ->setLabel(t('Props'));
+   * @endcode
+   *
    * @param string $key
    *   The key the structure sits at.
    * @param string $by
    *   The sibling input key whose value chooses the structure.
+   * @param string|null $from
+   *   The provider of variants from the site, by class, or NULL for the
+   *   #[Variant] classes alone.
    *
    * @return \Drupal\Core\TypedData\MapDataDefinition
    *   The map at the key, for the owner to label and describe with the
    *   core setters, as attach() returns it.
    *
    * @throws \LogicException
-   *   When the key is already declared, or for outputs, which do not
-   *   attach yet.
+   *   When the key is already declared, for outputs, which do not attach
+   *   yet, or when the provider implements no SiteListInterface.
+   *
+   * @see docs/resources.md#variants-from-the-site
    */
-  public function attachVariants(string $key, string $by): MapDataDefinition;
+  public function attachVariants(string $key, string $by, ?string $from = NULL): MapDataDefinition;
 
   /**
    * A map with one value per thing the site has: keys from the site.
@@ -59,7 +79,9 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
    * entry becomes a key in the map at $key, declared as add() declares
    * one: of $type, labeled with the entry's label, starting from the
    * entry's default or else $default, held to what is stored when the
-   * entry is locked. The provider is asked when the resource is built,
+   * entry is locked; an entry that names a schema or a structure is
+   * refused, since a key per thing reads neither. The provider is asked
+   * when the resource is built,
    * never by the resource; what it read is the built resource's
    * cacheability, so the form, both schema documents and the tool listing
    * change when the site does.
@@ -77,7 +99,7 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
    * @param string $type
    *   What each entry is: a typed data type, or a shape's class.
    * @param string $from
-   *   The provider's class, implementing KeysFromSiteInterface.
+   *   The provider's class, implementing SiteListInterface.
    * @param mixed $default
    *   What every entry starts from unless it says otherwise; NULL for
    *   nothing.
@@ -87,7 +109,7 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
    *
    * @throws \LogicException
    *   When the key is taken, for outputs, inside a structure mixed in, or
-   *   when the provider implements no KeysFromSiteInterface.
+   *   when the provider implements no SiteListInterface.
    *
    * @see docs/resources.md#keys-that-come-from-the-site
    */
@@ -116,7 +138,7 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
    * @param string $structure
    *   The structure each entry is, by class, or a derived one's id.
    * @param string $from
-   *   The provider's class, implementing KeysFromSiteInterface.
+   *   The provider's class, implementing SiteListInterface.
    * @param array<string, string> $reads
    *   Each port of the structure, mapped to a sibling map from the same
    *   provider, whose entry of the same id it reads.
@@ -176,6 +198,56 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
    * @see docs/resources.md#ports
    */
   public function reads(string $port, string $type, bool $required = FALSE): static;
+
+  /**
+   * A computed key: a value of the resource no caller types.
+   *
+   * Declared as add() declares a key, of a type or a shape, labeled, and
+   * returned for the owner to constrain and describe; its value is what
+   * $using computes from the values of the keys $from names. The pipeline
+   * computes it after accepting the rest, then validates it by its own
+   * constraints and rules, and storage writes it as any key; the read
+   * answers it. It is never asked of a caller: both documents state it
+   * `readOnly` with `x-surface.computed`, never `required`, the write
+   * tool's `values` leaves it out, and a form draws it fixed. A value sent
+   * for it equal to the one it holds is noted and not taken; any other is
+   * refused, code `computed`, naming the keys it is computed from.
+   *
+   * @code
+   * $inputs->compute('slug', 'string', t('Slug'), from: ['label'], using: Slugify::class)
+   *   ->addConstraint('Regex', ['pattern' => '/^[a-z0-9]+(-[a-z0-9]+)*$/D']);
+   * @endcode
+   *
+   * @param string $key
+   *   The key.
+   * @param string $type
+   *   A typed data type of one value, or a shape's class.
+   * @param string|\Stringable $label
+   *   The label.
+   * @param string[] $from
+   *   The keys it is computed from: keys this blueprint declared before
+   *   it, at least one.
+   * @param string $using
+   *   The class that computes it, a pure function of $from: one that
+   *   implements ComputesValueInterface.
+   * @param string $when
+   *   Compute::ON_CREATE, the default, to compute it once, while storage
+   *   holds nothing for it; Compute::ON_CHANGE to compute it again on every
+   *   write that changes a key in $from. A write that changes none keeps
+   *   what is stored, either way.
+   *
+   * @return \Drupal\Core\TypedData\DataDefinition
+   *   The key's definition.
+   *
+   * @throws \LogicException
+   *   For outputs, a structure (a computed key is a resource's own, in
+   *   this cut), a structure mixed in, a key of a map or list type, a
+   *   source that is not declared before it, a class that implements no
+   *   ComputesValueInterface, or a `when` that is neither.
+   *
+   * @see docs/declaring-a-resource.md#computed-keys
+   */
+  public function compute(string $key, string $type, string|\Stringable $label, array $from, string $using, string $when = Compute::ON_CREATE): DataDefinition;
 
   /**
    * Says what the declared keys depend on, while the build is reused.

@@ -12,9 +12,12 @@
 # adding a line to it. Examples 4 and 5 change no resource, so their pages
 # say what to do and where to look.
 #
-# Examples 7 to 11 leave the registration behind: each is one small resource
+# Examples 7 to 12 leave the registration behind: each is one small resource
 # of its own for one or two later concepts, served the same way, with a
 # third panel saying what the page shows and where the docs explain it.
+# Example 14 is two resources served the same way, the mailer and the
+# webhook, each page with the same panel; the module that manages keys is a
+# submodule the panel tells you to enable.
 
 data_surface_examples.index:
   path: '/surface-examples'
@@ -40,8 +43,6 @@ data_surface_examples.step1:
     _data_surface_resource: 'Drupal\data_surface_examples\Resource\RegistrationStep1Resource'
     _data_surface_operation: 'configure'
     _data_surface_panel: 'data_surface_examples.panels'
-  requirements:
-    _data_surface_operation_access: 'TRUE'
 
 data_surface_examples.step1_classic:
   path: '/surface-examples/1/classic'
@@ -59,8 +60,6 @@ data_surface_examples.step2:
     _data_surface_resource: 'Drupal\data_surface_examples\Resource\RegistrationStep2Resource'
     _data_surface_operation: 'configure'
     _data_surface_panel: 'data_surface_examples.panels'
-  requirements:
-    _data_surface_operation_access: 'TRUE'
 
 data_surface_examples.step2_classic:
   path: '/surface-examples/2/classic'
@@ -78,8 +77,6 @@ data_surface_examples.step3:
     _data_surface_resource: 'Drupal\data_surface_examples\Resource\RegistrationStep3Resource'
     _data_surface_operation: 'configure'
     _data_surface_panel: 'data_surface_examples.panels'
-  requirements:
-    _data_surface_operation_access: 'TRUE'
 
 data_surface_examples.step4:
   path: '/surface-examples/4'
@@ -105,8 +102,6 @@ data_surface_examples.step7:
     _data_surface_resource: 'Drupal\data_surface_examples\Resource\BulletinResource'
     _data_surface_operation: 'configure'
     _data_surface_panel: 'data_surface_examples.panels'
-  requirements:
-    _data_surface_operation_access: 'TRUE'
 
 data_surface_examples.step8:
   path: '/surface-examples/8'
@@ -116,8 +111,6 @@ data_surface_examples.step8:
     _data_surface_resource: 'Drupal\data_surface_examples\Resource\PressResource'
     _data_surface_operation: 'configure'
     _data_surface_panel: 'data_surface_examples.panels'
-  requirements:
-    _data_surface_operation_access: 'TRUE'
 
 data_surface_examples.step8_desk:
   path: '/surface-examples/8/desk'
@@ -127,8 +120,6 @@ data_surface_examples.step8_desk:
     _data_surface_resource: 'Drupal\data_surface_examples\Resource\InfoDeskResource'
     _data_surface_operation: 'configure'
     _data_surface_panel: 'data_surface_examples.panels'
-  requirements:
-    _data_surface_operation_access: 'TRUE'
 
 data_surface_examples.step9:
   path: '/surface-examples/9'
@@ -138,8 +129,6 @@ data_surface_examples.step9:
     _data_surface_resource: 'Drupal\data_surface_examples\Resource\TicketSalesResource'
     _data_surface_operation: 'configure'
     _data_surface_panel: 'data_surface_examples.panels'
-  requirements:
-    _data_surface_operation_access: 'TRUE'
 
 data_surface_examples.step10:
   path: '/surface-examples/10'
@@ -149,8 +138,6 @@ data_surface_examples.step10:
     _data_surface_resource: 'Drupal\data_surface_examples\Resource\ProgramResource'
     _data_surface_operation: 'configure'
     _data_surface_panel: 'data_surface_examples.panels'
-  requirements:
-    _data_surface_operation_access: 'TRUE'
 
 data_surface_examples.step10_check:
   path: '/surface-examples/10/check'
@@ -160,8 +147,6 @@ data_surface_examples.step10_check:
     _data_surface_resource: 'Drupal\data_surface_examples\Resource\ProgramResource'
     _data_surface_operation: 'check'
     _data_surface_panel: 'data_surface_examples.panels'
-  requirements:
-    _data_surface_operation_access: 'TRUE'
 
 data_surface_examples.step11:
   path: '/surface-examples/11'
@@ -171,5 +156,86 @@ data_surface_examples.step11:
     _data_surface_resource: 'Drupal\data_surface_examples\Resource\DoorsResource'
     _data_surface_operation: 'configure'
     _data_surface_panel: 'data_surface_examples.panels'
+
+data_surface_examples.step12:
+  path: '/surface-examples/12'
+  defaults:
+    _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
+    _title: 'Example 12: a schema read into a structure'
+    _data_surface_resource: 'Drupal\data_surface_examples\Resource\SpotlightResource'
+    _data_surface_operation: 'configure'
+    _data_surface_panel: 'data_surface_examples.panels'
+
+data_surface_examples.step13:
+  path: '/surface-examples/13'
+  defaults:
+    _controller: '\Drupal\data_surface_examples\Controller\ExamplesController::step13'
+    _title: 'Example 13: a block that embeds a component'
   requirements:
-    _data_surface_operation_access: 'TRUE'
+    _permission: 'administer site configuration'
+
+data_surface_examples.step14:
+  path: '/surface-examples/14'
+  defaults:
+    _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
+    _title: 'Example 14: an optional extension'
+    _data_surface_resource: 'Drupal\data_surface_examples\Resource\MailerResource'
+    _data_surface_operation: 'configure'
+    _data_surface_panel: 'data_surface_examples.panels'
+
+data_surface_examples.step14_webhook:
+  path: '/surface-examples/14/webhook'
+  defaults:
+    _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
+    _title: 'Example 14, the sales webhook'
+    _data_surface_resource: 'Drupal\data_surface_examples\Resource\WebhookResource'
+    _data_surface_operation: 'configure'
+    _data_surface_panel: 'data_surface_examples.panels'
+
+data_surface_examples.step15:
+  path: '/surface-examples/15'
+  defaults:
+    _controller: '\Drupal\data_surface_examples\Controller\ExamplesController::step15'
+    _title: 'Example 15: a config entity of your own'
+  requirements:
+    _permission: 'administer event venues'
+
+# Example 15's three forms, each one operation of the venue resource,
+# served by the generic operation form: the update and delete routes' {id}
+# is upcast to the venue the operations take. The delete route draws a
+# confirmation, since a delete takes no values; the cosmetic layer says
+# what was done and goes back to the example's page.
+data_surface_examples.step15_create:
+  path: '/surface-examples/15/add'
+  defaults:
+    _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
+    _title: 'Example 15, add a venue'
+    _data_surface_resource: 'Drupal\data_surface_examples\Resource\VenueResource'
+    _data_surface_operation: 'create'
+    _data_surface_cosmetics: 'data_surface_examples.venue_form_cosmetics'
+
+data_surface_examples.step15_update:
+  path: '/surface-examples/15/venue/{id}'
+  defaults:
+    _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
+    _title: 'Example 15, edit a venue'
+    _data_surface_resource: 'Drupal\data_surface_examples\Resource\VenueResource'
+    _data_surface_operation: 'update'
+    _data_surface_cosmetics: 'data_surface_examples.venue_form_cosmetics'
+  options:
+    parameters:
+      id:
+        type: 'entity:event_venue'
+
+data_surface_examples.step15_delete:
+  path: '/surface-examples/15/venue/{id}/delete'
+  defaults:
+    _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
+    _title: 'Example 15, remove a venue'
+    _data_surface_resource: 'Drupal\data_surface_examples\Resource\VenueResource'
+    _data_surface_operation: 'delete'
+    _data_surface_cosmetics: 'data_surface_examples.venue_form_cosmetics'
+  options:
+    parameters:
+      id:
+        type: 'entity:event_venue'

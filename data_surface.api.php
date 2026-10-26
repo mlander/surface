@@ -27,9 +27,9 @@ declare(strict_types=1);
  * @see docs/widgets.md
  */
 function hook_data_surface_widget_info_alter(array &$definitions): void {
-  if (isset($definitions['options'])) {
+  if (isset($definitions['select'])) {
     // Consult this site's autocomplete widget before the stock select.
-    $definitions['options']['weight'] = 10;
+    $definitions['select']['weight'] = 10;
   }
 }
 
@@ -110,7 +110,7 @@ function hook_data_surface_options_resolver_info_alter(array &$definitions): voi
  *   storage: ExampleStorage::class,
  *   access: ExampleAccess::class,
  * )]
- * #[Operation('add',
+ * #[Operation('create',
  *   label: new TranslatableMarkup('Add a thing'),
  *   description: new TranslatableMarkup('Creates a thing.'),
  *   permission: ExampleResource::PERMISSION,
@@ -120,12 +120,12 @@ function hook_data_surface_options_resolver_info_alter(array &$definitions): voi
  *
  *   public const PERMISSION = 'administer things';
  *
- *   #[Operation('edit',
+ *   #[Operation('update',
  *     label: new TranslatableMarkup('Edit a thing'),
  *     description: new TranslatableMarkup('Changes a thing, named by its id.'),
  *     permission: self::PERMISSION,
  *   )]
- *   public static function edit(ExampleInterface $thing): OperationContext {
+ *   public static function update(ExampleInterface $thing): OperationContext {
  *     return new OperationContext(known: ['id' => $thing->id()]);
  *   }
  *
@@ -160,9 +160,10 @@ function hook_data_surface_options_resolver_info_alter(array &$definitions): voi
  * owner labels with the core setters. Variants are always open: every
  * structure carrying \Drupal\data_surface\Resource\Attribute\Variant for
  * the key is one, and the deciding key's allowed values become exactly
- * those. A service tagged data_surface.derived_variants implementing
- * \Drupal\data_surface\ResourceBuild\DerivedVariantsInterface adds
- * variants for the values no variant class declares.
+ * those. attachVariants($key, by: $sibling, from: Provider::class) adds the
+ * variants a provider lists from the site, a
+ * \Drupal\data_surface\Resource\SiteListInterface, for the values no
+ * variant class declares.
  *
  * A plugin whose configuration is a structure names it with
  * \Drupal\data_surface\Resource\Attribute\UsesStructure and extends the host
@@ -204,7 +205,8 @@ function hook_data_surface_options_resolver_info_alter(array &$definitions): voi
  * A resource that names storage and is no plugin's is served at a route by
  * \Drupal\data_surface\Form\DataSurfaceOperationForm, from the route
  * defaults _data_surface_resource and _data_surface_operation, and gated by
- * the _data_surface_operation_access requirement.
+ * the _data_surface_operation_access requirement, which every such route
+ * has without saying it (OperationRouteSubscriber).
  *
  * @see \Drupal\data_surface\Resource\ResourceInterface
  * @see \Drupal\data_surface\Resource\StructureInterface
@@ -279,13 +281,11 @@ function hook_data_surface_options_resolver_info_alter(array &$definitions): voi
  * }
  * @endcode
  *
- * The same move on the other half of the contract is alterOutputs(), on
- * \Drupal\data_surface\Resource\AltersOutputsInterface: an output the alter
- * adds lands at third_party_outputs.<module>.<key>. An alter whose keys
- * are asked for in one layout and stored in another implements
- * \Drupal\data_surface\Resource\AltersStorageLayoutInterface. Another module's
- * operation for a resource is #[Operation] with of: naming the resource,
- * on a class in that module's src/Alter/ or on a static method there.
+ * An alter adds no outputs: what a call answers is its operation's, and a
+ * reaction to a save belongs to ECA. An alter whose keys are asked for in
+ * one layout and stored in another implements
+ * \Drupal\data_surface\Resource\AltersStorageLayoutInterface. An
+ * operation stands on its resource's or structure's own class only.
  *
  * @see \Drupal\data_surface\Resource\AltersInputsInterface
  * @see \Drupal\data_surface\Resource\BlueprintAdditionsInterface

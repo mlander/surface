@@ -1,7 +1,7 @@
 {
     "resource": "event.bulletin",
     "module": "data_surface_examples",
-    "contract": 2,
+    "contract": 4,
     "documents": [
         {
             "resource": "event.bulletin",
@@ -12,7 +12,7 @@
                 "title": "Configure the bulletin",
                 "description": "Sets how often the event bulletin goes out, the day it is sent and how many items an issue holds.",
                 "x-surface": {
-                    "contract": 2,
+                    "contract": 4,
                     "operation": {
                         "id": "configure",
                         "label": "Configure the bulletin",
@@ -44,11 +44,7 @@
                                 "title": "Monthly"
                             }
                         ],
-                        "default": "weekly",
-                        "x-surface": {
-                            "locked": false,
-                            "dependsOn": []
-                        }
+                        "default": "weekly"
                     },
                     "send_day": {
                         "title": "Send day",
@@ -69,11 +65,9 @@
                         ],
                         "default": "monday",
                         "x-surface": {
-                            "locked": false,
                             "dependsOn": [
                                 "frequency"
-                            ],
-                            "declared": true
+                            ]
                         }
                     },
                     "items": {
@@ -86,11 +80,9 @@
                         "maximum": 20,
                         "default": 5,
                         "x-surface": {
-                            "locked": false,
                             "dependsOn": [
                                 "frequency"
-                            ],
-                            "declared": true
+                            ]
                         }
                     }
                 },

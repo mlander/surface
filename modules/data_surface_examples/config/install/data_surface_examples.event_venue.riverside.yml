@@ -1,0 +1,18 @@
+langcode: en
+status: true
+dependencies: {  }
+id: riverside
+label: 'Riverside Hall'
+slug: riverside-hall
+capacity: 520
+address: '1 River Walk'
+rooms:
+  -
+    id: riverside_main
+    label: 'Main hall'
+    seats: 400
+  -
+    id: riverside_east
+    label: 'East room'
+    seats: 120
+weight: 0

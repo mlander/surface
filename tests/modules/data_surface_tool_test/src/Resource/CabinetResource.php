@@ -22,7 +22,7 @@ use Drupal\data_surface_tool_test\Storage\CabinetStorage;
  * that changes nothing.
  */
 #[Resource('tool_test.cabinet', storage: CabinetStorage::class, access: CabinetAccess::class)]
-#[Operation('edit',
+#[Operation('update',
   label: 'Edit the cabinet',
   description: 'Edits the cabinet, which always exists.',
 )]

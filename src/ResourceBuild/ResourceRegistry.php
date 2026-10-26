@@ -4,9 +4,13 @@ declare(strict_types=1);
 
 namespace Drupal\data_surface\ResourceBuild;
 
+use Drupal\data_surface\Contract\SchemaReader;
 use Drupal\Core\Cache\Cache;
 use Drupal\Core\Cache\CacheBackendInterface;
 use Drupal\Core\DependencyInjection\ClassResolverInterface;
+use Drupal\Core\Entity\EntityTypeManagerInterface;
+use Drupal\Core\Entity\FieldableEntityInterface;
+use Drupal\Core\Session\AccountInterface;
 use Drupal\data_surface\Hook\ResourcePluginHooks;
 use Drupal\data_surface\Resource\Attribute\Alters;
 use Drupal\data_surface\Resource\Attribute\DerivesResources;
@@ -19,9 +23,11 @@ use Drupal\data_surface\Resource\Attribute\Structure;
 use Drupal\data_surface\Resource\Attribute\Variant;
 use Drupal\data_surface\Resource\DerivedOperation;
 use Drupal\data_surface\Resource\OperationContext;
+use Drupal\data_surface\Reference\EntityReferenceStructure;
+use Drupal\data_surface\Resource\ResourceCallable;
 use Drupal\data_surface\Resource\DefinesOutputsInterface;
-use Drupal\data_surface\Resource\AltersAccessInterface;
 use Drupal\data_surface\Resource\AltersInputsInterface;
+use Drupal\data_surface\Resource\OperationAccessInterface;
 use Drupal\data_surface\Resource\ResourceInterface;
 use Drupal\data_surface\Resource\ShapeInterface;
 use Drupal\data_surface\Resource\StructureInterface;
@@ -81,6 +87,21 @@ final class ResourceRegistry {
   protected const CACHE_PREFIX = 'data_surface:resources:';
 
   /**
+   * The attribute arguments removed on 2026-10-24, with what replaced each.
+   *
+   * Decision: see docs/decisions.md#the-surface-was-counted-and-cut.
+   */
+  protected const REMOVED_ARGUMENTS = [
+    RefinesInput::class => [
+      'watches' => 'what a refiner watches is its parameters after the definition, each named for the key it is handed.',
+    ],
+    Operation::class => [
+      'default' => 'a child is invoked through the operation its parent\'s context names, else its operation with the parent context\'s id, else its operation with the standard id of the parent operation\'s kind (create, update or configure, read or list, delete).',
+      'of' => 'an operation stands on its resource\'s or structure\'s own class.',
+    ],
+  ];
+
+  /**
    * The index, once read: what there is, by name, and the shapes.
    *
    * `ids` maps an id to its name where they differ (a class's), `refusing`
@@ -134,6 +155,17 @@ final class ResourceRegistry {
   protected array $provisional = [];
 
   /**
+   * The structures read from a schema document, by the name each is asked by.
+   *
+   * Kept for the life of this service and listed by nothing: no catalog,
+   * baseline or tool sees them. Each is registered again, under the same
+   * name, whenever what reads it is built.
+   *
+   * @var array<string, \Drupal\data_surface\ResourceBuild\ResourceDefinition>
+   */
+  protected array $read = [];
+
+  /**
    * How discovery was read in this request, for a performance budget.
    *
    * @var array{index: int, entries: int, rebuilds: int, written: int}
@@ -155,12 +187,16 @@ final class ResourceRegistry {
    * @param \Drupal\Core\DependencyInjection\ClassResolverInterface|null $classResolver
    *   What returns each deriver as the autowired service discovery
    *   registered; NULL asks no deriver.
+   * @param \Drupal\Core\Entity\EntityTypeManagerInterface|null $entityTypeManager
+   *   The entity type manager, which a gate naming an entity type is held
+   *   to; NULL holds it to nothing.
    */
   public function __construct(
     protected readonly array $classes,
     protected readonly CacheBackendInterface $cache,
     protected readonly ?ResourcePlugins $plugins = NULL,
     protected readonly ?ClassResolverInterface $classResolver = NULL,
+    protected readonly ?EntityTypeManagerInterface $entityTypeManager = NULL,
   ) {
   }
 
@@ -553,6 +589,199 @@ final class ResourceRegistry {
   }
 
   /**
+   * Gets the structures read from a schema document in this request.
+   *
+   * What the builds so far registered (defineRead()), which nothing else
+   * lists: the site catalog builds every operation first, then lists
+   * these, so a structure a provider or a document supplies is on the
+   * map too.
+   *
+   * @return array<string, \Drupal\data_surface\ResourceBuild\ResourceDefinition>
+   *   The definitions, by the name each is built by, `schema:<id>:<hash>`,
+   *   sorted.
+   *
+   * @internal
+   *   For the site catalog.
+   */
+  public function getReadDefinitions(): array {
+    $read = array_filter($this->read, static fn (ResourceDefinition $definition): bool => str_starts_with((string) $definition->readAs, 'schema:'));
+    ksort($read);
+    return $read;
+  }
+
+  /**
+   * Registers a structure read from a schema document, to be built by name.
+   *
+   * A document's object at a key, a def it refers to, a variant it states
+   * or one a provider supplies is a structure with no class: its inputs
+   * are what SchemaReader reads from the document. It is asked for by the
+   * name this answers, `schema:<id>:<hash>`, which the hash of what it
+   * was read from keeps the same for the same document and apart for
+   * another one claiming the same id; its id is the document's own.
+   *
+   * Decision: see docs/decisions.md#a-schema-can-be-read-back-into-a-structure.
+   *
+   * @param string $id
+   *   The id it has in the document: a def's key, or `<owner>.<key>`.
+   * @param string $module
+   *   The module of what reads it, which it is reported under.
+   * @param \Drupal\data_surface\Resource\ResourceCallable $inputs
+   *   What fills its blueprint.
+   * @param string $hash
+   *   A hash of what it is read from.
+   *
+   * @return string
+   *   The name it is built by.
+   */
+  public function defineRead(string $id, string $module, ResourceCallable $inputs, string $hash): string {
+    $name = 'schema:' . $id . ':' . $hash;
+    $this->read[$name] ??= new ResourceDefinition(
+      class: NULL,
+      id: $id,
+      module: $module,
+      identity: [],
+      storage: NULL,
+      access: NULL,
+      refiners: [],
+      inputs: $inputs,
+      kind: ResourceDefinition::STRUCTURE,
+      readAs: $name,
+    );
+    return $name;
+  }
+
+  /**
+   * Writes down structures read from a schema so a later request has them.
+   *
+   * A build the build cache answers names, at its keys, structures read
+   * from a schema document or made for a reference key, which a request
+   * registers only by building their owner: the cache stores them with
+   * the build (exportRead()) and registers them again when it answers it
+   * (rememberRead()), so every door can build and name them as if this
+   * request had built the owner. A document many structures are read
+   * from (a theme's components, each one a def of it) is written once.
+   *
+   * Decision: see
+   * docs/decisions.md#the-static-build-is-cached-the-rest-is-per-request.
+   *
+   * @param array<string, \Drupal\data_surface\ResourceBuild\ResourceDefinition> $definitions
+   *   The definitions, by the name each is built by.
+   *
+   * @return array{documents: array<string, array>, schema: array<string, array{0: string, 1: string, 2: string, 3: string}>, other: array<string, \Drupal\data_surface\ResourceBuild\ResourceDefinition>}
+   *   Each document once, by its hash; each structure read from one, as
+   *   its id, module, pointer and document hash; and the rest as they are.
+   *
+   * @internal
+   *   For the build step alone.
+   */
+  public function exportRead(array $definitions): array {
+    $export = ['documents' => [], 'schema' => [], 'other' => []];
+    foreach ($definitions as $name => $definition) {
+      $inputs = $definition->inputs;
+      [$root, $pointer, $hash] = ($inputs->arguments ?? []) + [NULL, NULL, NULL];
+      if ($inputs?->class === SchemaReader::class && $inputs->method === 'fill' && is_array($root) && is_string($pointer) && is_string($hash) && str_starts_with((string) $name, 'schema:')) {
+        $export['documents'][$hash] ??= $root;
+        $export['schema'][(string) $name] = [$definition->id, $definition->module, $pointer, $hash];
+        continue;
+      }
+      $export['other'][(string) $name] = $definition;
+    }
+    return $export;
+  }
+
+  /**
+   * Registers again what exportRead() wrote down.
+   *
+   * @param array{documents?: array<string, array>, schema?: array<string, array{0: string, 1: string, 2: string, 3: string}>, other?: array<string, \Drupal\data_surface\ResourceBuild\ResourceDefinition>} $export
+   *   What it answered.
+   *
+   * @internal
+   *   For the build step alone.
+   */
+  public function rememberRead(array $export): void {
+    foreach ($export['schema'] ?? [] as $name => [$id, $module, $pointer, $hash]) {
+      if (isset($this->read[$name]) || !isset($export['documents'][$hash])) {
+        continue;
+      }
+      $this->read[$name] = new ResourceDefinition(
+        class: NULL,
+        id: $id,
+        module: $module,
+        identity: [],
+        storage: NULL,
+        access: NULL,
+        refiners: [],
+        inputs: new ResourceCallable(SchemaReader::class, 'fill', [$export['documents'][$hash], $pointer, $hash]),
+        kind: ResourceDefinition::STRUCTURE,
+        readAs: $name,
+      );
+    }
+    foreach ($export['other'] ?? [] as $name => $definition) {
+      if ($definition->isRead()) {
+        $this->read[(string) $name] ??= $definition;
+      }
+    }
+  }
+
+  /**
+   * Gets a structure read from a schema, or made for a reference key.
+   *
+   * @param string $name
+   *   The name it is built by.
+   *
+   * @return \Drupal\data_surface\ResourceBuild\ResourceDefinition|null
+   *   Its definition, or NULL when this request registered none by it.
+   *
+   * @internal
+   *   For the build step alone.
+   */
+  public function readDefinition(string $name): ?ResourceDefinition {
+    return $this->read[$name] ?? NULL;
+  }
+
+  /**
+   * Registers the two parts of a bare `entity` key, for one key's filter.
+   *
+   * Like a structure read from a schema, listed by nothing and built by
+   * name: its inputs EntityReferenceStructure::fill() with the filter, its
+   * refiner EntityReferenceStructure::id().
+   *
+   * Decision: see
+   * docs/decisions.md#a-reference-is-an-id-with-a-list-the-site-decides-listed-or-looked-up.
+   *
+   * @param string $id
+   *   Its id: the owner's, then the key.
+   * @param string $module
+   *   The owner's module.
+   * @param array{interface: string|null, targets: array<string, string[]>, required: bool} $filter
+   *   What the key's author narrowed it by, as
+   *   EntityReferenceStructure::filter() reads it.
+   *
+   * @return string
+   *   The name it is attached and built by.
+   */
+  public function defineReference(string $id, string $module, array $filter): string {
+    $name = 'reference:' . $id . ':' . hash('xxh128', serialize($filter));
+    $this->read[$name] ??= new ResourceDefinition(
+      class: NULL,
+      id: $id,
+      module: $module,
+      identity: [],
+      storage: NULL,
+      access: NULL,
+      refiners: self::refinersOf(new \ReflectionClass(EntityReferenceStructure::class)),
+      inputs: new ResourceCallable(EntityReferenceStructure::class, 'fill', [
+        $filter['interface'],
+        $filter['targets'],
+        $filter['required'],
+      ]),
+      kind: ResourceDefinition::STRUCTURE,
+      readAs: $name,
+    );
+    return $name;
+  }
+
+  /**
    * Gets every discovered shape.
    *
    * @return array<class-string, \Drupal\data_surface\ResourceBuild\ShapeDefinition>
@@ -646,27 +875,12 @@ final class ResourceRegistry {
    *   The operations, keyed by id.
    *
    * @throws \LogicException
-   *   When two providers declare one operation id, or two operations are
-   *   marked the default.
+   *   When two providers declare one operation id.
    */
   public function getOperations(string $resource): array {
     $definition = $this->getDefinition($resource);
     $operations = [];
-    $default = NULL;
     foreach ($definition->operations as $operation) {
-      if ($operation->default) {
-        if ($default !== NULL) {
-          throw new \LogicException(sprintf(
-            '%s marks two operations the default, "%s" from %s and "%s" from %s. The default is the one operation a parent invokes when nothing else picks one, so there is at most one.',
-            $definition->id,
-            $default->id,
-            $default->describe(),
-            $operation->id,
-            $operation->describe(),
-          ));
-        }
-        $default = $operation;
-      }
       if (isset($operations[$operation->id])) {
         throw new \LogicException(sprintf(
           '%s has two operations with the id "%s", from %s and from %s. An operation id is unique within its resource or structure, because it is the id a context is addressed by.',
@@ -746,6 +960,9 @@ final class ResourceRegistry {
    *   The definition, or NULL.
    */
   protected function find(string $resource): ?ResourceDefinition {
+    if (isset($this->read[$resource])) {
+      return $this->read[$resource];
+    }
     $provisional = $this->provisional();
     if ($provisional !== NULL) {
       if (isset($provisional['resources'][$resource])) {
@@ -852,6 +1069,7 @@ final class ResourceRegistry {
         ));
       }
       $ids[$id] = $class;
+      self::assertAccessClass($class, $attribute?->access);
       $resources[$class] = new ResourceDefinition(
         class: $class,
         id: $id,
@@ -908,26 +1126,18 @@ final class ResourceRegistry {
       // attribute's id and answer and nothing else, so it has no method.
       // Decision: see docs/decisions.md#an-operation-on-the-class.
       foreach ($reflection->getAttributes(Operation::class) as $attribute) {
+        $where = sprintf('#[Operation(\'%s\')] on %s', self::idOf($attribute), $class);
+        self::assertNoRemovedArgument($attribute, $where);
         $operation = $attribute->newInstance();
-        $where = sprintf('#[Operation(\'%s\')] on %s', $operation->id, $class);
-        $of = $operation->of ?? (isset($resources[$class]) ? $class : throw new \LogicException(sprintf(
-          '%s names no resource or structure: `of` may be left out only on the class carrying #[Resource] or #[Structure] itself.',
-          $where,
-        )));
-        if (self::isUndiscovered($of, $resources, $where)) {
-          continue;
-        }
+        $of = self::operationOwner($class, $resources, $where);
         $operations[$of][] = self::operationDefinition($operation, $of, $class, '', $module, [], $operation->description);
       }
       foreach ($reflection->getMethods() as $method) {
         foreach ($method->getAttributes(Operation::class) as $attribute) {
+          $where = sprintf('#[Operation(\'%s\')] on %s::%s()', self::idOf($attribute), $class, $method->getName());
+          self::assertNoRemovedArgument($attribute, $where);
           $operation = $attribute->newInstance();
-          $of = $operation->of ?? (isset($resources[$class]) ? $class : throw new \LogicException(sprintf(
-            '#[Operation(\'%s\')] on %s::%s() names no resource or structure: `of` may be left out only on the class carrying #[Resource] or #[Structure] itself.',
-            $operation->id,
-            $class,
-            $method->getName(),
-          )));
+          $of = self::operationOwner($class, $resources, $where);
           if (!$method->isStatic()) {
             throw new \LogicException(sprintf(
               '#[Operation(\'%s\')] on %s::%s() is not static: an operation builds a context before anything is built to ask.',
@@ -935,9 +1145,6 @@ final class ResourceRegistry {
               $class,
               $method->getName(),
             ));
-          }
-          if (self::isUndiscovered($of, $resources, sprintf('#[Operation(\'%s\')] on %s::%s()', $operation->id, $class, $method->getName()))) {
-            continue;
           }
           $definition = self::operationDefinition(
             $operation,
@@ -958,6 +1165,9 @@ final class ResourceRegistry {
     $shape_alters = [];
     foreach ($this->classes['alters'] ?? [] as $class => $module) {
       $reflection = new \ReflectionClass($class);
+      if ($reflection->hasMethod('alterOutputs')) {
+        throw ResourceCollectorPass::outputsRefused($class);
+      }
       $attribute = $reflection->getAttributes(Alters::class)[0]->newInstance();
       if (isset($shapes[$attribute->of])) {
         self::assertShapeAlter($reflection, $attribute, $shapes[$attribute->of]);
@@ -971,7 +1181,7 @@ final class ResourceRegistry {
         module: $module,
         operations: array_values($attribute->operations),
         refiners: self::refinersOf($reflection),
-        answersAccess: $reflection->implementsInterface(AltersAccessInterface::class),
+        answersAccess: $reflection->implementsInterface(OperationAccessInterface::class),
       );
       foreach ($named as $altered) {
         if (!isset($bases[$attribute->of]) && self::isUndiscovered($altered, $resources, sprintf('#[Alters] on %s', $class))) {
@@ -997,10 +1207,67 @@ final class ResourceRegistry {
     foreach ($resources as $class => $definition) {
       $resources[$class] = $definition->with($operations[$class] ?? [], $alters[$class] ?? [], $variants[$class] ?? []);
     }
+    $this->assertGates($resources, $operations);
     foreach ($shapes as $class => $shape) {
       $shapes[$class] = $shape->withAlters($shape_alters[$class] ?? []);
     }
     return ['resources' => $resources, 'shapes' => $shapes];
+  }
+
+  /**
+   * Refuses a gate that names what the site does not have.
+   *
+   * An operation gate names a resource and one of its operations, each
+   * discovered; an entity or a field gate names an entity type the entity
+   * type manager has, and a field gate one whose entities have fields.
+   * Which fields an entity has is not known until one is asked about, so
+   * a field the entity lacks refuses when the gate is asked. Without an
+   * entity type manager, as a registry built for a test of discovery
+   * alone, the entity types are not looked at.
+   *
+   * Decision: see docs/decisions.md#a-gate-is-borrowed-never-copied.
+   *
+   * @param array<string, \Drupal\data_surface\ResourceBuild\ResourceDefinition> $resources
+   *   Every resource and structure discovered, by name.
+   * @param array<string, \Drupal\data_surface\ResourceBuild\OperationDefinition[]> $operations
+   *   Their operations, by name.
+   *
+   * @throws \LogicException
+   *   Naming the gate, the operation it is on and what is missing.
+   */
+  protected function assertGates(array $resources, array $operations): void {
+    $names = [];
+    foreach ($resources as $name => $definition) {
+      $names[$definition->id] = (string) $name;
+    }
+    foreach ($operations as $of => $list) {
+      foreach ($list as $operation) {
+        foreach ($operation->gates as $gate) {
+          $where = sprintf('The gate "%s" on the "%s" operation of %s', $gate->spelled, $operation->id, $resources[$of]->id ?? $of);
+          if ($gate->kind === Gate::OPERATION) {
+            $name = $names[(string) $gate->resource] ?? NULL;
+            if ($name === NULL) {
+              throw new \LogicException(sprintf('%s names the resource %s, which the site does not have.', $where, $gate->resource));
+            }
+            $ids = array_map(static fn (OperationDefinition $one): string => $one->id, $operations[$name] ?? []);
+            if (!in_array($gate->operation, $ids, TRUE)) {
+              throw new \LogicException(sprintf('%s names the "%s" operation of %s, which it does not have; it has %s.', $where, $gate->operation, $gate->resource, $ids === [] ? 'none' : implode(', ', $ids)));
+            }
+            continue;
+          }
+          if ($this->entityTypeManager === NULL) {
+            continue;
+          }
+          $entity_type = $this->entityTypeManager->getDefinition((string) $gate->entityType, FALSE);
+          if ($entity_type === NULL) {
+            throw new \LogicException(sprintf('%s names the entity type %s, which the site does not have.', $where, $gate->entityType));
+          }
+          if ($gate->kind === Gate::FIELD && !$entity_type->entityClassImplements(FieldableEntityInterface::class)) {
+            throw new \LogicException(sprintf('%s asks for a field of %s, whose entities have no fields.', $where, $gate->entityType));
+          }
+        }
+      }
+    }
   }
 
   /**
@@ -1030,6 +1297,101 @@ final class ResourceRegistry {
     }
     if (!$class->implementsInterface(ShapeInterface::class)) {
       throw new \LogicException(sprintf('%s carries #[Shape] but does not implement %s.', $class->getName(), ShapeInterface::class));
+    }
+  }
+
+  /**
+   * Reads the id an attribute names first, for a message.
+   *
+   * @param \ReflectionAttribute $attribute
+   *   An #[Operation] or a #[RefinesInput].
+   *
+   * @return string
+   *   Its first argument, by position or by name.
+   */
+  protected static function idOf(\ReflectionAttribute $attribute): string {
+    $arguments = $attribute->getArguments();
+    $first = $arguments[0] ?? $arguments['id'] ?? $arguments['key'] ?? '';
+    return is_string($first) ? $first : '';
+  }
+
+  /**
+   * Refuses an attribute argument the module no longer takes.
+   *
+   * Each is named with what replaced it, before the attribute is
+   * instantiated, so the message says more than PHP's unknown parameter.
+   *
+   * Decision: see docs/decisions.md#the-surface-was-counted-and-cut.
+   *
+   * @param \ReflectionAttribute $attribute
+   *   The attribute.
+   * @param string $where
+   *   It and the class or method it is on, for the message.
+   *
+   * @throws \LogicException
+   *   When it names an argument that was removed.
+   */
+  protected static function assertNoRemovedArgument(\ReflectionAttribute $attribute, string $where): void {
+    $removed = self::REMOVED_ARGUMENTS[$attribute->getName()] ?? [];
+    foreach (array_intersect_key($removed, $attribute->getArguments()) as $name => $instead) {
+      throw new \LogicException(sprintf('%s says %s:, which the attribute no longer takes: %s', $where, $name, $instead));
+    }
+  }
+
+  /**
+   * Gets the resource or structure an #[Operation] on a class belongs to.
+   *
+   * Decision: see docs/decisions.md#the-surface-was-counted-and-cut.
+   *
+   * @param string $class
+   *   The class carrying it.
+   * @param array<string, \Drupal\data_surface\ResourceBuild\ResourceDefinition> $resources
+   *   What discovery found.
+   * @param string $where
+   *   The attribute and where it is, for the message.
+   *
+   * @return string
+   *   The class itself.
+   *
+   * @throws \LogicException
+   *   When the class is no resource or structure.
+   */
+  protected static function operationOwner(string $class, array $resources, string $where): string {
+    if (!isset($resources[$class])) {
+      throw new \LogicException(sprintf(
+        '%s stands on a class that is no resource or structure. An operation stands on its resource\'s or structure\'s own class.',
+        $where,
+      ));
+    }
+    return $class;
+  }
+
+  /**
+   * Refuses an access class that is an alter.
+   *
+   * An alter that answers access implements OperationAccessInterface, as
+   * an access class does, and is read in its own role: after the owner's
+   * answer, its neutral open. Named on `access:` as well, it would answer
+   * twice, once in each role.
+   *
+   * Decision: see
+   * docs/decisions.md#an-alter-may-answer-access-and-the-stricter-stands.
+   *
+   * @param string $class
+   *   The resource or structure.
+   * @param string|null $access
+   *   The class its attribute names on `access:`.
+   *
+   * @throws \LogicException
+   *   When the access class carries #[Alters].
+   */
+  protected static function assertAccessClass(string $class, ?string $access): void {
+    if ($access !== NULL && class_exists($access) && (new \ReflectionClass($access))->getAttributes(Alters::class) !== []) {
+      throw new \LogicException(sprintf(
+        '%s names %s on access:, which carries #[Alters]. An alter that answers access is asked as an alter, after the owner\'s answer; an access class is the owner\'s own. Name a class that carries no #[Alters], or leave the alter to answer as one.',
+        $class,
+        $access,
+      ));
     }
   }
 
@@ -1079,7 +1441,7 @@ final class ResourceRegistry {
     $problem = match (TRUE) {
       $attribute->operations !== [] => 'names operations, and a shape is the same in every operation of every key that uses it',
       self::refinersOf($class) !== [] => 'declares a #[RefinesInput] method, and a shape has no siblings to watch: tighten it in alterInputs() with narrow()',
-      $class->implementsInterface(AltersAccessInterface::class) => sprintf('implements %s, and a shape is one value with no access of its own: answer for the resource or structure that asks for it', AltersAccessInterface::class),
+      $class->implementsInterface(OperationAccessInterface::class) => sprintf('implements %s, and a shape is one value with no access of its own: answer for the resource or structure that asks for it', OperationAccessInterface::class),
       !$class->implementsInterface(AltersInputsInterface::class) => sprintf('does not implement %s, whose alterInputs() is where a shape is tightened', AltersInputsInterface::class),
       default => NULL,
     };
@@ -1175,13 +1537,13 @@ final class ResourceRegistry {
                 array_keys($operation->parameters),
                 array_values($operation->parameters),
               ),
-              default: $operation->default,
               context: $operation->context,
               destructive: $operation->destructive,
               readOnly: $operation->readOnly,
               idempotent: $operation->idempotent,
               creates: $operation->creates,
               description: $operation->description,
+              deletes: $operation->deletes,
             );
             $this->assertStamps($definition);
             return $definition;
@@ -1224,12 +1586,14 @@ final class ResourceRegistry {
       permission: $operation->permission,
       module: $module,
       parameters: $parameters,
-      default: $operation->default,
       destructive: $operation->destructive,
       readOnly: $operation->readOnly,
       idempotent: $operation->idempotent,
       creates: $operation->creates,
       description: $description,
+      deletes: $operation->deletes,
+      structure: $operation->structure,
+      gates: Gate::parseAll($operation->gate, sprintf('the "%s" operation of %s', $operation->id, $class)),
     );
   }
 
@@ -1417,13 +1781,22 @@ final class ResourceRegistry {
     $refiners = [];
     foreach ($class->getMethods() as $method) {
       foreach ($method->getAttributes(RefinesInput::class) as $attribute) {
+        self::assertNoRemovedArgument($attribute, sprintf('#[RefinesInput(\'%s\')] on %s::%s()', self::idOf($attribute), $class->getName(), $method->getName()));
         $refines = $attribute->newInstance();
         $parameters = $method->getParameters();
+        // The account the operation runs as is handed to a last parameter
+        // typed for it, and is no watched key.
+        // Decision: see
+        // docs/decisions.md#nothing-an-operation-runs-reads-the-request.
+        $last = count($parameters) > 1 ? $parameters[count($parameters) - 1]->getType() : NULL;
+        $account = $last instanceof \ReflectionNamedType && is_a($last->getName(), AccountInterface::class, TRUE);
+        if ($account) {
+          array_pop($parameters);
+        }
         $refiners[] = new RefinerDefinition(
           class: $class->getName(),
           method: $method->getName(),
           key: $refines->key,
-          watches: $refines->watches === NULL ? NULL : array_values($refines->watches),
           parameters: array_map(
             static fn (\ReflectionParameter $parameter): string => $parameter->getName(),
             array_slice($parameters, 1),
@@ -1432,6 +1805,7 @@ final class ResourceRegistry {
           isStatic: $method->isStatic(),
           runtime: $refines->runtime,
           mayNotApply: DoesNotApply::isDeclaredBy($method),
+          takesAccount: $account,
         );
       }
     }
