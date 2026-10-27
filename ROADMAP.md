@@ -1463,6 +1463,21 @@ renames sit in A because they are cheapest before new code exists.
     sentence on a gated list says "locked or left out" where a gate
     refuses.
 
+28. **References in config, carried forward.** Open after 2026-10-27
+    (`docs/decisions.md#a-config-object-stores-a-reference-by-uuid`,
+    `docs/decisions.md#a-layout-is-the-storages-one-word-on-its-shape`).
+    A content entity referenced from config is stored by uuid and the
+    wire stays the id; a storage's layout is what the schema check and
+    the generator read. What those two left open: a site default in
+    `data_surface.defaults` for a content reference key holds an id, so
+    it deploys as badly as a stored id did, and should be a uuid the
+    build resolves; the keys of an entry from the site (`addEach`,
+    `attachEach`) are not translated; an alter's layout on a config
+    object's mount says nothing to the check or the generator; a config
+    entity resource has no id-to-uuid conversion helper; and a config
+    entity saved by a path other than the storage drops the reference
+    dependencies the storage adds until the next save through it.
+
 ## Maintenance
 
 - **Functional tests convert to kernel tests as units touch them**, by
