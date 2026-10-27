@@ -529,6 +529,9 @@ reads no value: every key as declared, every listable dependency as
 conditionals, the rest `refine` or `live`, a list the site decides
 past its limit `deferred`, and never stricter than the pipeline
 (`docs/decisions.md#two-documents-never-stricter-than-the-runtime`).
+The emitter is the walk both documents share; `Contract\PropertySchema`,
+`Contract\Conditionals` and `Contract\DocumentHead` write what it asks
+for (`docs/decisions.md#the-emitter-is-one-walk-and-three-writers`).
 It names no widget unless asked
 (`emit(..., widgets: TRUE)`); `data_surface_tool`'s contract panel shows
 it without, beside what the Tool API can advertise (which flattens
@@ -677,11 +680,17 @@ src/                     Data surface, builder (internal), definition map, host 
 src/Resource/            The authoring API and attributes (Attribute/).
 src/ResourceBuild/       Discovery pass, registry, build step, adapters,
                          derived variants, catalog, operation routes.
+                         The build step is Resources.php, the order and
+                         the caches, over its four phases: Declaring.php,
+                         Attaching.php, Binding.php, Gating.php.
 src/Access/              The operation route's access check.
 src/Hook/                #[UsesStructure] into plugin definitions.
 src/Pipeline/            Access, accept, validate, prepare, commit; results.
 src/Storage/             Where accepted values are written; settings layouts.
-src/Contract/            The served contract's emitter (JSON Schema); the contract diff.
+src/Contract/            The served contract's emitter (JSON Schema): ContractEmitter
+                         walks the frames, PropertySchema writes each key,
+                         Conditionals the if/then, DocumentHead the top;
+                         the contract diff.
 src/Drush/               Drush commands (the site's catalog, the contract diff, the
                          config schema) and the resource generator, drush
                          generate surface:resource.

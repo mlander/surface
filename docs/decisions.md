@@ -529,8 +529,8 @@ Open: a key, or a container, opting out of a shape's alters, as a
 container cannot yet opt out of a structure's; the catalog listing
 shapes and who uses them. (`Resource\Attribute\Shape`,
 `ShapeInterface`, `ResourceBuild\Shapes`, `ShapeBlueprint`,
-`Resources::assertShapesNarrowed()`, `Resources::unshaped()`,
-`DefinitionMetadata::shapeOf()`, `ContractEmitter::named()`, `isPart()`
+`Declaring::assertShapesNarrowed()`, `Attaching::unshaped()`,
+`DefinitionMetadata::shapeOf()`, `PropertySchema::named()`, `isPart()`
 in `app/src/contract.ts`)
 
 ### Variants, not slots
@@ -598,7 +598,7 @@ and `paid`, in the form and both documents.
   owner wanting another order declares the list.
 
 (`Resource\Attribute\Variant::$label`, `DataSurfaceBuilder::attachVariants()`,
-`Resources::assertListNarrowsVariants()`)
+`Attaching::assertListNarrowsVariants()`)
 
 ## Authoring
 
@@ -625,7 +625,7 @@ runtime refiner, the one kind that may be an instance method (see
 PHP itself refuses a class that implements
 the interface with an instance `defineInputs()`, so discovery names the
 one that dropped the interface to get one past the compiler.
-(`Resources::buildResource()`, `Resources::assertStaticOnResource()`,
+(`Resources::buildResource()`, `Binding::assertStaticOnResource()`,
 `ResourceRegistry::assertResourceClass()`)
 
 Translatable strings in static context use the global `t()`: a
@@ -732,7 +732,7 @@ Rejected: a constraint per resource for every list the site holds,
 which is how example 2 started, because each one is code a reader must
 open to learn what a key allows, where a type string or a stock
 constraint says it.
-(`ContractEmitter::STATED`, `ContractEmitter::keywords()`,
+(`PropertySchema::STATED`, `PropertySchema::keywords()`,
 `DataSurfaceOptions::isStatedByList()`, `RegistrationStep2Resource`,
 `EventVenueRoomConstraint`)
 
@@ -853,8 +853,8 @@ way around it: were the handed path to skip the child's access class,
 any parent could open a field its access closed by building the field's
 context itself. An inherited child with no access class is asked
 nothing and stays open.
-(`Resources::invokeChild()`, `Resources::childOperationContext()`,
-`Resources::childAccess()`, `OperationContext::withChild()`)
+(`Declaring::invokeChild()`, `Declaring::childOperationContext()`,
+`Gating::childAccess()`, `OperationContext::withChild()`)
 
 ### A context's id is the operation id
 
@@ -879,7 +879,7 @@ A context constraint naming the key a child is attached at is refused,
 and the message points at `withChild()`. A child is narrowed by its own
 context, which is the one door
 through the wall
-between parent and child. (`Resources::applyContext()`) *Changed
+between parent and child. (`Declaring::applyContext()`) *Changed
 2026-10-24:* starting values, `OperationContext::withDefaults()`, are
 gone, and so is this entry's half about them ([The surface was counted and cut](#the-surface-was-counted-and-cut)).
 
@@ -952,7 +952,7 @@ each a resource id, a key path and a value.
   the declared default, while the documents of its settings state the
   site's.
 
-(`SiteDefaults`, `Resources::writeSiteDefaults()`, `SiteDefaultsTest`)
+(`SiteDefaults`, `Declaring::writeSiteDefaults()`, `SiteDefaultsTest`)
 
 ### Known keys that are not identity
 
@@ -977,7 +977,7 @@ object. A guess between entity types would load the wrong thing.
 
 The emitter and the build step each walk a structure, and each used to
 hand the same facts from method to method as loose parameters:
-`ContractEmitter::frame()` took twelve, `Resources::bindRefiners()`
+`ContractEmitter::frame()` took twelve, `Binding::bindRefiners()`
 sixteen. Each walk now carries them in one immutable object, passed
 whole.
 
@@ -1011,7 +1011,44 @@ or the request, so neither carries a door-specific thing into a place
 that runs on an operation's behalf
 ([No door-specific context](resources.md#no-door-specific-context)).
 (`Contract\Emission`, `ResourceBuild\Build`, `ContractEmitter::frame()`,
-`Resources::bindRefiners()`, `ContractBaselineTest`)
+`Binding::bindRefiners()`, `ContractBaselineTest`)
+
+### The build is read by phase
+
+`ResourceBuild\Resources` held the build step's order, its caches and
+every step between, in five thousand lines. It is split by phase, each
+an internal class that `Resources` constructs from the services it
+already has:
+
+- **`Declaring`** answers what the thing declares: its blueprints filled
+  from the class and its alters, the site's defaults, the context's
+  constraints and known identity, and the context a child is invoked in.
+- **`Attaching`** answers what the thing holds: each child, collection,
+  variant, map of keys from the site, structure mixed in and structure at
+  an alter's mount, each built through the whole sequence again in its
+  own frame, its ports wired to the parent's keys.
+- **`Binding`** answers what each contributor says about its keys: the
+  `#[RefinesInput]` methods and the rules declared as data, bound into
+  the builder, the owner's before any alter's.
+- **`Gating`** answers who may ask and what they may see: the
+  permission, the gates an operation borrows, the access classes and the
+  alters that answer access, at the top and at each child. It alone holds
+  the current user, and only its instance methods read it.
+
+`Resources` stays the one service, and `ResourcesInterface` is
+unchanged. It keeps the order (`buildResource()` reads as the sequence of
+phases), the memo within a request and the build cache, with the two
+builds that set the kind of build under way or are kept by it:
+`settleVariant()` and `buildRead()`. A phase that builds a child calls
+back into it.
+
+A reader who asks why a key is locked reads `Gating`, and one who asks
+where a refiner was bound reads `Binding`; neither reads the other
+phases. A core reviewer reviews one phase at a time, its dependencies
+named by its constructor. Nothing changed in what is built: the method
+bodies moved as they were, and the sealed data surfaces, the documents
+and the contract baselines are byte for byte what they were.
+(`Resources`, `Declaring`, `Attaching`, `Binding`, `Gating`)
 
 ## Refinement
 
@@ -1023,14 +1060,14 @@ waits for the union. The pattern runs each method once its own siblings
 have values; gating per key is what the engine's refinement edges, the
 form's AJAX rebuild and the discard cascade already ride, and nothing
 shipped has needed finer. Per-method gating is listed in `ROADMAP.md`, after
-the rework, for when a case needs it. (`Resources::bindRefiners()`)
+the rework, for when a case needs it. (`Binding::bindRefiners()`)
 
 ### A refiner that watches nothing
 
 It runs once, at build, after the context is applied; its result is
 held to the narrowing check and is what the data surface advertises. The
 pattern says it "runs once" without saying when; at build is the only
-time that gives every caller the same answer. (`Resources::bindRefiners()`)
+time that gives every caller the same answer. (`Binding::bindRefiners()`)
 
 ### Sibling values are coerced
 
@@ -1089,7 +1126,7 @@ more values on with `extendChoices()`, it is that contribution's
 refiner instead, handed the alter's values only. The engine keeps one
 chain per contribution, so an alter can tighten the owner's values
 without ever being able to take another module's away.
-(`Resources::bindRefiners()`)
+(`Binding::bindRefiners()`)
 
 ### Cacheability on the blueprint
 
@@ -1149,7 +1186,7 @@ config is the plain case), and no declaration alone stops it:
   alters' refiners that only translated to static methods calling
   `t()` and constructing `PluralTranslatableMarkup`; an alter's
   injected service, the honest way to read state, is now only reachable
-  from a runtime refiner. (`Resources::assertStaticUnlessRuntime()`)
+  from a runtime refiner. (`Binding::assertStaticUnlessRuntime()`)
 - **Observational, under `assert()`.** In development and tests a
   static refiner's call runs with the global container replaced by a
   wrapper that throws when asked for any service or parameter but the
@@ -1164,7 +1201,7 @@ config is the plain case), and no declaration alone stops it:
   answer, which catches a counter or a clock that reads no service; and
   a kernel test trait holds every conditional of a document to a fresh
   `refine()` for its values, run over the examples and the fixtures.
-  (`ContractEmitter::answersAgain()`,
+  (`Conditionals::answersAgain()`,
   `Tests\data_surface\Traits\StaticRefinerAgreementTrait`)
 
 None of them proves purity: running a refiner twice proves nothing about
@@ -1179,8 +1216,8 @@ it does not try static state, which a rule cannot tell from a constant
 without false alarms. The broken fixtures, which exist to be refused
 when they run, are ignored by its identifier.
 (`Tests\data_surface\PHPStan\StaticRefinerRule`, `StaticRefinerRuleTest`,
-`RefinesInput`, `Resources::bindRefiners()`, `RuntimeRefiner`,
-`ContractEmitter::frame()`, `ContractEmitter::enumerate()`)
+`RefinesInput`, `Binding::bindRefiners()`, `RuntimeRefiner`,
+`ContractEmitter::frame()`, `Conditionals::enumerate()`)
 
 ### A definition is validated as itself
 
@@ -1346,7 +1383,7 @@ refuses (decided 2026-10-19; until then the parcel fixture carried a
 `courier` with a default so its mount was never empty).
 (`Refinement\DoesNotApply`, `RefinesInputRefiner::invoke()`,
 `DataSurface::refineAgainst()`, `DataSurfacePipeline::accept()`,
-`DataSurfacePipeline::document()`, `ContractEmitter::enumerate()`,
+`DataSurfacePipeline::document()`, `Conditionals::enumerate()`,
 `narrow()` in `app/src/contract.ts`, `AdvertisedSchemaAcceptanceTest`)
 
 ### A rule declared as data
@@ -1514,8 +1551,8 @@ coded and `refine` (they watch a number), so the React page still asks
 on a license change: the stewards depend on the capacity. Phase C item 9
 of the roadmap (dependent effects as data) is this, but `locked`.
 (`Refinement\Condition`, `Refinement\Rule`, `Refinement\DeclaredRefiner`,
-`Resources::bindRules()`, `DataSurface::refinedEntry()`,
-`ContractEmitter::rules()`, `holdsIf()` in `app/src/contract.ts`)
+`Binding::bindRules()`, `DataSurface::refinedEntry()`,
+`Conditionals::rules()`, `holdsIf()` in `app/src/contract.ts`)
 
 ## Alters
 
@@ -1553,7 +1590,7 @@ that answers for it), is refused at a mount; each is open. *Changed for ports: u
 an alter were both refused, an attached structure inside the mount not
 being built.*
 (`ResourceBlueprintAdditions::attach()`, `ResourceBlueprintAdditions::attachList()`,
-`Resources::mountStructure()`, `DataSurface::refineMounted()`)
+`Attaching::mountStructure()`, `DataSurface::refineMounted()`)
 
 ### An alter refines its own mounted key
 
@@ -1567,7 +1604,7 @@ so the form rebuilds and the discard cascade drops that one key rather
 than the whole mount; the mount itself is gated on the union of what
 its keys watch. *Changed for example 4 of the examples, which needed a
 key the alter adds to tighten with the owner's capacity; until then
-such a method was refused.* (`Resources::bindRefiners()`,
+such a method was refused.* (`Binding::bindRefiners()`,
 `RefinesInputRefiner::refineMounted()`, `DefinitionMap::refinementPaths()`)
 
 ### An alter watches its own mounted key
@@ -1592,7 +1629,7 @@ license while the stewards beside it watch the capacity is no cycle.
 *Changed for example 4 of the examples; until then watching any mounted
 key was refused, pending dotted refinement paths, `ROADMAP.md` item 16,
 of which this is the one case the third-party mount needs.*
-(`Resources::assertNotWatchingForeignMount()`, `Resources::mountedWatches()`,
+(`Binding::assertNotWatchingForeignMount()`, `Binding::mountedWatches()`,
 `DataSurface::dependencyValues()`, `DataSurfaceBuilder::edgesOf()`)
 
 ### A storage layout for a mount
@@ -1705,7 +1742,7 @@ examples ship both, each for the case it fits.
   stored value the list no longer offers (`managed` after the key module
   is uninstalled) is drawn as a select under the empty option rule, so a
   save that leaves it keeps it. (`DefinitionMetadata::setOneVariant()`,
-  `OptionsWidget::drawsFixed()`, `ContractEmitter::property()`)
+  `OptionsWidget::drawsFixed()`, `PropertySchema::property()`)
 - **A secret survives a switch of variants.** A value written for
   another variant goes when the deciding key moves on
   ([An empty variant is an empty map](#an-empty-variant-is-an-empty-map)).
@@ -1760,7 +1797,7 @@ the credential it chose is not built until the source is offered again.
 A key with no variant declared stays a placeholder and its deciding
 key gains an empty `Choice`, so nothing can be chosen. Refusing the
 whole parent would break it on every site without a variant module.
-(`Resources::variantKeysOf()`)
+(`Attaching::variantKeysOf()`)
 
 ### Derived variants
 
@@ -1796,7 +1833,7 @@ each, at the limit, so its field tools state every field type's
 settings, as before. Why: one idea, a
 list the site decides, had two mechanisms, one named from outside its
 owner and outside the budget ([The surface was counted and cut](#the-surface-was-counted-and-cut)).
-(`FieldSettingsSchemaVariants`, `Resources::variantKeysOf()`)
+(`FieldSettingsSchemaVariants`, `Attaching::variantKeysOf()`)
 
 ### A parent watching a child
 
@@ -1806,7 +1843,7 @@ the key [does not apply](#a-key-that-does-not-apply), which is the
 parent's to say about a key it owns. The pattern says a parent cannot
 refine into a
 child and a child cannot read a parent's value; refusing the watch too
-makes the wall hold both ways. (`Resources::assertWalled()`)
+makes the wall hold both ways. (`Binding::assertWalled()`)
 
 ### A port is a live sibling value
 
@@ -1881,7 +1918,7 @@ first case. Each choice, and why:
 Open: a container opting out of the alters of a structure it attaches,
 which apply wherever it is used; ports on a variant or a
 collection's item, which nothing wires yet. (`Port`, `BlueprintInterface::reads()`,
-`Attachment::bound()`, `Resources::assertWiring()`, `Resources::wirePorts()`,
+`Attachment::bound()`, `Attaching::assertWiring()`, `Attaching::wirePorts()`,
 `DataSurface::refine()`, `ContractEmitter::site()`, `ContractEmitter::mounts()`)
 
 ### A mixin is merged flat
@@ -2000,8 +2037,8 @@ answered conditionals dropped), where `/refine` inlined carries the
 def's too, the same constraints written twice; the Vitest chain for the
 journal leaves the child's step out for it.
 (`BlueprintAdditionsInterface::mixIn()`, `ResourceBlueprint::mixIn()`,
-`Resources::mixIn()`, `Resources::bindMixin()`,
-`Resources::assertMixinsUnnamed()`, `Mixin`, `ContractEmitter::composed()`,
+`Attaching::mixIn()`, `Binding::bindMixin()`,
+`Attaching::assertMixinsUnnamed()`, `Mixin`, `ContractEmitter::composed()`,
 `SchemaResolver::mixIn()`, `mixIn()` in `app/src/contract.ts`)
 
 ### An empty variant is an empty map
@@ -2094,7 +2131,7 @@ that offered null would advertise a value no stored list holds. The key
 holding the list still allows null while it is optional, since null
 clears it ([Absent keeps, null clears](#absent-keeps-null-clears)). The
 tool listing is the Tool API's normalizer's, which still reads an item
-as optional. (`ContractEmitter::neverNull()`,
+as optional. (`PropertySchema::neverNull()`,
 `AdvertisedSchemaAcceptanceTest::testListItemsAreNeverNull()`)
 
 ### Count is the parent's
@@ -2249,7 +2286,7 @@ format core is asked to replace with data definitions
 
 (`Storage\ConfigSchemaGenerator`, `Drush\Commands\ConfigSchemaCommand`,
 `ResourceBuild\AutowiringClassResolver`,
-`Storage\HeldToConfigSchemaTrait`, `Resources::assertHeldToSchema()`,
+`Storage\HeldToConfigSchemaTrait`, `Declaring::assertHeldToSchema()`,
 `ConfigSchemaDriftTest`, `ConfigSchemaCheckTest`, `ConfigSchemaCommandTest`)
 
 ### The generator writes what the first page shows
@@ -2480,7 +2517,7 @@ cacheability](#access-is-static-or-runtime-read-from-its-cacheability).
 Another module's alter may answer as well, after the owner, the stricter
 standing: [An alter may answer access, and the stricter
 stands](#an-alter-may-answer-access-and-the-stricter-stands).
-(`AccessAnswer`, `Resources::childAccess()`)
+(`AccessAnswer`, `Gating::childAccess()`)
 
 ### Access is static or runtime, read from its cacheability
 
@@ -2527,13 +2564,13 @@ is known. Decided 2026-10-18, point by point.
   (`DefinitionMap::isRuntimeAccess()`); `build()` applies both. A static
   answer is asked once per context and account kind (the account's roles
   and its permissions hash) and kept, so a class that lied is wrong
-  visibly rather than now and then (`Resources::ask()`); the latest 256
+  visibly rather than now and then (`Gating::ask()`); the latest 256
   are kept, since a context knows its identity and a worker asking for
   one entity after another would otherwise keep one per entity. Under
   `assert()`: the first asking of a static answer is repeated with the
   global container guarded and must answer the same, static, having
   asked for no service that reads site state beside the account
-  (`PipelineGuard::guardAccess()`, `Resources::answersAgain()`).
+  (`PipelineGuard::guardAccess()`, `Gating::answersAgain()`).
   The refiner's guard is reused with another rule for what passes: a
   refiner may reach nothing but the typed data manager, while an access
   class is a service with injected collaborators and core's handlers
@@ -2653,7 +2690,7 @@ for an archivist (static), locking once the exhibit is sealed and
 leaving out once it is withdrawn (runtime, a stored value and a State
 flag); the loan's insurance is runtime for everyone
 (`StaticRuntimeAccessTest`). (`AccessAnswer`, `Resources::buildStatic()`,
-`Resources::childAccess()`, `ContractEmitter::frame()`,
+`Gating::childAccess()`, `ContractEmitter::frame()`,
 `InputDefinitions::runtimeAccessNote()`)
 
 *Changed 2026-10-24, with
@@ -2775,9 +2812,9 @@ alter answers locked or left out is refused, as one whose access class
 does ([An alter attaches at its own mount](#an-alter-attaches-at-its-own-mount));
 a reason an alter gives at a child is not shown, as no child's is.
 (`OperationAccessInterface`, `AlterDefinition::$answersAccess`, `ResourceRegistry::assertAccessClass()`,
-`ResourceDefinition::answersAccess()`, `Resources::answering()`,
-`Resources::answers()`, `Resources::alteredAtTheTop()`,
-`Resources::lockedAtTheTop()`)
+`ResourceDefinition::answersAccess()`, `Gating::answering()`,
+`Gating::answers()`, `Gating::alteredAtTheTop()`,
+`Gating::lockedAtTheTop()`)
 
 ### A gate is borrowed, never copied
 
@@ -2850,8 +2887,8 @@ operation is not asked, since gates are asked where the operation is
 the one called; the tool listing's sentence for a list a gate is asked
 of says "locked or left out", where a gate refuses the item; and a gate
 is asked per item for the collections at the top only, not inside an
-item. (`Gate`, `Gates`, `ItemGates`, `Resources::gatePlaces()`,
-`Resources::gatesAtTheTop()`, `Resources::gatesAside()`)
+item. (`Gate`, `Gates`, `ItemGates`, `Gating::gatePlaces()`,
+`Gating::gatesAtTheTop()`, `Gating::gatesAside()`)
 
 ### A permission a child cannot name
 
@@ -2875,7 +2912,7 @@ gate asked it already, and a child narrows only what the parent allowed.
 That is the storage's case when the field's context does know the
 entity type, so a field is built with its storage for any account, as
 it always was, and only the field's own access decides.
-(`Resources::childAccess()`)
+(`Gating::childAccess()`)
 
 ### Omitted is omitted both ways
 
@@ -3243,8 +3280,8 @@ reading under which a locked answer at the top was a refusal.
 Why refused at the pipeline rather than at access: locked is the
 answer that lets the caller see, so access cannot be the refusal; and a
 submit written back unchanged would report a write that did nothing.
-(`Resources::lockedAtTheTop()`, `Resources::atTheTop()`,
-`DataSurfacePipeline::submit()`, `ContractEmitter::lockedWhole()`,
+(`Gating::lockedAtTheTop()`, `Gating::atTheTop()`,
+`DataSurfacePipeline::submit()`, `DocumentHead::lockedWhole()`,
 `LockedAccessTest`, `LockedAccessFormTest`)
 
 **A lock says its own reason, once** (decided 2026-10-20, from the Form
@@ -3331,21 +3368,21 @@ builder that is never sealed, nothing refined and nothing asked. A
 variant that answers access elsewhere on the site costs every other
 resource nothing, and where none does (the index lists the holders),
 nothing is declared at all.
-(`Resources::access()`, `Resources::childAnswers()`,
-`Resources::childrenMayAnswer()`, `VariantsOfThisResourceTest`)
+(`Resources::access()`, `Gating::childAnswers()`,
+`Gating::childrenMayAnswer()`, `VariantsOfThisResourceTest`)
 
 ### No declared operation, no permission tier
 
 A context whose id names no declared operation (a plugin host's
 `configure`) has no permission tier: the access class alone answers, or
 neutral when there is none. The host already checked the permission
-that guards its own form. (`Resources::ownAccess()`)
+that guards its own form. (`Gating::ownAccess()`)
 
 ### An unknown placeholder
 
 A `%key` in an operation's permission that the context does not know
 makes access forbidden. The permission cannot be named, and guessing
-one would grant or refuse the wrong thing. (`Resources::ownAccess()`)
+one would grant or refuse the wrong thing. (`Gating::ownAccess()`)
 
 ### Neutral is a refusal for an operation's caller
 
@@ -3738,7 +3775,7 @@ the cheapest honest check. Whether a call reaches beyond
 the site (MCP's open world) is a fact of the storage, not the
 operation, and a later flag there; the MCP bridge says open world for
 every tool today. (`Operation`, `OperationDefinition::facts()`, `OperationDefinition::kind()`,
-`ContractEmitter::operation()`, `DataSurfacePipeline::commit()`,
+`DocumentHead::operation()`, `DataSurfacePipeline::commit()`,
 `OperationFactsTest`, `OperationKindsTest`, `LockedAccessTest`)
 
 ### A violation summary is plain text
@@ -4082,7 +4119,7 @@ puts the pattern on the input: an HTML `pattern` makes the browser ask
 for "the requested format", and Form API's `#pattern` says
 "is not in the right format", both vaguer than the message the data
 surface answers with. (`ContractPanel::regex()`,
-`ContractEmitter::keywords()`, `ContractPanel.tsx`)
+`PropertySchema::keywords()`, `ContractPanel.tsx`)
 
 ### The empty option rule
 
@@ -4284,7 +4321,7 @@ page never saw the content type's groups, and a block had none to give.
 (`Resource\Arrangement`, `Resource\ArrangementGroup`,
 `DefinitionMetadata::setArrangement()`, `DataSurfaceWidgetBase::arranged()`,
 `DataSurfaceFormBuilder::withGroups()`, `DataSurfaceFormBuilder::gatherGroups()`,
-`DataSurfaceBuilder::assertGroupsAgree()`, `ContractEmitter::arrangement()`,
+`DataSurfaceBuilder::assertGroupsAgree()`, `PropertySchema::arrangement()`,
 `ArrangementTest`, `ArrangementFormTest`)
 
 Declined, each in a line:
@@ -4437,7 +4474,7 @@ change the id shape.
 
 (`ResourceRegistry::getIndex()`, `ResourceRegistry::rebuild()`,
 `ResourceOperationToolDeriver::derive()`, `OperationInputs::derivation()`,
-`ContractEmitter::refinedFor()`, `DiscoveryPerDefinitionTest`,
+`Conditionals::refinedFor()`, `DiscoveryPerDefinitionTest`,
 `ToolDefinitionsPerResourceTest`, `EmitMemoTest`,
 `PerformanceBudgetTest`)
 
@@ -4630,7 +4667,7 @@ survive a cached form, where a closure would not. A static callable
 method is called on the class; an instance method on the class
 resolver's instance, so a deriver's own methods may read site state,
 which is what a derived resource is for. (`ResourceDefinition::name()`,
-`Resources::fillBlueprints()`, `Resources::operation()`)
+`Declaring::fillBlueprints()`, `Resources::operation()`)
 
 ### The id shape
 
@@ -4848,8 +4885,8 @@ owner's naming one entry by its id, which waits for a decision from the
 owner, since the code cannot list the ids. Closed: ports on an entry
 (above). (`SiteListInterface`, `SiteList`,
 `BlueprintInterface::addEach()`, `BlueprintInterface::attachEach()`,
-`Resources::buildEach()`, `Resources::keysFrom()`,
-`Resources::assertEachWiring()`, `Port::through()`,
+`Attaching::buildEach()`, `Attaching::keysFrom()`,
+`Attaching::assertEachWiring()`, `Port::through()`,
 `DataSurfaceFormBuilder::lockedInside()`, `ToolDefinitionsInvalidator`)
 
 ### Keys an alter adds to a content entity
@@ -5609,7 +5646,7 @@ document that uses it. Serving each resource's or structure's schema at
 an address of its own, so a def is fetched once and shared between
 documents, is later; it needs a route per id and a decision on what context a
 def at its own address is described in.
-(`ContractEmitter::define()`, `ContractEmitter::reference()`,
+(`ContractEmitter::define()`, `PropertySchema::reference()`,
 `Contract\SchemaResolver`)
 
 ### Enumeration is capped
@@ -5635,7 +5672,7 @@ rule the refiners never made. Such a key keeps `dependsOn`, and a client
 asks the server (`POST .../schema`) when a watched key changes, as before.
 A list the site decides is counted otherwise, by its entries, against a
 setting ([A budget for what the site decides](#a-budget-for-what-the-site-decides)).
-(`ContractEmitter::enumerate()`)
+(`Conditionals::enumerate()`)
 
 ### A budget for what the site decides
 
@@ -5870,7 +5907,7 @@ each of its keys sent null): the empty map, or a map whose keys hold
 nothing, is a value, so the map is not refused as missing, and a key
 inside it that is required is refused in its own words at its path;
 until then core's `NotNull` read it as null and refused the map itself.
-(`ContractEmitter::required()`, `DataSurfacePipeline::validateLevel()`,
+(`PropertySchema::required()`, `DataSurfacePipeline::validateLevel()`,
 `AdvertisedSchemaAcceptanceTest::testRequiredMapSentEmpty()`)
 
 ### Absent keeps, null clears
@@ -5907,7 +5944,7 @@ keys clear and a required one is refused in its own words, so the
 accepted document is a map its def describes; until 2026-10-18 the
 pipeline took `contact: null` whole, which the schema refused.
 (`DataSurfacePipeline::acceptKey()`, `DataSurfacePipeline::acceptChild()`,
-`ContractEmitter::nullable()`)
+`PropertySchema::nullable()`)
 
 **Writing back what was read changes nothing** (decided 2026-10-20, from
 the deterministic callers and AI agents reviews, B12). A read then a
@@ -6013,9 +6050,9 @@ On a key so marked:
 
 A required key is not marked: it holds a value already. A secret is
 not either: sent nothing it keeps what it holds, whatever its storage.
-(`DefinitionMetadata::holdsValue()`, `Resources::markAlwaysHeld()`,
+(`DefinitionMetadata::holdsValue()`, `Binding::markAlwaysHeld()`,
 `ConfigObjectStorage::mayClear()`, `DataSurfacePipeline::cannotBeCleared()`,
-`ContractEmitter::nullable()`, `StockWidgetsTest::testKeyItsStorageAlwaysHolds()`,
+`PropertySchema::nullable()`, `StockWidgetsTest::testKeyItsStorageAlwaysHolds()`,
 `AdvertisedSchemaAcceptanceTest::testOpeningHours()`)
 
 ### A secret is optional, never nullable
@@ -6031,7 +6068,7 @@ that holds nothing out (`DataSurfacePipelineInterface::document()`,
 required secret never set is still refused by the pipeline as missing.
 Before 2026-10-18 a required secret
 was in `required` and its type refused the `null` its own `values`
-carried. (`ContractEmitter::required()`, `InputDefinitions::fromDefinition()`)
+carried. (`PropertySchema::required()`, `InputDefinitions::fromDefinition()`)
 
 ### One coercion table, the Tool API's
 
@@ -6114,7 +6151,7 @@ refuse what the pipeline accepts; the suite's validator does not assert
 them, as a standard one does not. An address is `idn-email` (RFC 6531)
 since [contract 2](#contract-2), which admits a non-ASCII local part
 as Drupal's validator does; it was `email`, which refused one.
-(`ContractEmitter::type()`)
+(`PropertySchema::type()`)
 
 ### A composite is its parts
 
@@ -6134,7 +6171,7 @@ the one checked. Each part's message is the server's to say; only a
 key's own Regex fills `x-surface.patternMessage`. Symfony's `All`
 applies its constraints to each item of a collection, not all of them
 to one value, and core registers no `All` plugin, so it is not read as
-an `allOf`. (`ContractEmitter::parts()`,
+an `allOf`. (`PropertySchema::parts()`,
 `AdvertisedSchemaAcceptanceTest::testCompositesAreTheirParts()`)
 
 ### A machine document carries plain text
@@ -6366,7 +6403,7 @@ B24, the served contract page saying `runtime` was never in the full
 schema, is closed by the page's rewrite. Not changed: `locked: false`
 and `dependsOn: []` are still written on every property (a cut
 json-schema-tooling proposed), and no `x-surface` metaschema is
-published yet. (`ContractEmitter::CONTRACT`, `ContractEmitter::settled()`,
+published yet. (`ContractEmitter::CONTRACT`, `DocumentHead::settled()`,
 `SchemaResolver::restored()`, `ContractDiff::CONTRACT`,
 `ContractChange::CONTRACT`, `ContractBaselines::compare()`,
 `ResourceApiController::VERSION_HEADER`, `CONTRACT` and
@@ -6667,12 +6704,52 @@ The examples' documents differ in these changes and the number alone;
 their tool input schemas are byte for byte as before, since the
 listing is built from the data surface, not from the document, but for
 the description of a map of keys from the site past the limit, which
-names `x-surface.deferred.entries`. (`ContractEmitter::extension()`,
+names `x-surface.deferred.entries`. (`PropertySchema::extension()`,
 `ContractEmitter::frame()`, `ContractEmitter::variants()`,
-`ContractEmitter::withoutWidgets()`, `ContractEmitter::withoutPresent()`,
+`PropertySchema::withoutWidgets()`, `Conditionals::withoutPresent()`,
 `SchemaReader::droppedExtension()`, `CONTRACT` and `compacted()` in
 `app/src/contract.ts`, `ContractBaselineTest`, `SiteListBudgetTest`,
 `StaticRuntimeAccessTest`, `SchemaRoundTripTest`)
+
+### The emitter is one walk and three writers
+
+`ContractEmitter` had grown to 4,300 lines. It is now the walk, and three
+final internal classes in `src/Contract/` write what the walk asks for:
+
+- **`ContractEmitter`** walks a document's frames: each key, child,
+  variant, collection item and mount, and the defs each child is filed
+  under. Its public API, its service and its constructor are unchanged.
+- **`PropertySchema`** describes one key as a JSON Schema property with
+  its `x-surface`: the type, the keywords its constraints state, the
+  allowed values with their labels, the widget hint, what only the
+  server checks, a shape's def, and a child's site as a reference with
+  only what differs from its def.
+- **`Conditionals`** writes what a key's refiners answer as `if`/`then`:
+  a declared rule as written, and the static refiners refined for every
+  combination of the values they watch. Where neither can be stated, it
+  marks the key `refine` or `live` and drops it from `required`. It
+  remembers what it refined during one document.
+- **`DocumentHead`** writes what sits above the properties: the heading,
+  how the operation behaves, the versions, `readOnly` for a resource
+  locked whole, the outputs, and the placement rules that move each
+  marker to the object that owns it.
+
+The seam is the responsibility, not the document. `emit()` and
+`emitFull()` share the walk, and differ only in what `Emission::full()`
+answers at each step. One class per document would copy the walk into
+both, and the two documents could then drift apart
+([Two documents, never stricter than the runtime](#two-documents-never-stricter-than-the-runtime)).
+Calls run one way: the walk calls the three writers, and `Conditionals`
+and `DocumentHead` call `PropertySchema`; no writer calls the walk, and
+the two static helpers they share, `pointer()` and `foreign()`, stay
+public on the emitter.
+`ContractEmitter`'s constructor builds each writer from the services it
+already has, so there is no new container service and none is
+door-specific. Nothing changed in what is emitted: the examples'
+documents and tool definitions are byte for byte what they were, and
+the contract baselines did not move. (`ContractEmitter`,
+`Contract\PropertySchema`, `Contract\Conditionals`,
+`Contract\DocumentHead`, `ContractBaselineTest`)
 
 ### An OpenAPI document is one more door
 
@@ -7120,7 +7197,7 @@ removes from a derived resource, a breaking change no code made; and
 baselines for operations that need a subject, which the lint leaves out.
 (`Resource\Attribute\Resource::$version`, `Structure::$version`,
 `ResourceRegistry::versionOf()`, `DataSurfaceInterface::version()`,
-`ContractEmitter::versioned()`, `Resource\StoredValueMigrationInterface`,
+`DocumentHead::versioned()`, `Resource\StoredValueMigrationInterface`,
 `Contract\ContractDiff`, `Contract\ContractBaselines`,
 `Drush\Commands\ContractDiffCommand`, `ContractBaselineTest`,
 `ContractDiffTest`)

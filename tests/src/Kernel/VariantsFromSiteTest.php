@@ -304,7 +304,9 @@ class VariantsFromSiteTest extends DataSurfaceKernelTestBase {
    * in structures().
    */
   public function testWhatVariantsDoNotReadIsRefused(): void {
-    $resources = $this->container->get('data_surface.resources');
+    // The variants from the site are the attach phase's to read.
+    $build = $this->container->get('data_surface.resources');
+    $resources = (new \ReflectionProperty($build, 'attaching'))->getValue($build);
     $variantsFrom = new \ReflectionMethod($resources, 'variantsFrom');
     $poster = $this->container->get('data_surface.resource_registry')->getDefinition(PosterResource::class);
     $refusals = [

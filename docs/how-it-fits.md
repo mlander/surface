@@ -47,7 +47,11 @@ section below says what else is kept.
 ## The build step
 
 `ResourcesInterface::build(string $resource, OperationContext $context):
-DataSurfaceInterface`, in `Resources::buildResource()`:
+DataSurfaceInterface`, in `Resources::buildResource()`, which calls its
+phases in order: `Declaring` for steps 1 to 4, `Attaching` and `Binding`
+for the mixins, the refiners and the children, and `Gating` for every
+access answer ([The build is read by
+phase](decisions.md#the-build-is-read-by-phase)):
 
 ```
 build(FieldInstanceResource::class, $context):

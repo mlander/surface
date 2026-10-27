@@ -290,7 +290,7 @@ final class ResourceRegistry {
    * Answers whether any variant here names an access answer, by holder.
    *
    * The resources and structures that hold, at some key, a variant whose
-   * access may refuse them (Resources::childAnswers()): read off the
+   * access may refuse them (Gating::childAnswers()): read off the
    * index, so asking reads no definition.
    *
    * @return array<string, true>
