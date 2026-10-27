@@ -1169,6 +1169,7 @@ final class ResourceRegistry {
         throw ResourceCollectorPass::outputsRefused($class);
       }
       $attribute = $reflection->getAttributes(Alters::class)[0]->newInstance();
+      self::assertAltersByClass($class, $attribute->of, $ids, $resources, $shapes, $bases);
       if (isset($shapes[$attribute->of])) {
         self::assertShapeAlter($reflection, $attribute, $shapes[$attribute->of]);
         $shape_alters[$attribute->of][] = new AlterDefinition(class: $class, module: $module, operations: [], refiners: []);
@@ -1418,6 +1419,44 @@ final class ResourceRegistry {
         ));
       }
     }
+  }
+
+  /**
+   * Refuses an alter that names a class's owner by its id.
+   *
+   * A resource, structure or shape with a class is named by its class; an
+   * id names only a derived resource, which has none, or a deriver's base.
+   * An id that names a class is refused, not skipped as a class that does
+   * not load is, since it names something discovered.
+   *
+   * Decision: see docs/decisions.md#a-class-that-is-not-there.
+   *
+   * @param class-string $alter
+   *   The alter.
+   * @param string $of
+   *   What its #[Alters] names.
+   * @param array<string, string> $ids
+   *   Every discovered id, with the class that claimed it.
+   * @param array<string, \Drupal\data_surface\ResourceBuild\ResourceDefinition> $resources
+   *   The resources and structures, keyed by name.
+   * @param array<class-string, \Drupal\data_surface\ResourceBuild\ShapeDefinition> $shapes
+   *   The shapes, keyed by class.
+   * @param array<string, string[]> $bases
+   *   The derived ids, keyed by their deriver's base id.
+   *
+   * @throws \LogicException
+   *   When $of is the id of a resource, structure or shape with a class.
+   */
+  protected static function assertAltersByClass(string $alter, string $of, array $ids, array $resources, array $shapes, array $bases): void {
+    if (!isset($ids[$of]) || isset($resources[$of]) || isset($shapes[$of]) || isset($bases[$of])) {
+      return;
+    }
+    throw new \LogicException(sprintf(
+      '#[Alters(\'%s\')] on %s names an id; name the owner by its class, %s::class. An id names only a derived resource, which has no class.',
+      $of,
+      $alter,
+      $ids[$of],
+    ));
   }
 
   /**

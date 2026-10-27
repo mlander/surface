@@ -19,6 +19,9 @@ use Drupal\data_surface_resource_test\OutsideDiscovery\HomelessResource;
 use Drupal\data_surface_resource_test\OutsideDiscovery\OperationAlter;
 use Drupal\data_surface_resource_test\OutsideDiscovery\OperationOfAlter;
 use Drupal\data_surface_resource_test\OutsideDiscovery\OutputsAlter;
+use Drupal\data_surface_resource_test\OutsideDiscovery\RecipeByIdAlter;
+use Drupal\data_surface_resource_test\OutsideDiscovery\SkuByIdAlter;
+use Drupal\data_surface_resource_test\OutsideDiscovery\UnknownIdAlter;
 use Drupal\data_surface_resource_test\OutsideDiscovery\WatchesRefinerStructure;
 use Drupal\data_surface_resource_test\OutsideDiscovery\InstanceDefineInputsStructure;
 use Drupal\data_surface_resource_test\OutsideDiscovery\WrongKindStructure;
@@ -269,6 +272,41 @@ class ResourceDiscoveryTest extends DataSurfaceKernelTestBase {
     $this->expectException(\LogicException::class);
     $this->expectExceptionMessage(OutputsAlter::class . $tail);
     $registry->getDefinitions();
+  }
+
+  /**
+   * Tests that an alter naming an owner with a class by its id is refused.
+   *
+   * The id spelling is for a derived resource, which has no class, and a
+   * deriver's base: ContentEntityAccessTest mounts an alter by the base id
+   * `entity.content`. An id nothing claims is skipped, as a class that does
+   * not load is.
+   */
+  public function testAnAlterNamingAnOwnerByItsIdIsRefused(): void {
+    $cases = [
+      RecipeByIdAlter::class => ['resource_test.recipe', RecipeResource::class],
+      SkuByIdAlter::class => ['resource_test.sku', Sku::class],
+    ];
+    foreach ($cases as $alter => [$id, $owner]) {
+      $registry = new ResourceRegistry([
+        'resources' => [RecipeResource::class => 'data_surface_resource_test'],
+        'shapes' => [Sku::class => 'data_surface_resource_test'],
+        'alters' => [$alter => 'data_surface_resource_test'],
+      ], $this->container->get('cache.discovery'));
+      try {
+        $registry->getDefinitions();
+        $this->fail(sprintf('%s was not refused.', $alter));
+      }
+      catch (\LogicException $e) {
+        $this->assertSame(sprintf("#[Alters('%s')] on %s names an id; name the owner by its class, %s::class. An id names only a derived resource, which has no class.", $id, $alter, $owner), $e->getMessage());
+      }
+    }
+
+    $registry = new ResourceRegistry([
+      'resources' => [RecipeResource::class => 'data_surface_resource_test'],
+      'alters' => [UnknownIdAlter::class => 'data_surface_resource_test'],
+    ], $this->container->get('cache.discovery'));
+    $this->assertSame([], $registry->getAlters(RecipeResource::class));
   }
 
   /**
