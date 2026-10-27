@@ -102,7 +102,14 @@ caller sends that.
                     "title": "Name"
                 },
                 "type": {
-                    "type": "string",
+                    "oneOf": [
+                        {
+                            "type": "string"
+                        },
+                        {
+                            "type": "null"
+                        }
+                    ],
                     "maxLength": 32,
                     "description": "Unique machine readable name: lowercase letters, numbers, and underscores only.",
                     "title": "Machine name"
@@ -293,7 +300,6 @@ caller sends that.
             },
             "required": [
                 "name",
-                "type",
                 "title_label",
                 "preview_mode"
             ],

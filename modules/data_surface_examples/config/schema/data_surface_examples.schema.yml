@@ -487,11 +487,9 @@ data_surface_examples.event_venue.*:
     FullyValidatable: ~
   mapping:
     id:
-      type: string
+      type: machine_name
       label: 'Machine name'
       constraints:
-        Regex:
-          pattern: '/^[a-z0-9_]+$/D'
         Length:
           max: 32
     label:

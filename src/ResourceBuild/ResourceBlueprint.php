@@ -793,7 +793,7 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
       throw $refuse(sprintf('names %s, which implements no %s: the class it names has a static compute().', $using, ComputesValueInterface::class));
     }
     if (!in_array($when, Compute::ALL, TRUE)) {
-      throw $refuse(sprintf('says when: "%s"; it is Compute::ON_CREATE or Compute::ON_CHANGE.', $when));
+      throw $refuse(sprintf('says when: "%s"; it is Compute::ON_CREATE, Compute::ON_CHANGE or Compute::UNLESS_SENT.', $when));
     }
     if ($from === [] || !array_is_list($from)) {
       throw $refuse('names no key it is computed from: from: lists one or more keys.');

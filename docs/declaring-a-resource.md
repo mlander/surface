@@ -631,20 +631,25 @@ $inputs->compute('slug', 'string', t('Slug'), from: ['label'], using: Slugify::c
 Each class's `use` line: [Namespaces](concepts.md#namespaces).
 
 The class implements `ComputesValueInterface`, whose one method is static,
-`compute(array $from): mixed`: handed the value of each key `from:`
-names, it answers the value. It is a pure function of those values, held
-to it as a static refiner is: with assertions on it runs with the
-container guarded (`PipelineGuard::guardCompute()`), and the
-module's PHPStan rule flags a `\Drupal::` call in it. A value that needs
-a service, the clock or the request, such as a changed time, is no
-computed key: a storage's `prepare()` adds it.
+`compute(array $from, ?DataDefinitionInterface $key = NULL): mixed`:
+handed the value of each key `from:` names, and the key's own
+definition, it answers the value. It is a pure function of those
+values and of what the key declares, held to it as a static refiner is:
+with assertions on it runs with the container guarded
+(`PipelineGuard::guardCompute()`), and the module's PHPStan rule flags a
+`\Drupal::` call in it. A value that needs a service, the clock or the
+request, such as a changed time, is no computed key: a storage's
+`prepare()` adds it. The one exception is the stock `MachineName`
+below, which may ask for core's `transliteration` service.
 
 - **When.** `when: Compute::ON_CREATE`, the default, computes it while
   storage holds nothing for it, which is when the thing is created, and
   keeps it after: renaming a venue leaves its slug, and every link to
   it, as it was. `when: Compute::ON_CHANGE` computes it again on every
   write that changes a key in `from`. A write that changes none of them
-  keeps what is stored either way.
+  keeps what is stored either way. `when: Compute::UNLESS_SENT`
+  computes it as `ON_CREATE` does only when a call leaves it out, or
+  sends it null or empty, and keeps a value sent: the machine name below.
 - **Judged like any key.** The pipeline computes it once the other keys
   are accepted, then validates it by its own constraints and rules, and
   storage writes it. A refusal of it names the keys it is computed from,
@@ -664,6 +669,48 @@ computed key: a storage's `prepare()` adds it.
 A computed key is a resource's own key, at its top: `compute()` is on the
 owner's blueprint only, and refused in a structure, a structure mixed in
 and outputs.
+
+### A title and its machine name
+
+Drupal's title and machine name pair is a computed key computed unless
+sent, of core's config schema type `machine_name`, by the stock
+`MachineName`:
+
+```php
+$inputs->add('label', 'string', t('Name'))->setRequired(TRUE);
+$inputs->compute('id', 'machine_name', t('Machine name'),
+  from: ['label'], using: MachineName::class, when: Compute::UNLESS_SENT);
+```
+
+Each class's `use` line: [Namespaces](concepts.md#namespaces).
+
+- **The type.** A type typed data does not know is read from the config
+  schema: `machine_name` is a string with the pattern `^[a-z0-9_]+$`
+  and a Length of 166, both the key's own and stated in both documents.
+  The key may narrow them, `->addConstraint('Length', ['max' => 32])`,
+  never widen them, and the generated config schema writes `type:
+  machine_name` with what it narrows.
+- **Left out, computed; sent, kept.** `MachineName` transliterates the
+  title, lowercases it, replaces each run of characters outside
+  `[a-z0-9_]` with one underscore, cuts it to the key's Length and trims
+  the underscores at its ends, as core's machine name element does in
+  the browser: "Café Déjà Vu" is `cafe_deja_vu`. A value sent is judged
+  by the key's constraints and kept. Both documents state the key with
+  `x-surface.computed: {"from": ["label"], "when": "unless_sent"}` and
+  no `readOnly`; it is never in `required`, and the write tool offers it.
+- **Held once.** Where the key is the identity a create names and the
+  storage can say whether a thing is stored under it
+  (`DeletableStorageInterface::exists()`, which `ConfigEntityStorage`
+  answers), the build adds the stock `DataSurfaceUnique` to it: "A venue
+  named riverside already exists.", code `taken`, named under
+  `checkedOnServer`. No resource writes a uniqueness rule of its own.
+- **Drawn as core's element.** The form draws it as a `machine_name`
+  element whose source is the title's element, so the browser suggests
+  the name as the title is typed and a person may edit it. On an update
+  the identity is known, locked, and drawn disabled with its value.
+
+Example 15's venue and the content type demo declare it
+(why: [decision](decisions.md#a-machine-name-is-a-computed-identity)).
 
 ## Required
 

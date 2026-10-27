@@ -31,7 +31,11 @@ In the order asked, each default in brackets:
 5. **Operation**: `configure`, for a settings object. A resource with
    identity (`create`, `update` and `delete`, and its identity key) is
    stored in a config entity type, which the generator does not write
-   yet: it says so and stops.
+   yet: it says so and stops, naming the identity to write by hand, a
+   title and its machine name,
+   `$inputs->compute('id', 'machine_name', t('Machine name'), from:
+   ['label'], using: MachineName::class, when: Compute::UNLESS_SENT)`
+   ([A title and a machine name](recipes.md#a-title-and-a-machine-name)).
 6. **Operation label** [Configure the ...] and **Operation description**,
    the first thing an agent reads about the tool.
 7. **Config object** [`<module>.<class name>`]: one of the module's own.

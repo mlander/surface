@@ -134,7 +134,10 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
    * {@inheritdoc}
    *
    * The type may be a shape's class: the key then starts from the shape
-   * as its alters left it, and may only narrow it.
+   * as its alters left it, and may only narrow it. It may be a data type
+   * core's config schema names and typed data does not, `machine_name`:
+   * the key is then the string underneath, with the type's constraints,
+   * and may only narrow them.
    * Decision: see docs/decisions.md#a-shape-is-a-named-definition.
    */
   public function add(string $key, string $type, string|\Stringable $label, mixed $default = NULL): DataDefinition {
@@ -152,6 +155,17 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
       $this->addDefinition($key, $definition, $default);
       $this->shaped[$key] = $definition;
       return $definition;
+    }
+    $named = $this->shapes?->configType($type, $this->typedDataManager);
+    if ($named !== NULL) {
+      // A config schema data type, `machine_name`: a string with the
+      // type's constraints as its own, which the key may only narrow.
+      // Decision: see
+      // docs/decisions.md#a-machine-name-is-a-computed-identity.
+      $named->setLabel($label);
+      $this->addDefinition($key, $named, $default);
+      $this->shaped[$key] = $named;
+      return $named;
     }
     $definition = $this->typedDataManager->createDataDefinition($type);
     if (!$definition instanceof DataDefinition) {

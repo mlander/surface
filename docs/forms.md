@@ -996,7 +996,7 @@ the whole of what a form class is still for:
 
 | Method | Decides |
 | --- | --- |
-| `alterSurfaceForm()` | What this one form borrows or adds around the built elements: an element of core's (vertical tabs, a machine name), markup. Runs after every element exists, including the actions and the groups the keys' arrangement declares. |
+| `alterSurfaceForm()` | What this one form borrows or adds around the built elements: an element of core's (vertical tabs), markup. Runs after every element exists, including the actions and the groups the keys' arrangement declares. |
 | `surfaceFormMessage()` | What the person is told. NULL for the generic sentence. |
 | `surfaceFormRedirect()` | Where they are sent. NULL to stay on the form. |
 
@@ -1023,11 +1023,14 @@ checks along with what it draws, so clear its `#element_validate` when
 you do. An element validates before any form level handler, and a form
 state keeps only the first error set on an element, so a check that came
 with the element answers first and the data surface's own violation
-(the one that names the value that was refused) is dropped in silence. The demo
-does exactly this where it borrows core's machine name element, and the
-stock number widget does the same for core's number element, whose own
-`#min` and `#max` check would otherwise answer before a `Range` and its
-message (why: [decision](decisions.md#an-element-hints-and-the-rule-speaks)).
+(the one that names the value that was refused) is dropped in silence. The form
+builder does exactly this where it draws core's machine name element for
+a key of type `machine_name` computed from a title
+([A title and its machine name](declaring-a-resource.md#a-title-and-its-machine-name)),
+and the stock number widget does the same for core's number element,
+whose own `#min` and `#max` check would otherwise answer before a
+`Range` and its message
+(why: [decision](decisions.md#an-element-hints-and-the-rule-speaks)).
 
 A swap must also keep the shape the element posts. The widget that drew
 the element reads the value back from what it posts, in the

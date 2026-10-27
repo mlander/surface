@@ -6,12 +6,14 @@ namespace Drupal\data_surface_demo_node_type\Resource;
 
 use Drupal\Core\Entity\EntityTypeInterface;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
+use Drupal\data_surface\Compute\MachineName;
 use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Resource\Arrangement;
 use Drupal\data_surface\Resource\ArrangementGroup;
 use Drupal\data_surface\Resource\Attribute\Operation;
 use Drupal\data_surface\Resource\Attribute\Resource;
 use Drupal\data_surface\Resource\BlueprintInterface;
+use Drupal\data_surface\Resource\Compute;
 use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface\Resource\ResourceInterface;
 use Drupal\data_surface_demo_node_type\Access\NodeTypeAccess;
@@ -25,9 +27,10 @@ use Drupal\node\NodeTypeInterface;
  * Add and edit are not two resources. They are how much is already known:
  *
  * @code
- *                               add                      edit
- *   type (the machine name)     open, unique on the site locked
- *   everything else             open, declared defaults  open, loaded
+ *                               add                         edit
+ *   type (the machine name)     computed from the name      locked
+ *                               unless typed, held once
+ *   everything else             open, declared defaults     open, loaded
  * @endcode
  *
  * Where each key is stored is the storage's business: the node type
@@ -47,6 +50,13 @@ use Drupal\node\NodeTypeInterface;
   storage: NodeTypeStorage::class,
   access: NodeTypeAccess::class,
 )]
+#[Operation('create',
+  label: new TranslatableMarkup('Add a content type'),
+  description: new TranslatableMarkup('Creates a content type under a machine name the caller chooses, or one computed from its name; a machine name already in use is refused.'),
+  permission: self::PERMISSION,
+  creates: TRUE,
+  idempotent: TRUE,
+)]
 final class NodeTypeResource implements ResourceInterface {
 
   /**
@@ -56,26 +66,6 @@ final class NodeTypeResource implements ResourceInterface {
    * the access class asks the entity for that half.
    */
   public const PERMISSION = 'administer data surface node type demo';
-
-  /**
-   * Adds a content type. Knows nothing, so the machine name is open.
-   *
-   * A machine name that is already a content type is refused, on add
-   * only: that is where you are, not what was entered, so the operation
-   * narrows the key rather than a refiner. The caller names the type, so
-   * the same call twice leaves what the first left, the second refused
-   * for the name the first took: idempotent, though it creates.
-   */
-  #[Operation('create',
-    label: new TranslatableMarkup('Add a content type'),
-    description: new TranslatableMarkup('Creates a content type under a machine name the caller chooses; a machine name already in use is refused.'),
-    permission: self::PERMISSION,
-    creates: TRUE,
-    idempotent: TRUE,
-  )]
-  public static function create(): OperationContext {
-    return (new OperationContext())->withConstraint('type', 'DataSurfaceUniqueNodeType');
-  }
 
   /**
    * Edits a content type. Its machine name is known, so it is locked.
@@ -111,14 +101,12 @@ final class NodeTypeResource implements ResourceInterface {
         'match' => FALSE,
         'message' => t('The name may not span lines or hold control characters.'),
       ]);
-    $inputs->add('type', 'string', t('Machine name'))
+    // Computed from the name unless typed, as core's form suggests it, and
+    // held once by the stock DataSurfaceUnique the build adds on add.
+    $inputs->compute('type', 'machine_name', t('Machine name'),
+      from: ['name'], using: MachineName::class, when: Compute::UNLESS_SENT)
       ->setDescription(t('Unique machine readable name: lowercase letters, numbers, and underscores only.'))
-      ->setRequired(TRUE)
-      ->addConstraint('Length', ['max' => EntityTypeInterface::BUNDLE_MAX_LENGTH])
-      ->addConstraint('Regex', [
-        'pattern' => '/^[a-z0-9_]+$/D',
-        'message' => t('The machine name must contain only lowercase letters, numbers, and underscores.'),
-      ]);
+      ->addConstraint('Length', ['max' => EntityTypeInterface::BUNDLE_MAX_LENGTH]);
 
     // The content type itself. Core has no multiline string type, so the
     // definition says so with a setting and the string widget renders a

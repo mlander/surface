@@ -437,10 +437,13 @@ final class PropertySchema {
     $computed = Computed::of($definition);
     if ($computed !== NULL && !$locked) {
       // Shown, never offered: a value nobody types, with no `const`, since
-      // what it holds follows the keys it is computed from.
+      // what it holds follows the keys it is computed from. One computed
+      // unless sent is offered, and computed when left out.
       // Decision: see
       // docs/decisions.md#a-computed-key-is-a-pure-function-of-its-sources.
-      $schema['readOnly'] = TRUE;
+      if (!$computed->takesSent()) {
+        $schema['readOnly'] = TRUE;
+      }
       $extension['computed'] = $computed->marker();
     }
     if (isset($schema[self::EXTENSION . '-checked'])) {
@@ -689,7 +692,8 @@ final class PropertySchema {
    *   Whether the schema requires it.
    */
   public static function required(DataDefinitionInterface $definition): bool {
-    // Nor is a computed key asked of a caller.
+    // Nor is a computed key asked of a caller: one computed unless sent
+    // is computed when left out.
     return $definition->isRequired() && !DefinitionMetadata::isSecret($definition) && Computed::of($definition) === NULL;
   }
 
@@ -849,8 +853,11 @@ final class PropertySchema {
           // translates when it refuses a value, read as plain text.
           $message = $options['message'] ?? NULL;
           if (is_string($message) && $message !== '') {
+            // A message naming the value it refuses (core's `machine_name`
+            // says "The %value machine name is not valid.") is a refusal's
+            // sentence, with no value to name ahead of one: none is stated.
             // phpcs:ignore Drupal.Semantics.FunctionT.NotLiteralString
-            $message = $this->t($message);
+            $message = preg_match('/%value|@value|\{\{ ?value ?\}\}/', $message) === 1 ? NULL : $this->t($message);
           }
           if ($message instanceof TranslatableMarkup) {
             $keywords[self::EXTENSION . '-pattern-message'] = PlainText::of($message);
@@ -889,9 +896,10 @@ final class PropertySchema {
    * Names a constraint only the server checks, and says what it checks.
    *
    * A client told only a plugin id learns nothing it can act on, so each
-   * entry carries a sentence: the constraint's own message where it was
-   * given one (a Regex's is how a person is told what it allows), else
-   * the label its plugin declares, else the id again.
+   * entry carries a sentence: the constraint's own reason where it was
+   * given one (DataSurfaceUnique's), else its own message (a Regex's is
+   * how a person is told what it allows), else the label its plugin
+   * declares, else the id again.
    * Decision: see docs/decisions.md#contract-2.
    *
    * @param string $name
@@ -911,7 +919,9 @@ final class PropertySchema {
       // docs/decisions.md#a-schema-can-be-read-back-into-a-structure.
       return ContractEmitter::foreign(is_array($options['schema'] ?? NULL) ? $options['schema'] : [], $this->stringTranslation);
     }
-    $message = is_array($options) ? ($options['message'] ?? NULL) : NULL;
+    // A constraint that refuses in a sentence of its own (DataSurfaceUnique)
+    // says what it checks in its `reason`.
+    $message = is_array($options) ? ($options['reason'] ?? $options['message'] ?? NULL) : NULL;
     if (is_string($message) && $message !== '') {
       // phpcs:ignore Drupal.Semantics.FunctionT.NotLiteralString
       $message = $this->t($message);

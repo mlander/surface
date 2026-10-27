@@ -28,16 +28,13 @@
             },
             "id": {
                 "title": "Machine name",
-                "description": "A unique name for the venue: lowercase letters, numbers and underscores.",
+                "description": "A unique name for the venue: lowercase letters, numbers and underscores, computed from its name unless one is given.",
                 "type": "string",
                 "pattern": "^[a-z0-9_]+$",
                 "maxLength": 32,
                 "default": "library",
                 "readOnly": true,
-                "const": "library",
-                "x-surface": {
-                    "patternMessage": "The machine name may hold only lowercase letters, numbers and underscores."
-                }
+                "const": "library"
             },
             "slug": {
                 "title": "Slug",
@@ -107,7 +104,6 @@
         "additionalProperties": false,
         "required": [
             "label",
-            "id",
             "capacity"
         ],
         "$defs": {

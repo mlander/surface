@@ -1589,7 +1589,7 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
     $bare = $full($this->surface(['k' => DataDefinition::create('string')->setLabel('K')]))['properties']['k'];
     $names = [
       'UniqueField',
-      'DataSurfaceUniqueNodeType',
+      'DataSurfaceUnique',
       'DataSurfaceDemoExtrasUniqueItems',
       'DataSurfaceDemoExtrasReviewDeadline',
       'AuditRuleNobodyDeclares',

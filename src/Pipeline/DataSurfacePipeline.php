@@ -486,7 +486,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
       $prepared = $this->prepare($surface, $write, $storage);
     }
     catch (StorageViolationsException $e) {
-      return new DataSurfaceResult($values, new ViolationSet($this->validating->namingSourcesAtTop(iterator_to_array($e->getViolations(), FALSE), $surface)), access: $access, notes: $notes);
+      return new DataSurfaceResult($values, new ViolationSet($this->validating->namingSourcesAtTop(iterator_to_array($e->getViolations(), FALSE), $surface, $values, $current)), access: $access, notes: $notes);
     }
     // The set travels on rather than being replaced by an empty one: it
     // blocks nothing, so the run is valid and committed, and the stale

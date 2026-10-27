@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\data_surface_examples;
 
+use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\data_surface\Resource\ComputesValueInterface;
 
 /**
@@ -19,7 +20,7 @@ final class Slugify implements ComputesValueInterface {
   /**
    * {@inheritdoc}
    */
-  public static function compute(array $from): mixed {
+  public static function compute(array $from, ?DataDefinitionInterface $key = NULL): mixed {
     $slug = trim((string) preg_replace('/[^a-z0-9]+/', '-', mb_strtolower((string) ($from['label'] ?? ''))), '-');
     return $slug === '' ? NULL : $slug;
   }

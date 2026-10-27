@@ -154,8 +154,10 @@ class NodeTypeToolComparisonTest extends DataSurfaceKernelTestBase {
 
     // Required is what the resource says, default or not: a key whose
     // default already holds a value is still in `required`, and the
-    // default is advertised beside it.
-    $this->assertSame(['name', 'type', 'title_label', 'preview_mode'], $values['required']);
+    // default is advertised beside it. The machine name is computed from
+    // the name when it is left out, so it is offered and not required.
+    $this->assertSame(['name', 'title_label', 'preview_mode'], $values['required']);
+    $this->assertArrayHasKey('type', $values['properties']);
     $this->assertSame('Title', $values['properties']['title_label']['default']);
   }
 

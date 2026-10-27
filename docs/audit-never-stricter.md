@@ -342,7 +342,7 @@ them a standard validator's.
 
 **Documents:** both. **Test:** `testConstraintsWithNoKeyword`.
 
-`UniqueField`, `DataSurfaceUniqueNodeType`,
+`UniqueField`, `DataSurfaceUnique`,
 `DataSurfaceDemoExtrasUniqueItems`, `DataSurfaceDemoExtrasReviewDeadline`
 and a constraint nobody declares: each is named under
 `x-surface.checkedOnServer` and otherwise leaves the property exactly as

@@ -259,6 +259,8 @@ PHP, $resource, 'A foreign constraint is a comment naming the keyword and the ke
     $out = $this->sandbox . '/identity';
     $display = $this->generate(['data_surface_first', 'first.venue', 'Venue', '', '2', 'id'], [], $out, 1);
     $this->assertStringContainsString('A resource with identity (id) is stored in a config entity type', $display);
+    // What to write by hand: the title and machine name pair.
+    $this->assertStringContainsString("compute('id', 'machine_name', t('Machine name'), from: ['label'], using: MachineName::class, when: Compute::UNLESS_SENT)", $display);
     $this->assertDirectoryDoesNotExist($out . '/src');
   }
 

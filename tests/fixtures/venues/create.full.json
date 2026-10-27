@@ -5,13 +5,13 @@
     "schema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "title": "Add a venue",
-        "description": "Adds a venue under a machine name the caller chooses, with its capacity, address and rooms; a machine name already in use is refused.",
+        "description": "Adds a venue under a machine name the caller chooses, or one computed from its name, with its capacity, address and rooms; a machine name already in use is refused.",
         "x-surface": {
             "contract": 4,
             "operation": {
                 "id": "create",
                 "label": "Add a venue",
-                "description": "Adds a venue under a machine name the caller chooses, with its capacity, address and rooms; a machine name already in use is refused.",
+                "description": "Adds a venue under a machine name the caller chooses, or one computed from its name, with its capacity, address and rooms; a machine name already in use is refused.",
                 "kind": "create",
                 "creates": true,
                 "destructive": false,
@@ -28,12 +28,23 @@
             },
             "id": {
                 "title": "Machine name",
-                "description": "A unique name for the venue: lowercase letters, numbers and underscores.",
+                "description": "A unique name for the venue: lowercase letters, numbers and underscores, computed from its name unless one is given.",
                 "type": "string",
                 "pattern": "^[a-z0-9_]+$",
                 "maxLength": 32,
                 "x-surface": {
-                    "patternMessage": "The machine name may hold only lowercase letters, numbers and underscores."
+                    "computed": {
+                        "from": [
+                            "label"
+                        ],
+                        "when": "unless_sent"
+                    },
+                    "checkedOnServer": [
+                        {
+                            "constraint": "DataSurfaceUnique",
+                            "message": "Refused when a venue named this already exists."
+                        }
+                    ]
                 }
             },
             "slug": {
@@ -104,7 +115,6 @@
         "additionalProperties": false,
         "required": [
             "label",
-            "id",
             "capacity"
         ],
         "$defs": {

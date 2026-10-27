@@ -1,10 +1,11 @@
 # Common settings recipes
 
-Seven things a settings page asks for that no other page shows end to
-end. Each snippet but the last is a key of the test module's opening
+Eight things a resource often asks for that no other page shows end to
+end. Each snippet but the last two is a key of the test module's opening
 hours (`resource_test.opening_hours`, in
 `tests/modules/data_surface_resource_test`), written into its
-`defineInputs()` as shown here; the last is the same module's workshop.
+`defineInputs()` as shown here; the seventh is the same module's
+workshop, and the last example 15's venue.
 A test fails if this page and the class differ, and another holds each
 key to what this page says it does. Read
 [Your first resource](first-resource.md) first: a recipe is a few more
@@ -286,3 +287,43 @@ applies at every bench. Store the map as a `sequence` in config schema.
 A list that cannot be cached is refused: declare the tags of what the
 provider reads ([Keys that come from the
 site](resources.md#keys-that-come-from-the-site)).
+
+## A title and a machine name
+
+A thing with a name and a machine name, as Drupal's own forms ask for a
+content type or a block: the machine name is suggested from the name, a
+person may type over it, it is held once, and it stays as it is once
+the thing exists. It is two keys. Example 15's venue declares them:
+
+<!-- excerpt: modules/data_surface_examples/src/Resource/VenueResource.php -->
+
+```php
+$inputs->add('label', 'string', t('Name'))
+  ->setRequired(TRUE)
+  ->addConstraint('Length', ['max' => 128]);
+$inputs->compute('id', 'machine_name', t('Machine name'),
+  from: ['label'], using: MachineName::class, when: Compute::UNLESS_SENT)
+  ->setDescription(t('A unique name for the venue: lowercase letters, numbers and underscores, computed from its name unless one is given.'))
+  ->addConstraint('Length', ['max' => 32]);
+```
+
+`id` is the resource's identity, `#[Resource(identity: ['id'])]`, and its
+storage a `ConfigEntityStorage`. That is all it takes:
+
+- `machine_name` is core's config schema type: the pattern
+  `^[a-z0-9_]+$` and a Length of 166, both stated in the schema, which
+  the key narrows to 32.
+- A call that leaves `id` out gets one computed from the name by the
+  stock `MachineName`, as the browser suggests it: "Café Déjà Vu" is
+  `cafe_deja_vu`. A call that sends one keeps it.
+- A create refuses a machine name a venue holds: "A venue named
+  riverside already exists." The build adds that rule, the stock
+  `DataSurfaceUnique`, to the identity key of every create whose storage
+  can say whether a thing exists; write none of your own.
+- The form draws core's machine name element beside the name. On edit
+  the machine name is the venue the page is about: drawn disabled, and
+  kept whatever is sent.
+
+Each class's `use` line: [Namespaces](concepts.md#namespaces).
+The rules in full: [A title and its machine
+name](declaring-a-resource.md#a-title-and-its-machine-name).

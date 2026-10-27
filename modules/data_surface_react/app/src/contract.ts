@@ -133,9 +133,11 @@ export interface Extension {
    * On a computed key, beside `readOnly`: the keys it is computed from, and
    * whether once, when the thing is created, or again whenever one of them
    * changes. Nobody types it: the page shows what the server's narrowing
-   * answers for it and never sends it.
+   * answers for it and never sends it. One computed `unless_sent`, a
+   * machine name from a title, is no `readOnly`: the page shows what the
+   * narrowing suggests, and sends it only once the person typed it.
    */
-  computed?: { from: string[]; when: 'create' | 'change' };
+  computed?: { from: string[]; when: 'create' | 'change' | 'unless_sent' };
   /** On an object that only groups each module's fieldset: draw nothing around them. */
   group?: boolean;
   /** On a module's fieldset inside a group: draw it right after this sibling of the group instead. */
@@ -1153,16 +1155,40 @@ export function watchedPaths(schema: Schema, values: Values, prefix = ''): Set<s
  *
  * The server computes it from the keys it is computed from as they are
  * sent, so a value the page holds for it, from a narrowing asked before the
- * last change, is never sent and refused.
+ * last change, is never sent and refused. A key computed `unless_sent` is
+ * sent once the person typed it, `typed`, and kept as sent.
  */
-export function withoutComputed(schema: Schema, values: Values): Values {
+export function withoutComputed(schema: Schema, values: Values, typed: ReadonlySet<string> = new Set()): Values {
   const sent: Values = { ...values };
   for (const [name, property] of Object.entries(schema.properties ?? {})) {
-    if (property['x-surface']?.computed !== undefined) {
+    const computed = property['x-surface']?.computed;
+    if (computed !== undefined && !(computed.when === 'unless_sent' && typed.has(name))) {
       delete sent[name];
     }
   }
   return sent;
+}
+
+/**
+ * The values to narrow: every key but one computed `unless_sent` nobody typed.
+ *
+ * What the page holds for it is the server's last suggestion, which a
+ * change of what it is computed from moves; sent, it would be kept as
+ * typed.
+ */
+export function withoutSuggested(schema: Schema, values: Values, typed: ReadonlySet<string>): Values {
+  const sent: Values = { ...values };
+  for (const [name, property] of Object.entries(schema.properties ?? {})) {
+    if (property['x-surface']?.computed?.when === 'unless_sent' && !typed.has(name)) {
+      delete sent[name];
+    }
+  }
+  return sent;
+}
+
+/** Answers whether a top level key is computed unless sent: one a person may type. */
+export function isSuggested(schema: Schema | null, path: string): boolean {
+  return schema?.properties?.[path]?.['x-surface']?.computed?.when === 'unless_sent';
 }
 
 export function isObject(value: unknown): value is Values {

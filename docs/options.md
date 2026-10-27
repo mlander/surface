@@ -272,7 +272,12 @@ as the permission option, a placeholder message), for the same reason
 
 **3. A constraint of your own, last.** Only for a rule no keyword and no
 list can state: a comparison between two keys, uniqueness against what
-is stored, a check of site state with a reason of its own. The cost: the
+is stored, a check of site state with a reason of its own. One such rule
+needs none: a create's identity held once across what is stored is the
+stock `DataSurfaceUnique`, which the build adds where the storage can
+say whether a thing exists ("A venue named riverside already exists.";
+[A title and its machine name](declaring-a-resource.md#a-title-and-its-machine-name)),
+so no resource writes one. The cost: the
 schema can only name it under `x-surface.checkedOnServer`, it does not
 read back from the schema, the React page cannot narrow on it, and a
 caller learns the rule when a call is refused. When you write a

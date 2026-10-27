@@ -45,7 +45,7 @@ services:
       - { name: cache_tags_invalidator }
   data_surface.resources:
     class: Drupal\data_surface\ResourceBuild\Resources
-    arguments: ['@data_surface.resource_registry', '@typed_data_manager', '@class_resolver', '@current_user', '@data_surface.operation_arguments', '@data_surface.watched_value_check', '@user_permissions_hash_generator', '@data_surface.site_defaults', '@cache.data_surface_build', '@language_manager']
+    arguments: ['@data_surface.resource_registry', '@typed_data_manager', '@class_resolver', '@current_user', '@data_surface.operation_arguments', '@data_surface.watched_value_check', '@user_permissions_hash_generator', '@data_surface.site_defaults', '@cache.data_surface_build', '@language_manager', '@config.typed']
   # Each build for no account (buildDeclared()) and the OpenAPI document,
   # kept across requests under the tags of what they were read from.
   cache.data_surface_build:

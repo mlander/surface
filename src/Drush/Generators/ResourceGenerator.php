@@ -205,7 +205,7 @@ final class ResourceGenerator extends BaseGenerator {
     ], 'configure');
     if ($operation === 'identity') {
       $identity = $this->ask($ir, 'Identity key', 'id', static fn (mixed $value): string => (new RequiredMachineName())($value));
-      throw new RuntimeException(sprintf('A resource with identity (%s) is stored in a config entity type, which this generator does not write yet; only a config object is offered. Example 15 of data_surface_examples shows one written by hand.', $identity));
+      throw new RuntimeException(sprintf('A resource with identity (%s) is stored in a config entity type, which this generator does not write yet; only a config object is offered. Example 15 of data_surface_examples shows one written by hand, its identity a title and a machine name: $inputs->compute(\'%s\', \'machine_name\', t(\'Machine name\'), from: [\'label\'], using: MachineName::class, when: Compute::UNLESS_SENT) (docs/recipes.md#a-title-and-a-machine-name).', $identity, $identity));
     }
     $operation_label = $this->ask($ir, 'Operation label', 'Configure the ' . lcfirst($label));
     $operation_description = $this->ask($ir, 'Operation description, the first thing an agent reads about the tool', NULL, static function (mixed $value): string {

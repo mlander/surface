@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\data_surface_resource_test\Resource\Badge;
 
+use Drupal\data_surface\Compute\MachineName;
 use Drupal\data_surface\Resource\Attribute\Operation;
 use Drupal\data_surface\Resource\Attribute\Resource;
 use Drupal\data_surface\Resource\BlueprintInterface;
@@ -14,11 +15,13 @@ use Drupal\data_surface_resource_test\Compute\BadgeHandle;
 use Drupal\data_surface_resource_test\Storage\BadgeStorage;
 
 /**
- * A badge: two keys computed from a name, once and on every change.
+ * A badge: three keys computed from a name, once, on change, unless sent.
  *
  * The code is computed once, while nothing is stored for it; the handle
  * again whenever the first or last name changes, and is held to twelve
- * characters, which a long name breaks.
+ * characters, which a long name breaks; the tag, a machine name of eight
+ * characters at most, from the last name when none is sent, and kept as
+ * sent when one is.
  */
 #[Resource('resource_test.badge', storage: BadgeStorage::class)]
 #[Operation('configure', label: 'Configure the badge', permission: 'administer site configuration')]
@@ -34,6 +37,8 @@ final class BadgeResource implements ResourceInterface {
     $inputs->compute('code', 'string', t('Code'), from: ['first'], using: BadgeCode::class);
     $inputs->compute('handle', 'string', t('Handle'), from: ['first', 'last'], using: BadgeHandle::class, when: Compute::ON_CHANGE)
       ->addConstraint('Length', ['max' => 12]);
+    $inputs->compute('tag', 'machine_name', t('Tag'), from: ['last'], using: MachineName::class, when: Compute::UNLESS_SENT)
+      ->addConstraint('Length', ['max' => 8]);
     $inputs->add('color', 'string', t('Color'), default: 'blue');
   }
 

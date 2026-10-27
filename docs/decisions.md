@@ -737,7 +737,10 @@ top ([Which constraint to write](options.md#which-constraint-to-write)):
   example 2 does for a venue's rooms.
 - **A constraint of the author's own last.** Only for a rule no keyword
   and no list states: a comparison between two keys, uniqueness against
-  what is stored, a check of site state with a reason of its own. Why
+  what is stored, a check of site state with a reason of its own. A
+  create's identity held once is no author's: the build adds the stock
+  `DataSurfaceUnique` (*amended 2026-10-26*,
+  [A machine name is a computed identity](#a-machine-name-is-a-computed-identity)). Why
   last: the schema can only name it under `checkedOnServer`, nothing
   reads it back, nothing narrows on it in the browser, and a caller
   learns it when a call is refused. One that is written extends the
@@ -2506,6 +2509,142 @@ value locally, which needs the class in a language the page runs.
 `DataSurfaceFormBuilder::refinementOverlay()`, `Slugify`, `ComputedKeysTest`,
 `VenueResourceTest`)
 
+*Amended 2026-10-26:* a third `when:`, `Compute::UNLESS_SENT`, computes
+the key only when a call leaves it out, or sends it null or empty, and
+keeps a value sent, with no note and no refusal. Such a key is not
+`readOnly`, the write tool offers it, and a form draws it by its widget.
+A refusal of it names its sources only while it holds the value they
+give, "This is computed from Name unless a value is sent.", and is left
+out while one of them is refused; holding another value, it holds the
+caller's own, and its refusals stand as they are.
+The class computing a key is handed the key's own definition beside the
+values, `compute(array $from, ?DataDefinitionInterface $key = NULL)`:
+static declaration, no site state, which the stock `MachineName` reads
+to cut to the key's Length. And one class may reach one service: the
+guard admits `transliteration` to `MachineName` by name, a function of a
+string and a language code that reads no site state, and refuses every
+other service to every class as before
+([A machine name is a computed identity](#a-machine-name-is-a-computed-identity)).
+
+### A machine name is a computed identity
+
+Decided 2026-10-26, with example 15's venue and the content type demo.
+Drupal pairs a title with a machine name: the machine name is suggested
+from the title, a person may type over it, it is unique, and it does not
+change once the thing exists. It is one spelling with no verb of its
+own, `id` being the resource's identity key:
+
+```php
+$inputs->add('label', 'string', t('Name'))->setRequired(TRUE);
+$inputs->compute('id', 'machine_name', t('Machine name'),
+  from: ['label'], using: MachineName::class, when: Compute::UNLESS_SENT);
+```
+
+Each class's `use` line: [Namespaces](concepts.md#namespaces).
+
+Five parts, each an existing mechanism:
+
+- **The type.** `machine_name` is core's config schema data type: a
+  string with a Regex and a Length of 166. `add()` and `compute()` read
+  a type typed data does not know from the config schema
+  (`Shapes::configType()`): the key is the string underneath, with the
+  type's constraints as its own, marked with the type
+  (`DefinitionMetadata::configTypeOf()`), and held to narrowing them as
+  a key declared with a shape is. Both documents state `pattern` and
+  `maxLength`, the schema reader reads them back, and a tool caller sees
+  them. The generated config schema writes `type: machine_name` and only
+  what the key narrows, as core's `node.type.*` does. Two readings make
+  the pattern one a client can check: a Regex anchored with `$` is read
+  with `D`, which narrows it by a final line break only
+  ([A pattern both engines read alike](#a-pattern-both-engines-read-alike)),
+  and a message that names the value it refuses (core's "The %value
+  machine name is not valid.") is a refusal's sentence, so no
+  `patternMessage` is stated for it. Why the config schema type and not
+  a shape of this module's: a config entity's id is a `machine_name` in
+  core's schema already, so the resource and its storage name one type.
+- **When it is computed, `Compute::UNLESS_SENT`.** Left out of a call,
+  or sent null or empty, it is computed as `ON_CREATE` computes it,
+  while storage holds nothing for it; sent, it is kept as sent and
+  judged by its own constraints. A refusal of the value its sources give
+  names them, "This is computed from Name unless a value is sent.";
+  a refusal of a value of the caller's own names nothing more.
+  `ON_CREATE` and `ON_CHANGE` still refuse a value sent other than the
+  one they hold, code `computed`.
+  Both documents keep `x-surface.computed`, `"when": "unless_sent"`,
+  with no `readOnly`, and never list it in `required`; the write tool's
+  `values` offers it. On an update the identity is what the operation
+  knows, locked at every door, as before. Why a mode and not a verb: it
+  is a computed key in every other respect (its sources, a pure class,
+  the narrowing answering its value), and only what a value sent means
+  differs.
+- **The stock class, `MachineName`.** It transliterates the first source,
+  lowercases, replaces each run of characters outside `[a-z0-9_]` with
+  one underscore, cuts to the key's Length and trims underscores at both
+  ends: the steps of core's `machine-name.js` with its default
+  `replace_pattern`, in its order, so the name the browser suggests and
+  the name the server computes for a call that leaves the key out are
+  one name. "Café Déjà Vu" is `cafe_deja_vu`. It reads the key's Length
+  from the key's own definition, which `compute()` is handed. The guard
+  admits one service to this one class by name, `transliteration`
+  (`PipelineGuard::COMPUTE_ALLOWED`, and the same list in the PHPStan
+  rule): transliteration is a function of a string and a language code
+  with no site state. Every other service stays refused, to it and to
+  every other class. It transliterates for English; the browser
+  transliterates for the page's language, and what it suggests is sent
+  and kept.
+- **Uniqueness, `DataSurfaceUnique`.** A stock constraint nobody writes:
+  the build adds it to the identity key of every operation that creates,
+  when the resource has one identity key and its storage implements
+  `DeletableStorageInterface`, which now also answers `exists()`, whether
+  a thing is stored under the identity a context knows, and
+  `singularLabel()`, "venue" (`Declaring::holdIdentityOnce()`). Its
+  refusal names the id and the thing, code `taken`: "A venue named
+  riverside already exists." Both documents name it under
+  `checkedOnServer` with its reason, "Refused when a venue named this
+  already exists." `ConfigEntityStorage` answers both, and its
+  `prepare()` refuses a taken id in the same sentence for a caller that
+  skips validation. Why on the deletable storage: a storage that
+  removes a thing by its identity loads it by that identity, so it can
+  say whether one is there. A method on `ResourceStorageInterface` would
+  have to be written by every storage, those with no identity included,
+  and a new interface would grow the counted surface for the same
+  question ([The surface was counted and cut](#the-surface-was-counted-and-cut)).
+- **The widget.** A key of type `machine_name` computed unless sent from
+  a key beside it is drawn as core's `machine_name` element
+  (`Form\MachineNameElement`): its source is the source key's element,
+  and its `exists` callback asks the storage what the constraint asks
+  (`UniqueConstraintValidator::taken()`). The element's own validation
+  is off, since a form keeps the first error per element and core's
+  words would replace the constraint's, which are the tool's and HTTP's.
+  On an update the key is locked, drawn disabled with its value, as any
+  locked key is. The React page draws it as a text input, shows the
+  narrowing's suggestion, and sends it once the person typed it.
+
+Moved onto it: example 15's venue `id`, whose slug stays `ON_CREATE`,
+the contrast the page shows, and the content type demo's `type`, whose
+`DataSurfaceUniqueNodeType` constraint and whose cosmetic machine name
+element are deleted. A placed block and the storage test's config entity
+get `DataSurfaceUnique` too: their storages are config entity storages.
+
+Rejected: a blueprint verb of its own, `machineName()`, since it would
+repeat `compute()`'s sources, class and mode under another name, where
+every door reads a computed key already; and a uniqueness constraint per
+resource, as the content type demo had, since each repeats one storage
+question in its own words, and a resource without one lets every door
+offer a taken id.
+
+*Open:* an identity of several keys gets no uniqueness constraint, since
+a constraint sees one key's value; the refusal says "A" before every
+noun, "A image style" included; and a source and its machine name drawn
+in different groups of an arrangement are not paired, since the element
+looks for its source beside it.
+(`Compute::UNLESS_SENT`, `Computed::takesSent()`, `Shapes::configType()`,
+`MachineName`, `PipelineGuard::COMPUTE_ALLOWED`, `UniqueConstraint`,
+`UniqueConstraintValidator`, `DeletableStorageInterface::exists()`,
+`Declaring::holdIdentityOnce()`, `MachineNameElement`,
+`ComputedKeysTest`, `MachineNameTest`, `UniqueIdentityTest`,
+`VenueApiTest`)
+
 ## Access
 
 ### Access has three answers
@@ -3210,8 +3349,10 @@ that is their job ([No door-specific context](resources.md#no-door-specific-cont
   through the container, so the instance's properties are looked through
   once for one (`PipelineGuard::holdsNothingDoorSpecific()`). Site state
   with cacheability passes; a static refiner and a deriver still reach
-  nothing but the typed data manager, and a static access answer asked
-  again nothing that reads site state. A declared rule is data the
+  nothing but the typed data manager (and the stock `MachineName`
+  transliteration besides, *amended 2026-10-26*,
+  [A machine name is a computed identity](#a-machine-name-is-a-computed-identity)),
+  and a static access answer asked again nothing that reads site state. A declared rule is data the
   engine evaluates and runs no code of the author's, so it has nothing
   to guard. Before anything runs, the module's PHPStan rule
   (`DoorSpecificRule`) flags, in those classes, the `\Drupal` shortcuts
@@ -4421,6 +4562,11 @@ module is off: it carries `#[Resource]` or `#[Structure]`, or it is a
 plugin that is its own structure), is skipped; one naming a class that
 loads and is neither is refused. A disabled module must not break the
 site, and a typo must not pass silently. (`ResourceRegistry`)
+An `#[Alters]` naming by its id a resource, structure or shape that has
+a class is refused with the class to name instead (decided 2026-10-26;
+until then it was skipped as a class that does not load): an id names
+only a derived resource or a deriver's base, and an id nothing claims is
+still skipped. (`ResourceRegistry::assertAltersByClass()`)
 
 ### `#[UsesStructure]` into the plugin definition
 

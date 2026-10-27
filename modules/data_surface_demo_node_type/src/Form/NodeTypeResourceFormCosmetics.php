@@ -19,10 +19,12 @@ use Drupal\data_surface\Pipeline\DataSurfaceResult;
  *
  * All that is left of a form class once the values and their arrangement
  * are declared on a resource: core's vertical tabs borrowed to hold the
- * groups the resource declares, the machine name's mirror-while-typing,
- * the sentence a person reads afterwards and the page they land on. No
- * build, no validate, no submit, and no grouping or weight: which key
- * sits in which group is the resource's, read by every door.
+ * groups the resource declares, the sentence a person reads afterwards
+ * and the page they land on. No build, no validate, no submit, no
+ * grouping or weight, and no machine name element: the machine name is
+ * computed from the name unless typed, which the generated form draws as
+ * core's element, and which key sits in which group is the resource's,
+ * read by every door.
  *
  * Deleting this class yields the same working form, its groups drawn as
  * details one under another, which is the test of whether a cosmetic
@@ -77,21 +79,6 @@ final class NodeTypeResourceFormCosmetics implements DataSurfaceFormCosmeticsInt
       $form[$key] = $surface_form;
     }
 
-    // The element type is borrowed for what it draws, not for what it
-    // checks: its own validation asks what the resource's Regex and
-    // uniqueness constraints already ask, answers first, and a form
-    // state keeps only the FIRST error per element, so the element's
-    // generic sentence would replace the resource's violation. Dropping
-    // #element_validate is what keeps this layer cosmetic. Only an add
-    // has anything to mirror; on edit the key is locked and the
-    // generated element is already disabled.
-    if ($operation === 'create') {
-      $form[$key]['type']['#type'] = 'machine_name';
-      $form[$key]['type']['#machine_name'] = [
-        'source' => [$key, 'name'],
-      ];
-      $form[$key]['type']['#element_validate'] = [];
-    }
     return $form;
   }
 

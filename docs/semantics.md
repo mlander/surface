@@ -83,6 +83,15 @@ says the same: an optional key's type allows `null`, a required key's,
 an always held key's and a secret's does not
 ([served contract](served-contract.md#the-schema)).
 
+A computed key reads the three its own way, by its `when:`
+([Computed keys](declaring-a-resource.md#computed-keys)):
+
+| Sent for the key | `ON_CREATE`, `ON_CHANGE` | `UNLESS_SENT` |
+| --- | --- | --- |
+| left out | computed while storage holds nothing for it (and, for `ON_CHANGE`, when a source changed); else what is stored | the same |
+| `NULL`, or `''` | refused as a value other than the one it holds, code `computed`, unless it holds nothing | read as left out |
+| a value | noted and not taken when it is the one it holds; else refused, code `computed` | the value, coerced and judged by its constraints |
+
 This is where the module parts from the Tool API, whose rule is that a
 caller's null for an optional input means the default. A tool's
 defaults are static, so its null and its absent key say the same thing;
@@ -582,8 +591,7 @@ constraint defines one, by the name its constraint gives it, lower case
 and without `_ERROR` (Symfony's code is a UUID, and
 `Constraint::getErrorName()` names it one to one); a constraint that
 sets no code is named for itself, in snake case
-(`UniqueNodeTypeConstraint` is `unique_node_type`,
-`ReferenceableConstraint` `referenceable`). Every refusal the module
+(`ReferenceableConstraint` is `referenceable`). Every refusal the module
 makes itself has one of its own (`Pipeline\Violation`'s constants). A
 refusal of the whole call has an empty path.
 
@@ -619,9 +627,9 @@ key" is that key's pointer.
 | `locked` | empty | The resource may be seen and not changed, so nothing was written. |
 | `not_found` | empty | The call's parameters name nothing, or a read is asked of what an operation creates. |
 | `conflict` | empty | What storage holds changed since the caller read it: the API's `If-Match` no longer names it, a 412. |
-| `taken` | the key | A create names a thing that exists already: its machine name is in use (`ConfigEntityStorage`), or a list holds a thing twice that may be held once (a placed block's condition). |
+| `taken` | the key | A create names a thing that exists already: its identity is held, "A venue named riverside already exists." (the stock `DataSurfaceUnique`, and `ConfigEntityStorage`), or a list holds a thing twice that may be held once (a placed block's condition). |
 | `locked` | the key | In `notes`: a value sent for a locked key, not taken. |
-| `computed` | the key | A value sent for a computed key other than the one it holds; in `notes`, the one it holds, sent and not taken ([Computed keys](declaring-a-resource.md#computed-keys)). |
+| `computed` | the key | A value sent for a computed key other than the one it holds; in `notes`, the one it holds, sent and not taken ([Computed keys](declaring-a-resource.md#computed-keys)). A key computed unless sent takes the value sent, and is never refused with it. |
 | `stale` | the key | In `stale`: a stored value kept that the key no longer offers, with `stored`. |
 | `not_in_range`, `too_high`, `too_low` | the key | Range: a number outside its bounds. |
 | `too_long`, `too_short` | the key | Length: a string outside its bounds. |

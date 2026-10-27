@@ -457,7 +457,9 @@ final class ConfigSchemaGenerator {
     $config = $type->getConfigPrefix() . '.*';
     $built = $this->resources->declaration($definition->name(), $this->context($definition));
     $existing = $this->existing($definition->module, $config);
-    $this->alwaysHeld = array_map('strval', (array) constant($definition->storage . '::ALWAYS_HELD'));
+    // An entity's id is always held: no null clears an identity.
+    $always_held = (array) constant($definition->storage . '::ALWAYS_HELD');
+    $this->alwaysHeld = array_map('strval', [...$always_held, ...$definition->identity]);
     $storage = (string) $definition->storage;
     assert(is_subclass_of($storage, ConfigEntityStorage::class));
     $properties = array_filter($storage::properties(), 'is_string');
@@ -825,7 +827,11 @@ final class ConfigSchemaGenerator {
     if ($definition->getDataType() === 'any') {
       return ['type' => 'ignore', 'label' => $label];
     }
-    $schema = ['type' => static::type($definition), 'label' => $label];
+    // A key declared with a config schema data type is written as that
+    // type, with what it narrows of it.
+    // Decision: see docs/decisions.md#a-machine-name-is-a-computed-identity.
+    $named = DefinitionMetadata::configTypeOf($definition);
+    $schema = ['type' => $named ?? static::type($definition), 'label' => $label];
     // Null clears an optional key, unless its storage always holds it; a
     // required key holds nothing only where the object is installed with
     // nothing for it.
@@ -834,7 +840,7 @@ final class ConfigSchemaGenerator {
     if (!$item && (($installedEmpty && !DefinitionMetadata::hasDefaultValue($definition)) || $this->clearable($definition, $at))) {
       $schema['nullable'] = TRUE;
     }
-    return $schema + static::constraints($definition);
+    return $schema + static::constraints($definition, $named === NULL ? NULL : DefinitionMetadata::configTypeDefinition($definition));
   }
 
   /**
@@ -888,11 +894,32 @@ final class ConfigSchemaGenerator {
    *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   The definition.
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface|null $type
+   *   The config schema data type it was declared with, whose own
+   *   constraints the schema's type states already; NULL for none.
    *
    * @return array
    *   `['constraints' => ...]`, or nothing when it has none to carry.
    */
-  protected static function constraints(DataDefinitionInterface $definition): array {
+  protected static function constraints(DataDefinitionInterface $definition, ?DataDefinitionInterface $type = NULL): array {
+    $carried = static::carried($definition);
+    if ($type !== NULL) {
+      $stated = static::carried($type);
+      $carried = array_filter($carried, static fn (?array $options, string $name): bool => !array_key_exists($name, $stated) || $stated[$name] !== $options, ARRAY_FILTER_USE_BOTH);
+    }
+    return $carried === [] ? [] : ['constraints' => $carried];
+  }
+
+  /**
+   * Reads the constraints of a definition a schema can carry, as carried.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The definition.
+   *
+   * @return array<string, array|null>
+   *   Each constraint's carried options, by name.
+   */
+  protected static function carried(DataDefinitionInterface $definition): array {
     $declared = $definition instanceof DataDefinition ? ($definition->toArray()['constraints'] ?? []) : [];
     $carried = [];
     foreach (is_array($declared) ? $declared : [] as $name => $options) {
@@ -907,7 +934,7 @@ final class ConfigSchemaGenerator {
       }
       $carried[$name] = $kept === [] ? NULL : $kept;
     }
-    return $carried === [] ? [] : ['constraints' => $carried];
+    return $carried;
   }
 
   /**

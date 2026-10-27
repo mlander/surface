@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createApi, pageOf, SEND_FINGERPRINT, type Fetcher, type Settings } from './api';
 import type { Contract, Narrowed, Schema, Settled, Values, Violation } from './contract';
-import { ContractRefused, inlineSchema, joinedFetch, narrow, narrowingStatus, watchedPaths, setAt, withoutComputed } from './contract';
+import { ContractRefused, inlineSchema, isSuggested, joinedFetch, narrow, narrowingStatus, watchedPaths, setAt, withoutComputed, withoutSuggested } from './contract';
 import { ContractPanel } from './ContractPanel';
 import { Properties } from './widgets/Field';
 import { LookupContext } from './widgets/Shell';
@@ -99,6 +99,9 @@ export function SurfaceForm({
   const [submitting, setSubmitting] = useState(false);
   const current = useRef<Values>({});
   const stale = useRef<string[]>([]);
+  // The keys computed unless sent that the person typed, which are sent
+  // as typed; the rest hold the server's suggestion and are left out.
+  const typed = useRef<Set<string>>(new Set());
   // The ETag of what storage held when the contract was loaded, or last
   // written, as received; a narrowing re-reads storage, so it never
   // replaces this.
@@ -163,7 +166,8 @@ export function SurfaceForm({
 
   const refine = useCallback(async () => {
     timer.current = undefined;
-    const sent = current.current;
+    const before = current.current;
+    const sent = settled.current === null ? before : withoutSuggested(settled.current.schema, before, typed.current);
     const mine = ++sequence.current;
     pending.current = true;
     setRefining(true);
@@ -176,7 +180,7 @@ export function SurfaceForm({
       // the rest is the server's answer, discards included.
       const kept: Values = { ...refined.values };
       for (const [key, value] of Object.entries(current.current)) {
-        if (!same(value, sent[key])) {
+        if (!same(value, before[key])) {
           kept[key] = value;
         }
       }
@@ -266,6 +270,15 @@ export function SurfaceForm({
     (path: string, value: unknown) => {
       current.current = setAt(current.current, path, value);
       setValues(current.current);
+      if (isSuggested(settled.current?.schema ?? null, path)) {
+        // Typed over, it is the person's; emptied, it is suggested again.
+        if (value === '' || value === null || value === undefined) {
+          typed.current.delete(path);
+        }
+        else {
+          typed.current.add(path);
+        }
+      }
       // An explicit answer replaces a stale value: it no longer stands
       // for what is stored.
       stale.current = stale.current.filter((dotted) => dotted !== path && !dotted.startsWith(`${path}.`));
@@ -312,7 +325,7 @@ export function SurfaceForm({
     setSubmitting(true);
     try {
       const send = settings.sendFingerprint ?? SEND_FINGERPRINT;
-      const sent = settled.current === null ? current.current : withoutComputed(settled.current.schema, current.current);
+      const sent = settled.current === null ? current.current : withoutComputed(settled.current.schema, current.current, typed.current);
       const { document: result, etag } = await api.submit(sent, stale.current, send ? fingerprint.current : null);
       setFailure(null);
       setErrors(byPath(result.violations));

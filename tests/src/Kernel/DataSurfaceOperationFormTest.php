@@ -249,9 +249,9 @@ class DataSurfaceOperationFormTest extends DataSurfaceKernelTestBase {
    * The element and the message both, because only the pair says the
    * check that ran was the resource's. A form state keeps the FIRST
    * error set on an element and drops every later one, so an element
-   * type borrowed for presentation — the machine name the cosmetic
-   * layer swaps in here — answers first with a sentence of its own and
-   * leaves the resource's violation nowhere to go. Asserting the element
+   * type borrowed for presentation, such as the machine name element
+   * the form draws here, answering first with a sentence of its own
+   * would leave the resource's violation nowhere to go. Asserting the element
    * alone cannot tell that apart, which is how it reached a browser
    * before anything noticed.
    */
@@ -269,7 +269,7 @@ class DataSurfaceOperationFormTest extends DataSurfaceKernelTestBase {
     $this->assertArrayHasKey('surface][type', $errors);
     // Printed at the top of the page, so named for its field.
     $this->assertSame(
-      'Machine name: A content type with the machine name recipe already exists.',
+      'Machine name: A content type named recipe already exists.',
       strip_tags((string) $errors['surface][type']),
     );
     $this->assertSame('Recipe', NodeType::load('recipe')->label());

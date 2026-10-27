@@ -225,7 +225,8 @@ class ReactNarrowingTest extends ExamplesWebDriverTestBase {
    * The slug is computed from the name, so the page watches the name and
    * asks the server to narrow, which answers the slug a write of these
    * values would store; the field is read only, saying it is computed.
-   * A venue's own page shows the slug stored.
+   * The machine name, computed unless sent, is suggested the same way and
+   * may be typed. A venue's own page shows the slug stored.
    *
    * Decision: see
    * docs/decisions.md#a-computed-key-is-a-pure-function-of-its-sources.
@@ -239,8 +240,11 @@ class ReactNarrowingTest extends ExamplesWebDriverTestBase {
     $slug = $page->findField('dsr-slug');
     $this->assertTrue($slug->hasAttribute('disabled'), 'Shown, never typed.');
     $assert->elementTextContains('css', '#dsr-slug--description', 'Computed from other keys when this is created, and kept as it is after.');
+    // The machine name is computed unless sent: typed, or suggested.
+    $this->assertFalse($page->findField('dsr-id')->hasAttribute('disabled'), 'A machine name may be typed.');
     $page->fillField('dsr-label', 'Town Hall');
     $this->assertTrue($this->getSession()->wait(10000, "document.getElementById('dsr-slug').value === 'town-hall'"), 'The narrowing answers the slug it computes.');
+    $this->assertTrue($this->getSession()->wait(10000, "document.getElementById('dsr-id').value === 'town_hall'"), 'And suggests the machine name.');
     $this->assertGreaterThanOrEqual(1, $this->askedTheServer());
 
     $this->drupalGet('surface-react/event.venue/update', ['query' => ['id' => 'riverside']]);

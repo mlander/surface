@@ -47,7 +47,8 @@ use Drupal\Core\Session\AccountInterface;
  *   creates, so a new thing starts from what the resource declares.
  * - prepare() builds the entity it would save, unsaved: a copy of the
  *   one the context names, or a new one under the id the values carry,
- *   refused when that id is taken. It calculates the dependencies the
+ *   refused when that id is taken (which DataSurfaceUnique, asking
+ *   exists(), refuses first at every door). It calculates the dependencies the
  *   entity would save with and holds the whole entity to its config
  *   schema, which for a config entity is its validation, filing each
  *   violation under the key that owns the property. It returns the
@@ -253,7 +254,12 @@ abstract class ConfigEntityStorage implements DeletableStorageInterface, KnowsCl
       $key = $this->idKey();
       $id = $values[$key] ?? NULL;
       if (is_string($id) && $id !== '' && $this->storage()->load($id) !== NULL) {
-        $violations[] = new Violation($key, '', $this->t('The machine name @id is already in use: choose another.', ['@id' => $id]), Violation::TAKEN);
+        // What DataSurfaceUnique refuses before this runs, in its words,
+        // for a caller of prepare() that skipped validation.
+        $violations[] = new Violation($key, '', $this->t('A @thing named @id already exists.', [
+          '@thing' => $this->singularLabel(),
+          '@id' => $id,
+        ]), Violation::TAKEN);
       }
       $entity = $this->create($values);
     }
@@ -270,6 +276,25 @@ abstract class ConfigEntityStorage implements DeletableStorageInterface, KnowsCl
       throw new StorageViolationsException(new ViolationSet($violations));
     }
     return $record;
+  }
+
+  /**
+   * {@inheritdoc}
+   *
+   * Whether the entity type holds an entity under the id the context
+   * knows.
+   */
+  public function exists(OperationContext $context): bool {
+    return $this->entity($context) !== NULL;
+  }
+
+  /**
+   * {@inheritdoc}
+   *
+   * The entity type's singular label: "venue", "content type".
+   */
+  public function singularLabel(): string|\Stringable {
+    return $this->entityType()->getSingularLabel();
   }
 
   /**

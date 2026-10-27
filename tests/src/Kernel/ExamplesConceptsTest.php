@@ -682,8 +682,8 @@ class ExamplesConceptsTest extends DataSurfaceKernelTestBase {
       ['data_surface:block.placement:delete', 'Remove a placed block', 'write', 'id, dry_run'],
     ], $page['parts']['tools']['#rows']);
     $answer = static fn (string $call): string => htmlspecialchars_decode((string) $page['calls']['block.placement:' . $call]['answer']['#value']);
-    $this->assertStringStartsWith("Failed: The values were refused:\n/id: The machine name data_surface_examples_spotlight is already in use", $answer('place'));
-    $this->assertStringStartsWith("Failed: The values were refused:\n/id: The machine name data_surface_examples_section is already in use", $answer('section'));
+    $this->assertStringStartsWith("Failed: The values were refused:\n/id: A block named data_surface_examples_spotlight already exists.", $answer('place'));
+    $this->assertStringStartsWith("Failed: The values were refused:\n/id: A block named data_surface_examples_section already exists.", $answer('section'));
     $this->assertStringStartsWith('Success: Dry run of Edit a placed block', $answer('props'));
     $this->assertStringStartsWith("Failed: The values were refused:\n/settings/slots/actions/component/component: The value you selected is not a valid choice. Choose data_surface_examples:call_to_action (Call to action).", $answer('wrong_slot'));
     $this->assertStringStartsWith('Success: Dry run of Remove a placed block', $answer('delete'));
@@ -796,7 +796,7 @@ class ExamplesConceptsTest extends DataSurfaceKernelTestBase {
     $this->container->get('entity_type.manager')->getStorage('event_venue')->create($ours)->save();
     $page = $controller->step15();
     $this->assertStringContainsString('This site has a venue named town_hall', (string) $page['calls']['note']['#markup']);
-    $this->assertSame("Failed: The values were refused:\n/id: The machine name town_hall is already in use: choose another.", $answer($page, 'create'));
+    $this->assertSame("Failed: The values were refused:\n/id: A venue named town_hall already exists. This is computed from label unless a value is sent.", $answer($page, 'create'));
     $this->assertStringStartsWith('Success: Dry run of Remove a venue', $answer($page, 'delete'));
     $kept = $this->container->get('entity_type.manager')->getStorage('event_venue')->loadUnchanged('town_hall');
     $this->assertSame('Our town hall', $kept?->label(), 'Left as it was.');

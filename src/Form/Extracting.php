@@ -548,8 +548,10 @@ final class Extracting {
     $definitions = $surface->getDefinitions();
     $variantKeys = [];
     foreach ($definitions->entries() as $name => $entry) {
-      if (!$entry->locked && Computed::of($entry->definition) !== NULL) {
-        // Drawn as an item, which posts nothing: accept() computes it.
+      if (!$entry->locked && Computed::of($entry->definition)?->takesSent() === FALSE) {
+        // Drawn as an item, which posts nothing: accept() computes it. One
+        // computed unless sent is drawn as its widget, and read back as
+        // any key: left empty, accept() computes it.
         continue;
       }
       if ($entry->variants !== NULL) {

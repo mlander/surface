@@ -2786,7 +2786,7 @@ drush tool:run data_surface:block.placement:create --uid=1 --input='{"values":{"
 ```
 1. The Spotlight block placed through create, made again: refused for the machine name it took
 Failed: The values were refused:
-/id: The machine name data_surface_examples_spotlight is already in use: choose another.
+/id: A block named data_surface_examples_spotlight already exists.
 ```
 
 ```bash
@@ -2796,7 +2796,7 @@ drush tool:run data_surface:block.placement:create --uid=1 --input='{"values":{"
 ```
 2. The Tonight block, a section holding a card, placed through create, made again: refused for the machine name it took
 Failed: The values were refused:
-/id: The machine name data_surface_examples_section is already in use: choose another.
+/id: A block named data_surface_examples_section already exists.
 ```
 
 ```bash
@@ -3518,7 +3518,7 @@ over the collection. Neither is a new kind of operation.
 )]
 #[Operation('create',
   label: new TranslatableMarkup('Add a venue'),
-  description: new TranslatableMarkup('Adds a venue under a machine name the caller chooses, with its capacity, address and rooms; a machine name already in use is refused.'),
+  description: new TranslatableMarkup('Adds a venue under a machine name the caller chooses, or one computed from its name, with its capacity, address and rooms; a machine name already in use is refused.'),
   permission: self::ADMINISTER,
   creates: TRUE,
   idempotent: TRUE,
@@ -3581,13 +3581,9 @@ final class VenueResource implements ResourceInterface {
     $inputs->add('label', 'string', t('Name'))
       ->setRequired(TRUE)
       ->addConstraint('Length', ['max' => 128]);
-    $inputs->add('id', 'string', t('Machine name'))
-      ->setDescription(t('A unique name for the venue: lowercase letters, numbers and underscores.'))
-      ->setRequired(TRUE)
-      ->addConstraint('Regex', [
-        'pattern' => '/^[a-z0-9_]+$/D',
-        'message' => t('The machine name may hold only lowercase letters, numbers and underscores.'),
-      ])
+    $inputs->compute('id', 'machine_name', t('Machine name'),
+      from: ['label'], using: MachineName::class, when: Compute::UNLESS_SENT)
+      ->setDescription(t('A unique name for the venue: lowercase letters, numbers and underscores, computed from its name unless one is given.'))
       ->addConstraint('Length', ['max' => 32]);
     $inputs->compute('slug', 'string', t('Slug'), from: ['label'], using: Slugify::class)
       ->setDescription(t('The name in a link: lowercase letters, numbers and dashes, set when the venue is added.'))
@@ -3615,6 +3611,20 @@ final class VenueResource implements ResourceInterface {
 }
 ```
 
+The machine name is the venue's identity, and a computed key a caller
+may type: `machine_name` is core's config schema type, a string with
+the pattern `^[a-z0-9_]+$` and a Length the venue narrows to 32, and
+`when: Compute::UNLESS_SENT` computes it from the name only when a call
+leaves it out. The stock `MachineName` does what core's machine name
+element does in the browser: "Town Hall" is `town_hall`. A call that
+sends one keeps it, so both documents state the key with
+`x-surface.computed: {"from": ["label"], "when": "unless_sent"}` and no
+`readOnly`, and the add tool offers it. The build holds the machine name
+a create names to one no venue holds, with the stock `DataSurfaceUnique`
+it adds to the identity key, "A venue named town_hall already exists.",
+and the add form draws core's machine name element beside the name. On
+edit the machine name is the venue the page is about, fixed.
+
 The slug is a computed key, `compute()`: a key of the venue, stored and
 read like any other, whose value nobody types. `Slugify` computes it
 from the name, once, when the venue is added (`when:` is
@@ -3636,7 +3646,7 @@ final class Slugify implements ComputesValueInterface {
   /**
    * {@inheritdoc}
    */
-  public static function compute(array $from): mixed {
+  public static function compute(array $from, ?DataDefinitionInterface $key = NULL): mixed {
     $slug = trim((string) preg_replace('/[^a-z0-9]+/', '-', mb_strtolower((string) ($from['label'] ?? ''))), '-');
     return $slug === '' ? NULL : $slug;
   }
@@ -4069,11 +4079,9 @@ data_surface_examples.event_venue.*:
     FullyValidatable: ~
   mapping:
     id:
-      type: string
+      type: machine_name
       label: 'Machine name'
       constraints:
-        Regex:
-          pattern: '/^[a-z0-9_]+$/D'
         Length:
           max: 32
     label:
@@ -4313,7 +4321,7 @@ of code, counted without blank lines or comments:
 | File | What it is | Lines |
 | --- | --- | --- |
 | [`modules/data_surface_examples/src/Entity/EventVenue.php`](src/Entity/EventVenue.php) | the entity type: its declaration, its keys and the properties it exports, and no form, list builder or link | 47 |
-| [`modules/data_surface_examples/src/Resource/VenueResource.php`](src/Resource/VenueResource.php) | the resource: a venue by its machine name, added, edited and removed, and the venues listed and reordered; its slug a computed key | 81 |
+| [`modules/data_surface_examples/src/Resource/VenueResource.php`](src/Resource/VenueResource.php) | the resource: a venue by its machine name, computed from its name unless one is given, added, edited and removed, and the venues listed and reordered; its slug a computed key | 77 |
 | [`modules/data_surface_examples/src/Slugify.php`](src/Slugify.php) | the slug's deriver: a pure function of the name, run when a venue is added | 6 |
 | [`modules/data_surface_examples/src/Structure/VenueRoomStructure.php`](src/Structure/VenueRoomStructure.php) | a room: an item of the venue's rooms | 18 |
 | [`modules/data_surface_examples/src/Structure/VenueListingStructure.php`](src/Structure/VenueListingStructure.php) | what the listing takes, a page and a filter, and what it answers, the page and the total | 27 |
@@ -4321,7 +4329,7 @@ of code, counted without blank lines or comments:
 | [`modules/data_surface_examples/src/Structure/VenueOrderStructure.php`](src/Structure/VenueOrderStructure.php) | an item of that list: a venue and its new weight | 12 |
 | [`modules/data_surface_examples/src/Storage/VenueStorage.php`](src/Storage/VenueStorage.php) | the storage: a ConfigEntityStorage, which reads the listing, writes the reorder in one commit, and holds a slug to one venue | 151 |
 | [`modules/data_surface_examples/src/Access/VenueAccess.php`](src/Access/VenueAccess.php) | the access class: a disabled venue is only for an account that administers the venues | 17 |
-| [`modules/data_surface_examples/config/schema/data_surface_examples.schema.yml`](config/schema/data_surface_examples.schema.yml), entry `data_surface_examples.event_venue.*` | the entity type's config schema, generated from the resource | 84 |
+| [`modules/data_surface_examples/config/schema/data_surface_examples.schema.yml`](config/schema/data_surface_examples.schema.yml), entry `data_surface_examples.event_venue.*` | the entity type's config schema, generated from the resource | 82 |
 | [`modules/data_surface_examples/config/install/data_surface_examples.event_venue.riverside.yml`](config/install/data_surface_examples.event_venue.riverside.yml) | Riverside Hall, shipped | 18 |
 | [`modules/data_surface_examples/config/install/data_surface_examples.event_venue.library.yml`](config/install/data_surface_examples.event_venue.library.yml) | the Old Library, shipped | 18 |
 | [`modules/data_surface_examples/config/install/data_surface_examples.event_venue.harbour.yml`](config/install/data_surface_examples.event_venue.harbour.yml) | the Harbour Centre, shipped | 18 |

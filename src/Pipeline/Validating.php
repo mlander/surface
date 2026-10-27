@@ -122,13 +122,18 @@ final class Validating {
    *   The storage's violations, filed under the top level's keys.
    * @param \Drupal\data_surface\DataSurfaceInterface $surface
    *   The data surface describing the top level.
+   * @param array $values
+   *   The accepted values of the top level, which tell a key computed
+   *   unless sent that was computed from one that was sent.
+   * @param array $current
+   *   What the top level holds in storage.
    *
    * @return \Drupal\data_surface\Pipeline\Violation[]
    *   The same, each of a computed key naming its sources.
    */
-  public function namingSourcesAtTop(array $violations, DataSurfaceInterface $surface): array {
+  public function namingSourcesAtTop(array $violations, DataSurfaceInterface $surface, array $values = [], array $current = []): array {
     $this->frame = ['', [], []];
-    return $this->namingSources($violations, $surface);
+    return $this->namingSources($violations, $surface, $values, $current);
   }
 
   /**
@@ -193,7 +198,8 @@ final class Validating {
       $definition = $entry->definition;
       $value = $values[$name] ?? NULL;
       $computed = $entry->locked ? NULL : Computed::of($definition);
-      $refusal = $computed === NULL ? NULL : $this->notComputed($surface, $entry, $computed, $values, $current);
+      // A key computed unless sent holds either: nothing to refuse.
+      $refusal = $computed === NULL || $computed->takesSent() ? NULL : $this->notComputed($surface, $entry, $computed, $values, $current);
       if ($refusal !== NULL) {
         // Decision: see
         // docs/decisions.md#a-computed-key-is-a-pure-function-of-its-sources.
@@ -329,7 +335,7 @@ final class Validating {
         ? new Violation('', '', $this->t('These values cannot be checked here: the schema they were read from refers to @reference, which is outside it.', ['@reference' => $said]), Violation::UNRESOLVED)
         : new Violation('', '', $this->t('These values do not hold to the schema they were read from: @error', ['@error' => $said]), Violation::NOT_VALID);
     }
-    return $this->namingSources($errors, $surface);
+    return $this->namingSources($errors, $surface, $values, $current);
   }
 
   /**
@@ -358,7 +364,7 @@ final class Validating {
    */
   protected function notComputed(DataSurfaceInterface $surface, Entry $entry, Computed $computed, array $values, array $current): ?Violation {
     $name = $entry->name;
-    $held = $computed->value($name, $values, $current);
+    $held = $computed->value($name, $values, $current, $entry->definition);
     try {
       $held = $this->accepting->acceptValue($entry->definition, $held, $held, $name);
     }
@@ -378,7 +384,11 @@ final class Validating {
    * rule) is about a value the caller did not send: a sentence after it
    * names the keys it is computed from, the ones the caller can change.
    * While one of those is refused itself, the computed key's refusals are
-   * left out: they follow from it, and fixing it fixes them.
+   * left out: they follow from it, and fixing it fixes them. A key
+   * computed unless sent is named so only where it holds the value its
+   * sources give, and its sentence says a value may be sent instead; one
+   * holding another value holds the caller's own, and its refusals stand
+   * as they are.
    *
    * Decision: see
    * docs/decisions.md#a-computed-key-is-a-pure-function-of-its-sources.
@@ -387,11 +397,15 @@ final class Validating {
    *   The violations of one level, filed under its keys.
    * @param \Drupal\data_surface\DataSurfaceInterface $surface
    *   The data surface describing the level.
+   * @param array $values
+   *   The accepted values of the level.
+   * @param array $current
+   *   What the level holds in storage.
    *
    * @return \Drupal\data_surface\Pipeline\Violation[]
    *   The same, each of a computed key naming its sources.
    */
-  protected function namingSources(array $violations, DataSurfaceInterface $surface): array {
+  protected function namingSources(array $violations, DataSurfaceInterface $surface, array $values = [], array $current = []): array {
     $refused = [];
     foreach ($violations as $violation) {
       $refused[$violation->key] = TRUE;
@@ -400,17 +414,51 @@ final class Validating {
     foreach ($violations as $violation) {
       $definition = $violation->key === '' ? NULL : $surface->getDefinition($violation->key);
       $computed = Computed::of($definition);
-      if ($computed === NULL || $violation->code === Violation::COMPUTED) {
+      // A key computed unless sent holding a value its sources do not give
+      // holds the caller's own: its refusals stand as they are.
+      if ($computed === NULL || $violation->code === Violation::COMPUTED || ($computed->takesSent() && !$this->holdsComputed($violation->key, $definition, $computed, $values, $current))) {
         $named[] = $violation;
         continue;
       }
       if (array_intersect_key($refused, array_flip($computed->from)) !== []) {
         continue;
       }
-      $after = $this->accepting->computedFrom($definition->getLabel() ?? $violation->key, $this->accepting->sources($surface, $computed, $this->frame[0]), 'after');
+      $after = $this->accepting->computedFrom($definition->getLabel() ?? $violation->key, $this->accepting->sources($surface, $computed, $this->frame[0]), $computed->takesSent() ? 'unless' : 'after');
       $named[] = $violation->saying(new Sentences($violation->message, $after));
     }
     return $named;
+  }
+
+  /**
+   * Answers whether a key computed unless sent holds what its sources give.
+   *
+   * @param string $key
+   *   The key.
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   Its definition.
+   * @param \Drupal\data_surface\Computed $computed
+   *   What it is computed from.
+   * @param array $values
+   *   The accepted values of its level.
+   * @param array $current
+   *   What its level holds in storage.
+   *
+   * @return bool
+   *   TRUE when it holds the value computed, or what is stored where it is
+   *   not computed again: no value of the caller's own.
+   */
+  protected function holdsComputed(string $key, DataDefinitionInterface $definition, Computed $computed, array $values, array $current): bool {
+    if ($values === []) {
+      return FALSE;
+    }
+    $held = $computed->value($key, $values, $current, $definition);
+    try {
+      $held = $this->accepting->acceptValue($definition, $held, $held, $key);
+    }
+    catch (\InvalidArgumentException) {
+      // Compared as computed.
+    }
+    return Accepting::sameValue($values[$key] ?? NULL, $held);
   }
 
   /**

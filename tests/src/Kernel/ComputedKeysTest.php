@@ -24,8 +24,9 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * Tests a key computed from others: declared, computed, judged and stated.
  *
  * The badge fixture computes its code from the first name once, while
- * nothing is stored for it, and its handle from both names again on
- * every write that changes one of them, held to twelve characters.
+ * nothing is stored for it, its handle from both names again on every
+ * write that changes one of them, held to twelve characters, and its tag,
+ * a machine name, from the last name unless one is sent.
  *
  * @see docs/decisions.md#a-computed-key-is-a-pure-function-of-its-sources
  */
@@ -117,7 +118,7 @@ class ComputedKeysTest extends DataSurfaceKernelTestBase {
    */
   public function testBothDocumentsStateItReadOnlyAndComputed(): void {
     $built = $this->badge();
-    $this->assertSame(['first', 'last', 'code', 'handle', 'color'], $built->getDefinitions()->names());
+    $this->assertSame(['first', 'last', 'code', 'handle', 'tag', 'color'], $built->getDefinitions()->names());
     $emitter = $this->container->get('data_surface.contract_emitter');
     $documents = [
       'full' => $emitter->emitFull($built, 'resource_test.badge', 'configure')->document['schema'],
@@ -136,6 +137,11 @@ class ComputedKeysTest extends DataSurfaceKernelTestBase {
       $this->assertArrayNotHasKey('const', $schema['properties']['handle'], $kind);
       $this->assertArrayNotHasKey('readOnly', $schema['properties']['first'], $kind);
       $this->assertArrayNotHasKey('computed', $schema['properties']['first']['x-surface'] ?? [], $kind);
+      // Computed unless sent: offered, and still marked, the mode named.
+      $this->assertArrayNotHasKey('readOnly', $schema['properties']['tag'], $kind . ': a value may be typed over it.');
+      $this->assertSame(['from' => ['last'], 'when' => 'unless_sent'], $schema['properties']['tag']['x-surface']['computed'], $kind);
+      $this->assertSame('^[a-z0-9_]+$', $schema['properties']['tag']['pattern'], $kind . ': the machine_name type\'s own Regex.');
+      $this->assertSame(8, $schema['properties']['tag']['maxLength'], $kind . ': narrowed by the key.');
     }
   }
 
@@ -145,7 +151,14 @@ class ComputedKeysTest extends DataSurfaceKernelTestBase {
   public function testComputedWhenNothingIsStored(): void {
     $result = $this->submit(['first' => 'Ada', 'last' => 'Byron']);
     $this->assertTrue($result->isValid(), print_r(static::said($result->violations), TRUE));
-    $this->assertSame(['first' => 'Ada', 'last' => 'Byron', 'code' => 'ADA', 'handle' => 'ada.byron', 'color' => 'blue'], $this->stored());
+    $this->assertSame([
+      'first' => 'Ada',
+      'last' => 'Byron',
+      'code' => 'ADA',
+      'handle' => 'ada.byron',
+      'tag' => 'byron',
+      'color' => 'blue',
+    ], $this->stored());
     $this->assertContains('/code', array_map(static fn (string $path): string => '/' . $path, $result->changes));
   }
 
@@ -221,11 +234,68 @@ class ComputedKeysTest extends DataSurfaceKernelTestBase {
     $forms = $this->container->get('data_surface.form_builder');
     $overlay = $forms->refinementOverlay($built, [], ['first' => 'Grace', 'last' => 'Hop']);
     $this->assertSame(['GRA', 'grace.hop'], [$overlay['code'], $overlay['handle']]);
-    $stored = ['first' => 'Ada', 'last' => 'Byron', 'code' => 'ADA', 'handle' => 'ada.byron', 'color' => 'blue'];
+    $stored = [
+      'first' => 'Ada',
+      'last' => 'Byron',
+      'code' => 'ADA',
+      'handle' => 'ada.byron',
+      'tag' => 'byron',
+      'color' => 'blue',
+    ];
     $overlay = $forms->refinementOverlay($built, $stored, ['first' => 'Grace']);
     $this->assertSame(['ADA', 'grace.byron'], [$overlay['code'], $overlay['handle']], 'As a write would: the code kept, the handle computed again.');
     $document = $this->container->get('data_surface.contract_emitter')->emit($built, $overlay, 'resource_test.badge', 'configure')->document;
     $this->assertSame('grace.byron', $document['values']['handle']);
+  }
+
+  /**
+   * Tests a key computed unless sent: left out, computed; sent, kept.
+   */
+  public function testUnlessSentComputesWhatIsLeftOutAndKeepsWhatIsSent(): void {
+    // cspell:ignore abernath
+    $left_out = $this->submit(['first' => 'Al', 'last' => 'Abernathy']);
+    $this->assertTrue($left_out->isValid(), print_r(static::said($left_out->violations), TRUE));
+    $this->assertSame([], static::said($left_out->notes));
+    $this->assertSame('abernath', $this->stored()['tag'], 'Left out: computed, cut to its Length.');
+
+    \Drupal::state()->delete(BadgeStorage::KEY);
+    $sent = $this->submit(['first' => 'Ada', 'last' => 'Byron', 'tag' => 'countess']);
+    $this->assertTrue($sent->isValid(), print_r(static::said($sent->violations), TRUE));
+    $this->assertSame([], static::said($sent->notes), 'Kept as sent, with no note.');
+    $this->assertSame('countess', $this->stored()['tag']);
+
+    \Drupal::state()->delete(BadgeStorage::KEY);
+    $empty = $this->submit(['first' => 'Ada', 'last' => 'Byron', 'tag' => '']);
+    $this->assertTrue($empty->isValid());
+    $this->assertSame('byron', $this->stored()['tag'], 'Sent empty: read as left out.');
+
+    $this->assertTrue($this->submit(['last' => 'King'])->isValid());
+    $this->assertSame('byron', $this->stored()['tag'], 'Once stored, kept when left out, as on create.');
+    $this->assertTrue($this->submit(['tag' => 'ada_king'])->isValid());
+    $this->assertSame('ada_king', $this->stored()['tag'], 'Sent on a later write: kept as sent.');
+
+    $refused = $this->submit(['tag' => 'Ada King']);
+    $said = array_map(static fn (array $said): array => [$said[0], $said[1], html_entity_decode($said[2])], static::said($refused->violations));
+    $this->assertSame([
+      ['tag', 'regex_failed', 'The "Ada King" machine name is not valid.'],
+    ], $said, 'A value sent is judged as any key, and its refusal names no source: the value is the caller\'s.');
+    $this->assertSame('ada_king', $this->stored()['tag']);
+  }
+
+  /**
+   * Tests the narrowing answers a value sent for a key computed unless sent.
+   */
+  public function testTheNarrowingKeepsWhatIsTypedOverTheSuggestion(): void {
+    $built = $this->badge();
+    $forms = $this->container->get('data_surface.form_builder');
+    $suggested = $forms->refinementOverlay($built, [], ['first' => 'Grace', 'last' => 'Hopper']);
+    $this->assertSame('hopper', $suggested['tag']);
+    $typed = $forms->refinementOverlay($built, [], [
+      'first' => 'Grace',
+      'last' => 'Hopper',
+      'tag' => 'admiral',
+    ]);
+    $this->assertSame('admiral', $typed['tag']);
   }
 
   /**
@@ -261,7 +331,7 @@ class ComputedKeysTest extends DataSurfaceKernelTestBase {
     $refused(fn () => $inputs->compute('code', 'string', 'Code', ['nickname'], BadgeCode::class), 'is computed from "nickname", which is no key declared before it');
     $refused(fn () => $inputs->compute('code', 'string', 'Code', [], BadgeCode::class), 'names no key it is computed from');
     $refused(fn () => $inputs->compute('code', 'string', 'Code', ['first'], DataDefinition::class), 'which implements no');
-    $refused(fn () => $inputs->compute('code', 'string', 'Code', ['first'], BadgeCode::class, 'always'), 'says when: "always"');
+    $refused(fn () => $inputs->compute('code', 'string', 'Code', ['first'], BadgeCode::class, 'always'), 'says when: "always"; it is Compute::ON_CREATE, Compute::ON_CHANGE or Compute::UNLESS_SENT.');
     $refused(fn () => $inputs->compute('codes', 'map', 'Codes', ['first'], BadgeCode::class), 'is a map');
     $definition = $inputs->compute('code', 'string', 'Code', ['first'], BadgeCode::class);
     $this->assertEquals(new Computed(['first'], BadgeCode::class), Computed::of($definition));

@@ -143,8 +143,9 @@ final class Drawing {
         continue;
       }
       $computed = Computed::of($definition);
-      if ($computed !== NULL && !$definitions->isLocked($name)) {
+      if ($computed !== NULL && !$computed->takesSent() && !$definitions->isLocked($name)) {
         // Shown and fixed: nobody types it, and nothing is posted for it.
+        // One computed unless sent is drawn by its widget, below.
         // Decision: see
         // docs/decisions.md#a-computed-key-is-a-pure-function-of-its-sources.
         $container[$name] = DataSurfaceWidgetBase::arranged(static::computedItem($definition, $computed, $surface, $shown[$name] ?? NULL), $declared);
@@ -232,6 +233,13 @@ final class Drawing {
         // Nothing stored: a declared default the list does not offer is
         // no value to keep, so the empty option does not say "keep".
         $element['#empty_option'] = $element[OptionsWidget::UNKEPT_LABEL_KEY];
+      }
+      if (!$locked && $computed?->takesSent() && DefinitionMetadata::configTypeOf($definition) === 'machine_name' && $surface->getDefinition($computed->from[0]) !== NULL) {
+        // A machine name computed from a title: core's element, suggesting
+        // it as the title is typed.
+        // Decision: see
+        // docs/decisions.md#a-machine-name-is-a-computed-identity.
+        $element = MachineNameElement::draw($element, $computed->from[0], $definition);
       }
       $inside = $variants === NULL ? $definitions->entry($name)?->attachment?->child : NULL;
       if ($inside !== NULL && !$locked) {

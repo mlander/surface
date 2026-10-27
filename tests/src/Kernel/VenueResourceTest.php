@@ -362,7 +362,7 @@ class VenueResourceTest extends DataSurfaceKernelTestBase {
     $taken = [
       'path' => '/id',
       'code' => 'taken',
-      'message' => 'The machine name town_hall is already in use: choose another.',
+      'message' => 'A venue named town_hall already exists. This is computed from label unless a value is sent.',
     ];
     $this->assertSame([$taken], $again['violations']);
     $main = ['id' => 'riverside_main', 'label' => 'Main hall', 'seats' => 10];

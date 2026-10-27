@@ -48,9 +48,10 @@ final class StaticRefinerRuleTest extends RuleTestCase {
    * Tests a compute() that calls \Drupal:: is flagged, and nothing else of it.
    */
   public function testFlagsComputeReachingForTheContainer(): void {
+    interface_exists(DataDefinitionInterface::class);
     interface_exists(ComputesValueInterface::class);
     $message = 'The computed key\'s Drupal\Tests\data_surface\Fixtures\ComputeFixture::compute() calls \Drupal::time(), which reads a service or site state. A computed key is a pure function of the keys it is computed from: a value that needs a service, the clock or the request is a storage\'s to add in its prepare().';
-    $this->analyse([dirname(__DIR__, 2) . '/fixtures/phpstan/ComputeFixture.php'], [[$message, 18]]);
+    $this->analyse([dirname(__DIR__, 2) . '/fixtures/phpstan/ComputeFixture.php'], [[$message, 19]]);
   }
 
 }

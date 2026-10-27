@@ -380,6 +380,12 @@ The class that computes a computed key is held to the same promise by the first 
 layers: its `compute()` is static, it runs with the container guarded
 (`PipelineGuard::guardCompute()`), and the PHPStan rule flags
 `\Drupal::` in it ([Computed keys](declaring-a-resource.md#computed-keys)).
+One class is allowed one service more, by name: the stock `MachineName`
+may ask for `transliteration` (`PipelineGuard::COMPUTE_ALLOWED`, and
+the PHPStan rule's `COMPUTE_ALLOWED`), a function of a string and a
+language code that reads no site state. Every other service stays
+refused, to it and to every other class
+(why: [decision](decisions.md#a-machine-name-is-a-computed-identity)).
 
 A runtime refiner may read site state, and nothing a door has: with
 assertions on it runs guarded too, its class refused the request, the

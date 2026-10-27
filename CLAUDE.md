@@ -175,8 +175,9 @@ the record of the rework that brought the module to the pattern.
 - **Computed key**: a key of a resource whose value nobody types,
   `$inputs->compute('slug', 'string', t('Slug'), from: ['label'], using:
   Slugify::class, when: Compute::ON_CREATE)`; the class implements
-  `ComputesValueInterface`, a static `compute(array $from)` run under the static
-  guard. Computed in `accept()` from the accepted sources while storage
+  `ComputesValueInterface`, a static `compute(array $from, ?DataDefinitionInterface $key = NULL)`
+  run under the static guard (one allowance: `MachineName` may use the
+  `transliteration` service, `PipelineGuard::COMPUTE_ALLOWED`). Computed in `accept()` from the accepted sources while storage
   holds nothing for it (and on every write that changes a source with
   `Compute::ON_CHANGE`), judged by its own constraints, a refusal naming
   its sources; stored and read as any key; `readOnly` with
@@ -184,6 +185,17 @@ the record of the rework that brought the module to the pattern.
   `values`; a value sent equal to it noted, any other refused, code
   `computed` (example 15's slug,
   `docs/decisions.md#a-computed-key-is-a-pure-function-of-its-sources`).
+  With `Compute::UNLESS_SENT` the key is computed only when left out (null
+  or `''` read as left out) and a sent value is kept: not `readOnly`,
+  offered by the write tool, `x-surface.computed.when: unless_sent`. A
+  machine name is that pair: `compute('id', 'machine_name', t('Machine
+  name'), from: ['label'], using: MachineName::class, when:
+  Compute::UNLESS_SENT)` on the identity key, with core's `machine_name`
+  config schema type for the pattern and length, `DataSurfaceUnique` added
+  to the identity key of every `creates` operation (the storage answers
+  `exists()`), and core's machine name element as the widget (example 15's
+  id, the content type demo,
+  `docs/decisions.md#a-machine-name-is-a-computed-identity`).
 - **Contract**: the JSON Schema a built resource or structure emits.
 - **Markers**: what a key's `x-surface` says of how far the schema holds
   it, and what an invoker does: `enumerated`, stated in full, narrow

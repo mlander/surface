@@ -86,6 +86,11 @@ final class DefinitionMetadata {
   protected const SHAPE_KEY = 'data_surface_shape';
 
   /**
+   * The definition array key holding the config schema type a key names.
+   */
+  protected const CONFIG_TYPE_KEY = 'data_surface_config_type';
+
+  /**
    * The definition array key marking a key its storage always holds.
    *
    * Written by the build step, from what the storage says, never by an
@@ -531,6 +536,55 @@ final class DefinitionMetadata {
   public static function shapeDefinition(DataDefinitionInterface $definition): ?DataDefinitionInterface {
     $shape = static::shape($definition);
     return $shape === NULL ? NULL : $shape['definition'];
+  }
+
+  /**
+   * Marks a key declared with a config schema data type, `machine_name`.
+   *
+   * The key is of the typed data type the config schema type extends, a
+   * string, with the constraints the config schema type states as its
+   * own; the mark keeps the name, for the form's element and for what the
+   * key narrows.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The key's definition.
+   * @param string $type
+   *   The config schema type.
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $declared
+   *   The type's own definition: what the key narrows.
+   *
+   * @see docs/decisions.md#a-machine-name-is-a-computed-identity
+   */
+  public static function setConfigType(DataDefinitionInterface $definition, string $type, DataDefinitionInterface $declared): void {
+    static::arrayAccess($definition)->offsetSet(static::CONFIG_TYPE_KEY, ['type' => $type, 'definition' => $declared]);
+  }
+
+  /**
+   * Gets the config schema data type a key was declared with.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The definition to read.
+   *
+   * @return string|null
+   *   The type, `machine_name`, or NULL for a key declared otherwise.
+   */
+  public static function configTypeOf(DataDefinitionInterface $definition): ?string {
+    $type = $definition instanceof \ArrayAccess && $definition->offsetExists(static::CONFIG_TYPE_KEY) ? $definition->offsetGet(static::CONFIG_TYPE_KEY) : NULL;
+    return is_array($type) && is_string($type['type'] ?? NULL) ? $type['type'] : NULL;
+  }
+
+  /**
+   * Gets the definition of the config schema data type a key was declared with.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The definition to read.
+   *
+   * @return \Drupal\Core\TypedData\DataDefinitionInterface|null
+   *   The type's own definition, or NULL for a key declared otherwise.
+   */
+  public static function configTypeDefinition(DataDefinitionInterface $definition): ?DataDefinitionInterface {
+    $type = $definition instanceof \ArrayAccess && $definition->offsetExists(static::CONFIG_TYPE_KEY) ? $definition->offsetGet(static::CONFIG_TYPE_KEY) : NULL;
+    return is_array($type) && ($type['definition'] ?? NULL) instanceof DataDefinitionInterface ? $type['definition'] : NULL;
   }
 
   /**

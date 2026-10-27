@@ -9,6 +9,7 @@ use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\Form\FormState;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\data_surface\DataSurfaceInterface;
+use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Pipeline\DataSurfaceStorageInterface;
 use Drupal\data_surface\Pipeline\StorageViolationsException;
 use Drupal\data_surface\Pipeline\ViolationSummary;
@@ -167,7 +168,16 @@ class NodeTypeResourceTest extends DataSurfaceKernelTestBase {
   public function testAddLeavesTheMachineNameOpenAndUnique(): void {
     $surface = $this->resources()->buildOperation(NodeTypeResource::class, 'create');
     $this->assertFalse($surface->isLocked('type'));
-    $this->assertArrayHasKey('DataSurfaceUniqueNodeType', $surface->getDefinition('type')->getConstraints());
+    // The stock uniqueness the build adds to a create's identity, asking
+    // the node type storage.
+    $unique = $surface->getDefinition('type')->getConstraints()['DataSurfaceUnique'] ?? NULL;
+    $this->assertIsArray($unique);
+    $this->assertSame(NodeTypeStorage::class, $unique['storage']);
+    $this->assertSame('type', $unique['key']);
+    $this->assertSame('content type', (string) $unique['thing']);
+    // Computed from the name unless sent: a machine_name of 32 at most.
+    $this->assertSame('machine_name', DefinitionMetadata::configTypeOf($surface->getDefinition('type')));
+    $this->assertSame(['max' => 32], $surface->getDefinition('type')->getConstraints()['Length']);
 
     // The defaults a new content type starts from, as declared.
     $defaults = $surface->getDefaultValues();
@@ -203,7 +213,7 @@ class NodeTypeResourceTest extends DataSurfaceKernelTestBase {
     $values = ['name' => 'Article again', 'type' => 'article'] + $defaults;
     $errors = $this->pipeline()->validate($surface, $values);
     $this->assertContains('type', $errors->keys());
-    $this->assertStringContainsString('already exists', (string) $errors->byKey('type')[0]->message);
+    $this->assertSame('A content type named article already exists.', strip_tags((string) $errors->byKey('type')[0]->message));
     $this->assertCount(0, $this->pipeline()->validate($surface, ['type' => 'fresh_type'] + $values));
   }
 
@@ -220,7 +230,7 @@ class NodeTypeResourceTest extends DataSurfaceKernelTestBase {
     $this->assertTrue($surface->isLocked('type'));
     $this->assertSame('article', $surface->getDefault('type'));
     // No uniqueness check against yourself on edit.
-    $this->assertArrayNotHasKey('DataSurfaceUniqueNodeType', $surface->getDefinition('type')->getConstraints());
+    $this->assertArrayNotHasKey('DataSurfaceUnique', $surface->getDefinition('type')->getConstraints());
 
     // Current values come from the storage, not from the built resource.
     $stored = $storage->load($surface);

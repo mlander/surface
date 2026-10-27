@@ -28,7 +28,9 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  *   but the typed data manager (ALLOWED), which core's own definitions
  *   ask the container for to read their type's default constraints. t() passes:
  *   it builds a lazy markup and resolves the translation service only
- *   when it is rendered.
+ *   when it is rendered. One allowance more, by name: the stock
+ *   MachineName may ask for transliteration (COMPUTE_ALLOWED), a function
+ *   of a string and a language code that reads no site state.
  * - A static access answer, asked a second time (guardAccess()), promises
  *   to depend on the account alone, so the services that read site state
  *   beside the account are refused whoever asks (READS_STATE), and the
@@ -67,6 +69,21 @@ final class PipelineGuard implements DrupalContainerInterface {
    * The services a static refiner may reach: reading a definition needs them.
    */
   public const ALLOWED = ['typed_data_manager'];
+
+  /**
+   * The one service beside ALLOWED a computed key's class may reach, by class.
+   *
+   * The stock MachineName transliterates a title, as core's machine name
+   * element does in the browser. Transliteration is a function of a
+   * string and a language code, with no site state, so it is admitted to
+   * that class by name; every other service stays refused, to it and to
+   * every other class.
+   *
+   * Decision: see docs/decisions.md#a-machine-name-is-a-computed-identity.
+   */
+  public const COMPUTE_ALLOWED = [
+    'Drupal\data_surface\Compute\MachineName' => ['transliteration'],
+  ];
 
   /**
    * What a static access answer may not ask for: site state beside the account.
@@ -210,7 +227,8 @@ final class PipelineGuard implements DrupalContainerInterface {
    *
    * It is a pure function of the keys it is computed from, as a
    * static refiner is of the keys it watches, so it is held the same way:
-   * everything but ALLOWED is refused.
+   * everything but ALLOWED is refused, and the one service COMPUTE_ALLOWED
+   * admits to the stock MachineName, transliteration.
    *
    * Decision: see
    * docs/decisions.md#a-computed-key-is-a-pure-function-of-its-sources.
@@ -227,7 +245,9 @@ final class PipelineGuard implements DrupalContainerInterface {
    *   When it asks the container for anything but ALLOWED.
    */
   public static function guardCompute(string $computes, callable $call): mixed {
-    return static::run(fn (ContainerInterface $container): self => new self($container, $computes, self::COMPUTE, self::ALLOWED), $call);
+    $class = explode('::', $computes, 2)[0];
+    $allowed = [...self::ALLOWED, ...(self::COMPUTE_ALLOWED[$class] ?? [])];
+    return static::run(fn (ContainerInterface $container): self => new self($container, $computes, self::COMPUTE, $allowed), $call);
   }
 
   /**

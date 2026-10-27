@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\data_surface_resource_test\Compute\Broken;
 
+use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\data_surface\Resource\ComputesValueInterface;
 
 /**
@@ -14,7 +15,7 @@ final class ClockStamp implements ComputesValueInterface {
   /**
    * {@inheritdoc}
    */
-  public static function compute(array $from): mixed {
+  public static function compute(array $from, ?DataDefinitionInterface $key = NULL): mixed {
     return ($from['first'] ?? '') . '-' . \Drupal::time()->getRequestTime();
   }
 

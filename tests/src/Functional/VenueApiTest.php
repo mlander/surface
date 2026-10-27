@@ -191,14 +191,35 @@ class VenueApiTest extends BrowserTestBase {
     // Shown fixed, with what it is computed from; nothing is posted for it.
     $assert->fieldNotExists('surface[slug]');
     $assert->pageTextContains('Computed from Name when this is created, and kept as it is after.');
+    // The machine name is core's element, suggested from the name's.
+    $assert->fieldExists('surface[id]');
+    $machine_name = $this->getDrupalSettings()['machineName']['#edit-surface-label'] ?? NULL;
+    $this->assertIsArray($machine_name, 'The machine name element names the name as its source.');
+    $this->assertSame('[^a-z0-9_]+', $machine_name['replace_pattern']);
+    $this->assertSame('_', $machine_name['replace']);
+    $this->assertSame('#edit-surface-id', $machine_name['target']);
+    $assert->elementAttributeContains('css', 'input[name="surface[id]"]', 'maxlength', '32');
+    // Left empty, as a browser with no script leaves it: computed from
+    // the name.
     $this->submitForm([
       'surface[label]' => 'Town Hall',
-      'surface[id]' => 'town_hall',
+      'surface[id]' => '',
       'surface[capacity]' => '300',
       'surface[address]' => '1 Market Square',
     ], 'Save');
     $assert->pageTextContains('The venue Town Hall has been added.');
     $assert->addressEquals('surface-examples/15');
+    // The same name again: the machine name computed from it is held.
+    $this->drupalGet('surface-examples/15/add');
+    $this->submitForm([
+      'surface[label]' => 'Town Hall',
+      'surface[id]' => '',
+      'surface[capacity]' => '30',
+    ], 'Save');
+    $assert->pageTextContains('A venue named town_hall already exists.');
+    $assert->pageTextNotContains('has been added.');
+    $assert->elementExists('css', 'input[name="surface[id]"].error');
+    $this->drupalGet('surface-examples/15');
     $this->assertSame('town-hall', $this->container->get('entity_type.manager')->getStorage('event_venue')->loadUnchanged('town_hall')->get('slug'), 'The add form wrote the slug it computed.');
     // The page's calls find a venue of their name, so they write nothing.
     $assert->pageTextContains('This site has a venue named town_hall, so each call below is made now as a dry run, and nothing is written');

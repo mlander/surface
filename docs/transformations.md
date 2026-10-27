@@ -451,7 +451,7 @@ The class is a pure function of the keys `from:` names:
 <!-- excerpt: modules/data_surface_examples/src/Slugify.php -->
 
 ```php
-public static function compute(array $from): mixed {
+public static function compute(array $from, ?DataDefinitionInterface $key = NULL): mixed {
   $slug = trim((string) preg_replace('/[^a-z0-9]+/', '-', mb_strtolower((string) ($from['label'] ?? ''))), '-');
   return $slug === '' ? NULL : $slug;
 }
@@ -466,9 +466,10 @@ and both documents state it. Three choices settle it
 - **Pure functions only.** The class that computes it runs under the guard a static
   refiner runs under, and the PHPStan rule flags `\Drupal::` in it, so
   the narrowing (`POST .../schema`) can run it ahead of a write and
-  answer the value it would compute for the values in progress. A
-  changed time reads the clock: it stays a storage's to add in
-  `prepare()`.
+  answer the value it would compute for the values in progress. It is
+  handed the values `from:` names and the key's own definition, `$key`,
+  which is declaration, not site state. A changed time reads the clock:
+  it stays a storage's to add in `prepare()`.
 - **When it runs.** Once the other keys are accepted, from their
   accepted values: while storage holds nothing for it, which is when the
   thing is created, and again on every write that changes a key in
@@ -487,5 +488,36 @@ Both documents state it `readOnly` with `x-surface.computed: {"from":
 its sources; it is never in `required`. The write tool's `values` leaves
 it out, and the read tool answers it, so the two shapes differ by
 exactly the computed keys.
+
+Each class's `use` line: [Namespaces](concepts.md#namespaces).
+
+### A machine name: computed unless sent
+
+The venue's machine name is a computed key a caller may also type. It
+is computed from the name when a call leaves it out, as Drupal's own
+forms suggest a machine name from a title, and kept as sent when a call
+gives one:
+
+<!-- excerpt: modules/data_surface_examples/src/Resource/VenueResource.php -->
+
+```php
+$inputs->compute('id', 'machine_name', t('Machine name'),
+  from: ['label'], using: MachineName::class, when: Compute::UNLESS_SENT)
+  ->setDescription(t('A unique name for the venue: lowercase letters, numbers and underscores, computed from its name unless one is given.'))
+  ->addConstraint('Length', ['max' => 32]);
+```
+
+`machine_name` is core's config schema type, so the key is a string with
+its pattern and a Length of 166, narrowed here to 32. The stock
+`MachineName` transliterates, lowercases, replaces what a machine name
+may not hold with underscores and cuts to the key's Length, as core's
+machine name element does in the browser. `Compute::UNLESS_SENT` is the
+third `when:`: a value sent is judged by the key's own constraints and
+is never refused for being sent, so both documents state the key with
+`x-surface.computed: {"from": ["label"], "when": "unless_sent"}` and no
+`readOnly`, and the write tool offers it. Each create holds the identity
+to one no venue has, with the stock `DataSurfaceUnique` the build adds:
+"A venue named riverside already exists."
+(why: [decision](decisions.md#a-machine-name-is-a-computed-identity)).
 
 Each class's `use` line: [Namespaces](concepts.md#namespaces).

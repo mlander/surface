@@ -1410,8 +1410,14 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
     $type = $add['schema']['properties']['type'];
     $this->assertArrayNotHasKey('readOnly', $type);
     $this->assertArrayNotHasKey('const', $type);
-    // Named with what it checks, the label its plugin declares.
-    $this->assertContains(['constraint' => 'DataSurfaceUniqueNodeType', 'message' => 'Unique content type machine name'], $type['x-surface']['checkedOnServer']);
+    // Named with what it checks, the reason the build gives it; computed
+    // from the name unless sent, and offered.
+    $this->assertContains([
+      'constraint' => 'DataSurfaceUnique',
+      'message' => 'Refused when a content type named this already exists.',
+    ], $type['x-surface']['checkedOnServer']);
+    $this->assertSame(['from' => ['name'], 'when' => 'unless_sent'], $type['x-surface']['computed']);
+    $this->assertSame(['^[a-z0-9_]+$', 32], [$type['pattern'], $type['maxLength']]);
   }
 
   /**

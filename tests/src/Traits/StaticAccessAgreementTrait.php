@@ -100,10 +100,11 @@ trait StaticAccessAgreementTrait {
     foreach ($alone->getDefinitions()->entries() as $name => $entry) {
       $property = is_array($properties[$name]) ? $properties[$name] : [];
       $locked = $entry->locked || $frozen;
-      // A computed key is read only too: nobody types it.
+      // A computed key is read only too: nobody types it. One computed
+      // unless sent is typed, or computed when left out.
       // Decision: see
       // docs/decisions.md#a-computed-key-is-a-pure-function-of-its-sources.
-      $this->assertSame($locked || Computed::of($entry->definition) !== NULL, ($property['readOnly'] ?? FALSE) === TRUE, sprintf('%s: "%s" is read only exactly where it is locked or computed.', $label, $name));
+      $this->assertSame($locked || Computed::of($entry->definition)?->takesSent() === FALSE, ($property['readOnly'] ?? FALSE) === TRUE, sprintf('%s: "%s" is read only exactly where it is locked or computed.', $label, $name));
       $this->assertSame($entry->runtimeAccess || $entry->isRefinedAtRuntime(), ($property['x-surface']['live'] ?? FALSE) === TRUE, sprintf('%s: "%s" is marked live exactly where its answer was set aside or a runtime refiner narrows it.', $label, $name));
       $compared++;
       if ($entry->attachment !== NULL) {

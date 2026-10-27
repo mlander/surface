@@ -1385,9 +1385,11 @@ renames sit in A because they are cheapest before new code exists.
     `data_surface_first` byte for byte, a foreign constraint is a comment
     naming the keyword and the key, and a routing or permissions file is
     added to, never replaced ([Generating a resource](docs/generating.md)).
-    Open: a resource with identity in a config entity type; a variant, a
-    mixin or a port read from a schema written as code rather than as a
-    comment.
+    Open: a resource with identity in a config entity type, its identity
+    written as a title and a machine name
+    (`docs/decisions.md#a-machine-name-is-a-computed-identity`); a
+    variant, a mixin or a port read from a schema written as code rather
+    than as a comment.
 23. **The site's catalog.** DONE 2026-10-24
     (`docs/decisions.md#the-catalog-is-the-sites-live-map`,
     `docs/catalog-command.md`). `drush surface:catalog` lists every

@@ -363,7 +363,9 @@ final class Accepting {
    * though it were open: the value it holds is noted and not taken, as a
    * locked key's is; any other stays, for validate() to refuse with the
    * code `computed`, naming the keys it is computed from, as a value sent
-   * for a key that does not apply stays.
+   * for a key that does not apply stays. A key computed unless sent
+   * (Compute::UNLESS_SENT) takes a value sent for it as any key does; one
+   * sent null or empty is read as left out, and computed.
    *
    * Decision: see
    * docs/decisions.md#a-computed-key-is-a-pure-function-of-its-sources.
@@ -389,9 +391,14 @@ final class Accepting {
     $path = static::joinPath($prefix, $name);
     $computed = Computed::of($entry->definition);
     assert($computed !== NULL);
-    $value = $computed->value($name, $values, $current);
+    if ($computed->takesSent() && array_key_exists($name, $input) && ValueState::isConfigured($input[$name])) {
+      // Typed over: kept as sent, and judged as any key.
+      $fallback = array_key_exists($name, $current) ? $current[$name] : NULL;
+      return $this->acceptValue($entry->definition, $input[$name], $fallback, $path);
+    }
+    $value = $computed->value($name, $values, $current, $entry->definition);
     $held = $this->acceptValue($entry->definition, $value, $value, $path);
-    if (!array_key_exists($name, $input)) {
+    if (!array_key_exists($name, $input) || $computed->takesSent()) {
       return $held;
     }
     $sent = $this->acceptValue($entry->definition, $input[$name], $held, $path);
@@ -424,12 +431,13 @@ final class Accepting {
   /**
    * Says that a key is computed, in one whole sentence per count of keys.
    *
-   * Three sentences, each one source string per count of the keys it is
+   * Four sentences, each one source string per count of the keys it is
    * computed from: the note ("Slug is computed from Name; the value sent
    * was not taken."), the refusal of another value ("Slug is computed
-   * from Name and takes no value of its own; leave it out."), and the
+   * from Name and takes no value of its own; leave it out."), the
    * sentence set after a refusal of the value it holds ("This is
-   * computed from Name.").
+   * computed from Name."), and that sentence for a key computed unless
+   * sent ("This is computed from Name unless a value is sent.").
    *
    * Decision: see docs/decisions.md#a-refusal-names-what-it-depends-on.
    *
@@ -438,7 +446,7 @@ final class Accepting {
    * @param \Drupal\data_surface\Pipeline\Named[] $sources
    *   The keys it is computed from, at least one.
    * @param string $kind
-   *   Which sentence: `note`, `refusal` or `after`.
+   *   Which sentence: `note`, `refusal`, `after` or `unless`.
    *
    * @return \Drupal\Core\StringTranslation\TranslatableMarkup
    *   The sentence.
@@ -460,7 +468,10 @@ final class Accepting {
       ['refusal', 3] => $this->formatPlural($count, '@label is computed from @sources and takes no value of its own; leave it out.', '@label is computed from these @count keys, @sources, and takes no value of its own; leave it out.', $arguments, $context),
       ['after', 1] => $this->t('This is computed from @source.', $arguments, $context),
       ['after', 2] => $this->t('This is computed from @first and @second.', $arguments, $context),
-      default => $this->formatPlural($count, 'This is computed from @sources.', 'This is computed from these @count keys: @sources.', $arguments, $context),
+      ['after', 3] => $this->formatPlural($count, 'This is computed from @sources.', 'This is computed from these @count keys: @sources.', $arguments, $context),
+      ['unless', 1] => $this->t('This is computed from @source unless a value is sent.', $arguments, $context),
+      ['unless', 2] => $this->t('This is computed from @first and @second unless a value is sent.', $arguments, $context),
+      default => $this->formatPlural($count, 'This is computed from @sources unless a value is sent.', 'This is computed from these @count keys, @sources, unless a value is sent.', $arguments, $context),
     };
   }
 

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\data_surface\ResourceBuild;
 
+use Drupal\Core\Config\TypedConfigManagerInterface;
 use Drupal\Core\DependencyInjection\ClassResolverInterface;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
 use Drupal\data_surface\DataSurface;
@@ -14,6 +15,7 @@ use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Reference\References;
 use Drupal\data_surface\Refinement\Narrowing;
 use Drupal\data_surface\Pipeline\PipelineGuard;
+use Drupal\data_surface\Plugin\Validation\Constraint\UniqueConstraint;
 use Drupal\data_surface\Refinement\WatchedValueCheckInterface;
 use Drupal\data_surface\Resource\DefinesOutputsInterface;
 use Drupal\data_surface\Resource\AltersStorageLayoutInterface;
@@ -21,6 +23,7 @@ use Drupal\data_surface\Resource\OperationAccessInterface;
 use Drupal\data_surface\Resource\AltersInputsInterface;
 use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface\Resource\DefinesInputsInterface;
+use Drupal\data_surface\Resource\DeletableStorageInterface;
 use Drupal\data_surface\Resource\HeldToConfigSchemaInterface;
 use Drupal\data_surface\Resource\ResourceStorageInterface;
 
@@ -90,6 +93,9 @@ final class Declaring {
    * @param \Drupal\data_surface\ResourceBuild\Resources $resources
    *   The build step, for the operation a child is invoked through and the
    *   structure an operation takes the keys of.
+   * @param \Drupal\Core\Config\TypedConfigManagerInterface|null $typedConfig
+   *   The config schema, whose data types a key may be declared with
+   *   (`machine_name`); NULL for none.
    */
   public function __construct(
     protected readonly ResourceRegistry $registry,
@@ -99,6 +105,7 @@ final class Declaring {
     protected readonly ?SiteDefaults $siteDefaults,
     protected readonly ?References $heldReferences,
     protected readonly Resources $resources,
+    protected readonly ?TypedConfigManagerInterface $typedConfig = NULL,
   ) {
   }
 
@@ -469,6 +476,44 @@ final class Declaring {
         $builder->lock($key);
       }
     }
+    $this->holdIdentityOnce($build);
+  }
+
+  /**
+   * Holds the identity a create names to one no thing holds yet.
+   *
+   * The stock DataSurfaceUnique constraint on the identity key, for an
+   * operation that creates a thing of a resource whose storage can say
+   * whether one is stored under an identity: one identity key, an input
+   * the context does not know, and a storage implementing
+   * DeletableStorageInterface. Nobody writes it on the key, and no
+   * resource writes a uniqueness rule of its own.
+   *
+   * Decision: see docs/decisions.md#a-machine-name-is-a-computed-identity.
+   *
+   * @param \Drupal\data_surface\ResourceBuild\Build $build
+   *   The build.
+   */
+  protected function holdIdentityOnce(Build $build): void {
+    $definition = $build->definition;
+    $context = $build->context;
+    if (!$context->creates || count($definition->identity) !== 1 || $definition->storage === NULL || !is_subclass_of($definition->storage, DeletableStorageInterface::class)) {
+      return;
+    }
+    $key = (string) array_values($definition->identity)[0];
+    $target = $build->builder->getDefinition($key);
+    if ($target === NULL || array_key_exists($key, $context->known) || !in_array($key, $build->inputKeys, TRUE)) {
+      return;
+    }
+    $storage = $this->instance($definition->storage, ResourceStorageInterface::class);
+    assert($storage instanceof DeletableStorageInterface);
+    $thing = $storage->singularLabel();
+    $target->addConstraint('DataSurfaceUnique', [
+      'storage' => $definition->storage,
+      'key' => $key,
+      'thing' => $thing,
+      'reason' => UniqueConstraint::reason($thing),
+    ]);
   }
 
   /**
@@ -495,7 +540,7 @@ final class Declaring {
    *   The resolver.
    */
   public function shapes(): Shapes {
-    return $this->shapes ??= new Shapes($this->registry, $this->classResolver);
+    return $this->shapes ??= new Shapes($this->registry, $this->classResolver, $this->typedConfig);
   }
 
   /**
@@ -534,16 +579,21 @@ final class Declaring {
   protected static function assertShapesNarrowed(ResourceDefinition $definition, array $blueprints): void {
     foreach ($blueprints as $prefix => $blueprint) {
       foreach ($blueprint->shapedKeys() as $key => $declared) {
-        $shape = DefinitionMetadata::shapeDefinition($declared);
+        // A shape, or a config schema data type such as `machine_name`.
+        // Decision: see
+        // docs/decisions.md#a-machine-name-is-a-computed-identity.
+        $shape = DefinitionMetadata::shapeDefinition($declared) ?? DefinitionMetadata::configTypeDefinition($declared);
         assert($shape !== NULL);
         $widened = Narrowing::narrowed($declared, $shape);
         if ($widened !== NULL) {
           throw new \LogicException(sprintf(
-            '%s declares "%s" with the shape %s and widens it: %s. A key narrows the shape it uses, as a refiner narrows a key: declare a shape of its own, or narrow less.',
+            '%s declares "%s" with the %s %s and widens it: %s. A key narrows the %s it uses, as a refiner narrows a key: declare a shape of its own, or narrow less.',
             $definition->id,
             $prefix . $key,
-            DefinitionMetadata::shapeOf($declared),
+            DefinitionMetadata::shapeOf($declared) !== NULL ? 'shape' : 'config schema type',
+            DefinitionMetadata::shapeOf($declared) ?? DefinitionMetadata::configTypeOf($declared),
             $widened,
+            DefinitionMetadata::shapeOf($declared) !== NULL ? 'shape' : 'type',
           ));
         }
       }

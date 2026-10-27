@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace Drupal\data_surface_examples\Resource;
 
 use Drupal\Core\StringTranslation\TranslatableMarkup;
+use Drupal\data_surface\Compute\MachineName;
 use Drupal\data_surface\Resource\Attribute\Operation;
 use Drupal\data_surface\Resource\Attribute\Resource;
 use Drupal\data_surface\Resource\BlueprintInterface;
+use Drupal\data_surface\Resource\Compute;
 use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface\Resource\ResourceInterface;
 use Drupal\data_surface_examples\Access\VenueAccess;
@@ -22,11 +24,12 @@ use Drupal\data_surface_examples\Structure\VenueRoomStructure;
  * Example 15: a venue, a config entity this module declares, from the start.
  *
  * The resource is the venue entity, `data_surface_examples.event_venue.<id>`,
- * by its machine name. Add, edit and remove are about one venue. Listing
- * and reordering are about the venues together, so they name no venue:
- * each takes the keys of a structure of its own, a page and a filter, or
- * a list of ids and weights, and the venue storage reads or writes every
- * venue they name.
+ * by its machine name, computed from the name unless one is given and
+ * held once across the venues. Add, edit and remove are about one venue.
+ * Listing and reordering are about the venues together, so they name no
+ * venue: each takes the keys of a structure of its own, a page and a
+ * filter, or a list of ids and weights, and the venue storage reads or
+ * writes every venue they name.
  */
 #[Resource('event.venue',
   identity: ['id'],
@@ -35,7 +38,7 @@ use Drupal\data_surface_examples\Structure\VenueRoomStructure;
 )]
 #[Operation('create',
   label: new TranslatableMarkup('Add a venue'),
-  description: new TranslatableMarkup('Adds a venue under a machine name the caller chooses, with its capacity, address and rooms; a machine name already in use is refused.'),
+  description: new TranslatableMarkup('Adds a venue under a machine name the caller chooses, or one computed from its name, with its capacity, address and rooms; a machine name already in use is refused.'),
   permission: self::ADMINISTER,
   creates: TRUE,
   idempotent: TRUE,
@@ -98,13 +101,9 @@ final class VenueResource implements ResourceInterface {
     $inputs->add('label', 'string', t('Name'))
       ->setRequired(TRUE)
       ->addConstraint('Length', ['max' => 128]);
-    $inputs->add('id', 'string', t('Machine name'))
-      ->setDescription(t('A unique name for the venue: lowercase letters, numbers and underscores.'))
-      ->setRequired(TRUE)
-      ->addConstraint('Regex', [
-        'pattern' => '/^[a-z0-9_]+$/D',
-        'message' => t('The machine name may hold only lowercase letters, numbers and underscores.'),
-      ])
+    $inputs->compute('id', 'machine_name', t('Machine name'),
+      from: ['label'], using: MachineName::class, when: Compute::UNLESS_SENT)
+      ->setDescription(t('A unique name for the venue: lowercase letters, numbers and underscores, computed from its name unless one is given.'))
       ->addConstraint('Length', ['max' => 32]);
     $inputs->compute('slug', 'string', t('Slug'), from: ['label'], using: Slugify::class)
       ->setDescription(t('The name in a link: lowercase letters, numbers and dashes, set when the venue is added.'))

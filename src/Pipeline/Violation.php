@@ -6,6 +6,7 @@ namespace Drupal\data_surface\Pipeline;
 
 use Symfony\Component\Validator\ConstraintViolationInterface;
 use Drupal\data_surface\Plugin\Validation\Constraint\JsonSchemaConstraint;
+use Drupal\data_surface\Plugin\Validation\Constraint\UniqueConstraint;
 use Symfony\Component\Validator\Constraints\Choice;
 use Symfony\Component\Validator\Constraints\Count;
 use Symfony\Component\Validator\Constraints\Email;
@@ -129,6 +130,8 @@ final class Violation {
 
   /**
    * A create names a thing that exists already: its machine name is taken.
+   *
+   * Also the code of the stock DataSurfaceUnique constraint's refusal.
    */
   public const TAKEN = 'taken';
 
@@ -171,6 +174,7 @@ final class Violation {
     Email::class,
     Type::class,
     JsonSchemaConstraint::class,
+    UniqueConstraint::class,
   ];
 
   /**
@@ -233,8 +237,8 @@ final class Violation {
    * AllowedValues' `NO_SUCH_CHOICE_ERROR` `no_such_choice`, a Length's
    * `TOO_LONG_ERROR` `too_long`; the name stands one to one for Symfony's
    * code, which is a UUID. A constraint that sets no code is named for
-   * itself, in snake case: `UniqueNodeTypeConstraint` is
-   * `unique_node_type`.
+   * itself, in snake case: `ReferenceableConstraint` is
+   * `referenceable`.
    *
    * @param \Symfony\Component\Validator\ConstraintViolationInterface $violation
    *   The violation.

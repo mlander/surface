@@ -369,7 +369,7 @@ final class Series {
         ],
         'files' => [
           self::MODULE . 'src/Entity/EventVenue.php' => t('the entity type: its declaration, its keys and the properties it exports, and no form, list builder or link'),
-          self::MODULE . 'src/Resource/VenueResource.php' => t('the resource: a venue by its machine name, added, edited and removed, and the venues listed and reordered; its slug a computed key'),
+          self::MODULE . 'src/Resource/VenueResource.php' => t('the resource: a venue by its machine name, computed from its name unless one is given, added, edited and removed, and the venues listed and reordered; its slug a computed key'),
           self::MODULE . 'src/Slugify.php' => t("the slug's deriver: a pure function of the name, run when a venue is added"),
           self::MODULE . 'src/Structure/VenueRoomStructure.php' => t("a room: an item of the venue's rooms"),
           self::MODULE . 'src/Structure/VenueListingStructure.php' => t('what the listing takes, a page and a filter, and what it answers, the page and the total'),

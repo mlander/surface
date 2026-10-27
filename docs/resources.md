@@ -254,19 +254,14 @@ The content type resource is the worked example:
   storage: NodeTypeStorage::class,
   access: NodeTypeAccess::class,
 )]
+#[Operation('create',
+  label: new TranslatableMarkup('Add a content type'),
+  description: new TranslatableMarkup('Creates a content type under a machine name the caller chooses, or one computed from its name; a machine name already in use is refused.'),
+  permission: self::PERMISSION,
+  creates: TRUE,
+  idempotent: TRUE,
+)]
 final class NodeTypeResource implements ResourceInterface {
-
-  #[Operation('create',
-    label: new TranslatableMarkup('Add a content type'),
-    description: new TranslatableMarkup('Creates a content type under a machine name the caller chooses; a machine name already in use is refused.'),
-    permission: self::PERMISSION,
-    creates: TRUE,
-    idempotent: TRUE,
-  )]
-  public static function create(): OperationContext {
-    // Unique on create only: that is where you are, not what was entered.
-    return (new OperationContext())->withConstraint('type', 'DataSurfaceUniqueNodeType');
-  }
 
   #[Operation('update',
     label: new TranslatableMarkup('Edit a content type'),
@@ -282,10 +277,13 @@ final class NodeTypeResource implements ResourceInterface {
 }
 ```
 
-Both are methods because their contexts need more: the create narrows
-the machine name, the update knows it. A settings object's one `configure` needs
-nothing, so it is the attribute alone, as on [the first
-resource](first-resource.md):
+The update is a method because its context needs more: it knows the
+machine name. The create needs nothing more, so it is the attribute
+alone on the class: the build holds the machine name it creates under
+to one no content type has, with the stock `DataSurfaceUnique`
+([A title and a machine name](recipes.md#a-title-and-a-machine-name)).
+A settings object's one `configure` is the attribute alone too, as on
+[the first resource](first-resource.md):
 
 ```php
 #[Resource('first.newsletter', storage: NewsletterStorage::class)]
@@ -1038,7 +1036,10 @@ block by its name. Its README, and example 13 at
 ## Alters
 
 An alter says which resource or structure it applies to with `#[Alters]`
-on its class, optionally naming the operations it applies in. What it
+on its class, optionally naming the operations it applies in. It names
+the owner by its class; an id is only for a [derived
+resource](#derived-resources), which has no class, and an id of an owner
+that has one is refused at discovery. What it
 adds is mounted under its own module's name, at
 `third_party_settings.<module>.<key>`, so the owner's storage and schema
 never have to know a contributor's keys. It adds no outputs: what a call

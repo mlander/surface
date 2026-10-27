@@ -45,6 +45,18 @@ final class StaticRefinerRule implements Rule {
   public const COMPUTES = 'Drupal\data_surface\Resource\ComputesValueInterface';
 
   /**
+   * The `\Drupal::` shortcuts a compute() may call, by class.
+   *
+   * The stock MachineName transliterates, as PipelineGuard::COMPUTE_ALLOWED
+   * admits it to.
+   *
+   * @see docs/decisions.md#a-machine-name-is-a-computed-identity
+   */
+  public const COMPUTE_ALLOWED = [
+    'Drupal\data_surface\Compute\MachineName' => ['transliteration'],
+  ];
+
+  /**
    * {@inheritdoc}
    */
   public function getNodeType(): string {
@@ -60,7 +72,7 @@ final class StaticRefinerRule implements Rule {
       return [];
     }
     if (static::isCompute($method->name->toString(), $scope)) {
-      return static::errors($method, $scope, 'The computed key\'s %s::%s() calls \\Drupal::%s(), which reads a service or site state. A computed key is a pure function of the keys it is computed from: a value that needs a service, the clock or the request is a storage\'s to add in its prepare().', 'dataSurface.compute');
+      return static::errors($method, $scope, 'The computed key\'s %s::%s() calls \\Drupal::%s(), which reads a service or site state. A computed key is a pure function of the keys it is computed from: a value that needs a service, the clock or the request is a storage\'s to add in its prepare().', 'dataSurface.compute', self::COMPUTE_ALLOWED[$scope->getClassReflection()?->getName() ?? ''] ?? []);
     }
     if (!static::isStaticRefiner($method->attrGroups)) {
       return [];
@@ -79,11 +91,13 @@ final class StaticRefinerRule implements Rule {
    *   The message, with the class, the method and the call.
    * @param string $identifier
    *   The error's identifier.
+   * @param string[] $allowed
+   *   The shortcuts the method may call.
    *
    * @return list<\PHPStan\Rules\IdentifierRuleError>
    *   One error per call.
    */
-  protected static function errors(ClassMethod $method, Scope $scope, string $message, string $identifier): array {
+  protected static function errors(ClassMethod $method, Scope $scope, string $message, string $identifier, array $allowed = []): array {
     $errors = [];
     $calls = (new NodeFinder())->findInstanceOf($method->stmts, StaticCall::class);
     foreach ($calls as $call) {
@@ -91,6 +105,9 @@ final class StaticRefinerRule implements Rule {
         continue;
       }
       $called = $call->name instanceof Identifier ? $call->name->toString() : '...';
+      if (in_array($called, $allowed, TRUE)) {
+        continue;
+      }
       $errors[] = RuleErrorBuilder::message(sprintf(
         $message,
         $scope->getClassReflection()?->getName() ?? '',

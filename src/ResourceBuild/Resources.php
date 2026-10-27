@@ -7,6 +7,7 @@ namespace Drupal\data_surface\ResourceBuild;
 use Drupal\Core\Access\AccessResultInterface;
 use Drupal\Core\Cache\Cache;
 use Drupal\Core\Cache\CacheBackendInterface;
+use Drupal\Core\Config\TypedConfigManagerInterface;
 use Drupal\Core\Language\LanguageManagerInterface;
 use Drupal\Core\DependencyInjection\ClassResolverInterface;
 use Drupal\Core\Session\AccountInterface;
@@ -253,6 +254,9 @@ final class Resources implements ResourcesInterface {
    *   keeps none.
    * @param \Drupal\Core\Language\LanguageManagerInterface|null $languageManager
    *   What tells the language a kept build's labels were read in.
+   * @param \Drupal\Core\Config\TypedConfigManagerInterface|null $typedConfig
+   *   The config schema, which says what a key declared with one of its
+   *   data types (`machine_name`) is; NULL reads none.
    */
   public function __construct(
     protected readonly ResourceRegistry $registry,
@@ -265,6 +269,7 @@ final class Resources implements ResourcesInterface {
     protected readonly ?SiteDefaults $siteDefaults = NULL,
     protected readonly ?CacheBackendInterface $buildCache = NULL,
     protected readonly ?LanguageManagerInterface $languageManager = NULL,
+    protected readonly ?TypedConfigManagerInterface $typedConfig = NULL,
   ) {
     $this->phases();
   }
@@ -276,7 +281,7 @@ final class Resources implements ResourcesInterface {
    * one holds the references it was handed.
    */
   protected function phases(): void {
-    $this->declaring = new Declaring($this->registry, $this->typedDataManager, $this->classResolver, $this->watchedValueCheck, $this->siteDefaults, $this->heldReferences, $this);
+    $this->declaring = new Declaring($this->registry, $this->typedDataManager, $this->classResolver, $this->watchedValueCheck, $this->siteDefaults, $this->heldReferences, $this, $this->typedConfig);
     $this->binding = new Binding($this->typedDataManager, $this->declaring);
     $this->gating = new Gating($this->registry, $this->typedDataManager, $this->classResolver, $this->currentUser, $this->permissionsHashGenerator, $this->declaring, $this);
     $this->attaching = new Attaching($this->registry, $this->typedDataManager, $this->watchedValueCheck, $this->declaring, $this->binding, $this->gating, $this, $this->buildResource(...), $this->buildRead(...));
@@ -305,7 +310,7 @@ final class Resources implements ResourcesInterface {
    * @see \Drupal\data_surface\Storage\ConfigSchemaGenerator::including()
    */
   public function withRegistry(ResourceRegistry $registry, ClassResolverInterface $classResolver, ?References $references = NULL): static {
-    $resources = new static($registry, $this->typedDataManager, $classResolver, $this->currentUser, $this->operationArguments, $this->watchedValueCheck, $this->permissionsHashGenerator, $this->siteDefaults);
+    $resources = new static($registry, $this->typedDataManager, $classResolver, $this->currentUser, $this->operationArguments, $this->watchedValueCheck, $this->permissionsHashGenerator, $this->siteDefaults, typedConfig: $this->typedConfig);
     $resources->heldReferences = $references;
     $resources->phases();
     return $resources;
