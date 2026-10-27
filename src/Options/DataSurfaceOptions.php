@@ -146,6 +146,29 @@ final class DataSurfaceOptions {
   }
 
   /**
+   * Answers core's options question for one key.
+   *
+   * The possible values are the declared definition's list, what the full
+   * schema states; the settable values are the refined definition's list,
+   * what the schema for these answers states, or the declared one when no
+   * refined definition is handed in.
+   *
+   * Decision: see docs/decisions.md#our-options-answer-cores-question.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $declared
+   *   The key's definition as declared.
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface|null $refined
+   *   (optional) The key's definition refined for a set of values.
+   *
+   * @return \Drupal\data_surface\Options\OptionsProvider
+   *   Core's OptionsProviderInterface for the key, with the lists'
+   *   cacheability on cacheability().
+   */
+  public function provider(DataDefinitionInterface $declared, ?DataDefinitionInterface $refined = NULL): OptionsProvider {
+    return new OptionsProvider($declared, $refined, $this);
+  }
+
+  /**
    * Forgets the answers read from what is being invalidated.
    *
    * A list read from the site (a module's config entities, say) is

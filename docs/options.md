@@ -15,6 +15,36 @@ The principle here is one line:
 Two mechanisms carry it: a constraint that can hold labels, and a plugin
 type that reads any constraint as a list.
 
+## Core's question
+
+Core asks "which values may this hold, and with what labels" through
+one interface, `OptionsProviderInterface`. Field items implement it, and
+core's options widgets read it. It has two halves, and each maps to one
+of the two documents:
+
+- **Possible** (`getPossibleValues()`, `getPossibleOptions()`): every
+  value the key may hold, read from the declared definition. The full
+  schema states this list.
+- **Settable** (`getSettableValues()`, `getSettableOptions()`): what may
+  be set now, read from the definition refined for the values in hand.
+  The schema for these answers states this list. With no refined
+  definition, it is the declared list.
+
+One line gets a key's provider from the options service:
+
+```php
+$provider = \Drupal::service('data_surface.options')->provider($declared, $refined);
+```
+
+The labels are the `OptionSet`'s, and `$provider->cacheability()` holds
+the lists' tags, contexts and max-age, which core's interface has no
+place for. A key with no list answers an empty array. The account core's
+methods take is not read: a definition is refined for an account when
+it is built, so hand in the one built for that account. A resolver stays
+the source of every list; the provider only reads what the resolvers
+answer (why: [decision](decisions.md#our-options-answer-cores-question)).
+The select widget reads its `#options` this way.
+
 ## LabeledChoice
 
 `LabeledChoice` is a `Choice` subclass. Because it *is* a `Choice`, every

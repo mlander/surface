@@ -85,7 +85,9 @@ final class OptionsWidget extends ChoiceWidgetBase {
    */
   public function buildElement(DataDefinitionInterface $definition, mixed $value): array {
     $set = $this->optionSet($definition);
-    $options = $set === NULL ? [] : $set->options;
+    // The select offers what core's options widgets offer: the settable
+    // options of the definition drawn, which is already the refined one.
+    $options = $this->options->provider($definition)->getSettableOptions();
     $multiple = $definition instanceof ListDataDefinitionInterface;
     $element = $this->baseElement($definition) + [
       '#type' => 'select',

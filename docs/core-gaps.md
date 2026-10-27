@@ -288,7 +288,12 @@ so every existing use keeps working; config schema YAML may give
 question), and the normalizer emits `oneOf` with `const` and `title`
 where labels exist. A separable second step: a service answering "the
 options for this definition" from its constraints, one resolver per
-constraint type, `LanguageExists` among them.
+constraint type, `LanguageExists` among them. Core's constraints with a
+list (`Choice`, `PluginExists`, `EntityBundleExists`) could answer
+through the same `OptionsProviderInterface` field items implement; a
+resolver is what that looks like for a constraint, and this module's
+`DataSurfaceOptions::provider()` answers that interface from one
+([Core's question](options.md#cores-question)).
 
 **Carried by.** "Allow Choice constraints to carry option labels, so
 allowed values are declared once for validation, config schema, Form

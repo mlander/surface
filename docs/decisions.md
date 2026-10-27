@@ -762,6 +762,41 @@ constraint says it.
 `DataSurfaceOptions::isStatedByList()`, `RegistrationStep2Resource`,
 `EventVenueRoomConstraint`, `UniqueItemsConstraint`)
 
+### Our options answer core's question
+
+Decided 2026-10-27. A key's lists answer core's
+`OptionsProviderInterface`: `DataSurfaceOptions::provider($declared,
+$refined)` returns an `OptionsProvider` whose possible values and
+options are the declared definition's list, and whose settable values
+and options are the refined definition's list, or the declared one when
+no refined definition is handed in
+([Core's question](options.md#cores-question)).
+
+- **Possible is the full schema, settable is these answers.** Core
+  separates the values data may hold from the values that may be set in
+  an editing context. The full schema states every value a key may
+  hold, read from no values; the schema for these answers states what
+  the values in hand allow. The two halves and the two documents draw
+  the same line, so each half reads the definition its document reads.
+- **The resolver stays the source.** The provider reads the `OptionSet`
+  the options service answers and adds nothing to it, so the list that
+  validates, the list a form offers, the list each document states and
+  the list core's interface answers are one list. The cacheability that
+  core's interface has no method for is kept on the provider,
+  `cacheability()`, for the doors that cache what they render.
+- **The account is not read.** Core's methods take one to filter by.
+  Here a definition is refined for an account when it is built, so the
+  caller hands in the definition built for that account; reading the
+  account again would be a second answer that could disagree.
+- **A core consumer needs no knowledge of this module.** Anything that
+  reads an `OptionsProviderInterface` reads a key's list from the
+  provider, with no resolver, constraint or `OptionSet` in its code.
+
+The select widget reads its `#options` through the provider, so the
+generated form asks the question in core's words.
+(`Options\OptionsProvider`, `DataSurfaceOptions::provider()`,
+`OptionsWidget::buildElement()`, `OptionsProviderTest`)
+
 ## Context
 
 ### A build is not cached across requests
