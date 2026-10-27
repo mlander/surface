@@ -308,64 +308,69 @@ $inputs->addEach('types', 'boolean', from: AliasTypes::class, default: FALSE)
   ->setLabel(t('Types with aliases'));
 ```
 
-The storage, a `ConfigObjectStorage` subclass, turns the stored list
-into the map in `load()`:
+The translation is a layout, a `StorageLayoutInterface` with two
+methods. `fromStorage()` turns the stored list into the map, and
+`toStorage()` turns the map back into the list:
 
-<!-- excerpt: tests/modules/data_surface_schema_test/src/Storage/AliasSettingsStorage.php -->
+<!-- excerpt: tests/modules/data_surface_schema_test/src/Storage/CheckedListLayout.php -->
 
 ```php
-public function load(OperationContext $context): array {
-  $values = parent::load($context);
-  if (is_array($values[self::LISTED] ?? NULL)) {
-    $values[self::LISTED] = array_fill_keys(array_map('strval', $values[self::LISTED]), TRUE);
+public function toStorage(array $values): array {
+  if (is_array($values[$this->key] ?? NULL)) {
+    $values[$this->key] = array_map('strval', array_keys(array_filter($values[$this->key])));
   }
   return $values;
 }
 ```
 
-and the map back into the list in `prepare()`, before the config schema
-judges what will be stored:
+<!-- excerpt: tests/modules/data_surface_schema_test/src/Storage/CheckedListLayout.php -->
+
+```php
+public function fromStorage(array $settings): array {
+  if (is_array($settings[$this->key] ?? NULL)) {
+    $settings[$this->key] = array_fill_keys(array_map('strval', $settings[$this->key]), TRUE);
+  }
+  return $settings;
+}
+```
+
+The layout also implements `StoredSchemaInterface`, whose one method
+says the config schema of each key it translates, as it is stored:
+
+<!-- excerpt: tests/modules/data_surface_schema_test/src/Storage/CheckedListLayout.php -->
+
+```php
+public function storedSchema(): array {
+  return [
+    $this->key => [
+      'type' => 'sequence',
+      'sequence' => ['type' => 'string', 'label' => 'Type'],
+    ],
+  ];
+}
+```
+
+The storage, a `ConfigObjectStorage` subclass, names it in `layout()`:
 
 <!-- excerpt: tests/modules/data_surface_schema_test/src/Storage/AliasSettingsStorage.php -->
 
 ```php
-public function prepare(OperationContext $context, array $values, AccountInterface $account): array {
-  if (is_array($values[self::LISTED] ?? NULL)) {
-    $values[self::LISTED] = array_map('strval', array_keys(array_filter($values[self::LISTED])));
-  }
-  return parent::prepare($context, $values, $account);
+protected function layout(): StorageLayoutInterface {
+  return new CheckedListLayout(self::LISTED);
 }
 ```
 
 Each class's `use` line: [Namespaces](concepts.md#namespaces).
 
-The build holds the resource to the config schema the storage writes to
+That is all of it. `load()` reads through the layout and `prepare()`
+writes through it before the config schema judges the object. The build
+holds the resource to that schema
 ([A schema the module did not generate](storage.md#a-schema-the-module-did-not-generate)),
-and that schema, written by hand as pathauto's is, types the key as the
-storage stores it: `types` a `sequence` of `string`.
-
-The resource asks for a boolean at each entry, so the build refuses it,
-once per entry: "it is a boolean, which the schema types string". Tell
-the check on the storage. Where the stored shape differs, as here,
-override `widerThanSchema()` and drop the key's paths from what the
-parent answers:
-
-<!-- excerpt: tests/modules/data_surface_schema_test/src/Storage/AliasSettingsStorage.php -->
-
-```php
-public function widerThanSchema(DataSurfaceInterface $built): array {
-  return array_filter(
-    parent::widerThanSchema($built),
-    static fn (string $path): bool => $path !== self::LISTED && !str_starts_with($path, self::LISTED . '.'),
-    ARRAY_FILTER_USE_KEY,
-  );
-}
-```
-
-Where a key is stored under another name, override the protected
-`configSchemaPaths()` instead and answer the schema's property for each
-key, by key; a key it leaves out is read as stored elsewhere and is not
-compared.
+and skips each key the layout names: a boolean at each entry is what
+the resource asks for, and a list of strings is what is stored. `drush
+data_surface:config-schema` writes the schema the layout gives for the
+key, labeled with the key's label, so `types` is generated as a
+`sequence` of `string`.
 
 Three more things hold for a translated key:
 
@@ -376,15 +381,16 @@ Three more things hold for a translated key:
   An entry that starts checked reads checked whatever the list says,
   which suits only an entry that is also locked, as pathauto's types
   whose path field another module provides are.
-- **The schema is yours to write.** `drush data_surface:config-schema`
-  reads no storage: it writes the shape the resource asks for, here a
-  sequence of booleans, which the stored list does not match. There is
-  no way to tell it a key is translated, so a module with one keeps its
-  schema written by hand, as pathauto's is, and does not run the command
-  with `--write`; without `--write`, the command shows that difference
-  every time.
+- **The install file holds the stored shape.** The generator keeps the
+  value the file gives a translated key, and writes nothing for one it
+  does not give, since a declared default is in the asked shape.
 - **Every door asks for the map.** The tool, HTTP, the form and React
   send and receive the map of booleans; only storage sees the list.
+
+A layout is pure: it reads no service and no site state. A rule that
+needs the site, such as pathauto leaving out a type whose path field
+another module provides, stays in the storage's `prepare()`, on the
+values as asked, before it calls the parent.
 
 ## A title and a machine name
 

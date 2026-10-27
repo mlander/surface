@@ -83,6 +83,13 @@ so it is the whole of the storage code. What it does:
   the schema allows, and the build refuses such a resource
   ([below](#a-schema-the-module-did-not-generate)); a generated schema is
   never narrower.
+- **`layout()`** says how the object keeps a key it stores otherwise
+  than it is asked for: none by default. `load()` reads through the
+  layout and `prepare()` writes through it
+  ([StorageLayoutInterface](#storagelayoutinterface)).
+- **A key that refers to a content entity is stored as the entity's
+  uuid**, and every door still sends and answers the id
+  ([below](#a-reference-is-stored-by-uuid)).
 
 ### A schema generated from the resource
 
@@ -132,7 +139,10 @@ resource the command writes:
 - **Each key** typed from its definition (`string`, `email`, `integer`,
   `float`, `boolean`, `uri`, `timestamp`, or the primitive its typed
   data class holds), labeled with the label its owner gave it, whatever
-  an alter reworded. A multi-line string is a `string` too: config
+  an alter reworded. A key the storage keeps otherwise than it is asked
+  for is written as stored: what the storage's layout says of it, or
+  `uuid` for a key that refers to a content entity
+  ([translated keys](#a-key-stored-otherwise-than-it-is-asked-for)). A multi-line string is a `string` too: config
   schema's `text` is a string marked translatable, and a resource cannot
   say yet that a key is translatable, so nothing is written as `text`.
 - **`nullable: true`** where null clears, by the three-way rule: on an
@@ -258,7 +268,14 @@ data_surface_resource_test.opening_hours:
 
 The values are stored as the resource accepted them, key for key: an
 attached structure is the map at its key, and the variants at a key
-are the map of the variant the deciding key chose.
+are the map of the variant the deciding key chose. Two keys are not:
+one the storage's layout translates, and one that refers to a content
+entity, stored by uuid ([below](#a-reference-is-stored-by-uuid)).
+
+A simple config object records no dependencies; core has no place for
+them ([core gaps](core-gaps.md#smaller-gaps-outside-the-sequence)). So
+an export or an uninstall does not know what a config object's
+references name, and the module does not invent a record of it.
 
 ### A schema the module did not generate
 
@@ -309,15 +326,87 @@ before the resource changed is refused until it is written again, and
 the command builds the resource without this check, since the schema on
 disk is what it replaces.
 
+#### A key stored otherwise than it is asked for
+
 A key the resource asks for one way and the storage keeps another (a
 checkbox per type, stored as the list of the types checked) is
-translated by the storage in `load()` and `prepare()`, and the storage
-tells the check so: `widerThanSchema()` drops the key where the stored
-shape differs, `configSchemaPaths()` names the schema's property where
-the key is stored under another name. The generator does not read
-either, so such a module writes its schema by hand. The recipe
+translated by the storage's layout, and the layout is where the check
+and the generator learn the stored shape. The storage answers
+`translatedKeys($built)`: the config schema of each such key as it is
+stored, by its dotted path. It holds two things:
+
+- What the storage's layout says of the keys it translates, when the
+  layout implements `StoredSchemaInterface`.
+- Each key that refers to one content entity type, typed `uuid`
+  ([below](#a-reference-is-stored-by-uuid)).
+
+The check skips each key it names, and the generator writes the schema
+it gives in place of the asked one, labeled with the key's own label
+where the schema gives none, and `nullable: true` on a key asked as one
+value by the three-way rule. A key the storage keeps under another name
+is still told with `configSchemaPaths()`, which answers the schema's
+property for each key. The recipe
 [Asked as checkboxes, stored as a list of ids](recipes.md#asked-as-checkboxes-stored-as-a-list-of-ids)
-shows all of it.
+shows all of it
+(why: [decision](decisions.md#a-layout-is-the-storages-one-word-on-its-shape)).
+
+#### A reference is stored by uuid
+
+A key that refers to a content entity (`entity:user`,
+`entity:node:article`) holds its id at every door, and a config storage,
+`ConfigObjectStorage` or `ConfigEntityStorage`, stores the entity's
+uuid. A content entity's id differs between sites, so config holding it
+would name another entity, or none, once deployed; the uuid is the same
+on both. A config entity's id is its machine name, the same on every
+site, so a reference to one is stored as its id. Example 16's:
+
+```yaml
+venue: riverside
+contact: 098fef00-a494-4fde-af2b-8e1f5b59a6a2
+page: 3ee32f45-6a1c-487f-8501-2254c794e0b7
+thing:
+  entity_type: user
+  id: 098fef00-a494-4fde-af2b-8e1f5b59a6a2
+setting:
+  entity_type: user_role
+  id: event_sponsorship_editor
+```
+
+- **The engine translates**, not the storage class: the stock
+  `ReferenceStorageLayout`, applied by `StorageAdapter` outside any
+  layout the storage declares, in the layout values are asked for. A
+  storage class sees the uuid and writes nothing for it.
+- **Where.** At the top, inside an attached structure or a map, in each
+  item of a collection, in the variant a deciding key chose among
+  variants a class declares, and in what another module mounts.
+  Variants the site lists are stored open (`type: ignore`) and keep the
+  id.
+- **The bare `entity` key** is stored as `{entity_type, id}` whatever
+  type it holds: `id` is the uuid for a content entity type and the id
+  for a config entity type. Its schema is two strings either way.
+- **The schema** types a key that refers to one content entity type
+  `uuid`, core's type with its `Uuid` constraint; the generator writes
+  it so, and the check does not compare it with the integer the key is
+  asked as.
+- **A uuid that names nothing** (the entity was deleted, or is not on
+  this site yet) reads as nothing stored, a bare key's two parts both,
+  at every door. A write that holds nothing for it keeps the stored
+  uuid, as a [stale](semantics.md#stale-values-the-third-state) value is
+  kept, so it names its entity again once that entity is there; a new
+  choice replaces it.
+- **An id stored before** is read as the id, while the entity exists,
+  and written as the uuid at the next write. Config validation still
+  names it, since the schema's `Uuid` refuses it. A module that stored
+  ids converts them in a post-update:
+  `data_surface_store_references_by_uuid(MyResource::class, 'configure')`
+  reads and writes the object through its storage.
+- **To keep the id**, the key says so:
+  `->setSetting(References::STORED_AS, References::BY_ID)` (on a bare
+  key, on the key itself). That is right only where the config never
+  leaves the site, or where every site gives the entity the same id by
+  other means (a migration that keeps ids).
+
+The values a dry run reports are the storage's, so they show the uuid.
 
 ### Keys another module mounts
 
@@ -413,8 +502,20 @@ context that creates.
   schema, which for a config entity is its validation, filing each
   violation under the key that owns the property. It returns the
   entity's exported array.
+- **The dependencies of what its keys refer to** are added to that
+  array by the engine, as core's own config entities name them: a
+  config entity by its config name under `config`
+  (`user.role.editor`), a content entity as `<entity type>:<bundle>:<uuid>`
+  under `content` (`node:page:3ee32f45-...`). An export orders the
+  entity after them, and deleting a role removes, or asks to fix, the
+  entity that depends on it.
 - **`commit()`** saves that array, the uuid the rehearsal handed out
-  included, so what a dry run showed is what is stored.
+  included, so what a dry run showed is what is stored. Core recalculates
+  a config entity's dependencies on every save, from its plugins and
+  third party settings; the save keeps the ones its references bring
+  (`ReferenceDependencies`, through a presave hook). A save made any
+  other way, a form of core's or `$entity->save()`, recalculates without
+  them until the next save through the storage.
 - **`prepareDelete()` and `delete()`** remove the entity the context
   names, for an operation that deletes
   (why: [decision](decisions.md#a-placed-block-is-a-resource)).
@@ -686,8 +787,8 @@ accepted values instead (why: [decision](decisions.md#every-door-projects-what-t
 
 | Storage | Destination | Artifact | Used by |
 | --- | --- | --- | --- |
-| `ConfigObjectStorage` | One simple config object, named by a subclass. A `ResourceStorageInterface`, named by a resource. | The values to write, plus the language code when the schema asks for one. | the examples, `data_surface_first` |
-| `ConfigEntityStorage` | One config entity, named by a subclass with its properties, plus core's third party settings. A `ResourceStorageInterface` that can delete, named by a resource. | The entity's exported array, its dependencies calculated. | `BlockPlacementStorage`, `NodeTypeStorage` |
+| `ConfigObjectStorage` | One simple config object, named by a subclass, laid out by its `layout()`. A `ResourceStorageInterface`, named by a resource. | The values to write, in storage layout, references to content by uuid, plus the language code when the schema asks for one. | the examples, `data_surface_first` |
+| `ConfigEntityStorage` | One config entity, named by a subclass with its properties, plus core's third party settings. A `ResourceStorageInterface` that can delete, named by a resource. | The entity's exported array, references to content by uuid, its dependencies calculated, those of what its keys refer to among them. | `BlockPlacementStorage`, `NodeTypeStorage` |
 | `StateStorage` | One State key. | The accepted values. | the demo form |
 | `FieldSettingsStorage` | One field instance's settings. | The settings array. | the field type host |
 | `BaseFieldOverrideStorage` | A bundle's overrides of an entity type's base fields. | The overrides to save, as exported arrays, and the fields whose override goes. | `NodeTypeStorage` |
@@ -791,9 +892,21 @@ none, and storage that insisted would be unusable there.
 
 `Drupal\data_surface\Storage\StorageLayoutInterface` has two methods,
 `toStorage(array $values): array` and `fromStorage(array $settings):
-array`. `FieldSettingsStorage` takes one, optionally; without one the
-input layout is the storage layout. It is also where encryption sits,
-below.
+array`. `FieldSettingsStorage` takes one, optionally, and a
+`ConfigObjectStorage` subclass answers one from `layout()`; without one
+the input layout is the storage layout. It is also where encryption
+sits, below.
+
+A config object's layout may implement `StoredSchemaInterface`, whose
+`storedSchema()` says the config schema of each key it translates, as
+stored. That is the storage's one word on its shape: `load()` and
+`prepare()` translate through the layout, the build's check skips each
+key it names, and the generator writes its schema for them
+([A key stored otherwise than it is asked
+for](#a-key-stored-otherwise-than-it-is-asked-for)). It sits beside
+`StorageLayoutInterface` rather than on it, since a field type's layout
+and an alter's are stored under a schema their owner writes, which no
+generator reads.
 
 It exists because storage layouts are frequently not the layout a person
 or an agent should be asked for. The address field type stores its
@@ -807,7 +920,10 @@ kernel test, a config action and an agent all go through it.
 
 An implementation must be pure layout: no services, no current user, no
 site state. The two halves are expected to round-trip, and where they
-cannot the implementation says so in its own documentation.
+cannot the implementation says so in its own documentation. The one
+layout that reads the site is the engine's own `ReferenceStorageLayout`,
+since what entity a uuid names is site state; it reads it the same way
+for every door.
 
 For how this fits with the other kinds of transformation, see
 [Transformations](transformations.md).

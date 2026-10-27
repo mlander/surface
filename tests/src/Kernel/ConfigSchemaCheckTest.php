@@ -97,12 +97,10 @@ class ConfigSchemaCheckTest extends DataSurfaceKernelTestBase {
    * Tests a key asked as checkboxes and stored as a list is told to the check.
    *
    * The alias settings ask for a checkbox per type, and their storage keeps
-   * the list of the types checked, translating in load() and prepare(), as
-   * docs/recipes.md shows. The schema, written by hand, types the key a
-   * sequence of strings; the storage leaves it out of widerThanSchema(), so
-   * the build passes. The generator reads no storage: it writes the shape
-   * the resource asks for, a sequence of booleans, so such a module writes
-   * its schema by hand and does not run the command with --write.
+   * the list of the types checked through its layout, as docs/recipes.md
+   * shows. The layout says the stored schema of the key it translates, a
+   * sequence of strings: the check skips the key, so the build passes, and
+   * the generator writes that schema rather than the asked one.
    */
   public function testTranslatedKeyIsToldToTheCheck(): void {
     $resources = $this->container->get('data_surface.resources');
@@ -136,8 +134,9 @@ class ConfigSchemaCheckTest extends DataSurfaceKernelTestBase {
             type: sequence
             label: 'Types with aliases'
             sequence:
-              type: boolean
-      YAML, $schema, 'Generated, the schema says what the resource asks for.');
+              type: string
+              label: 'Type'
+      YAML, $schema, 'Generated, the schema says what the layout stores.');
   }
 
   /**

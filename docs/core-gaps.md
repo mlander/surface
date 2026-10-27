@@ -784,6 +784,8 @@ the one core should adopt, or that content entities fit the same way.
 | No `patternProperties` or `additionalProperties` on maps | Not needed yet; maps are closed here | [#3556242](https://www.drupal.org/project/drupal/issues/3556242) |
 | `required` mixes non-empty, nullable and present | `NULL` and `''` mean not configured; anything else is a value ([Value semantics](semantics.md#configured-or-not)) | No issue named here |
 | Nothing says a value is fixed in this context | The identity keys an operation knows are locked by the resource, not by a definition flag | Possibly nothing; revisit |
+| A simple config object records no dependencies | A config object's references to content are stored by uuid, so they deploy, but an export and an uninstall do not know what they name; a config entity's are recorded under `dependencies` ([A reference is stored by uuid](storage.md#a-reference-is-stored-by-uuid)) | No issue named here |
+| A config entity's dependencies come only from its class | Core recalculates them on every save from plugins and third party settings; a key that refers to an entity is neither, so a save through `ConfigEntityStorage` adds them in a presave hook, and a save made any other way drops them | No issue named here |
 
 The contributed Tool API has gaps of its own: it reads `Choice` and
 `AllowedValues` by plugin id, so a subclass such as `LabeledChoice`

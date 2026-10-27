@@ -373,6 +373,15 @@ $inputs->add('thing', 'entity', t('Featured beside'))
   mechanism, and the full schema states the id once per entity type, as
   a conditional. The id does not apply while no entity type is chosen,
   and is required once one is. Stored as `{entity_type, id}`.
+- **In config, a content entity by its uuid.** A config storage
+  (`ConfigObjectStorage`, `ConfigEntityStorage`) stores a reference to a
+  content entity as its uuid, since a content entity's id differs
+  between sites, and a reference to a config entity as its id, its
+  machine name. Every door still sends and answers the id; only the
+  stored config holds the uuid, typed `uuid` in its schema. A config
+  entity also depends on what its keys refer to. A key keeps the id
+  with `->setSetting(References::STORED_AS, References::BY_ID)`
+  ([A reference is stored by uuid](storage.md#a-reference-is-stored-by-uuid)).
 
 The candidates are core's entity reference selection handler's: the
 `default` handler for the entity type, the bundles as its

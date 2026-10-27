@@ -82,7 +82,12 @@ the record of the rework that brought the module to the pattern.
   `commit()` on a `ResourceStorageInterface`.
 - **Layout**: how a storage lays accepted values out where that differs
   from how they are asked for, `StorageLayoutInterface`; an alter hands
-  one for its mount with `AltersStorageLayoutInterface::storageLayout()`.
+  one for its mount with `AltersStorageLayoutInterface::storageLayout()`,
+  and a `ConfigObjectStorage` subclass answers one from `layout()`. A
+  layout implementing `StoredSchemaInterface` says each translated key's
+  stored schema, which the build's check skips and the config schema
+  generator writes, both through the storage's `translatedKeys()`
+  (`docs/decisions.md#a-layout-is-the-storages-one-word-on-its-shape`).
 - **Alter**: another module's class that adds keys to a resource or
   structure and narrows it, `#[Alters]` in `src/Alter/`; one that
   implements `OperationAccessInterface`, the access class's interface,
@@ -165,7 +170,11 @@ the record of the rework that brought the module to the pattern.
   data type string of what it refers to, `add('page', 'entity:node:article',
   ...)`, `'entity:user'`, or the bare `'entity'` (two parts attached at
   the key, `entity_type` and `id`, filtered by `DataSurfaceReferenceableType`
-  written on the key); it stores the id. Its candidates are core's
+  written on the key); every door sends and answers the id, and a config
+  storage stores a content entity's uuid (`ReferenceStorageLayout`, which
+  the engine applies; `References::STORED_AS` keeps the id) and a config
+  entity's id, a config entity depending on what its keys refer to
+  (`docs/decisions.md#a-config-object-stores-a-reference-by-uuid`). Its candidates are core's
   selection handler's for the account (`Reference\References`), listed
   up to `data_surface.settings:reference_list_limit` and looked up past
   it, with core's entity autocomplete on the form and `GET
@@ -446,7 +455,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 The full lane's phpunit line reads, as of this writing:
 
 ```
-phpunit: Tests: 1651, Assertions: 38106, Errors: 0, Failures: 0, Skipped: 3. Classes: 229 of 229, 8 at a time, browser classes 4.
+phpunit: Tests: 1662, Assertions: 38351, Errors: 0, Failures: 0, Skipped: 3. Classes: 231 of 231, 8 at a time, browser classes 4.
 ```
 
 the same counts a plain phpunit run of the tree gives. The skipped

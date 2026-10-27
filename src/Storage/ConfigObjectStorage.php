@@ -13,9 +13,11 @@ use Drupal\Core\DependencyInjection\DependencySerializationTrait;
 use Drupal\Core\Language\LanguageManagerInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslationInterface;
+use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\Pipeline\StorageViolationsException;
 use Drupal\data_surface\Pipeline\Violation;
 use Drupal\data_surface\Pipeline\ViolationSet;
+use Drupal\data_surface\Reference\ReferenceStorageLayout;
 use Drupal\data_surface\Resource\HeldToConfigSchemaInterface;
 use Drupal\data_surface\Resource\KnowsClearableKeysInterface;
 use Drupal\data_surface\Resource\OperationContext;
@@ -54,6 +56,13 @@ use Drupal\Core\Session\AccountInterface;
  * - widerThanSchema() says where the resource advertises more than the
  *   schema allows, which the build refuses: never, for a schema generated
  *   from the resource (drush data_surface:config-schema).
+ * - layout() says how the object keeps a key it stores otherwise than it
+ *   is asked for; load() and prepare() translate through it, and
+ *   translatedKeys() tells the check and the generator its stored schema.
+ *
+ * A key that refers to a content entity is stored by its uuid, which the
+ * engine translates outside this class (ReferenceStorageLayout), so the
+ * values here hold the uuid.
  *
  * The storage owns `_core`, which the config installer writes, and
  * `langcode`, which core's rule asks for exactly when the schema has a
@@ -132,10 +141,44 @@ abstract class ConfigObjectStorage implements ResourceStorageInterface, KnowsCle
   }
 
   /**
+   * Gives how the object lays out keys it stores otherwise than asked for.
+   *
+   * None by default: each key is stored as the resource accepted it. A
+   * subclass whose object keeps a key in another shape (a checkbox per
+   * type, stored as the list of the types checked) answers a layout:
+   * load() reads through its fromStorage(), prepare() writes through its
+   * toStorage() before the config schema judges the object. A layout that
+   * implements StoredSchemaInterface also says the stored schema of each
+   * key it translates, which the build's check and the config schema
+   * generator read (translatedKeys()).
+   *
+   * Decision: see
+   * docs/decisions.md#a-layout-is-the-storages-one-word-on-its-shape.
+   *
+   * @return \Drupal\data_surface\Storage\StorageLayoutInterface|null
+   *   The layout, or NULL when the object holds each key as it is asked.
+   */
+  protected function layout(): ?StorageLayoutInterface {
+    return NULL;
+  }
+
+  /**
+   * {@inheritdoc}
+   *
+   * What the layout says of the keys it translates, and each reference
+   * to a content entity, stored by uuid.
+   */
+  public function translatedKeys(DataSurfaceInterface $built): array {
+    $layout = $this->layout();
+    return ($layout instanceof StoredSchemaInterface ? $layout->storedSchema() : []) + ReferenceStorageLayout::storedSchemaOf($built);
+  }
+
+  /**
    * {@inheritdoc}
    */
   public function load(OperationContext $context): array {
-    return array_diff_key($this->stored(), array_flip(static::OWNED));
+    $values = array_diff_key($this->stored(), array_flip(static::OWNED));
+    return $this->layout()?->fromStorage($values) ?? $values;
   }
 
   /**
@@ -154,13 +197,14 @@ abstract class ConfigObjectStorage implements ResourceStorageInterface, KnowsCle
       throw new \LogicException(sprintf('No config schema describes %s, which %s stores in. Declare it in the module\'s config/schema/*.schema.yml.', $name, static::class));
     }
     $prepared = array_diff_key($values, array_flip(static::OWNED));
+    $prepared = $this->layout()?->toStorage($prepared) ?? $prepared;
     $stored = $this->stored();
     $whole = $prepared + array_diff_key($stored, array_flip(static::OWNED));
     if ($this->typed($name, $whole)?->hasTranslatableElements()) {
       $prepared['langcode'] = $stored['langcode'] ?? $this->languageManager->getDefaultLanguage()->getId();
       $whole['langcode'] = $prepared['langcode'];
     }
-    $keys = array_map('strval', array_keys($values));
+    $keys = array_map('strval', array_keys(array_diff_key($prepared, ['langcode' => TRUE])));
     $violations = SchemaViolations::collect($this->typedConfig, $name, $whole, array_combine($keys, $keys));
     $undeclared = $this->mountsWithoutSchema($name, $whole, $prepared);
     if (!$violations->isEmpty() || $undeclared !== []) {

@@ -21,6 +21,8 @@ use Drupal\data_surface\Reference\References;
 use Drupal\data_surface\Refinement\WatchedValueCheckInterface;
 use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface\Resource\ResourceStorageInterface;
+use Drupal\data_surface\Storage\ConfigEntityStorage;
+use Drupal\data_surface\Storage\ConfigObjectStorage;
 
 /**
  * The build step, over the engine's builder and factory.
@@ -1204,8 +1206,9 @@ final class Resources implements ResourcesInterface {
       }
     }
     $operation = $this->registry->getOperations($definition->name())[$context->id] ?? NULL;
+    $storage = $this->storageInstance($definition->name());
     return new StorageAdapter(
-      $this->declaring->instance((string) $definition->storage, ResourceStorageInterface::class),
+      $storage,
       $context,
       $routes,
       $definition->identity,
@@ -1213,7 +1216,33 @@ final class Resources implements ResourcesInterface {
       $operation?->kind() === OperationDefinition::DELETE,
       $account,
       $gates,
+      // Decision: see
+      // docs/decisions.md#a-config-object-stores-a-reference-by-uuid.
+      $storage instanceof ConfigObjectStorage || $storage instanceof ConfigEntityStorage ? $this->declaring->references() : NULL,
     );
+  }
+
+  /**
+   * Gets the storage class a resource names, as the service it is.
+   *
+   * What the config schema generator asks which keys the storage keeps
+   * otherwise than they are asked for (translatedKeys()).
+   *
+   * @param string $resource
+   *   The resource, by name.
+   *
+   * @return \Drupal\data_surface\Resource\ResourceStorageInterface
+   *   Its storage.
+   *
+   * @throws \LogicException
+   *   When it names none.
+   */
+  public function storageInstance(string $resource): ResourceStorageInterface {
+    $definition = $this->registry->getDefinition($resource);
+    if ($definition->storage === NULL) {
+      throw new \LogicException(sprintf('%s names no storage.', $definition->id));
+    }
+    return $this->declaring->instance((string) $definition->storage, ResourceStorageInterface::class);
   }
 
 }

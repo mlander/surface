@@ -753,7 +753,7 @@ final class ResourceRegistry {
    *   Its id: the owner's, then the key.
    * @param string $module
    *   The owner's module.
-   * @param array{interface: string|null, targets: array<string, string[]>, required: bool} $filter
+   * @param array{interface: string|null, targets: array<string, string[]>, required: bool, byId?: true} $filter
    *   What the key's author narrowed it by, as
    *   EntityReferenceStructure::filter() reads it.
    *
@@ -774,6 +774,7 @@ final class ResourceRegistry {
         $filter['interface'],
         $filter['targets'],
         $filter['required'],
+        $filter['byId'] ?? FALSE,
       ]),
       kind: ResourceDefinition::STRUCTURE,
       readAs: $name,

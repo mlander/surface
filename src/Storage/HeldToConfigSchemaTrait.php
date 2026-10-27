@@ -61,13 +61,39 @@ trait HeldToConfigSchemaTrait {
   }
 
   /**
+   * Gives the config schema of each key stored otherwise than asked for.
+   *
+   * What the storage's layout says of the keys it translates, and the
+   * references a config storage stores by uuid: the check skips each, and
+   * the config schema generator writes the schema given instead of the
+   * asked one.
+   *
+   * Decision: see
+   * docs/decisions.md#a-layout-is-the-storages-one-word-on-its-shape.
+   *
+   * @param \Drupal\data_surface\DataSurfaceInterface $built
+   *   The resource, built.
+   *
+   * @return array<string, array>
+   *   Each such key's config schema as stored, by its dotted path; none by
+   *   default.
+   */
+  public function translatedKeys(DataSurfaceInterface $built): array {
+    return [];
+  }
+
+  /**
    * {@inheritdoc}
+   *
+   * A key the storage translates (translatedKeys()) is not compared: its
+   * stored shape is not the one the resource asks for.
    */
   public function widerThanSchema(DataSurfaceInterface $built): array {
     $type = $this->configSchemaType();
     if (!$this->typedConfig->hasConfigSchema($type)) {
       return [];
     }
+    $translated = array_keys($this->translatedKeys($built));
     $root = $this->typedConfig->getDefinition($type);
     $paths = $this->configSchemaPaths();
     $wider = [];
@@ -82,7 +108,14 @@ trait HeldToConfigSchemaTrait {
       $at = $paths[$key] ?? $key;
       $this->entryWider($entry, $root['mapping'][$at] ?? NULL, $key, static::fullyValidatable($root), $wider);
     }
-    return $wider;
+    return array_filter($wider, static function (string $path) use ($translated): bool {
+      foreach ($translated as $skipped) {
+        if ($path === $skipped || str_starts_with($path, $skipped . '.')) {
+          return FALSE;
+        }
+      }
+      return TRUE;
+    }, ARRAY_FILTER_USE_KEY);
   }
 
   /**

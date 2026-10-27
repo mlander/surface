@@ -17,7 +17,7 @@ services:
   # the limit up to which it lists them, and the lookup past it.
   data_surface.references:
     class: Drupal\data_surface\Reference\References
-    arguments: ['@entity_type.manager', '@entity_field.manager', '@plugin.manager.entity_reference_selection', '@config.factory', '@typed_data_manager']
+    arguments: ['@entity_type.manager', '@entity_field.manager', '@plugin.manager.entity_reference_selection', '@config.factory', '@typed_data_manager', '@entity.repository']
   Drupal\data_surface\Reference\References: '@data_surface.references'
   data_surface.secret_codec:
     class: Drupal\data_surface\Storage\SodiumSecretCodec

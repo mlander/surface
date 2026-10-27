@@ -129,16 +129,20 @@ $inputs->add('thing', 'entity', t('Featured beside'))
   ->addConstraint('DataSurfaceReferenceableType', ['interface' => ContentEntityInterface::class]);
 ```
 
-Its config object stores them as they are asked for: `page` as the
-node's integer id, and the bare `thing` as its two parts,
-`{entity_type, id}`. The config schema, generated from the resource,
-says so:
+Its config object stores a content entity by its uuid, which names the
+same node on a site the config is deployed to: `page` as the node's
+uuid, and the bare `thing` as its two parts, `{entity_type, id}`, the
+`id` the uuid of the content entity it holds. The engine translates,
+with the stock `ReferenceStorageLayout`, and every door still sends and
+answers the id
+([A reference is stored by uuid](storage.md#a-reference-is-stored-by-uuid)).
+The config schema, generated from the resource, says so:
 
 <!-- excerpt: modules/data_surface_examples_references/config/schema/data_surface_examples_references.schema.yml -->
 
 ```yaml
 page:
-  type: integer
+  type: uuid
   label: 'Announcement'
   nullable: true
 thing:
@@ -155,7 +159,7 @@ thing:
       nullable: true
 ```
 
-No layout is involved, because the stored shape is the asked shape.
+No layout of the example's is involved: the uuid is the engine's.
 When storage keeps a reference in another shape, the mapping is a
 layout and nowhere else. A field item keeps an entity reference as
 `[['target_id' => 7]]`; a resource that asks for the id as `page` and

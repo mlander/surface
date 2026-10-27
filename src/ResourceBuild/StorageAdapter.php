@@ -14,9 +14,12 @@ use Drupal\data_surface\Pipeline\PipelineGuard;
 use Drupal\data_surface\Pipeline\PreparedValues;
 use Drupal\data_surface\Pipeline\StorageViolationsException;
 use Drupal\data_surface\Pipeline\ViolationSet;
+use Drupal\data_surface\Reference\ReferenceStorageLayout;
+use Drupal\data_surface\Reference\References;
 use Drupal\data_surface\Resource\DeletableStorageInterface;
 use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface\Resource\ResourceStorageInterface;
+use Drupal\data_surface\Storage\ConfigEntityStorage;
 use Drupal\data_surface\Entry;
 
 /**
@@ -43,6 +46,12 @@ use Drupal\data_surface\Entry;
  * CompositeStorage: a composite hands each child only the keys it claims,
  * and a key with variants needs its sibling to know which variant it
  * holds.
+ *
+ * A config storage (ConfigObjectStorage, ConfigEntityStorage) stores a
+ * reference to a content entity by its uuid: ReferenceStorageLayout is
+ * applied here, outside every other layout, in the layout values are
+ * asked for, and the dependencies of what a config entity's keys refer to
+ * are added to what its storage rehearsed.
  *
  * A storage layout an alter hands the build for the keys it mounts
  * (AltersStorageLayoutInterface) is applied here, to that module's namespace
@@ -100,6 +109,9 @@ final class StorageAdapter implements CreatingStorageInterface, DeletingStorageI
    * @param \Drupal\data_surface\ResourceBuild\ItemGates|null $gates
    *   The gates the operation asks once per item of a collection, asked
    *   before the storage prepares anything; NULL for none.
+   * @param \Drupal\data_surface\Reference\References|null $references
+   *   For a config storage, what stores its references to content
+   *   entities by uuid (ReferenceStorageLayout); NULL for any other.
    *
    * @throws \LogicException
    *   When the operation deletes and the storage cannot.
@@ -113,6 +125,7 @@ final class StorageAdapter implements CreatingStorageInterface, DeletingStorageI
     protected bool $deletes = FALSE,
     protected ?AccountInterface $account = NULL,
     protected ?ItemGates $gates = NULL,
+    protected ?References $references = NULL,
   ) {
     if ($deletes && !$storage instanceof DeletableStorageInterface) {
       throw new \LogicException(sprintf('The "%s" operation deletes, and %s cannot: a storage that removes what it holds implements %s.', $context->id, get_class($storage), DeletableStorageInterface::class));
@@ -138,6 +151,7 @@ final class StorageAdapter implements CreatingStorageInterface, DeletingStorageI
    */
   public function load(DataSurfaceInterface $surface): array {
     $values = self::applyThirdPartyLayouts($surface, array_intersect_key($this->loaded($this->context), $surface->getDefinitions()->toArray()), FALSE);
+    $values = $this->referenceLayout($surface)?->fromStorage($values) ?? $values;
     foreach ($this->routes as $key => $routes) {
       $entry = $surface->getDefinitions()->entry($key);
       $id = $entry === NULL ? NULL : $this->routeOf($entry, $values + $surface->getDefaultValues());
@@ -185,7 +199,14 @@ final class StorageAdapter implements CreatingStorageInterface, DeletingStorageI
     if ($gated !== []) {
       throw new StorageViolationsException(new ViolationSet($gated));
     }
-    $own = self::applyThirdPartyLayouts($surface, $values, TRUE);
+    $references = $this->referenceLayout($surface);
+    $own = $references?->toStorage($values) ?? $values;
+    if ($references !== NULL) {
+      // Decision: see
+      // docs/decisions.md#a-config-object-stores-a-reference-by-uuid.
+      $own = $references->keepUnresolved($own, self::applyThirdPartyLayouts($surface, $this->loaded($this->context), FALSE));
+    }
+    $own = self::applyThirdPartyLayouts($surface, $own, TRUE);
     if ($this->omitted !== []) {
       // Decision: see docs/decisions.md#omitted-is-omitted-both-ways.
       $stored = $this->loaded($this->context);
@@ -234,6 +255,11 @@ final class StorageAdapter implements CreatingStorageInterface, DeletingStorageI
       throw new StorageViolationsException(new ViolationSet($refused));
     }
     assert(isset($artifact));
+    if ($this->storage instanceof ConfigEntityStorage && $references !== NULL) {
+      // The dependencies a save of the entity carries: what its keys refer
+      // to, beside what it calculated of its own.
+      $artifact['dependencies'] = static::withDependencies((array) ($artifact['dependencies'] ?? []), $references->dependencies($values));
+    }
     return new PreparedValues($values, $this->routes === [] ? $artifact : ['own' => $artifact, 'children' => $children]);
   }
 
@@ -502,6 +528,51 @@ final class StorageAdapter implements CreatingStorageInterface, DeletingStorageI
    */
   protected static function childOf(Entry $entry, string $id): DataSurfaceInterface {
     return $entry->attachment !== NULL ? $entry->attachment->child : $entry->variants->variant($id)->child;
+  }
+
+  /**
+   * Gives the layout that stores references to content entities by uuid.
+   *
+   * For a config storage alone, and for the keys this level stores: a
+   * child with storage of its own translates its own.
+   *
+   * Decision: see
+   * docs/decisions.md#a-config-object-stores-a-reference-by-uuid.
+   *
+   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   *   The data surface.
+   *
+   * @return \Drupal\data_surface\Reference\ReferenceStorageLayout|null
+   *   The layout, or NULL when there is nothing to translate.
+   */
+  protected function referenceLayout(DataSurfaceInterface $surface): ?ReferenceStorageLayout {
+    return $this->references === NULL ? NULL : ReferenceStorageLayout::forSurface($surface, $this->references, array_map('strval', array_keys($this->routes)));
+  }
+
+  /**
+   * Adds the dependencies references bring to an entity's own.
+   *
+   * @param array $own
+   *   The dependencies the entity calculated.
+   * @param array<string, string[]> $referenced
+   *   The ones its references bring, by type.
+   *
+   * @return array
+   *   Both, each type's names sorted, in core's order of types.
+   */
+  protected static function withDependencies(array $own, array $referenced): array {
+    foreach ($referenced as $type => $names) {
+      $merged = array_values(array_unique(array_merge((array) ($own[$type] ?? []), $names)));
+      sort($merged);
+      $own[$type] = $merged;
+    }
+    $ordered = [];
+    foreach (['config', 'content', 'module', 'theme', 'enforced'] as $type) {
+      if (isset($own[$type])) {
+        $ordered[$type] = $own[$type];
+      }
+    }
+    return $ordered + $own;
   }
 
   /**

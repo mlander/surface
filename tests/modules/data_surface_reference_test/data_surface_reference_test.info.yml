@@ -1,0 +1,9 @@
+name: 'Data Surface reference test'
+type: module
+description: 'Keys that refer to entities, stored in a simple config object and on a test configuration entity: by uuid for content, by id for config and where the author keeps the id.'
+package: Testing
+version: VERSION
+core_version_requirement: ^11.3 || ^12
+dependencies:
+  - data_surface:data_surface
+  - drupal:node

@@ -446,7 +446,9 @@ its members are declared into is not one; a named scalar shape, a
 the two never share a name. How accepted values are laid out in storage, where that
 differs from how they are asked for, is a **layout**:
 `StorageLayoutInterface`, and `AltersStorageLayoutInterface::storageLayout()`
-for an alter's mount. "Shape" is the named type, of three kinds, and in
+for an alter's mount (and, *added 2026-10-27*, `ConfigObjectStorage::layout()`
+for a config object, [A layout is the storage's one word on its
+shape](#a-layout-is-the-storages-one-word-on-its-shape)). "Shape" is the named type, of three kinds, and in
 code names the third, `#[Shape]`. (`ResourceBlueprint`,
 `ResourceBlueprintAdditions`, `BlueprintAdapterBase`)
 
@@ -2729,6 +2731,166 @@ looks for its source beside it.
 `Declaring::holdIdentityOnce()`, `MachineNameElement`,
 `ComputedKeysTest`, `MachineNameTest`, `UniqueIdentityTest`,
 `VenueApiTest`)
+
+### A layout is the storage's one word on its shape
+
+Decided 2026-10-27, with the pathauto port. A key a resource asks for
+one way and a config object keeps another (a checkbox per type, stored
+as the list of the types checked) took three overrides on the storage
+subclass: `load()` and `prepare()` to translate, and `widerThanSchema()`
+to drop the key from the check. The config schema generator read none of
+them, so it wrote the asked shape, which the stored list does not
+match, and such a module kept its schema written by hand.
+
+- **The seam `FieldSettingsStorage` already had.** `ConfigObjectStorage`
+  asks a protected `layout(): ?StorageLayoutInterface`, NULL by default,
+  which a subclass overrides: `load()` reads through its
+  `fromStorage()`, `prepare()` writes through its `toStorage()` before
+  the config schema judges the object. The constructor and the service
+  wiring stay as they are, so a subclass that needs a service for its
+  layout already has one.
+- **The stored schema, said once.** A layout implementing
+  `StoredSchemaInterface` answers `storedSchema()`: the config schema of
+  each key it translates, as stored, by dotted path. The storage's
+  `translatedKeys($built)` joins it with the references the engine
+  stores by uuid ([A config object stores a reference by
+  uuid](#a-config-object-stores-a-reference-by-uuid)), and both readers
+  ask that one method: `widerThanSchema()` skips each key it names, and
+  the generator writes its schema in place of the asked one, labeled
+  with the key's own label where it gives none, `nullable: true` on a
+  key asked as one value by the three-way rule, and installed with what
+  the install file gives it, else nothing, since a declared default is
+  in the asked shape.
+- **Beside `StorageLayoutInterface`, not on it.** Every existing layout
+  could answer the question: `AddressStorageLayout` its countries as a
+  sequence, `ReviewDeadlineLayout` its seconds as an integer. But a field
+  type's settings and an alter's mount are stored under a schema their
+  owner writes, which nothing here generates, so the answer would have
+  no reader, and adding a method to the interface breaks every layout an
+  adopter wrote. An optional interface costs a layout nothing until it
+  is read. It is in `src/Storage/`, which the counted surface does not
+  include ([The surface was counted and cut](#the-surface-was-counted-and-cut)).
+- **A layout stays pure.** It reads no service and no site state, as
+  before; a rule that needs the site stays in the storage's `prepare()`,
+  on the values as asked (the pathauto port leaves out a type whose path
+  field another module provides there, then calls the parent).
+
+Moved onto it: the recipe's alias settings (`CheckedListLayout`), and
+the pathauto port on the development site, whose `widerThanSchema()`
+and `load()` overrides are gone.
+
+Rejected: the generator reading `load()` and `prepare()` by running them
+on sample values, which guesses at a shape a class states in one line;
+a schema override per key on the resource, which puts a storage fact on
+the resource the pattern keeps it out of; and `layout()` on
+`ConfigEntityStorage`, which maps keys to properties and has
+`fromEntity()` and `toEntity()` for the rest, with no case yet.
+
+*Open:* an alter's layout on a config object's mount says nothing to
+the check or the generator; `configSchemaPaths()`, for a key stored
+under another name, is still its own override.
+(`ConfigObjectStorage::layout()`, `StoredSchemaInterface`,
+`HeldToConfigSchemaTrait::translatedKeys()`, `ConfigSchemaGenerator::translated()`,
+`Resources::storageInstance()`, `ReferenceStorageTest`,
+`ConfigSchemaCheckTest`)
+
+### A config object stores a reference by uuid
+
+Decided 2026-10-27, closing the open uuid representation of [A
+reference is an id with a list the site decides, listed or looked
+up](#a-reference-is-an-id-with-a-list-the-site-decides-listed-or-looked-up).
+A content entity's id differs between environments: node 7 on a
+development site is another node, or none, on the site its config is
+imported into. A config entity's id is its machine name and deploys as
+it is. So a reference key whose target is a content entity type, stored
+by a config storage (`ConfigObjectStorage` or `ConfigEntityStorage`), is
+stored as the entity's uuid; a config entity's stays its id.
+
+- **The wire does not change.** The documents, the tool and HTTP take
+  and answer ids and labels, `x-surface.reference` as before; only the
+  stored config holds the uuid. A uuid on the wire would make every
+  caller look an entity up twice, and the lookup and the selection
+  handler answer ids.
+- **A stock layout the engine applies.** `ReferenceStorageLayout`,
+  applied by `StorageAdapter` to every resource whose storage is a
+  config storage, outside the storage's own layout and in the layout
+  values are asked for (as the secrets decorator works in it), so a
+  storage class sees the uuid and its own layout sees the uuid too. It
+  translates on load, uuid to id through the entity repository, and on
+  prepare, id to uuid. It is the one layout that reads the site, since
+  what a uuid names is site state; it reads it the same for every door.
+  The build marks a key that refers to a content entity type
+  (`References::CONTENT`), so the check and the generator know it
+  without a service.
+- **Where.** Wherever a config storage keeps a key: at the top, in an
+  attached structure or a map, in each item of a collection, in the
+  variant a deciding key chose among those a class declares, and in a
+  module's mount. Variants the site lists are stored open (`type:
+  ignore`), and keep the id. A child with storage of its own translates
+  its own.
+- **The bare `entity` key: one shape, `{entity_type, id}`, two strings.**
+  `id` holds the uuid where `entity_type` names a content entity type
+  and the id where it names a config entity type. The stored value
+  carries its entity type, so it says which `id` holds, by the same rule
+  as a key of one entity type, and the generated schema states it as it
+  already did, two strings. Rejected: `{entity_type, uuid}` for content
+  beside `{entity_type, id}` for config, a key that changes its name
+  with its value, which a schema can state only by making both
+  optional; and a uuid for every entity type, which stores a config
+  entity by a uuid that differs on each site that installs it from a
+  module, against core's own naming of config by its name.
+- **The schema.** A key that refers to one content entity type is typed
+  `uuid`, core's type with its `Uuid` constraint, `nullable` by the
+  three-way rule; the generator writes it so, and the check skips it
+  ([A layout is the storage's one word on its
+  shape](#a-layout-is-the-storages-one-word-on-its-shape)).
+- **A uuid that names nothing reads as nothing stored**, a bare key's
+  two parts both, and the stale rule applies: a write that holds nothing
+  for it keeps the stored uuid, as an untouched stale value is kept, and
+  a new choice replaces it. So config deployed before its content keeps
+  its references through a save made before the content arrives. An id
+  stored before this rule that names nothing is not kept: it names
+  nothing on any site.
+- **Ids stored before.** A stored value that is not a uuid is read as an
+  id while that entity exists, and written as its uuid at the next
+  write. It hides nothing: the uuid type's `Uuid` constraint refuses it,
+  so config validation names each one left. A module converts them in a
+  post-update with `data_surface_store_references_by_uuid()`, which
+  reads and writes the object through its storage; example 16's is
+  `data_surface_examples_references_post_update_references_by_uuid()`.
+- **Opting out.** `->setSetting(References::STORED_AS,
+  References::BY_ID)` on the key, or on a bare key itself, keeps the id
+  in config. Right only for config that never leaves its site, or where
+  each site gives the entity the same id by other means (a migration
+  that keeps ids); the reference then deploys as wrong as an id does.
+- **Dependencies.** A config entity saved through `ConfigEntityStorage`
+  depends on what its keys refer to, as core's own config entities do: a
+  config entity by its config name under `config`, a content entity as
+  `<entity type>:<bundle>:<uuid>` under `content`. `StorageAdapter`
+  adds them to the record the storage rehearsed, so a dry run shows
+  them, and `commit()` saves through `ReferenceDependencies::during()`,
+  whose presave hook adds them after core recalculated the entity's own
+  (core invokes `hook_entity_presave()` after `preSave()`). Rejected:
+  enforced dependencies, which core keeps through recalculation but
+  never drops, so a reference changed would leave its old dependency
+  behind. A simple config object records no dependencies in core, and
+  this module does not invent a record; it is a gap
+  ([core gaps](core-gaps.md#smaller-gaps-outside-the-sequence)).
+
+*Open:* a save of the config entity made another way (core's form,
+`$entity->save()`) recalculates without the reference dependencies until
+the next save through the storage; the entity class's own
+`calculateDependencies()` is where core expects them. A config entity
+resource has no conversion helper for ids stored before; keys of an
+entry from the site are not translated; a site's default for such a key
+(`data_surface.defaults`, [A site sets a default in
+configuration](#a-site-sets-a-default-in-configuration)) is an id, and
+deploys as an id does.
+(`ReferenceStorageLayout`, `References::storedByUuid()`,
+`References::stored()`, `ReferenceDependencies`,
+`ReferenceDependencyHooks`, `StorageAdapter::referenceLayout()`,
+`data_surface_store_references_by_uuid()`, `ReferenceStorageTest`,
+`ReferenceStoredByUuidTest`)
 
 ## Access
 
@@ -5739,7 +5901,10 @@ Decided 2026-10-23, with example 16, the sponsorship
 - **The value is the id.** The key holds the entity's id as the entity
   type keeps it, an integer where a content entity type's id field is
   one and a string for a config entity, never the entity object: what is
-  stored, sent and answered is the id, at every door. The tool door
+  sent and answered is the id, at every door. *Amended 2026-10-27:* what
+  a config storage stores of a content entity is its uuid, which deploys
+  where its id does not ([A config object stores a reference by
+  uuid](#a-config-object-stores-a-reference-by-uuid)). The tool door
   keeps the bridge's own representation, which already sends an
   operation's entity parameter as its id (`OperationInputs::parameterInput()`):
   the Tool API's `EntityInputDefinition` would hand the pipeline a
@@ -5747,8 +5912,9 @@ Decided 2026-10-23, with example 16, the sponsorship
   reference in `values` is the id there too. The read tool answers the
   id and no label beside it: its answer is the write's values, and a
   label is no key of the resource; both documents label each listed id
-  in their `oneOf`, and the lookup answers labels for the rest. A uuid
-  representation stays open.
+  in their `oneOf`, and the lookup answers labels for the rest. The uuid
+  representation is settled for storage and kept off the wire
+  (*2026-10-27*).
 - **The bare `entity` is two keys, narrowed by a refiner.** An entity
   type, then an id, attached at the key: `entity_type`, a choice of the
   entity types the account may reference one of, and `id`, a string,
@@ -5812,7 +5978,7 @@ Decided 2026-10-23, with example 16, the sponsorship
   Portable Schema notes argued for, as an `x-surface` keyword, so a
   client that does not read it reads an id of the key's type.
 
-*Open:* a uuid representation; a multi-value reference, a list of
+*Open:* a multi-value reference, a list of
 references (`addList()` of an entity type); the entity side's two
 shapes, a reference field's `target_id` item (`DataSurfaceReferenceable`,
 no marker) beside a reference key; a lookup tool for an agent with no

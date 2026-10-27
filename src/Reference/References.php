@@ -5,10 +5,16 @@ declare(strict_types=1);
 namespace Drupal\data_surface\Reference;
 
 use Drupal\Component\Utility\Html;
+use Drupal\Component\Plugin\Exception\PluginException;
+use Drupal\Component\Uuid\Uuid;
 use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Config\Entity\ConfigEntityInterface;
+use Drupal\Core\Entity\ContentEntityInterface;
 use Drupal\Core\Entity\EntityFieldManagerInterface;
+use Drupal\Core\Entity\EntityInterface;
+use Drupal\Core\Entity\EntityRepositoryInterface;
+use Drupal\Core\Entity\EntityStorageException;
 use Drupal\Core\Entity\EntityReferenceSelection\SelectionInterface;
 use Drupal\Core\Entity\EntityReferenceSelection\SelectionPluginManagerInterface;
 use Drupal\Core\Entity\EntityTypeInterface;
@@ -73,6 +79,30 @@ final class References {
   public const LOOKUP_MAX = 50;
 
   /**
+   * The setting the build writes on a key that refers to a content entity.
+   *
+   * What a config storage stores such a key by: a content entity's id
+   * differs between sites, so config holding it would not deploy.
+   *
+   * Decision: see docs/decisions.md#a-config-object-stores-a-reference-by-uuid.
+   */
+  public const CONTENT = 'data_surface_reference_content';
+
+  /**
+   * The setting with which an author keeps a content reference as an id.
+   *
+   * `->setSetting(References::STORED_AS, References::BY_ID)` on the key
+   * (on a bare `entity` key, on the key itself): a config storage then
+   * stores the id, as it stores a config entity's.
+   */
+  public const STORED_AS = 'reference_stored_as';
+
+  /**
+   * The value of STORED_AS that keeps the id.
+   */
+  public const BY_ID = 'id';
+
+  /**
    * The cache contexts core's selection of each target type varies by.
    *
    * Node grants, for a node and for a comment (whose selection asks the
@@ -108,6 +138,9 @@ final class References {
    * @param \Drupal\Core\TypedData\TypedDataManagerInterface $typedDataManager
    *   The typed data manager, which says whether a data type string names
    *   an entity type and a bundle the site has.
+   * @param \Drupal\Core\Entity\EntityRepositoryInterface|null $entityRepository
+   *   The entity repository, which finds a content entity by its uuid;
+   *   NULL where nothing stored is read (a unit test).
    */
   public function __construct(
     protected readonly EntityTypeManagerInterface $entityTypeManager,
@@ -115,6 +148,7 @@ final class References {
     protected readonly SelectionPluginManagerInterface $selection,
     protected readonly ConfigFactoryInterface $configFactory,
     protected readonly TypedDataManagerInterface $typedDataManager,
+    protected readonly ?EntityRepositoryInterface $entityRepository = NULL,
   ) {}
 
   /**
@@ -253,7 +287,100 @@ final class References {
       'entityTypeId' => $parts[1],
       'bundles' => isset($parts[2]) ? [$parts[2]] : [],
     ]));
+    if ($this->isContent($parts[1])) {
+      $definition->setSetting(self::CONTENT, TRUE);
+    }
     return $definition;
+  }
+
+  /**
+   * Answers whether an entity type is a content entity type.
+   *
+   * @param string $entity_type_id
+   *   The entity type.
+   *
+   * @return bool
+   *   TRUE for a content entity type the site has, or one read from the
+   *   code of a module not installed (knowing()).
+   */
+  public function isContent(string $entity_type_id): bool {
+    $entity_type = $this->fromCode[$entity_type_id] ?? $this->entityTypeManager->getDefinition($entity_type_id, FALSE);
+    return $entity_type !== NULL && $entity_type->entityClassImplements(ContentEntityInterface::class);
+  }
+
+  /**
+   * Answers whether a config storage stores a key by its entity's uuid.
+   *
+   * A key that refers to one content entity type, unless its author kept
+   * the id (STORED_AS). A bare `entity` key decides per value, by the
+   * entity type it holds (ReferenceStorageLayout).
+   *
+   * Decision: see docs/decisions.md#a-config-object-stores-a-reference-by-uuid.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The key.
+   *
+   * @return bool
+   *   TRUE when its stored value is the uuid.
+   */
+  public static function storedByUuid(DataDefinitionInterface $definition): bool {
+    return $definition->getSetting(self::CONTENT) === TRUE && $definition->getSetting(self::STORED_AS) !== self::BY_ID;
+  }
+
+  /**
+   * Gives the uuid of the content entity an id names.
+   *
+   * @param string $entity_type_id
+   *   The entity type.
+   * @param mixed $id
+   *   The id.
+   *
+   * @return string|null
+   *   The uuid, or NULL when no entity of that type has the id.
+   */
+  public function uuidOf(string $entity_type_id, mixed $id): ?string {
+    if (!is_int($id) && !is_string($id)) {
+      return NULL;
+    }
+    try {
+      $entity = $this->entityTypeManager->getStorage($entity_type_id)->load($id);
+    }
+    catch (PluginException) {
+      return NULL;
+    }
+    return $entity instanceof EntityInterface ? $entity->uuid() : NULL;
+  }
+
+  /**
+   * Finds the content entity a stored value names.
+   *
+   * By its uuid. A value that is not a uuid is read as an id, which is
+   * what a key held before its config storage stored uuids, until the
+   * next write stores the uuid; the uuid's config schema type still
+   * refuses it, so config validation names each one left.
+   *
+   * @param string $entity_type_id
+   *   The entity type.
+   * @param mixed $stored
+   *   The stored value.
+   *
+   * @return \Drupal\Core\Entity\EntityInterface|null
+   *   The entity, or NULL when the value names none: nothing stored, or an
+   *   entity deleted or not on this site yet.
+   */
+  public function stored(string $entity_type_id, mixed $stored): ?EntityInterface {
+    try {
+      if (is_string($stored) && Uuid::isValid($stored)) {
+        return $this->entityRepository?->loadEntityByUuid($entity_type_id, $stored);
+      }
+      if ((is_int($stored) || is_string($stored)) && $stored !== '') {
+        return $this->entityTypeManager->getStorage($entity_type_id)->load($stored);
+      }
+    }
+    catch (PluginException | EntityStorageException) {
+      // An entity type the site no longer has, or one with no uuid.
+    }
+    return NULL;
   }
 
   /**
