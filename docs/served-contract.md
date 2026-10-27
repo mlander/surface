@@ -495,7 +495,7 @@ keeps its own refiners and alters
 ([attached structures](resources.md#children)).
 That makes a child a self-contained subschema, and both documents say
 so with JSON Schema 2020-12's own `$defs` and `$ref`, through the one
-code path they share (`ContractEmitter::define()` and `reference()`):
+code path they share (`ContractEmitter::define()` and `PropertySchema::reference()`):
 
 A [shape](#a-shape-is-one-def) is a def too, one per shape, which each
 key declared with it refers to.

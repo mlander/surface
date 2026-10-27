@@ -1206,7 +1206,7 @@ export function fieldId(path: string): string {
 // with a `refine` or `live` dependent is asked of the server. The page's
 // answer must be the server's: the same discard and orphan rule
 // (DataSurfaceFormBuilder::settle()), the same reading of a select
-// (ContractEmitter::property()), keyword for keyword.
+// (PropertySchema::property()), keyword for keyword.
 
 /** Why a change was asked of the server rather than narrowed here. */
 export type Marker = 'live' | 'refine' | 'deferred' | 'stored' | 'computed' | 'unsettled' | 'pending';
@@ -1626,7 +1626,7 @@ function met(condition: Conditional, values: Values): boolean {
   return Object.entries(condition.if.properties).every(([key, { const: value }]) => !isEmpty(getAt(values, key)) && sameValue(value, getAt(values, key)));
 }
 
-/** The keywords whose change the emitter counts as narrowed (ContractEmitter::signature()). */
+/** The keywords whose change the emitter counts as narrowed (PropertySchema::signature()). */
 const NARROWING = ['type', 'minimum', 'maximum', 'minLength', 'maxLength', 'minItems', 'maxItems', 'pattern', 'not', 'format'] as const;
 
 function narrows(declared: Schema, effective: Schema): boolean {
@@ -2344,7 +2344,7 @@ function compacted(node: unknown): unknown {
   return out;
 }
 
-/** ContractEmitter::anyRefined(): a property of the frame says it is narrowed now. */
+/** PropertySchema::anyRefined(): a property of the frame says it is narrowed now. */
 
 function anyRefined(schema: Schema): boolean {
   return Object.values(schema.properties ?? {}).some((property) => Boolean(property['x-surface']?.refined));

@@ -205,7 +205,7 @@ exception to the scope: a kept stale value is storage's, not an answer.
 
 **Documents:** both. **Test:** `testRegexTranslation`.
 
-`ContractEmitter::pattern()` strips the delimiters (the first character,
+`PropertySchema::pattern()` strips the delimiters (the first character,
 to its last occurrence), allows the `u` modifier and no other, and passes
 the body through unchanged. Any other modifier, or a bracket delimiter,
 leaves the `pattern` out and names `Regex` under `checkedOnServer`.
@@ -470,7 +470,7 @@ check about identity. The accepted document holds.
 a derived link field's item. No shipped key is a `datetime_iso8601`.
 
 **Recommendation: widen**: drop `format` where Drupal's check is not the
-format's (each one line in `ContractEmitter::type()` and the `Email` case
+format's (each one line in `PropertySchema::type()` and the `Email` case
 of `keywords()`, listed below), naming the constraint under
 `checkedOnServer` instead; or `idn-email` for email, if the email
 validator is held to it.
@@ -511,11 +511,11 @@ Each is a line or two on the schema side; none is applied.
 
 | Section | Where | Change |
 | --- | --- | --- |
-| 3 | `ContractEmitter::property()`, where a key is marked stale (and the orphan branch of `frame()`) | add `null` to `type` and `{const: null}` to `oneOf` |
-| 6 | `ContractEmitter::property()`, the secret branch | make the type nullable whatever `required` says |
+| 3 | `PropertySchema::property()`, where a key is marked stale (and the orphan branch of `ContractEmitter::frame()`) | add `null` to `type` and `{const: null}` to `oneOf` |
+| 6 | `PropertySchema::property()`, the secret branch | make the type nullable whatever `required` says |
 | 7 | `PluginExistsOptions::resolve()` | no list when `allowFallback` is set on a fallback manager |
 | 9 | `ContractEmitter::collection()` | describe a locked list's items without `const` in `emit()` |
-| Outside | `ContractEmitter::type()`, `keywords()` | drop `format` for `email`, `uri`, `datetime_iso8601` and `Email` |
+| Outside | `PropertySchema::type()`, `keywords()` | drop `format` for `email`, `uri`, `datetime_iso8601` and `Email` |
 
 ## Not verified
 

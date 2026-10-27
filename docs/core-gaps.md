@@ -130,7 +130,7 @@ limit from the refusal.
 `Choice` to its values, and names every other constraint under
 `x-surface.checkedOnServer`, with what it checks, so a client knows a
 server-side rule exists
-(`ContractEmitter::keywords()` in `src/Contract/ContractEmitter.php`). A
+(`PropertySchema::keywords()` in `src/Contract/PropertySchema.php`). A
 `Regex` is written only when every construct in its pattern is on an
 allowlist of those PHP and JavaScript read alike, and is otherwise left
 to the server (`src/Contract/PatternTranslation.php`; [a pattern both

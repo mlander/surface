@@ -328,7 +328,7 @@ final class ConfigSchemaContract {
    *   The pattern without its delimiters, or NULL when the expression
    *   carries a modifier JSON Schema has no way to say.
    *
-   * @see \Drupal\data_surface\Contract\ContractEmitter::pattern()
+   * @see \Drupal\data_surface\Contract\PropertySchema::pattern()
    */
   protected function pattern(array $options): ?string {
     $regex = $options['pattern'] ?? NULL;

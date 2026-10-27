@@ -36,7 +36,7 @@ namespace Drupal\data_surface\Contract;
  * `resolveSchema()` and `inlineSchema()`, in PHP.
  *
  * The inline reading is the emitter's own, before the placement rules of
- * the contract's version moved its markers (ContractEmitter::settled()):
+ * the contract's version moved its markers (DocumentHead::settled()):
  * restored() puts each `x-surface.within` entry back where it stands and
  * marks each conditional `x-surface.rules` lists `x-surface.declared`, a
  * mark of the inline reading alone, which no document carries, since
@@ -44,7 +44,7 @@ namespace Drupal\data_surface\Contract;
  * a key's union of its variants is left to the conditionals, which state
  * each one exactly.
  *
- * @see \Drupal\data_surface\Contract\ContractEmitter::reference()
+ * @see \Drupal\data_surface\Contract\PropertySchema::reference()
  */
 final class SchemaResolver {
 
