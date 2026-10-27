@@ -469,6 +469,7 @@ links its reason in one form, `(why: decision)`, which you may skip.
 | [Fresh eyes, 2026-10-19](docs/fresh-eyes-2026-10-19.md) | A second newcomer builds a library's opening hours, a reused structure and an alter. |
 | [Fresh eyes three, 2026-10-19](docs/fresh-eyes-2026-10-19b.md) | A third newcomer builds a newsletter digest from the documentation alone. |
 | [Two adopters, 2026-10-19](docs/adopters-2026-10-19.md) | Two contributed modules' settings forms, pathauto's and honeypot's, ported as resources. |
+| [Pathauto again, 2026-10-26](docs/adopters-2026-10-26.md) | Pathauto's settings form re-ported a week later from the docs alone: the line counts side by side, and what the form builder still gets wrong. |
 | [Audit: never stricter than the runtime](docs/audit-never-stricter.md) | Where the schema could be stricter than the pipeline, case by case, each verdict pinned by a test. |
 
 **The proposal**

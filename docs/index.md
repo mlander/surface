@@ -244,6 +244,9 @@ promise its two schema documents make:
 - [Two adopters, 2026-10-19](adopters-2026-10-19.md): two contributed
   modules' settings forms, pathauto's and honeypot's, ported as
   resources.
+- [Pathauto again, 2026-10-26](adopters-2026-10-26.md): the same
+  settings form re-ported on today's branch from the docs alone, as a
+  size measurement and a fourth newcomer run.
 - [Audit: never stricter than the runtime](audit-never-stricter.md):
   where the schema could be stricter than the pipeline, case by case,
   each verdict pinned by a test.
