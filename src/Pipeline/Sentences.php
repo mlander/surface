@@ -28,7 +28,7 @@ use Drupal\Component\Utility\Html;
  *
  * Decision: see docs/decisions.md#a-refusal-names-what-it-depends-on.
  *
- * @see \Drupal\data_surface\Pipeline\DataSurfacePipeline::sayingWhatIsAllowed()
+ * @see \Drupal\data_surface\Pipeline\Validating::sayingWhatIsAllowed()
  * @see \Drupal\data_surface\Pipeline\Named
  */
 final class Sentences implements MarkupInterface {
