@@ -37,8 +37,10 @@ final class SpotlightResource implements ResourceInterface {
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('component', 'string', t('Component'), default: 'data_surface_examples:card')
       ->setRequired(TRUE);
+
     $inputs->attachVariants('props', by: 'component', from: ComponentProps::class)
       ->setLabel(t('Props'));
+
     $inputs->attachVariants('slots', by: 'component', from: ComponentSlots::class)
       ->setLabel(t('Slots'));
   }

@@ -37,6 +37,7 @@ final class DataSurfaceDemoFormatter extends DataSurfaceFormatterBase implements
     $outputs->add('text', 'string', t('Text'))
       ->setDescription(t('The field value, prefixed and cased as the settings ask.'))
       ->setRequired(TRUE);
+
     $outputs->addList('classes', DataDefinition::create('string')->setLabel(t('Class')), t('Classes'))
       ->setDescription(t('The classes the chosen variant puts on the wrapper. Absent when no variant is chosen.'));
   }

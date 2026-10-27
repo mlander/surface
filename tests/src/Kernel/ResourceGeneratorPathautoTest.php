@@ -64,11 +64,15 @@ class ResourceGeneratorPathautoTest extends ResourceGeneratorTestBase {
     // self::SEPARATOR, self::MAX_LENGTH, self::MAX_COMPONENT_LENGTH,
     // self::TRANSLITERATE, self::REDUCE_ASCII, self::CASE, self::IGNORE_WORDS,
     // self::UPDATE_ACTION: each is named from its key.
+
     $inputs->addList(self::ENABLED_ENTITY_TYPES, 'string', t('Enabled entity types'), default: ['user']);
+
     // The site holds {"hyphen":1} at self::PUNCTUATION now, which is not a
     // value of the key as its schema reads: no default is written.
     $inputs->addList(self::PUNCTUATION, 'integer', t('Punctuation'));
+
     $inputs->add(self::VERBOSE, 'boolean', t('Verbose'), default: FALSE);
+
     $inputs->add(self::SEPARATOR, 'string', t('Separator'), default: '-');
 PHP, $resource, 'Defaults from the install file; no key required, the object not being fully validatable.');
     $this->assertStringContainsString("  public const CASE = 'case';\n", $resource, 'A key named for a PHP keyword other than class is a constant of that name.');

@@ -159,6 +159,15 @@ final class DefinitionMetadata {
   protected const COMPUTED_KEY = 'data_surface_computed';
 
   /**
+   * The definition array key holding what a key is resolved from at use.
+   *
+   * Holds a Resolve: the keys, by their stored paths, and the class
+   * resolving it. Set by BlueprintAdditionsInterface::resolve() alone, and
+   * read by Resources::resolved() alone: nothing emitted states it.
+   */
+  protected const RESOLVE_KEY = 'data_surface_resolve';
+
+  /**
    * Declares the value a definition starts from.
    *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
@@ -687,6 +696,37 @@ final class DefinitionMetadata {
   }
 
   /**
+   * Says a key's value is resolved at use from others, and how.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The key's definition.
+   * @param \Drupal\data_surface\Resolve $resolve
+   *   What it is resolved from, and by what.
+   *
+   * @see docs/decisions.md#a-key-may-stand-for-another-at-use
+   */
+  public static function setResolve(DataDefinitionInterface $definition, Resolve $resolve): void {
+    static::arrayAccess($definition)->offsetSet(static::RESOLVE_KEY, $resolve);
+  }
+
+  /**
+   * Reads what a key's value is resolved from at use.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The key's definition.
+   *
+   * @return \Drupal\data_surface\Resolve|null
+   *   What it is resolved from, or NULL for a key read as stored.
+   */
+  public static function resolveOf(DataDefinitionInterface $definition): ?Resolve {
+    if (!$definition instanceof \ArrayAccess || !$definition->offsetExists(static::RESOLVE_KEY)) {
+      return NULL;
+    }
+    $resolve = $definition->offsetGet(static::RESOLVE_KEY);
+    return $resolve instanceof Resolve ? $resolve : NULL;
+  }
+
+  /**
    * Says what each entry of a map of keys from the site is.
    *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
@@ -820,8 +860,9 @@ final class DefinitionMetadata {
   /**
    * Declares how a key is arranged where it is drawn.
    *
-   * Replaces whatever arrangement the key had; an alter lays its own over
-   * the owner's with describe(..., arrangement:) instead. Read by the
+   * Replaces whatever arrangement the key had. The engine's seam: an
+   * owner or an alter arranges a key with the blueprint's describe(),
+   * which lays what it is given over what the key has. Read by the
    * generated form for every host, and stated by the served contract as
    * `x-surface.arrangement` when a renderer asks for widget hints. Nothing
    * in it changes what is accepted.

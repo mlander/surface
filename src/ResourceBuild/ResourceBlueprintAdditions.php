@@ -10,7 +10,7 @@ use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
 use Drupal\data_surface\DataSurfaceBuilderInterface;
 use Drupal\data_surface\DefinitionMetadata;
-use Drupal\data_surface\Resource\Arrangement;
+use Drupal\data_surface\Resource\ArrangementGroup;
 
 /**
  * An alter's blueprint: keys are mounted under the alter's module.
@@ -90,7 +90,7 @@ final class ResourceBlueprintAdditions extends BlueprintAdapterBase {
   /**
    * {@inheritdoc}
    */
-  public function describe(string $key, string|\Stringable|null $label = NULL, string|\Stringable|null $description = NULL, ?string $after = NULL, ?Arrangement $arrangement = NULL): static {
+  public function describe(string $key, string|\Stringable|null $label = NULL, string|\Stringable|null $description = NULL, ?string $after = NULL, ?ArrangementGroup $group = NULL, ?int $weight = NULL, string|\Stringable|null $placeholder = NULL, string|\Stringable|null $prefix = NULL, string|\Stringable|null $suffix = NULL, string|\Stringable|null $help = NULL): static {
     $this->assertWithinMixin('rewords', $key);
     // The owner's own words are kept, for what describes the owner's
     // storage whichever modules are on (its config schema).
@@ -99,6 +99,7 @@ final class ResourceBlueprintAdditions extends BlueprintAdapterBase {
       DefinitionMetadata::keepOwnLabel($owned);
     }
     $mine = in_array($key, $this->keys, TRUE) || $key === 'third_party_settings.' . $this->provider || str_starts_with($key, 'third_party_settings.' . $this->provider . '.');
+    $arrangement = static::arrangement($group, $weight, $placeholder, $prefix, $suffix, $help);
     $arranged = $arrangement === NULL || $mine ? NULL : $this->find($key);
     $removed = $arranged === NULL ? [] : $arrangement->removes(DefinitionMetadata::arrangementOf($arranged));
     if ($removed !== []) {
@@ -112,7 +113,7 @@ final class ResourceBlueprintAdditions extends BlueprintAdapterBase {
         implode(' and ', $removed),
       ));
     }
-    return parent::describe($key, $label, $description, $after, $arrangement);
+    return parent::describe($key, $label, $description, $after, $group, $weight, $placeholder, $prefix, $suffix, $help);
   }
 
   /**
@@ -209,6 +210,36 @@ final class ResourceBlueprintAdditions extends BlueprintAdapterBase {
    */
   public function extended(): array {
     return $this->extended;
+  }
+
+  /**
+   * {@inheritdoc}
+   *
+   * The alter's own keys by the names it added them under, read from its
+   * mount, `third_party_settings.<module>.<key>`, as its rules read them.
+   *
+   * Decision: see docs/decisions.md#a-key-may-stand-for-another-at-use.
+   */
+  public function resolve(string $key, array $from, string $using): static {
+    if ($this->mixedIn !== NULL) {
+      [$structure, $owner] = $this->mixedIn;
+      throw new \LogicException(sprintf('The %s alter of %s resolves "%s", and %s is mixed into %s. A resolve is a resource\'s own, read from its storage: an alter of a mixed-in structure declares none, for now.', $this->provider, $structure, $key, $structure, $owner));
+    }
+    return parent::resolve($key, $from, $using);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  protected function storedPath(string $key): ?string {
+    return in_array($key, $this->keys, TRUE) ? RefinesInputRefiner::path($this->provider, $key) : parent::storedPath($key);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  protected function who(): string {
+    return sprintf('the %s alter', $this->provider);
   }
 
   /**

@@ -25,9 +25,13 @@ final class TicketLimitStructure implements StructureInterface {
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('per_order', 'integer', t('Per order'), default: 4)
       ->addConstraint('Range', ['min' => 1, 'max' => 10]);
+
     $inputs->add('waiting_list', 'boolean', t('Waiting list when sold out'), default: FALSE);
+
     $inputs->reads('selling', 'boolean');
+
     $inputs->narrow('per_order')->when(Condition::equals('selling', FALSE))->doesNotApply();
+
     $inputs->narrow('waiting_list')->when(Condition::equals('selling', FALSE))->doesNotApply();
   }
 

@@ -142,10 +142,13 @@ final class FieldInstanceResource implements ResourceInterface {
         'manager' => 'entity_type.manager',
         'interface' => FieldableEntityInterface::class,
       ]);
+
     $inputs->add('bundle', 'string', t('Bundle'))->setRequired(TRUE)
       ->setDescription(t('The bundle the field is on, for example article or page.'));
+
     $inputs->add('field_type', 'string', t('Field type'))->setRequired(TRUE)
       ->setDescription(t('The field type, which decides what the settings are.'));
+
     // What a field storage's name may be, which its constructor refuses
     // otherwise with an exception rather than a violation.
     $inputs->add('field_name', 'string', t('Machine name'))->setRequired(TRUE)
@@ -159,8 +162,10 @@ final class FieldInstanceResource implements ResourceInterface {
     // The field itself.
     $inputs->add('label', 'string', t('Label'))->setRequired(TRUE)
       ->setDescription(t('The human readable label for the field on this bundle.'));
+
     $inputs->add('description', 'string', t('Help text'))
       ->setDescription(t('Help text to display for the field.'));
+
     $inputs->add('required', 'boolean', t('Required field'), default: FALSE)
       ->setDescription(t('Whether the field is required.'));
 
@@ -168,6 +173,7 @@ final class FieldInstanceResource implements ResourceInterface {
     $inputs->attach('storage', FieldStorageResource::class)
       ->setLabel(t('Field storage'))
       ->setDescription(t('What every bundle using this field shares.'));
+
     $inputs->attachVariants('settings', by: 'field_type', from: FieldSettingsSchemaVariants::class)
       ->setLabel(t('Field settings'))
       ->setDescription(t('Settings for this field on this bundle, described by the field type itself.'));

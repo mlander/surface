@@ -28,9 +28,11 @@ final class VenueRoomStructure implements StructureInterface {
         'message' => t('A room id holds only lowercase letters, numbers and underscores.'),
       ])
       ->addConstraint('Length', ['max' => 64]);
+
     $inputs->add('label', 'string', t('Room name'))
       ->setRequired(TRUE)
       ->addConstraint('Length', ['max' => 128]);
+
     $inputs->add('seats', 'integer', t('Seats'))
       ->setRequired(TRUE)
       ->addConstraint('Range', ['min' => 1, 'max' => 10000]);

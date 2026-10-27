@@ -405,6 +405,7 @@ the thing exists. It is two keys. Example 15's venue declares them:
 $inputs->add('label', 'string', t('Name'))
   ->setRequired(TRUE)
   ->addConstraint('Length', ['max' => 128]);
+
 $inputs->compute('id', 'machine_name', t('Machine name'),
   from: ['label'], using: MachineName::class, when: Compute::UNLESS_SENT)
   ->setDescription(t('A unique name for the venue: lowercase letters, numbers and underscores, computed from its name unless one is given.'))

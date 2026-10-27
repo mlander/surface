@@ -29,8 +29,10 @@ final class VisibilityConditionStructure implements StructureInterface {
     $inputs->add('id', 'string', t('Condition'))
       ->setDescription(t('The condition plugin.'))
       ->setRequired(TRUE);
+
     $inputs->add('negate', 'boolean', t('Negate'), default: FALSE)
       ->setDescription(t('Whether the block is shown when the condition does not hold, rather than when it does.'));
+
     $inputs->attachVariants('settings', by: 'id', from: ConditionPluginStructures::class)
       ->setLabel(t('Settings'))
       ->setDescription(t('The settings of the condition chosen.'));

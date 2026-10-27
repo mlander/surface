@@ -29,7 +29,9 @@ final class ReviewStructure implements StructureInterface {
         'pattern' => '/^\d{4}-\d{2}-\d{2}$/D',
         'message' => t('Write the date as YYYY-MM-DD, such as 2026-10-19.'),
       ]);
+
     $inputs->add('reviewed_by', 'string', t('Reviewed by'));
+
     $inputs->narrow('reviewed_by')
       ->when(Condition::present('reviewed_on'))
       ->require()

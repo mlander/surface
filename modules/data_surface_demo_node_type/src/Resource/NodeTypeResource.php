@@ -7,8 +7,6 @@ namespace Drupal\data_surface_demo_node_type\Resource;
 use Drupal\Core\Entity\EntityTypeInterface;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\data_surface\Compute\MachineName;
-use Drupal\data_surface\DefinitionMetadata;
-use Drupal\data_surface\Resource\Arrangement;
 use Drupal\data_surface\Resource\ArrangementGroup;
 use Drupal\data_surface\Resource\Attribute\Operation;
 use Drupal\data_surface\Resource\Attribute\Resource;
@@ -83,15 +81,26 @@ final class NodeTypeResource implements ResourceInterface {
    * {@inheritdoc}
    *
    * Ordered as core's NodeTypeForm presents them; the form's cosmetic
-   * grouping relies on this order within each group.
+   * grouping relies on this order within each group. The three groups
+   * are core's content type form's, declared on the keys so every door
+   * that draws them reads them; the cosmetic layer only borrows core's
+   * vertical tabs to hold them.
+   *
+   * Core's schema stores the name as a label, which may not span lines or
+   * hold a control character, and the description and the help as text,
+   * which may hold line breaks and tabs and no other control character:
+   * the Regex constraints say so too, so no door offers what the node
+   * type's schema refuses. The machine name is computed from the name
+   * unless typed, as core's form suggests it, and held once by the stock
+   * DataSurfaceUnique the build adds on add. The title label is not
+   * stored on the node type but on the title base field, per bundle.
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    // Which content type this is.
-    // Core's schema stores the name as a label, which may not span lines
-    // or hold a control character, and the description and the help as
-    // text, which may hold line breaks and tabs and no other control
-    // character: said here too, so no door offers what the node type's
-    // schema refuses.
+    $submission = ArrangementGroup::details('submission', t('Submission form settings'));
+    $workflow = ArrangementGroup::details('workflow', t('Publishing options'), collapsed: TRUE);
+    $display = ArrangementGroup::details('display', t('Display settings'), collapsed: TRUE);
+
+    // The content type.
     $inputs->add('name', 'string', t('Name'))
       ->setDescription(t('The human readable name for this content type.'))
       ->setRequired(TRUE)
@@ -101,16 +110,12 @@ final class NodeTypeResource implements ResourceInterface {
         'match' => FALSE,
         'message' => t('The name may not span lines or hold control characters.'),
       ]);
-    // Computed from the name unless typed, as core's form suggests it, and
-    // held once by the stock DataSurfaceUnique the build adds on add.
+
     $inputs->compute('type', 'machine_name', t('Machine name'),
       from: ['name'], using: MachineName::class, when: Compute::UNLESS_SENT)
       ->setDescription(t('Unique machine readable name: lowercase letters, numbers, and underscores only.'))
       ->addConstraint('Length', ['max' => EntityTypeInterface::BUNDLE_MAX_LENGTH]);
 
-    // The content type itself. Core has no multiline string type, so the
-    // definition says so with a setting and the string widget renders a
-    // textarea.
     $inputs->add('description', 'string', t('Description'))
       ->setDescription(t('Displays on the Content types page.'))
       ->setSetting('multiline', TRUE)
@@ -119,32 +124,20 @@ final class NodeTypeResource implements ResourceInterface {
         'match' => FALSE,
         'message' => t('The description may not hold control characters other than line breaks and tabs.'),
       ]);
-    // How the content form is filled in, drawn as core's content type form
-    // draws it: three groups after the name, the first open. Declared on
-    // the keys, so every door that draws them reads it; the cosmetic
-    // layer only borrows core's vertical tabs to hold the groups.
-    $submission = new Arrangement(group: ArrangementGroup::details('submission', t('Submission form settings')));
-    $workflow = new Arrangement(group: ArrangementGroup::details('workflow', t('Publishing options'), collapsed: TRUE));
-    $display = new Arrangement(group: ArrangementGroup::details('display', t('Display settings'), collapsed: TRUE));
 
-    // Not stored on the node type: the title base field's per bundle
-    // label.
-    $title_label = $inputs->add('title_label', 'string', t('Title field label'), default: 'Title')
+    // Submission form.
+    $inputs->add('title_label', 'string', t('Title field label'), default: 'Title')
       ->setDescription(t('The label shown for the title field on the content form.'))
       ->setRequired(TRUE)
       ->addConstraint('Length', ['max' => 255]);
-    DefinitionMetadata::setArrangement($title_label, $submission);
-    // Spelled canonically — values as a list, labels beside them —
-    // because the values are integers, and an integer-keyed map of labels
-    // cannot be told from a list of values.
-    $preview_mode = $inputs->add('preview_mode', 'integer', t('Preview before submitting'), default: NodePreviewMode::Optional->value)
+    $inputs->describe('title_label', group: $submission);
+
+    $inputs->add('preview_mode', 'integer', t('Preview before submitting'), default: NodePreviewMode::Optional->value)
       ->setRequired(TRUE)
-      ->addConstraint('LabeledChoice', [
-        'choices' => array_column(NodePreviewMode::cases(), 'value'),
-        'labels' => NodePreviewMode::asOptions(),
-      ]);
-    DefinitionMetadata::setArrangement($preview_mode, $submission);
-    $help = $inputs->add('help', 'string', t('Explanation or submission guidelines'))
+      ->addConstraint('LabeledChoice', ['labels' => NodePreviewMode::asOptions()]);
+    $inputs->describe('preview_mode', group: $submission);
+
+    $inputs->add('help', 'string', t('Explanation or submission guidelines'))
       ->setDescription(t('Displayed at the top of the page when creating or editing content of this type.'))
       ->setSetting('multiline', TRUE)
       ->addConstraint('Regex', [
@@ -152,23 +145,29 @@ final class NodeTypeResource implements ResourceInterface {
         'match' => FALSE,
         'message' => t('The help may not hold control characters other than line breaks and tabs.'),
       ]);
-    DefinitionMetadata::setArrangement($help, $submission);
+    $inputs->describe('help', group: $submission);
 
-    // The defaults of new content, kept on the node base fields.
-    $status = $inputs->add('status', 'boolean', t('Published'), default: TRUE)
+    // Defaults of new content, kept on the node base fields.
+    $inputs->add('status', 'boolean', t('Published'), default: TRUE)
       ->setDescription(t('Whether new content of this type is published by default.'));
-    $promote = $inputs->add('promote', 'boolean', t('Promoted to front page'), default: FALSE)
+    $inputs->describe('status', group: $workflow);
+
+    $inputs->add('promote', 'boolean', t('Promoted to front page'), default: FALSE)
       ->setDescription(t('Whether new content of this type is promoted by default.'));
-    $sticky = $inputs->add('sticky', 'boolean', t('Sticky at top of lists'), default: FALSE)
+    $inputs->describe('promote', group: $workflow);
+
+    $inputs->add('sticky', 'boolean', t('Sticky at top of lists'), default: FALSE)
       ->setDescription(t('Whether new content of this type is sticky by default.'));
-    $new_revision = $inputs->add('new_revision', 'boolean', t('Create new revision'), default: TRUE)
+    $inputs->describe('sticky', group: $workflow);
+
+    $inputs->add('new_revision', 'boolean', t('Create new revision'), default: TRUE)
       ->setDescription(t('Whether edits create a new revision by default.'));
-    foreach ([$status, $promote, $sticky, $new_revision] as $published) {
-      DefinitionMetadata::setArrangement($published, $workflow);
-    }
-    $display_submitted = $inputs->add('display_submitted', 'boolean', t('Display author and date information'), default: TRUE)
+    $inputs->describe('new_revision', group: $workflow);
+
+    // Display.
+    $inputs->add('display_submitted', 'boolean', t('Display author and date information'), default: TRUE)
       ->setDescription(t('Author username and publish date will be displayed.'));
-    DefinitionMetadata::setArrangement($display_submitted, $display);
+    $inputs->describe('display_submitted', group: $display);
   }
 
 }

@@ -123,6 +123,7 @@ Example 16 declares two of its keys this way:
 ```php
 $inputs->add('page', 'entity:node:article', t('Announcement'))
   ->setDescription(t('The article that announces the sponsor.'));
+
 // Of any type: an entity type, then an id of it.
 $inputs->add('thing', 'entity', t('Featured beside'))
   ->setDescription(t('Any content the sponsor is featured beside.'))
@@ -382,6 +383,7 @@ Example 15's listing answers a page of the venues and how many matched:
 $outputs->addList('items', $item, t('Venues'))
   ->setDescription(t('The page of venues, lighter first, each one the account may read.'))
   ->setRequired(TRUE);
+
 $outputs->add('total', 'integer', t('Total'))
   ->setDescription(t('How many venues the filter matched that the account may read, on every page.'))
   ->setRequired(TRUE);

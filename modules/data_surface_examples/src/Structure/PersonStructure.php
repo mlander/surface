@@ -27,10 +27,14 @@ final class PersonStructure implements StructureInterface {
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->reads('listed', 'boolean');
+
     $inputs->add('name', 'string', t('Name'))
       ->setRequired(TRUE);
+
     $inputs->add('email', 'email', t('Email'));
+
     $inputs->add('phone', PhoneNumber::class, t('Phone'));
+
     $inputs->narrow('email')
       ->when(Condition::equals('listed', TRUE))
       ->require()

@@ -39,19 +39,26 @@ final class RegistrationStep3Resource implements ResourceInterface {
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('title', 'string', t('Event title'))
       ->setRequired(TRUE);
+
     $inputs->add('open', 'boolean', t('Registration open'), default: TRUE);
+
     $inputs->add('venue', 'string', t('Venue'))
       ->setRequired(TRUE)
       ->addConstraint('LabeledChoice', ['choices' => Venues::VENUES]);
+
     $inputs->add('room', 'string', t('Room'))
       ->setRequired(TRUE)
       ->addConstraint('LabeledChoice', ['choices' => Venues::rooms()]);
+
     $inputs->add('capacity', 'integer', t('Capacity'), default: 50)
       ->addConstraint('Range', ['min' => 1]);
+
     $inputs->add('pricing', 'string', t('Pricing'), default: 'free')
       ->setRequired(TRUE);
+
     $inputs->attachVariants('ticket', by: 'pricing')
       ->setLabel(t('Ticket'));
+
     $inputs->attach('contact', ContactStructure::class)
       ->setLabel(t('Contact'));
   }

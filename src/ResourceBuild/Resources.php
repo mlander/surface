@@ -15,6 +15,7 @@ use Drupal\Core\Session\PermissionsHashGeneratorInterface;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
 use Drupal\data_surface\DataSurfaceBuilder;
 use Drupal\data_surface\DataSurfaceInterface;
+use Drupal\data_surface\Resolve;
 use Drupal\data_surface\SettledCacheability;
 use Drupal\data_surface\Pipeline\DataSurfaceStorageInterface;
 use Drupal\data_surface\Reference\References;
@@ -1167,6 +1168,17 @@ final class Resources implements ResourcesInterface {
       ));
     }
     return $this->storageFor($definition, $context, $built ?? $this->build($definition->name(), $context), $account ?? $this->currentUser, $this->gating->itemGates($definition, $context));
+  }
+
+  /**
+   * {@inheritdoc}
+   *
+   * Decision: see docs/decisions.md#a-key-may-stand-for-another-at-use.
+   */
+  public function resolved(string $resource, string $operation = 'configure', array $arguments = []): array {
+    $context = $this->operation($resource, $operation, $arguments);
+    $built = $this->build($resource, $context);
+    return Resolve::apply($built, $this->storage($resource, $context, $built)->load($built));
   }
 
   /**

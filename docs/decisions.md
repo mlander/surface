@@ -250,8 +250,10 @@ does not count, so its pins are unchanged.
 grows only with that test updated beside a reason: 9 attributes, 31
 attribute arguments (33 before; 30 until 2026-10-25, when
 `#[Operation(gate:)]` was added, [A gate is borrowed, never
-copied](#a-gate-is-borrowed-never-copied)), 15 blueprint methods (17),
-20 interfaces (23). It is the concept budget for the code, as
+copied](#a-gate-is-borrowed-never-copied)), 16 blueprint methods (17
+before; 15 until 2026-10-27, when `resolve()` was added, [A key may
+stand for another at use](#a-key-may-stand-for-another-at-use)), 20
+interfaces (23). It is the concept budget for the code, as
 [Your first resource](first-resource.md) is for the docs.
 
 What changed, old → new, to grep:
@@ -802,9 +804,9 @@ generated form asks the question in core's words.
 ### A key is named once, as a constant
 
 Decided 2026-10-27. A class names each of its keys once, as a constant
-in declaration order with a one-line docblock, `public const VENUE =
-'venue';`, and every later mention is the constant: `add(self::VENUE,
-...)`, `#[RefinesInput(self::ROOM)]`, `narrow(self::ROOM)`,
+in declaration order, `public const VENUE = 'venue';`, and every later
+mention is the constant: `add(self::VENUE, ...)`,
+`#[RefinesInput(self::ROOM)]`, `narrow(self::ROOM)`,
 `Condition::equals(self::VENUE, ...)`
 ([Key names](declaring-a-resource.md#key-names)).
 
@@ -832,6 +834,11 @@ in declaration order with a one-line docblock, `public const VENUE =
   constants would add a block to every quoted class for no new idea, and
   a key named as a string still works the same. It is a convention, not
   a rule the build checks.
+- **The constant carries no comment** (*amended 2026-10-27*). The
+  constants are written one per line in one block, with no docblock and
+  no blank line between them: the label on the key's `add()` line is its
+  comment, and a block of bare constants reads as the method's table of
+  contents.
 - **Rejected: passing the definition `add()` returns in place of the
   key** ([the review](reviews-2026-10-20/creative-generalist.md)), which
   would need the blueprint to resolve an object to its key by identity
@@ -1883,14 +1890,16 @@ examples ship both, each for the case it fits.
   learns of it only from the note; the rule vocabulary has no
   conditional lock either (ROADMAP item 3 left it out). The page quotes
   the spelling a lock would have.
-- **What the alter cannot do.** Hand the owner's code the managed key's
-  value. The webhook's code reads `api_key`; `key_id` is under the key
-  module's mount, which the webhook never names
+- **What the code that uses it reads.** The webhook's code reads
+  `api_key`; `key_id` is under the key module's mount, which the webhook
+  never names
   ([An alter attaches at its own mount](#an-alter-attaches-at-its-own-mount)).
-  So the alter's way corrects the form, the documents and the tool, and
-  leaves the code that signs a post with no key, while the owner's way
-  has no such gap. An alter supplying the value it rules out is
-  [ROADMAP](../ROADMAP.md) item 18, designed and not built.
+  *Amended 2026-10-27:* the alter also resolves `api_key` from `key_id`
+  at use, so the code that signs a post, reading through
+  `Resources::resolved()`, gets the managed key's value
+  ([A key may stand for another at use](#a-key-may-stand-for-another-at-use)).
+  Until then the alter's way corrected the form, the documents and the
+  tool and left that code with no key.
 
 Open: whether a plain value of a variant not chosen is kept too (the
 rule against pruning stored values says keep it; a value left by
@@ -1898,6 +1907,63 @@ another variant has gone since variants were built); and a stored
 source the site no longer offers, which is kept and shown stale, while
 the credential it chose is not built until the source is offered again.
 (`ClosedSiteListInterface`, `CredentialSources`, `WebhookKeyAlter`)
+
+### A key may stand for another at use
+
+Decided 2026-10-27, with example 14's webhook. An alter that offers a
+managed key in place of an owner's pasted one rules the pasted key out
+once a managed key is chosen, and the owner's code still reads `api_key`.
+The alter now also says what that code reads there:
+`$inputs->resolve('api_key', from: ['key_id'], using: ManagedKeyValue::class)`.
+`Resources::resolved()` builds the operation, loads what storage holds,
+and puts at `api_key` what the class answers for the stored `key_id`,
+while `key_id` holds a value; the owner's code calls it and names no
+managed key.
+
+- **Why.** The Key module asks with `key_select` and answers with
+  `getKeyValue()`, one declaration for both. Here the alter owns both
+  halves of its swap, the rule for what is asked and the resolve for
+  what is answered, so the consumer is unchanged. Nothing is copied into
+  the owner's storage: the managed key's value is read at each call and
+  never written back, and the pasted key stays stored as it was.
+  Uninstall the key module and its mount goes with it, so `resolved()`
+  answers the pasted key again.
+- **Not in the contract.** A resolve is a fact about use, not about what
+  is asked, so neither document, the tools, the form nor the read states
+  it. What is asked does not change, and every door still leaves the
+  secret out. `resolved()` is PHP's alone and answers secrets.
+- **When it is skipped.** While a key in `from:` holds nothing (NULL, the
+  empty string or no value) the stored value stands. A name the class
+  knows no value for, a key the site stopped managing, resolves to NULL:
+  the pasted key does not stand in, since it was ruled out, and the
+  signer refuses to sign with no key.
+- **One resolve per key.** A second resolve of a key, by the owner or
+  another alter, is refused at build naming both. Two cannot compose:
+  while both sources held a value there would be no right answer, and
+  each alter rules out the owner's key alone, never the other alter's.
+  Core's form alters overwrite one another silently, by weight; the Key
+  module avoids that by being the one abstraction, so two modules that
+  both stand in for one credential would layer at the key, and the
+  refusal says so.
+- **The class.** `using:` names a `ComputesValueInterface` class, as a
+  computed key's does, handed the stored value of each key in `from:`
+  by the name the alter gave it. It runs at use and never ahead, so it
+  may read the store the value lives in (`ManagedKeyValue` asks the
+  keys' service); it never reads the request or the account.
+
+Two alternatives were turned down. A new output carrying the value would
+move the consumer onto a name the owner never asked for, and outputs are
+never refined or altered. Deriving the rule that rules the pasted key out
+from the resolve would join two facts, what is asked and what is
+answered, into one call; they stay two lines.
+
+*Open:* a resolve inside a structure or a collection (refused for now:
+`resolved()` reads the top level and the alters' mounts); a resolve whose
+class needs the account; two alters relabeling one owner key with
+`describe()`, last-wins today, the same kind of collision, not refused
+yet. (`Resolve`, `BlueprintAdditionsInterface::resolve()`,
+`Resources::resolved()`, `ManagedKeyValue`, `WebhookSigner`,
+`ResolvedKeysTest`, `ExamplesExtensionTest`)
 
 ## Attached structures
 
@@ -4730,6 +4796,18 @@ page never saw the content type's groups, and a block had none to give.
   cosmetic layer. A group of several keys, or of one key that is not a
   map, draws as before, so no shipped form's markup moved. The React app
   still draws the map's fieldset inside the group's details.
+- **One spelling, `describe()`** (*amended 2026-10-27*, from [the
+  adopter log of 2026-10-26](adopters-2026-10-26.md), where the owner's
+  `DefinitionMetadata::setArrangement($definition, new Arrangement(...))`
+  beside each key read worse than the Form API form it replaced). An
+  owner and an alter arrange a key the same way, `$inputs->describe('key',
+  group: ..., weight: ..., placeholder: ..., prefix: ..., suffix: ...,
+  help: ...)`, after the key is declared; the six arguments are
+  `Arrangement`'s, and the `arrangement:` argument is gone. `Arrangement`
+  and `DefinitionMetadata::setArrangement()` stay as the stored form the
+  engine reads: `describe()` builds one and lays it over what the key
+  has, so the alter's rule above is unchanged, and what the contract
+  states (`Arrangement::toArray()`) did not move.
 - **The cosmetic layer keeps what is truly one form's**: a borrowed
   element (the content type demo's vertical tabs, which gather the
   groups its resource declares, by their `@group.<id>` keys), markup,

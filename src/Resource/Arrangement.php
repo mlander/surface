@@ -16,17 +16,20 @@ namespace Drupal\data_surface\Resource;
  * hints, which the React app draws from. Nothing in it changes what is
  * accepted: no rule, no default, no requiredness, and no path moves.
  *
- * An owner declares it in defineInputs(), on what add() returns:
+ * Nobody writes one. An owner and an alter alike arrange a key with the
+ * blueprint's describe(), whose six arguments are this class's, after the
+ * key is declared:
  *
  * @code
  * $workflow = ArrangementGroup::details('workflow', t('Publishing options'), collapsed: TRUE);
- * $status = $inputs->add('status', 'boolean', t('Published'), default: TRUE);
- * DefinitionMetadata::setArrangement($status, new Arrangement(group: $workflow));
+ * $inputs->add('status', 'boolean', t('Published'), default: TRUE);
+ * $inputs->describe('status', group: $workflow);
  * @endcode
  *
- * An alter arranges an owner's key with describe(..., arrangement:), which
- * lays its arrangement over the owner's: it may place the key and reword
- * what the owner said, never take any of it away.
+ * describe() lays what it is given over what the key has: an alter may
+ * place an owner's key and reword what the owner said, never take any of
+ * it away. This is the stored form the engine reads, kept on the key's
+ * definition by DefinitionMetadata::setArrangement().
  *
  * The placeholder is only ever this one: a declared example is no longer
  * drawn as a placeholder, since an empty field showing a value reads as

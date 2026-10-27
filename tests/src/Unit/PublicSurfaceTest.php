@@ -26,6 +26,9 @@ use PHPUnit\Framework\Attributes\Group;
  * interfaces to 20. Grown on 2026-10-25 by one argument,
  * `#[Operation(gate:)]`, access borrowed from another thing's owner
  * (docs/decisions.md#a-gate-is-borrowed-never-copied): 31 arguments.
+ * Grown on 2026-10-27 by one blueprint method, `resolve()`, a key read
+ * otherwise at use than it is stored
+ * (docs/decisions.md#a-key-may-stand-for-another-at-use): 16 methods.
  *
  * @see docs/decisions.md#the-surface-was-counted-and-cut
  */
@@ -48,7 +51,7 @@ class PublicSurfaceTest extends UnitTestCase {
   protected const PINNED = [
     'attributes' => 9,
     'attribute arguments' => 31,
-    'blueprint methods' => 15,
+    'blueprint methods' => 16,
     'interfaces' => 20,
   ];
 

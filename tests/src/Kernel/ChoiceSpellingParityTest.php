@@ -16,23 +16,23 @@ use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
 /**
- * Tests that LabeledChoice's two spellings are one vocabulary.
+ * Tests that LabeledChoice's three spellings are one vocabulary.
  *
  * `LabeledChoice` takes a list of values with a map of labels beside it,
- * and it takes the same thing written once as a value-to-label map. Two
- * spellings are only a convenience while every consumer reads them as
- * the same declaration; the moment one of them reads a map's keys as
- * values, or its values as values, a declaration means something
- * different depending on how it was typed — and it would mean it
- * quietly, because the constraint itself would go on validating
- * correctly.
+ * the same thing written once as a value-to-label map in `choices`, and
+ * the same map in `labels` alone. Three spellings are only a convenience
+ * while every consumer reads them as the same declaration; the moment
+ * one of them reads a map's keys as values, or its values as values, a
+ * declaration means something different depending on how it was typed,
+ * and it would mean it quietly, because the constraint itself would go
+ * on validating correctly.
  *
  * So this holds the three places that read a declared value list to
  * exactly that: the option resolver, which answers what a form offers;
  * `Narrowing` and the `ChoiceSet` it reads through, which answer whether
  * a refinement is legal; and `DataSurfaceBuilder::extendChoices()`,
  * which merges a contribution into what the owner declared. Each is
- * asked the same question in both spellings and has to give the same
+ * asked the same question in every spelling and has to give the same
  * answer.
  *
  * @see \Drupal\data_surface\Plugin\Validation\Constraint\LabeledChoiceConstraint
@@ -68,49 +68,64 @@ class ChoiceSpellingParityTest extends DataSurfaceKernelTestBase {
   ];
 
   /**
+   * The same vocabulary, written as labels alone.
+   */
+  protected const LABELS = [
+    'labels' => ['star' => 'Star', 'flame' => 'Flame'],
+    'descriptions' => ['flame' => 'It burns.'],
+  ];
+
+  /**
+   * The three spellings, by name.
+   */
+  protected const SPELLINGS = ['canonical' => self::CANONICAL, 'map' => self::MAP, 'labels' => self::LABELS];
+
+  /**
    * Tests that ChoiceSet reads one set out of either spelling.
    *
    * The narrowing check never reads a constraint itself; it reads this,
-   * which is why this is where the two spellings have to meet.
+   * which is why this is where the spellings have to meet.
    */
-  public function testChoiceSetReadsBothSpellingsAsOneSet(): void {
+  public function testChoiceSetReadsEverySpellingAsOneSet(): void {
     $canonical = ChoiceSet::of($this->definition(self::CANONICAL));
-    $map = ChoiceSet::of($this->definition(self::MAP));
     $this->assertNotNull($canonical);
-    $this->assertNotNull($map);
-
     $this->assertSame(['star', 'flame'], $canonical->values);
-    $this->assertSame($canonical->values, $map->values);
     $this->assertSame(['star' => 'Star', 'flame' => 'Flame'], $canonical->labels);
-    $this->assertSame($canonical->labels, $map->labels);
-    // And what the constraint said beyond its values, kept by both so
-    // that writing the set back cannot drop it.
+    // And what the constraint said beyond its values, kept by every
+    // spelling so that writing the set back cannot drop it.
     $this->assertSame(['descriptions' => ['flame' => 'It burns.']], $canonical->options);
-    $this->assertSame($canonical->options, $map->options);
+    foreach (self::SPELLINGS as $spelling => $declared) {
+      $set = ChoiceSet::of($this->definition($declared));
+      $this->assertNotNull($set);
+      $this->assertSame($canonical->values, $set->values, $spelling);
+      $this->assertSame($canonical->labels, $set->labels, $spelling);
+      $this->assertSame($canonical->options, $set->options, $spelling);
+    }
   }
 
   /**
    * Tests that the resolver answers with one option set either way.
    */
-  public function testTheResolverReadsBothSpellingsAsOneOptionSet(): void {
+  public function testTheResolverReadsEverySpellingAsOneOptionSet(): void {
     $canonical = $this->options()->resolve($this->definition(self::CANONICAL));
-    $map = $this->options()->resolve($this->definition(self::MAP));
     $this->assertNotNull($canonical);
-    $this->assertNotNull($map);
-
     $this->assertSame(['star' => 'Star', 'flame' => 'Flame'], $canonical->options);
-    $this->assertSame($canonical->options, $map->options);
     $this->assertSame(['flame' => 'It burns.'], $canonical->descriptions);
-    $this->assertSame($canonical->descriptions, $map->descriptions);
-    // A list read from the constraint alone cannot go stale, whichever
-    // way the constraint was typed.
-    $this->assertSame($canonical->getCacheMaxAge(), $map->getCacheMaxAge());
+    foreach (self::SPELLINGS as $spelling => $declared) {
+      $set = $this->options()->resolve($this->definition($declared));
+      $this->assertNotNull($set);
+      $this->assertSame($canonical->options, $set->options, $spelling);
+      $this->assertSame($canonical->descriptions, $set->descriptions, $spelling);
+      // A list read from the constraint alone cannot go stale, whichever
+      // way the constraint was typed.
+      $this->assertSame($canonical->getCacheMaxAge(), $set->getCacheMaxAge(), $spelling);
+    }
 
     // And the list that is offered is the list that validates, which is
     // the whole reason the labels were put on the Choice in the first
     // place: the map spelling's keys are its allowed values, not its
     // labels.
-    foreach (['canonical' => self::CANONICAL, 'map' => self::MAP] as $spelling => $declared) {
+    foreach (self::SPELLINGS as $spelling => $declared) {
       $surface = $this->surface($declared);
       $this->assertCount(0, $this->pipeline()->validate($surface, ['badge' => 'star']), $spelling);
       $this->assertContains(
@@ -127,18 +142,19 @@ class ChoiceSpellingParityTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests that the narrowing check gives one verdict for both spellings.
+   * Tests that the narrowing check gives one verdict for every spelling.
    *
-   * Four pairings, because a refinement crosses the spellings in
+   * Nine pairings, because a refinement crosses the spellings in
    * practice: a declaration keeps the spelling it was written in, and
    * anything written back by a `ChoiceSet` is canonical, so a refiner
    * handed a map-spelled definition routinely answers canonically.
    */
-  public function testTheNarrowingCheckGivesOneVerdictForBothSpellings(): void {
-    $before = ['canonical' => self::CANONICAL, 'map' => self::MAP];
+  public function testTheNarrowingCheckGivesOneVerdictForEverySpelling(): void {
+    $before = self::SPELLINGS;
     $narrower = [
       'canonical' => ['choices' => ['star'], 'labels' => ['star' => 'Star']],
       'map' => ['choices' => ['star' => 'Star']],
+      'labels' => ['labels' => ['star' => 'Star']],
     ];
     $wider = [
       'canonical' => [
@@ -146,6 +162,7 @@ class ChoiceSpellingParityTest extends DataSurfaceKernelTestBase {
         'labels' => ['star' => 'Star', 'flame' => 'Flame', 'sash' => 'Sash'],
       ],
       'map' => ['choices' => ['star' => 'Star', 'flame' => 'Flame', 'sash' => 'Sash']],
+      'labels' => ['labels' => ['star' => 'Star', 'flame' => 'Flame', 'sash' => 'Sash']],
     ];
 
     $accepted = [];
@@ -178,13 +195,14 @@ class ChoiceSpellingParityTest extends DataSurfaceKernelTestBase {
       }
     }
 
-    // Dropping a value narrows in all four pairings, adding one widens
-    // in all four, and the refusal names the same value every time: the
+    // Dropping a value narrows in all nine pairings, adding one widens
+    // in all nine, and the refusal names the same value every time: the
     // verdict is about the vocabulary, never about how it was typed.
-    $this->assertSame(
-      ['canonical to canonical', 'canonical to map', 'map to canonical', 'map to map'],
-      $accepted,
-    );
+    $this->assertSame([
+      'canonical to canonical', 'canonical to map', 'canonical to labels',
+      'map to canonical', 'map to map', 'map to labels',
+      'labels to canonical', 'labels to map', 'labels to labels',
+    ], $accepted);
     $this->assertSame(array_keys($refused), $accepted);
     $this->assertCount(1, array_unique($refused));
     $this->assertStringContainsString(
@@ -199,6 +217,7 @@ class ChoiceSpellingParityTest extends DataSurfaceKernelTestBase {
   public function testExtendChoicesMergesTheSameWhicheverSpellingTheBaseUsed(): void {
     $from_canonical = $this->extended(self::CANONICAL);
     $from_map = $this->extended(self::MAP);
+    $this->assertSame($from_canonical, $this->extended(self::LABELS));
 
     // Not merely equivalent: identical. Both are written back in the one
     // canonical spelling, with the contributed value and its label in
@@ -218,14 +237,14 @@ class ChoiceSpellingParityTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests that a contribution is refused the same way for both.
+   * Tests that a contribution is refused the same way for every spelling.
    *
    * One value has one owner, and who owns it is read out of whichever
    * spelling the owner declared.
    */
-  public function testExtendChoicesRefusesAnOwnedValueInBothSpellings(): void {
+  public function testExtendChoicesRefusesAnOwnedValueInEverySpelling(): void {
     $messages = [];
-    foreach (['canonical' => self::CANONICAL, 'map' => self::MAP] as $spelling => $declared) {
+    foreach (self::SPELLINGS as $spelling => $declared) {
       try {
         $this->builderFor($declared)->extendChoices('badge', ['flame' => 'Flame'], 'other');
         $this->fail(sprintf('A %s declaration let its own value be contributed.', $spelling));

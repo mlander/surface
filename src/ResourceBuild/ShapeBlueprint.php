@@ -12,7 +12,7 @@ use Drupal\data_surface\DataSurface;
 use Drupal\data_surface\Refinement\ChoiceSet;
 use Drupal\data_surface\Refinement\Narrowing;
 use Drupal\data_surface\Refinement\Rule;
-use Drupal\data_surface\Resource\Arrangement;
+use Drupal\data_surface\Resource\ArrangementGroup;
 use Drupal\data_surface\Resource\BlueprintAdditionsInterface;
 
 /**
@@ -117,12 +117,12 @@ final class ShapeBlueprint implements BlueprintAdditionsInterface {
    * The shape itself, by its id: its label and description at every key
    * that leaves them as the shape says.
    */
-  public function describe(string $key, string|\Stringable|null $label = NULL, string|\Stringable|null $description = NULL, ?string $after = NULL, ?Arrangement $arrangement = NULL): static {
+  public function describe(string $key, string|\Stringable|null $label = NULL, string|\Stringable|null $description = NULL, ?string $after = NULL, ?ArrangementGroup $group = NULL, ?int $weight = NULL, string|\Stringable|null $placeholder = NULL, string|\Stringable|null $prefix = NULL, string|\Stringable|null $suffix = NULL, string|\Stringable|null $help = NULL): static {
     $this->assertNamed('describe', $key);
     if ($after !== NULL) {
       throw new \LogicException(sprintf('%s alters the shape %s and places it after "%s": a shape is a value, drawn where each key that uses it is.', $this->alter, $this->shape, $after));
     }
-    if ($arrangement !== NULL) {
+    if ($group !== NULL || $weight !== NULL || $placeholder !== NULL || $prefix !== NULL || $suffix !== NULL || $help !== NULL) {
       throw new \LogicException(sprintf('%s alters the shape %s and arranges it: a shape is a value, arranged where each key that uses it is drawn.', $this->alter, $this->shape));
     }
     $this->label = $label ?? $this->label;
@@ -139,6 +139,15 @@ final class ShapeBlueprint implements BlueprintAdditionsInterface {
   public function narrow(string $key): Rule {
     $this->assertNamed('narrow', $key);
     return $this->rules[] = new Rule($key);
+  }
+
+  /**
+   * {@inheritdoc}
+   *
+   * A shape is one value, with no keys to resolve it from.
+   */
+  public function resolve(string $key, array $from, string $using): static {
+    throw $this->refused('resolve()');
   }
 
   /**

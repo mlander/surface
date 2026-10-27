@@ -8,12 +8,13 @@ use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\Config\ConfigFactoryInterface;
 
 /**
- * Example 14: the keys the site manages, the Key module's list simulated.
+ * Example 14: the keys the site manages, the Key module's repository simulated.
  *
- * Each key has a machine name and a label, read from this module's
- * configuration, and the list says what it was read from, so whatever is
- * built from it is kept until that configuration changes. A key's value
- * is not here: what a resource stores is the key's name.
+ * Each key has a machine name, a label and a value, read from this
+ * module's configuration, and the list says what it was read from, so
+ * whatever is built from it is kept until that configuration changes. A
+ * resource that uses a key stores its name; the value is asked for here
+ * where it is used, as the Key module's getKeyValue() answers it.
  */
 final class ManagedKeys {
 
@@ -44,6 +45,24 @@ final class ManagedKeys {
       $labels[(string) $key['id']] = (string) $key['label'];
     }
     return $labels;
+  }
+
+  /**
+   * Gets a key's value.
+   *
+   * @param string $id
+   *   The key's machine name.
+   *
+   * @return string|null
+   *   Its value, or NULL when the site manages no key of that name.
+   */
+  public function value(string $id): ?string {
+    foreach ($this->configFactory->get(self::CONFIG)->get('keys') ?? [] as $key) {
+      if ((string) $key['id'] === $id) {
+        return isset($key['value']) ? (string) $key['value'] : NULL;
+      }
+    }
+    return NULL;
   }
 
   /**

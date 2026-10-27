@@ -1,9 +1,12 @@
 # The keys the site manages: example 14's stand-in for the Key module. Each
-# is named here; its value is never stored by the resource that uses it.
+# is named here with its value; a resource that uses one stores its name,
+# and the value is read where it is used.
 keys:
   -
     id: mail_service
     label: 'Mail service'
+    value: mk-managed-4e7b1d
   -
     id: webhook_signing
     label: 'Webhook signing'
+    value: wh-managed-9a1f2c

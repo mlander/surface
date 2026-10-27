@@ -24,6 +24,7 @@ final class RetitleItemStructure implements StructureInterface {
     $inputs->add('node', 'entity:node', t('Node'))
       ->setDescription(t('The node to retitle.'))
       ->setRequired(TRUE);
+
     $inputs->add('new_title', 'string', t('New title'))
       ->setDescription(t("Written as sent; left out, the node's title is rewritten in the style chosen."))
       ->addConstraint('Length', ['max' => 255]);

@@ -25,6 +25,11 @@ services:
   data_surface_examples.concept_panel:
     class: Drupal\data_surface_examples\ConceptPanel
     arguments: ['@data_surface.contract_emitter', '@data_surface.resource_registry', '@data_surface.resources', '@plugin.manager.tool', '@account_switcher', '@class_resolver', '@string_translation', '@module_handler', '@state', '@plugin.manager.sdc', '@data_surface.schema_reader', '@data_surface.references', '@data_surface_tool.operation_inputs', '@data_surface.site_list_budget', '@entity_type.manager']
+  # Example 14: the code that uses the webhook, which signs each post with
+  # the key the webhook's values hold where it is used.
+  data_surface_examples.webhook_signer:
+    class: Drupal\data_surface_examples\WebhookSigner
+    arguments: ['@data_surface.resources']
   # Example 15: what its three forms say once they wrote, and where they
   # go back to.
   data_surface_examples.venue_form_cosmetics:

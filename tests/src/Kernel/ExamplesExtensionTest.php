@@ -8,9 +8,11 @@ use Drupal\Core\Form\FormState;
 use Drupal\Core\Routing\RouteObjectInterface;
 use Drupal\data_surface\Form\DataSurfaceOperationForm;
 use Drupal\data_surface\Refinement\Rule;
+use Drupal\data_surface\Resolve;
 use Drupal\data_surface_examples\ConceptPanel;
 use Drupal\data_surface_examples\Resource\MailerResource;
 use Drupal\data_surface_examples\Resource\WebhookResource;
+use Drupal\data_surface_examples\WebhookSigner;
 use Drupal\data_surface_tool\OperationInputs;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
@@ -821,7 +823,55 @@ class ExamplesExtensionTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests the README quotes the documents, the gap and the lock not shipped.
+   * Tests the code that uses the webhook signs with the key that stands.
+   *
+   * The pasted key with the module off; the managed key's value once one is
+   * chosen, the pasted key kept in config as it was and the managed value
+   * stored nowhere; the pasted key again once none is chosen; and nothing
+   * for a name the site no longer manages, which the pasted key does not
+   * stand in for.
+   */
+  public function testTheSignerUsesTheKeyThatStandsAtUse(): void {
+    $payload = ['sold' => 3, 'event' => 'spring'];
+    $signed = static fn (string $key): string => hash_hmac('sha256', (string) json_encode($payload), $key);
+    $signer = fn (): WebhookSigner => $this->container->get('data_surface_examples.webhook_signer');
+    [$ok] = $this->call('event.webhook:configure', ['api_key' => 'wh-pasted-1']);
+    $this->assertTrue($ok);
+    $this->assertSame($signed('wh-pasted-1'), $signer()->sign($payload), 'Off: the pasted key.');
+    $this->assertSame('https://hooks.example.com/sales', $signer()->endpoint());
+
+    $this->keys(TRUE);
+    $this->assertSame($signed('wh-pasted-1'), $signer()->sign($payload), 'On, with no key chosen: the pasted key still.');
+    $built = $this->container->get('data_surface.resources')->buildOperation('event.webhook', 'configure');
+    $this->assertEquals(['key_id' => 'third_party_settings.' . self::KEYS . '.key_id'], Resolve::of($built->getDefinition('api_key'))?->from, 'The alter\'s own key, read from its mount.');
+    [$ok] = $this->call('event.webhook:configure', self::MOUNTED);
+    $this->assertTrue($ok);
+    $this->assertSame($signed('wh-managed-9a1f2c'), $signer()->sign($payload), 'A key chosen: its value.');
+    $stored = $this->stored('data_surface_examples.webhook');
+    $this->assertSame('wh-pasted-1', $stored['api_key'], 'The pasted key is kept as stored.');
+    $this->assertSame(self::MOUNTED['third_party_settings'], $stored['third_party_settings']);
+    $this->assertStringNotContainsString('wh-managed-9a1f2c', (string) json_encode($stored), 'The managed key\'s value is stored nowhere on the webhook.');
+    [, $read] = $this->call('event.webhook:configure:read');
+    $this->assertStringNotContainsString('wh-', (string) json_encode($read), 'The read names neither key.');
+    $this->assertStringNotContainsString('wh-', (string) json_encode($this->now('event.webhook')));
+
+    [$ok] = $this->call('event.webhook:configure', ['third_party_settings' => [self::KEYS => ['key_id' => NULL]]]);
+    $this->assertTrue($ok);
+    $this->assertSame($signed('wh-pasted-1'), $signer()->sign($payload), 'None chosen again: the pasted key.');
+
+    [$ok] = $this->call('event.webhook:configure', self::MOUNTED);
+    $this->assertTrue($ok);
+    $keys = $this->config('data_surface_examples_keys.keys');
+    $keys->set('keys', array_values(array_filter($keys->get('keys'), static fn (array $key): bool => $key['id'] !== 'webhook_signing')))->save();
+    $this->assertNull($this->container->get('data_surface.resources')->resolved('event.webhook')['api_key'], 'A name the site no longer manages resolves to nothing.');
+    $this->assertSame('wh-pasted-1', $this->stored('data_surface_examples.webhook')['api_key'], 'What is stored for the pasted key is kept, and not used.');
+    $this->expectException(\RuntimeException::class);
+    $this->expectExceptionMessage('The webhook has no key to sign a post with.');
+    $signer()->sign($payload);
+  }
+
+  /**
+   * Tests the README quotes the documents, the use and the lock not shipped.
    *
    * The lock is quoted, never run: it is no effect a declared rule has. A
    * rule that gains one fails here, so the alternative is weighed again.
@@ -836,8 +886,8 @@ class ExamplesExtensionTest extends DataSurfaceKernelTestBase {
     $this->assertStringContainsString("```json\n" . json_encode(self::rules(json_decode(self::WEBHOOK_ON, TRUE)), $flags) . "\n```", $readme);
     $this->assertStringContainsString("```php\n" . ConceptPanel::LOCKING . "\n```", $readme);
     $this->assertFalse((new \ReflectionClass(Rule::class))->hasMethod('lock'), 'A rule may lock now: weigh the alternative the page quotes again.');
-    $gap = (string) preg_replace('#<code>(.*?)</code>#', '`$1`', (string) $this->container->get('data_surface_examples.concept_panel')->gap());
-    $this->assertStringContainsString($gap, (string) preg_replace('/\s+/', ' ', $readme));
+    $use = (string) preg_replace('#<code>(.*?)</code>#', '`$1`', htmlspecialchars_decode((string) $this->container->get('data_surface_examples.concept_panel')->atUse(), ENT_QUOTES));
+    $this->assertStringContainsString($use, (string) preg_replace('/\s+/', ' ', $readme));
     $this->assertSame(MailerResource::class, $this->container->get('data_surface.resource_registry')->getDefinition('event.mailer')->class);
     $this->assertSame(WebhookResource::class, $this->container->get('data_surface.resource_registry')->getDefinition('event.webhook')->class);
   }

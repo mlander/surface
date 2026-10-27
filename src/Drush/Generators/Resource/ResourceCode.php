@@ -158,8 +158,8 @@ final class ResourceCode {
    *   Its dotted path in the resource, a dot at its end; empty at the top.
    *
    * @return array{0: string, 1: string}
-   *   The constants that name its keys, and its statements, one after
-   *   another.
+   *   The constants that name its keys, and its statements, a blank line
+   *   between each two.
    *
    * @phpstan-impure
    */
@@ -170,9 +170,8 @@ final class ResourceCode {
     $parent_constants = $this->constants;
     $this->constants = static::constantNames(array_map('strval', array_keys($map->entries())));
     $constants = [];
-    foreach ($map->entries() as $name => $entry) {
-      [$label] = $this->label($entry->definition, (string) $name);
-      $constants[] = $this->constant((string) $name, $label);
+    foreach (array_keys($map->entries()) as $name) {
+      $constants[] = $this->constant((string) $name);
     }
     $statements = [];
     $top = $path === '' ? $this->leftComments('', '', FALSE) : [];
@@ -215,8 +214,8 @@ final class ResourceCode {
     }
     $this->constants = $parent_constants;
     return [
-      implode("\n\n", $constants),
-      implode("\n", array_filter($statements, static fn (string $statement): bool => $statement !== '')),
+      implode("\n", $constants),
+      implode("\n\n", array_filter($statements, static fn (string $statement): bool => $statement !== '')),
     ];
   }
 
@@ -256,26 +255,19 @@ final class ResourceCode {
   }
 
   /**
-   * Writes the constant that names one key, with its docblock.
+   * Writes the constant that names one key.
+   *
+   * No docblock: the label on the key's add() line says what the key is,
+   * and the bare constants read as the method's table of contents.
    *
    * @param string $name
    *   The key.
-   * @param string $label
-   *   Its label.
    *
    * @return string
-   *   The lines, indented as a class member.
+   *   The line, indented as a class member.
    */
-  protected function constant(string $name, string $label): string {
-    // Lowercase the label's first letter, unless it begins an acronym.
-    $words = preg_match('/^\p{Lu}\p{Lu}/u', $label) ? $label : mb_strtolower(mb_substr($label, 0, 1)) . mb_substr($label, 1);
-    $lines = ['  /**'];
-    foreach (explode("\n", wordwrap(sprintf('The %s key.', rtrim($words, '.')), self::WIDTH - 5, "\n", FALSE)) as $line) {
-      $lines[] = '   * ' . $line;
-    }
-    $lines[] = '   */';
-    $lines[] = sprintf('  public const %s = %s;', $this->constants[$name], PhpLiteral::string($name));
-    return implode("\n", $lines);
+  protected function constant(string $name): string {
+    return sprintf('  public const %s = %s;', $this->constants[$name], PhpLiteral::string($name));
   }
 
   /**

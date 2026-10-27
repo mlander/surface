@@ -101,7 +101,9 @@ final class DemoBlockStructure implements StructureInterface {
         'manager' => 'entity_type.manager',
         'interface' => ContentEntityInterface::class,
       ]);
+
     $inputs->add('bundle', 'string', t('Bundle'));
+
     $inputs->add('field', 'string', t('Highlight field'));
     // ...
   }
@@ -1123,7 +1125,7 @@ only groups them, so a form and the served contract draw nothing for it
 ([Generated forms](forms.md#other-modules-keys)).
 
 An alter may arrange a key it does not own, `describe('capacity',
-arrangement: new Arrangement(group: ..., help: ...))`: put it in a
+group: ..., help: ...)`: put it in a
 group, weigh it, give or reword its placeholder, prefix, suffix and
 help, over what the owner arranged, never emptying any of them
 ([Arranging the keys](forms.md#arranging-the-keys)).
@@ -1160,11 +1162,56 @@ or once the thing is known, as any access answer does, and rule an
 owner's key out while a key of its own holds a value, which narrows.
 Example 14's module that manages keys rules the webhook's pasted key out
 once a managed key is chosen at its mount,
-`narrow('api_key')->when(Condition::present('key_id'))->doesNotApply()`.
-The owner's code still reads only its own keys, so the alter cannot hand
-it the managed key's value; an owner that needs it declares the managed
-key as a variant of its own ([ROADMAP](../ROADMAP.md) item 18; why:
-[decision](decisions.md#an-extension-is-a-variant-the-site-adds-or-an-alter)).
+`narrow('api_key')->when(Condition::present('key_id'))->doesNotApply()`,
+and says what the webhook's code reads in its place, below
+(why: [decision](decisions.md#an-extension-is-a-variant-the-site-adds-or-an-alter)).
+
+### Standing in for a key at use
+
+An alter that offers a key in place of an owner's says two things: what
+is asked, and what the code that uses the resource reads. Example 14's
+alter says both, one line each:
+
+```php
+$inputs->narrow('api_key')
+  ->when(Condition::present('key_id'))
+  ->doesNotApply();
+$inputs->resolve('api_key', from: ['key_id'], using: ManagedKeyValue::class);
+```
+
+The first rules the pasted key out once a managed key is chosen. The
+second resolves `api_key` at use: the code that uses the webhook reads
+its values with `Resources::resolved()`, and there `api_key` holds what
+`ManagedKeyValue::compute(['key_id' => ...])` answers, the managed key's
+value. The webhook's code, `WebhookSigner`, names no managed key:
+
+```php
+$values = $this->resources->resolved('event.webhook');
+return hash_hmac('sha256', (string) json_encode($payload), $values['api_key']);
+```
+
+What is stored: `api_key` as pasted, and `key_id` at the alter's mount,
+`third_party_settings.data_surface_examples_keys.key_id`. What is not: the
+managed key's value, which is read each time `resolved()` is called and
+never written back. While a key in `from:` holds nothing (NULL, the empty
+string or no value) the resolve is skipped and the stored value stands;
+a name the class knows no value for resolves to NULL, and the stored
+value does not stand in for it. Uninstall the alter's module and
+`resolved()` answers the pasted key as stored.
+
+The contract does not carry a resolve. Neither document, the tools, the
+form nor the read states it: what is asked is unchanged, and the read and
+every door leave a secret out as before. `resolved()` is for PHP code and
+answers secrets. The class implements `ComputesValueInterface`, as a
+computed key's does, and is handed the stored value of each key in
+`from:` by the name the alter gave it; it runs at use and never ahead, so
+it may read the store the value is kept in, never the request or the
+account. A key is resolved once: a second resolve of it, by the owner or
+another alter, is refused naming both. A resolve is a resource's for now,
+at its top level and its alters' mounts; one in a structure is refused
+(why: [decision](decisions.md#a-key-may-stand-for-another-at-use)).
+
+Each class's `use` line: [Namespaces](concepts.md#namespaces).
 
 ### An alter's answer
 
@@ -1454,9 +1501,9 @@ is refused.
 `attach()` and `attachVariants()` return the map definition at the key, a
 core `MapDataDefinition`, the way `add()` returns its definition, so
 the owner labels and describes its own child's key with the core
-setters. `describe()` is for an alter rewording a key it does not own;
-an owner calling it on its own key is saying in two statements what
-one says.
+setters. `describe()` rewords a key for an alter that does not own it,
+and arranges a key for its owner or an alter; an owner rewording its
+own key with it says in two statements what one says.
 
 What that means, end to end:
 
@@ -1545,6 +1592,7 @@ as are the storage's own settings:
 // DemoBlockStructure
 $inputs->add('presentation', 'string', t('Presentation'), default: 'list')
   ->setRequired(TRUE);
+
 $inputs->attachVariants('presentation_settings', by: 'presentation')
   ->setLabel(t('Presentation settings'))
   ->setDescription(t('What the chosen presentation needs.'));
@@ -1559,6 +1607,7 @@ $inputs->attachVariants('presentation_settings', by: 'presentation')
 // FieldInstanceResource, in data_surface_tool
 $inputs->attach('storage', FieldStorageResource::class)
   ->setLabel(t('Field storage'));
+
 $inputs->attachVariants('settings', by: 'field_type')
   ->setLabel(t('Field settings'));
 
@@ -1604,7 +1653,9 @@ final class ComplianceStructure implements StructureInterface {
 
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->reads('capacity', 'integer', required: TRUE);
+
     $inputs->add('license', License::class, t('Event license'));
+
     $inputs->add('stewards', 'integer', t('Stewards'), default: 1)->setRequired(TRUE);
   }
 
@@ -1684,12 +1735,17 @@ final class JournalResource implements ResourceInterface {
 
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('title', 'string', t('Title'))->setRequired(TRUE);
+
     $inputs->add('visibility', 'string', t('Visibility'), default: 'staff')
       ->setRequired(TRUE)
       ->addConstraint('LabeledChoice', ['choices' => ['public' => t('Public'), 'staff' => t('Staff')]]);
+
     $inputs->mixIn(OwnershipStructure::class, reads: ['audience' => 'visibility']);
+
     $inputs->mixIn(TimestampsStructure::class);
+
     $inputs->add('revision', 'integer', t('Revision'), default: 1);
+
     // ...
     $inputs->narrow('revision')
       ->when(Condition::absent('created'))

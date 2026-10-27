@@ -198,19 +198,8 @@ only when its context needs more.
 )]
 final class RegistrationStep1Resource implements ResourceInterface {
 
-  /**
-   * The event title key.
-   */
   public const TITLE = 'title';
-
-  /**
-   * The capacity key.
-   */
   public const CAPACITY = 'capacity';
-
-  /**
-   * The registration open key.
-   */
   public const OPEN = 'open';
 
   /**
@@ -219,8 +208,10 @@ final class RegistrationStep1Resource implements ResourceInterface {
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add(self::TITLE, 'string', t('Event title'))
       ->setRequired(TRUE);
+
     $inputs->add(self::CAPACITY, 'integer', t('Capacity'), default: 50)
       ->addConstraint('Range', ['min' => 1, 'max' => 1000]);
+
     $inputs->add(self::OPEN, 'boolean', t('Registration open'), default: TRUE);
   }
 
@@ -327,29 +318,10 @@ declared after the room it depends on.
 )]
 final class RegistrationStep2Resource implements ResourceInterface {
 
-  /**
-   * The event title key.
-   */
   public const TITLE = 'title';
-
-  /**
-   * The registration open key.
-   */
   public const OPEN = 'open';
-
-  /**
-   * The venue key.
-   */
   public const VENUE = 'venue';
-
-  /**
-   * The room key.
-   */
   public const ROOM = 'room';
-
-  /**
-   * The capacity key.
-   */
   public const CAPACITY = 'capacity';
 
   /**
@@ -358,12 +330,16 @@ final class RegistrationStep2Resource implements ResourceInterface {
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add(self::TITLE, 'string', t('Event title'))
       ->setRequired(TRUE);
+
     $inputs->add(self::OPEN, 'boolean', t('Registration open'), default: TRUE);
+
     $inputs->add(self::VENUE, 'entity:event_venue', t('Venue'))
       ->setRequired(TRUE);
+
     $inputs->add(self::ROOM, 'string', t('Room'))
       ->setRequired(TRUE)
       ->addConstraint('EventVenueRoom');
+
     $inputs->add(self::CAPACITY, 'integer', t('Capacity'), default: 50)
       ->addConstraint('Range', ['min' => 1]);
   }
@@ -673,19 +649,26 @@ final class RegistrationStep3Resource implements ResourceInterface {
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('title', 'string', t('Event title'))
       ->setRequired(TRUE);
+
     $inputs->add('open', 'boolean', t('Registration open'), default: TRUE);
+
     $inputs->add('venue', 'string', t('Venue'))
       ->setRequired(TRUE)
       ->addConstraint('LabeledChoice', ['choices' => Venues::VENUES]);
+
     $inputs->add('room', 'string', t('Room'))
       ->setRequired(TRUE)
       ->addConstraint('LabeledChoice', ['choices' => Venues::rooms()]);
+
     $inputs->add('capacity', 'integer', t('Capacity'), default: 50)
       ->addConstraint('Range', ['min' => 1]);
+
     $inputs->add('pricing', 'string', t('Pricing'), default: 'free')
       ->setRequired(TRUE);
+
     $inputs->attachVariants('ticket', by: 'pricing')
       ->setLabel(t('Ticket'));
+
     $inputs->attach('contact', ContactStructure::class)
       ->setLabel(t('Contact'));
   }
@@ -756,6 +739,7 @@ final class PaidTicketStructure implements StructureInterface {
     $inputs->add('price', 'float', t('Price'))
       ->setRequired(TRUE)
       ->addConstraint('Range', ['min' => 0.01]);
+
     $inputs->add('currency', 'string', t('Currency'), default: 'EUR')
       ->setRequired(TRUE)
       ->addConstraint('Choice', ['choices' => ['EUR', 'GBP', 'USD']]);
@@ -778,6 +762,7 @@ final class ContactStructure implements StructureInterface {
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('email', 'email', t('Email'))
       ->setRequired(TRUE);
+
     $inputs->add('phone', 'string', t('Phone'));
   }
 
@@ -894,7 +879,9 @@ final class ComplianceStructure implements StructureInterface {
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->reads('capacity', 'integer', required: TRUE);
+
     $inputs->add('license', License::class, t('Event license'));
+
     $inputs->add('stewards', 'integer', t('Stewards'), default: 1)->setRequired(TRUE);
   }
 
@@ -1281,17 +1268,20 @@ final class BulletinResource implements ResourceInterface {
       ->addConstraint('LabeledChoice', [
         'choices' => ['weekly' => t('Weekly'), 'monthly' => t('Monthly')],
       ]);
+
     $inputs->add('send_day', 'string', t('Send day'), default: 'monday')
       ->setRequired(TRUE)
       ->addConstraint('LabeledChoice', [
         'choices' => ['monday' => t('Monday'), 'wednesday' => t('Wednesday'), 'friday' => t('Friday')],
       ]);
+
     $inputs->add('items', 'integer', t('Items per issue'), default: 5)
       ->addConstraint('Range', ['min' => 1, 'max' => 20]);
 
     $inputs->narrow('send_day')
       ->when(Condition::equals('frequency', 'monthly'))
       ->doesNotApply();
+
     $inputs->narrow('items')
       ->when(Condition::equals('frequency', 'weekly'))
       ->constrain('Range', ['max' => 5])
@@ -1373,10 +1363,14 @@ final class PersonStructure implements StructureInterface {
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->reads('listed', 'boolean');
+
     $inputs->add('name', 'string', t('Name'))
       ->setRequired(TRUE);
+
     $inputs->add('email', 'email', t('Email'));
+
     $inputs->add('phone', PhoneNumber::class, t('Phone'));
+
     $inputs->narrow('email')
       ->when(Condition::equals('listed', TRUE))
       ->require()
@@ -1431,7 +1425,9 @@ final class ReviewStructure implements StructureInterface {
         'pattern' => '/^\d{4}-\d{2}-\d{2}$/D',
         'message' => t('Write the date as YYYY-MM-DD, such as 2026-10-19.'),
       ]);
+
     $inputs->add('reviewed_by', 'string', t('Reviewed by'));
+
     $inputs->narrow('reviewed_by')
       ->when(Condition::present('reviewed_on'))
       ->require()
@@ -1457,8 +1453,10 @@ final class PressResource implements ResourceInterface {
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('public', 'boolean', t('Show on the press page'), default: TRUE);
+
     $inputs->attach('contact', PersonStructure::class, reads: ['listed' => 'public'])
       ->setLabel(t('Press contact'));
+
     $inputs->mixIn(ReviewStructure::class);
   }
 
@@ -1488,9 +1486,12 @@ final class InfoDeskResource implements ResourceInterface {
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('phone', PhoneNumber::class, t('Desk phone'))
       ->setRequired(TRUE);
+
     $inputs->add('in_program', 'boolean', t('Listed in the printed program'), default: FALSE);
+
     $inputs->attach('lead', PersonStructure::class, reads: ['listed' => 'in_program'])
       ->setLabel(t('Desk lead'));
+
     $inputs->attachList('volunteers', PersonStructure::class, max: 4)
       ->setLabel(t('Volunteers'));
   }
@@ -1588,6 +1589,7 @@ final class TicketSalesResource implements ResourceInterface {
     $inputs->addEach('on_sale', 'boolean', from: TicketTypes::class, default: FALSE)
       ->setLabel(t('On sale'))
       ->setDescription(t('Which ticket types can be bought.'));
+
     $inputs->attachEach('limits', TicketLimitStructure::class, from: TicketTypes::class, reads: ['selling' => 'on_sale'])
       ->setLabel(t('Limits'));
   }
@@ -1613,9 +1615,13 @@ final class TicketLimitStructure implements StructureInterface {
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('per_order', 'integer', t('Per order'), default: 4)
       ->addConstraint('Range', ['min' => 1, 'max' => 10]);
+
     $inputs->add('waiting_list', 'boolean', t('Waiting list when sold out'), default: FALSE);
+
     $inputs->reads('selling', 'boolean');
+
     $inputs->narrow('per_order')->when(Condition::equals('selling', FALSE))->doesNotApply();
+
     $inputs->narrow('waiting_list')->when(Condition::equals('selling', FALSE))->doesNotApply();
   }
 
@@ -1837,6 +1843,7 @@ final class FeesStructure implements StructureInterface {
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('standard', 'float', t('Standard fee'), default: 20.0)
       ->addConstraint('Range', ['min' => 0]);
+
     $inputs->add('concession', 'float', t('Concession fee'), default: 10.0)
       ->addConstraint('Range', ['min' => 0]);
   }
@@ -1867,9 +1874,12 @@ final class ProgramResource implements ResourceInterface {
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('headline', 'string', t('Headline'))
       ->setRequired(TRUE);
+
     $inputs->add('sessions', 'integer', t('Sessions'), default: 8)
       ->addConstraint('Range', ['min' => 1, 'max' => 30]);
+
     $inputs->add('published', 'boolean', t('Published'), default: FALSE);
+
     $inputs->attach('fees', FeesStructure::class)
       ->setLabel(t('Fees'));
   }
@@ -2203,8 +2213,10 @@ final class SpotlightResource implements ResourceInterface {
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('component', 'string', t('Component'), default: 'data_surface_examples:card')
       ->setRequired(TRUE);
+
     $inputs->attachVariants('props', by: 'component', from: ComponentProps::class)
       ->setLabel(t('Props'));
+
     $inputs->attachVariants('slots', by: 'component', from: ComponentSlots::class)
       ->setLabel(t('Slots'));
   }
@@ -2570,8 +2582,10 @@ final class ComponentBlockStructure implements StructureInterface {
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('component', 'string', t('Component'));
+
     $inputs->attachVariants('props', by: 'component', from: ComponentProps::class)
       ->setLabel(t('Props'));
+
     $inputs->attachVariants('slots', by: 'component', from: ComponentSlots::class)
       ->setLabel(t('Slots'));
   }
@@ -2935,10 +2949,13 @@ final class MailerResource implements ResourceInterface {
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('sender', 'email', t('Sender'), default: 'tickets@example.com')
       ->setRequired(TRUE);
+
     $inputs->add('endpoint', 'uri', t('Mail service'), default: 'https://mail.example.com/v1/send')
       ->setRequired(TRUE);
+
     $inputs->add('source', 'string', t('Credential source'), default: 'pasted')
       ->setRequired(TRUE);
+
     $inputs->attachVariants('credential', by: 'source', from: CredentialSources::class)
       ->setLabel(t('Credential'));
   }
@@ -3175,6 +3192,7 @@ final class WebhookResource implements ResourceInterface {
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('endpoint', 'uri', t('Endpoint'), default: 'https://hooks.example.com/sales')
       ->setRequired(TRUE);
+
     $api_key = $inputs->add('api_key', 'string', t('API key'))
       ->setDescription(t('The key each post is signed with, pasted here.'));
     DefinitionMetadata::setSecret($api_key);
@@ -3184,8 +3202,9 @@ final class WebhookResource implements ResourceInterface {
 ```
 
 The module's alter mounts a managed key on it, draws it right after the
-pasted key, and rules the pasted key out once a key is chosen, a rule
-declared as data:
+pasted key, rules the pasted key out once a key is chosen, a rule
+declared as data, and says what the code that uses the webhook reads in
+its place, a resolve:
 
 <!-- code: ../data_surface_examples_keys/src/Alter/WebhookKeyAlter.php -->
 
@@ -3217,6 +3236,8 @@ final class WebhookKeyAlter implements AltersInputsInterface {
     $inputs->narrow('api_key')
       ->when(Condition::present('key_id'))
       ->doesNotApply();
+    // And where the webhook is used, the managed key's value in its place.
+    $inputs->resolve('api_key', from: ['key_id'], using: ManagedKeyValue::class);
   }
 
 }
@@ -3289,22 +3310,81 @@ $inputs->narrow('api_key')
   ->lock();
 ```
 
-### The gap between the two
+### The use: a managed key in the pasted key's place
 
-What the alter cannot do: hand the webhook's code the managed key's
-value. The code that signs a post reads `api_key`, the one key the
-webhook declares; the managed key's name is stored under
-`third_party_settings.data_surface_examples_keys.key_id`, which belongs
-to the module that mounted it, and the webhook never names another
-module's keys. So once a managed key is chosen the form, both documents
-and the tool are right, and the code that signs has no key to sign with.
-The mailer has no such gap: it declares the managed source itself, so
-its code reads `credential.key_id` and asks the key service for the
-value.
+Where the webhook is used: the code that signs a post reads `api_key`
+through `Resources::resolved()`, and knows nothing of managed keys. The
+alter says, beside its rule, that once a managed key is chosen its value
+stands in for the pasted key there: `resolve('api_key', from: ['key_id'],
+using: ManagedKeyValue::class)`. The value is read when a post is signed
+and never stored on the webhook; the pasted key stays stored as it was,
+and no document, form or tool states the resolve. The mailer declares
+the managed source itself, so its code reads `credential.key_id` and
+asks the key service for the value.
 
-An alter supplying the value it rules out, so the owner's code would
-read it at `api_key`, is [ROADMAP](../../ROADMAP.md) item 18, designed
-and not built.
+The signer is the webhook's code. It is a service of this module, which
+does not depend on the module that manages keys:
+
+<!-- code: src/WebhookSigner.php -->
+
+```php
+final class WebhookSigner {
+
+  /**
+   * The webhook.
+   */
+  public const RESOURCE = 'event.webhook';
+
+  /**
+   * Constructs the signer.
+   *
+   * @param \Drupal\data_surface\ResourceBuild\ResourcesInterface $resources
+   *   The build step, which reads the webhook's values.
+   */
+  public function __construct(
+    protected readonly ResourcesInterface $resources,
+  ) {}
+
+  /**
+   * Signs a post.
+   *
+   * @param array $payload
+   *   What is posted.
+   *
+   * @return string
+   *   The HMAC-SHA256 of the payload's JSON, keyed by the webhook's key.
+   *
+   * @throws \RuntimeException
+   *   When the webhook has no key to sign with.
+   */
+  public function sign(array $payload): string {
+    $key = $this->resources->resolved(self::RESOURCE)['api_key'] ?? NULL;
+    if (!is_string($key) || $key === '') {
+      throw new \RuntimeException('The webhook has no key to sign a post with.');
+    }
+    return hash_hmac('sha256', (string) json_encode($payload), $key);
+  }
+
+  /**
+   * Gets the address each post is sent to.
+   *
+   * @return string
+   *   The endpoint.
+   */
+  public function endpoint(): string {
+    return (string) ($this->resources->resolved(self::RESOURCE)['endpoint'] ?? '');
+  }
+
+}
+```
+
+`ManagedKeyValue` is the module's class that answers a key's value for
+its name, as the Key module's `getKeyValue()` does; a name the site no
+longer manages answers nothing, so the signer has no key and says so,
+and the pasted key does not stand in. The webhook's page says which key
+a post is signed with now, by its name, never its value. Uninstall the
+module and the signer reads the pasted key again, as it was stored
+(why: [decision](../../docs/decisions.md#a-key-may-stand-for-another-at-use)).
 
 ### The calls
 
@@ -3410,20 +3490,22 @@ of code, counted without blank lines or comments:
 | [`modules/data_surface_examples/config/install/data_surface_examples.mailer.yml`](config/install/data_surface_examples.mailer.yml) | the mailer's shipped settings | 5 |
 | [`modules/data_surface_examples/src/Resource/WebhookResource.php`](src/Resource/WebhookResource.php) | the alter's way: an endpoint and a pasted key, and nothing of managed keys | 15 |
 | [`modules/data_surface_examples/src/Storage/WebhookStorage.php`](src/Storage/WebhookStorage.php) | its storage: names the config object | 3 |
+| [`modules/data_surface_examples/src/WebhookSigner.php`](src/WebhookSigner.php) | the webhook's code: signs a post with the key the webhook's values hold where it is used | 16 |
 | [`modules/data_surface_examples/data_surface_examples.routing.yml`](data_surface_examples.routing.yml), entry `data_surface_examples.step14_webhook` | the webhook's route | 8 |
 | [`modules/data_surface_examples/config/schema/data_surface_examples.schema.yml`](config/schema/data_surface_examples.schema.yml), entry `data_surface_examples.webhook` | the webhook's config schema, generated from the class | 19 |
 | [`modules/data_surface_examples/config/install/data_surface_examples.webhook.yml`](config/install/data_surface_examples.webhook.yml) | the webhook's shipped settings | 2 |
 | [`modules/data_surface_examples_keys/data_surface_examples_keys.info.yml`](../data_surface_examples_keys/data_surface_examples_keys.info.yml) | the module that manages keys, which the page tells you to enable | 9 |
-| [`modules/data_surface_examples_keys/data_surface_examples_keys.services.yml`](../data_surface_examples_keys/data_surface_examples_keys.services.yml) | its one service, the list of keys | 5 |
+| [`modules/data_surface_examples_keys/data_surface_examples_keys.services.yml`](../data_surface_examples_keys/data_surface_examples_keys.services.yml) | its one service, the keys and their values | 5 |
 | [`modules/data_surface_examples_keys/data_surface_examples_keys.install`](../data_surface_examples_keys/data_surface_examples_keys.install) | takes the managed key it stored on the webhook away when it is uninstalled | 11 |
-| [`modules/data_surface_examples_keys/src/Keys/ManagedKeys.php`](../data_surface_examples_keys/src/Keys/ManagedKeys.php) | the keys the site manages, read from configuration with its cacheability | 16 |
+| [`modules/data_surface_examples_keys/src/Keys/ManagedKeys.php`](../data_surface_examples_keys/src/Keys/ManagedKeys.php) | the keys the site manages and their values, read from configuration with its cacheability | 24 |
 | [`modules/data_surface_examples_keys/src/Plugin/Validation/Constraint/ManagedKeyConstraint.php`](../data_surface_examples_keys/src/Plugin/Validation/Constraint/ManagedKeyConstraint.php) | the constraint a key naming a managed key declares | 15 |
 | [`modules/data_surface_examples_keys/src/Plugin/Validation/Constraint/ManagedKeyConstraintValidator.php`](../data_surface_examples_keys/src/Plugin/Validation/Constraint/ManagedKeyConstraintValidator.php) | its validator: refuses a name the site does not manage | 19 |
 | [`modules/data_surface_examples_keys/src/Plugin/DataSurfaceOptionsResolver/ManagedKeyOptions.php`](../data_surface_examples_keys/src/Plugin/DataSurfaceOptionsResolver/ManagedKeyOptions.php) | the resolver that reads the constraint as the list of keys | 28 |
-| [`modules/data_surface_examples_keys/src/Alter/WebhookKeyAlter.php`](../data_surface_examples_keys/src/Alter/WebhookKeyAlter.php) | the alter: mounts a managed key on the webhook, and rules the pasted key out once one is chosen | 16 |
-| [`modules/data_surface_examples_keys/config/schema/data_surface_examples_keys.schema.yml`](../data_surface_examples_keys/config/schema/data_surface_examples_keys.schema.yml), entry `data_surface_examples_keys.keys` | the keys' config schema, written by hand | 17 |
+| [`modules/data_surface_examples_keys/src/Alter/WebhookKeyAlter.php`](../data_surface_examples_keys/src/Alter/WebhookKeyAlter.php) | the alter: mounts a managed key on the webhook, rules the pasted key out once one is chosen, and resolves it to the managed key's value at use | 17 |
+| [`modules/data_surface_examples_keys/src/Compute/ManagedKeyValue.php`](../data_surface_examples_keys/src/Compute/ManagedKeyValue.php) | a managed key's value, for the name the webhook stores | 6 |
+| [`modules/data_surface_examples_keys/config/schema/data_surface_examples_keys.schema.yml`](../data_surface_examples_keys/config/schema/data_surface_examples_keys.schema.yml), entry `data_surface_examples_keys.keys` | the keys' config schema, written by hand | 20 |
 | [`modules/data_surface_examples_keys/config/schema/data_surface_examples_keys.schema.yml`](../data_surface_examples_keys/config/schema/data_surface_examples_keys.schema.yml), entry `data_surface_examples.webhook.third_party.data_surface_examples_keys` | the config schema of what it stores on the webhook | 11 |
-| [`modules/data_surface_examples_keys/config/install/data_surface_examples_keys.keys.yml`](../data_surface_examples_keys/config/install/data_surface_examples_keys.keys.yml) | the two keys it ships | 7 |
+| [`modules/data_surface_examples_keys/config/install/data_surface_examples_keys.keys.yml`](../data_surface_examples_keys/config/install/data_surface_examples_keys.keys.yml) | the two keys it ships, with their values | 9 |
 
 ## Example 15: a config entity of your own
 
@@ -3625,10 +3707,12 @@ final class VenueResource implements ResourceInterface {
     $inputs->add('label', 'string', t('Name'))
       ->setRequired(TRUE)
       ->addConstraint('Length', ['max' => 128]);
+
     $inputs->compute('id', 'machine_name', t('Machine name'),
       from: ['label'], using: MachineName::class, when: Compute::UNLESS_SENT)
       ->setDescription(t('A unique name for the venue: lowercase letters, numbers and underscores, computed from its name unless one is given.'))
       ->addConstraint('Length', ['max' => 32]);
+
     $inputs->compute('slug', 'string', t('Slug'), from: ['label'], using: Slugify::class)
       ->setDescription(t('The name in a link: lowercase letters, numbers and dashes, set when the venue is added.'))
       ->addConstraint('Regex', [
@@ -3636,18 +3720,23 @@ final class VenueResource implements ResourceInterface {
         'message' => t('The slug may hold only lowercase letters, numbers and single dashes between them.'),
       ])
       ->addConstraint('Length', ['max' => 128]);
+
     $inputs->add('capacity', 'integer', t('Capacity'))
       ->setDescription(t('How many people the venue holds.'))
       ->setRequired(TRUE)
       ->addConstraint('Range', ['min' => 1, 'max' => 100000]);
+
     $inputs->add('address', 'string', t('Address'))
       ->addConstraint('Length', ['max' => 255]);
+
     $inputs->attachList('rooms', VenueRoomStructure::class, max: 20)
       ->setLabel(t('Rooms'))
       ->setDescription(t('The rooms an event at the venue may be held in.'));
+
     $inputs->add('weight', 'integer', t('Weight'), default: 0)
       ->setDescription(t('Its place among the venues: lighter first.'))
       ->addConstraint('Range', ['min' => -1000, 'max' => 1000]);
+
     $inputs->add('status', 'boolean', t('Enabled'), default: TRUE)
       ->setDescription(t('Whether events may be held there; a disabled venue is listed only for an account that administers the venues.'));
   }
@@ -3715,9 +3804,11 @@ final class VenueListingStructure implements StructureInterface, DefinesOutputsI
     $inputs->add('offset', 'integer', t('Offset'), default: 0)
       ->setDescription(t('How many venues to skip, in order of weight.'))
       ->addConstraint('Range', ['min' => 0, 'max' => 10000]);
+
     $inputs->add('limit', 'integer', t('Limit'), default: 20)
       ->setDescription(t('How many venues to answer at most.'))
       ->addConstraint('Range', ['min' => 1, 'max' => 50]);
+
     $inputs->add('status', 'boolean', t('Enabled'))
       ->setDescription(t('Only the venues enabled, or only those disabled; left out, every venue.'));
   }
@@ -3735,6 +3826,7 @@ final class VenueListingStructure implements StructureInterface, DefinesOutputsI
     $outputs->addList('items', $item, t('Venues'))
       ->setDescription(t('The page of venues, lighter first, each one the account may read.'))
       ->setRequired(TRUE);
+
     $outputs->add('total', 'integer', t('Total'))
       ->setDescription(t('How many venues the filter matched that the account may read, on every page.'))
       ->setRequired(TRUE);
@@ -3777,6 +3869,7 @@ final class VenueOrderStructure implements StructureInterface {
     $inputs->add('id', 'string', t('Venue'))
       ->setDescription(t('The machine name of a venue the site has.'))
       ->setRequired(TRUE);
+
     $inputs->add('weight', 'integer', t('Weight'))
       ->setDescription(t('Its place among the venues: lighter first.'))
       ->setRequired(TRUE)
@@ -4421,20 +4514,25 @@ final class SponsorshipResource implements ResourceInterface {
     $inputs->add('venue', 'entity:event_venue', t('Venue'), default: 'riverside')
       ->setDescription(t("Where the sponsor's stand is."))
       ->setRequired(TRUE);
+
     $inputs->add('contact', 'entity:user', t('Contact'))
       ->setDescription(t('Who answers for the sponsor.'));
+
     $inputs->add('page', 'entity:node:article', t('Announcement'))
       ->setDescription(t('The article that announces the sponsor.'));
+
     // Of any type: an entity type, then an id of it.
     $inputs->add('thing', 'entity', t('Featured beside'))
       ->setDescription(t('Any content the sponsor is featured beside.'))
       ->addConstraint('DataSurfaceReferenceableType', ['interface' => ContentEntityInterface::class]);
+
     $inputs->add('setting', 'entity', t('Linked to'))
       ->setDescription(t('A venue or a role the sponsorship is linked to.'))
       ->addConstraint('DataSurfaceReferenceableType', [
         'interface' => ConfigEntityInterface::class,
         'targets' => ['event_venue' => [], 'user_role' => [], 'node' => []],
       ]);
+
     $inputs->add('credit', 'entity', t('Credited on'))
       ->setDescription(t('An article or a user the sponsor is credited on.'))
       ->addConstraint('DataSurfaceReferenceableType', [
@@ -4604,6 +4702,7 @@ final class RetitleResource implements ResourceInterface, DefinesOutputsInterfac
       ->setLabel(t('Nodes'))
       ->setDescription(t('Each node to retitle, one to fifty.'))
       ->setRequired(TRUE);
+
     $inputs->add('style', 'string', t('Style'), default: TitleRewriter::TITLE)
       ->setDescription(t('How the title of a node sent no new title is rewritten.'))
       ->addConstraint('LabeledChoice', ['choices' => TitleRewriter::styles()]);
@@ -4642,6 +4741,7 @@ final class RetitleItemStructure implements StructureInterface {
     $inputs->add('node', 'entity:node', t('Node'))
       ->setDescription(t('The node to retitle.'))
       ->setRequired(TRUE);
+
     $inputs->add('new_title', 'string', t('New title'))
       ->setDescription(t("Written as sent; left out, the node's title is rewritten in the style chosen."))
       ->addConstraint('Length', ['max' => 255]);
@@ -4906,7 +5006,7 @@ Drush commands are checked against `ExampleCalls`.
 | `Functional\ServedContractEndpointsTest` | In React: the landing page's links, and example 2's contract, refine and validate over HTTP. |
 | `Functional\ServedSubmitEndpointTest` | In React: example 2 saved over HTTP, refused, and refused after someone else saved. |
 | `Kernel\ExamplesResetTest` | Reset to defaults puts every example, and what another module stored on example 3, back to the shipped files, puts example 15's venues back as shipped, a venue removed made again and one added removed, and opens every room example 4 closed. |
-| `Kernel\ExamplesConceptsTest` | Examples 7 to 12 and 14: each form builds and saves; example 7's rules in the full schema as declared, the send day gone for a monthly bulletin and kept in storage; example 8's one def at two sites with each wiring, the mixed-in keys flat, the shape at two keys, the volunteers' collection; example 9's keys from the configuration, a type added without a cache rebuild, the locked type in both documents and on the form; example 10's fees for two accounts, locked once published, and both operations' facts and tools; example 11's widgets, the always held badges and the notes that clear; example 12's four components read as four variants at the props and again at the slots, the card's props as keys with their constraints, its text a slot, both documents stating them, the form swapped to the hero and saved with its slot, a hero too dark refused; the panel above each, and none above examples 1 to 3; each class stays screen sized; example 13's page with its modules off, saying how to enable both, then with the block alone on, its parts and no call, then with the placement resource on too, the Spotlight and Tonight blocks placed through the create operation, the three lines side by side, the block's contract cut to the four components, the hero's actions narrowed, the four placement tools and the five calls' answers, nothing written.; example 14's panel with its module off, then on: how to enable it, the one source and then two in the contract excerpt, the webhook's rule, the gap, the lock not shipped, and the calls each state allows. |
+| `Kernel\ExamplesConceptsTest` | Examples 7 to 12 and 14: each form builds and saves; example 7's rules in the full schema as declared, the send day gone for a monthly bulletin and kept in storage; example 8's one def at two sites with each wiring, the mixed-in keys flat, the shape at two keys, the volunteers' collection; example 9's keys from the configuration, a type added without a cache rebuild, the locked type in both documents and on the form; example 10's fees for two accounts, locked once published, and both operations' facts and tools; example 11's widgets, the always held badges and the notes that clear; example 12's four components read as four variants at the props and again at the slots, the card's props as keys with their constraints, its text a slot, both documents stating them, the form swapped to the hero and saved with its slot, a hero too dark refused; the panel above each, and none above examples 1 to 3; each class stays screen sized; example 13's page with its modules off, saying how to enable both, then with the block alone on, its parts and no call, then with the placement resource on too, the Spotlight and Tonight blocks placed through the create operation, the three lines side by side, the block's contract cut to the four components, the hero's actions narrowed, the four placement tools and the five calls' answers, nothing written.; example 14's panel with its module off, then on: how to enable it, the one source and then two in the contract excerpt, the webhook's rule, the use paragraph and the line naming the key a post is signed with, the lock not shipped, and the calls each state allows. |
 | `Kernel\ExamplesWorkflowTest` | Example 10 with the workflow module: the fees left out of the full schema, the tool listing and the read tool for an account without "see event fees" and kept for one with it; the program locked whole once the workflow state is published, settled at call time and left unmarked in the full schema; checking still answers; the panel's paragraph, with the module and without it. |
 | `Kernel\ExamplesConceptsToolTest` | Examples 7 to 17: every call `ConceptCalls` writes down, its answer, nothing left written, the two blocks and the venues included, and this page quoting each command and answer. |
 | `Kernel\VenueResourceTest` | Example 15: the entity type installs with its three venues and holds to its generated schema; the resource builds for each operation; both documents of create, update, list and reorder; the listing's outputs schema; the tools, the listing paged and filtered and an account that only views left without the disabled venue; the reorder written in one commit, and refused for an unknown venue and one named twice; the slug computed from the name on create and kept on a rename, left out of the write and in the read, a slug sent equal noted and another refused, one another venue holds refused naming the name, and the post-update writing a missing one; example 2 offering a venue added, with no cache rebuild. |
@@ -4916,7 +5016,7 @@ Drush commands are checked against `ExampleCalls`.
 | `Functional\RetitleFormTest` | Example 17 through its form and over HTTP: anonymous refused; an account that may edit no page refused on its page, nothing written; the retitler's save written, and the page then making its calls as dry runs; `PATCH` refused with a 422 per item, a dry run answering the titles it would write, a write answering what it wrote, and the titles read back. |
 | `Functional\ReferenceKeysFormTest` | Example 16 without JavaScript: a select up to the limit, core's entity autocomplete past it, the article saved by its uuid either way and drawn back as its id, and refused in the constraint's words; the lookup answering, refusing an account without the permission and leaving the draft out for one that may not see it; the React page told where the lookup is, and the full schema stating a bare key's id per entity type. |
 | `Functional\ExamplesConceptsRoutesTest` | Every route of examples 7 to 12 and 14 answers an administrator and refuses anonymous; the landing page lists them; each page shows its panel and its Files panel and saves through its form; example 10's check writes nothing. Example 13 refuses anonymous, says to enable its two modules, then, with them on, shows its parts and the calls' answers, and draws the Spotlight card and the Tonight section below on its page alone; its Files panel, the modules on or off. |
-| `Kernel\ExamplesExtensionTest` | Example 14 with the module that manages keys off, then on: both resources' full schemas, whole; the one source stated as `const` and drawn fixed, then two; the second source and the managed key there with no cache rebuild, in the documents and the tool; a pasted key kept across a switch to the managed key and back, and the config schema each source's stored value holds to; the read tool leaving the pasted key out and naming the managed key; the refusals, a pasted key sent while the managed source is chosen, a pasted key beside a managed key on the webhook, a key the site does not manage; the webhook's pasted key back with its value once the module is off; and this page quoting the documents, the gap and the lock it does not ship. |
+| `Kernel\ExamplesExtensionTest` | Example 14 with the module that manages keys off, then on: both resources' full schemas, whole; the one source stated as `const` and drawn fixed, then two; the second source and the managed key there with no cache rebuild, in the documents and the tool; a pasted key kept across a switch to the managed key and back, and the config schema each source's stored value holds to; the read tool leaving the pasted key out and naming the managed key; the refusals, a pasted key sent while the managed source is chosen, a pasted key beside a managed key on the webhook, a key the site does not manage; the webhook's pasted key back with its value once the module is off; the signer, the webhook's code, signing with the pasted key while the module is off or no managed key is chosen and with the managed key's value once one is, the pasted key kept in config and the managed value stored nowhere, and with no key for a name the site no longer manages; and this page quoting the documents, the use and the lock it does not ship. |
 | `Functional\ExamplesExtensionFormTest` | Example 14 through its forms without JavaScript: the one source drawn as its label and no select, then a select of two; the mailer's pasted key saved, the managed key chosen and the pasted source chosen back with nothing typed, the key kept; the webhook's pasted box gone once a managed key is saved, and back when the module is off. |
 | `Kernel\ComponentBlockTest` | Example 13's block: its structure and both documents, the hero's narrowed slot pinned, and what it renders, slots included ([its README](../data_surface_component_block/README.md)). |
 | `Kernel\ComponentSlotsTest` | What a slot expects read back from the metadata, the depth slots nest to, and each expectation a refusal. |

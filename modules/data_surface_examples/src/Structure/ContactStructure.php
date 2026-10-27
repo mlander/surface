@@ -24,6 +24,7 @@ final class ContactStructure implements StructureInterface {
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('email', 'email', t('Email'))
       ->setRequired(TRUE);
+
     $inputs->add('phone', 'string', t('Phone'));
   }
 

@@ -10,13 +10,13 @@ use Drupal\Core\TypedData\DataDefinitionInterface;
  * The list of values a definition's choice constraint allows.
  *
  * Contribution and refinement both work on one thing: the set of values
- * a key may hold. That set is declared as a constraint, in one of two
+ * a key may hold. That set is declared as a constraint, in one of three
  * spellings and under one of two names, and every place that has to read
  * or rewrite it would otherwise repeat the same four lines of array
  * handling. This reads it once, in exactly the way the constraint class
- * itself reads it, and writes it back in the canonical spelling —
- * `choices` as the list of values, `labels` as what each one is called —
- * keeping whatever else the constraint said.
+ * itself reads it, and writes it back in Choice's own form, `choices` as
+ * the list of values and `labels` as what each one is called, keeping
+ * whatever else the constraint said.
  *
  * It is deliberately not an option list: what a definition allows and
  * what a form offers are different questions, and the second one is
@@ -106,9 +106,10 @@ final class ChoiceSet {
   /**
    * Reads one constraint's options as a set of values.
    *
-   * Both LabeledChoice spellings are read exactly as the constraint
+   * The three LabeledChoice spellings are read exactly as the constraint
    * class reads them: with `labels` given, `choices` is the list of
-   * values; without it, `choices` is the values mapped to their labels.
+   * values; without it, `choices` is the values mapped to their labels;
+   * with `labels` alone, its keys are the values.
    *
    * @param string $name
    *   The constraint plugin ID.
@@ -125,6 +126,9 @@ final class ChoiceSet {
     if ($name === 'LabeledChoice') {
       if (array_key_exists('labels', $options)) {
         $labels = (array) $options['labels'];
+        if (!array_key_exists('choices', $options)) {
+          $choices = array_keys($labels);
+        }
       }
       else {
         $labels = $choices;
@@ -155,6 +159,25 @@ final class ChoiceSet {
   }
 
   /**
+   * Returns whether one constraint's options list the values it allows.
+   *
+   * A Choice lists them in `choices`; a LabeledChoice in `choices` or,
+   * with `labels` alone, in the keys of `labels`.
+   *
+   * @param string $name
+   *   The constraint plugin ID.
+   * @param array $options
+   *   The constraint's declared options.
+   *
+   * @return bool
+   *   TRUE when the options list the allowed values.
+   */
+  public static function listsValues(string $name, array $options): bool {
+    return array_key_exists('choices', $options)
+      || ($name === 'LabeledChoice' && array_key_exists('labels', $options));
+  }
+
+  /**
    * Returns the same set over a different list of values.
    *
    * @param array $values
@@ -178,7 +201,7 @@ final class ChoiceSet {
   }
 
   /**
-   * Writes the set back onto a definition, in the canonical spelling.
+   * Writes the set back onto a definition, in Choice's own form.
    *
    * A constraint is declared as one array, so adding it again replaces
    * what was there: the options this set carries are written back with

@@ -309,12 +309,12 @@ interface DataSurfaceBuilderInterface {
    * yet: every consumer reads the extended data surface, never a variant of
    * it.
    *
-   * Both choice constraints are understood, and the list is written back
-   * in the canonical spelling: `choices` as the list of allowed values,
-   * `labels` as what each one is called. A plain Choice has nowhere to
-   * keep labels, so contributing them to one drops them. The added
-   * values go after the existing ones, and an existing value keeps the
-   * label it already had.
+   * Both choice constraints are understood, in every spelling, and the
+   * list is written back in Choice's own form: `choices` as the list of
+   * allowed values, `labels` as what each one is called. A plain Choice
+   * has nowhere to keep labels, so contributing them to one drops them.
+   * The added values go after the existing ones, and an existing value
+   * keeps the label it already had.
    *
    * One value has one owner: contributing a value the key already
    * allows is refused, naming whoever already has it. A key that

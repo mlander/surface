@@ -109,6 +109,7 @@ final class FieldStorageResource implements ResourceInterface {
     $inputs->add('cardinality', 'integer', t('Allowed number of values'), default: 1)
       ->setDescription(t('How many values the field holds: a number of one or more, or -1 for unlimited.'))
       ->addConstraint('Range', ['min' => FieldStorageConfigInterface::CARDINALITY_UNLIMITED]);
+
     $inputs->add('translatable', 'boolean', t('Translatable'), default: TRUE);
 
     // Its part.

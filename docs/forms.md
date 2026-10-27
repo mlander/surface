@@ -138,24 +138,26 @@ How a form is laid out is declared once, on the keys, and every door
 that draws them reads it: the operation form, each plugin host (a
 block, a condition, a formatter, a field type), the demo's standalone
 form, and the React app through the served contract
-(why: [decision](decisions.md#arrangement-is-declared-once)). A key's
-`Resource\Arrangement` says the group it is drawn in, its weight, a
-placeholder, a prefix and a suffix beside its input, and a help text:
+(why: [decision](decisions.md#arrangement-is-declared-once)).
+`$inputs->describe()`, called after the key is declared, says the group
+it is drawn in, its weight, a placeholder, a prefix and a suffix beside
+its input, and a help text:
 
 ```php
 public static function defineInputs(BlueprintInterface $inputs): void {
   $workflow = ArrangementGroup::details('workflow', t('Publishing options'), collapsed: TRUE);
-  $status = $inputs->add('status', 'boolean', t('Published'), default: TRUE);
-  DefinitionMetadata::setArrangement($status, new Arrangement(group: $workflow));
 
-  $rate = $inputs->add('rate', 'integer', t('Hourly rate'));
-  DefinitionMetadata::setArrangement($rate, new Arrangement(
+  $inputs->add('status', 'boolean', t('Published'), default: TRUE);
+  $inputs->describe('status', group: $workflow);
+
+  $inputs->add('rate', 'integer', t('Hourly rate'));
+  $inputs->describe('rate',
     placeholder: t('For example, 40'),
     prefix: '$',
     suffix: t('per hour'),
     help: t('Whole dollars.'),
     weight: -5,
-  ));
+  );
 }
 ```
 
@@ -190,8 +192,8 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
   form only: the description is what the key means, which the tool
   listing says, and the help is for a person filling the form in.
 
-An alter arranges an owner's key with `describe($key, arrangement:)`,
-laid over what the owner said: it may place the key (a group, a weight)
+An alter arranges an owner's key with the same `describe()`, laid over
+what the owner said: it may place the key (a group, a weight)
 and reword its texts, and it may not take any of them away, so an empty
 text where the owner gave one is refused. Nothing in an arrangement is a
 rule: no default, no requiredness and no path moves, and both schemas

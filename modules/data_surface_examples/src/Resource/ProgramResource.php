@@ -40,9 +40,12 @@ final class ProgramResource implements ResourceInterface {
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('headline', 'string', t('Headline'))
       ->setRequired(TRUE);
+
     $inputs->add('sessions', 'integer', t('Sessions'), default: 8)
       ->addConstraint('Range', ['min' => 1, 'max' => 30]);
+
     $inputs->add('published', 'boolean', t('Published'), default: FALSE);
+
     $inputs->attach('fees', FeesStructure::class)
       ->setLabel(t('Fees'));
   }

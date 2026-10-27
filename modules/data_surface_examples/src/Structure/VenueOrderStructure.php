@@ -21,6 +21,7 @@ final class VenueOrderStructure implements StructureInterface {
     $inputs->add('id', 'string', t('Venue'))
       ->setDescription(t('The machine name of a venue the site has.'))
       ->setRequired(TRUE);
+
     $inputs->add('weight', 'integer', t('Weight'))
       ->setDescription(t('Its place among the venues: lighter first.'))
       ->setRequired(TRUE)

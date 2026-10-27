@@ -7,13 +7,14 @@ manages instead. Nothing contributed is installed.
 
 ## What it shows
 
-A list of named keys and nothing to hold their values:
-`data_surface_examples_keys.keys` lists each key's machine name and
-label, two shipped, and `Keys\ManagedKeys` reads the list with the
-cacheability of the configuration object. A key that names a managed
-key declares the `ManagedKey` constraint, which `ManagedKeyOptions`
-reads as the list, so a form offers the keys and both documents state
-them, and its validator refuses a name the site does not manage
+A list of named keys and their values, the Key module's repository
+simulated: `data_surface_examples_keys.keys` lists each key's machine
+name, label and value, two shipped, and `Keys\ManagedKeys` reads the
+list with the cacheability of the configuration object and answers a
+key's value for its name, `value()`. A key that names a managed key
+declares the `ManagedKey` constraint, which `ManagedKeyOptions` reads as
+the list, so a form offers the keys and both documents state them, and
+its validator refuses a name the site does not manage
 ([Which constraint to write](../../docs/options.md#which-constraint-to-write)).
 
 The examples use it twice. The mailer, `/surface-examples/14`, knows
@@ -23,10 +24,13 @@ does not: `Alter\WebhookKeyAlter` mounts a managed key on it and rules
 the pasted key out once one is chosen,
 `narrow('api_key')->when(Condition::present('key_id'))->doesNotApply()`,
 so the form draws no pasted box, a pasted key sent is refused naming the
-managed key, and what is stored for the pasted key is kept. The alter
-cannot hand the webhook's code the managed key's value, since the
-webhook reads only its own keys; the mailer, which reads its own
-variant, can (why: [decision](../../docs/decisions.md#an-extension-is-a-variant-the-site-adds-or-an-alter)).
+managed key, and what is stored for the pasted key is kept. It also
+resolves the pasted key at use,
+`resolve('api_key', from: ['key_id'], using: ManagedKeyValue::class)`, so
+the webhook's code, which reads its values with `Resources::resolved()`,
+signs with the managed key's value; `Compute\ManagedKeyValue` asks
+`ManagedKeys::value()`, and the value is never stored on the webhook
+(why: [decision](../../docs/decisions.md#a-key-may-stand-for-another-at-use)).
 
 ## Try it
 
@@ -40,10 +44,10 @@ fixed, and the webhook a managed key after its pasted one.
 `ddev drush pm:uninstall data_surface_examples_keys` takes it away again,
 with the managed key it stored on the webhook (`hook_uninstall()`): once
 the module is gone no config schema describes it. The webhook's pasted
-key is the webhook's, and stays.
+key is the webhook's, and stays: its code signs with it again.
 
 ## Gates
 
 `Kernel\ExamplesExtensionTest` and `Functional\ExamplesExtensionFormTest`
-with the module off and on; `Kernel\ExamplesConceptsToolTest` makes its
+with the module off and on, the signer's key among them; `Kernel\ExamplesConceptsToolTest` makes its
 calls and holds the examples' README to the answers.

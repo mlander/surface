@@ -104,14 +104,7 @@ use Drupal\data_surface_first\Storage\StoreStorage;
 )]
 final class StoreResource implements ResourceInterface {
 
-  /**
-   * The country key.
-   */
   public const COUNTRY = 'country';
-
-  /**
-   * The region key.
-   */
   public const REGION = 'region';
 
   /**
@@ -126,6 +119,7 @@ final class StoreResource implements ResourceInterface {
           'US' => t('United States'),
         ],
       ]);
+
     $inputs->add(self::REGION, 'string', t('Region'), default: 'CA-ON')
       ->setRequired(TRUE)
       ->addConstraint('LabeledChoice', [

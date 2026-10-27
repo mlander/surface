@@ -112,10 +112,8 @@ class ResourceGeneratorTest extends ResourceGeneratorTestBase {
     $this->assertStringContainsString('Checked against a build of the class just written (drush data_surface:config-schema --module=data_surface_first): the schema entry and install file agree.', $display);
     $this->assertFileDoesNotExist($this->moduleDirectory() . '/data_surface_first.info.yml', 'The module\'s info file is left as it is.');
     $this->assertStringContainsString(<<<'PHP'
-  /**
-   * The sender name key.
-   */
   public const SENDER_NAME = 'sender_name';
+  public const SENDER_EMAIL = 'sender_email';
 PHP, $this->written('src/Resource/NewsletterResource.php'), 'The interview names each key once, as a constant.');
     $this->assertParses(['src/Resource/NewsletterResource.php', 'src/Storage/NewsletterStorage.php']);
   }
@@ -168,9 +166,6 @@ PHP, $this->written('src/Resource/NewsletterResource.php'), 'The interview names
     ], ['--from-config-schema' => 'node.settings'], $out);
     $resource = $this->written('src/Resource/NodeSettingsResource.php', $out);
     $this->assertStringContainsString(<<<'PHP'
-  /**
-   * The use administration theme when editing or creating content key.
-   */
   public const USE_ADMIN_THEME = 'use_admin_theme';
 
   /**
@@ -205,6 +200,7 @@ PHP, $resource, 'Required in a fully validatable object, its default the value t
     $inputs->add(self::HEADING, 'string', t('Heading'))
       ->setRequired(TRUE)
       ->addConstraint('Length', ['max' => 80]);
+
     $inputs->add(self::TONE, 'string', t('Tone'), default: 'plain')
       ->addConstraint('LabeledChoice', [
         'choices' => ['plain', 'highlight'],
@@ -213,6 +209,7 @@ PHP, $resource, 'Required in a fully validatable object, its default the value t
           'highlight' => t('Highlighted'),
         ],
       ]);
+
     $inputs->addDefinition(self::LINK, MapDataDefinition::create()
       ->setPropertyDefinition('url', DataDefinition::create('uri')
         ->setLabel(t('Address')))
@@ -247,8 +244,10 @@ PHP, $resource, 'An enum is a Choice.');
     $this->assertStringContainsString(<<<'PHP'
     $inputs->add(self::SLUG, 'string', t('Slug'))
       ->addConstraint('Regex', ['pattern' => '/^[a-z0-9-]+$/D']);
+
     $inputs->attach(self::VENUE, VenueStructure::class)
       ->setLabel(t('Venue'));
+
     $inputs->addDefinition(self::CONTACT, MapDataDefinition::create()
 PHP, $resource, 'A $ref to a scalar def is read in place; one to an object def is a structure of its own; a nested object is a map.');
     $this->assertStringContainsString(<<<'PHP'
@@ -261,13 +260,14 @@ PHP, $resource, 'A foreign constraint is a comment naming the keyword and the ke
     $this->assertStringContainsString(<<<'PHP'
     $inputs->addList(self::TAGS, 'string', t('Tags'))
       ->addConstraint('UniqueItems', []);
+
     $inputs->narrow(self::SEATS)
       ->when(Condition::equals(self::KIND, 'conference'))
       ->require();
 PHP, $resource, 'uniqueItems is the stock UniqueItems; the if/then is a declared rule.');
     $structure = $this->written('src/Structure/VenueStructure.php', $out);
     $this->assertStringContainsString("#[Structure('first.event.venue')]", $structure);
-    $this->assertStringContainsString("  public const CITY = 'city';\n\n  /**\n   * The capacity key.\n   */\n  public const CAPACITY = 'capacity';\n", $structure, 'A structure names its own keys.');
+    $this->assertStringContainsString("  public const CITY = 'city';\n  public const CAPACITY = 'capacity';\n\n", $structure, 'A structure names its own keys.');
     $this->assertStringContainsString("    \$inputs->add(self::CITY, 'string', t('City'))\n      ->setRequired(TRUE);", $structure);
     $this->assertStringContainsString('A comment in the class names what was not written from the JSON Schema', $display);
     $this->assertStringContainsString('/properties/seats/multipleOf: Kept as a JsonSchema constraint', $display);
@@ -323,19 +323,8 @@ PHP, $resource, 'uniqueItems is the stock UniqueItems; the if/then is a declared
     $this->assertStringContainsString(<<<'PHP'
 final class ClashResource implements ResourceInterface {
 
-  /**
-   * The foo key.
-   */
   public const FOO_BAR = 'fooBar';
-
-  /**
-   * The URL of the bar key.
-   */
   public const FOO_BAR_2 = 'foo_bar';
-
-  /**
-   * The class key.
-   */
   public const CLASS_2 = 'class';
 
   /**
@@ -343,11 +332,14 @@ final class ClashResource implements ResourceInterface {
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add(self::FOO_BAR, 'string', t('Foo'));
+
     $inputs->add(self::FOO_BAR_2, 'string', t('URL of the bar'));
+
     // From the schema, not written here: multipleOf on self::CLASS_2, which no
     // constraint here states; the reader keeps it as a JsonSchema constraint.
     // Write a constraint for it.
     $inputs->add(self::CLASS_2, 'integer', t('Class'));
+
     $inputs->narrow(self::FOO_BAR_2)
       ->when(Condition::equals(self::FOO_BAR, 'x'))
       ->require();
