@@ -304,6 +304,30 @@ interface DataSurfaceInterface extends CacheableDependencyInterface {
   public function getDefaultValues(): array;
 
   /**
+   * Lays the declared defaults under values, following the definitions.
+   *
+   * What every door that starts from storage reads: a key the values leave
+   * out holds its default, and so does an entry left out of a map they
+   * hold, at any depth. The keys of an attached structure, and the entries
+   * of a map of keys from the site, merge one by one. A list is the list
+   * the values hold, never padded with default items, and each item of a
+   * collection merges with the defaults of the structure it is. A key with
+   * variants merges within the variant its deciding key chooses; a value
+   * written for another variant stays as it is. Anything the values hold
+   * that no definition declares stays as it is.
+   *
+   * Decision: see
+   * docs/decisions.md#defaults-follow-the-definitions-under-a-stored-value.
+   *
+   * @param array $values
+   *   The values, keyed by key: what storage holds, typically.
+   *
+   * @return array
+   *   The values with the defaults under them, every declared key present.
+   */
+  public function withDefaults(array $values): array;
+
+  /**
    * Returns a data surface with definitions refined against known values.
    *
    * A target refines only when every one of its dependencies holds a

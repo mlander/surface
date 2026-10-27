@@ -308,7 +308,8 @@ base plugin id:
   required. A read reports storage as it is, and a stale value
   ([`docs/semantics.md`](../../docs/semantics.md)) must not fail the
   output validation the Tool API runs on every result; a key storage
-  holds nothing for is absent.
+  holds nothing for is absent, and so is an entry a stored map leaves
+  out, which holds its default at every door that draws.
 - **Secrets.** A key the resource marks secret is never returned, at any
   depth, and is not in the output definition: left out, as the write
   tool's defaults leave it out, not sent as a placeholder.

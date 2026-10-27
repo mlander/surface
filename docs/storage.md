@@ -309,6 +309,16 @@ before the resource changed is refused until it is written again, and
 the command builds the resource without this check, since the schema on
 disk is what it replaces.
 
+A key the resource asks for one way and the storage keeps another (a
+checkbox per type, stored as the list of the types checked) is
+translated by the storage in `load()` and `prepare()`, and the storage
+tells the check so: `widerThanSchema()` drops the key where the stored
+shape differs, `configSchemaPaths()` names the schema's property where
+the key is stored under another name. The generator does not read
+either, so such a module writes its schema by hand. The recipe
+[Asked as checkboxes, stored as a list of ids](recipes.md#asked-as-checkboxes-stored-as-a-list-of-ids)
+shows all of it.
+
 ### Keys another module mounts
 
 An alter's keys are mounted under `third_party_settings.<module>`

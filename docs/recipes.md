@@ -1,11 +1,13 @@
 # Common settings recipes
 
-Eight things a resource often asks for that no other page shows end to
-end. Each snippet but the last two is a key of the test module's opening
-hours (`resource_test.opening_hours`, in
+Nine things a resource often asks for that no other page shows end to
+end. The snippets of the first six are keys of the test module's
+opening hours (`resource_test.opening_hours`, in
 `tests/modules/data_surface_resource_test`), written into its
-`defineInputs()` as shown here; the seventh is the same module's
-workshop, and the last example 15's venue.
+`defineInputs()` as shown here; the seventh quotes the same module's
+workshop, the eighth the schema test module's alias settings
+(`schema_test.aliases`, in `tests/modules/data_surface_schema_test`),
+and the last example 15's venue.
 A test fails if this page and the class differ, and another holds each
 key to what this page says it does. Read
 [Your first resource](first-resource.md) first: a recipe is a few more
@@ -290,6 +292,99 @@ applies at every bench. Store the map as a `sequence` in config schema.
 A list that cannot be cached is refused: declare the tags of what the
 provider reads ([Keys that come from the
 site](resources.md#keys-that-come-from-the-site)).
+
+## Asked as checkboxes, stored as a list of ids
+
+Pathauto asks for a checkbox per entity type and stores the list of the
+types checked, `enabled_entity_types: [node, user]`. Ask for what a
+person and an agent should send, a map of booleans from a provider
+([above](#one-key-per-thing-the-site-has)), and let the storage
+translate. The alias settings ask for their types so:
+
+<!-- excerpt: tests/modules/data_surface_schema_test/src/Resource/AliasSettingsResource.php -->
+
+```php
+$inputs->addEach('types', 'boolean', from: AliasTypes::class, default: FALSE)
+  ->setLabel(t('Types with aliases'));
+```
+
+The storage, a `ConfigObjectStorage` subclass, turns the stored list
+into the map in `load()`:
+
+<!-- excerpt: tests/modules/data_surface_schema_test/src/Storage/AliasSettingsStorage.php -->
+
+```php
+public function load(OperationContext $context): array {
+  $values = parent::load($context);
+  if (is_array($values[self::LISTED] ?? NULL)) {
+    $values[self::LISTED] = array_fill_keys(array_map('strval', $values[self::LISTED]), TRUE);
+  }
+  return $values;
+}
+```
+
+and the map back into the list in `prepare()`, before the config schema
+judges what will be stored:
+
+<!-- excerpt: tests/modules/data_surface_schema_test/src/Storage/AliasSettingsStorage.php -->
+
+```php
+public function prepare(OperationContext $context, array $values, AccountInterface $account): array {
+  if (is_array($values[self::LISTED] ?? NULL)) {
+    $values[self::LISTED] = array_map('strval', array_keys(array_filter($values[self::LISTED])));
+  }
+  return parent::prepare($context, $values, $account);
+}
+```
+
+Each class's `use` line: [Namespaces](concepts.md#namespaces).
+
+The build holds the resource to the config schema the storage writes to
+([A schema the module did not generate](storage.md#a-schema-the-module-did-not-generate)),
+and that schema, written by hand as pathauto's is, types the key as the
+storage stores it: `types` a `sequence` of `string`.
+
+The resource asks for a boolean at each entry, so the build refuses it,
+once per entry: "it is a boolean, which the schema types string". Tell
+the check on the storage. Where the stored shape differs, as here,
+override `widerThanSchema()` and drop the key's paths from what the
+parent answers:
+
+<!-- excerpt: tests/modules/data_surface_schema_test/src/Storage/AliasSettingsStorage.php -->
+
+```php
+public function widerThanSchema(DataSurfaceInterface $built): array {
+  return array_filter(
+    parent::widerThanSchema($built),
+    static fn (string $path): bool => $path !== self::LISTED && !str_starts_with($path, self::LISTED . '.'),
+    ARRAY_FILTER_USE_KEY,
+  );
+}
+```
+
+Where a key is stored under another name, override the protected
+`configSchemaPaths()` instead and answer the schema's property for each
+key, by key; a key it leaves out is read as stored elsewhere and is not
+compared.
+
+Three more things hold for a translated key:
+
+- **An id the list leaves out reads as its entry's default**, as any
+  entry a stored map leaves out does
+  ([Keys that come from the site](resources.md#keys-that-come-from-the-site)).
+  Give the entries `default: FALSE`, so a type left out reads unchecked.
+  An entry that starts checked reads checked whatever the list says,
+  which suits only an entry that is also locked, as pathauto's types
+  whose path field another module provides are.
+- **The schema is yours to write.** `drush data_surface:config-schema`
+  reads no storage: it writes the shape the resource asks for, here a
+  sequence of booleans, which the stored list does not match. There is
+  no way to tell it a key is translated, so a module with one keeps its
+  schema written by hand, as pathauto's is, and does not run the command
+  with `--write`; without `--write`, the command shows that difference
+  every time.
+- **Every door asks for the map.** The tool, HTTP, the form and React
+  send and receive the map of booleans; only storage sees the list.
 
 ## A title and a machine name
 

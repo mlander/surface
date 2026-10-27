@@ -304,6 +304,90 @@ final class DataSurface implements DataSurfaceInterface {
   }
 
   /**
+   * {@inheritdoc}
+   */
+  public function withDefaults(array $values): array {
+    $merged = [];
+    foreach ($this->definitions->entries() as $name => $entry) {
+      $name = (string) $name;
+      $merged[$name] = array_key_exists($name, $values)
+        ? $this->heldWithDefaults($entry, $values[$name], $values)
+        : $this->defaultOf($entry);
+    }
+    return $merged + $values;
+  }
+
+  /**
+   * Lays one key's defaults under what it holds.
+   *
+   * @param \Drupal\data_surface\Entry $entry
+   *   The key.
+   * @param mixed $held
+   *   What it holds.
+   * @param array $values
+   *   The values of its level, where a key's variants read their deciding
+   *   key.
+   *
+   * @return mixed
+   *   What it holds, with its defaults under it.
+   */
+  protected function heldWithDefaults(Entry $entry, mixed $held, array $values): mixed {
+    if (!is_array($held)) {
+      return $held;
+    }
+    if ($entry->list !== NULL) {
+      $child = $entry->list->child();
+      return array_map(static fn (mixed $item): mixed => is_array($item) ? $child->withDefaults($item) : $item, $held);
+    }
+    if ($entry->attachment !== NULL) {
+      return $entry->attachment->child->withDefaults($held);
+    }
+    if ($entry->variants !== NULL) {
+      $by = $entry->variants->by;
+      $chosen = $entry->variants->chosen(array_key_exists($by, $values) ? $values[$by] : $this->getDefault($by));
+      $own = $chosen === NULL ? NULL : $entry->variants->held($chosen, $held);
+      if ($chosen === NULL || $own === NULL) {
+        return $held;
+      }
+      // The secrets kept for other variants stay beside the chosen one's.
+      return $entry->variants->variant($chosen)->child->withDefaults($own) + $held;
+    }
+    return static::mapWithDefaults($entry->definition, DefinitionMetadata::defaultOf($entry->definition), $held);
+  }
+
+  /**
+   * Lays a plain map's defaults under what it holds, property by property.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The key or property, as declared.
+   * @param mixed $default
+   *   What it starts from: its properties' defaults, its own over them.
+   * @param array $held
+   *   What it holds.
+   *
+   * @return array
+   *   What it holds, each property it leaves out at its default.
+   */
+  protected static function mapWithDefaults(DataDefinitionInterface $definition, mixed $default, array $held): array {
+    if (!$definition instanceof ComplexDataDefinitionInterface) {
+      return $held;
+    }
+    $merged = [];
+    $default = is_array($default) ? $default : [];
+    foreach ($definition->getPropertyDefinitions() as $property => $property_definition) {
+      if (array_key_exists($property, $held)) {
+        $merged[$property] = is_array($held[$property])
+          ? static::mapWithDefaults($property_definition, $default[$property] ?? NULL, $held[$property])
+          : $held[$property];
+      }
+      elseif (array_key_exists($property, $default)) {
+        $merged[$property] = $default[$property];
+      }
+    }
+    return $merged + $held;
+  }
+
+  /**
    * Reads what one key starts from.
    *
    * An attached child starts from its own defaults, read from the child

@@ -2127,6 +2127,33 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
   resolver, a service named by its class or a class implementing
   `ContainerInjectionInterface`, so it may hold the services it reads;
   the resource only names it, and stays static.
+- **Each entry** is `SiteList::add($id, $label, default:, locked:,
+  schema:, structure:)`:
+
+  ```php
+  $keys->add('node', t('Content'), default: TRUE, locked: TRUE);
+  $keys->add('user', t('User'));
+  ```
+
+  `id` is the key the entry becomes: not empty, no dot or colon, once
+  per list. `label` is the key's label. `default` is what the key starts
+  from, over the `default:` the blueprint gave every entry; `NULL`
+  leaves that one. A structure at every thing (`attachEach()`) says what
+  it starts from itself, so an entry there with a `default` is refused.
+  `locked: TRUE` holds the key to what is stored, as "A locked thing"
+  below says.
+  `schema` and `structure` are read only for a variant
+  ([variants from the site](#variants-from-the-site)); an entry for a
+  key that names either is refused.
+- **An entry the stored map leaves out**, because the site added the
+  thing after the map was saved, holds its default at every door that
+  draws: the form, the envelope over HTTP, the React page, and what the
+  pipeline accepts and validates. A locked entry that starts checked is
+  drawn checked. A save leaves the entry unstored until a caller sends
+  another value, since [a default storage never held is not
+  written](decisions.md#absent-keeps-null-clears), and the read tool,
+  which answers what storage holds, leaves it out; no door reads it as
+  `null` (why: [decision](decisions.md#defaults-follow-the-definitions-under-a-stored-value)).
 - **When.** The build step asks the provider every time the resource is
   built and declares one key per thing in a child sealed at the key, as
   an options resolver is asked for its list. The owner's storage stores

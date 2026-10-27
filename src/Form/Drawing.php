@@ -571,6 +571,12 @@ final class Drawing {
    * its members, so a group a borrowed element gathers by Form API's own
    * `#group` is drawn before what it holds.
    *
+   * A map alone in its group (an attached structure, a map of keys from
+   * the site) is drawn as one details: the group's, with the group's label
+   * and collapse state, the map's description and required marker moved to
+   * it, and the map a plain container inside it, so the page does not show
+   * a details titled twice.
+   *
    * Decision: see docs/decisions.md#arrangement-is-declared-once.
    *
    * @param array $element
@@ -581,6 +587,7 @@ final class Drawing {
    */
   protected static function withGroups(array $element): array {
     $groups = [];
+    $members = [];
     foreach (static::elementChildren($element) as $key) {
       $element[$key] = static::withGroups($element[$key]);
       $group = $element[$key][DataSurfaceFormBuilderInterface::GROUP_KEY] ?? NULL;
@@ -588,6 +595,7 @@ final class Drawing {
         continue;
       }
       $groups[$group['id']] ??= ['first' => (string) $key, 'group' => $group];
+      $members[$group['id']] = ($members[$group['id']] ?? 0) + 1;
     }
     if ($groups === []) {
       return $element;
@@ -602,6 +610,12 @@ final class Drawing {
           : ['#type' => 'fieldset', '#title' => $group['label']];
         if (isset($group['weight'])) {
           $drawn['#weight'] = $group['weight'];
+        }
+        if ($members[$group['id']] === 1 && is_array($value) && ($value['#type'] ?? NULL) === 'details' && !isset($value[self::LIST_KEY])) {
+          // A map alone in its group: one details, the group's.
+          $drawn += array_intersect_key($value, array_flip(['#description', '#required']));
+          $own = ['#type', '#title', '#open', '#description', '#required'];
+          $value = ['#type' => 'container'] + array_diff_key($value, array_flip($own));
         }
         $framed[DataSurfaceFormBuilderInterface::GROUP_PREFIX . $group['id']] = $drawn;
       }

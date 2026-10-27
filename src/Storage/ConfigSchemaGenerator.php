@@ -82,6 +82,13 @@ use Symfony\Component\Yaml\Yaml;
  * written. An entity type of core or of another module has a schema of
  * its own.
  *
+ * The storage is not read: a key its load() and prepare() translate (a
+ * checkbox per type, stored as a list of ids) is written in the shape the
+ * resource asks for, which is not what is stored, and nothing tells this
+ * otherwise. Such a module keeps its schema written by hand and tells the
+ * build's check instead (widerThanSchema(), configSchemaPaths()); see
+ * docs/recipes.md#asked-as-checkboxes-stored-as-a-list-of-ids.
+ *
  * A file's entries the resource does not describe are kept as they are,
  * and so are the comments above an entry; each written entry says it was
  * generated on the line above it. What the resource does not say, the

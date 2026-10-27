@@ -174,7 +174,10 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
   stays where its value is posted: its `#parents`, its `#name`, its
   refresh wrapper and everything that walks the container by path are
   as they were, and the AJAX callback replaces a key inside a group by
-  the same id.
+  the same id. A map alone in its group (an attached structure, a map of
+  [keys from the site](resources.md#keys-that-come-from-the-site)) is
+  drawn as the group's one details, with the group's label and collapse
+  state, rather than its own details inside the group's.
 - **A weight** orders a key among its frame's keys, or, inside a group,
   among the group's; keys of equal weight keep declaration order.
 - **A placeholder** is drawn on an input a value is typed into (a text

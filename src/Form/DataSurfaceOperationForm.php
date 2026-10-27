@@ -185,10 +185,9 @@ class DataSurfaceOperationForm extends FormBase {
     if ($served->operation->kind() === OperationDefinition::DELETE) {
       return $this->confirmForm($form, $served, $surface, $form_state);
     }
-    $values = $this->surfaceFormValues($surface, array_replace(
-      $surface->getDefaultValues(),
-      $this->storedSurfaceValues($surface, $storage),
-    ), $form_state);
+    // Decision: see
+    // docs/decisions.md#defaults-follow-the-definitions-under-a-stored-value.
+    $values = $this->surfaceFormValues($surface, $surface->withDefaults($this->storedSurfaceValues($surface, $storage)), $form_state);
     $builder = $this->surfaceFormBuilder();
     $form[static::SURFACE_KEY] = $builder->buildSurfaceForm(
       $surface,

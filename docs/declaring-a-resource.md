@@ -208,6 +208,38 @@ module is installed, a label read from configuration) says so with
 `BlueprintInterface::addCacheableDependency()`, so a form rendered from it
 is cached no longer than those keys hold.
 
+**What `defineInputs()` may read.** It is static and holds no service,
+and the build is kept until a tag it carries is invalidated, so it reads
+what the site has, never who asks or how: the module list, configuration
+and the URLs of routes. It reads nothing of the request, the route being
+served, the session, the theme or the account
+([No door-specific context](resources.md#no-door-specific-context)).
+Declare each read:
+
+| Read | Declare |
+| --- | --- |
+| Whether a module is installed | the cache tag `config:core.extension` |
+| A config object | the object, `addCacheableDependency($config)` |
+| A URL | the `GeneratedUrl` that `toString(TRUE)` answers |
+
+`config:core.extension` is the tag the build puts on every build it
+keeps, so the build itself is rebuilt when a module is installed or
+removed; declared on the blueprint, it reaches the form and both
+documents too, which are cached by what the built resource declares. A
+description that links to a help page only while the help module is on:
+
+```php
+$inputs->addCacheableDependency((new CacheableMetadata())->addCacheTags(['config:core.extension']));
+$description = t('Maximum length of aliases to generate.');
+if (\Drupal::moduleHandler()->moduleExists('help')) {
+  $url = Url::fromRoute('help.page', ['name' => 'pathauto'])->toString(TRUE);
+  $inputs->addCacheableDependency($url);
+  $description = t('Maximum length of aliases to generate. See <a href=":help">Pathauto help</a> for details.', [':help' => $url->getGeneratedUrl()]);
+}
+$inputs->add('max_length', 'integer', t('Maximum alias length'), default: 100)
+  ->setDescription($description);
+```
+
 ## On a plugin
 
 A plugin keeps rendering and names the structure its configuration is,

@@ -297,7 +297,9 @@ final class ServedOperations {
    *   The values, keyed by resource key.
    */
   public function current(ServedOperation $served): array {
-    return array_replace($served->surface->getDefaultValues(), $this->stored($served));
+    // Decision: see
+    // docs/decisions.md#defaults-follow-the-definitions-under-a-stored-value.
+    return $served->surface->withDefaults($this->stored($served));
   }
 
   /**

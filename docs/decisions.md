@@ -4476,6 +4476,17 @@ page never saw the content type's groups, and a block had none to give.
   could not give the contract an example without giving the form a
   placeholder, and an empty field showing "+1 555 0100" read as filled.
   An example is now the documents' alone.
+- **A map alone in its group is one details** (decided 2026-10-27, from
+  [the adopter log of 2026-10-26](adopters-2026-10-26.md), which drew
+  "Punctuation" inside "Punctuation"). A map draws its own details, so a
+  group around a map of keys from the site, or around an attached
+  structure, drew two. Where a group holds one key and that key is a map,
+  the form draws the group's details alone: the group's label and
+  collapse state, the map's description and required marker moved to it,
+  and the map a plain container inside, still under `@group.<id>` for a
+  cosmetic layer. A group of several keys, or of one key that is not a
+  map, draws as before, so no shipped form's markup moved. The React app
+  still draws the map's fieldset inside the group's details.
 - **The cosmetic layer keeps what is truly one form's**: a borrowed
   element (the content type demo's vertical tabs, which gather the
   groups its resource declares, by their `@group.<id>` keys), markup,
@@ -4541,6 +4552,51 @@ moved as they were, the examples' forms render byte for byte as they did,
 and the documents and tool definitions did not move.
 (`DataSurfaceFormBuilder`, `Form\Drawing`, `Form\Extracting`,
 `Form\Refreshing`)
+
+### Defaults follow the definitions under a stored value
+
+A door that starts from storage lays the declared defaults under what is
+stored by the definitions, in one place, `DataSurfaceInterface::withDefaults()`
+(decided 2026-10-27, from the second port of pathauto's settings form,
+[the adopter log of 2026-10-26](adopters-2026-10-26.md), entry 17):
+
+- **A map's entries merge one by one**, at any depth: the keys of an
+  attached structure, the entries of a map of keys from the site, the
+  properties of a plain map, and each module's part of
+  `third_party_settings`. An entry the stored map leaves out holds its
+  default, as [Maps](semantics.md#maps) says.
+- **A list is the stored list.** Two items stored are two items, never
+  padded with a third default. Each item of a collection merges with the
+  defaults of the structure it is.
+- **Variants merge within the chosen variant.** The deciding key, stored
+  or at its default, chooses; a value written for another variant stays
+  as it is, and the form draws the chosen one from its defaults, as
+  before.
+
+Why: the operation form merged with `array_replace()`, one level deep, so
+a stored map replaced its default map whole. A map of keys from the site
+stored before the site added an entry (a punctuation character, an
+entity type) drew that entry empty: a select on "- None -", saved as
+`null`, and a locked checkbox that starts checked drawn unchecked. The
+pipeline never had the defect: `accept()` fills a child's left-out keys
+from its defaults, and `kept()` and the rule for what does not apply read
+defaults by nested path from `getDefaultValues()`, which is the whole
+tree.
+
+Which doors had it: the operation form (`DataSurfaceOperationForm`). The
+envelope (`GET /surface-api/...`, the React page) and the narrowing (the
+schema route's `POST`, the narrowing tool) seeded with the same one-level
+merge, but the emitter lays each child's defaults under its value as it
+walks, so their values were right; they now seed through the same
+method. A plugin host's form (`DataSurfaceHostFormTrait`) seeds from a
+configuration the pipeline already completed, and does too. The read
+tool and a write's answer report what storage holds: an entry storage
+holds nothing for is left out, never `null`, and a save leaves it
+unstored, since [a default storage never held is not
+written](#absent-keeps-null-clears).
+(`DataSurfaceInterface::withDefaults()`, `DataSurfaceOperationForm::buildForm()`,
+`ServedOperations::current()`, `ResourceOperationSchemaTool`,
+`DataSurfaceHostFormTrait`, `DefaultsUnderStoredMapTest`)
 
 ## Discovery
 

@@ -269,6 +269,10 @@ A complex definition with declared properties merges in one order at
 every depth: the **declared defaults**, then **what storage holds**,
 then **the input**. A property the input does not name keeps what it
 held; a property nothing has ever held starts from its declared default.
+Every door that draws a value (the form, the envelope over HTTP, the
+React page) reads what storage holds the same way, entry by entry, so
+an entry a stored map leaves out is drawn at its default
+(why: [decision](decisions.md#defaults-follow-the-definitions-under-a-stored-value)).
 
 Two consequences worth stating:
 

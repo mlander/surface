@@ -86,7 +86,7 @@ final class ResourceOperationSchemaTool extends ResourceOperationToolBase {
     $built = $this->resources->build($resource->name(), $context);
     $keys = $built->getDefinitions()->toArray();
     $stored = $resource->storage === NULL ? [] : array_intersect_key($this->resources->storage($resource->name(), $context, $built)->load($built), $keys);
-    $current = array_replace($built->getDefaultValues(), $stored);
+    $current = $built->withDefaults($stored);
     $sent = $values[OperationInputs::VALUES] ?? NULL;
     // Keys the resource does not declare are no edit of it, left out as
     // the HTTP narrowing and a rebuild leave them out; a write refuses
