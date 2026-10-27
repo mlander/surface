@@ -75,10 +75,11 @@ final class PropertySchema {
    *
    * NotNull is `required`; PrimitiveType, ComplexData and ValidReference
    * are the data type's own, which `type` states; the three list
-   * constraints are `oneOf`. Anything not here and not stated by a
-   * keyword is named under `x-surface.checkedOnServer`, so a client knows
-   * the schema is not the whole story for that key, unless the resolver
-   * reading it says its list is the whole of it, which is its `oneOf`
+   * constraints are `oneOf`; UniqueItems is `uniqueItems`. Anything not
+   * here and not stated by a keyword is named under
+   * `x-surface.checkedOnServer`, so a client knows the schema is not the
+   * whole story for that key, unless the resolver reading it says its
+   * list is the whole of it, which is its `oneOf`
    * (DataSurfaceOptions::isStatedByList()).
    */
   protected const STATED = [
@@ -92,6 +93,7 @@ final class PropertySchema {
     'Range',
     'Length',
     'Count',
+    'UniqueItems',
     'Email',
     'NotBlank',
   ];
@@ -796,6 +798,7 @@ final class PropertySchema {
   protected function keywords(DataDefinitionInterface $definition, string|array|null $type): array {
     $keywords = [];
     $unstated = [];
+    $unique = FALSE;
     $types = (array) $type;
     $numeric = array_intersect($types, ['integer', 'number']) !== [];
     foreach ($definition->getConstraints() as $name => $options) {
@@ -826,6 +829,16 @@ final class PropertySchema {
           }
           if (isset($options['max'])) {
             $keywords['maxItems'] = (int) $options['max'];
+          }
+          break;
+
+        case 'UniqueItems':
+          // Written last, after the bounds, as the reader reads it, so a
+          // list reads back to itself whatever order its constraints
+          // were added in.
+          $unique = in_array('array', $types, TRUE);
+          if (!$unique) {
+            $unstated[] = $this->checked((string) $name, $options);
           }
           break;
 
@@ -885,6 +898,9 @@ final class PropertySchema {
             $unstated[] = $this->checked((string) $name, $options);
           }
       }
+    }
+    if ($unique) {
+      $keywords['uniqueItems'] = TRUE;
     }
     if ($unstated !== []) {
       $keywords[self::EXTENSION . '-checked'] = $unstated;

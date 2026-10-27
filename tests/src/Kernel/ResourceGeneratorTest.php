@@ -232,19 +232,24 @@ PHP, $resource, 'An enum is a Choice.');
     $inputs->addDefinition('contact', MapDataDefinition::create()
 PHP, $resource, 'A $ref to a scalar def is read in place; one to an object def is a structure of its own; a nested object is a map.');
     $this->assertStringContainsString(<<<'PHP'
-    // From the schema, not written here: uniqueItems on tags, which no
+    // From the schema, not written here: multipleOf on seats, which no
     // constraint here states; the reader keeps it as a JsonSchema constraint.
     // Write a constraint for it.
-    $inputs->addList('tags', 'string', t('Tags'));
+    $inputs->add('seats', 'integer', t('Seats'))
+      ->addConstraint('Range', ['min' => 1]);
+PHP, $resource, 'A foreign constraint is a comment naming the keyword and the key.');
+    $this->assertStringContainsString(<<<'PHP'
+    $inputs->addList('tags', 'string', t('Tags'))
+      ->addConstraint('UniqueItems', []);
     $inputs->narrow('seats')
       ->when(Condition::equals('kind', 'conference'))
       ->require();
-PHP, $resource, 'A foreign constraint is a comment naming the keyword and the key; the if/then is a declared rule.');
+PHP, $resource, 'uniqueItems is the stock UniqueItems; the if/then is a declared rule.');
     $structure = $this->written('src/Structure/VenueStructure.php', $out);
     $this->assertStringContainsString("#[Structure('first.event.venue')]", $structure);
     $this->assertStringContainsString("    \$inputs->add('city', 'string', t('City'))\n      ->setRequired(TRUE);", $structure);
     $this->assertStringContainsString('A comment in the class names what was not written from the JSON Schema', $display);
-    $this->assertStringContainsString('/properties/tags/uniqueItems: Kept as a JsonSchema constraint', $display);
+    $this->assertStringContainsString('/properties/seats/multipleOf: Kept as a JsonSchema constraint', $display);
     $this->assertParses([
       'src/Resource/EventResource.php',
       'src/Storage/EventStorage.php',

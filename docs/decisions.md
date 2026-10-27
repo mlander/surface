@@ -719,13 +719,14 @@ constraint an author writes is a ladder of three steps, taken from the
 top ([Which constraint to write](options.md#which-constraint-to-write)):
 
 - **A stock constraint with data options first.** `Range`, `Length`,
-  `Count`, `NotBlank`, `Regex`, `Email`, `Choice`, `LabeledChoice`:
-  the ones the emitter writes as JSON Schema keywords. Why: a keyword is
-  read by every client. The schema reader turns it back into the
-  constraint, the React page narrows on it with no request, and a tool
-  caller reads it before calling. JSON Schema has a closed set of
-  keywords and a generic validator ignores any other, so a constraint
-  with no keyword tells a client its name and nothing it can check.
+  `Count`, `UniqueItems`, `NotBlank`, `Regex`, `Email`, `Choice`,
+  `LabeledChoice`: the ones the emitter writes as JSON Schema keywords.
+  Why: a keyword is read by every client. The schema reader turns it
+  back into the constraint, the React page narrows on it with no
+  request, and a tool caller reads it before calling. JSON Schema has a
+  closed set of keywords and a generic validator ignores any other, so
+  a constraint with no keyword tells a client its name and nothing it
+  can check.
 - **A list the site decides second.** A constraint that names a kind,
   read by a resolver (`PluginExists`, `EntityBundleExists`,
   `LanguageExists`, `Country`), or the type string `entity:<type>`. Why:
@@ -745,7 +746,10 @@ top ([Which constraint to write](options.md#which-constraint-to-write)):
   reads it back, nothing narrows on it in the browser, and a caller
   learns it when a call is refused. One that is written extends the
   closest stock constraint, so its validator, refusal and result code
-  come with it.
+  come with it. *Amended 2026-10-26:* the demo's
+  `DataSurfaceDemoExtrasUniqueItems` was a step three constraint for a
+  rule JSON Schema has a keyword for, so it moved to step one as the
+  stock `UniqueItems`, written as `uniqueItems: true` and read back.
 
 Example 2's venue was a `Choice` subclass with a validator and a
 resolver of its own; it is `entity:event_venue` now, with no class. Its
@@ -756,7 +760,7 @@ open to learn what a key allows, where a type string or a stock
 constraint says it.
 (`PropertySchema::STATED`, `PropertySchema::keywords()`,
 `DataSurfaceOptions::isStatedByList()`, `RegistrationStep2Resource`,
-`EventVenueRoomConstraint`)
+`EventVenueRoomConstraint`, `UniqueItemsConstraint`)
 
 ## Context
 
@@ -6299,7 +6303,26 @@ keeps the principle: a fractional numeric string for an integer is left
 for validation, not truncated. `InputCoercionMatrixTest` holds both
 doors to the same accepted value, row by row. The audit's "a boolean
 stored for an integer" is an alignment now: `TRUE` is `1`.
-(`Pipeline\Coercion`, `Accepting::coerce()`)
+
+Coercion comes first for a second reason: core's typed data throws on
+malformed input instead of reporting it. `Map::setValue()` throws
+`InvalidArgumentException` for a value that is not an array ("Values
+must be represented as an associative array"), `ItemList::setValue()`
+for a list that is not an array and `ItemList::set()` for a delta that
+is not a number, and `TypedDataManager::getPropertyInstance()` for a key
+the map does not declare ("Property ... is unknown"). Each is thrown
+while the value is typed, before any constraint runs, so a caller would
+get an exception where it should get a violation at the key's path.
+`accept()` walks the raw input against the definitions first: it
+applies the table, refuses an array for a scalar and a scalar for a map
+or a list (`TypeMismatchException`) and a key no definition declares
+(`UnknownKeysException`), and turns each refusal into a violation at
+its path. Only values that passed are typed and validated, so the
+pipeline never reaches those exceptions. Another
+contributed module in the same space lets core throw and then parses
+the exception's stack trace to learn which key was malformed; coercion
+first makes that unnecessary.
+(`Pipeline\Coercion`, `Accepting::coerce()`, `Accepting::acceptValue()`)
 
 ### The pipeline is read by verb
 
@@ -6946,7 +6969,12 @@ signal. Every change removes or moves a keyword; none adds one.
   contract, and the new number is how a client tells: a client of
   contract 3 refuses a contract 4 document rather than reading a key
   with no `locked` as open. The contract diff reports a baseline of
-  contract 3 once, "contract version 3 to 4", as before.
+  contract 3 once, "contract version 3 to 4", as before. *Added
+  2026-10-26:* `uniqueItems: true`, the stock `UniqueItems` constraint's
+  keyword, is a JSON Schema keyword added within contract 4, so no
+  version bump: it appears only where the same rule was named under
+  `checkedOnServer` before, so a client refuses nothing the server
+  accepted, and a client that does not check it is as wide as it was.
 
 The examples' documents differ in these changes and the number alone;
 their tool input schemas are byte for byte as before, since the
@@ -7160,7 +7188,7 @@ and was removed on 2026-10-24; [The surface was counted and cut](#the-surface-wa
   and the document holds its answers, which are read as declared rules,
   or its `refine` marker, which is not read.
 - **Kept, not refused, not dropped.** What the vocabulary cannot say
-  (`not`, `uniqueItems`, `patternProperties`, `dependentSchemas`, a type
+  (`not`, `contains`, `patternProperties`, `dependentSchemas`, a type
   that is several types, a conditional outside the vocabulary or one
   that widens, a reference to another document) is the part of the
   schema left over, kept as a `JsonSchema` constraint on the key it is

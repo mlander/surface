@@ -393,7 +393,7 @@ class SchemaReaderTest extends DataSurfaceKernelTestBase {
   public function testForeignConstraints(): void {
     $read = $this->read(static::json(<<<'JSON'
       {"type": "object", "additionalProperties": false, "properties": {
-        "tags": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+        "tags": {"type": "array", "items": {"type": "string"}, "contains": {"const": "news"}},
         "odd": {"type": "integer", "not": {"multipleOf": 2}},
         "either": {"type": ["string", "integer"]},
         "meta": {"type": "object"},
@@ -403,7 +403,7 @@ class SchemaReaderTest extends DataSurfaceKernelTestBase {
       "dependentRequired": {"odd": ["either"]}}
       JSON));
     $constraints = static fn (string $key): array => $read->getDefinition($key)->getConstraints();
-    $this->assertSame(['schema' => ['uniqueItems' => TRUE]], $constraints('tags')['JsonSchema']);
+    $this->assertSame(['schema' => ['contains' => ['const' => 'news']]], $constraints('tags')['JsonSchema']);
     $this->assertSame(['schema' => ['not' => ['multipleOf' => 2]]], $constraints('odd')['JsonSchema']);
     $this->assertSame('any', $read->getDefinition('either')->getDataType());
     $this->assertSame(['schema' => ['type' => ['string', 'integer']]], $constraints('either')['JsonSchema']);
@@ -421,8 +421,8 @@ class SchemaReaderTest extends DataSurfaceKernelTestBase {
     $this->assertSame([
       [
         'constraint' => 'JsonSchema',
-        'message' => 'Checked on the server against the schema it was read from: uniqueItems.',
-        'schema' => ['uniqueItems' => TRUE],
+        'message' => 'Checked on the server against the schema it was read from: contains.',
+        'schema' => ['contains' => ['const' => 'news']],
       ],
     ], $full['properties']['tags'][ContractEmitter::EXTENSION]['checkedOnServer']);
     $this->assertSame(
@@ -431,8 +431,8 @@ class SchemaReaderTest extends DataSurfaceKernelTestBase {
     );
 
     // And the pipeline checks them.
-    $this->assertSame([], $this->refused($read, ['tags' => ['a', 'b'], 'odd' => 3, 'either' => 'x']));
-    $this->assertSame(['tags not_valid'], $this->refused($read, ['tags' => ['a', 'a']]));
+    $this->assertSame([], $this->refused($read, ['tags' => ['news', 'b'], 'odd' => 3, 'either' => 'x']));
+    $this->assertSame(['tags not_valid'], $this->refused($read, ['tags' => ['a', 'b']]));
     $this->assertSame(['odd not_valid', ' not_valid'], $this->refused($read, ['odd' => 4]), 'An even number, and odd without either.');
     $this->assertSame(['either not_valid'], $this->refused($read, ['either' => TRUE]));
     $this->assertSame(['elsewhere unresolved'], $this->refused($read, ['elsewhere' => 'x']), 'A document outside is never fetched.');
@@ -498,6 +498,43 @@ class SchemaReaderTest extends DataSurfaceKernelTestBase {
         $this->assertStringContainsString($message, $e->getMessage());
       }
     }
+  }
+
+  /**
+   * Tests `uniqueItems` is the stock UniqueItems constraint, both ways.
+   *
+   * On a list and on a collection: read into the constraint, named under
+   * no `checkedOnServer`, written back as the keyword, and checked by the
+   * pipeline as a standard validator checks the keyword. `false`, what an
+   * array says with no keyword, reads as nothing.
+   */
+  public function testUniqueItems(): void {
+    $read = $this->read(static::json(<<<'JSON'
+      {"type": "object", "additionalProperties": false, "properties": {
+        "tags": {"type": ["array", "null"], "items": {"type": "string"}, "minItems": 1, "uniqueItems": true},
+        "rows": {"type": ["array", "null"], "items": {"type": "object", "additionalProperties": false,
+          "properties": {"n": {"type": ["integer", "null"]}}}, "uniqueItems": true},
+        "any": {"type": "array", "items": {"type": "string"}, "uniqueItems": false}
+      }}
+      JSON));
+    $this->assertSame(['Count' => ['min' => 1], 'UniqueItems' => []], array_diff_key($read->getDefinition('tags')->getConstraints(), ['NotNull' => TRUE]), 'After the bounds, where the emitter writes it.');
+    $this->assertSame([], $read->getDefinition('rows')->getConstraints()['UniqueItems']);
+    $this->assertArrayNotHasKey('UniqueItems', $read->getDefinition('any')->getConstraints());
+    $this->assertArrayNotHasKey('JsonSchema', $read->getDefinition('any')->getConstraints());
+    $this->assertSame([], $this->reader()->notes(static::json('{"type": "object", "additionalProperties": false, "properties": {"tags": {"type": "array", "items": {"type": "string"}, "uniqueItems": true}}}')), 'Nothing is kept or dropped.');
+
+    $full = $this->container->get('data_surface.contract_emitter')->emitFull($read, 'test.read')->document['schema'];
+    foreach (['tags', 'rows'] as $key) {
+      $this->assertTrue($full['properties'][$key]['uniqueItems'], $key);
+      $this->assertArrayNotHasKey('checkedOnServer', (array) ($full['properties'][$key][ContractEmitter::EXTENSION] ?? []), $key . ': stated, so not named as checked on the server.');
+    }
+    $said = array_diff_key($full['properties']['tags'], array_flip(['title', 'description', ContractEmitter::EXTENSION]));
+    $this->assertSame(['type', 'items', 'minItems', 'uniqueItems'], array_keys($said));
+
+    $this->assertSame([], $this->refused($read, ['tags' => ['a', 'b'], 'rows' => [['n' => 1], ['n' => 2]]]));
+    $this->assertSame(['tags is_not_unique'], $this->refused($read, ['tags' => ['a', 'b', 'a']]));
+    $this->assertSame(['rows is_not_unique'], $this->refused($read, ['rows' => [['n' => 1], ['n' => 1]]]), 'Two items of a collection with the same values.');
+    $this->assertSame([], $this->refused($read, ['tags' => ['1', 'a'], 'any' => ['a', 'a']]));
   }
 
   /**

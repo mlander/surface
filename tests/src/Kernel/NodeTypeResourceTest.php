@@ -421,6 +421,25 @@ class NodeTypeResourceTest extends DataSurfaceKernelTestBase {
     $this->assertInstanceOf(ComplexDataDefinitionInterface::class, $module);
     $this->assertSame('Review deadline', (string) $module->getPropertyDefinition(NodeTypeReviewSettings::DEADLINE)?->getLabel());
     $this->assertNotNull($surface->getThirdPartyLayout($extras));
+    // Each tag once is the stock UniqueItems, which the full schema states.
+    $find = static function (array $schema) use (&$find): ?array {
+      foreach ($schema as $keyword => $value) {
+        if (!is_array($value)) {
+          continue;
+        }
+        if ($keyword === 'properties' && is_array($value[NodeTypeReviewSettings::TAGS] ?? NULL)) {
+          return $value[NodeTypeReviewSettings::TAGS];
+        }
+        $found = $find($value);
+        if ($found !== NULL) {
+          return $found;
+        }
+      }
+      return NULL;
+    };
+    $tags = $find(json_decode((string) json_encode($this->container->get('data_surface.contract_emitter')->emitFull($surface, 'node.type')->document['schema']), TRUE));
+    $this->assertTrue($tags['uniqueItems'] ?? NULL);
+    $this->assertArrayNotHasKey('checkedOnServer', $tags['x-surface'] ?? []);
 
     $week = [NodeTypeReviewSettings::AMOUNT => 1, NodeTypeReviewSettings::UNIT => 'weeks'];
     $result = $this->submit($surface, $storage, [

@@ -129,10 +129,11 @@ call. The class carries a comment above the key instead, naming the
 keyword and the key, so the author sees what to write by hand:
 
 ```php
-// From the schema, not written here: uniqueItems on tags, which no
+// From the schema, not written here: multipleOf on seats, which no
 // constraint here states; the reader keeps it as a JsonSchema constraint.
 // Write a constraint for it.
-$inputs->addList('tags', 'string', t('Tags'));
+$inputs->add('seats', 'integer', t('Seats'))
+  ->addConstraint('Range', ['min' => 1]);
 ```
 
 The same holds for what a config schema states that its document does

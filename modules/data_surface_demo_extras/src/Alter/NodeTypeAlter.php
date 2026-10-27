@@ -109,7 +109,7 @@ final class NodeTypeAlter implements AltersInputsInterface, AltersStorageLayoutI
     $inputs->addList(NodeTypeReviewSettings::TAGS, $tag, $this->t('Audience tags'), default: [])
       ->setDescription($this->t('Who content of this type is written for, each tag listed once and in lower case, for example "local news" or "sports".'))
       ->setSetting(CommaSeparatedListWidget::SETTING, TRUE)
-      ->addConstraint('DataSurfaceDemoExtrasUniqueItems', []);
+      ->addConstraint('UniqueItems', []);
     $inputs->describe('third_party_settings.data_surface_demo_extras', label: $this->t('Editorial review'));
   }
 

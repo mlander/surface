@@ -221,9 +221,10 @@ that can say it: each step down tells a client less before it calls
 (why: [decision](decisions.md#a-rule-is-a-keyword-first-a-list-second-code-last)).
 
 **1. A stock constraint with data options.** `Range`, `Length`,
-`Count`, `NotBlank`, `Regex`, `Email`, `Choice` and `LabeledChoice` are
-the constraints `ContractEmitter` writes as JSON Schema keywords
-(`minimum`, `maxLength`, `minItems`, `pattern`, `format`, `oneOf`). The
+`Count`, `UniqueItems`, `NotBlank`, `Regex`, `Email`, `Choice` and
+`LabeledChoice` are the constraints `ContractEmitter` writes as JSON
+Schema keywords (`minimum`, `maxLength`, `minItems`, `uniqueItems`,
+`pattern`, `format`, `oneOf`). The
 schema reader turns those keywords back into the same constraints, the
 React page narrows on them with no request, and a tool caller reads them
 in the listing before it calls. JSON Schema has a closed set of
@@ -232,6 +233,15 @@ emitter has no keyword for is in the same place: a client can read its
 name, and nothing it can check. Keep
 `LabeledChoice` for a vocabulary that is literal, such as
 hidden/optional/required.
+
+`UniqueItems` is a constraint this module adds because core has none.
+Put it on a list whose items must differ; both documents state it as
+`uniqueItems: true`, and a list that repeats an item is refused on the
+list, naming the first item repeated. It is Symfony's `Unique`,
+registered the way core registers `Count`, and compares items strictly.
+`accept()` has already typed every scalar and put every map's keys in
+declaration order, so on the accepted list that is the comparison
+`uniqueItems` makes ([core gaps](core-gaps.md#15-two-constraints-core-is-missing)).
 
 **2. A list the site decides: name the kind, and a resolver lists it.**
 When the allowed values are "every one of a kind that this site has",

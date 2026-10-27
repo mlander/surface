@@ -97,7 +97,8 @@ $day = DataDefinition::create('string')
     ],
   ]);
 $inputs->addList('days', $day, t('Days open'), default: ['mon', 'tue', 'wed', 'thu', 'fri'])
-  ->setRequired(TRUE);
+  ->setRequired(TRUE)
+  ->addConstraint('UniqueItems', []);
 ```
 
 `addList()` takes the item as a type name (`'string'`), a shape's class,
@@ -113,7 +114,9 @@ twelve choices is a multiple select, and
 on the list asks for one or the other at any length
 ([Widgets](widgets.md#which-element-a-list-of-choices-is)). A day not on
 the list is refused by its position ("days.1: The value you selected is
-not a valid choice."). An item is never null in either schema: an empty
+not a valid choice."), and a day listed twice by the list ("days: The
+item "mon" is listed more than once."), which both schemas state as
+`uniqueItems: true`. An item is never null in either schema: an empty
 item is dropped before anything reads the list
 ([Value semantics](semantics.md#lists)). Required means configured, so
 an empty list satisfies it

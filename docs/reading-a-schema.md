@@ -55,6 +55,7 @@ the emitter wrote reads back as what it was written from
 | `exclusiveMinimum`, `exclusiveMaximum` | on an integer, `Range` to the next whole number in; on a number, kept ([below](#what-is-kept)) |
 | `minLength`, `maxLength` | `Length` |
 | `minItems`, `maxItems` | `Count` |
+| `uniqueItems: true` on an array | `UniqueItems`; `false` is what an array says without it, and reads as nothing |
 | `pattern` | a `Regex`, when it is inside the subset PHP and an ECMA engine read alike: the body, delimited, with `D` and, for a character outside ASCII, `u` (why: [decision](decisions.md#a-pattern-both-engines-read-alike)); `x-surface.patternMessage` its message; outside the subset, kept |
 | `not: {pattern}` | a `Regex` that must not match |
 | `allOf`, `anyOf` of parts each one constraint | `Sequentially`, `AtLeastOneOf` of them (why: [decision](decisions.md#a-composite-is-its-parts)) |
@@ -65,7 +66,7 @@ the emitter wrote reads back as what it was written from
 | `$ref` to an object under `$defs` | a structure attached at the key, its id the def's key: one structure wherever it is used |
 | `$ref` to a scalar under `$defs` | the shape of that id, where the site has one, and what the property says beside it; otherwise the def read in place, noted |
 | an array of scalars | a list, its items read as a value is |
-| an array of objects, or of references to one | a collection, its Count from `minItems` and `maxItems` |
+| an array of objects, or of references to one | a collection, its Count from `minItems` and `maxItems`, `UniqueItems` from `uniqueItems: true` |
 | a property that is a `oneOf` or `anyOf` of objects, each chosen by a conditional `if` naming a sibling's `const` | variants that sibling chooses, each the object its conditional names; the conditionals are the variants' |
 | an `allOf` holding a reference to an object def, beside the frame's own properties | that structure mixed in, at its first member's place |
 | a conditional whose `if` is a condition of the vocabulary and whose `then` only narrows | a declared rule ([Declaring a rule](refinement.md#declaring-a-rule)): `{"properties": {k: false}}` `doesNotApply()`, `required` `require()`, a bound, a list or a pattern `constrain()`, a `description` `because()` |
@@ -103,7 +104,7 @@ rule or an access answer only the server knows: not read, noted.
 ## What is kept
 
 What no keyword of the vocabulary says is kept, not refused, and not
-dropped: `not` (but a pattern), `uniqueItems`, `multipleOf`,
+dropped: `not` (but a pattern), `multipleOf`,
 `patternProperties`, `propertyNames`, `minProperties`,
 `dependentRequired`, `dependentSchemas`, `contains`, `prefixItems`, a
 type that is several types, a pattern outside the subset, an exclusive
@@ -122,7 +123,7 @@ The pipeline checks each with opis/json-schema, as a standard validator
 reads a schema: its extensions off, `format` not asserted, the defs the
 part refers to carried with it. A refusal says what the validator said,
 code `not_valid`: "This value does not hold to the schema it was read
-from: Array must have unique items." A reference to another
+from: At least one array item must match schema." A reference to another
 document is never fetched: a value it would decide is refused, naming
 the reference, code `unresolved`.
 
@@ -135,8 +136,8 @@ reader of a document reads it back as the same constraint:
   "title": "Tags", "type": ["array", "null"], "items": {"type": "string"},
   "x-surface": {"checkedOnServer": [{
     "constraint": "JsonSchema",
-    "message": "Checked on the server against the schema it was read from: uniqueItems.",
-    "schema": {"uniqueItems": true}
+    "message": "Checked on the server against the schema it was read from: contains.",
+    "schema": {"contains": {"const": "news"}}
   }]}
 }
 ```

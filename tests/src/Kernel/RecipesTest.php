@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\data_surface\Kernel;
 
+use Drupal\Component\Render\PlainTextOutput;
 use Drupal\Core\Form\FormState;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface_resource_test\Resource\Library\OpeningHoursResource;
@@ -69,7 +70,7 @@ class RecipesTest extends DataSurfaceKernelTestBase {
     $accepted = $this->pipeline()->accept($this->hours(), $values, $stored);
     $messages = [];
     foreach ($this->pipeline()->validate($this->hours(), $accepted, $stored) as $violation) {
-      $messages[$violation->fullPath()] = strip_tags((string) $violation->message);
+      $messages[$violation->fullPath()] = PlainTextOutput::renderFromHtml((string) $violation->message);
     }
     return $messages;
   }
@@ -100,6 +101,7 @@ class RecipesTest extends DataSurfaceKernelTestBase {
     $this->assertSame('textarea', $full['properties']['notes']['x-surface']['widget']);
     $this->assertSame('time', $full['properties']['opens']['x-surface']['widget']);
     $this->assertSame('checkboxes', $full['properties']['days']['x-surface']['widget']);
+    $this->assertTrue($full['properties']['days']['uniqueItems'], 'Each day once, stated.');
     $this->assertSame('list', $full['properties']['keywords']['x-surface']['widget']);
     $this->assertSame(1, $full['properties']['late_days']['minItems'], 'At least one day, stated wherever the key applies.');
   }
@@ -114,6 +116,8 @@ class RecipesTest extends DataSurfaceKernelTestBase {
     $this->assertSame(['closes' => 'This value should be between 721 and 1439.'], $closes, 'Noon is not later than noon.');
     $days = $this->refusals(['days' => ['mon', 'xyz']]);
     $this->assertSame(['days.1' => 'The value you selected is not a valid choice. Choose Monday, Tuesday, Wednesday, Thursday, Friday, Saturday or Sunday.'], $days, 'A refused item lists its choices, as a single choice does.');
+    $twice = $this->refusals(['days' => ['mon', 'tue', 'mon']]);
+    $this->assertSame(['days' => 'The item "mon" is listed more than once.'], $twice, 'A day listed twice, by the list.');
     $this->assertSame(['door_code' => 'Door code does not apply when After-hours access is off.'], $this->refusals(['door_code' => '7310']));
     $this->assertSame([
       'door_code' => 'Door code is required.',

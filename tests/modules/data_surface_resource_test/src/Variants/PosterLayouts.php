@@ -73,6 +73,7 @@ final class PosterLayouts implements SiteListInterface, ContainerInjectionInterf
             'type' => ['string', 'null'],
             'title' => 'Caption',
             'maxLength' => 60,
+            'not' => ['const' => 'Untitled'],
           ],
           'tags' => [
             'type' => ['array', 'null'],

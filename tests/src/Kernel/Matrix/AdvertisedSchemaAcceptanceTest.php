@@ -6,6 +6,7 @@ namespace Drupal\Tests\data_surface\Kernel\Matrix;
 
 use Drupal\Core\Cache\Cache;
 use Drupal\Core\TypedData\DataDefinition;
+use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\data_surface\Contract\SchemaResolver;
 use Drupal\data_surface\DataSurfaceBuilder;
@@ -460,6 +461,7 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
       'notes emptied, nullable' => [['notes' => ''], TRUE],
       'checkboxes all unchecked: the empty list' => [['days' => []], TRUE],
       'a day not offered' => [['days' => ['mon', 'xyz']], FALSE],
+      'a day listed twice' => [['days' => ['mon', 'tue', 'mon']], FALSE],
       'keywords as rows, one left empty' => [['keywords' => ['maps', '', 'archives']], TRUE],
       'keywords null keeps the list' => [['keywords' => NULL], TRUE],
       'a time picked' => [['opens' => '08:30'], TRUE],
@@ -1581,7 +1583,9 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
    * checkedOnServer and changes nothing else. One with a resolver is
    * stated as `oneOf` read from the source its validator reads; a
    * PluginExists that allows a fallback accepts any id, so it offers no
-   * list and the schema stays as wide as the validator.
+   * list and the schema stays as wide as the validator. UniqueItems, which
+   * started here as the demo's constraint, has a keyword: `uniqueItems`,
+   * as narrow as its validator.
    */
   public function testConstraintsWithNoKeyword(): void {
     $emitter = $this->container->get('data_surface.contract_emitter');
@@ -1590,7 +1594,6 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
     $names = [
       'UniqueField',
       'DataSurfaceUnique',
-      'DataSurfaceDemoExtrasUniqueItems',
       'DataSurfaceDemoExtrasReviewDeadline',
       'AuditRuleNobodyDeclares',
     ];
@@ -1602,6 +1605,18 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
       $this->assertNotSame('', $property['x-surface']['checkedOnServer'][0]['message'], $name . ': what it checks is said.');
       $this->assertSame(array_diff_key($bare, ['x-surface' => TRUE]), array_diff_key($property, ['x-surface' => TRUE]), $name . ': no keyword.');
     }
+
+    // Each item once: a keyword, as narrow as the validator.
+    $unique = $this->surface([
+      'k' => ListDataDefinition::create('string')->setLabel('K')->addConstraint('UniqueItems', []),
+    ]);
+    $schema = $full($unique);
+    $this->assertTrue($schema['properties']['k']['uniqueItems']);
+    $this->assertArrayNotHasKey('checkedOnServer', (array) ($schema['properties']['k']['x-surface'] ?? []));
+    $this->assertTrue($this->pipeline()->validate($unique, ['k' => ['a', 'b']])->isEmpty());
+    $this->assertTrue($this->validates($schema, ['k' => ['a', 'b']]));
+    $this->assertFalse($this->pipeline()->validate($unique, ['k' => ['a', 'b', 'a']])->isEmpty());
+    $this->assertFalse($this->validates($schema, ['k' => ['a', 'b', 'a']]));
 
     // The languages the site has: as narrow as the validator.
     $language = $this->surface([

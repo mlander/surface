@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\data_surface\Kernel;
 
+use Drupal\Component\Render\PlainTextOutput;
 use Drupal\Core\Config\Schema\SchemaCheckTrait;
 use Drupal\Core\Form\FormState;
 use Drupal\Core\Form\FormStateInterface;
@@ -307,7 +308,7 @@ class NodeTypeToolComparisonTest extends DataSurfaceKernelTestBase {
     // whole, by the pipeline.
     $result = $this->runResourceTool($this->contentType('repeat') + $this->extras(NULL, ['news', 'news']));
     $this->assertFalse($result->isSuccess());
-    $this->assertStringContainsString(static::refusedAt(NodeTypeReviewSettings::TAGS) . 'Each item may be listed only once.', (string) $result->getMessage());
+    $this->assertStringContainsString(static::refusedAt(NodeTypeReviewSettings::TAGS) . 'The item "news" is listed more than once.', PlainTextOutput::renderFromHtml((string) $result->getMessage()));
     $this->assertNull(NodeType::load('repeat'));
 
     // One string where the list goes: typed data wraps it into a list of

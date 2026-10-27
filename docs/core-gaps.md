@@ -22,7 +22,7 @@ it.
 
 | Step | What core gains | Carried by |
 | --- | --- | --- |
-| [1](#step-1-facts-on-a-data-definition) | Eleven changes to typed data, validation and the Field API, each small and additive, and one to the coding standards | Eleven drafts, drafted, unfiled; one item not drafted |
+| [1](#step-1-facts-on-a-data-definition) | Eleven changes to typed data, validation and the Field API, each small and additive, and one to the coding standards | Eleven drafts, drafted, unfiled; one item and one constraint not drafted |
 | [2](#step-2-operations-and-access-for-simple-config) | Operations, a permission each, and per-key access for a simple config object, as entity types have | Not drafted |
 | [3](#step-3-third-party-settings-for-simple-config) | A place in a simple config object for another module's keys, as config entities have | Not drafted |
 | [4](#step-4-a-served-contract) | A JSON Schema of what an operation accepts, never stricter than validation | Not drafted as one; its parts are step 1's |
@@ -124,8 +124,9 @@ description and never call `getConstraints()`: a string with `Length:
 {max: 50}` is advertised as `{"type": "string"}`, so a client learns the
 limit from the refusal.
 
-**Here today.** The emitter maps `Range`, `Length`, `Count`, `Email`,
-`NotBlank`, `Regex`, `Sequentially` and `AtLeastOneOf` to keywords, a
+**Here today.** The emitter maps `Range`, `Length`, `Count`,
+`UniqueItems` (1.5), `Email`, `NotBlank`, `Regex`, `Sequentially` and
+`AtLeastOneOf` to keywords, a
 `Choice` to its values, and names every other constraint under
 `x-surface.checkedOnServer`, with what it checks, so a client knows a
 server-side rule exists
@@ -207,9 +208,9 @@ unfiled.
 hand-written form that sets `#placeholder` from the definition; one
 spelling that plugin contexts and other wrappers could later delegate to.
 
-### 1.5 A `LanguageExists` constraint
+### 1.5 Two constraints core is missing
 
-**The gap.** Core has `PluginExists`, `EntityBundleExists`,
+**The gap, for languages.** Core has `PluginExists`, `EntityBundleExists`,
 `ExtensionExists` and `ConfigExists`, and nothing for a language code,
 so `langcode` keys in config are left unchecked or checked by a
 hand-written constraint, and cannot offer their allowed values.
@@ -230,6 +231,32 @@ PluginExists, EntityBundleExists, ExtensionExists and ConfigExists",
 drafted, unfiled.
 
 **Alone, it gives.** Validated language codes in config.
+
+**The gap, for lists.** Core registers `Count` for a list's size,
+JSON Schema's `minItems` and `maxItems`, and nothing for `uniqueItems`.
+Symfony has the `Unique` constraint and core does not register it, so a
+list whose items must differ (tags, days, roles) is checked by a
+hand-written constraint, de-duplicated in form code, or not checked.
+
+**Here today.** `UniqueItems`, registered the way core registers
+`Count`: Symfony's `Unique`, under an id of its own, with a message in
+Drupal's placeholder style ("The item %value is listed more than
+once.") and no option but the message. Its validator is Symfony's,
+which compares items strictly, handed a list's plain values. The
+emitter writes it as `uniqueItems: true` and the schema reader reads it
+back (`src/Plugin/Validation/Constraint/UniqueItemsConstraint.php`,
+`UniqueItemsConstraintValidator.php`).
+
+**The core change.** The same constraint beside `Count` in
+`core/lib/Drupal/Core/Validation/Plugin/Validation/Constraint/`; a
+config schema `sequence` may then declare it, and the normalizer of 1.2
+writes it as `uniqueItems`.
+
+**Carried by.** Not drafted. It belongs with the `LanguageExists` draft
+or in one of its own.
+
+**Alone, it gives.** Lists in config whose items are held to differ, by
+a constraint any schema reader can read.
 
 ### 1.6 Labels on `Choice`
 

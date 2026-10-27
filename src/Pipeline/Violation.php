@@ -7,6 +7,7 @@ namespace Drupal\data_surface\Pipeline;
 use Symfony\Component\Validator\ConstraintViolationInterface;
 use Drupal\data_surface\Plugin\Validation\Constraint\JsonSchemaConstraint;
 use Drupal\data_surface\Plugin\Validation\Constraint\UniqueConstraint;
+use Drupal\data_surface\Plugin\Validation\Constraint\UniqueItemsConstraint;
 use Symfony\Component\Validator\Constraints\Choice;
 use Symfony\Component\Validator\Constraints\Count;
 use Symfony\Component\Validator\Constraints\Email;
@@ -175,6 +176,7 @@ final class Violation {
     Type::class,
     JsonSchemaConstraint::class,
     UniqueConstraint::class,
+    UniqueItemsConstraint::class,
   ];
 
   /**

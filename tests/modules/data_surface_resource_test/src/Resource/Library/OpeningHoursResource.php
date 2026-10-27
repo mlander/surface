@@ -67,7 +67,8 @@ final class OpeningHoursResource implements ResourceInterface {
         ],
       ]);
     $inputs->addList('days', $day, t('Days open'), default: ['mon', 'tue', 'wed', 'thu', 'fri'])
-      ->setRequired(TRUE);
+      ->setRequired(TRUE)
+      ->addConstraint('UniqueItems', []);
 
     $inputs->add('notes', 'string', t('Notes'))
       ->setSetting('multiline', TRUE);

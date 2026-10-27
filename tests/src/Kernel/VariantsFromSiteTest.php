@@ -151,9 +151,12 @@ class VariantsFromSiteTest extends DataSurfaceKernelTestBase {
     $this->assertSame(['choices' => ['none', 'small', 'large']], $gap->getConstraint('Choice'));
     $this->assertTrue(DefinitionMetadata::isAlwaysHeld($gap), 'An optional key that refuses null and starts from a value is always held.');
 
-    // The strip's tags say what no constraint does: kept, and checked.
-    $tags = $entry->variants->variants['strip']->child->getDefinition('tags');
-    $this->assertSame(['schema' => ['uniqueItems' => TRUE]], $tags->getConstraint('JsonSchema'));
+    // The strip's caption says what no constraint does: kept, and
+    // checked; its tags' uniqueItems is the stock UniqueItems.
+    $strip = $entry->variants->variants['strip']->child;
+    $this->assertSame(['schema' => ['not' => ['const' => 'Untitled']]], $strip->getDefinition('caption')->getConstraint('JsonSchema'));
+    $this->assertSame([], $strip->getDefinition('tags')->getConstraint('UniqueItems'));
+    $this->assertArrayNotHasKey('JsonSchema', $strip->getDefinition('tags')->getConstraints());
   }
 
   /**
@@ -193,10 +196,13 @@ class VariantsFromSiteTest extends DataSurfaceKernelTestBase {
     // One layout's panels under another: both documents refuse it.
     $mixed = ['layout' => 'strip', 'panels' => ['columns' => 3, 'gap' => 'small']];
     $this->assertFalse($this->validates($full['schema'], $mixed));
-    // The strip's tags are unique, which the documents leave to the server:
-    // wider than the pipeline, never stricter.
-    $this->assertTrue($this->validates($full['schema'], ['layout' => 'strip', 'panels' => ['tags' => ['a', 'a']]]));
-    $this->assertSame(['uniqueItems' => TRUE], $full['schema']['$defs']['resource_test.poster.panels.strip']['properties']['tags']['x-surface']['checkedOnServer'][0]['schema']);
+    // The strip's caption is never "Untitled", which the documents leave
+    // to the server: wider than the pipeline, never stricter.
+    $this->assertTrue($this->validates($full['schema'], ['layout' => 'strip', 'panels' => ['caption' => 'Untitled']]));
+    $this->assertSame(['not' => ['const' => 'Untitled']], $full['schema']['$defs']['resource_test.poster.panels.strip']['properties']['caption']['x-surface']['checkedOnServer'][0]['schema']);
+    // Its tags are unique, which the documents state.
+    $this->assertFalse($this->validates($full['schema'], ['layout' => 'strip', 'panels' => ['tags' => ['a', 'a']]]));
+    $this->assertTrue($full['schema']['$defs']['resource_test.poster.panels.strip']['properties']['tags']['uniqueItems']);
   }
 
   /**
@@ -227,15 +233,18 @@ class VariantsFromSiteTest extends DataSurfaceKernelTestBase {
     $this->assertFalse($tool->getResult()->isSuccess());
     $this->assertSame("The values were refused:\n/panels/columns: panels.columns belongs to the grid variant, but layout chose strip.", PlainTextOutput::renderFromHtml((string) $tool->getResult()->getMessage()));
 
-    // The strip's tags held to the schema they were read from.
+    // The strip's caption held to the schema it was read from, and its
+    // tags to UniqueItems.
     $tool = $manager->createInstance('data_surface:resource_test.poster:configure');
     $tool->setInputValue(OperationInputs::VALUES, [
       'layout' => 'strip',
-      'panels' => ['caption' => 'Spring', 'tags' => ['music', 'music']],
+      'panels' => ['caption' => 'Untitled', 'tags' => ['music', 'music']],
     ]);
     $tool->execute();
     $this->assertFalse($tool->getResult()->isSuccess());
-    $this->assertStringContainsString('/panels/tags: This value does not hold to the schema it was read from:', PlainTextOutput::renderFromHtml((string) $tool->getResult()->getMessage()));
+    $message = PlainTextOutput::renderFromHtml((string) $tool->getResult()->getMessage());
+    $this->assertStringContainsString('/panels/caption: This value does not hold to the schema it was read from:', $message);
+    $this->assertStringContainsString('/panels/tags: The item "music" is listed more than once.', $message);
 
     // And written.
     $tool = $manager->createInstance('data_surface:resource_test.poster:configure');
