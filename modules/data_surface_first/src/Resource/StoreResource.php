@@ -25,10 +25,20 @@ use Drupal\data_surface_first\Storage\StoreStorage;
 final class StoreResource implements ResourceInterface {
 
   /**
+   * The country key.
+   */
+  public const COUNTRY = 'country';
+
+  /**
+   * The region key.
+   */
+  public const REGION = 'region';
+
+  /**
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('country', 'string', t('Country'), default: 'CA')
+    $inputs->add(self::COUNTRY, 'string', t('Country'), default: 'CA')
       ->setRequired(TRUE)
       ->addConstraint('LabeledChoice', [
         'choices' => [
@@ -36,7 +46,7 @@ final class StoreResource implements ResourceInterface {
           'US' => t('United States'),
         ],
       ]);
-    $inputs->add('region', 'string', t('Region'), default: 'CA-ON')
+    $inputs->add(self::REGION, 'string', t('Region'), default: 'CA-ON')
       ->setRequired(TRUE)
       ->addConstraint('LabeledChoice', [
         'choices' => self::regions('CA') + self::regions('US'),
@@ -45,8 +55,11 @@ final class StoreResource implements ResourceInterface {
 
   /**
    * The region must be one of the chosen country's.
+   *
+   * The parameter $country watches self::COUNTRY by its name, the one place
+   * the key is spelled as a string: rename the key, rename the parameter.
    */
-  #[RefinesInput('region')]
+  #[RefinesInput(self::REGION)]
   public static function regionOfCountry(DataDefinitionInterface $region, string $country): DataDefinitionInterface {
     return $region->addConstraint('LabeledChoice', [
       'choices' => self::regions($country),

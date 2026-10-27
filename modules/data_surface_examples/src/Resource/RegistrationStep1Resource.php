@@ -27,14 +27,29 @@ use Drupal\data_surface_examples\Storage\RegistrationStep1Storage;
 final class RegistrationStep1Resource implements ResourceInterface {
 
   /**
+   * The event title key.
+   */
+  public const TITLE = 'title';
+
+  /**
+   * The capacity key.
+   */
+  public const CAPACITY = 'capacity';
+
+  /**
+   * The registration open key.
+   */
+  public const OPEN = 'open';
+
+  /**
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('title', 'string', t('Event title'))
+    $inputs->add(self::TITLE, 'string', t('Event title'))
       ->setRequired(TRUE);
-    $inputs->add('capacity', 'integer', t('Capacity'), default: 50)
+    $inputs->add(self::CAPACITY, 'integer', t('Capacity'), default: 50)
       ->addConstraint('Range', ['min' => 1, 'max' => 1000]);
-    $inputs->add('open', 'boolean', t('Registration open'), default: TRUE);
+    $inputs->add(self::OPEN, 'boolean', t('Registration open'), default: TRUE);
   }
 
 }

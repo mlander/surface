@@ -36,25 +36,53 @@ use Drupal\data_surface_examples\Venues;
 final class RegistrationStep2Resource implements ResourceInterface {
 
   /**
+   * The event title key.
+   */
+  public const TITLE = 'title';
+
+  /**
+   * The registration open key.
+   */
+  public const OPEN = 'open';
+
+  /**
+   * The venue key.
+   */
+  public const VENUE = 'venue';
+
+  /**
+   * The room key.
+   */
+  public const ROOM = 'room';
+
+  /**
+   * The capacity key.
+   */
+  public const CAPACITY = 'capacity';
+
+  /**
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('title', 'string', t('Event title'))
+    $inputs->add(self::TITLE, 'string', t('Event title'))
       ->setRequired(TRUE);
-    $inputs->add('open', 'boolean', t('Registration open'), default: TRUE);
-    $inputs->add('venue', 'entity:event_venue', t('Venue'))
+    $inputs->add(self::OPEN, 'boolean', t('Registration open'), default: TRUE);
+    $inputs->add(self::VENUE, 'entity:event_venue', t('Venue'))
       ->setRequired(TRUE);
-    $inputs->add('room', 'string', t('Room'))
+    $inputs->add(self::ROOM, 'string', t('Room'))
       ->setRequired(TRUE)
       ->addConstraint('EventVenueRoom');
-    $inputs->add('capacity', 'integer', t('Capacity'), default: 50)
+    $inputs->add(self::CAPACITY, 'integer', t('Capacity'), default: 50)
       ->addConstraint('Range', ['min' => 1]);
   }
 
   /**
    * The room must be one of the chosen venue's rooms.
+   *
+   * The parameter $venue watches self::VENUE by its name, the one place the
+   * key is spelled as a string: rename the key, rename the parameter.
    */
-  #[RefinesInput('room')]
+  #[RefinesInput(self::ROOM)]
   public static function roomInVenue(DataDefinitionInterface $room, string $venue): DataDefinitionInterface {
     return $room->addConstraint('RoomOfEventVenue', ['venue' => $venue]);
   }
@@ -63,9 +91,10 @@ final class RegistrationStep2Resource implements ResourceInterface {
    * No more people than the chosen room seats, said under the field.
    *
    * A room that seats no known number changes nothing: the capacity keeps
-   * its lower bound and has no upper one.
+   * its lower bound and has no upper one. The parameter $room watches
+   * self::ROOM by its name.
    */
-  #[RefinesInput('capacity')]
+  #[RefinesInput(self::CAPACITY)]
   public static function capacityOfRoom(DataDefinitionInterface $capacity, string $room): DataDefinitionInterface {
     $seats = Venues::seats($room);
     if ($seats !== NULL && $capacity instanceof DataDefinition) {

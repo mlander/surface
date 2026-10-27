@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\data_surface\Kernel;
 
+use Drupal\data_surface\Drush\Generators\Resource\ResourceCode;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use Symfony\Component\Filesystem\Filesystem;
@@ -22,6 +23,10 @@ use Symfony\Component\Filesystem\Filesystem;
  *   fixture with a reference, a list of values, a nested object and a
  *   conditional) write their keys as add() calls, what the reader keeps
  *   as a foreign constraint as a comment naming the keyword and the key.
+ * - In every mode each key is named once, as a constant of its class in
+ *   declaration order, and every call and comment names it by the
+ *   constant; keys whose names would clash take a suffix, and every class
+ *   written parses.
  */
 #[Group('data_surface')]
 #[RunTestsInSeparateProcesses]
@@ -106,6 +111,13 @@ class ResourceGeneratorTest extends ResourceGeneratorTestBase {
     $this->assertStringContainsString('Config schema entry and install file: written from a build of the interview', $display);
     $this->assertStringContainsString('Checked against a build of the class just written (drush data_surface:config-schema --module=data_surface_first): the schema entry and install file agree.', $display);
     $this->assertFileDoesNotExist($this->moduleDirectory() . '/data_surface_first.info.yml', 'The module\'s info file is left as it is.');
+    $this->assertStringContainsString(<<<'PHP'
+  /**
+   * The sender name key.
+   */
+  public const SENDER_NAME = 'sender_name';
+PHP, $this->written('src/Resource/NewsletterResource.php'), 'The interview names each key once, as a constant.');
+    $this->assertParses(['src/Resource/NewsletterResource.php', 'src/Storage/NewsletterStorage.php']);
   }
 
   /**
@@ -156,8 +168,16 @@ class ResourceGeneratorTest extends ResourceGeneratorTestBase {
     ], ['--from-config-schema' => 'node.settings'], $out);
     $resource = $this->written('src/Resource/NodeSettingsResource.php', $out);
     $this->assertStringContainsString(<<<'PHP'
+  /**
+   * The use administration theme when editing or creating content key.
+   */
+  public const USE_ADMIN_THEME = 'use_admin_theme';
+
+  /**
+   * {@inheritdoc}
+   */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('use_admin_theme', 'boolean', t('Use administration theme when editing or creating content'), default: TRUE)
+    $inputs->add(self::USE_ADMIN_THEME, 'boolean', t('Use administration theme when editing or creating content'), default: TRUE)
       ->setRequired(TRUE);
   }
 PHP, $resource, 'Required in a fully validatable object, its default the value the site holds; _core and langcode are the storage\'s.');
@@ -182,10 +202,10 @@ PHP, $resource, 'Required in a fully validatable object, its default the value t
     ], ['--from-json-schema' => dirname(__DIR__, 3) . '/modules/data_surface_examples/components/card/card.component.yml'], $out);
     $resource = $this->written('src/Resource/CardResource.php', $out);
     $this->assertStringContainsString(<<<'PHP'
-    $inputs->add('heading', 'string', t('Heading'))
+    $inputs->add(self::HEADING, 'string', t('Heading'))
       ->setRequired(TRUE)
       ->addConstraint('Length', ['max' => 80]);
-    $inputs->add('tone', 'string', t('Tone'), default: 'plain')
+    $inputs->add(self::TONE, 'string', t('Tone'), default: 'plain')
       ->addConstraint('LabeledChoice', [
         'choices' => ['plain', 'highlight'],
         'labels' => [
@@ -193,7 +213,7 @@ PHP, $resource, 'Required in a fully validatable object, its default the value t
           'highlight' => t('Highlighted'),
         ],
       ]);
-    $inputs->addDefinition('link', MapDataDefinition::create()
+    $inputs->addDefinition(self::LINK, MapDataDefinition::create()
       ->setPropertyDefinition('url', DataDefinition::create('uri')
         ->setLabel(t('Address')))
       ->setPropertyDefinition('label', DataDefinition::create('string')
@@ -220,34 +240,35 @@ PHP, $resource);
     ], ['--from-json-schema' => dirname(__DIR__, 2) . '/fixtures/generator/event.schema.json'], $out);
     $resource = $this->written('src/Resource/EventResource.php', $out);
     $this->assertStringContainsString(<<<'PHP'
-    $inputs->add('kind', 'string', t('Kind'), default: 'meetup')
+    $inputs->add(self::KIND, 'string', t('Kind'), default: 'meetup')
       ->setRequired(TRUE)
       ->addConstraint('Choice', ['choices' => ['meetup', 'conference']]);
 PHP, $resource, 'An enum is a Choice.');
     $this->assertStringContainsString(<<<'PHP'
-    $inputs->add('slug', 'string', t('Slug'))
+    $inputs->add(self::SLUG, 'string', t('Slug'))
       ->addConstraint('Regex', ['pattern' => '/^[a-z0-9-]+$/D']);
-    $inputs->attach('venue', VenueStructure::class)
+    $inputs->attach(self::VENUE, VenueStructure::class)
       ->setLabel(t('Venue'));
-    $inputs->addDefinition('contact', MapDataDefinition::create()
+    $inputs->addDefinition(self::CONTACT, MapDataDefinition::create()
 PHP, $resource, 'A $ref to a scalar def is read in place; one to an object def is a structure of its own; a nested object is a map.');
     $this->assertStringContainsString(<<<'PHP'
-    // From the schema, not written here: multipleOf on seats, which no
+    // From the schema, not written here: multipleOf on self::SEATS, which no
     // constraint here states; the reader keeps it as a JsonSchema constraint.
     // Write a constraint for it.
-    $inputs->add('seats', 'integer', t('Seats'))
+    $inputs->add(self::SEATS, 'integer', t('Seats'))
       ->addConstraint('Range', ['min' => 1]);
-PHP, $resource, 'A foreign constraint is a comment naming the keyword and the key.');
+PHP, $resource, 'A foreign constraint is a comment naming the keyword and the key by its constant.');
     $this->assertStringContainsString(<<<'PHP'
-    $inputs->addList('tags', 'string', t('Tags'))
+    $inputs->addList(self::TAGS, 'string', t('Tags'))
       ->addConstraint('UniqueItems', []);
-    $inputs->narrow('seats')
-      ->when(Condition::equals('kind', 'conference'))
+    $inputs->narrow(self::SEATS)
+      ->when(Condition::equals(self::KIND, 'conference'))
       ->require();
 PHP, $resource, 'uniqueItems is the stock UniqueItems; the if/then is a declared rule.');
     $structure = $this->written('src/Structure/VenueStructure.php', $out);
     $this->assertStringContainsString("#[Structure('first.event.venue')]", $structure);
-    $this->assertStringContainsString("    \$inputs->add('city', 'string', t('City'))\n      ->setRequired(TRUE);", $structure);
+    $this->assertStringContainsString("  public const CITY = 'city';\n\n  /**\n   * The capacity key.\n   */\n  public const CAPACITY = 'capacity';\n", $structure, 'A structure names its own keys.');
+    $this->assertStringContainsString("    \$inputs->add(self::CITY, 'string', t('City'))\n      ->setRequired(TRUE);", $structure);
     $this->assertStringContainsString('A comment in the class names what was not written from the JSON Schema', $display);
     $this->assertStringContainsString('/properties/seats/multipleOf: Kept as a JsonSchema constraint', $display);
     $this->assertParses([
@@ -255,6 +276,84 @@ PHP, $resource, 'uniqueItems is the stock UniqueItems; the if/then is a declared
       'src/Storage/EventStorage.php',
       'src/Structure/VenueStructure.php',
     ], $out);
+  }
+
+  /**
+   * Tests keys whose constants would clash are named apart.
+   *
+   * A camelCase key splits at its capitals, a run of other characters is
+   * one underscore, a key starting with a digit is prefixed KEY_, and a
+   * later key whose name is taken, or would be the reserved CLASS, takes
+   * the first free suffix.
+   */
+  public function testKeysAreNamedOnceAsConstants(): void {
+    $this->assertSame([
+      'fooBar' => 'FOO_BAR',
+      'foo_bar' => 'FOO_BAR_2',
+      'foo-bar' => 'FOO_BAR_3',
+      'class' => 'CLASS_2',
+      '2nd' => 'KEY_2ND',
+      'a.b' => 'A_B',
+      'ID' => 'ID',
+    ], ResourceCode::constantNames(['fooBar', 'foo_bar', 'foo-bar', 'class', '2nd', 'a.b', 'ID']));
+
+    $document = $this->sandbox . '/clash.schema.json';
+    file_put_contents($document, (string) json_encode([
+      '$schema' => 'https://json-schema.org/draft/2020-12/schema',
+      'type' => 'object',
+      'properties' => [
+        'fooBar' => ['type' => 'string', 'title' => 'Foo'],
+        'foo_bar' => ['type' => ['string', 'null'], 'title' => 'URL of the bar'],
+        'class' => ['type' => ['integer', 'null'], 'title' => 'Class', 'multipleOf' => 5],
+      ],
+      'allOf' => [
+        [
+          'if' => ['properties' => ['fooBar' => ['const' => 'x']], 'required' => ['fooBar']],
+          'then' => ['required' => ['foo_bar']],
+        ],
+      ],
+    ]));
+    $out = $this->sandbox . '/clash';
+    $this->generate([
+      'data_surface_first', 'first.clash', 'Clash', '', '1', '',
+      'Sets the clash.',
+      '', '', '', '',
+    ], ['--from-json-schema' => $document], $out);
+    $resource = $this->written('src/Resource/ClashResource.php', $out);
+    $this->assertStringContainsString(<<<'PHP'
+final class ClashResource implements ResourceInterface {
+
+  /**
+   * The foo key.
+   */
+  public const FOO_BAR = 'fooBar';
+
+  /**
+   * The URL of the bar key.
+   */
+  public const FOO_BAR_2 = 'foo_bar';
+
+  /**
+   * The class key.
+   */
+  public const CLASS_2 = 'class';
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function defineInputs(BlueprintInterface $inputs): void {
+    $inputs->add(self::FOO_BAR, 'string', t('Foo'));
+    $inputs->add(self::FOO_BAR_2, 'string', t('URL of the bar'));
+    // From the schema, not written here: multipleOf on self::CLASS_2, which no
+    // constraint here states; the reader keeps it as a JsonSchema constraint.
+    // Write a constraint for it.
+    $inputs->add(self::CLASS_2, 'integer', t('Class'));
+    $inputs->narrow(self::FOO_BAR_2)
+      ->when(Condition::equals(self::FOO_BAR, 'x'))
+      ->require();
+  }
+PHP, $resource, 'Each key is a constant, in declaration order; every call and comment names it by the constant.');
+    $this->assertParses(['src/Resource/ClashResource.php', 'src/Storage/ClashStorage.php'], $out);
   }
 
   /**

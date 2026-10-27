@@ -407,6 +407,36 @@ kinds that share an id apart.
 
 **An operation is a verb.** See above.
 
+### Key names
+
+A key is a string wherever it is named, `add('venue', ...)`,
+`narrow('room')`, `Condition::equals('venue', ...)`, and an editor can
+neither rename a string nor find its uses. So the class names each key
+once, as a constant, in declaration order with a one-line docblock, and
+every later mention is the constant:
+
+```php
+/**
+ * The room key.
+ */
+public const ROOM = 'room';
+
+// ...
+$inputs->add(self::ROOM, 'string', t('Room'));
+$inputs->narrow(self::CAPACITY)->when(Condition::present(self::ROOM))->require();
+#[RefinesInput(self::CAPACITY)]
+```
+
+Each class's `use` line: [Namespaces](concepts.md#namespaces).
+
+A refiner's parameter is the one exception: `string $room` watches the
+key whose name matches the parameter's, so it is spelled out and must
+match the constant's value; a rename changes both. The generator writes
+this convention ([Key names](generating.md#key-names)), and the first
+two pages and examples 1 and 2 follow it; the later examples name keys
+as strings, which works the same
+(why: [decision](decisions.md#a-key-is-named-once-as-a-constant)).
+
 ## Translatable strings
 
 Every human-facing string a class carries is a translatable object,

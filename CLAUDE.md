@@ -446,7 +446,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 The full lane's phpunit line reads, as of this writing:
 
 ```
-phpunit: Tests: 1650, Assertions: 38094, Errors: 0, Failures: 0, Skipped: 3. Classes: 229 of 229, 8 at a time, browser classes 4.
+phpunit: Tests: 1651, Assertions: 38106, Errors: 0, Failures: 0, Skipped: 3. Classes: 229 of 229, 8 at a time, browser classes 4.
 ```
 
 the same counts a plain phpunit run of the tree gives. The skipped

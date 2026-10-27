@@ -285,6 +285,7 @@ final class ResourceGenerator extends BaseGenerator {
       'operation_label_literal' => PhpLiteral::string($operation_label),
       'operation_description_literal' => PhpLiteral::string($operation_description),
       'permission_literal' => PhpLiteral::string($permission),
+      'constants' => $code['constants'],
       'inputs' => $code['inputs'],
       'storage_summary' => $storage_summary,
       'config_literal' => PhpLiteral::string($config),
@@ -319,6 +320,7 @@ final class ResourceGenerator extends BaseGenerator {
             'uses' => array_values(array_unique($structure_uses)),
             'summary' => static::wrapped(sprintf('%s, a part of the %s, written from %s.', $structure['label'], $about, $source->source)),
             'id_literal' => PhpLiteral::string($structure['id']),
+            'constants' => $structure['constants'],
             'inputs' => $structure['inputs'],
           ],
         ]);

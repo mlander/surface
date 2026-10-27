@@ -199,14 +199,29 @@ only when its context needs more.
 final class RegistrationStep1Resource implements ResourceInterface {
 
   /**
+   * The event title key.
+   */
+  public const TITLE = 'title';
+
+  /**
+   * The capacity key.
+   */
+  public const CAPACITY = 'capacity';
+
+  /**
+   * The registration open key.
+   */
+  public const OPEN = 'open';
+
+  /**
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('title', 'string', t('Event title'))
+    $inputs->add(self::TITLE, 'string', t('Event title'))
       ->setRequired(TRUE);
-    $inputs->add('capacity', 'integer', t('Capacity'), default: 50)
+    $inputs->add(self::CAPACITY, 'integer', t('Capacity'), default: 50)
       ->addConstraint('Range', ['min' => 1, 'max' => 1000]);
-    $inputs->add('open', 'boolean', t('Registration open'), default: TRUE);
+    $inputs->add(self::OPEN, 'boolean', t('Registration open'), default: TRUE);
   }
 
 }
@@ -283,7 +298,7 @@ of code, counted without blank lines or comments:
 
 | File | What it is | Lines |
 | --- | --- | --- |
-| [`modules/data_surface_examples/src/Resource/RegistrationStep1Resource.php`](src/Resource/RegistrationStep1Resource.php) | the resource: three keys, each with what it allows, and the operation that asks for them | 15 |
+| [`modules/data_surface_examples/src/Resource/RegistrationStep1Resource.php`](src/Resource/RegistrationStep1Resource.php) | the resource: three keys, each with what it allows, and the operation that asks for them | 18 |
 | [`modules/data_surface_examples/src/Storage/RegistrationStep1Storage.php`](src/Storage/RegistrationStep1Storage.php) | the storage: names the config object | 3 |
 | [`modules/data_surface_examples/data_surface_examples.routing.yml`](data_surface_examples.routing.yml), entry `data_surface_examples.step1` | the route: the generic operation form, serving the resource | 8 |
 | [`modules/data_surface_examples/config/schema/data_surface_examples.schema.yml`](config/schema/data_surface_examples.schema.yml), entry `data_surface_examples.registration_step1` | the config schema, generated from the class | 21 |
@@ -313,25 +328,53 @@ declared after the room it depends on.
 final class RegistrationStep2Resource implements ResourceInterface {
 
   /**
+   * The event title key.
+   */
+  public const TITLE = 'title';
+
+  /**
+   * The registration open key.
+   */
+  public const OPEN = 'open';
+
+  /**
+   * The venue key.
+   */
+  public const VENUE = 'venue';
+
+  /**
+   * The room key.
+   */
+  public const ROOM = 'room';
+
+  /**
+   * The capacity key.
+   */
+  public const CAPACITY = 'capacity';
+
+  /**
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('title', 'string', t('Event title'))
+    $inputs->add(self::TITLE, 'string', t('Event title'))
       ->setRequired(TRUE);
-    $inputs->add('open', 'boolean', t('Registration open'), default: TRUE);
-    $inputs->add('venue', 'entity:event_venue', t('Venue'))
+    $inputs->add(self::OPEN, 'boolean', t('Registration open'), default: TRUE);
+    $inputs->add(self::VENUE, 'entity:event_venue', t('Venue'))
       ->setRequired(TRUE);
-    $inputs->add('room', 'string', t('Room'))
+    $inputs->add(self::ROOM, 'string', t('Room'))
       ->setRequired(TRUE)
       ->addConstraint('EventVenueRoom');
-    $inputs->add('capacity', 'integer', t('Capacity'), default: 50)
+    $inputs->add(self::CAPACITY, 'integer', t('Capacity'), default: 50)
       ->addConstraint('Range', ['min' => 1]);
   }
 
   /**
    * The room must be one of the chosen venue's rooms.
+   *
+   * The parameter $venue watches self::VENUE by its name, the one place the
+   * key is spelled as a string: rename the key, rename the parameter.
    */
-  #[RefinesInput('room')]
+  #[RefinesInput(self::ROOM)]
   public static function roomInVenue(DataDefinitionInterface $room, string $venue): DataDefinitionInterface {
     return $room->addConstraint('RoomOfEventVenue', ['venue' => $venue]);
   }
@@ -340,9 +383,10 @@ final class RegistrationStep2Resource implements ResourceInterface {
    * No more people than the chosen room seats, said under the field.
    *
    * A room that seats no known number changes nothing: the capacity keeps
-   * its lower bound and has no upper one.
+   * its lower bound and has no upper one. The parameter $room watches
+   * self::ROOM by its name.
    */
-  #[RefinesInput('capacity')]
+  #[RefinesInput(self::CAPACITY)]
   public static function capacityOfRoom(DataDefinitionInterface $capacity, string $room): DataDefinitionInterface {
     $seats = Venues::seats($room);
     if ($seats !== NULL && $capacity instanceof DataDefinition) {
@@ -425,7 +469,7 @@ the resource uses. It edits the same config object. It chooses from
 Its page says what the two forms share and counts both, from the files,
 the way the landing page counts every class: without the namespace, the
 use statements, blank lines and comments. The twin is **94 lines of
-code**; example 2's resource and its storage are **39**. The storage is
+code**; example 2's resource and its storage are **44**. The storage is
 counted with the resource because the twin names its config object
 itself, which the resource leaves to its storage.
 
@@ -588,7 +632,7 @@ of code, counted without blank lines or comments:
 
 | File | What it is | Lines |
 | --- | --- | --- |
-| [`modules/data_surface_examples/src/Resource/RegistrationStep2Resource.php`](src/Resource/RegistrationStep2Resource.php) | the resource: five keys and two refiners, the rooms by the venue and the capacity by the room; the venue refers to a venue entity | 36 |
+| [`modules/data_surface_examples/src/Resource/RegistrationStep2Resource.php`](src/Resource/RegistrationStep2Resource.php) | the resource: five keys and two refiners, the rooms by the venue and the capacity by the room; the venue refers to a venue entity | 41 |
 | [`modules/data_surface_examples/src/Plugin/Validation/Constraint/EventVenueRoomConstraint.php`](src/Plugin/Validation/Constraint/EventVenueRoomConstraint.php) | the room's constraint: a room of a venue the site has, a Choice whose list is the site's | 17 |
 | [`modules/data_surface_examples/src/Plugin/Validation/Constraint/RoomOfEventVenueConstraint.php`](src/Plugin/Validation/Constraint/RoomOfEventVenueConstraint.php) | the constraint the room refiner adds: a room of the chosen venue | 6 |
 | [`modules/data_surface_examples/src/Plugin/Validation/Constraint/EventVenueRoomConstraintValidator.php`](src/Plugin/Validation/Constraint/EventVenueRoomConstraintValidator.php) | their validator: reads the rooms, then holds the value to them as Choice does | 14 |

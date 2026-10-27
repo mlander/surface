@@ -63,6 +63,33 @@ asked for a config schema: the object is the one named.
 
 Each kept or added entry is named in a note as the files are written.
 
+## Key names
+
+Every class the generator writes, a resource or a structure, names each
+of its keys once, as a constant, in declaration order with a one-line
+docblock, above `defineInputs()`. Every call after it names the key by
+the constant, `add(self::SENDER_NAME, ...)`, `narrow(self::SEATS)`,
+`Condition::equals(self::KIND, ...)`, and so does every comment it
+leaves for the author. Why: a key is a string, and an editor can neither
+rename a string nor find its uses; a constant it can
+(why: [decision](decisions.md#a-key-is-named-once-as-a-constant)).
+
+The constant is the key upper-cased with underscores: a camelCase key is
+split at each capital (`maxItems` is `MAX_ITEMS`), each run of other
+characters is one underscore (`a-b` is `A_B`), and a key that starts
+with a digit is prefixed `KEY_` (`2nd` is `KEY_2ND`). Where two keys
+would share a name, or a key would be `CLASS`, which PHP reserves, the
+later key in declaration order takes the first free suffix, `_2`, `_3`:
+`fooBar` and `foo_bar` are `FOO_BAR` and `FOO_BAR_2`, and `class` is
+`CLASS_2`.
+
+A property of a map, `setPropertyDefinition('url', ...)`, keeps its
+string: it is not a key of the class. A method you add later that
+narrows one key by another's value names the key it watches as its
+parameter, `string $country`, which is matched to the key by name: that
+parameter is the one place the name is spelled out, and it has to match
+the constant's value ([Your second resource](second-resource.md)).
+
 The schema entry and the install file are written by the same mapping
 `drush data_surface:config-schema` uses. The generator builds the
 resource before any class of it exists (the answers declared as the
@@ -99,8 +126,16 @@ owner's schema describes it, and the build holds the resource to that
 schema. For `node.settings`:
 
 ```php
+/**
+ * The use administration theme when editing or creating content key.
+ */
+public const USE_ADMIN_THEME = 'use_admin_theme';
+
+/**
+ * {@inheritdoc}
+ */
 public static function defineInputs(BlueprintInterface $inputs): void {
-  $inputs->add('use_admin_theme', 'boolean', t('Use administration theme when editing or creating content'), default: TRUE)
+  $inputs->add(self::USE_ADMIN_THEME, 'boolean', t('Use administration theme when editing or creating content'), default: TRUE)
     ->setRequired(TRUE);
 }
 ```
@@ -129,10 +164,10 @@ call. The class carries a comment above the key instead, naming the
 keyword and the key, so the author sees what to write by hand:
 
 ```php
-// From the schema, not written here: multipleOf on seats, which no
+// From the schema, not written here: multipleOf on self::SEATS, which no
 // constraint here states; the reader keeps it as a JsonSchema constraint.
 // Write a constraint for it.
-$inputs->add('seats', 'integer', t('Seats'))
+$inputs->add(self::SEATS, 'integer', t('Seats'))
   ->addConstraint('Range', ['min' => 1]);
 ```
 
@@ -150,3 +185,5 @@ One generator serves three sources, the first page stays the source of
 truth, a foreign constraint is written as a comment, and a YAML file is
 added to and never replaced
 (why: [decision](decisions.md#the-generator-writes-what-the-first-page-shows)).
+Each key is named once, as a constant
+(why: [decision](decisions.md#a-key-is-named-once-as-a-constant)).

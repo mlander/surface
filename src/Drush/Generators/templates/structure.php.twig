@@ -17,6 +17,10 @@ use {{ use }};
 #[Structure({{ s.id_literal }})]
 final class {{ s.class }} implements StructureInterface {
 
+{% if s.constants %}
+{{ s.constants }}
+
+{% endif %}
   /**
    * {@inheritdoc}
    */

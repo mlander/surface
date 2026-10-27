@@ -797,6 +797,52 @@ generated form asks the question in core's words.
 (`Options\OptionsProvider`, `DataSurfaceOptions::provider()`,
 `OptionsWidget::buildElement()`, `OptionsProviderTest`)
 
+### A key is named once, as a constant
+
+Decided 2026-10-27. A class names each of its keys once, as a constant
+in declaration order with a one-line docblock, `public const VENUE =
+'venue';`, and every later mention is the constant: `add(self::VENUE,
+...)`, `#[RefinesInput(self::ROOM)]`, `narrow(self::ROOM)`,
+`Condition::equals(self::VENUE, ...)`
+([Key names](declaring-a-resource.md#key-names)).
+
+- **The question is the editor's.** A key named as a string in five
+  places is five strings: an editor cannot rename it, and find usages
+  finds nothing. A misspelled key is still refused at build, naming it;
+  the constant moves that to the editor, before anything runs, and makes
+  a rename one refactoring.
+- **What it does not solve.** A refiner's parameter is matched to the
+  key it watches by name, `string $venue`, so the name is spelled there
+  and must match the constant's value; the refiners on the second page
+  and in example 2 each say so in a docblock. The generator writes no
+  refiner. Another module's alter names the owner's keys by
+  string too, or by the owner's constant where it chooses to import the
+  class; a rename in the owner is a breaking change for it either way,
+  which the contract diff reports. Nothing on the wire changes: the
+  constant's value is the key.
+- **Who carries it.** The generator writes it in every mode, for the
+  resource and each structure it writes, with a rule for keys whose
+  names would clash ([Key names](generating.md#key-names)). The first two
+  pages and examples 1 and 2 carry it, since they are what an author
+  copies first and what the generator's output is held to
+  ([The generator writes what the first page shows](#the-generator-writes-what-the-first-page-shows)).
+  Examples 3 to 17 keep their strings: each shows one concept, the
+  constants would add a block to every quoted class for no new idea, and
+  a key named as a string still works the same. It is a convention, not
+  a rule the build checks.
+- **Rejected: passing the definition `add()` returns in place of the
+  key** ([the review](reviews-2026-10-20/creative-generalist.md)), which
+  would need the blueprint to resolve an object to its key by identity
+  in every method that takes a key, and leaves attribute arguments as
+  strings, which PHP requires to be constant expressions. A class
+  constant works in all of them with no change to the API, so
+  `PublicSurfaceTest`'s counts stay where they are.
+
+(`Drush\Generators\Resource\ResourceCode::constantNames()`,
+`ResourceGeneratorTest::testKeysAreNamedOnceAsConstants()`,
+`NewsletterResource`, `StoreResource`, `RegistrationStep1Resource`,
+`RegistrationStep2Resource`)
+
 ## Context
 
 ### A build is not cached across requests

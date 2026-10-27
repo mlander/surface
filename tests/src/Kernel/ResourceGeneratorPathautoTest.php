@@ -60,16 +60,18 @@ class ResourceGeneratorPathautoTest extends ResourceGeneratorTestBase {
     $resource = $this->written('src/Resource/PathautoResource.php', $out);
     $this->assertStringContainsString(<<<'PHP'
   public static function defineInputs(BlueprintInterface $inputs): void {
-    // The schema gives no label to punctuation, verbose, separator, max_length,
-    // max_component_length, transliterate, reduce_ascii, case, ignore_words,
-    // update_action: each is named from its key.
-    $inputs->addList('enabled_entity_types', 'string', t('Enabled entity types'), default: ['user']);
-    // The site holds {"hyphen":1} at punctuation now, which is not a value of
-    // the key as its schema reads: no default is written.
-    $inputs->addList('punctuation', 'integer', t('Punctuation'));
-    $inputs->add('verbose', 'boolean', t('Verbose'), default: FALSE);
-    $inputs->add('separator', 'string', t('Separator'), default: '-');
+    // The schema gives no label to self::PUNCTUATION, self::VERBOSE,
+    // self::SEPARATOR, self::MAX_LENGTH, self::MAX_COMPONENT_LENGTH,
+    // self::TRANSLITERATE, self::REDUCE_ASCII, self::CASE, self::IGNORE_WORDS,
+    // self::UPDATE_ACTION: each is named from its key.
+    $inputs->addList(self::ENABLED_ENTITY_TYPES, 'string', t('Enabled entity types'), default: ['user']);
+    // The site holds {"hyphen":1} at self::PUNCTUATION now, which is not a
+    // value of the key as its schema reads: no default is written.
+    $inputs->addList(self::PUNCTUATION, 'integer', t('Punctuation'));
+    $inputs->add(self::VERBOSE, 'boolean', t('Verbose'), default: FALSE);
+    $inputs->add(self::SEPARATOR, 'string', t('Separator'), default: '-');
 PHP, $resource, 'Defaults from the install file; no key required, the object not being fully validatable.');
+    $this->assertStringContainsString("  public const CASE = 'case';\n", $resource, 'A key named for a PHP keyword other than class is a constant of that name.');
     $storage = $this->written('src/Storage/PathautoStorage.php', $out);
     $this->assertStringContainsString("public const CONFIG = 'pathauto.settings';", $storage);
     $this->assertStringContainsString("    'safe_tokens',\n  ];", $storage, 'Each optional key with a default that refuses null is always held.');
