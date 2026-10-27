@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Drupal\data_surface_resource_test\Alter;
 
 use Drupal\data_surface\Resource\AltersInputsInterface;
-use Drupal\data_surface\Resource\Arrangement;
 use Drupal\data_surface\Resource\Attribute\Alters;
 use Drupal\data_surface\Resource\BlueprintAdditionsInterface;
 use Drupal\data_surface_resource_test\Resource\Studio\StudioResource;
@@ -26,8 +25,8 @@ final class StudioAlter implements AltersInputsInterface {
    * {@inheritdoc}
    */
   public function alterInputs(BlueprintAdditionsInterface $inputs): void {
-    $inputs->describe('name', arrangement: new Arrangement(placeholder: 'Riverside studio', help: 'Shown on the door.'));
-    $inputs->describe('deposit', arrangement: new Arrangement(weight: -1));
+    $inputs->describe('name', placeholder: 'Riverside studio', help: 'Shown on the door.');
+    $inputs->describe('deposit', weight: -1);
     $inputs->add('booking_fee', 'integer', 'Booking fee', default: 0)
       ->addConstraint('Range', ['min' => 0]);
     $inputs->describe('third_party_settings.data_surface_resource_test', label: 'Booking', after: 'deposit');

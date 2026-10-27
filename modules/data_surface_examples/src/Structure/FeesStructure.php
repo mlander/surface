@@ -21,6 +21,7 @@ final class FeesStructure implements StructureInterface {
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('standard', 'float', t('Standard fee'), default: 20.0)
       ->addConstraint('Range', ['min' => 0]);
+
     $inputs->add('concession', 'float', t('Concession fee'), default: 10.0)
       ->addConstraint('Range', ['min' => 0]);
   }

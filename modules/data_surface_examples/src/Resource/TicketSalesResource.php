@@ -36,6 +36,7 @@ final class TicketSalesResource implements ResourceInterface {
     $inputs->addEach('on_sale', 'boolean', from: TicketTypes::class, default: FALSE)
       ->setLabel(t('On sale'))
       ->setDescription(t('Which ticket types can be bought.'));
+
     $inputs->attachEach('limits', TicketLimitStructure::class, from: TicketTypes::class, reads: ['selling' => 'on_sale'])
       ->setLabel(t('Limits'));
   }

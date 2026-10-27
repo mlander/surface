@@ -8,7 +8,6 @@ use Drupal\Core\Entity\ContentEntityInterface;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\data_surface\DefinitionMetadata;
-use Drupal\data_surface\Resource\Arrangement;
 use Drupal\data_surface\Resource\ArrangementGroup;
 use Drupal\data_surface\Resource\Attribute\RefinesInput;
 use Drupal\data_surface\Resource\Attribute\Structure;
@@ -41,53 +40,50 @@ final class DemoBlockStructure implements StructureInterface {
 
   /**
    * {@inheritdoc}
+   *
+   * The entity type defaults to 'user', not 'node': the block host applies
+   * the declared defaults through the pipeline while the plugin is being
+   * constructed, so a default its own constraint refuses makes the block
+   * impossible to construct, and 'node' is refused on a site without the
+   * node module.
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
+    $source = ArrangementGroup::fieldset('source', t('What to feature'));
+
     $headline = $inputs->add('headline', 'string', t('Headline'), default: 'Featured content')
       ->setDescription(t('Shown above the featured content.'))
       ->setRequired(TRUE)
       ->addConstraint('Length', ['max' => 50]);
     DefinitionMetadata::setExamples($headline, ['Quarterly report']);
-    // How the form is laid out, declared once on the keys, so the block
-    // form, the demo's own form and any renderer of the contract draw it
-    // alike: a placeholder (an example is no placeholder), the three keys
-    // that pick what to feature in one fieldset, and the count last.
-    DefinitionMetadata::setArrangement($headline, new Arrangement(placeholder: t('For example, Quarterly report')));
-    $source = new Arrangement(group: ArrangementGroup::fieldset('source', t('What to feature')));
+    $inputs->describe('headline', placeholder: t('For example, Quarterly report'));
 
-    // 'user', not 'node'. The block host applies the declared defaults
-    // through the pipeline while the plugin is being constructed, so a
-    // default its own constraint refuses makes the block impossible to
-    // construct — and 'node' is refused on a site without the node
-    // module.
-    $entity_type = $inputs->add('entity_type', 'string', t('Entity type'), default: 'user')
+    $inputs->add('entity_type', 'string', t('Entity type'), default: 'user')
       ->setDescription(t('The type of content to feature.'))
       ->setRequired(TRUE)
       ->addConstraint('PluginExists', [
         'manager' => 'entity_type.manager',
         'interface' => ContentEntityInterface::class,
       ]);
-    DefinitionMetadata::setArrangement($entity_type, $source);
+    $inputs->describe('entity_type', group: $source);
 
-    $bundle = $inputs->add('bundle', 'string', t('Bundle'))
+    $inputs->add('bundle', 'string', t('Bundle'))
       ->setDescription(t('Choose an entity type to see its bundles.'));
-    DefinitionMetadata::setArrangement($bundle, $source);
+    $inputs->describe('bundle', group: $source);
 
-    $field = $inputs->add('field', 'string', t('Highlight field'))
+    $inputs->add('field', 'string', t('Highlight field'))
       ->setDescription(t('Choose a bundle to pick from its fields.'));
-    DefinitionMetadata::setArrangement($field, $source);
+    $inputs->describe('field', group: $source);
 
-    $limit = $inputs->add('limit', 'integer', t('Number of items'), default: 10)
+    $inputs->add('limit', 'integer', t('Number of items'), default: 10)
       ->setDescription(t('How many items to feature.'))
       ->setRequired(TRUE)
       ->addConstraint('Range', ['min' => 1, 'max' => 50]);
-    DefinitionMetadata::setArrangement($limit, new Arrangement(weight: 10, suffix: t('items')));
+    $inputs->describe('limit', weight: 10, suffix: t('items'));
 
-    // How the items are laid out, and what that layout needs: variants the
-    // presentation chooses between, one per #[Variant] declared for it.
     $inputs->add('presentation', 'string', t('Presentation'), default: 'list')
       ->setDescription(t('How the items are laid out.'))
       ->setRequired(TRUE);
+
     $inputs->attachVariants('presentation_settings', by: 'presentation')
       ->setLabel(t('Presentation settings'))
       ->setDescription(t('What the chosen presentation needs.'));

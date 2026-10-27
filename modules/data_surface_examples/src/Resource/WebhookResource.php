@@ -33,6 +33,7 @@ final class WebhookResource implements ResourceInterface {
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('endpoint', 'uri', t('Endpoint'), default: 'https://hooks.example.com/sales')
       ->setRequired(TRUE);
+
     $api_key = $inputs->add('api_key', 'string', t('API key'))
       ->setDescription(t('The key each post is signed with, pasted here.'));
     DefinitionMetadata::setSecret($api_key);

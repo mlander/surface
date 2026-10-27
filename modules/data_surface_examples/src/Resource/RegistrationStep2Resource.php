@@ -35,29 +35,10 @@ use Drupal\data_surface_examples\Venues;
 )]
 final class RegistrationStep2Resource implements ResourceInterface {
 
-  /**
-   * The event title key.
-   */
   public const TITLE = 'title';
-
-  /**
-   * The registration open key.
-   */
   public const OPEN = 'open';
-
-  /**
-   * The venue key.
-   */
   public const VENUE = 'venue';
-
-  /**
-   * The room key.
-   */
   public const ROOM = 'room';
-
-  /**
-   * The capacity key.
-   */
   public const CAPACITY = 'capacity';
 
   /**
@@ -66,12 +47,16 @@ final class RegistrationStep2Resource implements ResourceInterface {
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add(self::TITLE, 'string', t('Event title'))
       ->setRequired(TRUE);
+
     $inputs->add(self::OPEN, 'boolean', t('Registration open'), default: TRUE);
+
     $inputs->add(self::VENUE, 'entity:event_venue', t('Venue'))
       ->setRequired(TRUE);
+
     $inputs->add(self::ROOM, 'string', t('Room'))
       ->setRequired(TRUE)
       ->addConstraint('EventVenueRoom');
+
     $inputs->add(self::CAPACITY, 'integer', t('Capacity'), default: 50)
       ->addConstraint('Range', ['min' => 1]);
   }

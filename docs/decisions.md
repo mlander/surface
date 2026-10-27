@@ -802,9 +802,9 @@ generated form asks the question in core's words.
 ### A key is named once, as a constant
 
 Decided 2026-10-27. A class names each of its keys once, as a constant
-in declaration order with a one-line docblock, `public const VENUE =
-'venue';`, and every later mention is the constant: `add(self::VENUE,
-...)`, `#[RefinesInput(self::ROOM)]`, `narrow(self::ROOM)`,
+in declaration order, `public const VENUE = 'venue';`, and every later
+mention is the constant: `add(self::VENUE, ...)`,
+`#[RefinesInput(self::ROOM)]`, `narrow(self::ROOM)`,
 `Condition::equals(self::VENUE, ...)`
 ([Key names](declaring-a-resource.md#key-names)).
 
@@ -832,6 +832,11 @@ in declaration order with a one-line docblock, `public const VENUE =
   constants would add a block to every quoted class for no new idea, and
   a key named as a string still works the same. It is a convention, not
   a rule the build checks.
+- **The constant carries no comment** (*amended 2026-10-27*). The
+  constants are written one per line in one block, with no docblock and
+  no blank line between them: the label on the key's `add()` line is its
+  comment, and a block of bare constants reads as the method's table of
+  contents.
 - **Rejected: passing the definition `add()` returns in place of the
   key** ([the review](reviews-2026-10-20/creative-generalist.md)), which
   would need the blueprint to resolve an object to its key by identity
@@ -4730,6 +4735,18 @@ page never saw the content type's groups, and a block had none to give.
   cosmetic layer. A group of several keys, or of one key that is not a
   map, draws as before, so no shipped form's markup moved. The React app
   still draws the map's fieldset inside the group's details.
+- **One spelling, `describe()`** (*amended 2026-10-27*, from [the
+  adopter log of 2026-10-26](adopters-2026-10-26.md), where the owner's
+  `DefinitionMetadata::setArrangement($definition, new Arrangement(...))`
+  beside each key read worse than the Form API form it replaced). An
+  owner and an alter arrange a key the same way, `$inputs->describe('key',
+  group: ..., weight: ..., placeholder: ..., prefix: ..., suffix: ...,
+  help: ...)`, after the key is declared; the six arguments are
+  `Arrangement`'s, and the `arrangement:` argument is gone. `Arrangement`
+  and `DefinitionMetadata::setArrangement()` stay as the stored form the
+  engine reads: `describe()` builds one and lays it over what the key
+  has, so the alter's rule above is unchanged, and what the contract
+  states (`Arrangement::toArray()`) did not move.
 - **The cosmetic layer keeps what is truly one form's**: a borrowed
   element (the content type demo's vertical tabs, which gather the
   groups its resource declares, by their `@group.<id>` keys), markup,

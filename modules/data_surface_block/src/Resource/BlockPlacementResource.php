@@ -98,6 +98,7 @@ final class BlockPlacementResource implements ResourceInterface {
         'match' => FALSE,
         'message' => t('The title may not span lines or hold control characters.'),
       ]);
+
     $inputs->add('id', 'string', t('Machine name'))
       ->setDescription(t('A unique name for the placed block: lowercase letters, numbers, underscores and periods, not starting with a period.'))
       ->setRequired(TRUE)
@@ -106,29 +107,37 @@ final class BlockPlacementResource implements ResourceInterface {
         'pattern' => '/^(?!\.)[a-z0-9_.]+$/D',
         'message' => t('The machine name may hold only lowercase letters, numbers, underscores and periods, and may not start with a period.'),
       ]);
+
     $inputs->add('label_display', 'boolean', t('Display title'), default: TRUE)
       ->setDescription(t('Whether the title is shown above the block.'));
+
     $inputs->add('plugin', 'string', t('Block'))
       ->setDescription(t('What the block shows: a block plugin the block layout offers. A block that reads a context, such as the node of the page, is not offered yet.'))
       ->setRequired(TRUE);
+
     $inputs->attachVariants('settings', by: 'plugin', from: BlockPluginStructures::class)
       ->setLabel(t('Settings'))
       ->setDescription(t('The settings of the block chosen, as its plugin declares them.'));
+
     $inputs->add('theme', 'string', t('Theme'))
       ->setDescription(t('The theme the block is placed in.'))
       ->setRequired(TRUE)
       ->addConstraint('ExtensionExists', ['type' => 'theme']);
+
     // A region of any installed theme, until the theme narrows it to its
     // own: every door offers a list before a theme is chosen.
     $inputs->add('region', 'string', t('Region'))
       ->setDescription(t('The region of the theme the block is shown in.'))
       ->setRequired(TRUE)
       ->addConstraint('DataSurfaceAnyThemeRegion');
+
     $inputs->add('weight', 'integer', t('Weight'), default: 0)
       ->setDescription(t('The order of the block in its region: lighter blocks are shown first.'))
       ->addConstraint('Range', ['min' => -2147483648, 'max' => 2147483647]);
+
     $inputs->add('status', 'boolean', t('Enabled'), default: TRUE)
       ->setDescription(t('Whether the block is shown at all.'));
+
     $inputs->attachList('visibility', VisibilityConditionStructure::class)
       ->setLabel(t('Visibility'))
       ->setDescription(t('The conditions the block is shown under, each at most once; with none, it is shown on every page.'));

@@ -185,12 +185,14 @@ class ArrangementTest extends DataSurfaceKernelTestBase {
     $builder = new DataSurfaceBuilder();
     $owner = new ResourceBlueprint($builder, $typed_data);
     $title = $owner->add('title', 'string', 'Title');
-    DefinitionMetadata::setArrangement($title, new Arrangement(placeholder: 'A short title', help: 'Shown in lists.'));
+    // The owner arranges its own key, found by its name once declared.
+    $owner->describe('title', placeholder: 'A short title', help: 'Shown in lists.');
+    $this->assertSame(['placeholder' => 'A short title', 'help' => 'Shown in lists.'], DefinitionMetadata::arrangementOf($title)->toArray());
     $alter = new ResourceBlueprintAdditions($builder, $typed_data, 'first_module');
     $alter->add('badge', 'string', 'Badge');
 
     // Reworded and placed: allowed, over what the owner said.
-    $alter->describe('title', arrangement: new Arrangement(group: ArrangementGroup::fieldset('basics', 'Basics'), help: 'Shown in every list.'));
+    $alter->describe('title', group: ArrangementGroup::fieldset('basics', 'Basics'), help: 'Shown in every list.');
     $this->assertSame([
       'group' => ['id' => 'basics', 'label' => 'Basics', 'as' => 'fieldset'],
       'placeholder' => 'A short title',
@@ -199,7 +201,7 @@ class ArrangementTest extends DataSurfaceKernelTestBase {
 
     // Emptied: refused, naming what it would take away.
     try {
-      $alter->describe('title', arrangement: new Arrangement(placeholder: '', help: ''));
+      $alter->describe('title', placeholder: '', help: '');
       $this->fail('An alter that empties what the owner arranged is refused.');
     }
     catch (\LogicException $e) {
@@ -208,15 +210,15 @@ class ArrangementTest extends DataSurfaceKernelTestBase {
     $this->assertSame('A short title', (string) DefinitionMetadata::arrangementOf($title)->placeholder, 'Nothing was taken.');
 
     // Its own key is its own to arrange as it likes.
-    $alter->describe('third_party_settings.first_module.badge', arrangement: new Arrangement(placeholder: 'Gold'));
-    $alter->describe('third_party_settings.first_module.badge', arrangement: new Arrangement(placeholder: ''));
+    $alter->describe('third_party_settings.first_module.badge', placeholder: 'Gold');
+    $alter->describe('third_party_settings.first_module.badge', placeholder: '');
 
     // Outputs are never drawn.
     $outputs = new ResourceBlueprint($builder, $typed_data, outputs: TRUE);
     $outputs->add('shown', 'string', 'Shown');
     $this->expectException(\LogicException::class);
     $this->expectExceptionMessage('outputs are never drawn, so they have nothing to arrange');
-    $outputs->describe('shown', arrangement: new Arrangement(weight: 1));
+    $outputs->describe('shown', weight: 1);
   }
 
   /**
@@ -255,8 +257,10 @@ class ArrangementTest extends DataSurfaceKernelTestBase {
     $typed_data = $this->container->get('typed_data_manager');
     $builder = new DataSurfaceBuilder();
     $owner = new ResourceBlueprint($builder, $typed_data);
-    DefinitionMetadata::setArrangement($owner->add('opens', 'string', 'Opens'), new Arrangement(group: ArrangementGroup::fieldset('hours', 'Hours')));
-    DefinitionMetadata::setArrangement($owner->add('closes', 'string', 'Closes'), new Arrangement(group: ArrangementGroup::details('hours', 'Hours')));
+    $owner->add('opens', 'string', 'Opens');
+    $owner->describe('opens', group: ArrangementGroup::fieldset('hours', 'Hours'));
+    $owner->add('closes', 'string', 'Closes');
+    $owner->describe('closes', group: ArrangementGroup::details('hours', 'Hours'));
     $this->expectException(\LogicException::class);
     $this->expectExceptionMessage('The keys opens and closes name the group "hours" and draw it differently');
     $builder->seal();

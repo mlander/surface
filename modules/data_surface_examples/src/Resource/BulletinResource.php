@@ -38,17 +38,20 @@ final class BulletinResource implements ResourceInterface {
       ->addConstraint('LabeledChoice', [
         'choices' => ['weekly' => t('Weekly'), 'monthly' => t('Monthly')],
       ]);
+
     $inputs->add('send_day', 'string', t('Send day'), default: 'monday')
       ->setRequired(TRUE)
       ->addConstraint('LabeledChoice', [
         'choices' => ['monday' => t('Monday'), 'wednesday' => t('Wednesday'), 'friday' => t('Friday')],
       ]);
+
     $inputs->add('items', 'integer', t('Items per issue'), default: 5)
       ->addConstraint('Range', ['min' => 1, 'max' => 20]);
 
     $inputs->narrow('send_day')
       ->when(Condition::equals('frequency', 'monthly'))
       ->doesNotApply();
+
     $inputs->narrow('items')
       ->when(Condition::equals('frequency', 'weekly'))
       ->constrain('Range', ['max' => 5])

@@ -17,7 +17,7 @@ use Drupal\data_surface\DataSurfaceBuilderInterface;
 use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Port;
 use Drupal\data_surface\Reference\EntityReferenceStructure;
-use Drupal\data_surface\Resource\Arrangement;
+use Drupal\data_surface\Resource\ArrangementGroup;
 use Drupal\data_surface\Resource\BlueprintInterface;
 use Drupal\data_surface\Resource\DefinesInputsInterface;
 use Drupal\data_surface\Resource\Compute;
@@ -709,11 +709,11 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
    *
    * A structure being mixed in rewords its own members only.
    */
-  public function describe(string $key, string|\Stringable|null $label = NULL, string|\Stringable|null $description = NULL, ?string $after = NULL, ?Arrangement $arrangement = NULL): static {
+  public function describe(string $key, string|\Stringable|null $label = NULL, string|\Stringable|null $description = NULL, ?string $after = NULL, ?ArrangementGroup $group = NULL, ?int $weight = NULL, string|\Stringable|null $placeholder = NULL, string|\Stringable|null $prefix = NULL, string|\Stringable|null $suffix = NULL, string|\Stringable|null $help = NULL): static {
     if ($this->into !== NULL && !in_array($key, $this->keys, TRUE)) {
       throw new \LogicException(sprintf('%s, mixed into %s, rewords "%s", which it does not declare: a mixed-in structure names its own members.', $this->name($this->owner), $this->name($this->root()->owner), $key));
     }
-    return parent::describe($key, $label, $description, $after, $arrangement);
+    return parent::describe($key, $label, $description, $after, $group, $weight, $placeholder, $prefix, $suffix, $help);
   }
 
   /**

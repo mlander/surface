@@ -188,7 +188,7 @@ through one class that delegates to core's own method once one exists
 (`src/DefinitionMetadata.php`). The emitter writes `default` and
 `examples` from them. A form draws no example as a placeholder: an
 empty field showing a value reads as filled, so a placeholder is the
-key's declared arrangement (`DefinitionMetadata::setArrangement()`).
+key's declared arrangement (`describe($key, placeholder: ...)`).
 
 **The core change.** `setExamples()` and `getExamples()` on
 `DataDefinition`, and a default value as plain metadata: nothing

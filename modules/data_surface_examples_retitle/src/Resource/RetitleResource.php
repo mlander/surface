@@ -42,6 +42,7 @@ final class RetitleResource implements ResourceInterface, DefinesOutputsInterfac
       ->setLabel(t('Nodes'))
       ->setDescription(t('Each node to retitle, one to fifty.'))
       ->setRequired(TRUE);
+
     $inputs->add('style', 'string', t('Style'), default: TitleRewriter::TITLE)
       ->setDescription(t('How the title of a node sent no new title is rewritten.'))
       ->addConstraint('LabeledChoice', ['choices' => TitleRewriter::styles()]);

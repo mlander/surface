@@ -29,12 +29,14 @@ final class DemoBlockStructure implements StructureInterface {
       ->setRequired(TRUE)
       ->addConstraint('Length', ['max' => 50]);
     DefinitionMetadata::setExamples($headline, ['Quarterly report']);
+
     $inputs->add('entity_type', 'string', t('Entity type'), default: 'user')
       ->setRequired(TRUE)
       ->addConstraint('PluginExists', [
         'manager' => 'entity_type.manager',
         'interface' => ContentEntityInterface::class,
       ]);
+
     $inputs->add('bundle', 'string', t('Bundle'));
     // ...
   }
@@ -82,6 +84,14 @@ declares; the test module's `TestBlockStructure`, a structure, uses two.
   values. Anything that reads another key's value is a rule declared
   with `narrow()`, which is data the build reads, or a `#[RefinesInput]`
   method.
+- **One key, one group of lines.** A key's `add()` (or `attach()`,
+  `narrow()` and the rest) with its chained setters, and a `describe()`
+  of that key right after it, is one group, and one blank line separates
+  each group from the next. A value several keys use (a help link, an
+  arrangement group) is computed first, at the top of the method. In a
+  method of many keys, a one-line `//` comment names the topic where it
+  turns (`// Limits.`); no comment names a single key. The key constants
+  above the method are one line each, in one block, with no docblock.
 - **`add()` takes name, type and label** and returns the core
   definition, so the rest is plain core API: `setRequired()`,
   `setDescription()`, `addConstraint()`, `setSetting()`. The label is
@@ -230,6 +240,7 @@ description that links to a help page only while the help module is on:
 
 ```php
 $inputs->addCacheableDependency((new CacheableMetadata())->addCacheTags(['config:core.extension']));
+
 $description = t('Maximum length of aliases to generate.');
 if (\Drupal::moduleHandler()->moduleExists('help')) {
   $url = Url::fromRoute('help.page', ['name' => 'pathauto'])->toString(TRUE);
@@ -412,14 +423,14 @@ kinds that share an id apart.
 A key is a string wherever it is named, `add('venue', ...)`,
 `narrow('room')`, `Condition::equals('venue', ...)`, and an editor can
 neither rename a string nor find its uses. So the class names each key
-once, as a constant, in declaration order with a one-line docblock, and
-every later mention is the constant:
+once, as a constant, in declaration order, one line each in one block
+with no docblock (the label on the `add()` line says what the key is),
+and every later mention is the constant:
 
 ```php
-/**
- * The room key.
- */
+public const VENUE = 'venue';
 public const ROOM = 'room';
+public const CAPACITY = 'capacity';
 
 // ...
 $inputs->add(self::ROOM, 'string', t('Room'));

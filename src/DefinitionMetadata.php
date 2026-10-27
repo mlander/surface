@@ -820,8 +820,9 @@ final class DefinitionMetadata {
   /**
    * Declares how a key is arranged where it is drawn.
    *
-   * Replaces whatever arrangement the key had; an alter lays its own over
-   * the owner's with describe(..., arrangement:) instead. Read by the
+   * Replaces whatever arrangement the key had. The engine's seam: an
+   * owner or an alter arranges a key with the blueprint's describe(),
+   * which lays what it is given over what the key has. Read by the
    * generated form for every host, and stated by the served contract as
    * `x-surface.arrangement` when a renderer asks for widget hints. Nothing
    * in it changes what is accepted.

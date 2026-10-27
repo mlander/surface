@@ -5,8 +5,6 @@ declare(strict_types=1);
 namespace Drupal\data_surface_schema_test\Resource;
 
 use Drupal\Core\StringTranslation\TranslatableMarkup;
-use Drupal\data_surface\DefinitionMetadata;
-use Drupal\data_surface\Resource\Arrangement;
 use Drupal\data_surface\Resource\ArrangementGroup;
 use Drupal\data_surface\Resource\Attribute\Operation;
 use Drupal\data_surface\Resource\Attribute\Resource;
@@ -36,11 +34,9 @@ final class AliasSettingsResource implements ResourceInterface {
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->addEach('types', 'boolean', from: AliasTypes::class, default: FALSE)
       ->setLabel(t('Types with aliases'));
-    $marks = $inputs->addEach('marks', MarkAction::class, from: AliasMarks::class)
+    $inputs->addEach('marks', MarkAction::class, from: AliasMarks::class)
       ->setLabel(t('Punctuation'));
-    DefinitionMetadata::setArrangement($marks, new Arrangement(
-      group: ArrangementGroup::details('punctuation', t('Punctuation'), collapsed: TRUE),
-    ));
+    $inputs->describe('marks', group: ArrangementGroup::details('punctuation', t('Punctuation'), collapsed: TRUE));
   }
 
 }

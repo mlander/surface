@@ -144,10 +144,14 @@ final class ContentEntityResources implements ResourceDeriverInterface, KnowsDer
    */
   public function defineInputs(BlueprintInterface $inputs, string $entity_type_id, string $bundle, array $overridden = []): void {
     $entity_type = $this->entityTypeManager->getDefinition($entity_type_id);
+
     $inputs->add('entity_type', 'string', $this->t('Entity type'))->setRequired(TRUE);
+
     $inputs->add('bundle', 'string', $entity_type->getBundleLabel() ?: $this->t('Bundle'))->setRequired(TRUE);
+
     $inputs->add('id', $this->derivation->idType($entity_type_id), $this->t('ID'))
       ->setDescription($this->t('Given by storage when the @entity_type is saved.', ['@entity_type' => $entity_type->getSingularLabel()]));
+
     foreach ($this->derivation->fields($entity_type_id, $bundle, $overridden)['fields'] as $name => $field) {
       $child = $inputs->attach($name, 'field.item:' . $entity_type_id . '.' . $bundle . '.' . $name)
         ->setLabel($field->getLabel());
@@ -155,6 +159,7 @@ final class ContentEntityResources implements ResourceDeriverInterface, KnowsDer
         $child->setDescription($field->getDescription());
       }
     }
+
     $inputs->addCacheableDependency((new CacheableMetadata())->addCacheTags($this->derivation->bundleCacheTags($entity_type_id, $bundle)));
   }
 

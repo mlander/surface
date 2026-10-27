@@ -38,20 +38,25 @@ final class SponsorshipResource implements ResourceInterface {
     $inputs->add('venue', 'entity:event_venue', t('Venue'), default: 'riverside')
       ->setDescription(t("Where the sponsor's stand is."))
       ->setRequired(TRUE);
+
     $inputs->add('contact', 'entity:user', t('Contact'))
       ->setDescription(t('Who answers for the sponsor.'));
+
     $inputs->add('page', 'entity:node:article', t('Announcement'))
       ->setDescription(t('The article that announces the sponsor.'));
+
     // Of any type: an entity type, then an id of it.
     $inputs->add('thing', 'entity', t('Featured beside'))
       ->setDescription(t('Any content the sponsor is featured beside.'))
       ->addConstraint('DataSurfaceReferenceableType', ['interface' => ContentEntityInterface::class]);
+
     $inputs->add('setting', 'entity', t('Linked to'))
       ->setDescription(t('A venue or a role the sponsorship is linked to.'))
       ->addConstraint('DataSurfaceReferenceableType', [
         'interface' => ConfigEntityInterface::class,
         'targets' => ['event_venue' => [], 'user_role' => [], 'node' => []],
       ]);
+
     $inputs->add('credit', 'entity', t('Credited on'))
       ->setDescription(t('An article or a user the sponsor is credited on.'))
       ->addConstraint('DataSurfaceReferenceableType', [

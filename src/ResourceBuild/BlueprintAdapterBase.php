@@ -14,6 +14,7 @@ use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Reference\References;
 use Drupal\data_surface\Refinement\Rule;
 use Drupal\data_surface\Resource\Arrangement;
+use Drupal\data_surface\Resource\ArrangementGroup;
 use Drupal\data_surface\Resource\BlueprintAdditionsInterface;
 use Drupal\data_surface\Resource\DefinesInputsInterface;
 
@@ -456,7 +457,7 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
   /**
    * {@inheritdoc}
    */
-  public function describe(string $key, string|\Stringable|null $label = NULL, string|\Stringable|null $description = NULL, ?string $after = NULL, ?Arrangement $arrangement = NULL): static {
+  public function describe(string $key, string|\Stringable|null $label = NULL, string|\Stringable|null $description = NULL, ?string $after = NULL, ?ArrangementGroup $group = NULL, ?int $weight = NULL, string|\Stringable|null $placeholder = NULL, string|\Stringable|null $prefix = NULL, string|\Stringable|null $suffix = NULL, string|\Stringable|null $help = NULL): static {
     $definition = $this->find($key);
     if ($definition === NULL) {
       throw new \LogicException(sprintf(
@@ -481,6 +482,7 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
     if ($after !== NULL) {
       DefinitionMetadata::setPlacedAfter($definition, $after);
     }
+    $arrangement = static::arrangement($group, $weight, $placeholder, $prefix, $suffix, $help);
     if ($arrangement !== NULL) {
       if ($this->outputs) {
         throw new \LogicException(sprintf('describe() was asked to arrange the output "%s": outputs are never drawn, so they have nothing to arrange.', $key));
@@ -489,6 +491,32 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
       DefinitionMetadata::setArrangement($definition, $arrangement->over(DefinitionMetadata::arrangementOf($definition)));
     }
     return $this;
+  }
+
+  /**
+   * Builds the arrangement describe() was given, or NULL for none.
+   *
+   * @param \Drupal\data_surface\Resource\ArrangementGroup|null $group
+   *   The group the key is drawn in.
+   * @param int|null $weight
+   *   Its weight among its frame's keys.
+   * @param string|\Stringable|null $placeholder
+   *   What an empty input shows.
+   * @param string|\Stringable|null $prefix
+   *   A text drawn before the input.
+   * @param string|\Stringable|null $suffix
+   *   A text drawn after the input.
+   * @param string|\Stringable|null $help
+   *   A help text drawn after the key's description.
+   *
+   * @return \Drupal\data_surface\Resource\Arrangement|null
+   *   The arrangement, or NULL when all six are NULL.
+   */
+  protected static function arrangement(?ArrangementGroup $group, ?int $weight, string|\Stringable|null $placeholder, string|\Stringable|null $prefix, string|\Stringable|null $suffix, string|\Stringable|null $help): ?Arrangement {
+    if ($group === NULL && $weight === NULL && $placeholder === NULL && $prefix === NULL && $suffix === NULL && $help === NULL) {
+      return NULL;
+    }
+    return new Arrangement($group, $weight, $placeholder, $prefix, $suffix, $help);
   }
 
   /**

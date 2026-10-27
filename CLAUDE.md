@@ -351,7 +351,9 @@ Attached structures are `attach()` (a fixed child, by class) and
 `attachVariants()` (variants a sibling key chooses between, always
 open: every `#[Variant]` at the key is one, and the parent names none).
 Both return the map at the key, which the owner labels with the core
-setters; `describe()` is for an alter rewording a key it does not own.
+setters; `describe()` rewords a key for an alter that does not own it,
+and arranges a key (group, weight, placeholder, prefix, suffix, help)
+for its owner or an alter, after the key is declared.
 A child may be a resource with storage of its own, an attached resource
 (the field's storage, `FieldStorageResource`). A provider named by
 `attachVariants(from:)` lists variants for the values no variant class
@@ -455,7 +457,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 The full lane's phpunit line reads, as of this writing:
 
 ```
-phpunit: Tests: 1662, Assertions: 38351, Errors: 0, Failures: 0, Skipped: 3. Classes: 231 of 231, 8 at a time, browser classes 4.
+phpunit: Tests: 1663, Assertions: 38372, Errors: 0, Failures: 0, Skipped: 3. Classes: 231 of 231, 8 at a time, browser classes 4.
 ```
 
 the same counts a plain phpunit run of the tree gives. The skipped
@@ -651,6 +653,12 @@ so the rule is this sentence. `npm test` is not part of
   call is not allowed.
 - No closures anywhere a form array or a data surface carries: both are
   serialized. Use a service, a callable string, or a class.
+- House style for `defineInputs()`, `defineOutputs()` and a shape's
+  `define()`: one blank line between key groups (a key's add, its chained
+  setters and its `describe()`), shared helpers computed at the top, a
+  one-line `//` topic comment only where a long method turns, key
+  constants one line each with no docblock
+  (`docs/declaring-a-resource.md#the-class`); the generator writes it.
 - Iteration order is load-bearing: the definition map is in declaration
   order, and `FieldToolsComparisonTest`'s drift assertion is the tripwire.
 - `modules/data_surface_tool/COMPARISON.md` and

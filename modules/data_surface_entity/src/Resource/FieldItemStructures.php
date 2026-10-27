@@ -152,6 +152,7 @@ final class FieldItemStructures implements ResourceDeriverInterface, KnowsDeriva
     // leaves what was built from this one be.
     // Decision: see docs/decisions.md#what-is-paid-once-and-what-per-request.
     $inputs->addCacheableDependency((new CacheableMetadata())->addCacheTags($this->derivation->fieldCacheTags($field, $entity_type_id, $bundle)));
+
     if ($override !== NULL) {
       $override::defineItem($inputs, $field);
       return;

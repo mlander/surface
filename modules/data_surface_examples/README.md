@@ -198,19 +198,8 @@ only when its context needs more.
 )]
 final class RegistrationStep1Resource implements ResourceInterface {
 
-  /**
-   * The event title key.
-   */
   public const TITLE = 'title';
-
-  /**
-   * The capacity key.
-   */
   public const CAPACITY = 'capacity';
-
-  /**
-   * The registration open key.
-   */
   public const OPEN = 'open';
 
   /**
@@ -219,8 +208,10 @@ final class RegistrationStep1Resource implements ResourceInterface {
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add(self::TITLE, 'string', t('Event title'))
       ->setRequired(TRUE);
+
     $inputs->add(self::CAPACITY, 'integer', t('Capacity'), default: 50)
       ->addConstraint('Range', ['min' => 1, 'max' => 1000]);
+
     $inputs->add(self::OPEN, 'boolean', t('Registration open'), default: TRUE);
   }
 
@@ -327,29 +318,10 @@ declared after the room it depends on.
 )]
 final class RegistrationStep2Resource implements ResourceInterface {
 
-  /**
-   * The event title key.
-   */
   public const TITLE = 'title';
-
-  /**
-   * The registration open key.
-   */
   public const OPEN = 'open';
-
-  /**
-   * The venue key.
-   */
   public const VENUE = 'venue';
-
-  /**
-   * The room key.
-   */
   public const ROOM = 'room';
-
-  /**
-   * The capacity key.
-   */
   public const CAPACITY = 'capacity';
 
   /**
@@ -358,12 +330,16 @@ final class RegistrationStep2Resource implements ResourceInterface {
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add(self::TITLE, 'string', t('Event title'))
       ->setRequired(TRUE);
+
     $inputs->add(self::OPEN, 'boolean', t('Registration open'), default: TRUE);
+
     $inputs->add(self::VENUE, 'entity:event_venue', t('Venue'))
       ->setRequired(TRUE);
+
     $inputs->add(self::ROOM, 'string', t('Room'))
       ->setRequired(TRUE)
       ->addConstraint('EventVenueRoom');
+
     $inputs->add(self::CAPACITY, 'integer', t('Capacity'), default: 50)
       ->addConstraint('Range', ['min' => 1]);
   }
@@ -673,19 +649,26 @@ final class RegistrationStep3Resource implements ResourceInterface {
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('title', 'string', t('Event title'))
       ->setRequired(TRUE);
+
     $inputs->add('open', 'boolean', t('Registration open'), default: TRUE);
+
     $inputs->add('venue', 'string', t('Venue'))
       ->setRequired(TRUE)
       ->addConstraint('LabeledChoice', ['choices' => Venues::VENUES]);
+
     $inputs->add('room', 'string', t('Room'))
       ->setRequired(TRUE)
       ->addConstraint('LabeledChoice', ['choices' => Venues::rooms()]);
+
     $inputs->add('capacity', 'integer', t('Capacity'), default: 50)
       ->addConstraint('Range', ['min' => 1]);
+
     $inputs->add('pricing', 'string', t('Pricing'), default: 'free')
       ->setRequired(TRUE);
+
     $inputs->attachVariants('ticket', by: 'pricing')
       ->setLabel(t('Ticket'));
+
     $inputs->attach('contact', ContactStructure::class)
       ->setLabel(t('Contact'));
   }
@@ -756,6 +739,7 @@ final class PaidTicketStructure implements StructureInterface {
     $inputs->add('price', 'float', t('Price'))
       ->setRequired(TRUE)
       ->addConstraint('Range', ['min' => 0.01]);
+
     $inputs->add('currency', 'string', t('Currency'), default: 'EUR')
       ->setRequired(TRUE)
       ->addConstraint('Choice', ['choices' => ['EUR', 'GBP', 'USD']]);
@@ -778,6 +762,7 @@ final class ContactStructure implements StructureInterface {
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('email', 'email', t('Email'))
       ->setRequired(TRUE);
+
     $inputs->add('phone', 'string', t('Phone'));
   }
 
@@ -894,7 +879,9 @@ final class ComplianceStructure implements StructureInterface {
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->reads('capacity', 'integer', required: TRUE);
+
     $inputs->add('license', License::class, t('Event license'));
+
     $inputs->add('stewards', 'integer', t('Stewards'), default: 1)->setRequired(TRUE);
   }
 
@@ -1281,17 +1268,20 @@ final class BulletinResource implements ResourceInterface {
       ->addConstraint('LabeledChoice', [
         'choices' => ['weekly' => t('Weekly'), 'monthly' => t('Monthly')],
       ]);
+
     $inputs->add('send_day', 'string', t('Send day'), default: 'monday')
       ->setRequired(TRUE)
       ->addConstraint('LabeledChoice', [
         'choices' => ['monday' => t('Monday'), 'wednesday' => t('Wednesday'), 'friday' => t('Friday')],
       ]);
+
     $inputs->add('items', 'integer', t('Items per issue'), default: 5)
       ->addConstraint('Range', ['min' => 1, 'max' => 20]);
 
     $inputs->narrow('send_day')
       ->when(Condition::equals('frequency', 'monthly'))
       ->doesNotApply();
+
     $inputs->narrow('items')
       ->when(Condition::equals('frequency', 'weekly'))
       ->constrain('Range', ['max' => 5])
@@ -1373,10 +1363,14 @@ final class PersonStructure implements StructureInterface {
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->reads('listed', 'boolean');
+
     $inputs->add('name', 'string', t('Name'))
       ->setRequired(TRUE);
+
     $inputs->add('email', 'email', t('Email'));
+
     $inputs->add('phone', PhoneNumber::class, t('Phone'));
+
     $inputs->narrow('email')
       ->when(Condition::equals('listed', TRUE))
       ->require()
@@ -1431,7 +1425,9 @@ final class ReviewStructure implements StructureInterface {
         'pattern' => '/^\d{4}-\d{2}-\d{2}$/D',
         'message' => t('Write the date as YYYY-MM-DD, such as 2026-10-19.'),
       ]);
+
     $inputs->add('reviewed_by', 'string', t('Reviewed by'));
+
     $inputs->narrow('reviewed_by')
       ->when(Condition::present('reviewed_on'))
       ->require()
@@ -1457,8 +1453,10 @@ final class PressResource implements ResourceInterface {
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('public', 'boolean', t('Show on the press page'), default: TRUE);
+
     $inputs->attach('contact', PersonStructure::class, reads: ['listed' => 'public'])
       ->setLabel(t('Press contact'));
+
     $inputs->mixIn(ReviewStructure::class);
   }
 
@@ -1488,9 +1486,12 @@ final class InfoDeskResource implements ResourceInterface {
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('phone', PhoneNumber::class, t('Desk phone'))
       ->setRequired(TRUE);
+
     $inputs->add('in_program', 'boolean', t('Listed in the printed program'), default: FALSE);
+
     $inputs->attach('lead', PersonStructure::class, reads: ['listed' => 'in_program'])
       ->setLabel(t('Desk lead'));
+
     $inputs->attachList('volunteers', PersonStructure::class, max: 4)
       ->setLabel(t('Volunteers'));
   }
@@ -1588,6 +1589,7 @@ final class TicketSalesResource implements ResourceInterface {
     $inputs->addEach('on_sale', 'boolean', from: TicketTypes::class, default: FALSE)
       ->setLabel(t('On sale'))
       ->setDescription(t('Which ticket types can be bought.'));
+
     $inputs->attachEach('limits', TicketLimitStructure::class, from: TicketTypes::class, reads: ['selling' => 'on_sale'])
       ->setLabel(t('Limits'));
   }
@@ -1613,9 +1615,13 @@ final class TicketLimitStructure implements StructureInterface {
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('per_order', 'integer', t('Per order'), default: 4)
       ->addConstraint('Range', ['min' => 1, 'max' => 10]);
+
     $inputs->add('waiting_list', 'boolean', t('Waiting list when sold out'), default: FALSE);
+
     $inputs->reads('selling', 'boolean');
+
     $inputs->narrow('per_order')->when(Condition::equals('selling', FALSE))->doesNotApply();
+
     $inputs->narrow('waiting_list')->when(Condition::equals('selling', FALSE))->doesNotApply();
   }
 
@@ -1837,6 +1843,7 @@ final class FeesStructure implements StructureInterface {
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('standard', 'float', t('Standard fee'), default: 20.0)
       ->addConstraint('Range', ['min' => 0]);
+
     $inputs->add('concession', 'float', t('Concession fee'), default: 10.0)
       ->addConstraint('Range', ['min' => 0]);
   }
@@ -1867,9 +1874,12 @@ final class ProgramResource implements ResourceInterface {
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('headline', 'string', t('Headline'))
       ->setRequired(TRUE);
+
     $inputs->add('sessions', 'integer', t('Sessions'), default: 8)
       ->addConstraint('Range', ['min' => 1, 'max' => 30]);
+
     $inputs->add('published', 'boolean', t('Published'), default: FALSE);
+
     $inputs->attach('fees', FeesStructure::class)
       ->setLabel(t('Fees'));
   }
@@ -2203,8 +2213,10 @@ final class SpotlightResource implements ResourceInterface {
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('component', 'string', t('Component'), default: 'data_surface_examples:card')
       ->setRequired(TRUE);
+
     $inputs->attachVariants('props', by: 'component', from: ComponentProps::class)
       ->setLabel(t('Props'));
+
     $inputs->attachVariants('slots', by: 'component', from: ComponentSlots::class)
       ->setLabel(t('Slots'));
   }
@@ -2570,8 +2582,10 @@ final class ComponentBlockStructure implements StructureInterface {
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('component', 'string', t('Component'));
+
     $inputs->attachVariants('props', by: 'component', from: ComponentProps::class)
       ->setLabel(t('Props'));
+
     $inputs->attachVariants('slots', by: 'component', from: ComponentSlots::class)
       ->setLabel(t('Slots'));
   }
@@ -2935,10 +2949,13 @@ final class MailerResource implements ResourceInterface {
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('sender', 'email', t('Sender'), default: 'tickets@example.com')
       ->setRequired(TRUE);
+
     $inputs->add('endpoint', 'uri', t('Mail service'), default: 'https://mail.example.com/v1/send')
       ->setRequired(TRUE);
+
     $inputs->add('source', 'string', t('Credential source'), default: 'pasted')
       ->setRequired(TRUE);
+
     $inputs->attachVariants('credential', by: 'source', from: CredentialSources::class)
       ->setLabel(t('Credential'));
   }
@@ -3175,6 +3192,7 @@ final class WebhookResource implements ResourceInterface {
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('endpoint', 'uri', t('Endpoint'), default: 'https://hooks.example.com/sales')
       ->setRequired(TRUE);
+
     $api_key = $inputs->add('api_key', 'string', t('API key'))
       ->setDescription(t('The key each post is signed with, pasted here.'));
     DefinitionMetadata::setSecret($api_key);
@@ -3625,10 +3643,12 @@ final class VenueResource implements ResourceInterface {
     $inputs->add('label', 'string', t('Name'))
       ->setRequired(TRUE)
       ->addConstraint('Length', ['max' => 128]);
+
     $inputs->compute('id', 'machine_name', t('Machine name'),
       from: ['label'], using: MachineName::class, when: Compute::UNLESS_SENT)
       ->setDescription(t('A unique name for the venue: lowercase letters, numbers and underscores, computed from its name unless one is given.'))
       ->addConstraint('Length', ['max' => 32]);
+
     $inputs->compute('slug', 'string', t('Slug'), from: ['label'], using: Slugify::class)
       ->setDescription(t('The name in a link: lowercase letters, numbers and dashes, set when the venue is added.'))
       ->addConstraint('Regex', [
@@ -3636,18 +3656,23 @@ final class VenueResource implements ResourceInterface {
         'message' => t('The slug may hold only lowercase letters, numbers and single dashes between them.'),
       ])
       ->addConstraint('Length', ['max' => 128]);
+
     $inputs->add('capacity', 'integer', t('Capacity'))
       ->setDescription(t('How many people the venue holds.'))
       ->setRequired(TRUE)
       ->addConstraint('Range', ['min' => 1, 'max' => 100000]);
+
     $inputs->add('address', 'string', t('Address'))
       ->addConstraint('Length', ['max' => 255]);
+
     $inputs->attachList('rooms', VenueRoomStructure::class, max: 20)
       ->setLabel(t('Rooms'))
       ->setDescription(t('The rooms an event at the venue may be held in.'));
+
     $inputs->add('weight', 'integer', t('Weight'), default: 0)
       ->setDescription(t('Its place among the venues: lighter first.'))
       ->addConstraint('Range', ['min' => -1000, 'max' => 1000]);
+
     $inputs->add('status', 'boolean', t('Enabled'), default: TRUE)
       ->setDescription(t('Whether events may be held there; a disabled venue is listed only for an account that administers the venues.'));
   }
@@ -3715,9 +3740,11 @@ final class VenueListingStructure implements StructureInterface, DefinesOutputsI
     $inputs->add('offset', 'integer', t('Offset'), default: 0)
       ->setDescription(t('How many venues to skip, in order of weight.'))
       ->addConstraint('Range', ['min' => 0, 'max' => 10000]);
+
     $inputs->add('limit', 'integer', t('Limit'), default: 20)
       ->setDescription(t('How many venues to answer at most.'))
       ->addConstraint('Range', ['min' => 1, 'max' => 50]);
+
     $inputs->add('status', 'boolean', t('Enabled'))
       ->setDescription(t('Only the venues enabled, or only those disabled; left out, every venue.'));
   }
@@ -3735,6 +3762,7 @@ final class VenueListingStructure implements StructureInterface, DefinesOutputsI
     $outputs->addList('items', $item, t('Venues'))
       ->setDescription(t('The page of venues, lighter first, each one the account may read.'))
       ->setRequired(TRUE);
+
     $outputs->add('total', 'integer', t('Total'))
       ->setDescription(t('How many venues the filter matched that the account may read, on every page.'))
       ->setRequired(TRUE);
@@ -3777,6 +3805,7 @@ final class VenueOrderStructure implements StructureInterface {
     $inputs->add('id', 'string', t('Venue'))
       ->setDescription(t('The machine name of a venue the site has.'))
       ->setRequired(TRUE);
+
     $inputs->add('weight', 'integer', t('Weight'))
       ->setDescription(t('Its place among the venues: lighter first.'))
       ->setRequired(TRUE)
@@ -4421,20 +4450,25 @@ final class SponsorshipResource implements ResourceInterface {
     $inputs->add('venue', 'entity:event_venue', t('Venue'), default: 'riverside')
       ->setDescription(t("Where the sponsor's stand is."))
       ->setRequired(TRUE);
+
     $inputs->add('contact', 'entity:user', t('Contact'))
       ->setDescription(t('Who answers for the sponsor.'));
+
     $inputs->add('page', 'entity:node:article', t('Announcement'))
       ->setDescription(t('The article that announces the sponsor.'));
+
     // Of any type: an entity type, then an id of it.
     $inputs->add('thing', 'entity', t('Featured beside'))
       ->setDescription(t('Any content the sponsor is featured beside.'))
       ->addConstraint('DataSurfaceReferenceableType', ['interface' => ContentEntityInterface::class]);
+
     $inputs->add('setting', 'entity', t('Linked to'))
       ->setDescription(t('A venue or a role the sponsorship is linked to.'))
       ->addConstraint('DataSurfaceReferenceableType', [
         'interface' => ConfigEntityInterface::class,
         'targets' => ['event_venue' => [], 'user_role' => [], 'node' => []],
       ]);
+
     $inputs->add('credit', 'entity', t('Credited on'))
       ->setDescription(t('An article or a user the sponsor is credited on.'))
       ->addConstraint('DataSurfaceReferenceableType', [
@@ -4604,6 +4638,7 @@ final class RetitleResource implements ResourceInterface, DefinesOutputsInterfac
       ->setLabel(t('Nodes'))
       ->setDescription(t('Each node to retitle, one to fifty.'))
       ->setRequired(TRUE);
+
     $inputs->add('style', 'string', t('Style'), default: TitleRewriter::TITLE)
       ->setDescription(t('How the title of a node sent no new title is rewritten.'))
       ->addConstraint('LabeledChoice', ['choices' => TitleRewriter::styles()]);
@@ -4642,6 +4677,7 @@ final class RetitleItemStructure implements StructureInterface {
     $inputs->add('node', 'entity:node', t('Node'))
       ->setDescription(t('The node to retitle.'))
       ->setRequired(TRUE);
+
     $inputs->add('new_title', 'string', t('New title'))
       ->setDescription(t("Written as sent; left out, the node's title is rewritten in the style chosen."))
       ->addConstraint('Length', ['max' => 255]);

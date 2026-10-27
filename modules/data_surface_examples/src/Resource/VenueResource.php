@@ -101,10 +101,12 @@ final class VenueResource implements ResourceInterface {
     $inputs->add('label', 'string', t('Name'))
       ->setRequired(TRUE)
       ->addConstraint('Length', ['max' => 128]);
+
     $inputs->compute('id', 'machine_name', t('Machine name'),
       from: ['label'], using: MachineName::class, when: Compute::UNLESS_SENT)
       ->setDescription(t('A unique name for the venue: lowercase letters, numbers and underscores, computed from its name unless one is given.'))
       ->addConstraint('Length', ['max' => 32]);
+
     $inputs->compute('slug', 'string', t('Slug'), from: ['label'], using: Slugify::class)
       ->setDescription(t('The name in a link: lowercase letters, numbers and dashes, set when the venue is added.'))
       ->addConstraint('Regex', [
@@ -112,18 +114,23 @@ final class VenueResource implements ResourceInterface {
         'message' => t('The slug may hold only lowercase letters, numbers and single dashes between them.'),
       ])
       ->addConstraint('Length', ['max' => 128]);
+
     $inputs->add('capacity', 'integer', t('Capacity'))
       ->setDescription(t('How many people the venue holds.'))
       ->setRequired(TRUE)
       ->addConstraint('Range', ['min' => 1, 'max' => 100000]);
+
     $inputs->add('address', 'string', t('Address'))
       ->addConstraint('Length', ['max' => 255]);
+
     $inputs->attachList('rooms', VenueRoomStructure::class, max: 20)
       ->setLabel(t('Rooms'))
       ->setDescription(t('The rooms an event at the venue may be held in.'));
+
     $inputs->add('weight', 'integer', t('Weight'), default: 0)
       ->setDescription(t('Its place among the venues: lighter first.'))
       ->addConstraint('Range', ['min' => -1000, 'max' => 1000]);
+
     $inputs->add('status', 'boolean', t('Enabled'), default: TRUE)
       ->setDescription(t('Whether events may be held there; a disabled venue is listed only for an account that administers the venues.'));
   }

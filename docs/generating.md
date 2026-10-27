@@ -66,8 +66,8 @@ Each kept or added entry is named in a note as the files are written.
 ## Key names
 
 Every class the generator writes, a resource or a structure, names each
-of its keys once, as a constant, in declaration order with a one-line
-docblock, above `defineInputs()`. Every call after it names the key by
+of its keys once, as a constant, in declaration order, one line each in
+one block with no docblock, above `defineInputs()`. Every call after it names the key by
 the constant, `add(self::SENDER_NAME, ...)`, `narrow(self::SEATS)`,
 `Condition::equals(self::KIND, ...)`, and so does every comment it
 leaves for the author. Why: a key is a string, and an editor can neither
@@ -126,9 +126,6 @@ owner's schema describes it, and the build holds the resource to that
 schema. For `node.settings`:
 
 ```php
-/**
- * The use administration theme when editing or creating content key.
- */
 public const USE_ADMIN_THEME = 'use_admin_theme';
 
 /**

@@ -125,16 +125,30 @@ interface BlueprintAdditionsInterface {
   public function addDefinition(string $key, DataDefinitionInterface $definition, mixed $default = NULL): DataDefinitionInterface;
 
   /**
-   * Rewords a key anyone declared.
+   * Rewords or arranges a key anyone declared.
    *
-   * For an alter rewording a key it does not own. An owner words its own
-   * keys with the core setters on what add() and attach() return.
+   * An owner arranges its own keys here, after declaring them, and words
+   * them with the core setters on what add() and attach() return. An
+   * alter rewords and arranges a key it does not own here.
    *
    * Label, description, arrangement and, for a mount, placement: the one
    * change to an existing key an alter may make, because it changes
    * nothing about what is accepted. Type, presence and width stay the owner's;
    * tightening is a #[RefinesInput] method. Not a narrowing, so not
    * checked as one.
+   *
+   * The arrangement is how the key is drawn: its group, weight,
+   * placeholder, prefix, suffix and help, the six arguments after $after.
+   * What they say is laid over what the key's owner arranged: what is
+   * given replaces, what is left NULL stays. An alter may place an
+   * owner's key and reword what the owner said, never take it away: a
+   * text emptied where the owner gave one is refused.
+   *
+   * @code
+   * $inputs->addEach('punctuation', PunctuationAction::class, from: PunctuationCharacters::class)
+   *   ->setLabel(t('Punctuation'));
+   * $inputs->describe('punctuation', group: ArrangementGroup::details('punctuation', t('Punctuation'), collapsed: TRUE));
+   * @endcode
    *
    * Placement is for the alter's own mount only,
    * `third_party_settings.<module>` of the module calling it. Its keys
@@ -159,26 +173,33 @@ interface BlueprintAdditionsInterface {
    *   For the calling alter's own input mount only: a top-level key of
    *   the owner's blueprint, a plain key or an attached part, to draw the
    *   mount's fieldset directly after. NULL leaves it where it is.
-   * @param \Drupal\data_surface\Resource\Arrangement|null $arrangement
-   *   How the key is drawn (its group, weight, placeholder, prefix,
-   *   suffix and help), laid over what the key's owner arranged: what it
-   *   says replaces, what it leaves NULL stays. An alter may place an
-   *   owner's key and reword what the owner said, never take it away: a
-   *   text emptied where the owner gave one is refused. NULL leaves the
-   *   arrangement as it is.
+   * @param \Drupal\data_surface\Resource\ArrangementGroup|null $group
+   *   The group the key is drawn in, or NULL to leave it.
+   * @param int|null $weight
+   *   Its weight among its frame's keys (or its group's), lighter first;
+   *   NULL to leave it.
+   * @param string|\Stringable|null $placeholder
+   *   What an empty input shows, or NULL to leave it.
+   * @param string|\Stringable|null $prefix
+   *   A text drawn before the input, or NULL to leave it.
+   * @param string|\Stringable|null $suffix
+   *   A text drawn after the input, or NULL to leave it.
+   * @param string|\Stringable|null $help
+   *   A help text drawn after the key's description, or NULL to leave it.
    *
    * @return $this
    *
    * @throws \LogicException
    *   When no declared key answers to that name; with $after, when the key
    *   is not the calling alter's own input mount, or $after names no
-   *   top-level key of the owner's blueprint; and with $arrangement, when
-   *   it would empty a text another contributor arranged, or the key is an
-   *   output, which is never drawn.
+   *   top-level key of the owner's blueprint; and with an arrangement,
+   *   when it would empty a text another contributor arranged, or the key
+   *   is an output, which is never drawn.
    *
+   * @see \Drupal\data_surface\Resource\Arrangement
    * @see docs/decisions.md#arrangement-is-declared-once
    */
-  public function describe(string $key, string|\Stringable|null $label = NULL, string|\Stringable|null $description = NULL, ?string $after = NULL, ?Arrangement $arrangement = NULL): static;
+  public function describe(string $key, string|\Stringable|null $label = NULL, string|\Stringable|null $description = NULL, ?string $after = NULL, ?ArrangementGroup $group = NULL, ?int $weight = NULL, string|\Stringable|null $placeholder = NULL, string|\Stringable|null $prefix = NULL, string|\Stringable|null $suffix = NULL, string|\Stringable|null $help = NULL): static;
 
   /**
    * A child at a key, by class: a structure, or a resource it holds.

@@ -101,7 +101,9 @@ final class DemoBlockStructure implements StructureInterface {
         'manager' => 'entity_type.manager',
         'interface' => ContentEntityInterface::class,
       ]);
+
     $inputs->add('bundle', 'string', t('Bundle'));
+
     $inputs->add('field', 'string', t('Highlight field'));
     // ...
   }
@@ -1123,7 +1125,7 @@ only groups them, so a form and the served contract draw nothing for it
 ([Generated forms](forms.md#other-modules-keys)).
 
 An alter may arrange a key it does not own, `describe('capacity',
-arrangement: new Arrangement(group: ..., help: ...))`: put it in a
+group: ..., help: ...)`: put it in a
 group, weigh it, give or reword its placeholder, prefix, suffix and
 help, over what the owner arranged, never emptying any of them
 ([Arranging the keys](forms.md#arranging-the-keys)).
@@ -1454,9 +1456,9 @@ is refused.
 `attach()` and `attachVariants()` return the map definition at the key, a
 core `MapDataDefinition`, the way `add()` returns its definition, so
 the owner labels and describes its own child's key with the core
-setters. `describe()` is for an alter rewording a key it does not own;
-an owner calling it on its own key is saying in two statements what
-one says.
+setters. `describe()` rewords a key for an alter that does not own it,
+and arranges a key for its owner or an alter; an owner rewording its
+own key with it says in two statements what one says.
 
 What that means, end to end:
 
@@ -1545,6 +1547,7 @@ as are the storage's own settings:
 // DemoBlockStructure
 $inputs->add('presentation', 'string', t('Presentation'), default: 'list')
   ->setRequired(TRUE);
+
 $inputs->attachVariants('presentation_settings', by: 'presentation')
   ->setLabel(t('Presentation settings'))
   ->setDescription(t('What the chosen presentation needs.'));
@@ -1559,6 +1562,7 @@ $inputs->attachVariants('presentation_settings', by: 'presentation')
 // FieldInstanceResource, in data_surface_tool
 $inputs->attach('storage', FieldStorageResource::class)
   ->setLabel(t('Field storage'));
+
 $inputs->attachVariants('settings', by: 'field_type')
   ->setLabel(t('Field settings'));
 
@@ -1604,7 +1608,9 @@ final class ComplianceStructure implements StructureInterface {
 
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->reads('capacity', 'integer', required: TRUE);
+
     $inputs->add('license', License::class, t('Event license'));
+
     $inputs->add('stewards', 'integer', t('Stewards'), default: 1)->setRequired(TRUE);
   }
 
@@ -1684,12 +1690,17 @@ final class JournalResource implements ResourceInterface {
 
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('title', 'string', t('Title'))->setRequired(TRUE);
+
     $inputs->add('visibility', 'string', t('Visibility'), default: 'staff')
       ->setRequired(TRUE)
       ->addConstraint('LabeledChoice', ['choices' => ['public' => t('Public'), 'staff' => t('Staff')]]);
+
     $inputs->mixIn(OwnershipStructure::class, reads: ['audience' => 'visibility']);
+
     $inputs->mixIn(TimestampsStructure::class);
+
     $inputs->add('revision', 'integer', t('Revision'), default: 1);
+
     // ...
     $inputs->narrow('revision')
       ->when(Condition::absent('created'))

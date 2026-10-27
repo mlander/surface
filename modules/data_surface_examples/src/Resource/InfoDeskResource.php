@@ -35,9 +35,12 @@ final class InfoDeskResource implements ResourceInterface {
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('phone', PhoneNumber::class, t('Desk phone'))
       ->setRequired(TRUE);
+
     $inputs->add('in_program', 'boolean', t('Listed in the printed program'), default: FALSE);
+
     $inputs->attach('lead', PersonStructure::class, reads: ['listed' => 'in_program'])
       ->setLabel(t('Desk lead'));
+
     $inputs->attachList('volunteers', PersonStructure::class, max: 4)
       ->setLabel(t('Volunteers'));
   }

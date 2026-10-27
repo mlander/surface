@@ -35,10 +35,13 @@ final class MailerResource implements ResourceInterface {
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('sender', 'email', t('Sender'), default: 'tickets@example.com')
       ->setRequired(TRUE);
+
     $inputs->add('endpoint', 'uri', t('Mail service'), default: 'https://mail.example.com/v1/send')
       ->setRequired(TRUE);
+
     $inputs->add('source', 'string', t('Credential source'), default: 'pasted')
       ->setRequired(TRUE);
+
     $inputs->attachVariants('credential', by: 'source', from: CredentialSources::class)
       ->setLabel(t('Credential'));
   }

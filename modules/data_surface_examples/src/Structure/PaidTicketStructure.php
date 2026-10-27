@@ -28,6 +28,7 @@ final class PaidTicketStructure implements StructureInterface {
     $inputs->add('price', 'float', t('Price'))
       ->setRequired(TRUE)
       ->addConstraint('Range', ['min' => 0.01]);
+
     $inputs->add('currency', 'string', t('Currency'), default: 'EUR')
       ->setRequired(TRUE)
       ->addConstraint('Choice', ['choices' => ['EUR', 'GBP', 'USD']]);

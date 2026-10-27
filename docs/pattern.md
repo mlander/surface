@@ -155,16 +155,24 @@ final class FieldInstanceResource implements ResourceInterface {
   public static function defineInputs(BlueprintInterface $inputs): void {
     // Which field this is.
     $inputs->add('entity_type_id', 'string', t('Entity type'))->setRequired(TRUE);
+
     $inputs->add('bundle', 'string', t('Bundle'))->setRequired(TRUE);
+
     $inputs->add('field_type', 'string', t('Field type'))->setRequired(TRUE);
+
     $inputs->add('field_name', 'string', t('Machine name'))->setRequired(TRUE);
+
     // The field itself.
     $inputs->add('label', 'string', t('Label'))->setRequired(TRUE);
+
     $inputs->add('description', 'string', t('Help text'));
+
     $inputs->add('required', 'boolean', t('Required field'), default: FALSE);
+
     // Its parts.
     $inputs->attach('storage', FieldStorageResource::class)
       ->setLabel(t('Field storage'));
+
     $inputs->attachVariants('settings', by: 'field_type')
       ->setLabel(t('Field settings'));
   }
@@ -402,8 +410,9 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
   refine and watch those keys by the names it added them under, and
   never another module's; a watched one is handed as it stands, NULL
   while unanswered.
-- `describe()` rewords a key anyone declared: label and description
-  only, because that changes nothing about what is accepted.
+- `describe()` rewords and arranges a key anyone declared: label,
+  description and arrangement only, because that changes nothing about
+  what is accepted.
 - `extendChoices()` offers more values on a key whose owner declared a
   fixed list. The alter's `#[RefinesInput]` method on that key says what
   its own values mean and is handed only them, so it can never take the

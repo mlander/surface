@@ -59,18 +59,19 @@ Nothing in it knows about resources, structures, widgets or resolvers.
 The resolver layer reads the constraint; the constraint never reads the
 resolver.
 
-### Two ways to write it
+### Three ways to write it
 
-Which one is meant is decided by whether `labels` is present.
+Which one is meant is decided by which of `choices` and `labels` are
+given. All three allow the same values and offer the same labels.
 
-**The canonical spelling** is `Choice`'s own list of values with the
-meaning beside it. It is the only one that can express integer values,
-because an integer-keyed map of labels cannot be told from a list of
-values:
+**`labels` alone** is the one to reach for whenever the values carry
+meaning: the keys of `labels` are the allowed values. It is the spelling
+for integer values. An integer-keyed map in `choices` reads as a list of
+values to `Choice` and to a person reading the declaration, so an integer
+value's meaning goes in `labels`:
 
 ```php
 $definition->addConstraint('LabeledChoice', [
-  'choices' => [0, 1, 2],
   'labels' => [
     0 => t('Disabled'),
     1 => t('Optional'),
@@ -80,8 +81,9 @@ $definition->addConstraint('LabeledChoice', [
 ]);
 ```
 
-**The map convenience** is how a list with meaning is most often written
-by hand: `choices` on its own is read as `value => label`.
+**`choices` as a map** is the same thing for string values, where no key
+can be mistaken for a position: `choices` on its own is read as
+`value => label`.
 
 ```php
 $definition->addConstraint('LabeledChoice', [
@@ -89,14 +91,25 @@ $definition->addConstraint('LabeledChoice', [
 ]);
 ```
 
+**`choices` as a list with `labels` beside it** is `Choice`'s own form,
+for a label set that covers only some of the values. It is also the
+form the module writes back after narrowing or extending a list.
+
+```php
+$definition->addConstraint('LabeledChoice', [
+  'choices' => ['star', 'flame', 'sash'],
+  'labels' => ['star' => t('Star')],
+]);
+```
+
 A bare list of values with no meaning attached is core's `Choice`, not
 this constraint, so `choices` alone is never read as one. Both `labels`
-and `descriptions` may be partial: a value with no label of its own is
-named by its value.
+and `descriptions` may be partial in the third form: a value with no
+label of its own is named by its value.
 
-Both spellings are one declaration to every consumer: the resolver
+The three spellings are one declaration to every consumer: the resolver
 answers with the same `OptionSet`, the narrowing check gives the same
-verdict, and a contribution merges into either identically:
+verdict, and a contribution merges into any of them identically:
 `ChoiceSpellingParityTest` is where that is held to.
 
 ### One vocabulary, declared once
@@ -159,16 +172,11 @@ gate turns every contribution into a fatal.
 the declaration, and read back only as options. Those want the map
 spelling and nothing else; an enum whose only caller is the declaration
 buys a class for no reader. Reach for the enum when the values are also
-matched on in code. And when the values are integers, the enum fills the
-`labels` half of the canonical spelling rather than the whole of the
-short one, because an integer-keyed map of labels cannot be told from a
-list of values:
+matched on in code. And when the values are integers, the enum's
+`asOptions()` is the whole of the `labels` spelling:
 
 ```php
-->addConstraint('LabeledChoice', [
-  'choices' => array_column(NodePreviewMode::cases(), 'value'),
-  'labels' => NodePreviewMode::asOptions(),
-]);
+->addConstraint('LabeledChoice', ['labels' => NodePreviewMode::asOptions()]);
 ```
 
 ## The resolver plugin type
@@ -347,9 +355,12 @@ what it refers to, and holds the entity's id
 (why: [decision](decisions.md#a-reference-is-an-id-with-a-list-the-site-decides-listed-or-looked-up)):
 
 ```php
+
 $inputs->add('venue', 'entity:event_venue', t('Venue'));    // a venue's machine name
+
 $inputs->add('contact', 'entity:user', t('Contact'));       // a user's id
 $inputs->add('page', 'entity:node:article', t('Announcement'));
+
 $inputs->add('thing', 'entity', t('Featured beside'))
   ->addConstraint('DataSurfaceReferenceableType', ['interface' => ContentEntityInterface::class]);
 ```

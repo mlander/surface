@@ -279,12 +279,12 @@ final class Narrowing {
    */
   protected static function constraintWidening(string $name, array $before, array $after): ?string {
     if (ChoiceSet::isChoiceBearing($name, $before)) {
-      if (!array_key_exists('choices', $before)) {
+      if (!ChoiceSet::listsValues($name, $before)) {
         // A choice constraint that named no list allowed nothing in
         // particular, so nothing about it can widen.
         return NULL;
       }
-      if (!array_key_exists('choices', $after)) {
+      if (!ChoiceSet::listsValues($name, $after)) {
         return sprintf('the %s constraint lost its list of allowed values', $name);
       }
       $added = array_diff(

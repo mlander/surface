@@ -161,6 +161,34 @@ class LabeledChoiceTest extends DataSurfaceKernelTestBase {
   }
 
   /**
+   * Tests labels alone: the keys of the labels are the allowed values.
+   *
+   * The spelling for integer values, which reads the same as the list
+   * with labels beside it and validates the same.
+   */
+  public function testLabelsAloneAreTheValues(): void {
+    $labels = $this->constraint([
+      'labels' => [0 => 'Disabled', 1 => 'Optional', 2 => 'Required'],
+    ]);
+    $this->assertSame([0, 1, 2], $labels->choices);
+    $this->assertSame([0 => 'Disabled', 1 => 'Optional', 2 => 'Required'], $labels->labels);
+
+    $surface = new DataSurface(
+      DefinitionMap::fromArrays(
+        definitions: [
+          'mode' => DataDefinition::create('integer')
+            ->setLabel('Mode')
+            ->addConstraint('LabeledChoice', [
+              'labels' => [0 => 'Disabled', 1 => 'Optional', 2 => 'Required'],
+            ]),
+        ],
+      ),
+    );
+    $this->assertCount(0, $this->pipeline()->validate($surface, ['mode' => 2]));
+    $this->assertContains('mode', $this->pipeline()->validate($surface, ['mode' => 3])->keys());
+  }
+
+  /**
    * Tests a declared choice passes.
    */
   public function testDeclaredChoicePasses(): void {
