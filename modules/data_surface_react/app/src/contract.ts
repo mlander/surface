@@ -1205,7 +1205,7 @@ export function fieldId(path: string): string {
 // in the page, from the full schema, by the module's own rules; a change
 // with a `refine` or `live` dependent is asked of the server. The page's
 // answer must be the server's: the same discard and orphan rule
-// (DataSurfaceFormBuilder::settle()), the same reading of a select
+// (Form\Extracting::settle()), the same reading of a select
 // (PropertySchema::property()), keyword for keyword.
 
 /** Why a change was asked of the server rather than narrowed here. */
@@ -1607,7 +1607,7 @@ function allows(list: unknown[], value: unknown): boolean {
   return (typeof value === 'string' || Number.isInteger(value)) && list.some((option) => String(option) === String(value));
 }
 
-/** DataSurfaceFormBuilder::sameAnswer(): a form posts every scalar as a string. */
+/** Form\Extracting::sameAnswer(): a form posts every scalar as a string. */
 function sameAnswer(answer: unknown, stored: unknown): boolean {
   if (isEmpty(answer) || isEmpty(stored)) {
     return isEmpty(answer) === isEmpty(stored);
@@ -1716,7 +1716,7 @@ interface Context {
 }
 
 /**
- * Settles one frame, then each child in it, as DataSurfaceFormBuilder::settle().
+ * Settles one frame, then each child in it, as Form\Extracting::settle().
  *
  * Every key that refines against a sibling is a target. An input whose
  * dependency moved under it, or that the narrowed list no longer offers,

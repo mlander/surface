@@ -9,7 +9,10 @@ what a JSON payload carrying the same strings produces.
 The layer has two halves. `data_surface.form_builder`
 (`Form\DataSurfaceFormBuilderInterface`) knows how to turn a data surface
 into a container of elements and read it back. The host traits know how to
-satisfy one host family's protocol using it.
+satisfy one host family's protocol using it. The service draws through
+`Form\Drawing`, reads back through `Form\Extracting` and refines over
+AJAX through `Form\Refreshing`, three internal classes
+([The form builder draws, extracts and refreshes](decisions.md#the-form-builder-draws-extracts-and-refreshes)).
 
 ## Pick your host family
 
@@ -238,7 +241,7 @@ The move happens at render time and only then, because it is a matter
 of drawing. By then Form API has processed, validated and submitted the
 form, so everything that walks the container by path finds the
 fieldset where the fieldset widget built it: extraction, `flagSurfaceErrors()`,
-the trigger's inline error, the stale marker, `settle()`, and the AJAX
+the trigger's inline error, the stale marker, `Extracting::settle()`, and the AJAX
 callback's walk to each dependent. What is kept:
 
 - **The value path.** Its elements keep their `#parents` and `#name`
@@ -690,7 +693,7 @@ Three rules keep it honest:
   waiting on: the demo block's entity type moved with a bundle and field
   still posted leaves the bundle standing for the stored one and the
   field open again, refined against no bundle at all.
-  `DataSurfaceFormBuilder::settleFrame()` is the loop, per frame, and a
+  `Extracting::settleFrame()` is the loop, per frame, and a
   child's own frame is settled the same way.
 - **A programmatic submission is exempt.** Its caller said every value on
   purpose, in one statement, so a value the pipeline refuses is refused
@@ -702,7 +705,8 @@ resolves an element's `#value` from the input before it ever looks at
 `#default_value`. An input left in place would put the orphaned value
 straight back into the rebuilt select.
 
-The settling lives in the form builder, behind two calls:
+The settling lives in the form builder (`Form\Extracting`), behind two
+calls:
 `discardedRefinementInput()` names what is dropped, and
 `refinementOverlay()` returns the values to build from: stored
 underneath, the input that stands on top, orphans unanswered, with

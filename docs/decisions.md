@@ -1651,7 +1651,7 @@ anything; typed data's NotNull for the same path is dropped so it is
 said once. No child judges a plain map's properties, and NotNull alone
 passes an empty string and never sees a map that is absent, so a
 mounted key an alter made required would otherwise never be refused.
-(`DataSurfacePipeline::missingInMap()`)
+(`Validating::missingInMap()`)
 
 ### Placement is a describe option
 
@@ -1683,7 +1683,7 @@ placement was chosen over refusing it at build: the owner groups and
 the alter places, neither knowing the other, so a refusal would make an
 owner's arrangement break another module's alter.
 (`BlueprintAdapterBase::assertPlaceable()`,
-`DataSurfaceFormBuilder::placeMounts()`, `DataSurfaceFormBuilder::holding()`)
+`Form\Drawing::placeMounts()`, `Form\Drawing::holding()`)
 
 ### Adding a key twice
 
@@ -2086,7 +2086,7 @@ item as a list in its place ([A collection on a
 form](forms.md#a-collection-on-a-form), decided 2026-10-19). *Open:*
 routing an item to its child's storage, which needs an identity key on
 the child to say which stored item it is. (`Resources::buildResource()`,
-`Collection`, `DataSurfaceFormBuilder::buildCollection()`)
+`Collection`, `Form\Drawing::buildCollection()`)
 
 ### Access once per list
 
@@ -2115,7 +2115,7 @@ the child's defaults, not over what is stored at its delta, since the
 list is sent whole and an item may have moved; except a secret, which
 keeps its position's ([Every door projects what the read tool
 projects](#every-door-projects-what-the-read-tool-projects)).
-(`Collection::isEmptyItem()`, `DataSurfacePipeline::acceptCollection()`)
+(`Collection::isEmptyItem()`, `Accepting::acceptCollection()`)
 
 ### An item is never null
 
@@ -2482,8 +2482,8 @@ its mount); computing again on demand, an operation that recomputes a
 stored value its sources no longer give; the React page computing the
 value locally, which needs the class in a language the page runs.
 (`Computed`, `ComputesValueInterface`, `Compute`, `ResourceBlueprint::compute()`,
-`DataSurfacePipeline::acceptComputed()`, `DataSurfacePipeline::notComputed()`,
-`DataSurfacePipeline::namingSources()`, `PipelineGuard::guardCompute()`,
+`Accepting::acceptComputed()`, `Validating::notComputed()`,
+`Validating::namingSources()`, `PipelineGuard::guardCompute()`,
 `DataSurfaceFormBuilder::refinementOverlay()`, `Slugify`, `ComputedKeysTest`,
 `VenueResourceTest`)
 
@@ -3040,7 +3040,7 @@ leaves a secret out" are promises about every door, or about none.
   child cannot name](#a-permission-a-child-cannot-name)).
 
 (`Pipeline\Outbound`, `DataSurfacePipeline::outbound()`,
-`DataSurfacePipeline::acceptCollection()`, `DataSurfacePipeline::takes()`,
+`Accepting::acceptCollection()`, `Accepting::takes()`,
 `ResourceOperationTool::doExecute()`, `ResourceApiController::validate()`,
 `OperationInputs::stored()`, `Resources::permissionAccess()`,
 `ServedOperationAccessCheck`, `ResourceOperationToolBase::checkAccess()`,
@@ -3295,8 +3295,8 @@ none. A form locked whole says its reason once, above the elements, and
 no element repeats it or carries a required marker: nothing can be
 sent, so nothing is asked for. An operation that changes nothing has
 nothing to save either, so its form's button is the operation's label
-("Check a program"), not "Save". (`DataSurfaceFormBuilder::describeLocked()`,
-`DataSurfaceFormBuilder::withoutRequired()`,
+("Check a program"), not "Save". (`Form\Drawing::describeLocked()`,
+`Form\Drawing::withoutRequired()`,
 `DataSurfaceOperationForm::buildForm()`, `LockReasonFormTest`)
 
 **A locked key inside an open write is said, not refused** (decided
@@ -3317,7 +3317,7 @@ under `notes` beside `stale`, `{path, code, message}`, code `locked`
 ([One result at every door](#one-result-at-every-door)). The form
 needs none: it draws the key disabled, and posts what it holds. A
 resource locked whole is refused above, not noted.
-(`DataSurfacePipeline::acceptKey()`, `DataSurfacePipeline::takes()`,
+(`Accepting::acceptKey()`, `Accepting::takes()`,
 `ResultReportingTrait::withNotes()`, `LockedAccessTest`,
 `KeysFromSiteTest`, `ServedSubmitEndpointTest`)
 
@@ -3524,7 +3524,7 @@ value not on its list unexplained.
   clauses for every kind. Why the holder alone and not the whole trail:
   one level says where the key is, and the levels above it
   ("Third party settings") are grouping a caller never chose
-  (`DataSurfacePipeline::conditionKey()`, `RefusalLabelsTest`).
+  (`Validating::conditionKey()`, `RefusalLabelsTest`).
 - **Whole sentences, for translation** (decided 2026-10-20, from the
   multilingual review, B10). Every sentence a refusal adds is one source
   string a translator sees entire, in the context `data_surface
@@ -3629,11 +3629,11 @@ value not on its list unexplained.
   says nothing about it. The listing stays small: a key that depends on
   nothing says nothing more.
 
-(`DataSurfacePipeline::sayingWhatIsAllowed()`,
-`DataSurfacePipeline::conditions()`, `DataSurfacePipeline::appliesWhen()`,
+(`Validating::sayingWhatIsAllowed()`,
+`Validating::conditions()`, `Validating::appliesWhen()`,
 `Pipeline\Sentences`, `Pipeline\Named`, `Entry::presenceDependencies()`,
-`DataSurfacePipeline::choices()`,
-`DataSurfacePipeline::isRequired()`,
+`Validating::choices()`,
+`Validating::isRequired()`,
 `InputDefinitions::withDependencies()`, `ToolFeedbackTest`)
 
 ### An operation states how it behaves
@@ -4076,7 +4076,7 @@ no value, so its `#required` is the marker alone and stays. A list is
 never drawn required, a multiple select now as the checkboxes already
 were: the empty list satisfies a required list, and a `required`
 attribute would ask for one item more than the rule does. The widgets'
-`#required_error` went with this. (`DataSurfaceFormBuilder::requiredHints()`,
+`#required_error` went with this. (`Form\Refreshing::requiredHints()`,
 `DataSurfaceFormBuilder::preRenderRequired()`, `RefusalMessagesTest`,
 `FirstResourceTest`)
 
@@ -4100,7 +4100,7 @@ named, then what the rebuild changed on the dependents it replaced, in
 whole sentences ("Send day no longer applies. Items per issue now
 allows 1 to 20."), read off what each was drawn as on the page the
 request came from. (`DataSurfaceFormBuilder::flagSurfaceErrors()`,
-`DataSurfaceFormBuilder::named()`, `DataSurfaceFormBuilder::changesSaid()`,
+`Form\Drawing::named()`, `Form\Refreshing::changesSaid()`,
 `Hook\InlineErrorHooks`, `ErrorsNameTheirFieldTest`,
 `RebuildAnnouncesTest`)
 
@@ -4320,7 +4320,7 @@ page never saw the content type's groups, and a block had none to give.
 
 (`Resource\Arrangement`, `Resource\ArrangementGroup`,
 `DefinitionMetadata::setArrangement()`, `DataSurfaceWidgetBase::arranged()`,
-`DataSurfaceFormBuilder::withGroups()`, `DataSurfaceFormBuilder::gatherGroups()`,
+`Form\Drawing::withGroups()`, `Form\Drawing::gatherGroups()`,
 `DataSurfaceBuilder::assertGroupsAgree()`, `PropertySchema::arrangement()`,
 `ArrangementTest`, `ArrangementFormTest`)
 
@@ -4334,6 +4334,49 @@ Declined, each in a line:
   `_data_surface_cosmetics` is a route key, which [the product keeps its
   name](#the-product-keeps-its-name) holds to, and with the arrangement
   gone from it, what is left is cosmetic.
+
+### The form builder draws, extracts and refreshes
+
+`DataSurfaceFormBuilder` had grown to 2,973 lines. It is now the service
+and its Form API callbacks, and three final internal classes in
+`src/Form/` do the work:
+
+- **`Drawing`** answers what the form shows: each key drawn by its widget
+  as its arrangement says, a collection with its buttons, a computed key,
+  a key that does not apply, a locked key and its reason, and, when the
+  container is rendered, the groups and the placed fieldsets.
+- **`Extracting`** answers what the form posted: each element read back
+  through its widget into the data surface's shape and handed to
+  `accept()`, each violation flagged on its element, an error on a
+  refinement trigger held for the request, and, on a refinement request,
+  which in-progress input still stands against what is stored
+  (`refinementOverlay()`).
+- **`Refreshing`** answers the rebuild over AJAX: what triggers it, the
+  wrappers it replaces by, the container's `#process`, the response and
+  what it says changed, and the container's place in a host's own
+  element.
+
+`DataSurfaceFormBuilder` stays the one service.
+`DataSurfaceFormBuilderInterface`, the service id and the constructor's
+arguments are unchanged, and the constructor builds the three from the
+services it already has. The Form API callbacks stay on the service
+under their own names: `refreshSurface()`, `processSurfaceContainer()`,
+`processOptionTrigger()`, `preRenderSurfaceContainer()`,
+`preRenderRequired()`, `addListItem()` and `removeListItem()`. A render
+array names a `#process`, `#pre_render`, `#submit` or `#ajax` callback by
+class and method, and the form cache stores that render array, so a
+callback that moved would break every form cached before the move. The
+first three call the static method of the same name on `Refreshing`, and
+`preRenderSurfaceContainer()` calls `Drawing`.
+
+`Drawing` holds the instance of `Refreshing` it wires the container with.
+The static helpers the three share, such as `Drawing::elementChildren()`
+and `Refreshing::containerKey()`, are public on the internal classes and
+not on the service. Nothing changed in what is drawn: the method bodies
+moved as they were, the examples' forms render byte for byte as they did,
+and the documents and tool definitions did not move.
+(`DataSurfaceFormBuilder`, `Form\Drawing`, `Form\Extracting`,
+`Form\Refreshing`)
 
 ## Discovery
 
@@ -4887,7 +4930,7 @@ owner, since the code cannot list the ids. Closed: ports on an entry
 `BlueprintInterface::addEach()`, `BlueprintInterface::attachEach()`,
 `Attaching::buildEach()`, `Attaching::keysFrom()`,
 `Attaching::assertEachWiring()`, `Port::through()`,
-`DataSurfaceFormBuilder::lockedInside()`, `ToolDefinitionsInvalidator`)
+`Form\Drawing::lockedInside()`, `ToolDefinitionsInvalidator`)
 
 ### Keys an alter adds to a content entity
 
@@ -5106,9 +5149,9 @@ how strictly to apply them to a display builder. Each choice, and why:
 - **On the block form.** Text and one component are drawn at any depth,
   a nested component's props and slots swapped over AJAX as the top's
   are, each drawn from its own defaults where it was chosen afresh
-  (`DataSurfaceFormBuilder::nestedHeld()`), and a submission is read a
+  (`Form\Drawing::nestedHeld()`), and a submission is read a
   level at a time, each variant through what its own deciding key chose
-  (`DataSurfaceFormBuilder::extractFrame()`).
+  (`Form\Extracting::extractFrame()`).
   A list of components inside a slot is not drawn there: what it holds
   is kept, and the tool, HTTP and the React page set it.
 
@@ -5907,7 +5950,7 @@ each of its keys sent null): the empty map, or a map whose keys hold
 nothing, is a value, so the map is not refused as missing, and a key
 inside it that is required is refused in its own words at its path;
 until then core's `NotNull` read it as null and refused the map itself.
-(`PropertySchema::required()`, `DataSurfacePipeline::validateLevel()`,
+(`PropertySchema::required()`, `Validating::validateLevel()`,
 `AdvertisedSchemaAcceptanceTest::testRequiredMapSentEmpty()`)
 
 ### Absent keeps, null clears
@@ -5943,7 +5986,7 @@ chosen variant) is each of its keys sent `null`: its optional
 keys clear and a required one is refused in its own words, so the
 accepted document is a map its def describes; until 2026-10-18 the
 pipeline took `contact: null` whole, which the schema refused.
-(`DataSurfacePipeline::acceptKey()`, `DataSurfacePipeline::acceptChild()`,
+(`Accepting::acceptKey()`, `Accepting::acceptChild()`,
 `PropertySchema::nullable()`)
 
 **Writing back what was read changes nothing** (decided 2026-10-20, from
@@ -6051,7 +6094,7 @@ On a key so marked:
 A required key is not marked: it holds a value already. A secret is
 not either: sent nothing it keeps what it holds, whatever its storage.
 (`DefinitionMetadata::holdsValue()`, `Binding::markAlwaysHeld()`,
-`ConfigObjectStorage::mayClear()`, `DataSurfacePipeline::cannotBeCleared()`,
+`ConfigObjectStorage::mayClear()`, `Validating::cannotBeCleared()`,
 `PropertySchema::nullable()`, `StockWidgetsTest::testKeyItsStorageAlwaysHolds()`,
 `AdvertisedSchemaAcceptanceTest::testOpeningHours()`)
 
@@ -6091,7 +6134,47 @@ keeps the principle: a fractional numeric string for an integer is left
 for validation, not truncated. `InputCoercionMatrixTest` holds both
 doors to the same accepted value, row by row. The audit's "a boolean
 stored for an integer" is an alignment now: `TRUE` is `1`.
-(`Pipeline\Coercion`, `DataSurfacePipeline::coerce()`)
+(`Pipeline\Coercion`, `Accepting::coerce()`)
+
+### The pipeline is read by verb
+
+`Pipeline\DataSurfacePipeline` held every stage from raw values to stored
+values in 2,874 lines. The three verbs before a write are now final
+internal classes in `src/Pipeline/`, which the pipeline's constructor
+builds from the services it already has:
+
+- **`Accepting`** turns raw values into typed values: defaults, stored
+  values and input merged, the coercion table, the three-way rule (a key
+  left out keeps what it holds, one sent nothing is cleared, one sent a
+  value takes it), locked keys, secrets, computed keys, and the
+  violations a refusal of `accept()` becomes.
+- **`Validating`** holds the accepted values to the definition refined
+  for them: each refusal filed under its key with the path below it, the
+  keys it depends on, the values allowed, a key that does not apply, and
+  the stale rule.
+- **`Conforming`** holds outputs to their declared shape and coerces
+  nothing.
+
+`DataSurfacePipeline` stays the one service, and
+`DataSurfacePipelineInterface`, the constructor and the public constants
+are unchanged. It keeps the write path and the document: `kept()`,
+`changes()`, `prepare()`, `commit()`, `submit()`, `commitDryRun()`, a
+delete, `outbound()` and `document()`. Its `accept()`, `validate()` and
+`conformOutput()` call the verbs.
+
+A reader who asks why a key left out kept its value, or why an empty
+secret box kept the secret, reads `Accepting`, which applies the
+three-way rule and its exceptions. A reader who asks why a refusal names
+`tags.2.target_id`, or what it says is allowed, reads `Validating`, which
+holds the frame each path and label is read from. `Validating` calls
+`Accepting` for a computed key's value and sources and for the sentence
+about a key of another variant, and calls the pipeline for `document()`;
+`Accepting` reads only the static `Validating::definitionAt()`. None of
+the three holds a door-specific service. Nothing changed in what is
+accepted, refused or written: the method bodies moved as they were, no
+test changed, and the examples' documents and tool definitions are byte
+for byte what they were. (`DataSurfacePipeline`, `Pipeline\Accepting`,
+`Pipeline\Validating`, `Pipeline\Conforming`)
 
 ### A pattern both engines read alike
 

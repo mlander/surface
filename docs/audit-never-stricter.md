@@ -146,7 +146,7 @@ silently rather than refused. That also contradicts
 refused by its path"). It is a refusal everywhere else, never a silent
 drop.
 
-**Recommendation: tighten.** In `DataSurfacePipeline::acceptCollection()`,
+**Recommendation: tighten.** In `Accepting::acceptCollection()`,
 check an item's keys against the child's definitions before
 `isEmptyItem()` drops it. The schema is right.
 
@@ -318,7 +318,7 @@ By door:
   `ExamplesToolTest::testPartialUpdateIsRefusedByTheToolApi()`. Stricter
   than the pipeline, and no stricter than the schema.
 - **The form** posts every key it drew an element for; a key with no
-  element keeps what is stored (`extractKey()`).
+  element keeps what is stored (`Form\Extracting::extractKey()`).
 - **The React page** posts every key the contract's `values` carry, and
   those always carry every key.
 - **A PHP caller** of `submit()` may send a partial update.

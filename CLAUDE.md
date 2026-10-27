@@ -686,6 +686,9 @@ src/ResourceBuild/       Discovery pass, registry, build step, adapters,
 src/Access/              The operation route's access check.
 src/Hook/                #[UsesStructure] into plugin definitions.
 src/Pipeline/            Access, accept, validate, prepare, commit; results.
+                         DataSurfacePipeline.php keeps the write path and
+                         the document, over its three verbs: Accepting.php,
+                         Validating.php, Conforming.php.
 src/Storage/             Where accepted values are written; settings layouts.
 src/Contract/            The served contract's emitter (JSON Schema): ContractEmitter
                          walks the frames, PropertySchema writes each key,
@@ -695,6 +698,9 @@ src/Drush/               Drush commands (the site's catalog, the contract diff, 
                          config schema) and the resource generator, drush
                          generate surface:resource.
 src/Form/                Form builder, host traits, the operation form.
+                         The form builder is DataSurfaceFormBuilder.php,
+                         the service and its Form API callbacks, over
+                         Drawing.php, Extracting.php and Refreshing.php.
 src/Widget/ src/Plugin/  Definition to form element; resolvers, hosts, constraints.
 src/Options/             Option sets, the resolver plugin base and manager.
 src/Variants/            Variants from the site: ComponentProps and ComponentSlots.
