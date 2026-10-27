@@ -110,4 +110,11 @@ final class CountingResources implements ResourcesInterface {
     return $this->inner->storage($resource, $context, $built, $account);
   }
 
+  /**
+   * {@inheritdoc}
+   */
+  public function resolved(string $resource, string $operation = 'configure', array $arguments = []): array {
+    return $this->inner->resolved($resource, $operation, $arguments);
+  }
+
 }

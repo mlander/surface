@@ -741,7 +741,7 @@ class ExamplesConceptsTest extends DataSurfaceKernelTestBase {
     $this->assertSame('pasted', $contract['event.mailer']['source']['const']);
     $this->assertSame('Pasted here', $contract['event.mailer']['source'][ContractEmitter::EXTENSION]['fixed']);
     $this->assertSame([], $contract['event.webhook']['rules']);
-    $this->assertSame((string) $this->container->get('data_surface_examples.concept_panel')->gap(), strip_tags((string) $concept['gap']['#markup'], '<code>'));
+    $this->assertSame('<p>' . $this->container->get('data_surface_examples.concept_panel')->atUse() . '</p><p>A post cannot be signed now: no key is pasted, and no managed key is chosen.</p>', (string) $concept['use']['#markup']);
     $this->assertSame(ConceptPanel::LOCKING, htmlspecialchars_decode((string) $concept['alternative']['content']['#value']));
     $this->assertSame(['event.mailer:pasted', 'event.mailer:read', 'event.webhook:pasted'], array_values(array_filter(array_keys($concept['calls']), static fn (string $key): bool => str_contains($key, ':'))), 'With the module off, the calls that need nothing of it.');
     $this->assertSame(array_keys($concept['calls']), array_keys($this->formAt('data_surface_examples.step14_webhook')[DataSurfaceOperationForm::PANEL_KEY][ExamplePanels::CONCEPT]['calls']), 'Both pages make both resources\' calls.');

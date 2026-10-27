@@ -585,7 +585,7 @@ final class ConceptPanel {
   }
 
   /**
-   * Example 14: the module to enable, both resources' documents, the gap.
+   * Example 14: the module to enable, both resources' documents, the use.
    *
    * What the page shows depends on whether the module that manages keys
    * is on, and says which: one source or two, a managed key on the
@@ -628,7 +628,7 @@ final class ConceptPanel {
           ],
         ]),
       ),
-      'gap' => ['#markup' => '<p>' . $this->gap() . '</p>'],
+      'use' => ['#markup' => '<p>' . $this->atUse() . '</p><p>' . $this->signedWith() . '</p>'],
       'alternative' => $this->details(
         $this->t('The alter not shipped: lock the pasted key instead of ruling it out'),
         $this->t('A lock would keep the pasted key drawn, an empty password box that cannot be used, and would take a pasted key sent with a note instead of a refusal, so a caller who sends both learns of it only from the note. Ruling it out takes the box away, refuses the pasted key naming the managed key, and keeps what is stored, as a lock would. A conditional lock is also no effect a declared rule has, so this is the spelling it would have:'),
@@ -638,13 +638,34 @@ final class ConceptPanel {
   }
 
   /**
-   * Example 14: what the alter cannot do, in one paragraph.
+   * Example 14: what the code that uses the webhook reads, in one paragraph.
    *
    * @return \Drupal\Core\StringTranslation\TranslatableMarkup
    *   The paragraph, as safe HTML.
    */
-  public function gap(): \Stringable {
-    return $this->t("What the alter cannot do: hand the webhook's code the managed key's value. The code that signs a post reads <code>api_key</code>, the one key the webhook declares; the managed key's name is stored under <code>third_party_settings.data_surface_examples_keys.key_id</code>, which belongs to the module that mounted it, and the webhook never names another module's keys. So once a managed key is chosen the form, both documents and the tool are right, and the code that signs has no key to sign with. The mailer has no such gap: it declares the managed source itself, so its code reads <code>credential.key_id</code> and asks the key service for the value.");
+  public function atUse(): \Stringable {
+    return $this->t("Where the webhook is used: the code that signs a post reads <code>api_key</code> through <code>Resources::resolved()</code>, and knows nothing of managed keys. The alter says, beside its rule, that once a managed key is chosen its value stands in for the pasted key there: <code>resolve('api_key', from: ['key_id'], using: ManagedKeyValue::class)</code>. The value is read when a post is signed and never stored on the webhook; the pasted key stays stored as it was, and no document, form or tool states the resolve. The mailer declares the managed source itself, so its code reads <code>credential.key_id</code> and asks the key service for the value.");
+  }
+
+  /**
+   * Example 14: the key a post is signed with now, in one line.
+   *
+   * Read from what the webhook stores: the managed key's name, or whether
+   * a key is pasted. The key itself is never shown.
+   *
+   * @return \Drupal\Core\StringTranslation\TranslatableMarkup
+   *   The line, as safe HTML.
+   */
+  protected function signedWith(): \Stringable {
+    $context = $this->resources->operation('event.webhook', 'configure');
+    $built = $this->resources->build('event.webhook', $context);
+    $stored = $this->resources->storage('event.webhook', $context, $built)->load($built);
+    $managed = $stored['third_party_settings'][self::KEYS]['key_id'] ?? NULL;
+    return match (TRUE) {
+      is_string($managed) && $managed !== '' => $this->t('A post is signed now with the managed key <code>@key</code>.', ['@key' => $managed]),
+      is_string($stored['api_key'] ?? NULL) && $stored['api_key'] !== '' => $this->t('A post is signed now with the pasted key.'),
+      default => $this->t('A post cannot be signed now: no key is pasted, and no managed key is chosen.'),
+    };
   }
 
   /**

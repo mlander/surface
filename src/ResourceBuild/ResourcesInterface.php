@@ -276,4 +276,42 @@ interface ResourcesInterface {
    */
   public function storage(string $resource, OperationContext $context, ?DataSurfaceInterface $built = NULL, ?AccountInterface $account = NULL): DataSurfaceStorageInterface;
 
+  /**
+   * Reads what a resource holds, as the code that uses it needs it.
+   *
+   * Builds the operation, loads its stored values through its storage as
+   * storage() does, and applies every resolve declared on the built
+   * resource, its own keys' and the keys alters mounted
+   * (BlueprintAdditionsInterface::resolve()): a resolved key holds what its
+   * class answers for the stored values of the keys it is resolved from,
+   * while each holds a value, and what is stored otherwise. A value a
+   * resolve fills is never written back.
+   *
+   * For PHP code alone: the answer holds secrets, so it is no route and no
+   * tool, and every door's read still leaves secrets out and states no
+   * resolve.
+   *
+   * @code
+   * $values = $resources->resolved('event.webhook');
+   * $signature = hash_hmac('sha256', $body, $values['api_key']);
+   * @endcode
+   *
+   * @param string $resource
+   *   The resource class, or its #[Resource] id.
+   * @param string $operation
+   *   The operation it is built in, `configure` by default.
+   * @param array $arguments
+   *   The operation's arguments, positional or by parameter name.
+   *
+   * @return array
+   *   The stored values, with each resolve applied; empty when nothing is
+   *   stored.
+   *
+   * @throws \LogicException
+   *   When the resource names no storage.
+   *
+   * @see docs/resources.md#standing-in-for-a-key-at-use
+   */
+  public function resolved(string $resource, string $operation = 'configure', array $arguments = []): array;
+
 }

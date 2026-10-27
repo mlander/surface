@@ -142,6 +142,15 @@ final class ShapeBlueprint implements BlueprintAdditionsInterface {
   }
 
   /**
+   * {@inheritdoc}
+   *
+   * A shape is one value, with no keys to resolve it from.
+   */
+  public function resolve(string $key, array $from, string $using): static {
+    throw $this->refused('resolve()');
+  }
+
+  /**
    * Applies what the alter said to the shape, refusing what widens it.
    *
    * @param \Drupal\Core\TypedData\DataDefinition $definition

@@ -39,6 +39,7 @@ use Drupal\data_surface_examples\Storage\MailerStorage;
 use Drupal\data_surface_examples\Storage\SpotlightStorage;
 use Drupal\data_surface_examples\Storage\VenueStorage;
 use Drupal\data_surface_examples\Storage\WebhookStorage;
+use Drupal\data_surface_examples\WebhookSigner;
 use Drupal\data_surface_examples\Structure\ManagedCredentialStructure;
 use Drupal\data_surface_examples\Structure\PastedCredentialStructure;
 use Drupal\data_surface_examples\Structure\PersonStructure;
@@ -135,7 +136,7 @@ final class ExamplesController extends ControllerBase {
   public const RETITLE = 'data_surface_examples_retitle';
 
   /**
-   * That module's list, constraint, validator, resolver and alter.
+   * That module's list, constraint, validator, resolver, alter and value.
    */
   public const KEYS_FILES = [
     'src/Keys/ManagedKeys.php',
@@ -143,6 +144,7 @@ final class ExamplesController extends ControllerBase {
     'src/Plugin/Validation/Constraint/ManagedKeyConstraintValidator.php',
     'src/Plugin/DataSurfaceOptionsResolver/ManagedKeyOptions.php',
     'src/Alter/WebhookKeyAlter.php',
+    'src/Compute/ManagedKeyValue.php',
   ];
 
   /**
@@ -699,7 +701,7 @@ final class ExamplesController extends ControllerBase {
           $this->route('data_surface_examples.step14'),
           $this->route('data_surface_examples.step14_webhook'),
           $this->react('event.mailer'),
-          $this->t("The mailer, its provider, its two sources and its storage: @mailer lines of code; the webhook and its storage: @webhook; the keys module's list, constraint, validator, resolver and alter: @keys.", $this->extensionLines()),
+          $this->t("The mailer, its provider, its two sources and its storage: @mailer lines of code; the webhook, its storage and its signer: @webhook; the keys module's list, constraint, validator, resolver, alter and key value: @keys.", $this->extensionLines()),
         ],
       ],
       15 => [
@@ -776,7 +778,7 @@ final class ExamplesController extends ControllerBase {
         ManagedCredentialStructure::class,
         MailerStorage::class,
       ])),
-      '@webhook' => CodeLines::count($this->file(WebhookResource::class)) + CodeLines::count($this->file(WebhookStorage::class)),
+      '@webhook' => CodeLines::count($this->file(WebhookResource::class)) + CodeLines::count($this->file(WebhookStorage::class)) + CodeLines::count($this->file(WebhookSigner::class)),
       '@keys' => array_sum(array_map(static fn (string $file): int => CodeLines::count($path . $file), self::KEYS_FILES)),
     ];
   }

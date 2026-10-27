@@ -813,6 +813,32 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
 
   /**
    * {@inheritdoc}
+   *
+   * A resource's own, at its top: Resources::resolved() reads it from the
+   * resource's storage.
+   *
+   * Decision: see docs/decisions.md#a-key-may-stand-for-another-at-use.
+   */
+  public function resolve(string $key, array $from, string $using): static {
+    $refuse = fn (string $why): \LogicException => new \LogicException(sprintf('resolve("%s") in %s %s', $key, $this->who(), $why));
+    if ($this->into !== NULL) {
+      throw $refuse(sprintf('is inside %s, mixed in: a resolve is a resource\'s own, for now.', $this->name($this->root()->owner)));
+    }
+    if ($this->owner !== NULL && $this->registry?->hasDefinition($this->owner) && !$this->registry->getDefinition($this->owner)->isResource()) {
+      throw $refuse('is in a structure: a resolve is a resource\'s own, read from its storage, for now. Declare it on the resource that holds the structure.');
+    }
+    return parent::resolve($key, $from, $using);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  protected function who(): string {
+    return $this->owner === NULL ? parent::who() : $this->name($this->owner);
+  }
+
+  /**
+   * {@inheritdoc}
    */
   public function addCacheableDependency(CacheableDependencyInterface $dependency): static {
     $this->builder->addCacheableDependency($dependency);

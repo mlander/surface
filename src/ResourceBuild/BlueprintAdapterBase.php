@@ -4,18 +4,22 @@ declare(strict_types=1);
 
 namespace Drupal\data_surface\ResourceBuild;
 
+use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinition;
+use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
 use Drupal\data_surface\DataSurfaceBuilderInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Reference\References;
 use Drupal\data_surface\Refinement\Rule;
+use Drupal\data_surface\Resolve;
 use Drupal\data_surface\Resource\Arrangement;
 use Drupal\data_surface\Resource\ArrangementGroup;
 use Drupal\data_surface\Resource\BlueprintAdditionsInterface;
+use Drupal\data_surface\Resource\ComputesValueInterface;
 use Drupal\data_surface\Resource\DefinesInputsInterface;
 
 /**
@@ -62,6 +66,13 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
    * @var \Drupal\data_surface\Refinement\Rule[]
    */
   protected array $rules = [];
+
+  /**
+   * The keys resolved at use through this blueprint, by stored path.
+   *
+   * @var string[]
+   */
+  protected array $resolves = [];
 
   /**
    * The collections attached through this blueprint, keyed by key.
@@ -452,6 +463,86 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
    */
   public function rules(): array {
     return $this->rules;
+  }
+
+  /**
+   * {@inheritdoc}
+   *
+   * Written on the key's definition now, every name translated to the
+   * path its value is stored at, so Resources::resolved() reads it from
+   * what storage loads with nothing more to look up.
+   *
+   * Decision: see docs/decisions.md#a-key-may-stand-for-another-at-use.
+   */
+  public function resolve(string $key, array $from, string $using): static {
+    $refuse = fn (string $why): \LogicException => new \LogicException(sprintf('resolve("%s") in %s %s', $key, $this->who(), $why));
+    if ($this->outputs) {
+      throw $refuse('resolves an output: an output is emitted, never stored, so it has nothing to resolve; a resolve reads a resource\'s stored inputs.');
+    }
+    if (!is_subclass_of($using, ComputesValueInterface::class)) {
+      throw $refuse(sprintf('names %s, which implements no %s: the class it names has a static compute().', $using, ComputesValueInterface::class));
+    }
+    if ($from === [] || !array_is_list($from)) {
+      throw $refuse('names no key it is resolved from: from: lists one or more keys.');
+    }
+    $path = $this->storedPath($key);
+    $definition = $path === NULL ? NULL : $this->find($key);
+    if ($path === NULL || $definition === NULL) {
+      throw $refuse('names a key nothing has declared: it resolves the owner\'s key by its name, or a key this blueprint added, once declared.');
+    }
+    if ($definition instanceof ComplexDataDefinitionInterface || $definition instanceof ListDataDefinitionInterface) {
+      throw $refuse('names a map or a list: a resolved key holds one value.');
+    }
+    $resolved = DefinitionMetadata::resolveOf($definition);
+    if ($resolved !== NULL) {
+      // Decision: see docs/decisions.md#a-key-may-stand-for-another-at-use.
+      throw $refuse(sprintf('names a key %s resolves already. A key is resolved once: while both resolves\' sources held a value there would be no right answer, and each alter rules out the owner\'s key alone, never another alter\'s. One module stands in for a key.', $resolved->by));
+    }
+    $paths = [];
+    foreach ($from as $source) {
+      $at = $source === $key ? NULL : $this->storedPath($source);
+      if ($at === NULL) {
+        throw $refuse(sprintf('is resolved from "%s", which is %s.', $source, $source === $key ? 'the key itself: a key is resolved from others' : 'no key declared: the owner\'s key by its name, or a key this blueprint added'));
+      }
+      $paths[$source] = $at;
+    }
+    DefinitionMetadata::setResolve($definition, new Resolve($paths, $using, $this->who()));
+    $this->resolves[] = $path;
+    return $this;
+  }
+
+  /**
+   * Gets the keys resolved at use through this blueprint.
+   *
+   * @return string[]
+   *   Each key's stored path, in the order resolved.
+   */
+  public function resolves(): array {
+    return $this->resolves;
+  }
+
+  /**
+   * Gets the path a declared key's value is stored at, for resolve().
+   *
+   * @param string $key
+   *   The key, as resolve() was given it.
+   *
+   * @return string|null
+   *   Its dotted path in the stored values, or NULL when this blueprint
+   *   knows no input of that name.
+   */
+  protected function storedPath(string $key): ?string {
+    return $this->outputs || $this->builder->getDefinition($key) === NULL ? NULL : $key;
+  }
+
+  /**
+   * Names the declaration this blueprint fills, for a message.
+   *
+   * @return string
+   *   The owner, or the alter.
+   */
+  protected function who(): string {
+    return 'this blueprint';
   }
 
   /**

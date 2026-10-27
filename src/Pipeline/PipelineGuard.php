@@ -38,7 +38,8 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * - Everything else run on an operation's behalf (onBehalf()): a runtime
  *   refiner, an access answer, an alter, a storage's load(), prepare(),
  *   commit() and delete(), a provider of keys or variants from the site,
- *   a deriver of variants or resources, an options resolver. Site state
+ *   a deriver of variants or resources, an options resolver, the class
+ *   that resolves a key at use (Resources::resolved()). Site state
  *   with cacheability passes; the door-specific services (DOOR_SPECIFIC)
  *   are refused when that class's own code asks for them. Core's code it
  *   calls is core's: an entity's save reads the request and the current
@@ -165,6 +166,11 @@ final class PipelineGuard implements DrupalContainerInterface {
    * An options resolver.
    */
   public const OPTIONS = 'options resolver';
+
+  /**
+   * The class that resolves a key at use, for Resources::resolved().
+   */
+  public const RESOLVE = 'resolve';
 
   /**
    * The classes whose properties were looked through, by class.

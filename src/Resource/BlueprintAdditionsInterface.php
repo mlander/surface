@@ -408,4 +408,52 @@ interface BlueprintAdditionsInterface {
    */
   public function narrow(string $key): Rule;
 
+  /**
+   * Resolves a key at use: its value computed from others, never stored.
+   *
+   * The key is asked, accepted and stored as declared. The code that uses
+   * the resource reads its values through Resources::resolved(), which
+   * hands $using the stored values of the keys $from names and puts what
+   * it answers at the key, unless one of them holds nothing (NULL, the
+   * empty string or no value), when the stored value stands. What it
+   * answers is never written back, and the contract does not carry it:
+   * no document, tool, form or read states a resolve.
+   *
+   * An alter that offers a key in place of an owner's says both halves,
+   * the asking and the use, each once:
+   *
+   * @code
+   * $inputs->narrow('api_key')
+   *   ->when(Condition::present('key_id'))
+   *   ->doesNotApply();
+   * $inputs->resolve('api_key', from: ['key_id'], using: ManagedKeyValue::class);
+   * @endcode
+   *
+   * @param string $key
+   *   The key resolved: an owner's key by its name, or, for an alter, a
+   *   key it added by the name it added it under.
+   * @param string[] $from
+   *   The keys it is resolved from, at least one, named as $key is: for
+   *   an alter, its own keys bare, as a condition names them.
+   * @param string $using
+   *   The class that resolves it, implementing ComputesValueInterface:
+   *   handed the value of each key in $from by its name, and the key's
+   *   own definition. It runs at use and never ahead, so it may read a
+   *   store the value is kept in; it never reads the request or the
+   *   account.
+   *
+   * @return $this
+   *
+   * @throws \LogicException
+   *   For outputs, a structure or a structure mixed in (a resolve is a
+   *   resource's, in this cut), a key not declared, a key of a map or list
+   *   type, a key resolved twice, a key in $from not declared or the key
+   *   itself, no key in $from, or a class that implements no
+   *   ComputesValueInterface.
+   *
+   * @see docs/resources.md#standing-in-for-a-key-at-use
+   * @see docs/decisions.md#a-key-may-stand-for-another-at-use
+   */
+  public function resolve(string $key, array $from, string $using): static;
+
 }

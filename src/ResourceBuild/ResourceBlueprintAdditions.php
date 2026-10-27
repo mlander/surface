@@ -215,6 +215,36 @@ final class ResourceBlueprintAdditions extends BlueprintAdapterBase {
   /**
    * {@inheritdoc}
    *
+   * The alter's own keys by the names it added them under, read from its
+   * mount, `third_party_settings.<module>.<key>`, as its rules read them.
+   *
+   * Decision: see docs/decisions.md#a-key-may-stand-for-another-at-use.
+   */
+  public function resolve(string $key, array $from, string $using): static {
+    if ($this->mixedIn !== NULL) {
+      [$structure, $owner] = $this->mixedIn;
+      throw new \LogicException(sprintf('The %s alter of %s resolves "%s", and %s is mixed into %s. A resolve is a resource\'s own, read from its storage: an alter of a mixed-in structure declares none, for now.', $this->provider, $structure, $key, $structure, $owner));
+    }
+    return parent::resolve($key, $from, $using);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  protected function storedPath(string $key): ?string {
+    return in_array($key, $this->keys, TRUE) ? RefinesInputRefiner::path($this->provider, $key) : parent::storedPath($key);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  protected function who(): string {
+    return sprintf('the %s alter', $this->provider);
+  }
+
+  /**
+   * {@inheritdoc}
+   *
    * This blueprint's own keys answer by their plain name first: they live in
    * this module's namespace, where another declaration of the same name
    * could not collide with them.

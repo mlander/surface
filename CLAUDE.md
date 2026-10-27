@@ -205,6 +205,16 @@ the record of the rework that brought the module to the pattern.
   `exists()`), and core's machine name element as the widget (example 15's
   id, the content type demo,
   `docs/decisions.md#a-machine-name-is-a-computed-identity`).
+  A key **resolved** at use is asked and stored as declared, and read
+  otherwise by the code that uses the resource: `$inputs->resolve('api_key',
+  from: ['key_id'], using: ManagedKeyValue::class)` (owner or alter, an
+  alter's own keys bare, recorded by stored path in a `Resolve` on the
+  key's definition) and `Resources::resolved($resource, $operation)`, the
+  PHP door that loads the stored values and puts the class's answer at
+  the key while every source holds a value; never stored, in no document,
+  tool, form or read, a second resolve of a key refused naming both,
+  refused in a structure (example 14's webhook and `WebhookSigner`,
+  `docs/decisions.md#a-key-may-stand-for-another-at-use`).
 - **Contract**: the JSON Schema a built resource or structure emits.
 - **Markers**: what a key's `x-surface` says of how far the schema holds
   it, and what an invoker does: `enumerated`, stated in full, narrow
@@ -457,7 +467,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 The full lane's phpunit line reads, as of this writing:
 
 ```
-phpunit: Tests: 1663, Assertions: 38372, Errors: 0, Failures: 0, Skipped: 3. Classes: 231 of 231, 8 at a time, browser classes 4.
+phpunit: Tests: 1670, Assertions: 38588, Errors: 0, Failures: 0, Skipped: 3. Classes: 232 of 232, 8 at a time, browser classes 4.
 ```
 
 the same counts a plain phpunit run of the tree gives. The skipped
@@ -705,7 +715,9 @@ See `docs/declaring-a-resource.md` for all four in full.
 ## Where things live
 
 ```
-src/                     Data surface, builder (internal), definition map, host trait.
+src/                     Data surface, builder (internal), definition map, host trait;
+                         Computed and Resolve, a computed key's and a
+                         resolved key's metadata.
 src/Resource/            The authoring API and attributes (Attribute/).
 src/ResourceBuild/       Discovery pass, registry, build step, adapters,
                          derived variants, catalog, operation routes.

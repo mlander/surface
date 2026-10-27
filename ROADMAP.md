@@ -1283,8 +1283,14 @@ renames sit in A because they are cheapest before new code exists.
     to a def per shape. Open: the list of components on the block form;
     formatted text in a slot.
 
-18. **An alter may supply a value it rules out.** Designed, not built;
-    for a decision of its own. Found by example 14 (DONE 2026-10-23,
+18. **An alter may supply a value it rules out.** DONE 2026-10-27,
+    otherwise than designed below
+    (`docs/decisions.md#a-key-may-stand-for-another-at-use`): the alter
+    declares `resolve('api_key', from: ['key_id'], using:
+    ManagedKeyValue::class)`, and the owner's code reads its values
+    through `Resources::resolved()`, a PHP door; nothing enters the
+    built resource's frame, no door and no document states it, and the
+    write path is unchanged. The design as it stood: Found by example 14 (DONE 2026-10-23,
     `docs/decisions.md#an-extension-is-a-variant-the-site-adds-or-an-alter`:
     a credential pasted as a secret or a key the site manages, once as
     the owner's variants from a closed provider, once as another
