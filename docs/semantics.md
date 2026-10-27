@@ -48,13 +48,17 @@ constraint of its own, not by hoping the pipeline reads them as absences.
 ### Absent, null, or a value
 
 A key can be sent three things, and they mean three things
-([decision](decisions.md#absent-keeps-null-clears)):
+(why: [decision](decisions.md#absent-keeps-null-clears)):
 
-| Sent for the key | Optional key | Required key |
-| --- | --- | --- |
-| left out | what it holds stands | what it holds stands |
-| `NULL`, or `''` (a form's nothing) | **cleared**: the key holds `NULL` | `NULL`: "@label is required." |
-| a value | the value, coerced | the value, coerced |
+| Sent for the key | Optional key | Required key | Key its storage always holds |
+| --- | --- | --- | --- |
+| left out | what it holds stands | what it holds stands | what it holds stands |
+| `NULL`, or `''` (a form's nothing) | **cleared**: the key holds `NULL` | `NULL`: "@label is required." | refused: "@label cannot be cleared: it always holds a value, @default by default. Leave it out to keep what it holds." |
+| a value | the value, coerced | the value, coerced | the value, coerced |
+
+A key its storage always holds is one a fully validatable config schema
+does not mark `nullable: true`
+([Storage](storage.md#a-simple-config-object)).
 
 "What it holds" is what storage holds for it on an operation that
 changes something that exists, or its declared default on one that
@@ -65,7 +69,7 @@ value yet, and the refusal is "@label is required.", judged on the
 merged document. That is why a generated tool for an operation that
 changes what exists requires no key at its door, and says "Required; a
 value already stored stands when left out." on each key the resource
-requires ([decision](decisions.md#required-is-the-resources-and-an-update-tool-requires-nothing-at-its-door)).
+requires (why: [decision](decisions.md#required-is-the-resources-and-an-update-tool-requires-nothing-at-its-door)).
 A key that is sent `null`, an emptied text box, or an optional select's
 "- None -" is cleared. Two exceptions keep what they hold when sent
 nothing: a list, which is emptied with `[]` ([Lists](#lists)), and a
@@ -74,10 +78,19 @@ secret, which is emptied with its clear marker
 clearing is possible: a key its storage always holds (a config object
 whose fully validatable schema does not call it nullable) refuses null
 and `''` naming its default, and is kept when left out
-([decision](decisions.md#a-key-its-storage-always-holds)). The schema
+(why: [decision](decisions.md#a-key-its-storage-always-holds)). The schema
 says the same: an optional key's type allows `null`, a required key's,
 an always held key's and a secret's does not
 ([served contract](served-contract.md#the-schema)).
+
+A computed key reads the three its own way, by its `when:`
+([Computed keys](declaring-a-resource.md#computed-keys)):
+
+| Sent for the key | `ON_CREATE`, `ON_CHANGE` | `UNLESS_SENT` |
+| --- | --- | --- |
+| left out | computed while storage holds nothing for it (and, for `ON_CHANGE`, when a source changed); else what is stored | the same |
+| `NULL`, or `''` | refused as a value other than the one it holds, code `computed`, unless it holds nothing | read as left out |
+| a value | noted and not taken when it is the one it holds; else refused, code `computed` | the value, coerced and judged by its constraints |
 
 This is where the module parts from the Tool API, whose rule is that a
 caller's null for an optional input means the default. A tool's
@@ -103,7 +116,7 @@ a monthly bulletin. Such a key is read as left out, whatever it is sent:
 Nothing about it is required, and nothing about it is validated. Storage
 keeps what it holds, so the key holds it again when it applies: a weekly
 send day survives a month of monthly sends
-([decision](decisions.md#a-key-that-does-not-apply)). Inside a
+(why: [decision](decisions.md#a-key-that-does-not-apply)). Inside a
 collection's item it is not put back: a list sent is written as sent.
 A map whose every key does not apply is an empty map, and its JSON
 document, `DataSurfacePipelineInterface::document()`, writes it `{}`.
@@ -112,8 +125,7 @@ A form posted without JavaScript keeps the stored value too. The form
 draws no element for a key that does not apply, and draws it again over
 AJAX when the key it depends on changes; with JavaScript off nothing is
 redrawn, so the post says nothing about that key, and a key left out
-keeps what it holds ([Absent keeps, null
-clears](decisions.md#absent-keeps-null-clears)). A person who turns
+keeps what it holds (why: [decision](decisions.md#absent-keeps-null-clears)). A person who turns
 after-hours access on and saves posts no door code: the stored code
 stands and the save is accepted, where "required when on" might have
 been expected to refuse it (a key that holds nothing is refused, and the
@@ -202,6 +214,8 @@ checked, a payload sending `['us', 'ca']` and a lenient caller sending
 `'["us","ca"]'` mean the same thing. Checkboxes all unchecked, and a
 list of rows with every row removed, send `[]`, which empties the list.
 
+Every other key is cleared by `null`
+([Absent, null, or a value](#absent-null-or-a-value)); a list is not.
 A list that is sent nothing keeps what it holds, required or not: a
 form that rendered no list widget, or a payload that named no list, has
 said nothing about the list, so **what the list already holds stands**:
@@ -255,6 +269,10 @@ A complex definition with declared properties merges in one order at
 every depth: the **declared defaults**, then **what storage holds**,
 then **the input**. A property the input does not name keeps what it
 held; a property nothing has ever held starts from its declared default.
+Every door that draws a value (the form, the envelope over HTTP, the
+React page) reads what storage holds the same way, entry by entry, so
+an entry a stored map leaves out is drawn at its default
+(why: [decision](decisions.md#defaults-follow-the-definitions-under-a-stored-value)).
 
 Two consequences worth stating:
 
@@ -320,7 +338,7 @@ Two consequences:
   `#required`, and why both schema documents advertise every secret as
   optional and not nullable, its declared type, `writeOnly`, and its
   value in `values` as `null`
-  ([decision](decisions.md#a-secret-is-optional-never-nullable)).
+  (why: [decision](decisions.md#a-secret-is-optional-never-nullable)).
 - **Locked wins.** A key that is both locked and secret takes what
   storage holds and ignores the input, marker included, because that is
   what locked means. Anything sent for it is noted as not taken, a right
@@ -333,7 +351,7 @@ Two consequences:
   or removed, a position may hold another item, so an item that leaves
   out a secret stored where it now sits is refused by the secret's path
   (`/mirrors/0/password`): send it again, or the marker
-  ([decision](decisions.md#every-door-projects-what-the-read-tool-projects)).
+  (why: [decision](decisions.md#every-door-projects-what-the-read-tool-projects)).
 - **No door answers it.** The read leaves a secret out, and so does
   every other answer: the write tool's `values`, dry run or written, and
   the API's, a dry run's included.
@@ -342,7 +360,7 @@ Two consequences:
   variant's keys, and taken up again when its variant is chosen back,
   since no caller could send it again: example 14's pasted key survives a
   switch to a managed key and back. A plain value of the other variant
-  goes, as before ([decision](decisions.md#an-extension-is-a-variant-the-site-adds-or-an-alter)).
+  goes, as before (why: [decision](decisions.md#an-extension-is-a-variant-the-site-adds-or-an-alter)).
 
 Encryption is a separate concern and lives one layer down, at the
 storage layout: see [Storage](storage.md#secrets-at-the-codec).
@@ -405,8 +423,11 @@ could show what it holds; on a stale select the empty option is what
 was selected already, so it keeps, which the stale marker (the form's
 hidden input, the contract's `stale` paths) says. A caller with no form
 keeps a stale key by leaving it out, or by sending it empty with its
-stale path, and clears it by sending it empty without one. The
-presentation is [the empty option rule](decisions.md#the-empty-option-rule).
+stale path, and clears it by sending it empty without one. The form
+shows a stale select on its empty option, selected, reading "- Keep
+@value (no longer offered) -", and that option posts the empty string,
+which keeps the stored value
+(why: [decision](decisions.md#the-empty-option-rule)).
 
 Two boundaries, both deliberate:
 
@@ -538,7 +559,7 @@ Venue is Riverside Hall. Choose Main hall or East room." The
 constraint's own message comes first, whole, still the object it built,
 and each sentence added is one source a translator sees entire, never a
 concatenation of translated fragments
-([decision](decisions.md#a-refusal-names-what-it-depends-on)).
+(why: [decision](decisions.md#a-refusal-names-what-it-depends-on)).
 
 A key it depends on is named by its label; a key held by another (an
 alter's mounted key, a key of a child, a variant or an item) by the
@@ -568,14 +589,13 @@ entries and counts the rest; the full list is still on the exception.
 Every violation carries a stable `code` beside its message, for a
 script or an agent to branch on: the message moves with the site's
 language and with what an alter relabels, the code does not
-([decision](decisions.md#one-result-at-every-door)). A refusal a
+(why: [decision](decisions.md#one-result-at-every-door)). A refusal a
 constraint made has its constraint's code: Symfony's own where the
 constraint defines one, by the name its constraint gives it, lower case
 and without `_ERROR` (Symfony's code is a UUID, and
 `Constraint::getErrorName()` names it one to one); a constraint that
 sets no code is named for itself, in snake case
-(`UniqueNodeTypeConstraint` is `unique_node_type`,
-`ReferenceableConstraint` `referenceable`). Every refusal the module
+(`ReferenceableConstraint` is `referenceable`). Every refusal the module
 makes itself has one of its own (`Pipeline\Violation`'s constants). A
 refusal of the whole call has an empty path.
 
@@ -589,7 +609,7 @@ problem details all spell it so; inside the pipeline a violation keeps
 its dotted path (`Violation::fullPath()`), which the door writes as a
 pointer (`ResultDocument::pointer()`), and the form names an element as
 the form does. Until contract 3 every door answered the dotted path
-([decision](decisions.md#one-result-at-every-door)). In the table, "the
+(why: [decision](decisions.md#one-result-at-every-door)). In the table, "the
 key" is that key's pointer.
 
 | Code | Path | Says |
@@ -611,9 +631,9 @@ key" is that key's pointer.
 | `locked` | empty | The resource may be seen and not changed, so nothing was written. |
 | `not_found` | empty | The call's parameters name nothing, or a read is asked of what an operation creates. |
 | `conflict` | empty | What storage holds changed since the caller read it: the API's `If-Match` no longer names it, a 412. |
-| `taken` | the key | A create names a thing that exists already: its machine name is in use (`ConfigEntityStorage`), or a list holds a thing twice that may be held once (a placed block's condition). |
+| `taken` | the key | A create names a thing that exists already: its identity is held, "A venue named riverside already exists." (the stock `DataSurfaceUnique`, and `ConfigEntityStorage`), or a list holds a thing twice that may be held once (a placed block's condition). |
 | `locked` | the key | In `notes`: a value sent for a locked key, not taken. |
-| `computed` | the key | A value sent for a computed key other than the one it holds; in `notes`, the one it holds, sent and not taken ([Computed keys](declaring-a-resource.md#computed-keys)). |
+| `computed` | the key | A value sent for a computed key other than the one it holds; in `notes`, the one it holds, sent and not taken ([Computed keys](declaring-a-resource.md#computed-keys)). A key computed unless sent takes the value sent, and is never refused with it. |
 | `stale` | the key | In `stale`: a stored value kept that the key no longer offers, with `stored`. |
 | `not_in_range`, `too_high`, `too_low` | the key | Range: a number outside its bounds. |
 | `too_long`, `too_short` | the key | Length: a string outside its bounds. |
@@ -640,7 +660,7 @@ is said, though, once per key and blocking nothing: the run's notes
 and the API answers as `notes`, say "Machine
 name is locked and kept as stored; the value sent was not taken." The
 form says nothing, since it draws the key disabled
-([decision](decisions.md#locked-at-the-top)).
+(why: [decision](decisions.md#locked-at-the-top)).
 
 ### Locked and omitted children
 

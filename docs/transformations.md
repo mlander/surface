@@ -16,8 +16,8 @@ each layer changes one thing about it and nothing else:
 
 | Layer | What it transforms | Who declares it | Where it is documented |
 | --- | --- | --- | --- |
-| Coercion, at the door | A raw value into the declared type, before validation: `'7'` becomes `7` for an integer, `'yes'` becomes `TRUE` for a boolean. Only when the intended value is unambiguous; anything else is left for a constraint to refuse. | Nobody: one table, the Tool API's, mirrored in `Pipeline\Coercion` and run by `accept()` for every door. | [The coercion table](semantics.md#the-coercion-table), [decision](decisions.md#one-coercion-table-the-tool-apis) |
-| Storage layout | The accepted document into the shape storage keeps, and back: a deadline asked as an amount and a unit, stored as seconds. | The storage class, in its own `load()` and `prepare()`; a field type, by handing `FieldSettingsStorage` a `StorageLayoutInterface`; an alter, for its own mount, with `AltersStorageLayoutInterface::storageLayout()`. | [StorageLayoutInterface](storage.md#storagelayoutinterface), [decision](decisions.md#blueprints-and-layouts) |
+| Coercion, at the door | A raw value into the declared type, before validation: `'7'` becomes `7` for an integer, `'yes'` becomes `TRUE` for a boolean. Only when the intended value is unambiguous; anything else is left for a constraint to refuse. | Nobody: one table, the Tool API's, mirrored in `Pipeline\Coercion` and run by `accept()` for every door. | [The coercion table](semantics.md#the-coercion-table) (why: [decision](decisions.md#one-coercion-table-the-tool-apis)) |
+| Storage layout | The accepted document into the shape storage keeps, and back: a deadline asked as an amount and a unit, stored as seconds. | The storage class, in its own `load()` and `prepare()`; a field type, by handing `FieldSettingsStorage` a `StorageLayoutInterface`; an alter, for its own mount, with `AltersStorageLayoutInterface::storageLayout()`. | [StorageLayoutInterface](storage.md#storagelayoutinterface) (why: [decision](decisions.md#blueprints-and-layouts)) |
 | Wire representation | How a value travels at one door: an operation's entity parameter as its id at the tool door, an update's body as a merge patch over HTTP. | The door: the tool bridge's `OperationInputs`, the React submodule's API controller. | [The Tool API bridge](../modules/data_surface_tool/README.md), [The write](served-contract.md#the-write) |
 
 The resource's keys, as declared, are the one document all three layers
@@ -108,14 +108,14 @@ Its `prepare()` calls `toStorage()` the same way. Every door answers
 values in the resource's layout, a dry run's included; what a layout
 produces is served to no caller, and only PHP code holding the storage
 reads it on the result
-([decision](decisions.md#every-door-projects-what-the-read-tool-projects)).
+(why: [decision](decisions.md#every-door-projects-what-the-read-tool-projects)).
 
 Each class's `use` line: [Namespaces](concepts.md#namespaces).
 
 ### A reference key: the id, and where another shape belongs
 
 A key that refers to an entity holds the entity's id at every door
-([decision](decisions.md#a-reference-is-an-id-with-a-list-the-site-decides-listed-or-looked-up)).
+(why: [decision](decisions.md#a-reference-is-an-id-with-a-list-the-site-decides-listed-or-looked-up)).
 Example 16 declares two of its keys this way:
 
 <!-- excerpt: modules/data_surface_examples_references/src/Resource/SponsorshipResource.php -->
@@ -129,16 +129,20 @@ $inputs->add('thing', 'entity', t('Featured beside'))
   ->addConstraint('DataSurfaceReferenceableType', ['interface' => ContentEntityInterface::class]);
 ```
 
-Its config object stores them as they are asked for: `page` as the
-node's integer id, and the bare `thing` as its two parts,
-`{entity_type, id}`. The config schema, generated from the resource,
-says so:
+Its config object stores a content entity by its uuid, which names the
+same node on a site the config is deployed to: `page` as the node's
+uuid, and the bare `thing` as its two parts, `{entity_type, id}`, the
+`id` the uuid of the content entity it holds. The engine translates,
+with the stock `ReferenceStorageLayout`, and every door still sends and
+answers the id
+([A reference is stored by uuid](storage.md#a-reference-is-stored-by-uuid)).
+The config schema, generated from the resource, says so:
 
 <!-- excerpt: modules/data_surface_examples_references/config/schema/data_surface_examples_references.schema.yml -->
 
 ```yaml
 page:
-  type: integer
+  type: uuid
   label: 'Announcement'
   nullable: true
 thing:
@@ -155,7 +159,7 @@ thing:
       nullable: true
 ```
 
-No layout is involved, because the stored shape is the asked shape.
+No layout of the example's is involved: the uuid is the engine's.
 When storage keeps a reference in another shape, the mapping is a
 layout and nowhere else. A field item keeps an entity reference as
 `[['target_id' => 7]]`; a resource that asks for the id as `page` and
@@ -322,7 +326,7 @@ plugin; ECA meets a resource at two points that already exist:
   resource goes through the pipeline like any other door:
   access, coercion, validation, storage's checks, and the one result
   shape with its violations by path
-  ([decision](decisions.md#one-result-at-every-door)).
+  (why: [decision](decisions.md#one-result-at-every-door)).
 
 Either way the model is site configuration, built and exported on the
 site that wants the reaction, and the resource does not know it exists.
@@ -385,7 +389,7 @@ $outputs->add('total', 'integer', t('Total'))
 
 A listing is a read only operation, which is never committed, so its
 outputs are what its storage's `prepare()` answered
-([decision](decisions.md#who-produces-outputs)). `VenueStorage`
+(why: [decision](decisions.md#who-produces-outputs)). `VenueStorage`
 computes them there:
 
 <!-- excerpt: modules/data_surface_examples/src/Storage/VenueStorage.php -->
@@ -451,7 +455,7 @@ The class is a pure function of the keys `from:` names:
 <!-- excerpt: modules/data_surface_examples/src/Slugify.php -->
 
 ```php
-public static function compute(array $from): mixed {
+public static function compute(array $from, ?DataDefinitionInterface $key = NULL): mixed {
   $slug = trim((string) preg_replace('/[^a-z0-9]+/', '-', mb_strtolower((string) ($from['label'] ?? ''))), '-');
   return $slug === '' ? NULL : $slug;
 }
@@ -461,14 +465,15 @@ It differs from the two above in what it is: an output is not stored
 and no read answers it, and what `prepare()` adds is in no contract. A
 computed key is stored, loaded and answered by the read like any key,
 and both documents state it. Three choices settle it
-([decision](decisions.md#a-computed-key-is-a-pure-function-of-its-sources)):
+(why: [decision](decisions.md#a-computed-key-is-a-pure-function-of-its-sources)):
 
 - **Pure functions only.** The class that computes it runs under the guard a static
   refiner runs under, and the PHPStan rule flags `\Drupal::` in it, so
   the narrowing (`POST .../schema`) can run it ahead of a write and
-  answer the value it would compute for the values in progress. A
-  changed time reads the clock: it stays a storage's to add in
-  `prepare()`.
+  answer the value it would compute for the values in progress. It is
+  handed the values `from:` names and the key's own definition, `$key`,
+  which is declaration, not site state. A changed time reads the clock:
+  it stays a storage's to add in `prepare()`.
 - **When it runs.** Once the other keys are accepted, from their
   accepted values: while storage holds nothing for it, which is when the
   thing is created, and again on every write that changes a key in
@@ -487,5 +492,36 @@ Both documents state it `readOnly` with `x-surface.computed: {"from":
 its sources; it is never in `required`. The write tool's `values` leaves
 it out, and the read tool answers it, so the two shapes differ by
 exactly the computed keys.
+
+Each class's `use` line: [Namespaces](concepts.md#namespaces).
+
+### A machine name: computed unless sent
+
+The venue's machine name is a computed key a caller may also type. It
+is computed from the name when a call leaves it out, as Drupal's own
+forms suggest a machine name from a title, and kept as sent when a call
+gives one:
+
+<!-- excerpt: modules/data_surface_examples/src/Resource/VenueResource.php -->
+
+```php
+$inputs->compute('id', 'machine_name', t('Machine name'),
+  from: ['label'], using: MachineName::class, when: Compute::UNLESS_SENT)
+  ->setDescription(t('A unique name for the venue: lowercase letters, numbers and underscores, computed from its name unless one is given.'))
+  ->addConstraint('Length', ['max' => 32]);
+```
+
+`machine_name` is core's config schema type, so the key is a string with
+its pattern and a Length of 166, narrowed here to 32. The stock
+`MachineName` transliterates, lowercases, replaces what a machine name
+may not hold with underscores and cuts to the key's Length, as core's
+machine name element does in the browser. `Compute::UNLESS_SENT` is the
+third `when:`: a value sent is judged by the key's own constraints and
+is never refused for being sent, so both documents state the key with
+`x-surface.computed: {"from": ["label"], "when": "unless_sent"}` and no
+`readOnly`, and the write tool offers it. Each create holds the identity
+to one no venue has, with the stock `DataSurfaceUnique` the build adds:
+"A venue named riverside already exists."
+(why: [decision](decisions.md#a-machine-name-is-a-computed-identity)).
 
 Each class's `use` line: [Namespaces](concepts.md#namespaces).

@@ -18,9 +18,10 @@ use Drupal\data_surface_examples_references\Storage\SponsorshipStorage;
  *
  * A sponsor of the event has a stand at a venue, a contact among the
  * site's users and an announcement among its articles; each key is
- * declared by the data type string of what it refers to, and stores the
- * id. The last three name an entity of any type: its entity type, then
- * its id, filtered by what kind of entity type it is and by bundle.
+ * declared by the data type string of what it refers to, and every door
+ * sends and answers the id; the config object stores a content entity by
+ * its uuid. The last three name an entity of any type: its entity type,
+ * then its id, filtered by what kind of entity type it is and by bundle.
  */
 #[Resource('event.sponsorship', storage: SponsorshipStorage::class)]
 #[Operation('configure',

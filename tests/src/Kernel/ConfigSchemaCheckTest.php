@@ -7,7 +7,9 @@ namespace Drupal\Tests\data_surface\Kernel;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\data_surface\DataSurfaceBuilder;
 use Drupal\data_surface\DefinitionMetadata;
+use Drupal\data_surface\Storage\ConfigObjectStorage;
 use Drupal\data_surface_demo_node_type\Storage\NodeTypeStorage;
+use Drupal\data_surface_schema_test\Storage\AliasSettingsStorage;
 use Drupal\data_surface_schema_test\Storage\NarrowedStorage;
 use Drupal\node\Entity\NodeType;
 use PHPUnit\Framework\Attributes\Group;
@@ -89,6 +91,52 @@ class ConfigSchemaCheckTest extends DataSurfaceKernelTestBase {
                 min: 1
                 max: 100
       YAML, $schema, 'Generated, the schema says what the resource does.');
+  }
+
+  /**
+   * Tests a key asked as checkboxes and stored as a list is told to the check.
+   *
+   * The alias settings ask for a checkbox per type, and their storage keeps
+   * the list of the types checked through its layout, as docs/recipes.md
+   * shows. The layout says the stored schema of the key it translates, a
+   * sequence of strings: the check skips the key, so the build passes, and
+   * the generator writes that schema rather than the asked one.
+   */
+  public function testTranslatedKeyIsToldToTheCheck(): void {
+    $resources = $this->container->get('data_surface.resources');
+    $context = $resources->operation('schema_test.aliases', 'configure');
+    $built = $resources->build('schema_test.aliases', $context);
+    $this->assertSame(['types', 'marks'], $built->getDefinitions()->names());
+    $this->assertSame([], $this->container->get('class_resolver')->getInstanceFromDefinition(AliasSettingsStorage::class)->widerThanSchema($built));
+    // Not told, the check names each entry.
+    $untold = new class(
+      $this->container->get('config.factory'),
+      $this->container->get('config.typed'),
+      $this->container->get('language_manager'),
+      $this->container->get('string_translation'),
+    ) extends ConfigObjectStorage {
+
+      /**
+       * {@inheritdoc}
+       */
+      public const CONFIG = 'data_surface_schema_test.aliases';
+
+    };
+    $this->assertSame([
+      'types.node' => 'it is a boolean, which the schema types string, a string',
+      'types.term' => 'it is a boolean, which the schema types string, a string',
+      'types.user' => 'it is a boolean, which the schema types string, a string',
+    ], $untold->widerThanSchema($built));
+    $generated = $this->container->get('data_surface.config_schema')->files(['data_surface_schema_test']);
+    $schema = $generated[$this->container->get('extension.list.module')->getPath('data_surface_schema_test') . '/config/schema/data_surface_schema_test.schema.yml'];
+    $this->assertStringContainsString(<<<'YAML'
+          types:
+            type: sequence
+            label: 'Types with aliases'
+            sequence:
+              type: string
+              label: 'Type'
+      YAML, $schema, 'Generated, the schema says what the layout stores.');
   }
 
   /**

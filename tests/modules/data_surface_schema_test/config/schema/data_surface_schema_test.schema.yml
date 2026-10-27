@@ -29,3 +29,23 @@ data_surface_schema_test.narrowed:
       type: string
       label: 'Note'
       nullable: true
+
+# Written by hand, as pathauto's is: the types are stored as a list of ids
+# though the resource asks for a checkbox per type, which its storage
+# translates and tells the check about.
+data_surface_schema_test.aliases:
+  type: config_object
+  label: 'Alias settings'
+  mapping:
+    types:
+      type: sequence
+      label: 'Types with aliases'
+      sequence:
+        type: string
+        label: 'Type'
+    marks:
+      type: sequence
+      label: 'Punctuation'
+      sequence:
+        type: integer
+        label: 'Action'

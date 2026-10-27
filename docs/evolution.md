@@ -4,8 +4,8 @@ A resource or structure is a promise twice over: to the values already
 stored for it, and to every client that read its contract. This page
 says which changes keep both promises, which break one, what a
 breaking change needs, how the module finds one before a release does,
-and what is promised at all. The decision behind it is [A resource
-evolves in the open](decisions.md#a-resource-evolves-in-the-open).
+and what is promised at all
+(why: [decision](decisions.md#a-resource-evolves-in-the-open)).
 
 In short: a compatible change needs nothing. A breaking change raises
 the version of the resource or structure that owns it and migrates the
@@ -70,7 +70,7 @@ version it is written in, is not the one served.
 | --- | --- | --- | --- | --- |
 | An optional key added, with a default | compatible | Nothing: a value stored before reads the default until it is written. | Nothing: an old document leaves it out, so a create gives it the default and an edit keeps what it holds. | `optional key added` |
 | An optional key added, with no default | compatible | Nothing: a value stored before holds nothing there. | Nothing: left out, a create holds nothing and an edit keeps nothing; a reader of `values` meets a new key holding `null`. | `optional key added` |
-| A constraint widened (a bound raised, a pattern dropped) | compatible | Nothing. | Nothing; a read promises shape, not membership ([decision](decisions.md#a-read-promises-shape-not-membership)). | `maximum raised`, `pattern removed` |
+| A constraint widened (a bound raised, a pattern dropped) | compatible | Nothing. | Nothing; a read promises shape, not membership (why: [decision](decisions.md#a-read-promises-shape-not-membership)). | `maximum raised`, `pattern removed` |
 | A choice added | compatible | Nothing. | A reader may meet a value it does not know, and shows it by its value. | `choice added` |
 | A variant added | compatible | Nothing. | As for a choice: the deciding key offers a value, and its conditional is met only by it. | `choice added`, `rule added for a value the baseline did not allow` (a note) |
 | An optional port added to a structure | compatible | Nothing. | A container that does not wire it reads nothing there. | `optional port added` (a note) on the def |
@@ -78,7 +78,7 @@ version it is written in, is not the one served.
 | A label, a description, a default or an example changed | compatible | Nothing. | Nothing; a default changed changes what a create gives a key left out, which the note says. | a note |
 | A required key made optional | compatible | Nothing. | A reader of `values` may meet `null` there. | `made optional` |
 | A required key added, with a default | compatible | Nothing: a value stored before reads the default until it is written. | Nothing: a create gives it the default, and an edit keeps what it holds. | `required key added, with a default` (a note) |
-| A required key added, with no default, to an operation that acts on what is stored (an update, a read) | compatible, with a note | Nothing loads differently: a thing stored before holds nothing there, so its next write must supply the key, and the pipeline refuses one that does not in the key's own words. Where the value can be derived from what is stored, raise the version and migrate it in instead, so no write is asked for it. | An edit of a thing stored before it sends it once, and an edit of one that holds it may leave it out, since a key left out keeps what is stored (an update tool requires nothing at its door, [decision](decisions.md#required-is-the-resources-and-an-update-tool-requires-nothing-at-its-door)). | `required key added: a write must now supply <key> where nothing is stored` (a note) |
+| A required key added, with no default, to an operation that acts on what is stored (an update, a read) | compatible, with a note | Nothing loads differently: a thing stored before holds nothing there, so its next write must supply the key, and the pipeline refuses one that does not in the key's own words. Where the value can be derived from what is stored, raise the version and migrate it in instead, so no write is asked for it. | An edit of a thing stored before it sends it once, and an edit of one that holds it may leave it out, since a key left out keeps what is stored (an update tool requires nothing at its door; why: [decision](decisions.md#required-is-the-resources-and-an-update-tool-requires-nothing-at-its-door)). | `required key added: a write must now supply <key> where nothing is stored` (a note) |
 | A required key added, with no default, to a create | breaking | Nothing. | Every create an old client sends leaves it out, and nothing is stored for it to keep, so every one is refused. Give the key a default, or allow it with a reason. | `required key added with no default: a create that leaves <key> out is refused` |
 | A required key added, with no default, to a structure described alone | breaking | As for its containers. | It states no operation, so the lint cannot tell whether a container creates it, and judges it as a create; each container's own document judges the same key in that container's kind. | `required key added with no default: a container that creates this structure and leaves <key> out is refused` |
 | A key removed | breaking | A migration drops it; `ConfigObjectStorage` otherwise keeps it stored, unread, since it lays values over what is stored. | Sending it is refused as an unknown key. | `key removed` |
@@ -141,16 +141,16 @@ Both documents are written in a version of the wire format, the
 contract's own, distinct from a resource's version: the resource's
 counts the breaking changes made to its stored values, the contract's
 the changes made to how every document is spelled and laid out, whatever
-it describes ([decision](decisions.md#contract-2)). Contract 1 is what
+it describes (why: [decision](decisions.md#contract-2)). Contract 1 is what
 the module served until 2026-10-20, and what every document was before
 it had a number, contract 2 until 2026-10-22, and contract 3, which
 changed the HTTP door and kept the documents' spelling
-([decision](decisions.md#contract-3-the-operation-is-the-method)), until
+(why: [decision](decisions.md#contract-3-the-operation-is-the-method)), until
 2026-10-24; today's is 4 (`ContractEmitter::CONTRACT`), which kept the
 door and cut the `x-surface` keywords that said nothing or said it twice
 (`locked`, `declared`, `access: "live"`, `fetch` and `entries` beside
 `deferred`, `list`), and writes every keyword only where it says
-something ([decision](decisions.md#contract-4-fewer-keywords-nothing-new-on-the-wire)).
+something (why: [decision](decisions.md#contract-4-fewer-keywords-nothing-new-on-the-wire)).
 
 **What raises it.** A change to how documents are spelled or laid out
 that a client reading the old spelling would misread: a key or a marker
@@ -380,7 +380,7 @@ an alter a site installs, which only that site's own baselines cover.
 
 ## See also
 
-- [Decisions: a resource evolves in the open](decisions.md#a-resource-evolves-in-the-open)
+- A resource evolves in the open (why: [decision](decisions.md#a-resource-evolves-in-the-open))
 - [Testing a resource](testing-a-resource.md), the contract baseline among an adopter's checks
 - [The served contract](served-contract.md), whose full schema the lint compares
 - [Value semantics](semantics.md), which says what a client asked for

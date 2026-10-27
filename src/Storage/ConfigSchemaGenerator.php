@@ -9,8 +9,11 @@ use Composer\Autoload\ClassLoader;
 use Drupal\Core\Cache\NullBackend;
 use Drupal\Core\Config\Entity\ConfigEntityTypeInterface;
 use Drupal\Core\DependencyInjection\ClassResolverInterface;
+use Drupal\Core\Entity\Attribute\EntityType;
+use Drupal\Core\Entity\EntityTypeInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Extension\ModuleExtensionList;
+use Drupal\Core\Plugin\Discovery\AttributeDiscoveryWithAnnotations;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinition;
@@ -25,6 +28,7 @@ use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\DefinitionMap;
 use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Entry;
+use Drupal\data_surface\Reference\ReferenceStorageLayout;
 use Drupal\data_surface\Refinement\ChoiceSet;
 use Drupal\data_surface\Resource\ClosedSiteListInterface;
 use Drupal\data_surface\Resource\OperationContext;
@@ -79,6 +83,15 @@ use Symfony\Component\Yaml\Yaml;
  * written. An entity type of core or of another module has a schema of
  * its own.
  *
+ * A key the storage keeps otherwise than it is asked for is written as
+ * the storage keeps it, from the one place that says so, the storage's
+ * translatedKeys(): a key its layout translates (a checkbox per type,
+ * stored as the list of the types checked), with the schema the layout
+ * gives, and a key that refers to a content entity, as a `uuid`. Its
+ * install value is the one the file gives, else nothing: a declared
+ * default is in the layout it is asked for; see
+ * docs/recipes.md#asked-as-checkboxes-stored-as-a-list-of-ids.
+ *
  * A file's entries the resource does not describe are kept as they are,
  * and so are the comments above an entry; each written entry says it was
  * generated on the line above it. What the resource does not say, the
@@ -118,6 +131,13 @@ final class ConfigSchemaGenerator {
    * @var string[]
    */
   protected array $alwaysHeld = [];
+
+  /**
+   * The keys the storage of the resource being described translates.
+   *
+   * @var array<string, array>
+   */
+  protected array $translated = [];
 
   /**
    * Constructs a ConfigSchemaGenerator.
@@ -164,9 +184,12 @@ final class ConfigSchemaGenerator {
    * its classes scanned from its src/ as discovery scans an installed
    * module's (ResourceCollectorPass::discover()), autoloaded from there,
    * and its alters, storage and access classes built as the container
-   * would build them (AutowiringClassResolver). Nothing is installed and
-   * no cache is written. An owner and a module mounting keys on it are
-   * named together, so one run writes both, each seeing the other.
+   * would build them (AutowiringClassResolver), and the entity types it
+   * declares are read from its code, so a key that refers to one is built
+   * as it will be once the module is installed (References::knowing()).
+   * Nothing is installed and no cache is written. An owner and a module
+   * mounting keys on it are named together, so one run writes both, each
+   * seeing the other.
    *
    * Decision: see
    * docs/decisions.md#a-config-object-is-described-by-its-resource.
@@ -211,7 +234,36 @@ final class ConfigSchemaGenerator {
     $loader->register();
     $resolver = new AutowiringClassResolver($this->classResolver, $this->container);
     $registry = new ResourceRegistry(ResourceCollectorPass::discover($scanned, $this->root . '/'), new NullBackend('data_surface_config_schema'), $this->plugins, $resolver);
-    return new static($registry, $this->resources->withRegistry($registry, $resolver), $this->moduleList, $this->root, $scanned, entityTypeManager: $this->entityTypeManager);
+    // A key may refer to an entity type a module not installed declares,
+    // which the site does not have until it is.
+    $declared = $this->entityTypesOf(array_diff_key($scanned, $this->installed));
+    $references = $this->container->get('data_surface.references');
+    $known = $declared === [] ? NULL : $references->knowing($declared);
+    return new static($registry, $this->resources->withRegistry($registry, $resolver, $known), $this->moduleList, $this->root, $scanned, entityTypeManager: $this->entityTypeManager);
+  }
+
+  /**
+   * Reads the entity types modules declare, from their code.
+   *
+   * As the entity type manager discovers them, in each module's
+   * src/Entity, without installing anything.
+   *
+   * @param array<string, array{pathname: string}> $modules
+   *   The modules, each with the path of its info file from the root.
+   *
+   * @return array<string, \Drupal\Core\Entity\EntityTypeInterface>
+   *   The entity types, by id.
+   */
+  protected function entityTypesOf(array $modules): array {
+    $namespaces = [];
+    foreach ($modules as $module => $info) {
+      $namespaces['Drupal\\' . $module] = $this->root . '/' . dirname($info['pathname']) . '/src';
+    }
+    if ($namespaces === []) {
+      return [];
+    }
+    $discovery = new AttributeDiscoveryWithAnnotations('Entity', new \ArrayObject($namespaces), EntityType::class, 'Drupal\Core\Entity\Annotation\EntityType');
+    return array_filter($discovery->getDefinitions(), static fn (mixed $type): bool => $type instanceof EntityTypeInterface);
   }
 
   /**
@@ -333,7 +385,26 @@ final class ConfigSchemaGenerator {
     $built = $this->resources->declaration($definition->name(), $this->context($definition));
     $existing = $this->existing($definition->module, $config);
     $always_held = array_map('strval', (array) constant($definition->storage . '::ALWAYS_HELD'));
-    return $this->describeBuilt($built, $definition, $config, $always_held, $existing['schema'], $existing['install']);
+    return $this->describeBuilt($built, $definition, $config, $always_held, $existing['schema'], $existing['install'], $this->translatedBy($definition, $built));
+  }
+
+  /**
+   * Gives the keys a resource's storage keeps otherwise than asked for.
+   *
+   * Decision: see
+   * docs/decisions.md#a-layout-is-the-storages-one-word-on-its-shape.
+   *
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   *   The resource.
+   * @param \Drupal\data_surface\DataSurfaceInterface $built
+   *   The resource, sealed as declared.
+   *
+   * @return array<string, array>
+   *   Each such key's config schema as stored, by its dotted path.
+   */
+  protected function translatedBy(ResourceDefinition $definition, DataSurfaceInterface $built): array {
+    $storage = $this->resources->storageInstance($definition->name());
+    return $storage instanceof ConfigObjectStorage || $storage instanceof ConfigEntityStorage ? $storage->translatedKeys($built) : [];
   }
 
   /**
@@ -360,13 +431,19 @@ final class ConfigSchemaGenerator {
    *   the resource does not say: the object's label.
    * @param array $install
    *   What the object's install file holds now.
+   * @param array<string, array>|null $translated
+   *   The keys its storage keeps otherwise than asked for, each with its
+   *   config schema as stored, by dotted path (translatedKeys()); NULL for
+   *   a storage with no layout of its own, whose references to content
+   *   entities alone are.
    *
    * @return array{config: string, entries: list<array{module: string, name: string, resource: string, schema: array}>, install: array}
    *   The object's name, each schema entry with the module it is written
    *   in, and the values it is installed with.
    */
-  public function describeBuilt(DataSurfaceInterface $built, ResourceDefinition $owner, string $config, array $always_held, array $schema, array $install): array {
+  public function describeBuilt(DataSurfaceInterface $built, ResourceDefinition $owner, string $config, array $always_held, array $schema, array $install, ?array $translated = NULL): array {
     $this->alwaysHeld = $always_held;
+    $this->translated = $translated ?? ReferenceStorageLayout::storedSchemaOf($built);
     $entries = [];
     $installed = $this->install($built, $install);
     $mapping = $this->mapping($built->getDefinitions(), $config, $owner, $entries, $schema, TRUE, installed: $installed);
@@ -422,7 +499,10 @@ final class ConfigSchemaGenerator {
     $config = $type->getConfigPrefix() . '.*';
     $built = $this->resources->declaration($definition->name(), $this->context($definition));
     $existing = $this->existing($definition->module, $config);
-    $this->alwaysHeld = array_map('strval', (array) constant($definition->storage . '::ALWAYS_HELD'));
+    // An entity's id is always held: no null clears an identity.
+    $always_held = (array) constant($definition->storage . '::ALWAYS_HELD');
+    $this->alwaysHeld = array_map('strval', [...$always_held, ...$definition->identity]);
+    $this->translated = $this->translatedBy($definition, $built);
     $storage = (string) $definition->storage;
     assert(is_subclass_of($storage, ConfigEntityStorage::class));
     $properties = array_filter($storage::properties(), 'is_string');
@@ -552,6 +632,9 @@ final class ConfigSchemaGenerator {
     $held = $installed === NULL ? NULL : ($installed[$entry->name] ?? NULL);
     $definition = $entry->definition;
     $label = static::label($definition, $entry->name);
+    if ($at !== '' && isset($this->translated[$at])) {
+      return $this->translated($this->translated[$at], $definition, $label, $at, $installed !== NULL && $held === NULL);
+    }
     $from = $entry->variants === NULL ? NULL : DefinitionMetadata::variantsFrom($entry->variants->shell);
     if ($from !== NULL && !is_subclass_of($from, ClosedSiteListInterface::class)) {
       // Variants from the site: which there are is the site's, not the
@@ -610,7 +693,7 @@ final class ConfigSchemaGenerator {
         'sequence' => [
           'type' => 'mapping',
           'label' => $label,
-          'mapping' => $this->mapping($entry->list->child()->getDefinitions(), $path, $owner, $entries, $existing),
+          'mapping' => $this->mapping($entry->list->child()->getDefinitions(), $path, $owner, $entries, $existing, at: $at . '.'),
         ],
       ];
     }
@@ -715,7 +798,7 @@ final class ConfigSchemaGenerator {
         $mounted = $entry->mounted[(string) $module] ?? NULL;
         $mapping = $mounted !== NULL
           ? $this->mapping($mounted->child->getDefinitions(), $name, $owner, $entries, $existing, absent: TRUE, ruledOut: $ruled[(string) $module] ?? [], at: ConfigObjectStorage::THIRD_PARTY . '.' . $module . '.')
-          : $this->plainMapping($part, TRUE);
+          : $this->plainMapping($part, TRUE, ConfigObjectStorage::THIRD_PARTY . '.' . $module);
         $entries[] = [
           'module' => (string) $module,
           'name' => $name,
@@ -744,15 +827,22 @@ final class ConfigSchemaGenerator {
    *   The map.
    * @param bool $mounted
    *   TRUE for a module's mounted keys, each of which may be absent.
+   * @param string|null $at
+   *   Where the map is stored in the object, a dotted path; NULL where it
+   *   is not named.
    *
    * @return array
    *   The mapping.
    */
-  protected function plainMapping(DataDefinitionInterface $definition, bool $mounted = FALSE): array {
+  protected function plainMapping(DataDefinitionInterface $definition, bool $mounted = FALSE, ?string $at = NULL): array {
     $mapping = [];
     if ($definition instanceof ComplexDataDefinitionInterface) {
       foreach ($definition->getPropertyDefinitions() as $name => $property) {
-        $written = $this->definition($property, static::label($property, (string) $name));
+        $where = $at === NULL ? NULL : $at . '.' . $name;
+        $label = static::label($property, (string) $name);
+        $written = $where !== NULL && isset($this->translated[$where])
+          ? $this->translated($this->translated[$where], $property, $label, $where)
+          : $this->definition($property, $label);
         $mapping[(string) $name] = $mounted ? static::after($written, 'nullable', ['requiredKey' => FALSE]) : $written;
       }
     }
@@ -790,7 +880,11 @@ final class ConfigSchemaGenerator {
     if ($definition->getDataType() === 'any') {
       return ['type' => 'ignore', 'label' => $label];
     }
-    $schema = ['type' => static::type($definition), 'label' => $label];
+    // A key declared with a config schema data type is written as that
+    // type, with what it narrows of it.
+    // Decision: see docs/decisions.md#a-machine-name-is-a-computed-identity.
+    $named = DefinitionMetadata::configTypeOf($definition);
+    $schema = ['type' => $named ?? static::type($definition), 'label' => $label];
     // Null clears an optional key, unless its storage always holds it; a
     // required key holds nothing only where the object is installed with
     // nothing for it.
@@ -799,7 +893,42 @@ final class ConfigSchemaGenerator {
     if (!$item && (($installedEmpty && !DefinitionMetadata::hasDefaultValue($definition)) || $this->clearable($definition, $at))) {
       $schema['nullable'] = TRUE;
     }
-    return $schema + static::constraints($definition);
+    return $schema + static::constraints($definition, $named === NULL ? NULL : DefinitionMetadata::configTypeDefinition($definition));
+  }
+
+  /**
+   * Writes a key its storage keeps otherwise than it is asked for.
+   *
+   * The schema the storage gives (translatedKeys()), labeled with the
+   * key's label where it gives none. Where it does not say `nullable`, a
+   * key asked as one value is nullable by the three-way rule; a key asked
+   * as a map or a list holds its value, as a map of keys from the site
+   * does.
+   *
+   * Decision: see
+   * docs/decisions.md#a-layout-is-the-storages-one-word-on-its-shape.
+   *
+   * @param array $stored
+   *   The schema as stored.
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The key, as asked for.
+   * @param string $label
+   *   Its label.
+   * @param string $at
+   *   Where it is stored in the object.
+   * @param bool $installedEmpty
+   *   TRUE when the object is installed holding nothing for it.
+   *
+   * @return array
+   *   Its schema.
+   */
+  protected function translated(array $stored, DataDefinitionInterface $definition, string $label, string $at, bool $installedEmpty = FALSE): array {
+    $schema = ['type' => (string) ($stored['type'] ?? 'ignore'), 'label' => (string) ($stored['label'] ?? $label)];
+    $one = !$definition instanceof ComplexDataDefinitionInterface && !$definition instanceof ListDataDefinitionInterface;
+    if (!array_key_exists('nullable', $stored) && $one && ($installedEmpty || $this->clearable($definition, $at))) {
+      $schema['nullable'] = TRUE;
+    }
+    return $schema + $stored;
   }
 
   /**
@@ -853,11 +982,32 @@ final class ConfigSchemaGenerator {
    *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   The definition.
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface|null $type
+   *   The config schema data type it was declared with, whose own
+   *   constraints the schema's type states already; NULL for none.
    *
    * @return array
    *   `['constraints' => ...]`, or nothing when it has none to carry.
    */
-  protected static function constraints(DataDefinitionInterface $definition): array {
+  protected static function constraints(DataDefinitionInterface $definition, ?DataDefinitionInterface $type = NULL): array {
+    $carried = static::carried($definition);
+    if ($type !== NULL) {
+      $stated = static::carried($type);
+      $carried = array_filter($carried, static fn (?array $options, string $name): bool => !array_key_exists($name, $stated) || $stated[$name] !== $options, ARRAY_FILTER_USE_BOTH);
+    }
+    return $carried === [] ? [] : ['constraints' => $carried];
+  }
+
+  /**
+   * Reads the constraints of a definition a schema can carry, as carried.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The definition.
+   *
+   * @return array<string, array|null>
+   *   Each constraint's carried options, by name.
+   */
+  protected static function carried(DataDefinitionInterface $definition): array {
     $declared = $definition instanceof DataDefinition ? ($definition->toArray()['constraints'] ?? []) : [];
     $carried = [];
     foreach (is_array($declared) ? $declared : [] as $name => $options) {
@@ -872,7 +1022,7 @@ final class ConfigSchemaGenerator {
       }
       $carried[$name] = $kept === [] ? NULL : $kept;
     }
-    return $carried === [] ? [] : ['constraints' => $carried];
+    return $carried;
   }
 
   /**
@@ -899,16 +1049,25 @@ final class ConfigSchemaGenerator {
    *   What holds them, for its defaults.
    * @param array $existing
    *   What the file holds for them now.
+   * @param string $at
+   *   Where the map is stored in the object, a dotted path and a dot;
+   *   empty at the top.
    *
    * @return array
    *   The values.
    */
-  protected function installMap(DefinitionMap $map, DataSurfaceInterface $surface, array $existing): array {
+  protected function installMap(DefinitionMap $map, DataSurfaceInterface $surface, array $existing, string $at = ''): array {
     // In declaration order, the order core keeps a config object in once
     // its schema lists the keys so.
     $values = [];
     foreach ($map->entries() as $name => $entry) {
       $name = (string) $name;
+      if (isset($this->translated[$at . $name])) {
+        // Stored otherwise than asked for: what the file gives, else
+        // nothing, since a declared default is in the asked layout.
+        $values[$name] = array_key_exists($name, $existing) ? $existing[$name] : (($this->translated[$at . $name]['type'] ?? NULL) === 'sequence' ? [] : NULL);
+        continue;
+      }
       if ($name === ConfigObjectStorage::THIRD_PARTY) {
         // Stored once a module's keys are sent: installed only where the
         // file says so.
@@ -921,10 +1080,10 @@ final class ConfigSchemaGenerator {
       $definition = $entry->definition;
       if ($entry->variants !== NULL) {
         $chosen = $entry->variants->chosen($values[$entry->variants->by] ?? $surface->getDefault($entry->variants->by));
-        $values[$name] = $chosen === NULL ? $held : $this->installMap($entry->variants->variant($chosen)->child->getDefinitions(), $entry->variants->variant($chosen)->child, is_array($held) ? $held : []);
+        $values[$name] = $chosen === NULL ? $held : $this->installMap($entry->variants->variant($chosen)->child->getDefinitions(), $entry->variants->variant($chosen)->child, is_array($held) ? $held : [], $at . $name . '.');
       }
       elseif ($entry->attachment !== NULL && DefinitionMetadata::eachOf($definition) === NULL) {
-        $values[$name] = $this->installMap($entry->attachment->child->getDefinitions(), $entry->attachment->child, is_array($held) ? $held : []);
+        $values[$name] = $this->installMap($entry->attachment->child->getDefinitions(), $entry->attachment->child, is_array($held) ? $held : [], $at . $name . '.');
       }
       elseif (array_key_exists($name, $existing)) {
         // What a site starts from may differ from what a key starts from

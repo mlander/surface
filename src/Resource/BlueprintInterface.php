@@ -211,17 +211,24 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
    * `readOnly` with `x-surface.computed`, never `required`, the write
    * tool's `values` leaves it out, and a form draws it fixed. A value sent
    * for it equal to the one it holds is noted and not taken; any other is
-   * refused, code `computed`, naming the keys it is computed from.
+   * refused, code `computed`, naming the keys it is computed from. With
+   * `when: Compute::UNLESS_SENT` it is computed only when a call leaves
+   * it out, and a value sent is kept as sent: a machine name suggested
+   * from a title, of the config schema type `machine_name`, computed by
+   * the stock MachineName and drawn as core's machine name element.
    *
    * @code
    * $inputs->compute('slug', 'string', t('Slug'), from: ['label'], using: Slugify::class)
    *   ->addConstraint('Regex', ['pattern' => '/^[a-z0-9]+(-[a-z0-9]+)*$/D']);
+   * $inputs->compute('id', 'machine_name', t('Machine name'),
+   *   from: ['label'], using: MachineName::class, when: Compute::UNLESS_SENT);
    * @endcode
    *
    * @param string $key
    *   The key.
    * @param string $type
-   *   A typed data type of one value, or a shape's class.
+   *   A typed data type of one value, a config schema data type of one
+   *   value (`machine_name`), or a shape's class.
    * @param string|\Stringable $label
    *   The label.
    * @param string[] $from
@@ -233,8 +240,9 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
    * @param string $when
    *   Compute::ON_CREATE, the default, to compute it once, while storage
    *   holds nothing for it; Compute::ON_CHANGE to compute it again on every
-   *   write that changes a key in $from. A write that changes none keeps
-   *   what is stored, either way.
+   *   write that changes a key in $from; Compute::UNLESS_SENT to compute
+   *   it as ON_CREATE does when a call leaves it out, and keep a value
+   *   sent. A write that changes none keeps what is stored, either way.
    *
    * @return \Drupal\Core\TypedData\DataDefinition
    *   The key's definition.
@@ -243,7 +251,7 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
    *   For outputs, a structure (a computed key is a resource's own, in
    *   this cut), a structure mixed in, a key of a map or list type, a
    *   source that is not declared before it, a class that implements no
-   *   ComputesValueInterface, or a `when` that is neither.
+   *   ComputesValueInterface, or a `when` that is none of the three.
    *
    * @see docs/declaring-a-resource.md#computed-keys
    */

@@ -22,6 +22,10 @@ use {{ use }};
 )]
 final class {{ r.resource_class }} implements ResourceInterface {
 
+{% if r.constants %}
+{{ r.constants }}
+
+{% endif %}
   /**
    * {@inheritdoc}
    */

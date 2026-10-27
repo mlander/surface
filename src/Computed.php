@@ -32,7 +32,7 @@ final class Computed {
    * @param class-string<\Drupal\data_surface\Resource\ComputesValueInterface> $using
    *   The class that computes it.
    * @param string $when
-   *   Compute::ON_CREATE or Compute::ON_CHANGE.
+   *   Compute::ON_CREATE, Compute::ON_CHANGE or Compute::UNLESS_SENT.
    */
   public function __construct(
     public readonly array $from,
@@ -52,6 +52,21 @@ final class Computed {
    */
   public static function of(?DataDefinitionInterface $definition): ?static {
     return $definition === NULL ? NULL : DefinitionMetadata::computedOf($definition);
+  }
+
+  /**
+   * Answers whether a value sent for the key is taken as sent.
+   *
+   * Only for Compute::UNLESS_SENT: the key is computed when a call leaves
+   * it out, and a caller may type it, as a person types over a machine
+   * name suggested from a title. Every other key is computed whatever is
+   * sent.
+   *
+   * @return bool
+   *   TRUE when a value sent is kept.
+   */
+  public function takesSent(): bool {
+    return $this->when === Compute::UNLESS_SENT;
   }
 
   /**
@@ -97,13 +112,15 @@ final class Computed {
    *   The values of its level, sources included.
    * @param array $stored
    *   What storage holds for its level.
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface|null $definition
+   *   The key's own definition, handed to the class computing it.
    *
    * @return mixed
    *   The value computed from the sources, or what is stored when it is
    *   not computed again.
    */
-  public function value(string $key, array $values, array $stored): mixed {
-    return $this->recomputes($key, $values, $stored) ? $this->compute($values) : $stored[$key];
+  public function value(string $key, array $values, array $stored, ?DataDefinitionInterface $definition = NULL): mixed {
+    return $this->recomputes($key, $values, $stored) ? $this->compute($values, $definition) : $stored[$key];
   }
 
   /**
@@ -115,17 +132,20 @@ final class Computed {
    *
    * @param array $values
    *   The values of the key's level, sources included.
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface|null $definition
+   *   The key's own definition, as declared: what it allows, for a class
+   *   that fits its value to it (MachineName cuts to its Length).
    *
    * @return mixed
    *   What the class computing it answers.
    */
-  public function compute(array $values): mixed {
+  public function compute(array $values, ?DataDefinitionInterface $definition = NULL): mixed {
     $from = [];
     foreach ($this->from as $source) {
       $from[$source] = $values[$source] ?? NULL;
     }
     $using = $this->using;
-    $call = static fn (): mixed => $using::compute($from);
+    $call = static fn (): mixed => $using::compute($from, $definition);
     $guarded = FALSE;
     assert(PipelineGuard::asserting($guarded));
     return $guarded ? PipelineGuard::guardCompute($using . '::compute()', $call) : $call();
@@ -135,7 +155,9 @@ final class Computed {
    * Sets each computed key of a level to the value it holds for its values.
    *
    * What the narrowing and a form's rebuild show: the value a write of
-   * these values would store, computed from the sources as they stand.
+   * these values would store, computed from the sources as they stand. A
+   * key computed unless sent keeps a value the values in progress hold
+   * for it, as a write would keep it.
    *
    * @param \Drupal\data_surface\DataSurfaceInterface $surface
    *   The data surface describing the level.
@@ -150,8 +172,8 @@ final class Computed {
   public static function apply(DataSurfaceInterface $surface, array $values, array $stored): array {
     foreach ($surface->getDefinitions()->entries() as $name => $entry) {
       $computed = static::of($entry->definition);
-      if ($computed !== NULL && !$entry->locked) {
-        $values[$name] = $computed->value((string) $name, $values, $stored);
+      if ($computed !== NULL && !$entry->locked && !($computed->takesSent() && ValueState::isConfigured($values[$name] ?? NULL))) {
+        $values[$name] = $computed->value((string) $name, $values, $stored, $entry->definition);
       }
     }
     return $values;

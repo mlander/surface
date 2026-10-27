@@ -1,5 +1,5 @@
 import type { Extension, Schema } from '../contract';
-import { assertContract, assertSchema, CONTRACT, ContractRefused, defName, inlineSchema, isPart, resolveSchema, resolveVariants, restored, watchedPaths, withoutComputed, narrow, narrowingStatus } from '../contract';
+import { assertContract, assertSchema, CONTRACT, ContractRefused, defName, inlineSchema, isPart, resolveSchema, resolveVariants, restored, watchedPaths, withoutComputed, withoutSuggested, isSuggested, narrow, narrowingStatus } from '../contract';
 import example3 from './fixtures/example3.json';
 import license from './fixtures/refine-example3-license.json';
 import journal from './fixtures/refine-journal.json';
@@ -215,6 +215,40 @@ describe('a computed key', () => {
 
   it('is never sent', () => {
     expect(withoutComputed(venue, { label: 'Town Hall', slug: 'town' })).toEqual({ label: 'Town Hall' });
+  });
+});
+
+describe('a machine name computed unless sent', () => {
+  // Example 15's venue, abbreviated: the machine name is suggested from the name.
+  const venue: Schema = {
+    type: 'object',
+    properties: {
+      label: { title: 'Name', type: 'string', 'x-surface': { widget: 'text' } },
+      id: {
+        title: 'Machine name',
+        type: 'string',
+        pattern: '^[a-z0-9_]+$',
+        maxLength: 32,
+        'x-surface': { widget: 'text', computed: { from: ['label'], when: 'unless_sent' } },
+      },
+    },
+    additionalProperties: false,
+    required: ['label'],
+  };
+
+  it('is suggested by the server while the name changes', () => {
+    expect(isSuggested(venue, 'id')).toBe(true);
+    expect(isSuggested(venue, 'label')).toBe(false);
+    const narrowed = narrow({ full: venue, previous: { schema: venue, values: {}, stale: [] }, stored: {}, values: { label: 'Town Hall' }, stale: [], changed: 'label' });
+    expect(narrowed).toEqual({ local: false, key: 'id', marker: 'computed' });
+  });
+
+  it('is left out until the person types it, then sent as typed', () => {
+    const values = { label: 'Town Hall', id: 'town_hall' };
+    expect(withoutSuggested(venue, values, new Set())).toEqual({ label: 'Town Hall' });
+    expect(withoutComputed(venue, values)).toEqual({ label: 'Town Hall' });
+    expect(withoutSuggested(venue, values, new Set(['id']))).toEqual(values);
+    expect(withoutComputed(venue, values, new Set(['id']))).toEqual(values);
   });
 });
 

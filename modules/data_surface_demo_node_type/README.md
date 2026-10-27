@@ -5,11 +5,25 @@ A resource-driven alternative to core's content type add and edit form.
 ## What it shows
 
 One resource, `Resource\NodeTypeResource` (`node.type`), with two
-operations: `create()` knows nothing, so the machine name is open and
-carries a service-backed uniqueness constraint the operation adds;
-`update(NodeTypeInterface $type)` knows the machine name, so it is
-locked: still advertised, narrowed to the one value it has. Create and
-update are not two resources: they are how much is known.
+operations: `create`, on the class, knows nothing, so the machine name
+is open; `update(NodeTypeInterface $type)` knows the machine name, so it
+is locked: still advertised, narrowed to the one value it has. Create
+and update are not two resources: they are how much is known.
+
+The machine name is Drupal's title and machine name pair, one spelling:
+
+```php
+$inputs->compute('type', 'machine_name', t('Machine name'),
+  from: ['name'], using: MachineName::class, when: Compute::UNLESS_SENT)
+```
+
+of core's config schema type `machine_name`, narrowed to 32 characters
+as core's `node.type.*` schema narrows it. A call that leaves it out gets
+one computed from the name, as core's form suggests it; a call that
+sends one keeps it. On add, the build holds it to one no content type
+has with the stock `DataSurfaceUnique` constraint, "A content type named
+article already exists.", and the generated form draws it as core's
+machine name element beside the name.
 
 `Storage\NodeTypeStorage` loads by the machine name the context knows and
 creates or updates by whether it creates. It writes the node type
@@ -26,9 +40,8 @@ class and an operation; the update route's `{type}` is the update
 operation's `$type`. The resource declares which keys sit in which of
 its three groups (`Arrangement`), so every door draws them alike. What
 is left of a form here is `NodeTypeResourceFormCosmetics`: core's
-vertical tabs borrowed to hold those groups, the machine name's
-mirror-while-typing, the message and the redirect, which is the part
-that should stay bespoke. With `data_surface_tool` enabled, both
+vertical tabs borrowed to hold those groups, the message and the
+redirect, which is the part that should stay bespoke. With `data_surface_tool` enabled, both
 operations are tools, `data_surface:node.type:create` and
 `data_surface:node.type:update`, generated from the resource.
 

@@ -79,7 +79,7 @@ caller sends that.
 | --- | --- | --- | --- |
 | One week. Resource: `{"amount": 1, "unit": "weeks"}`; classic: `604800`, by a schema-only agent that reads 3600 and 2592000 as an hour and thirty days in seconds and infers the unit, rightly, though nothing tells it so before storage; form: 1, Weeks | Created. Stored `{"review_deadline":604800,"audience_tags":[]}`. | Created. Stored `{"review_deadline":604800}`. | Stored `{"review_deadline":604800,"audience_tags":[]}`. |
 | Forty-five days, past the ceiling. Resource: `{"amount": 45, "unit": "days"}`; classic: `3888000`; form: 45, Days | Refused; nothing created. `/third_party_settings/data_surface_demo_extras/review_deadline/amount`: A review deadline is at least one hour and at most thirty days; 45 days is outside that. | Created. Stored `{"review_deadline":3888000}`. The stored schema refuses it (This value should be between 3600 and 2592000.), but nothing on the write path asked. | Refused: The review deadline must be between one hour and thirty days. |
-| A schema-only agent that infers instead that the integer counts days sends `7`, meaning seven. Form: 7, Days, which is what it meant | Refused; nothing created. `values`: (property third_party_settings) (property data_surface_demo_extras) (property review_deadline) Invalid values given. Values must be represented as an associative array. | Created. Stored `{"review_deadline":7}`. The stored schema refuses it (This value should be between 3600 and 2592000.), but nothing on the write path asked. | Stored `{"review_deadline":604800,"audience_tags":[]}`. |
+| A schema-only agent that infers instead that the integer counts days sends `7`, meaning seven. Form: 7, Days, which is what it meant | Refused; nothing created. `values.third_party_settings.data_surface_demo_extras.review_deadline`: Invalid values given. Values must be represented as an associative array. | Created. Stored `{"review_deadline":7}`. The stored schema refuses it (This value should be between 3600 and 2592000.), but nothing on the write path asked. | Stored `{"review_deadline":604800,"audience_tags":[]}`. |
 | Ten business days. Resource: `{"amount": 10, "unit": "business_days"}`; classic: `864000`, a schema-only agent's best inference, ten days in seconds: plausible, in range, and wrong, since no reading of the schema says what a business day becomes; form: 10, Business days | Created. Stored `{"review_deadline":1036800,"audience_tags":[]}`. | Created. Stored `{"review_deadline":864000}`. | Stored `{"review_deadline":1036800,"audience_tags":[]}`. |
 | Set the tags `["news", "sports"]`. Form: news, sports | Created. Stored `{"review_deadline":null,"audience_tags":["news","sports"]}`. | Created. Stored `{"audience_tags":["news","sports"]}`. | Stored `{"review_deadline":null,"audience_tags":["news","sports"]}`. |
 | Tags as a person types them: `["News", "news ", "Sports"]`. Form: News, news , Sports | Refused; nothing created. `/third_party_settings/data_surface_demo_extras/audience_tags/0`, `/third_party_settings/data_surface_demo_extras/audience_tags/1`, `/third_party_settings/data_surface_demo_extras/audience_tags/2`: An audience tag is lower case letters and digits, words joined by one space or one hyphen, with nothing around it. | Created. Stored `{"audience_tags":["News","news ","Sports"]}`. | Stored `{"review_deadline":null,"audience_tags":["news","sports"]}`. |
@@ -98,13 +98,20 @@ caller sends that.
                 "name": {
                     "type": "string",
                     "maxLength": 255,
-                    "description": "Name: The human readable name for this content type.",
+                    "description": "The human readable name for this content type.",
                     "title": "Name"
                 },
                 "type": {
-                    "type": "string",
+                    "oneOf": [
+                        {
+                            "type": "string"
+                        },
+                        {
+                            "type": "null"
+                        }
+                    ],
                     "maxLength": 32,
-                    "description": "Machine name: Unique machine readable name: lowercase letters, numbers, and underscores only.",
+                    "description": "Unique machine readable name: lowercase letters, numbers, and underscores only.",
                     "title": "Machine name"
                 },
                 "description": {
@@ -116,14 +123,14 @@ caller sends that.
                             "type": "null"
                         }
                     ],
-                    "description": "Description: Displays on the Content types page.",
+                    "description": "Displays on the Content types page.",
                     "title": "Description"
                 },
                 "title_label": {
                     "type": "string",
                     "default": "Title",
                     "maxLength": 255,
-                    "description": "Title field label: The label shown for the title field on the content form.",
+                    "description": "The label shown for the title field on the content form.",
                     "title": "Title field label"
                 },
                 "preview_mode": {
@@ -145,7 +152,7 @@ caller sends that.
                             "type": "null"
                         }
                     ],
-                    "description": "Explanation or submission guidelines: Displayed at the top of the page when creating or editing content of this type.",
+                    "description": "Displayed at the top of the page when creating or editing content of this type.",
                     "title": "Explanation or submission guidelines"
                 },
                 "status": {
@@ -158,7 +165,7 @@ caller sends that.
                         }
                     ],
                     "default": true,
-                    "description": "Published: Whether new content of this type is published by default.",
+                    "description": "Whether new content of this type is published by default.",
                     "title": "Published"
                 },
                 "promote": {
@@ -170,7 +177,7 @@ caller sends that.
                             "type": "null"
                         }
                     ],
-                    "description": "Promoted to front page: Whether new content of this type is promoted by default.",
+                    "description": "Whether new content of this type is promoted by default.",
                     "title": "Promoted to front page"
                 },
                 "sticky": {
@@ -182,7 +189,7 @@ caller sends that.
                             "type": "null"
                         }
                     ],
-                    "description": "Sticky at top of lists: Whether new content of this type is sticky by default.",
+                    "description": "Whether new content of this type is sticky by default.",
                     "title": "Sticky at top of lists"
                 },
                 "new_revision": {
@@ -195,7 +202,7 @@ caller sends that.
                         }
                     ],
                     "default": true,
-                    "description": "Create new revision: Whether edits create a new revision by default.",
+                    "description": "Whether edits create a new revision by default.",
                     "title": "Create new revision"
                 },
                 "display_submitted": {
@@ -208,7 +215,7 @@ caller sends that.
                         }
                     ],
                     "default": true,
-                    "description": "Display author and date information: Author username and publish date will be displayed.",
+                    "description": "Author username and publish date will be displayed.",
                     "title": "Display author and date information"
                 },
                 "third_party_settings": {
@@ -261,7 +268,7 @@ caller sends that.
                                             "title": "Unit"
                                         }
                                     },
-                                    "description": "Review deadline: How long an editor has to review new content of this type, from one hour to thirty days. Leave the amount empty for no deadline.",
+                                    "description": "How long an editor has to review new content of this type, from one hour to thirty days. Leave the amount empty for no deadline.",
                                     "title": "Review deadline"
                                 },
                                 "audience_tags": {
@@ -269,7 +276,7 @@ caller sends that.
                                         "array",
                                         "null"
                                     ],
-                                    "description": "Audience tags: Who content of this type is written for, each tag listed once and in lower case, for example \"local news\" or \"sports\".",
+                                    "description": "Who content of this type is written for, each tag listed once and in lower case, for example \"local news\" or \"sports\".",
                                     "items": {
                                         "oneOf": [
                                             {
@@ -287,17 +294,16 @@ caller sends that.
                             "title": "Editorial review"
                         }
                     },
-                    "description": "Third party settings: Settings added by other modules.",
+                    "description": "Settings added by other modules.",
                     "title": "Third party settings"
                 }
             },
             "required": [
                 "name",
-                "type",
                 "title_label",
                 "preview_mode"
             ],
-            "description": "node.type values: The values, as the node.type resource describes them: every key it takes that the operation does not already know, including those other modules add, with its label, its meaning and the values it allows. Always sent, as an object and never null: {} sends no key.",
+            "description": "The values, as the node.type resource describes them: every key it takes that the operation does not already know, including those other modules add, with its label, its meaning and the values it allows. Always sent, as an object and never null: {} sends no key.",
             "title": "node.type values"
         },
         "dry_run": {
@@ -309,7 +315,7 @@ caller sends that.
                     "type": "null"
                 }
             ],
-            "description": "Dry run: Accept, validate and prepare the values without writing anything.",
+            "description": "Accept, validate and prepare the values without writing anything.",
             "title": "Dry run"
         }
     },
@@ -328,19 +334,19 @@ caller sends that.
     "properties": {
         "entity_type_id": {
             "type": "string",
-            "description": "Entity Type ID: The machine name of the entity type to add a bundle for.",
+            "description": "The machine name of the entity type to add a bundle for.",
             "title": "Entity Type ID"
         },
         "bundle": {
             "type": "string",
             "maxLength": 32,
             "pattern": "^[a-z0-9_]+$",
-            "description": "Bundle ID: The machine name of the bundle to create.",
+            "description": "The machine name of the bundle to create.",
             "title": "Bundle ID"
         },
         "label": {
             "type": "string",
-            "description": "Label: The human-readable label for the bundle.",
+            "description": "The human-readable label for the bundle.",
             "title": "Label"
         },
         "properties": {
@@ -358,7 +364,7 @@ caller sends that.
                             "type": "null"
                         }
                     ],
-                    "description": "Language code: The input definition for Language code",
+                    "description": "The input definition for Language code",
                     "title": "Language code"
                 },
                 "status": {
@@ -371,7 +377,7 @@ caller sends that.
                         }
                     ],
                     "default": "status",
-                    "description": "Published: The input definition for Status",
+                    "description": "The input definition for Status",
                     "title": "Published"
                 },
                 "description": {
@@ -383,7 +389,7 @@ caller sends that.
                             "type": "null"
                         }
                     ],
-                    "description": "Description: Displays on the <em>Content types</em> page.",
+                    "description": "Displays on the <em>Content types</em> page.",
                     "title": "Description"
                 },
                 "help": {
@@ -395,7 +401,7 @@ caller sends that.
                             "type": "null"
                         }
                     ],
-                    "description": "Explanation or submission guidelines: This text will be displayed at the top of the page when creating or editing content of this type.",
+                    "description": "This text will be displayed at the top of the page when creating or editing content of this type.",
                     "title": "Explanation or submission guidelines"
                 },
                 "new_revision": {
@@ -407,7 +413,7 @@ caller sends that.
                             "type": "null"
                         }
                     ],
-                    "description": "Whether a new revision should be created by default: The input definition for Whether a new revision should be created by default",
+                    "description": "The input definition for Whether a new revision should be created by default",
                     "title": "Whether a new revision should be created by default"
                 },
                 "preview_mode": {
@@ -426,7 +432,7 @@ caller sends that.
                         2,
                         null
                     ],
-                    "description": "Preview before submitting: The input definition for Preview before submitting. Allowed values: {\"0\":\"Disabled\",\"1\":\"Optional\",\"2\":\"Required\"}",
+                    "description": "The input definition for Preview before submitting. Allowed values: {\"0\":\"Disabled\",\"1\":\"Optional\",\"2\":\"Required\"}",
                     "title": "Preview before submitting"
                 },
                 "display_submitted": {
@@ -439,11 +445,11 @@ caller sends that.
                         }
                     ],
                     "default": true,
-                    "description": "Display author and date information: Author username and publish date will be displayed.",
+                    "description": "Author username and publish date will be displayed.",
                     "title": "Display author and date information"
                 }
             },
-            "description": "Properties: Additional properties to set on the bundle configuration entity.",
+            "description": "Additional properties to set on the bundle configuration entity.",
             "title": "Properties"
         }
     },

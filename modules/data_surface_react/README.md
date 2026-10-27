@@ -37,7 +37,7 @@ resource's access class through `Resources::access()`, no opinion read
 as a refusal. The permission is asked first, before a parameter is read,
 and a refusal past it gives one fixed reason, so it never says whether
 an id exists
-([decision](../../docs/decisions.md#every-door-projects-what-the-read-tool-projects)).
+(why: [decision](../../docs/decisions.md#every-door-projects-what-the-read-tool-projects)).
 A POST, a PATCH or a DELETE wants the session's CSRF token from `/session/token`
 in an `X-CSRF-Token` header.
 
@@ -57,7 +57,7 @@ an answer whose header names another version, and a document whose
 nothing from it. A missing header is no refusal by itself: the
 document is checked all the same. The app reads every path the API
 answers as a JSON Pointer and keeps dotted paths inside
-([decision](../../docs/decisions.md#contract-3-the-operation-is-the-method)).
+(why: [decision](../../docs/decisions.md#contract-3-the-operation-is-the-method)).
 
 ```bash
 drush pm:install data_surface_react

@@ -1,0 +1,65 @@
+# Generated from the reference_test.settings resource by drush data_surface:config-schema.
+data_surface_reference_test.settings:
+  type: config_object
+  label: 'reference_test.settings'
+  constraints:
+    FullyValidatable: ~
+  mapping:
+    page:
+      type: uuid
+      label: 'Page'
+      nullable: true
+    kept:
+      type: integer
+      label: 'Kept by id'
+      nullable: true
+    role:
+      type: string
+      label: 'Role'
+      nullable: true
+    thing:
+      type: mapping
+      label: 'Thing'
+      mapping:
+        entity_type:
+          type: string
+          label: 'Entity type'
+          nullable: true
+        id:
+          type: string
+          label: 'ID'
+          nullable: true
+    kept_thing:
+      type: mapping
+      label: 'Thing kept by id'
+      mapping:
+        entity_type:
+          type: string
+          label: 'Entity type'
+          nullable: true
+        id:
+          type: string
+          label: 'ID'
+          nullable: true
+    nested:
+      type: mapping
+      label: 'Nested'
+      mapping:
+        author:
+          type: uuid
+          label: 'Author'
+          nullable: true
+    items:
+      type: sequence
+      label: 'Items'
+      nullable: true
+      constraints:
+        Count:
+          max: 5
+      sequence:
+        type: mapping
+        label: 'Items'
+        mapping:
+          node:
+            type: uuid
+            label: 'Node'

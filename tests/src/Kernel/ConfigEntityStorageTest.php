@@ -129,7 +129,11 @@ class ConfigEntityStorageTest extends DataSurfaceKernelTestBase {
     $this->assertFalse($again->isValid());
     $this->assertSame('id', $again->violations->keys()[0]);
     $this->assertSame(Violation::TAKEN, $again->violations->byKey('id')[0]->code);
-    $this->assertSame('The machine name one is already in use: choose another.', (string) $again->violations->byKey('id')[0]->message);
+    // The stock DataSurfaceUnique the build adds to a create's identity,
+    // asking the storage; the storage's own check says it in the same
+    // words for a caller of prepare() that skips validation.
+    $this->assertSame('A test configuration named one already exists.', (string) $again->violations->byKey('id')[0]->message);
+    $this->assertSame('', (string) $again->violations->byKey('id')[0]->path);
   }
 
   /**

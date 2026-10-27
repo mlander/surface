@@ -16,21 +16,19 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\Validator\Constraint;
 
 /**
- * Example 2: reads the EventVenue constraint as the venues, or the rooms.
+ * Example 2: reads the EventVenueRoom constraint as the rooms.
  *
- * The venues an event may be held in, by machine name, or for its
- * EventVenueRoom subclass the rooms of one venue or of all, by room id,
- * each under its name, cacheable by the venues' list tag. The list is
- * every value the constraint accepts, so a schema stating it states the
- * constraint whole.
+ * The rooms of one venue, or of every venue, by room id, each under its
+ * name, cacheable by the venues' list tag. The list is every value the
+ * constraint accepts, so a schema stating it states the constraint whole.
  */
 #[DataSurfaceOptionsResolver(
-  id: 'event_venue',
-  label: new TranslatableMarkup('Event venue or room'),
-  constraint: 'EventVenue',
+  id: 'event_venue_room',
+  label: new TranslatableMarkup('Room of an event venue'),
+  constraint: 'EventVenueRoom',
   exact: TRUE,
 )]
-final class EventVenueOptions extends DataSurfaceOptionsResolverBase {
+final class EventVenueRoomOptions extends DataSurfaceOptionsResolverBase {
 
   /**
    * Constructs the resolver.
@@ -44,7 +42,7 @@ final class EventVenueOptions extends DataSurfaceOptionsResolverBase {
    * @param \Drupal\Core\Validation\ConstraintManager $constraint_manager
    *   The constraint plugin manager.
    * @param \Drupal\data_surface_examples\VenueChoices $choices
-   *   The venues and their rooms.
+   *   The venues' rooms.
    */
   public function __construct(
     array $configuration,
@@ -73,8 +71,8 @@ final class EventVenueOptions extends DataSurfaceOptionsResolverBase {
    * {@inheritdoc}
    */
   public function resolve(Constraint $constraint, DataDefinitionInterface $definition): OptionSet {
-    $options = $constraint instanceof EventVenueRoomConstraint ? $this->choices->rooms($constraint->venue) : $this->choices->venues();
-    return new OptionSet($options, [], $this->choices->cacheability());
+    assert($constraint instanceof EventVenueRoomConstraint);
+    return new OptionSet($this->choices->rooms($constraint->venue), [], $this->choices->cacheability());
   }
 
 }

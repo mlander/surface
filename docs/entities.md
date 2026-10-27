@@ -25,7 +25,7 @@ display and the fields it shows. The index of what there is carries
 a field clears the index, that field's entries and its bundle's, what
 this request already read of them, and that bundle's derived tools; the
 other bundles' entries and tools are kept
-([decision](decisions.md#what-is-paid-once-and-what-per-request)). They stay derivers, not
+(why: [decision](decisions.md#what-is-paid-once-and-what-per-request)). They stay derivers, not
 [keys from the site](resources.md#keys-that-come-from-the-site): a bundle
 is a resource of its own, with operations, storage and identity, and a
 field a structure every bundle carrying it shares; keys from the site
@@ -159,7 +159,7 @@ the resource never lets anyone write what core's form would not.
 `ContentEntityStorage`, in `data_surface_entity` rather than beside the
 engine's storage classes, because what it reads and writes is the field
 item derivation's keys, which the engine does not own
-([decision](decisions.md#the-content-entity-storage)).
+(why: [decision](decisions.md#the-content-entity-storage)).
 
 - **Load** reads the entity the context names: its identity, and each
   carried field's first item, property by property, cast to the key's
@@ -196,7 +196,7 @@ A dry run stops after prepare; a PHP caller reads the prepared values
 on the result (the identity, whether a revision would be made, and each
 field's item), and a door answers the accepted values as the read tool
 would, a field whose view access is denied left out
-([decision](decisions.md#every-door-projects-what-the-read-tool-projects)).
+(why: [decision](decisions.md#every-door-projects-what-the-read-tool-projects)).
 
 ## The doors
 
@@ -287,7 +287,7 @@ done about it.
     the selection read:
     `user.permissions`, and `user.node_grants:view` for a node or a
     comment, `user` for a target type core does not list
-    ([decided](decisions.md#every-door-projects-what-the-read-tool-projects));
+    (why: [decision](decisions.md#every-door-projects-what-the-read-tool-projects));
     past that the key is free and the validator asks the handler.
 11. **Which text formats an account may use** is a fact about the
     account, so it is a runtime refiner, never run ahead of time; the
@@ -295,8 +295,8 @@ done about it.
     Core's text widget also preselects the account's first format; the
     structure leaves the format unanswered, and a body saved without one
     renders through the fallback format.
-12. **A static tool definition is no account's.**
-    [Decided](decisions.md#a-static-tool-definition-is-no-accounts):
+12. **A static tool definition is no account's**
+    (why: [decision](decisions.md#a-static-tool-definition-is-no-accounts)):
     the `create` tool's cached `values`, which no parameter refines, is
     built for no account, every field there and the ones field access
     may lock or leave out marked, and derived as the anonymous account.
@@ -308,7 +308,7 @@ done about it.
     definition only at the next cache rebuild. Settled 2026-10-19:
     `data_surface_tool` clears the tool definitions when a tag they were
     derived from is invalidated
-    ([decision](decisions.md#tool-definitions-after-a-field-changes)).
+    (why: [decision](decisions.md#tool-definitions-after-a-field-changes)).
 14. **The entity's id is storage's.** The create operation knows `id` as
     nothing, so it is locked empty, and the new id is an output the
     storage reads back after the commit. React's `created` used to hold

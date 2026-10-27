@@ -15,10 +15,18 @@ use Drupal\Core\Session\AccountInterface;
  * makes and no side effects, and delete() removes what it rehearsed. A
  * dry run stops after the first.
  *
+ * A storage that removes a thing by its identity can say whether one is
+ * stored under an identity, exists(), and what one thing is called,
+ * singularLabel(). The build reads both: every operation that creates
+ * holds its identity key to the stock DataSurfaceUnique constraint, which
+ * asks exists() and refuses an identity taken, "A venue named riverside
+ * already exists."
+ *
  * A storage that does not implement it cannot serve a delete: the build
  * of its storage for one refuses it.
  *
  * Decision: see docs/decisions.md#a-placed-block-is-a-resource.
+ * Decision: see docs/decisions.md#a-machine-name-is-a-computed-identity.
  */
 interface DeletableStorageInterface extends ResourceStorageInterface {
 
@@ -50,5 +58,29 @@ interface DeletableStorageInterface extends ResourceStorageInterface {
    *   The account the removal is made as.
    */
   public function delete(OperationContext $context, array $prepared, AccountInterface $account): void;
+
+  /**
+   * Answers whether a thing is stored under the identity the context knows.
+   *
+   * Asked of a context that knows every identity key, by the stock
+   * DataSurfaceUnique constraint and by the form's machine name element,
+   * so every door refuses a taken identity in one sentence. Reads what is
+   * stored, as load() does, and nothing bound to a request.
+   *
+   * @param \Drupal\data_surface\Resource\OperationContext $context
+   *   A context whose known identity names the thing.
+   *
+   * @return bool
+   *   TRUE when one is stored under it.
+   */
+  public function exists(OperationContext $context): bool;
+
+  /**
+   * Names one of the things this storage holds, for a sentence.
+   *
+   * @return string|\Stringable
+   *   The singular label, lowercase: "venue", "content type".
+   */
+  public function singularLabel(): string|\Stringable;
 
 }

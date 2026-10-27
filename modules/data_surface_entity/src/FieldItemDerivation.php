@@ -198,7 +198,6 @@ final class FieldItemDerivation {
         $skipped[$name] = $reason;
         continue;
       }
-      assert($field instanceof FieldDefinitionInterface);
       $fields[$name] = $field;
     }
     return ['fields' => $fields, 'skipped' => $skipped];

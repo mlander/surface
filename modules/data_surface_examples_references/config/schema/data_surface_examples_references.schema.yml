@@ -9,11 +9,11 @@ data_surface_examples_references.sponsorship:
       type: string
       label: 'Venue'
     contact:
-      type: integer
+      type: uuid
       label: 'Contact'
       nullable: true
     page:
-      type: integer
+      type: uuid
       label: 'Announcement'
       nullable: true
     thing:

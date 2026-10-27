@@ -1,10 +1,13 @@
 # Common settings recipes
 
-Seven things a settings page asks for that no other page shows end to
-end. Each snippet but the last is a key of the test module's opening
-hours (`resource_test.opening_hours`, in
+Nine things a resource often asks for that no other page shows end to
+end. The snippets of the first six are keys of the test module's
+opening hours (`resource_test.opening_hours`, in
 `tests/modules/data_surface_resource_test`), written into its
-`defineInputs()` as shown here; the last is the same module's workshop.
+`defineInputs()` as shown here; the seventh quotes the same module's
+workshop, the eighth the schema test module's alias settings
+(`schema_test.aliases`, in `tests/modules/data_surface_schema_test`),
+and the last example 15's venue.
 A test fails if this page and the class differ, and another holds each
 key to what this page says it does. Read
 [Your first resource](first-resource.md) first: a recipe is a few more
@@ -44,7 +47,7 @@ The form draws the browser's time input, the served contract says
 Prefer the string. What a person picks, what an agent sends and what the
 config object stores are the same `09:00`, a refusal is the pattern's
 own message, and the pattern reaches both schemas (it ends in `$` with
-the `D` modifier, which both engines read alike:
+the `D` modifier, which both engines read alike; why:
 [decision](decisions.md#a-pattern-both-engines-read-alike)). Take an
 integer of minutes after midnight instead when something compares the
 time: a bound, as the closing time below, or a
@@ -96,7 +99,8 @@ $day = DataDefinition::create('string')
     ],
   ]);
 $inputs->addList('days', $day, t('Days open'), default: ['mon', 'tue', 'wed', 'thu', 'fri'])
-  ->setRequired(TRUE);
+  ->setRequired(TRUE)
+  ->addConstraint('UniqueItems', []);
 ```
 
 `addList()` takes the item as a type name (`'string'`), a shape's class,
@@ -112,7 +116,9 @@ twelve choices is a multiple select, and
 on the list asks for one or the other at any length
 ([Widgets](widgets.md#which-element-a-list-of-choices-is)). A day not on
 the list is refused by its position ("days.1: The value you selected is
-not a valid choice."). An item is never null in either schema: an empty
+not a valid choice."), and a day listed twice by the list ("days: The
+item "mon" is listed more than once."), which both schemas state as
+`uniqueItems: true`. An item is never null in either schema: an empty
 item is dropped before anything reads the list
 ([Value semantics](semantics.md#lists)). Required means configured, so
 an empty list satisfies it
@@ -210,7 +216,7 @@ refusal is the rule's message, with the condition after it, or core's
 sentence when the rule gives none.
 
 **A key left out keeps what is stored**
-([decision](decisions.md#absent-keeps-null-clears)), and that meets
+(why: [decision](decisions.md#absent-keeps-null-clears)), and that meets
 required on an edit: a key required by its declaration, or by a rule's
 `->require()`, is refused only when it is sent empty (`""` or `null`)
 or nothing is stored for it. Turning after-hours access on with a code
@@ -286,3 +292,142 @@ applies at every bench. Store the map as a `sequence` in config schema.
 A list that cannot be cached is refused: declare the tags of what the
 provider reads ([Keys that come from the
 site](resources.md#keys-that-come-from-the-site)).
+
+## Asked as checkboxes, stored as a list of ids
+
+Pathauto asks for a checkbox per entity type and stores the list of the
+types checked, `enabled_entity_types: [node, user]`. Ask for what a
+person and an agent should send, a map of booleans from a provider
+([above](#one-key-per-thing-the-site-has)), and let the storage
+translate. The alias settings ask for their types so:
+
+<!-- excerpt: tests/modules/data_surface_schema_test/src/Resource/AliasSettingsResource.php -->
+
+```php
+$inputs->addEach('types', 'boolean', from: AliasTypes::class, default: FALSE)
+  ->setLabel(t('Types with aliases'));
+```
+
+The translation is a layout, a `StorageLayoutInterface` with two
+methods. `fromStorage()` turns the stored list into the map, and
+`toStorage()` turns the map back into the list:
+
+<!-- excerpt: tests/modules/data_surface_schema_test/src/Storage/CheckedListLayout.php -->
+
+```php
+public function toStorage(array $values): array {
+  if (is_array($values[$this->key] ?? NULL)) {
+    $values[$this->key] = array_map('strval', array_keys(array_filter($values[$this->key])));
+  }
+  return $values;
+}
+```
+
+<!-- excerpt: tests/modules/data_surface_schema_test/src/Storage/CheckedListLayout.php -->
+
+```php
+public function fromStorage(array $settings): array {
+  if (is_array($settings[$this->key] ?? NULL)) {
+    $settings[$this->key] = array_fill_keys(array_map('strval', $settings[$this->key]), TRUE);
+  }
+  return $settings;
+}
+```
+
+The layout also implements `StoredSchemaInterface`, whose one method
+says the config schema of each key it translates, as it is stored:
+
+<!-- excerpt: tests/modules/data_surface_schema_test/src/Storage/CheckedListLayout.php -->
+
+```php
+public function storedSchema(): array {
+  return [
+    $this->key => [
+      'type' => 'sequence',
+      'sequence' => ['type' => 'string', 'label' => 'Type'],
+    ],
+  ];
+}
+```
+
+The storage, a `ConfigObjectStorage` subclass, names it in `layout()`:
+
+<!-- excerpt: tests/modules/data_surface_schema_test/src/Storage/AliasSettingsStorage.php -->
+
+```php
+protected function layout(): StorageLayoutInterface {
+  return new CheckedListLayout(self::LISTED);
+}
+```
+
+Each class's `use` line: [Namespaces](concepts.md#namespaces).
+
+That is all of it. `load()` reads through the layout and `prepare()`
+writes through it before the config schema judges the object. The build
+holds the resource to that schema
+([A schema the module did not generate](storage.md#a-schema-the-module-did-not-generate)),
+and skips each key the layout names: a boolean at each entry is what
+the resource asks for, and a list of strings is what is stored. `drush
+data_surface:config-schema` writes the schema the layout gives for the
+key, labeled with the key's label, so `types` is generated as a
+`sequence` of `string`.
+
+Three more things hold for a translated key:
+
+- **An id the list leaves out reads as its entry's default**, as any
+  entry a stored map leaves out does
+  ([Keys that come from the site](resources.md#keys-that-come-from-the-site)).
+  Give the entries `default: FALSE`, so a type left out reads unchecked.
+  An entry that starts checked reads checked whatever the list says,
+  which suits only an entry that is also locked, as pathauto's types
+  whose path field another module provides are.
+- **The install file holds the stored shape.** The generator keeps the
+  value the file gives a translated key, and writes nothing for one it
+  does not give, since a declared default is in the asked shape.
+- **Every door asks for the map.** The tool, HTTP, the form and React
+  send and receive the map of booleans; only storage sees the list.
+
+A layout is pure: it reads no service and no site state. A rule that
+needs the site, such as pathauto leaving out a type whose path field
+another module provides, stays in the storage's `prepare()`, on the
+values as asked, before it calls the parent.
+
+## A title and a machine name
+
+A thing with a name and a machine name, as Drupal's own forms ask for a
+content type or a block: the machine name is suggested from the name, a
+person may type over it, it is held once, and it stays as it is once
+the thing exists. It is two keys. Example 15's venue declares them:
+
+<!-- excerpt: modules/data_surface_examples/src/Resource/VenueResource.php -->
+
+```php
+$inputs->add('label', 'string', t('Name'))
+  ->setRequired(TRUE)
+  ->addConstraint('Length', ['max' => 128]);
+$inputs->compute('id', 'machine_name', t('Machine name'),
+  from: ['label'], using: MachineName::class, when: Compute::UNLESS_SENT)
+  ->setDescription(t('A unique name for the venue: lowercase letters, numbers and underscores, computed from its name unless one is given.'))
+  ->addConstraint('Length', ['max' => 32]);
+```
+
+`id` is the resource's identity, `#[Resource(identity: ['id'])]`, and its
+storage a `ConfigEntityStorage`. That is all it takes:
+
+- `machine_name` is core's config schema type: the pattern
+  `^[a-z0-9_]+$` and a Length of 166, both stated in the schema, which
+  the key narrows to 32.
+- A call that leaves `id` out gets one computed from the name by the
+  stock `MachineName`, as the browser suggests it: "Café Déjà Vu" is
+  `cafe_deja_vu`. A call that sends one keeps it.
+- A create refuses a machine name a venue holds: "A venue named
+  riverside already exists." The build adds that rule, the stock
+  `DataSurfaceUnique`, to the identity key of every create whose storage
+  can say whether a thing exists; write none of your own.
+- The form draws core's machine name element beside the name. On edit
+  the machine name is the venue the page is about: drawn disabled, and
+  kept whatever is sent.
+
+Each class's `use` line: [Namespaces](concepts.md#namespaces).
+The rules in full: [A title and its machine
+name](declaring-a-resource.md#a-title-and-its-machine-name).

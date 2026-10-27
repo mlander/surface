@@ -164,9 +164,9 @@ class NodeTypeResourceFormTest extends BrowserTestBase {
       'surface[title_label]' => 'Title',
     ], 'Save');
 
-    // The constraint consults storage, which no config schema can do,
-    // and its message names the value that was refused.
-    $assert_session->pageTextContains('A content type with the machine name recipe already exists.');
+    // The stock DataSurfaceUnique consults storage, which no config
+    // schema can do, and its message names the value that was refused.
+    $assert_session->pageTextContains('A content type named recipe already exists.');
     $assert_session->pageTextNotContains('has been added.');
     // Flagged on the element that carries the machine name, not on the
     // form as a whole.

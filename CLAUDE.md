@@ -82,7 +82,12 @@ the record of the rework that brought the module to the pattern.
   `commit()` on a `ResourceStorageInterface`.
 - **Layout**: how a storage lays accepted values out where that differs
   from how they are asked for, `StorageLayoutInterface`; an alter hands
-  one for its mount with `AltersStorageLayoutInterface::storageLayout()`.
+  one for its mount with `AltersStorageLayoutInterface::storageLayout()`,
+  and a `ConfigObjectStorage` subclass answers one from `layout()`. A
+  layout implementing `StoredSchemaInterface` says each translated key's
+  stored schema, which the build's check skips and the config schema
+  generator writes, both through the storage's `translatedKeys()`
+  (`docs/decisions.md#a-layout-is-the-storages-one-word-on-its-shape`).
 - **Alter**: another module's class that adds keys to a resource or
   structure and narrows it, `#[Alters]` in `src/Alter/`; one that
   implements `OperationAccessInterface`, the access class's interface,
@@ -165,7 +170,11 @@ the record of the rework that brought the module to the pattern.
   data type string of what it refers to, `add('page', 'entity:node:article',
   ...)`, `'entity:user'`, or the bare `'entity'` (two parts attached at
   the key, `entity_type` and `id`, filtered by `DataSurfaceReferenceableType`
-  written on the key); it stores the id. Its candidates are core's
+  written on the key); every door sends and answers the id, and a config
+  storage stores a content entity's uuid (`ReferenceStorageLayout`, which
+  the engine applies; `References::STORED_AS` keeps the id) and a config
+  entity's id, a config entity depending on what its keys refer to
+  (`docs/decisions.md#a-config-object-stores-a-reference-by-uuid`). Its candidates are core's
   selection handler's for the account (`Reference\References`), listed
   up to `data_surface.settings:reference_list_limit` and looked up past
   it, with core's entity autocomplete on the form and `GET
@@ -175,8 +184,9 @@ the record of the rework that brought the module to the pattern.
 - **Computed key**: a key of a resource whose value nobody types,
   `$inputs->compute('slug', 'string', t('Slug'), from: ['label'], using:
   Slugify::class, when: Compute::ON_CREATE)`; the class implements
-  `ComputesValueInterface`, a static `compute(array $from)` run under the static
-  guard. Computed in `accept()` from the accepted sources while storage
+  `ComputesValueInterface`, a static `compute(array $from, ?DataDefinitionInterface $key = NULL)`
+  run under the static guard (one allowance: `MachineName` may use the
+  `transliteration` service, `PipelineGuard::COMPUTE_ALLOWED`). Computed in `accept()` from the accepted sources while storage
   holds nothing for it (and on every write that changes a source with
   `Compute::ON_CHANGE`), judged by its own constraints, a refusal naming
   its sources; stored and read as any key; `readOnly` with
@@ -184,6 +194,17 @@ the record of the rework that brought the module to the pattern.
   `values`; a value sent equal to it noted, any other refused, code
   `computed` (example 15's slug,
   `docs/decisions.md#a-computed-key-is-a-pure-function-of-its-sources`).
+  With `Compute::UNLESS_SENT` the key is computed only when left out (null
+  or `''` read as left out) and a sent value is kept: not `readOnly`,
+  offered by the write tool, `x-surface.computed.when: unless_sent`. A
+  machine name is that pair: `compute('id', 'machine_name', t('Machine
+  name'), from: ['label'], using: MachineName::class, when:
+  Compute::UNLESS_SENT)` on the identity key, with core's `machine_name`
+  config schema type for the pattern and length, `DataSurfaceUnique` added
+  to the identity key of every `creates` operation (the storage answers
+  `exists()`), and core's machine name element as the widget (example 15's
+  id, the content type demo,
+  `docs/decisions.md#a-machine-name-is-a-computed-identity`).
 - **Contract**: the JSON Schema a built resource or structure emits.
 - **Markers**: what a key's `x-surface` says of how far the schema holds
   it, and what an invoker does: `enumerated`, stated in full, narrow
@@ -434,7 +455,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 The full lane's phpunit line reads, as of this writing:
 
 ```
-phpunit: Tests: 1608, Assertions: 37220, Errors: 0, Failures: 0, Skipped: 3. Classes: 222 of 222, 8 at a time, browser classes 4.
+phpunit: Tests: 1662, Assertions: 38351, Errors: 0, Failures: 0, Skipped: 3. Classes: 231 of 231, 8 at a time, browser classes 4.
 ```
 
 the same counts a plain phpunit run of the tree gives. The skipped
@@ -529,6 +550,9 @@ reads no value: every key as declared, every listable dependency as
 conditionals, the rest `refine` or `live`, a list the site decides
 past its limit `deferred`, and never stricter than the pipeline
 (`docs/decisions.md#two-documents-never-stricter-than-the-runtime`).
+The emitter is the walk both documents share; `Contract\PropertySchema`,
+`Contract\Conditionals` and `Contract\DocumentHead` write what it asks
+for (`docs/decisions.md#the-emitter-is-one-walk-and-three-writers`).
 It names no widget unless asked
 (`emit(..., widgets: TRUE)`); `data_surface_tool`'s contract panel shows
 it without, beside what the Tool API can advertise (which flattens
@@ -677,15 +701,27 @@ src/                     Data surface, builder (internal), definition map, host 
 src/Resource/            The authoring API and attributes (Attribute/).
 src/ResourceBuild/       Discovery pass, registry, build step, adapters,
                          derived variants, catalog, operation routes.
+                         The build step is Resources.php, the order and
+                         the caches, over its four phases: Declaring.php,
+                         Attaching.php, Binding.php, Gating.php.
 src/Access/              The operation route's access check.
 src/Hook/                #[UsesStructure] into plugin definitions.
 src/Pipeline/            Access, accept, validate, prepare, commit; results.
+                         DataSurfacePipeline.php keeps the write path and
+                         the document, over its three verbs: Accepting.php,
+                         Validating.php, Conforming.php.
 src/Storage/             Where accepted values are written; settings layouts.
-src/Contract/            The served contract's emitter (JSON Schema); the contract diff.
+src/Contract/            The served contract's emitter (JSON Schema): ContractEmitter
+                         walks the frames, PropertySchema writes each key,
+                         Conditionals the if/then, DocumentHead the top;
+                         the contract diff.
 src/Drush/               Drush commands (the site's catalog, the contract diff, the
                          config schema) and the resource generator, drush
                          generate surface:resource.
 src/Form/                Form builder, host traits, the operation form.
+                         The form builder is DataSurfaceFormBuilder.php,
+                         the service and its Form API callbacks, over
+                         Drawing.php, Extracting.php and Refreshing.php.
 src/Widget/ src/Plugin/  Definition to form element; resolvers, hosts, constraints.
 src/Options/             Option sets, the resolver plugin base and manager.
 src/Variants/            Variants from the site: ComponentProps and ComponentSlots.

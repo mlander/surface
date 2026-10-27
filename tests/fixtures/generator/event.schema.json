@@ -7,7 +7,7 @@
   "properties": {
     "name": {"type": "string", "title": "Name", "maxLength": 80},
     "kind": {"type": "string", "title": "Kind", "enum": ["meetup", "conference"], "default": "meetup"},
-    "seats": {"type": ["integer", "null"], "title": "Seats", "minimum": 1},
+    "seats": {"type": ["integer", "null"], "title": "Seats", "minimum": 1, "multipleOf": 2},
     "slug": {"$ref": "#/$defs/slug", "title": "Slug"},
     "venue": {"$ref": "#/$defs/venue", "title": "Venue"},
     "contact": {

@@ -196,12 +196,12 @@ what its storage's `load()` hands back once the values are committed; a
 read only operation, which is never committed, and a dry run, which
 stops before it writes, answer what its storage's `prepare()` answered
 under an output's name: example 17's dry run answers each node's title
-before and after ([decision](decisions.md#who-produces-outputs)). An operation that takes
+before and after (why: [decision](decisions.md#who-produces-outputs)). An operation that takes
 the keys of a structure of its own (`#[Operation(structure:)]`) answers
 that structure's outputs: example 15's listing declares `items`, a list
 of maps, and `total`
 ([An operation that takes keys of its own](resources.md#an-operation-that-takes-keys-of-its-own)). What prepare rehearsed, in storage layout, is
-never served ([decision](decisions.md#every-door-projects-what-the-read-tool-projects)).
+never served (why: [decision](decisions.md#every-door-projects-what-the-read-tool-projects)).
 
 ## No alter adds an output
 
@@ -212,4 +212,4 @@ sent, a record written elsewhere) belongs to ECA. Until 2026-10-24 an
 alter could, through `AltersOutputsInterface` and a `third_party_outputs`
 mount; nothing shipped used it, and an alter that still implements it
 or keeps an `alterOutputs()` method is refused at discovery
-([decision](decisions.md#the-surface-was-counted-and-cut)).
+(why: [decision](decisions.md#the-surface-was-counted-and-cut)).

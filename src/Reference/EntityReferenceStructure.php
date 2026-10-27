@@ -43,9 +43,11 @@ final class EntityReferenceStructure {
    * @param \Drupal\Core\TypedData\MapDataDefinition $shell
    *   The map at the key, as its author left it.
    *
-   * @return array{interface: string|null, targets: array<string, string[]>, required: bool}
+   * @return array{interface: string|null, targets: array<string, string[]>, required: bool, byId?: true}
    *   The interface its entity types implement, the entity types it
-   *   allows with their bundles, and whether it must hold one.
+   *   allows with their bundles, whether it must hold one, and, only when
+   *   its author said so (References::STORED_AS), that a config storage
+   *   keeps a content entity's id rather than its uuid.
    */
   public static function filter(MapDataDefinition $shell): array {
     $constraints = $shell->getConstraints();
@@ -61,7 +63,7 @@ final class EntityReferenceStructure {
       'interface' => is_string($options['interface'] ?? NULL) ? $options['interface'] : NULL,
       'targets' => $targets,
       'required' => $shell->isRequired(),
-    ];
+    ] + ($shell->getSetting(References::STORED_AS) === References::BY_ID ? ['byId' => TRUE] : []);
   }
 
   /**
@@ -75,8 +77,11 @@ final class EntityReferenceStructure {
    *   The entity types it allows, each with its bundles; empty for all.
    * @param bool $required
    *   Whether the key must hold one.
+   * @param bool $byId
+   *   Whether a config storage keeps a content entity's id rather than its
+   *   uuid, as the key's author said.
    */
-  public static function fill(BlueprintInterface $inputs, ?string $interface, array $targets, bool $required): void {
+  public static function fill(BlueprintInterface $inputs, ?string $interface, array $targets, bool $required, bool $byId = FALSE): void {
     $type = $inputs->add('entity_type', 'string', t('Entity type'))
       ->addConstraint(References::TYPE_CONSTRAINT, array_filter([
         'interface' => $interface,
@@ -85,9 +90,12 @@ final class EntityReferenceStructure {
     if ($required) {
       $type->setRequired(TRUE);
     }
-    $inputs->add('id', 'string', t('ID'))
+    $id = $inputs->add('id', 'string', t('ID'))
       ->setDescription(t('The id of an entity of the entity type chosen.'))
       ->setSetting(self::TARGETS, $targets);
+    if ($byId) {
+      $id->setSetting(References::STORED_AS, References::BY_ID);
+    }
     // An id means nothing without its entity type, and an entity type
     // chosen names one.
     $inputs->narrow('id')

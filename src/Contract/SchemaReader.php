@@ -36,7 +36,8 @@ use Drupal\data_surface\ResourceBuild\ResourceRegistry;
  * - `oneOf` of `const` with `title`, or `enum` (`meta:enum` the labels),
  *   a list of allowed values; `minimum` and `maximum` (and an exclusive
  *   bound on an integer) a Range, `minLength` and `maxLength` a Length,
- *   `minItems` and `maxItems` a Count, `pattern` a Regex through the
+ *   `minItems` and `maxItems` a Count, `uniqueItems: true` on an array a
+ *   UniqueItems, `pattern` a Regex through the
  *   subset both engines read alike, run backwards (PatternTranslation),
  *   and `not: {pattern}` one that must not match; `format` `date`, `time`
  *   and `uuid` the constraint that checks it; an `allOf` or `anyOf` of
@@ -61,7 +62,7 @@ use Drupal\data_surface\ResourceBuild\ResourceRegistry;
  *   `patternMessage`, the widget a key asks for, and `checkedOnServer`
  *   entries of a JsonSchema constraint.
  *
- * What none of these can say (`not`, `patternProperties`, `uniqueItems`,
+ * What none of these can say (`not`, `patternProperties`, `contains`,
  * `dependentSchemas`, `multipleOf`, a type that is several types, a
  * conditional outside the vocabulary or one that widens, a reference to
  * another document) is kept, not refused: the part of the schema left
@@ -172,6 +173,7 @@ final class SchemaReader {
     'items',
     'minItems',
     'maxItems',
+    'uniqueItems',
     'default',
     ContractEmitter::EXTENSION,
   ];
@@ -1583,6 +1585,9 @@ final class SchemaReader {
     $min = is_int($property['minItems'] ?? NULL) ? $property['minItems'] : NULL;
     $max = is_int($property['maxItems'] ?? NULL) ? $property['maxItems'] : NULL;
     $list = $inputs->attachList($name, $child, $min, $max);
+    if (($property['uniqueItems'] ?? FALSE) === TRUE) {
+      $list->addConstraint('UniqueItems', []);
+    }
     if (is_string($property['title'] ?? NULL)) {
       $list->setLabel($property['title']);
     }
@@ -1596,7 +1601,7 @@ final class SchemaReader {
       DefinitionMetadata::setAlwaysHeld($list);
     }
     foreach (array_diff_key($property, array_flip(self::COLLECTION)) as $keyword => $value) {
-      $this->note(static::below($pointer, (string) $keyword), 'Not read: a collection says its title, its description and how many items it holds.');
+      $this->note(static::below($pointer, (string) $keyword), 'Not read: a collection says its title, its description, how many items it holds and whether they differ.');
     }
   }
 
@@ -1964,6 +1969,7 @@ final class SchemaReader {
     $numeric = array_intersect($types, ['integer', 'number']) !== [];
     $integer = $types === ['integer'];
     $bounds = [];
+    $unique = FALSE;
     $message = is_string($property[ContractEmitter::EXTENSION]['patternMessage'] ?? NULL) ? $property[ContractEmitter::EXTENSION]['patternMessage'] : NULL;
     foreach ($property as $keyword => $value) {
       $at = static::below($pointer, (string) $keyword);
@@ -1977,6 +1983,18 @@ final class SchemaReader {
         continue;
       }
       switch ($keyword) {
+        case 'uniqueItems':
+          // Read after the bounds, where the emitter writes it. False is
+          // what an array says with no keyword at all.
+          if ($types === ['array'] && is_bool($value)) {
+            $unique = $value;
+          }
+          else {
+            $foreign[$keyword] = static::plain($value);
+            $this->note($at, 'Kept as a JsonSchema constraint: no constraint of the vocabulary says it.');
+          }
+          break;
+
         case 'exclusiveMinimum':
         case 'exclusiveMaximum':
           if ($integer && (is_int($value) || is_float($value))) {
@@ -2057,6 +2075,9 @@ final class SchemaReader {
     }
     foreach ($bounds as $constraint => $options) {
       $constraints[] = [$constraint, $options];
+    }
+    if ($unique) {
+      $constraints[] = ['UniqueItems', []];
     }
     return $constraints;
   }

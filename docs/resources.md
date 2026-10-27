@@ -197,7 +197,7 @@ already known, and that is a **context**, an `OperationContext`:
   permission: ...)]` beside `#[Resource]`, repeatable, means the context
   `new OperationContext()` with the attribute's id and `creates`
   stamped on it. Every shipped singleton is written this way
-  ([decision](decisions.md#an-operation-on-the-class)).
+  (why: [decision](decisions.md#an-operation-on-the-class)).
 - **On a static method**, the exception: a method only when the context
   needs more, parameters (what the operation needs is its own
   signature: a route or a tool supplies them by name), identity it
@@ -206,7 +206,7 @@ already known, and that is a **context**, an `OperationContext`:
   attribute's are stamped on it, and a context that names another id,
   or says otherwise about creating, is refused: at discovery when the
   method needs nothing, else when it is first asked
-  ([decision](decisions.md#a-contexts-id-is-the-operation-id)). With no
+  (why: [decision](decisions.md#a-contexts-id-is-the-operation-id)). With no
   `description:`, the method's docblock summary is its description.
 - The context is `new OperationContext(known: [])`: the identity keys
   it knows, each with its value. The plugin hosts build their own,
@@ -234,7 +234,7 @@ already known, and that is a **context**, an `OperationContext`:
   call finding the name taken. A tool carries them to the Tool API,
   which MCP reads as a tool's annotations, and both schema documents
   state them at the top, under `x-surface.operation`
-  ([decision](decisions.md#an-operation-states-how-it-behaves)). A read
+  (why: [decision](decisions.md#an-operation-states-how-it-behaves)). A read
   only operation writes nothing at any door: its pipeline accepts,
   validates and prepares, stops where a dry run does, and refuses to
   commit what it prepared. An update
@@ -243,7 +243,7 @@ already known, and that is a **context**, an `OperationContext`:
   operation a delete: it takes no values, its storage removes the thing
   its context names (`DeletableStorageInterface`), its tool takes the
   parameters and a dry run, and HTTP serves it as `DELETE` (the
-  placement's `delete`,
+  placement's `delete`; why:
   [decision](decisions.md#a-placed-block-is-a-resource)).
 
 The content type resource is the worked example:
@@ -254,19 +254,14 @@ The content type resource is the worked example:
   storage: NodeTypeStorage::class,
   access: NodeTypeAccess::class,
 )]
+#[Operation('create',
+  label: new TranslatableMarkup('Add a content type'),
+  description: new TranslatableMarkup('Creates a content type under a machine name the caller chooses, or one computed from its name; a machine name already in use is refused.'),
+  permission: self::PERMISSION,
+  creates: TRUE,
+  idempotent: TRUE,
+)]
 final class NodeTypeResource implements ResourceInterface {
-
-  #[Operation('create',
-    label: new TranslatableMarkup('Add a content type'),
-    description: new TranslatableMarkup('Creates a content type under a machine name the caller chooses; a machine name already in use is refused.'),
-    permission: self::PERMISSION,
-    creates: TRUE,
-    idempotent: TRUE,
-  )]
-  public static function create(): OperationContext {
-    // Unique on create only: that is where you are, not what was entered.
-    return (new OperationContext())->withConstraint('type', 'DataSurfaceUniqueNodeType');
-  }
 
   #[Operation('update',
     label: new TranslatableMarkup('Edit a content type'),
@@ -282,10 +277,13 @@ final class NodeTypeResource implements ResourceInterface {
 }
 ```
 
-Both are methods because their contexts need more: the create narrows
-the machine name, the update knows it. A settings object's one `configure` needs
-nothing, so it is the attribute alone, as on [the first
-resource](first-resource.md):
+The update is a method because its context needs more: it knows the
+machine name. The create needs nothing more, so it is the attribute
+alone on the class: the build holds the machine name it creates under
+to one no content type has, with the stock `DataSurfaceUnique`
+([A title and a machine name](recipes.md#a-title-and-a-machine-name)).
+A settings object's one `configure` is the attribute alone too, as on
+[the first resource](first-resource.md):
 
 ```php
 #[Resource('first.newsletter', storage: NewsletterStorage::class)]
@@ -328,7 +326,7 @@ changes some. An operation about the things together takes other keys:
 a listing's page and filter, a reorder's ids and weights. It names the
 structure they are with `structure:` on its `#[Operation]`, and that
 structure's inputs are what it takes and its outputs what it answers
-([decision](decisions.md#a-listing-is-a-read-only-operation-with-outputs-a-reorder-is-an-update-over-the-collection)):
+(why: [decision](decisions.md#a-listing-is-a-read-only-operation-with-outputs-a-reorder-is-an-update-over-the-collection)):
 
 ```php
 #[Operation('list',
@@ -359,8 +357,7 @@ structure's inputs are what it takes and its outputs what it answers
   them to the config schema the storage writes to.
 - **A read answers its outputs.** A read only operation is never
   committed, so its outputs are what its storage's `prepare()` answered
-  under an output's name ([Who produces
-  outputs](decisions.md#who-produces-outputs)): `VenueStorage` reads the
+  under an output's name (why: [decision](decisions.md#who-produces-outputs)): `VenueStorage` reads the
   venues there and answers the page and the total. Its tool answers them
   beside the one result shape; on HTTP, `GET` on the collection runs it
   and answers them alone ([a listing](served-contract.md#a-listing)).
@@ -469,21 +466,20 @@ surface, both contracts and the form.
 | Answer | At the top (an operation asked on its own) | At a child, however invoked |
 | --- | --- | --- |
 | open | allowed, as today | as today |
-| locked | allowed, built locked whole: every element disabled and no Save, `readOnly` at the top and on every key in both contracts, a submit refused by name at every door, the read tool answering ([Locked at the top](decisions.md#locked-at-the-top)) | the parent's key locked: fieldset drawn disabled, every key `readOnly` in both contracts and locked in the tool's `values`, posted values ignored ([Value semantics](semantics.md#locked-and-omitted-children)) |
+| locked | allowed, built locked whole: every element disabled and no Save, `readOnly` at the top and on every key in both contracts, a submit refused by name at every door, the read tool answering (why: [decision](decisions.md#locked-at-the-top)) | the parent's key locked: fieldset drawn disabled, every key `readOnly` in both contracts and locked in the tool's `values`, posted values ignored ([Value semantics](semantics.md#locked-and-omitted-children)) |
 | omitted | denied (route 403, tool access denied) | the key left out of the built data surface, both contracts, the form, the tool's `values` and the read tool's output; a posted value is an unknown key; a write keeps what is stored under it |
 
 Access composes: the parent's operation access gates the whole data
 surface as above, and each child's access then decides that child's
 keys ([Child operations](#child-operations)). One child may refuse the
 whole parent, never allow: a variant chosen by a locked deciding
-key, which the parent cannot be written without ([A chosen variant may
-refuse](decisions.md#a-chosen-variant-may-refuse)).
+key, which the parent cannot be written without (why: [decision](decisions.md#a-chosen-variant-may-refuse)).
 
 ### Static and runtime access
 
 An answer is one of two kinds, read from what its cacheability says it
 depends on and never declared
-([decision](decisions.md#access-is-static-or-runtime-read-from-its-cacheability)):
+(why: [decision](decisions.md#access-is-static-or-runtime-read-from-its-cacheability)):
 
 - **Static**: it varies by the account's permissions or roles and
   nothing else (cache contexts `user.permissions`, `user.roles`,
@@ -705,7 +701,7 @@ made as, which a storage that records who wrote reads there
   `children`, by the key it sits at), for a PHP caller; a derived tool's
   dry run answers the accepted `values` instead, as the read tool would,
   since what storage rehearsed holds what the caller may not see
-  ([decision](decisions.md#every-door-projects-what-the-read-tool-projects)).
+  (why: [decision](decisions.md#every-door-projects-what-the-read-tool-projects)).
 - **A real submit prepares first**, so `commit()` is never the first to
   find out storage would refuse. A refusal is a
   `StorageViolationsException` carrying violations filed under the
@@ -742,7 +738,7 @@ form and another over HTTP or through a tool, and the doors stop
 agreeing. The doors themselves (the operation form, the HTTP API, the
 tool, the React page) read the request: that is their job, and each
 turns it into a context, values and an account
-([decision](decisions.md#nothing-an-operation-runs-reads-the-request)).
+(why: [decision](decisions.md#nothing-an-operation-runs-reads-the-request)).
 
 | What runs | It may read | It gets the account |
 | --- | --- | --- |
@@ -819,7 +815,7 @@ own is a tool, `data_surface:<resource id>:<operation id>`, derived by
   the tool runs. The pipeline still refuses an update
   of a thing that holds no value for a required key, in the key's own
   words
-  ([decision](decisions.md#required-is-the-resources-and-an-update-tool-requires-nothing-at-its-door)).
+  (why: [decision](decisions.md#required-is-the-resources-and-an-update-tool-requires-nothing-at-its-door)).
   The definition is static, which is what operations make possible: an
   operation that needs nothing is the exact contract before anyone
   calls, and one that needs an existing thing refines `values` to its
@@ -832,7 +828,7 @@ own is a tool, `data_surface:<resource id>:<operation id>`, derived by
   requires, none on an update, its nesting), and the pipeline holds it to every rule,
   against the definitions the values sent narrow, so a refusal says
   what is allowed for them
-  ([decision](decisions.md#a-refusal-names-what-it-depends-on)), by path
+  (why: [decision](decisions.md#a-refusal-names-what-it-depends-on)), by path
   and by what to send: "room: The value you selected is not a valid
   choice. This applies when Venue is riverside (Riverside Hall). Choose
   riverside_main (Main hall) or riverside_east (East room)."
@@ -1034,13 +1030,16 @@ declared ([Variants from the site](#variants-from-the-site)). The tool
 bridge derives its tools, which place, configure, read and remove a
 block by its name. Its README, and example 13 at
 `/surface-examples/13`, show both
-([decision](decisions.md#a-block-embeds-a-component-through-its-structure),
+(why: [decision](decisions.md#a-block-embeds-a-component-through-its-structure),
 [decision](decisions.md#a-placed-block-is-a-resource)).
 
 ## Alters
 
 An alter says which resource or structure it applies to with `#[Alters]`
-on its class, optionally naming the operations it applies in. What it
+on its class, optionally naming the operations it applies in. It names
+the owner by its class; an id is only for a [derived
+resource](#derived-resources), which has no class, and an id of an owner
+that has one is refused at discovery. What it
 adds is mounted under its own module's name, at
 `third_party_settings.<module>.<key>`, so the owner's storage and schema
 never have to know a contributor's keys. It adds no outputs: what a call
@@ -1056,7 +1055,7 @@ alter declares with `narrow()` reads and narrows the same keys
 ([Declaring a rule](refinement.md#declaring-a-rule)). A watched mounted
 key is known everywhere else by its path,
 `third_party_settings.<module>.<key>`. Another module's mounted key is
-watched by no alter ([Decisions](decisions.md#an-alter-watches-its-own-mounted-key)).
+watched by no alter (why: [decision](decisions.md#an-alter-watches-its-own-mounted-key)).
 
 An alter may also attach a structure, at its own mount and nowhere
 else, `attach('third_party_settings.<module>', Structure::class, reads:
@@ -1071,7 +1070,7 @@ the structure's `license` at its mount and caps the owner's capacity at
 a hundred while it is empty, so the capacity's dependencies, its AJAX
 trigger and its `dependsOn` name the license by its path. The glue may
 read the structure's keys and never narrows them
-([Decisions](decisions.md#an-alter-attaches-at-its-own-mount)).
+(why: [decision](decisions.md#an-alter-attaches-at-its-own-mount)).
 
 The one widening an alter may make is `extendChoices()`: more values on
 a key whose owner declared a list of allowed values. The values are the
@@ -1147,7 +1146,7 @@ stored, posted, validated and advertised at
 `third_party_settings.<module>.<key>`, the config schema and the Tool
 API see no change, and the served contract says it with one keyword,
 `x-surface.after`, leaving the schema's nesting and order alone
-([Decisions](decisions.md#placement-is-a-describe-option)). `after:` on
+(why: [decision](decisions.md#placement-is-a-describe-option)). `after:` on
 anything but the calling alter's own input mount (an owner's key,
 another module's mount, an output mount, which is never drawn) is
 refused, as is a key the owner's blueprint does not declare at its top
@@ -1164,8 +1163,8 @@ once a managed key is chosen at its mount,
 `narrow('api_key')->when(Condition::present('key_id'))->doesNotApply()`.
 The owner's code still reads only its own keys, so the alter cannot hand
 it the managed key's value; an owner that needs it declares the managed
-key as a variant of its own ([decision](decisions.md#an-extension-is-a-variant-the-site-adds-or-an-alter),
-[ROADMAP](../ROADMAP.md) item 18).
+key as a variant of its own ([ROADMAP](../ROADMAP.md) item 18; why:
+[decision](decisions.md#an-extension-is-a-variant-the-site-adds-or-an-alter)).
 
 ### An alter's answer
 
@@ -1220,7 +1219,7 @@ is one value with no access of its own. So is an access class, named on
 role. An alter answers for a whole
 resource or structure, never for one key of it; a key that needs an
 answer of its own is a structure
-([decision](decisions.md#an-alter-may-answer-access-and-the-stricter-stands)).
+(why: [decision](decisions.md#an-alter-may-answer-access-and-the-stricter-stands)).
 
 ### A whole alter
 
@@ -1589,7 +1588,7 @@ payload carrying another variant's keys is refused by name
 presentation chose grid.`); a stored value that does not fit a newly
 chosen variant falls back to that variant's defaults, but a secret of
 another variant, which is kept beside them for the day its variant is
-chosen again ([decision](decisions.md#an-extension-is-a-variant-the-site-adds-or-an-alter)).
+chosen again (why: [decision](decisions.md#an-extension-is-a-variant-the-site-adds-or-an-alter)).
 
 ### Ports
 
@@ -1743,7 +1742,7 @@ timestamps' two are the journal's own.
   locked, they hold what is stored, shown and fixed; omitted, they are
   not there and storage keeps them. The owner's access answers for the
   rest, and where both answer for the same keys the stricter stands
-  ([decision](decisions.md#a-mixin-is-merged-flat)).
+  (why: [decision](decisions.md#a-mixin-is-merged-flat)).
 - **One def.** Both documents write the structure once, as a def, and
   the owner's frame is `allOf` of a reference to it and the owner's own
   properties, closed with `unevaluatedProperties`
@@ -1785,7 +1784,7 @@ its own module attaches it. The recipe:
    rules, its access class and its operations, and keeps its def id in
    both documents: one def, however many containers attach it. The
    alters of the structure apply wherever it is used; a container
-   cannot opt out of them yet (open,
+   cannot opt out of them yet (open; why:
    [decision](decisions.md#a-port-is-a-live-sibling-value)).
    A change to the structure's keys changes every container's stored
    layout, which is Phase D of the roadmap, with an explicit contract to
@@ -1863,8 +1862,7 @@ the same way, one variant at a time; a variant whose access
 omits it is not offered, so its deciding value can no longer be chosen,
 and nothing is derived in its place; one whose access locks it is
 offered read only, built locked whole: it can be chosen, and is drawn
-and stated fixed ([A variant is open, locked or not
-offered](decisions.md#a-variant-is-open-locked-or-not-offered)).
+and stated fixed (why: [decision](decisions.md#a-variant-is-open-locked-or-not-offered)).
 
 The test module's larder is the worked example: one spice rack resource
 attached twice, invoked through its `update` at one key, matched by the
@@ -1944,7 +1942,7 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
   for these answers state the variant chosen, and the narrowing tool,
   `data_surface:<resource>:<operation>:schema`, answers it to an agent
   that asks with values
-  ([decision](decisions.md#a-list-left-out-for-size-is-deferred-not-refined)).
+  (why: [decision](decisions.md#a-list-left-out-for-size-is-deferred-not-refined)).
 - **Storage.** The key is open in the config schema written from the
   resource (`type: ignore`): which variants a site has is not the
   code's, and the chosen variant holds the value to its own keys before
@@ -1965,7 +1963,7 @@ class that wins for the banner (`VariantsFromSiteTest`); example 12
 reads every single-directory component the site has. Example 14's mailer
 lists two structures of its own, a credential pasted or a key the site
 manages, the second only while the module that manages keys is on
-([decision](decisions.md#an-extension-is-a-variant-the-site-adds-or-an-alter)).
+(why: [decision](decisions.md#an-extension-is-a-variant-the-site-adds-or-an-alter)).
 
 A placed block is the case at scale. `data_surface_block`'s
 `block.placement` attaches its `settings` with
@@ -1980,7 +1978,7 @@ from its config schema, `block.settings.<plugin id>`, written as JSON
 Schema for the reader. The keys every block has (its title, whether it
 shows, its theme, region, weight and status) are the resource's own, and
 its visibility a collection of conditions chosen the same way
-([decision](decisions.md#a-placed-block-is-a-resource)).
+(why: [decision](decisions.md#a-placed-block-is-a-resource)).
 
 A field type's settings are the case again, in `data_surface_tool`.
 `FieldInstanceResource` attaches its `settings` with
@@ -1996,13 +1994,13 @@ plain `string` or `integer` field as they offer an address field, with
 what the schema says and nothing more. The list counts against the site
 list limit as any other: on a site offering more field types than that,
 the field tools state `settings` open and `deferred`, fetched per field
-type ([decision](decisions.md#derived-variants)).
+type (why: [decision](decisions.md#derived-variants)).
 
 Variants from the site nest. A schema a provider lists may hold
 variants of its own, a sibling's `const` choosing among objects, and
 those again: a component's slots each hold a component, whose own props
 and slots are variants of the component it names, three deep
-(`ComponentSlots`, beside `ComponentProps` at `slots`;
+(`ComponentSlots`, beside `ComponentProps` at `slots`; why:
 [decision](decisions.md#a-slot-holds-text-a-component-or-components)).
 The same shape stands at many places in such a tree, so a provider hands
 the defs its entries share once, `SiteList::addDefs($defs)`, and an
@@ -2129,6 +2127,33 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
   resolver, a service named by its class or a class implementing
   `ContainerInjectionInterface`, so it may hold the services it reads;
   the resource only names it, and stays static.
+- **Each entry** is `SiteList::add($id, $label, default:, locked:,
+  schema:, structure:)`:
+
+  ```php
+  $keys->add('node', t('Content'), default: TRUE, locked: TRUE);
+  $keys->add('user', t('User'));
+  ```
+
+  `id` is the key the entry becomes: not empty, no dot or colon, once
+  per list. `label` is the key's label. `default` is what the key starts
+  from, over the `default:` the blueprint gave every entry; `NULL`
+  leaves that one. A structure at every thing (`attachEach()`) says what
+  it starts from itself, so an entry there with a `default` is refused.
+  `locked: TRUE` holds the key to what is stored, as "A locked thing"
+  below says.
+  `schema` and `structure` are read only for a variant
+  ([variants from the site](#variants-from-the-site)); an entry for a
+  key that names either is refused.
+- **An entry the stored map leaves out**, because the site added the
+  thing after the map was saved, holds its default at every door that
+  draws: the form, the envelope over HTTP, the React page, and what the
+  pipeline accepts and validates. A locked entry that starts checked is
+  drawn checked. A save leaves the entry unstored until a caller sends
+  another value, since [a default storage never held is not
+  written](decisions.md#absent-keeps-null-clears), and the read tool,
+  which answers what storage holds, leaves it out; no door reads it as
+  `null` (why: [decision](decisions.md#defaults-follow-the-definitions-under-a-stored-value)).
 - **When.** The build step asks the provider every time the resource is
   built and declares one key per thing in a child sealed at the key, as
   an options resolver is asked for its list. The owner's storage stores
@@ -2152,12 +2177,12 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
   fetched with an entry chosen, `GET .../schema?choose=/limits=<id>`,
   states that key, the schema for these answers states every key, and
   the narrowing tool answers it to an agent
-  ([decision](decisions.md#a-list-left-out-for-size-is-deferred-not-refined)).
+  (why: [decision](decisions.md#a-list-left-out-for-size-is-deferred-not-refined)).
 - **A locked thing** (`add($id, $label, locked: TRUE)`) is held to what
   is stored: drawn fixed on the form, `readOnly` in both documents, locked
   in the tool listing, and a value posted for it is not taken, which the
   tool and the React submit say in a note ("Drill press is locked and
-  kept as stored; the value sent was not taken.",
+  kept as stored; the value sent was not taken."; why:
   [decision](decisions.md#locked-at-the-top)). A thing holding a
   structure is that structure locked.
 - **The keys are ordinary keys.** The full schema states every one; the
@@ -2181,7 +2206,7 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
 A deriver ([below](#derived-resources)) is for what is a resource or
 structure of its own: operations, storage, identity, or a use at many
 sites. Keys that only one resource asks for, one per thing, are this
-([decision](decisions.md#keys-that-come-from-the-site)). Where each
+(why: [decision](decisions.md#keys-that-come-from-the-site)). Where each
 thing chooses a group of keys of its own, a schema per thing, the
 spelling is [variants from the site](#variants-from-the-site):
 `attachVariants($key, by: $sibling, from: Provider::class)`.
@@ -2299,7 +2324,7 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
   its class). The build step, the alters, the routes
   (`_data_surface_resource: 'entity.content:node.page'`), the catalog,
   the derived tools and read tools, the React app and its API treat it
-  as they treat a class ([decision](decisions.md#a-derived-resource-has-no-class)).
+  as they treat a class (why: [decision](decisions.md#a-derived-resource-has-no-class)).
 - **Cacheability.** A derived resource names the cache tags of what it
   was read from, and only those (its bundle's form display and fields,
   not every field on the site); its discovery entry carries them, so
@@ -2313,7 +2338,7 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
   belong in the build's cacheability too
   (`$inputs->addCacheableDependency()`), which is what the schema route
   and the tools are kept by
-  ([decision](decisions.md#what-is-paid-once-and-what-per-request)).
+  (why: [decision](decisions.md#what-is-paid-once-and-what-per-request)).
 - **Alters.** `#[Alters]` names a derived resource or structure by its
   id, or every one a deriver makes by the base id:
   `#[Alters('entity.content')]`.

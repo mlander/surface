@@ -155,7 +155,7 @@ class FieldToolsComparisonTest extends DataSurfaceKernelTestBase {
     $this->assertContains('CA', $schema['properties']['available_countries']['items']['enum']);
     $this->assertSame('Available countries', $schema['properties']['available_countries']['title']);
     $this->assertSame(
-      'Available countries: Leave empty for all countries.',
+      'Leave empty for all countries.',
       $schema['properties']['available_countries']['description'],
     );
     $this->assertSame('Country', $schema['properties']['available_countries']['items']['title']);

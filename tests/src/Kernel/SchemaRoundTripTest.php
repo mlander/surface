@@ -71,7 +71,7 @@ class SchemaRoundTripTest extends DataSurfaceKernelTestBase {
     'event.ticket_limit:configure' => 'port',
     'event.venue:create' => 'computed',
     'first.store:configure' => 'coded',
-    'registration.step2:configure' => 'coded',
+    'registration.step2:configure' => 'server',
     'registration.step3:configure' => 'coded',
     'resource_test.annex:configure' => 'access',
     'resource_test.archive:configure' => 'coded',

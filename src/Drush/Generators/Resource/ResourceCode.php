@@ -36,6 +36,10 @@ use Drupal\data_surface\Refinement\Rule;
  * schema, what its document could not carry. The optional keys a schema
  * says are always held are the storage's ALWAYS_HELD.
  *
+ * Each frame's keys are named once, as constants of its class in
+ * declaration order (constantNames()), and every call and comment after
+ * names the key by its constant: self::VENUE, never 'venue'.
+ *
  * Decision: see
  * docs/decisions.md#the-generator-writes-what-the-first-page-shows.
  */
@@ -70,7 +74,7 @@ final class ResourceCode {
   /**
    * The structures written so far, by what each was built from.
    *
-   * @var array<string, array{class: string, id: string, label: string, inputs: string, uses: string[]}>
+   * @var array<string, array{class: string, id: string, label: string, constants: string, inputs: string, uses: string[]}>
    */
   protected array $structures = [];
 
@@ -92,6 +96,13 @@ final class ResourceCode {
    * @var string[]
    */
   protected array $unlabeled = [];
+
+  /**
+   * The constant of each key of the frame being written, by key.
+   *
+   * @var array<string, string>
+   */
+  protected array $constants = [];
 
   /**
    * Constructs a ResourceCode.
@@ -116,18 +127,20 @@ final class ResourceCode {
    * @param \Drupal\data_surface\DataSurfaceInterface $built
    *   The resource, sealed as declared.
    *
-   * @return array{inputs: string, uses: string[], structures: list<array{class: string, id: string, label: string, inputs: string, uses: string[]}>, always_held: string[], comments: int}
-   *   The body of its defineInputs(), the classes it uses, the structures
-   *   it attaches, each written the same way, the keys its storage always
-   *   holds, and how many comments name what is left to write.
+   * @return array{constants: string, inputs: string, uses: string[], structures: list<array{class: string, id: string, label: string, constants: string, inputs: string, uses: string[]}>, always_held: string[], comments: int}
+   *   The constants that name its keys, the body of its defineInputs(),
+   *   the classes it uses, the structures it attaches, each written the
+   *   same way, the keys its storage always holds, and how many comments
+   *   name what is left to write.
    */
   public function write(DataSurfaceInterface $built): array {
     $this->uses = [];
     $this->structures = [];
     $this->alwaysHeld = [];
     $this->comments = 0;
-    $inputs = $this->frame($built, '');
+    [$constants, $inputs] = $this->frame($built, '');
     return [
+      'constants' => $constants,
       'inputs' => $inputs,
       'uses' => static::sorted($this->uses),
       'structures' => array_values($this->structures),
@@ -144,13 +157,23 @@ final class ResourceCode {
    * @param string $path
    *   Its dotted path in the resource, a dot at its end; empty at the top.
    *
-   * @return string
-   *   The statements, one after another.
+   * @return array{0: string, 1: string}
+   *   The constants that name its keys, and its statements, one after
+   *   another.
    *
    * @phpstan-impure
    */
-  protected function frame(DataSurfaceInterface $surface, string $path): string {
+  protected function frame(DataSurfaceInterface $surface, string $path): array {
     $map = $surface->getDefinitions();
+    // A structure's frame is written while its parent's is: each names
+    // its own keys.
+    $parent_constants = $this->constants;
+    $this->constants = static::constantNames(array_map('strval', array_keys($map->entries())));
+    $constants = [];
+    foreach ($map->entries() as $name => $entry) {
+      [$label] = $this->label($entry->definition, (string) $name);
+      $constants[] = $this->constant((string) $name, $label);
+    }
     $statements = [];
     $top = $path === '' ? $this->leftComments('', '', FALSE) : [];
     foreach ($map->frameConstraints() as $schema) {
@@ -158,7 +181,7 @@ final class ResourceCode {
       $this->comments++;
     }
     foreach ($map->mixins() as $mixin) {
-      $top[] = sprintf('From the schema, written as keys of this class: %s, a structure mixed in. Mix it in with mixIn() once it is a class.', implode(', ', array_map('strval', $mixin->keys)));
+      $top[] = sprintf('From the schema, written as keys of this class: %s, a structure mixed in. Mix it in with mixIn() once it is a class.', implode(', ', array_map($this->named(...), array_map('strval', $mixin->keys))));
       $this->comments++;
     }
     foreach ($map->ports() as $port) {
@@ -169,7 +192,6 @@ final class ResourceCode {
       $statements[] = $this->comment($top);
     }
     $rules = [];
-    // A structure's frame is written while its parent's is: each its own.
     $parent_unlabeled = $this->unlabeled;
     $this->unlabeled = [];
     $keys = [];
@@ -184,14 +206,102 @@ final class ResourceCode {
       }
     }
     if ($this->unlabeled !== []) {
-      $statements[] = $this->comment([sprintf('The schema gives no label to %s: each is named from its key.', implode(', ', $this->unlabeled))]);
+      $statements[] = $this->comment([sprintf('The schema gives no label to %s: each is named from its key.', implode(', ', array_map($this->named(...), $this->unlabeled)))]);
     }
     $this->unlabeled = $parent_unlabeled;
     $statements = [...$statements, ...$keys];
     foreach ($rules as $rule) {
       $statements[] = $this->rule($rule);
     }
-    return implode("\n", array_filter($statements, static fn (string $statement): bool => $statement !== ''));
+    $this->constants = $parent_constants;
+    return [
+      implode("\n\n", $constants),
+      implode("\n", array_filter($statements, static fn (string $statement): bool => $statement !== '')),
+    ];
+  }
+
+  /**
+   * Names each key of a frame as a constant of its class.
+   *
+   * A key's constant is the key upper-cased, a camelCase key split at
+   * each capital, and every run of characters other than ASCII letters
+   * and digits one underscore; a key that would start with a digit, or
+   * leave nothing, is prefixed KEY_. Where two keys would share a name,
+   * or a key would be named CLASS, which PHP reserves, the later key in
+   * declaration order takes the first free suffix: _2, _3, and so on.
+   *
+   * @param string[] $keys
+   *   The keys, in declaration order.
+   *
+   * @return array<string, string>
+   *   Each key's constant, by key.
+   */
+  public static function constantNames(array $keys): array {
+    $names = [];
+    $taken = ['CLASS' => TRUE];
+    foreach ($keys as $key) {
+      $name = (string) preg_replace('/(?<=[a-z0-9])(?=[A-Z])/', '_', $key);
+      $name = strtoupper(trim((string) preg_replace('/[^A-Za-z0-9]+/', '_', $name), '_'));
+      if ($name === '' || ctype_digit($name[0])) {
+        $name = rtrim('KEY_' . $name, '_');
+      }
+      $unique = $name;
+      for ($i = 2; isset($taken[$unique]); $i++) {
+        $unique = $name . '_' . $i;
+      }
+      $taken[$unique] = TRUE;
+      $names[$key] = $unique;
+    }
+    return $names;
+  }
+
+  /**
+   * Writes the constant that names one key, with its docblock.
+   *
+   * @param string $name
+   *   The key.
+   * @param string $label
+   *   Its label.
+   *
+   * @return string
+   *   The lines, indented as a class member.
+   */
+  protected function constant(string $name, string $label): string {
+    // Lowercase the label's first letter, unless it begins an acronym.
+    $words = preg_match('/^\p{Lu}\p{Lu}/u', $label) ? $label : mb_strtolower(mb_substr($label, 0, 1)) . mb_substr($label, 1);
+    $lines = ['  /**'];
+    foreach (explode("\n", wordwrap(sprintf('The %s key.', rtrim($words, '.')), self::WIDTH - 5, "\n", FALSE)) as $line) {
+      $lines[] = '   * ' . $line;
+    }
+    $lines[] = '   */';
+    $lines[] = sprintf('  public const %s = %s;', $this->constants[$name], PhpLiteral::string($name));
+    return implode("\n", $lines);
+  }
+
+  /**
+   * Writes a key as an argument: its constant, where its frame names it.
+   *
+   * @param string $name
+   *   The key.
+   *
+   * @return string
+   *   The expression.
+   */
+  protected function ref(string $name): string {
+    return isset($this->constants[$name]) ? 'self::' . $this->constants[$name] : PhpLiteral::string($name);
+  }
+
+  /**
+   * Names a key in a comment: its constant, where its frame names it.
+   *
+   * @param string $name
+   *   The key.
+   *
+   * @return string
+   *   The words.
+   */
+  protected function named(string $name): string {
+    return isset($this->constants[$name]) ? 'self::' . $this->constants[$name] : $name;
   }
 
   /**
@@ -215,12 +325,12 @@ final class ResourceCode {
     $definition = $entry->definition;
     $comments = $this->leftComments($at, $name, $entry->attachment === NULL && $entry->list === NULL);
     if ($entry->variants !== NULL) {
-      $comments[] = sprintf('From the schema, not written here: %s holds variants chosen by %s. Declare each as a #[Variant] structure and attach them with attachVariants().', $name, $entry->variants->by);
+      $comments[] = sprintf('From the schema, not written here: %s holds variants chosen by %s. Declare each as a #[Variant] structure and attach them with attachVariants(%s, by: %s).', $this->named($name), $this->named($entry->variants->by), $this->ref($name), $this->ref($entry->variants->by));
       $this->comments++;
       return $this->comment($comments);
     }
     if ($entry->attachment !== NULL && DefinitionMetadata::eachOf($definition) !== NULL) {
-      $comments[] = sprintf('From the schema, not written here: %s holds one entry per thing the site has. Declare it with addEach() or attachEach() and a provider.', $name);
+      $comments[] = sprintf('From the schema, not written here: %s holds one entry per thing the site has. Declare it with addEach() or attachEach() and a provider.', $this->named($name));
       $this->comments++;
       return $this->comment($comments);
     }
@@ -238,10 +348,10 @@ final class ResourceCode {
         foreach (['min', 'max'] as $bound) {
           $bounds .= isset($count[$bound]) ? sprintf(', %s: %s', $bound, PhpLiteral::scalar($count[$bound])) : '';
         }
-        $head = sprintf('$inputs->attachList(%s, %s::class%s)', PhpLiteral::string($name), $class, $bounds);
+        $head = sprintf('$inputs->attachList(%s, %s::class%s)', $this->ref($name), $class, $bounds);
       }
       else {
-        $head = sprintf('$inputs->attach(%s, %s::class)', PhpLiteral::string($name), $class);
+        $head = sprintf('$inputs->attach(%s, %s::class)', $this->ref($name), $class);
       }
       $calls[] = '->setLabel(' . PhpLiteral::translated($label) . ')';
       $calls = [...$calls, ...$this->described($definition)];
@@ -253,15 +363,15 @@ final class ResourceCode {
       $calls = [
         ...($map ? ['->setLabel(' . PhpLiteral::translated($label) . ')'] : []),
         ...$this->described($definition),
-        ...$this->constraintCalls($definition, $at, $comments),
+        ...$this->constraintCalls($definition, $this->named($name), $comments),
       ];
     }
     if ($entry->locked) {
-      $comments[] = sprintf('The schema makes %s readOnly, at the value it starts from: lock it with an access class, or leave it out.', $name);
+      $comments[] = sprintf('The schema makes %s readOnly, at the value it starts from: lock it with an access class, or leave it out.', $this->named($name));
       $this->comments++;
     }
     if (DefinitionMetadata::isSecret($definition)) {
-      $comments[] = sprintf('The schema makes %s writeOnly: a secret, which a storage holds apart. See docs/declaring-a-resource.md.', $name);
+      $comments[] = sprintf('The schema makes %s writeOnly: a secret, which a storage holds apart. See docs/declaring-a-resource.md.', $this->named($name));
       $this->comments++;
     }
     if (DefinitionMetadata::isAlwaysHeld($definition) && !$definition->isRequired()) {
@@ -288,15 +398,15 @@ final class ResourceCode {
   protected function declaration(string $name, DataDefinitionInterface $definition, string $label, mixed $default): string {
     $default_argument = $default === NULL ? '' : ', default: ' . PhpLiteral::write($default, self::INDENT);
     if ($definition instanceof ListDataDefinitionInterface) {
-      return sprintf('$inputs->addList(%s, %s, %s%s)', PhpLiteral::string($name), $this->item($definition->getItemDefinition(), self::INDENT + 2), PhpLiteral::translated($label), $default_argument);
+      return sprintf('$inputs->addList(%s, %s, %s%s)', $this->ref($name), $this->item($definition->getItemDefinition(), self::INDENT + 2), PhpLiteral::translated($label), $default_argument);
     }
     if ($definition instanceof ComplexDataDefinitionInterface) {
       $this->uses[MapDataDefinition::class] = TRUE;
       $map = $this->map($definition, self::INDENT + 2);
       $nested = $default ?? $this->mapDefault($definition);
-      return sprintf('$inputs->addDefinition(%s, %s%s)', PhpLiteral::string($name), $map, $nested === NULL ? '' : ', default: ' . PhpLiteral::write($nested, self::INDENT));
+      return sprintf('$inputs->addDefinition(%s, %s%s)', $this->ref($name), $map, $nested === NULL ? '' : ', default: ' . PhpLiteral::write($nested, self::INDENT));
     }
-    return sprintf('$inputs->add(%s, %s, %s%s)', PhpLiteral::string($name), PhpLiteral::string($this->type($definition)), PhpLiteral::translated($label), $default_argument);
+    return sprintf('$inputs->add(%s, %s, %s%s)', $this->ref($name), PhpLiteral::string($this->type($definition)), PhpLiteral::translated($label), $default_argument);
   }
 
   /**
@@ -412,12 +522,20 @@ final class ResourceCode {
       // Its own frame: what it uses is its own.
       $uses = $this->uses;
       $this->uses = [];
-      $this->structures[$source] = ['class' => $class, 'id' => '', 'label' => $label, 'inputs' => '', 'uses' => []];
-      $inputs = $this->frame($child, $name . '.');
+      $this->structures[$source] = [
+        'class' => $class,
+        'id' => '',
+        'label' => $label,
+        'constants' => '',
+        'inputs' => '',
+        'uses' => [],
+      ];
+      [$constants, $inputs] = $this->frame($child, $name . '.');
       $this->structures[$source] = [
         'class' => $class,
         'id' => $this->id . '.' . $name,
         'label' => $label,
+        'constants' => $constants,
         'inputs' => $inputs,
         'uses' => static::sorted($this->uses),
       ];
@@ -457,7 +575,7 @@ final class ResourceCode {
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   The definition.
    * @param string $at
-   *   The key's dotted path.
+   *   The key, as a comment names it; empty for a list's item.
    * @param string[] $comments
    *   The comments above the key, added to.
    * @param int $indent
@@ -519,7 +637,7 @@ final class ResourceCode {
     $calls = [];
     $condition = $rule->condition();
     if ($condition !== NULL) {
-      $calls[] = '->when(' . static::condition($condition) . ')';
+      $calls[] = '->when(' . $this->condition($condition) . ')';
     }
     foreach ($rule->constraints() as $constraint => $options) {
       $calls[] = sprintf('->constrain(%s, %s)', PhpLiteral::string((string) $constraint), PhpLiteral::write($options, self::INDENT + 2, static fn (array $path): bool => end($path) === 'message'));
@@ -534,7 +652,7 @@ final class ResourceCode {
     if ($description !== NULL) {
       $calls[] = '->because(' . PhpLiteral::translated(static::text($description)) . ')';
     }
-    return static::chain('$inputs->narrow(' . PhpLiteral::string($rule->key) . ')', $calls);
+    return static::chain('$inputs->narrow(' . $this->ref($rule->key) . ')', $calls);
   }
 
   /**
@@ -544,13 +662,13 @@ final class ResourceCode {
    *   The condition.
    *
    * @return string
-   *   The expression.
+   *   The expression, each key named by its constant.
    */
-  public static function condition(Condition $condition): string {
+  protected function condition(Condition $condition): string {
     if ($condition->conditions !== []) {
-      return sprintf('Condition::%s(%s)', $condition->kind, implode(', ', array_map(static::condition(...), $condition->conditions)));
+      return sprintf('Condition::%s(%s)', $condition->kind, implode(', ', array_map($this->condition(...), $condition->conditions)));
     }
-    $arguments = [PhpLiteral::string((string) $condition->key)];
+    $arguments = [$this->ref((string) $condition->key)];
     if ($condition->operand !== NULL) {
       $arguments[] = PhpLiteral::write($condition->operand);
     }
@@ -580,11 +698,12 @@ final class ResourceCode {
       if ($path !== $at && !($below && ($deep || $path === $at . '.*'))) {
         continue;
       }
+      $key = $this->named($name);
       $what = match (TRUE) {
         $path === '' => 'the object',
-        !$below => $name,
-        str_ends_with($path, '.*') => 'each item of ' . $name . substr($path, strlen($at), -2),
-        default => $name . substr($path, strlen($at)),
+        !$below => $key,
+        str_ends_with($path, '.*') => 'each item of ' . $key . substr($path, strlen($at), -2),
+        default => $key . substr($path, strlen($at)),
       };
       foreach ($left['constraints'] ?? [] as $constraint => $options) {
         $held = in_array((string) $constraint, self::HELD, TRUE);

@@ -142,7 +142,7 @@ class ResourceCatalogTest extends DataSurfaceKernelTestBase {
       [
         'id' => 'create',
         'label' => 'Add a content type',
-        'provider' => NodeTypeResource::class . '::create()',
+        'provider' => '#[Operation] on ' . NodeTypeResource::class,
         'module' => 'data_surface_demo_node_type',
         'parameters' => [],
         'creates' => TRUE,

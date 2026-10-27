@@ -65,8 +65,8 @@ class AttachedStructureEmissionTest extends DataSurfaceKernelTestBase {
     $this->assertSame(['object', 'null'], $shelf['type']);
     $this->assertSame(['unit', 'height', 'third_party_settings'], array_keys($shelf['properties']));
     $this->assertSame(['cm', 'in', NULL], $shelf['properties']['unit']['enum']);
-    // The Tool API's normalizer puts the label in front of a description.
-    $this->assertSame('Height: Measured inside.', $shelf['properties']['height']['description']);
+    // The label travels as the title; the description is the description alone.
+    $this->assertSame('Measured inside.', $shelf['properties']['height']['description']);
   }
 
   /**
@@ -79,13 +79,13 @@ class AttachedStructureEmissionTest extends DataSurfaceKernelTestBase {
     $this->assertEqualsCanonicalizing(['lid', 'volume', 'opener'], array_keys($variants['properties']));
     $this->assertArrayNotHasKey('required', $variants);
     // Each key says which values of the deciding key it belongs to.
-    $this->assertSame('Lid: How the jar closes. Only when kind is jar.', $variants['properties']['lid']['description']);
-    $this->assertSame('Needs an opener: Only when kind is tin.', $variants['properties']['opener']['description']);
-    $this->assertMatchesRegularExpression('/^Volume: Only when kind is (jar, tin|tin, jar)\.$/', $variants['properties']['volume']['description']);
+    $this->assertSame('How the jar closes. Only when kind is jar.', $variants['properties']['lid']['description']);
+    $this->assertSame('Only when kind is tin.', $variants['properties']['opener']['description']);
+    $this->assertMatchesRegularExpression('/^Only when kind is (jar, tin|tin, jar)\.$/', $variants['properties']['volume']['description']);
     // A default would be one variant's, so none is advertised.
     $this->assertArrayNotHasKey('default', $variants['properties']['volume']);
     // And the key's own description carries the whole table.
-    $this->assertStringStartsWith('Kind settings: What the kind of container needs. Its keys depend on kind.', $variants['description']);
+    $this->assertStringStartsWith('What the kind of container needs. Its keys depend on kind.', $variants['description']);
     $this->assertStringContainsString('jar: lid, volume', $variants['description']);
     $this->assertStringContainsString('tin: opener, volume', $variants['description']);
     // The deciding key lists exactly the values a variant answers for.
@@ -100,7 +100,7 @@ class AttachedStructureEmissionTest extends DataSurfaceKernelTestBase {
     $variants = $this->schema($surface->refine(['kind' => 'tin']))['properties']['kind_settings'];
     $this->assertSame(['object', 'null'], $variants['type']);
     $this->assertSame(['opener', 'volume'], array_keys($variants['properties']));
-    $this->assertSame('Kind settings: What the kind of container needs.', $variants['description']);
+    $this->assertSame('What the kind of container needs.', $variants['description']);
   }
 
 }

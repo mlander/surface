@@ -23,7 +23,7 @@ is refused by name.
 Both are asked after the program's own answers (the operation's
 permission, then the fees' access class), and the stricter answer
 stands, so neither can open what the fees' own access locked
-([decision](../../docs/decisions.md#an-alter-may-answer-access-and-the-stricter-stands)).
+(why: [decision](../../docs/decisions.md#an-alter-may-answer-access-and-the-stricter-stands)).
 
 ## Try it
 

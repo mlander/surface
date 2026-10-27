@@ -173,15 +173,35 @@ use Drupal\data_surface_first\Storage\NewsletterStorage;
 final class NewsletterResource implements ResourceInterface {
 
   /**
+   * The sender name key.
+   */
+  public const SENDER_NAME = 'sender_name';
+
+  /**
+   * The sender email key.
+   */
+  public const SENDER_EMAIL = 'sender_email';
+
+  /**
+   * The frequency key.
+   */
+  public const FREQUENCY = 'frequency';
+
+  /**
+   * The maximum recipients per send key.
+   */
+  public const MAX_RECIPIENTS = 'max_recipients';
+
+  /**
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('sender_name', 'string', t('Sender name'))
+    $inputs->add(self::SENDER_NAME, 'string', t('Sender name'))
       ->setRequired(TRUE)
       ->addConstraint('Length', ['max' => 64]);
-    $inputs->add('sender_email', 'email', t('Sender email'))
+    $inputs->add(self::SENDER_EMAIL, 'email', t('Sender email'))
       ->setRequired(TRUE);
-    $inputs->add('frequency', 'string', t('Frequency'), default: 'weekly')
+    $inputs->add(self::FREQUENCY, 'string', t('Frequency'), default: 'weekly')
       ->setRequired(TRUE)
       ->addConstraint('LabeledChoice', [
         'choices' => [
@@ -189,7 +209,7 @@ final class NewsletterResource implements ResourceInterface {
           'monthly' => t('Monthly'),
         ],
       ]);
-    $inputs->add('max_recipients', 'integer', t('Maximum recipients per send'), default: 500)
+    $inputs->add(self::MAX_RECIPIENTS, 'integer', t('Maximum recipients per send'), default: 500)
       ->setDescription(t('Larger lists are sent in batches of this size.'))
       ->addConstraint('Range', ['min' => 1, 'max' => 10000]);
   }
@@ -209,6 +229,11 @@ Read it top to bottom:
   title, the description is the first thing an agent reads about the
   tool and the schema's description, and the permission is the one the
   route and the tool both check (step 5).
+- **The constants** name each key once, and every later mention is the
+  constant, `self::SENDER_NAME`, so an editor can rename a key or find
+  its uses; the one place a name is still spelled as a string is the
+  parameter of a method that narrows one key by another's value, which
+  is matched to the key by name ([Your second resource](second-resource.md)).
 - **`defineInputs()`** declares the keys. `add()` takes the key, its type
   (core's typed data types: `string`, `email`, `integer`, `boolean`,
   ...), its label and, optionally, a `default:`, and returns core's own
@@ -220,14 +245,27 @@ Read it top to bottom:
   description.
 - **What a key allows** is a constraint. `Length` becomes a maximum
   length, `Range` a number field bounded at 1 and 10000, and
-  `LabeledChoice` a select whose options are its labels. The form, the
-  tool and the schema all read the same constraint, and a value outside
-  it is refused with the constraint's message, wherever it came from.
+  `LabeledChoice` a select whose options are its labels. The select
+  comes from the list: a key whose constraint lists its allowed values
+  is drawn as a select, and stays one if a later rule empties the list,
+  offering only its empty option, since a text field there would invite
+  a value the constraint refuses. The form, the tool and the schema all
+  read the same constraint, and a value outside it is refused with the
+  constraint's message, wherever it came from.
 - **Everything is static.** The class is never instantiated, so there is
   nothing to inject a translation service into: labels call the global
   `t()` with a literal string. An attribute argument cannot call a
   function, so the operation's label and description are
-  `new TranslatableMarkup()`.
+  `new TranslatableMarkup()`. A method you add later to narrow one key
+  by another's value, as the second page does, is static for the same
+  reason: it reads only the keys its parameters name and holds no
+  service, so the schema can state its answer ahead of time. A rule that
+  must read the site or the account, such as a value in State, declares
+  `runtime: TRUE` and runs only against the values of a call
+  ([Enforcing the kind](refinement.md#enforcing-the-kind)). The module
+  refuses a method that is not static when it reads the class, and, with
+  PHP assertions on as under DDEV, stops a static one that asks for a
+  service, naming the method and the service.
 
 ## 5. The permission
 
@@ -302,7 +340,7 @@ them: the three the class requires say "Required; a value already
 stored stands when left out." in their descriptions. `values` itself is
 always sent, `{}` when nothing changes. The write answers, in the one
 result shape every door answers
-([decision](decisions.md#one-result-at-every-door)):
+(why: [decision](decisions.md#one-result-at-every-door)):
 
 ```
 Success: Configure the newsletter: the values were accepted and written.
@@ -318,7 +356,11 @@ Outputs:
   stale: []
 ```
 
-The key left out, `max_recipients`, kept what was stored. A key the
+The key left out, `max_recipients`, kept what was stored. A key sent
+`null` is cleared instead, unless its storage always holds it, and then
+the call is refused: here, every key the schema in step 2 does not mark
+`nullable: true`
+([Absent, null, or a value](semantics.md#absent-null-or-a-value)). A key the
 class requires may be left out too once a value for it is stored, and
 the stored value stands. Where nothing is stored for it, on an
 operation that creates or for a thing that has no value yet, it cannot

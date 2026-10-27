@@ -146,8 +146,8 @@ final class DoorSpecificRule implements Rule {
    */
   public function processNode(Node $node, Scope $scope): array {
     $class = $scope->getClassReflection();
-    $kind = $class === NULL ? NULL : static::kindOf($class);
-    if ($kind === NULL || $class === NULL) {
+    $kind = static::kindOf($class);
+    if ($kind === NULL) {
       return [];
     }
     $method = $node->getOriginalNode();

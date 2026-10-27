@@ -23,15 +23,35 @@ use Drupal\data_surface_first\Storage\NewsletterStorage;
 final class NewsletterResource implements ResourceInterface {
 
   /**
+   * The sender name key.
+   */
+  public const SENDER_NAME = 'sender_name';
+
+  /**
+   * The sender email key.
+   */
+  public const SENDER_EMAIL = 'sender_email';
+
+  /**
+   * The frequency key.
+   */
+  public const FREQUENCY = 'frequency';
+
+  /**
+   * The maximum recipients per send key.
+   */
+  public const MAX_RECIPIENTS = 'max_recipients';
+
+  /**
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('sender_name', 'string', t('Sender name'))
+    $inputs->add(self::SENDER_NAME, 'string', t('Sender name'))
       ->setRequired(TRUE)
       ->addConstraint('Length', ['max' => 64]);
-    $inputs->add('sender_email', 'email', t('Sender email'))
+    $inputs->add(self::SENDER_EMAIL, 'email', t('Sender email'))
       ->setRequired(TRUE);
-    $inputs->add('frequency', 'string', t('Frequency'), default: 'weekly')
+    $inputs->add(self::FREQUENCY, 'string', t('Frequency'), default: 'weekly')
       ->setRequired(TRUE)
       ->addConstraint('LabeledChoice', [
         'choices' => [
@@ -39,7 +59,7 @@ final class NewsletterResource implements ResourceInterface {
           'monthly' => t('Monthly'),
         ],
       ]);
-    $inputs->add('max_recipients', 'integer', t('Maximum recipients per send'), default: 500)
+    $inputs->add(self::MAX_RECIPIENTS, 'integer', t('Maximum recipients per send'), default: 500)
       ->setDescription(t('Larger lists are sent in batches of this size.'))
       ->addConstraint('Range', ['min' => 1, 'max' => 10000]);
   }

@@ -494,7 +494,7 @@ last, under Refused. `docs/resources.md` says how each part works.
 
 | Operation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `create` | Add a content type | nothing | yes | `administer data surface node type demo` | yes | no: it creates | `NodeTypeResource::create()` (`data_surface_demo_node_type`) |
+| `create` | Add a content type | nothing | yes | `administer data surface node type demo` | yes | no: it creates | `#[Operation] on NodeTypeResource` (`data_surface_demo_node_type`) |
 | `update` | Edit a content type | `NodeTypeInterface $type` | no | `administer data surface node type demo` | yes | yes | `NodeTypeResource::update()` (`data_surface_demo_node_type`) |
 
 - `create` reaches form `/admin/structure/types/surface-add (data_surface_demo_node_type.create)`, http `POST /surface-api/node.type`, tool `data_surface:node.type:create`, openapi `node.type:create:write`, react `/surface-react/node.type/create`.

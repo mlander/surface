@@ -186,9 +186,9 @@ $inputs->add('license', License::class, t('Event license'));
 
 The test module's stock code, `Shape\Sku`, is used at two keys of the
 depot that narrow it differently, read by the shelf tag's port, and
-tightened by `Alter\SkuAlter`. Why a shape is a named definition rather
-than a data type plugin is in
-[Decisions](decisions.md#a-shape-is-a-named-definition).
+tightened by `Alter\SkuAlter`. A shape is a named definition, not a
+data type plugin: a module writes no plugin for it
+(why: [decision](decisions.md#a-shape-is-a-named-definition)).
 
 ### Nothing live in the blueprint
 
@@ -197,15 +197,48 @@ options resolver fetches it, never a list the class assembles. "Live"
 is decided by runtime dependence, not by structure: `PluginExists`,
 whose values are resolved from a plugin manager, is still written down
 as a literal constraint, and so is `EntityBundleExists`, handed the
-entity type by a refiner. A refiner points; the resolver fetches. When
-no core constraint names the list, a module adds one with its resolver,
-as the demo does with `DataSurfaceDemoBundleField`; see [Options and
-resolvers](options.md).
+entity type by a refiner. A refiner points; the resolver fetches. Look
+for a stock constraint or a reference type string (`entity:<type>`)
+first; only when none names the list does a module add one with its
+resolver, as the demo does with `DataSurfaceDemoBundleField`; see
+[Which constraint to write](options.md#which-constraint-to-write).
 
 A blueprint whose keys do depend on site state (a key offered only while a
 module is installed, a label read from configuration) says so with
 `BlueprintInterface::addCacheableDependency()`, so a form rendered from it
 is cached no longer than those keys hold.
+
+**What `defineInputs()` may read.** It is static and holds no service,
+and the build is kept until a tag it carries is invalidated, so it reads
+what the site has, never who asks or how: the module list, configuration
+and the URLs of routes. It reads nothing of the request, the route being
+served, the session, the theme or the account
+([No door-specific context](resources.md#no-door-specific-context)).
+Declare each read:
+
+| Read | Declare |
+| --- | --- |
+| Whether a module is installed | the cache tag `config:core.extension` |
+| A config object | the object, `addCacheableDependency($config)` |
+| A URL | the `GeneratedUrl` that `toString(TRUE)` answers |
+
+`config:core.extension` is the tag the build puts on every build it
+keeps, so the build itself is rebuilt when a module is installed or
+removed; declared on the blueprint, it reaches the form and both
+documents too, which are cached by what the built resource declares. A
+description that links to a help page only while the help module is on:
+
+```php
+$inputs->addCacheableDependency((new CacheableMetadata())->addCacheTags(['config:core.extension']));
+$description = t('Maximum length of aliases to generate.');
+if (\Drupal::moduleHandler()->moduleExists('help')) {
+  $url = Url::fromRoute('help.page', ['name' => 'pathauto'])->toString(TRUE);
+  $inputs->addCacheableDependency($url);
+  $description = t('Maximum length of aliases to generate. See <a href=":help">Pathauto help</a> for details.', [':help' => $url->getGeneratedUrl()]);
+}
+$inputs->add('max_length', 'integer', t('Maximum alias length'), default: 100)
+  ->setDescription($description);
+```
 
 ## On a plugin
 
@@ -374,6 +407,36 @@ kinds that share an id apart.
 
 **An operation is a verb.** See above.
 
+### Key names
+
+A key is a string wherever it is named, `add('venue', ...)`,
+`narrow('room')`, `Condition::equals('venue', ...)`, and an editor can
+neither rename a string nor find its uses. So the class names each key
+once, as a constant, in declaration order with a one-line docblock, and
+every later mention is the constant:
+
+```php
+/**
+ * The room key.
+ */
+public const ROOM = 'room';
+
+// ...
+$inputs->add(self::ROOM, 'string', t('Room'));
+$inputs->narrow(self::CAPACITY)->when(Condition::present(self::ROOM))->require();
+#[RefinesInput(self::CAPACITY)]
+```
+
+Each class's `use` line: [Namespaces](concepts.md#namespaces).
+
+A refiner's parameter is the one exception: `string $room` watches the
+key whose name matches the parameter's, so it is spelled out and must
+match the constant's value; a rename changes both. The generator writes
+this convention ([Key names](generating.md#key-names)), and the first
+two pages and examples 1 and 2 follow it; the later examples name keys
+as strings, which works the same
+(why: [decision](decisions.md#a-key-is-named-once-as-a-constant)).
+
 ## Translatable strings
 
 Every human-facing string a class carries is a translatable object,
@@ -534,7 +597,7 @@ and the catalog lists the refusal:
 
 Every build carries the config object's cache tag,
 `config:data_surface.defaults`, so a change reaches every door at the
-next request ([decision](decisions.md#a-site-sets-a-default-in-configuration)).
+next request (why: [decision](decisions.md#a-site-sets-a-default-in-configuration)).
 
 ## Locking
 
@@ -630,20 +693,25 @@ $inputs->compute('slug', 'string', t('Slug'), from: ['label'], using: Slugify::c
 Each class's `use` line: [Namespaces](concepts.md#namespaces).
 
 The class implements `ComputesValueInterface`, whose one method is static,
-`compute(array $from): mixed`: handed the value of each key `from:`
-names, it answers the value. It is a pure function of those values, held
-to it as a static refiner is: with assertions on it runs with the
-container guarded (`PipelineGuard::guardCompute()`), and the
-module's PHPStan rule flags a `\Drupal::` call in it. A value that needs
-a service, the clock or the request, such as a changed time, is no
-computed key: a storage's `prepare()` adds it.
+`compute(array $from, ?DataDefinitionInterface $key = NULL): mixed`:
+handed the value of each key `from:` names, and the key's own
+definition, it answers the value. It is a pure function of those
+values and of what the key declares, held to it as a static refiner is:
+with assertions on it runs with the container guarded
+(`PipelineGuard::guardCompute()`), and the module's PHPStan rule flags a
+`\Drupal::` call in it. A value that needs a service, the clock or the
+request, such as a changed time, is no computed key: a storage's
+`prepare()` adds it. The one exception is the stock `MachineName`
+below, which may ask for core's `transliteration` service.
 
 - **When.** `when: Compute::ON_CREATE`, the default, computes it while
   storage holds nothing for it, which is when the thing is created, and
   keeps it after: renaming a venue leaves its slug, and every link to
   it, as it was. `when: Compute::ON_CHANGE` computes it again on every
   write that changes a key in `from`. A write that changes none of them
-  keeps what is stored either way.
+  keeps what is stored either way. `when: Compute::UNLESS_SENT`
+  computes it as `ON_CREATE` does only when a call leaves it out, or
+  sends it null or empty, and keeps a value sent: the machine name below.
 - **Judged like any key.** The pipeline computes it once the other keys
   are accepted, then validates it by its own constraints and rules, and
   storage writes it. A refusal of it names the keys it is computed from,
@@ -658,11 +726,53 @@ computed key: a storage's `prepare()` adds it.
   equal to the one it holds is noted, code `computed`, and not taken, so
   a client that writes back the document it read is not refused; any
   other is refused with the same code
-  ([decision](decisions.md#a-computed-key-is-a-pure-function-of-its-sources)).
+  (why: [decision](decisions.md#a-computed-key-is-a-pure-function-of-its-sources)).
 
 A computed key is a resource's own key, at its top: `compute()` is on the
 owner's blueprint only, and refused in a structure, a structure mixed in
 and outputs.
+
+### A title and its machine name
+
+Drupal's title and machine name pair is a computed key computed unless
+sent, of core's config schema type `machine_name`, by the stock
+`MachineName`:
+
+```php
+$inputs->add('label', 'string', t('Name'))->setRequired(TRUE);
+$inputs->compute('id', 'machine_name', t('Machine name'),
+  from: ['label'], using: MachineName::class, when: Compute::UNLESS_SENT);
+```
+
+Each class's `use` line: [Namespaces](concepts.md#namespaces).
+
+- **The type.** A type typed data does not know is read from the config
+  schema: `machine_name` is a string with the pattern `^[a-z0-9_]+$`
+  and a Length of 166, both the key's own and stated in both documents.
+  The key may narrow them, `->addConstraint('Length', ['max' => 32])`,
+  never widen them, and the generated config schema writes `type:
+  machine_name` with what it narrows.
+- **Left out, computed; sent, kept.** `MachineName` transliterates the
+  title, lowercases it, replaces each run of characters outside
+  `[a-z0-9_]` with one underscore, cuts it to the key's Length and trims
+  the underscores at its ends, as core's machine name element does in
+  the browser: "Café Déjà Vu" is `cafe_deja_vu`. A value sent is judged
+  by the key's constraints and kept. Both documents state the key with
+  `x-surface.computed: {"from": ["label"], "when": "unless_sent"}` and
+  no `readOnly`; it is never in `required`, and the write tool offers it.
+- **Held once.** Where the key is the identity a create names and the
+  storage can say whether a thing is stored under it
+  (`DeletableStorageInterface::exists()`, which `ConfigEntityStorage`
+  answers), the build adds the stock `DataSurfaceUnique` to it: "A venue
+  named riverside already exists.", code `taken`, named under
+  `checkedOnServer`. No resource writes a uniqueness rule of its own.
+- **Drawn as core's element.** The form draws it as a `machine_name`
+  element whose source is the title's element, so the browser suggests
+  the name as the title is typed and a person may edit it. On an update
+  the identity is known, locked, and drawn disabled with its value.
+
+Example 15's venue and the content type demo declare it
+(why: [decision](decisions.md#a-machine-name-is-a-computed-identity)).
 
 ## Required
 

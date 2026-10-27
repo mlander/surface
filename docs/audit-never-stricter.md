@@ -7,7 +7,7 @@ today; where a verdict breaks the invariant the test says so with a
 `@todo` naming its section, so changing a verdict changes a test on
 purpose.*
 
-The invariant ([decision](decisions.md#two-documents-never-stricter-than-the-runtime)):
+The invariant (why: [decision](decisions.md#two-documents-never-stricter-than-the-runtime)):
 the JSON Schema the emitter writes is never stricter than what the
 pipeline (accept, refine, validate) accepts. The full schema
 (`emitFull()`) must hold it for any values, the schema for these answers
@@ -49,7 +49,7 @@ with two properties that matter here:
   as a syntax error or read it otherwise. No ECMA engine was run for
   this audit; since 2026-10-20 the React app's Vitest reads the pattern
   subset's rows (`tests/fixtures/pattern-engines.json`) with one
-  ([decision](decisions.md#a-pattern-both-engines-read-alike)).
+  (why: [decision](decisions.md#a-pattern-both-engines-read-alike)).
 - **`Validator` runs with its extensions on.** One of them,
   `allowDefaults`, drops every property that has a `default` from
   `required` and fills it in before validating. A standard validator
@@ -146,7 +146,7 @@ silently rather than refused. That also contradicts
 refused by its path"). It is a refusal everywhere else, never a silent
 drop.
 
-**Recommendation: tighten.** In `DataSurfacePipeline::acceptCollection()`,
+**Recommendation: tighten.** In `Accepting::acceptCollection()`,
 check an item's keys against the child's definitions before
 `isEmptyItem()` drops it. The schema is right.
 
@@ -205,7 +205,7 @@ exception to the scope: a kept stale value is storage's, not an answer.
 
 **Documents:** both. **Test:** `testRegexTranslation`.
 
-`ContractEmitter::pattern()` strips the delimiters (the first character,
+`PropertySchema::pattern()` strips the delimiters (the first character,
 to its last occurrence), allows the `u` modifier and no other, and passes
 the body through unchanged. Any other modifier, or a bracket delimiter,
 leaves the `pattern` out and names `Regex` under `checkedOnServer`.
@@ -318,7 +318,7 @@ By door:
   `ExamplesToolTest::testPartialUpdateIsRefusedByTheToolApi()`. Stricter
   than the pipeline, and no stricter than the schema.
 - **The form** posts every key it drew an element for; a key with no
-  element keeps what is stored (`extractKey()`).
+  element keeps what is stored (`Form\Extracting::extractKey()`).
 - **The React page** posts every key the contract's `values` carry, and
   those always carry every key.
 - **A PHP caller** of `submit()` may send a partial update.
@@ -342,11 +342,14 @@ them a standard validator's.
 
 **Documents:** both. **Test:** `testConstraintsWithNoKeyword`.
 
-`UniqueField`, `DataSurfaceUniqueNodeType`,
-`DataSurfaceDemoExtrasUniqueItems`, `DataSurfaceDemoExtrasReviewDeadline`
+`UniqueField`, `DataSurfaceUnique`, `DataSurfaceDemoExtrasReviewDeadline`
 and a constraint nobody declares: each is named under
 `x-surface.checkedOnServer` and otherwise leaves the property exactly as
 it is without it, in both documents. Never approximated.
+`DataSurfaceDemoExtrasUniqueItems` was listed here until 2026-10-26,
+when it became the stock `UniqueItems`, stated as `uniqueItems: true`:
+the schema and the pipeline refuse `["a", "b", "a"]` and accept
+`["a", "b"]` alike (tested).
 
 A constraint with an options resolver is stated as `oneOf`, and named in
 `checkedOnServer` besides. That is a keyword, so the question is whether
@@ -470,7 +473,7 @@ check about identity. The accepted document holds.
 a derived link field's item. No shipped key is a `datetime_iso8601`.
 
 **Recommendation: widen**: drop `format` where Drupal's check is not the
-format's (each one line in `ContractEmitter::type()` and the `Email` case
+format's (each one line in `PropertySchema::type()` and the `Email` case
 of `keywords()`, listed below), naming the constraint under
 `checkedOnServer` instead; or `idn-email` for email, if the email
 validator is held to it.
@@ -511,11 +514,11 @@ Each is a line or two on the schema side; none is applied.
 
 | Section | Where | Change |
 | --- | --- | --- |
-| 3 | `ContractEmitter::property()`, where a key is marked stale (and the orphan branch of `frame()`) | add `null` to `type` and `{const: null}` to `oneOf` |
-| 6 | `ContractEmitter::property()`, the secret branch | make the type nullable whatever `required` says |
+| 3 | `PropertySchema::property()`, where a key is marked stale (and the orphan branch of `ContractEmitter::frame()`) | add `null` to `type` and `{const: null}` to `oneOf` |
+| 6 | `PropertySchema::property()`, the secret branch | make the type nullable whatever `required` says |
 | 7 | `PluginExistsOptions::resolve()` | no list when `allowFallback` is set on a fallback manager |
 | 9 | `ContractEmitter::collection()` | describe a locked list's items without `const` in `emit()` |
-| Outside | `ContractEmitter::type()`, `keywords()` | drop `format` for `email`, `uri`, `datetime_iso8601` and `Email` |
+| Outside | `PropertySchema::type()`, `keywords()` | drop `format` for `email`, `uri`, `datetime_iso8601` and `Email` |
 
 ## Not verified
 
@@ -547,18 +550,18 @@ became.*
 
 | # | Case | Became | Where it is held |
 | --- | --- | --- | --- |
-| Scope | Raw input or accepted document | The invariant is stated on the **accepted document**: what `accept()` makes of the input after coercion ([decision](decisions.md#two-documents-never-stricter-than-the-runtime), [served contract](served-contract.md#never-stricter-than-the-runtime)) | every row of `AdvertisedSchemaAcceptanceTest` |
-| 1 | Casting | The module's casting table is replaced by the Tool API's coercion table, mirrored once in `Pipeline\Coercion` ([semantics](semantics.md#the-coercion-table), [decision](decisions.md#one-coercion-table-the-tool-apis)); the notations are the accepted document's, not the schema's | `InputCoercionMatrixTest::testBothDoorsCoerceAlike()`, `::testCoercedValuesAreFixedPoints()`, `::testBothDoorsRefuse()`; the "notations" and "as the form posts it" rows |
+| Scope | Raw input or accepted document | The invariant is stated on the **accepted document**: what `accept()` makes of the input after coercion (why: [decision](decisions.md#two-documents-never-stricter-than-the-runtime), [served contract](served-contract.md#never-stricter-than-the-runtime)) | every row of `AdvertisedSchemaAcceptanceTest` |
+| 1 | Casting | The module's casting table is replaced by the Tool API's coercion table, mirrored once in `Pipeline\Coercion` ([semantics](semantics.md#the-coercion-table), why: [decision](decisions.md#one-coercion-table-the-tool-apis)); the notations are the accepted document's, not the schema's | `InputCoercionMatrixTest::testBothDoorsCoerceAlike()`, `::testCoercedValuesAreFixedPoints()`, `::testBothDoorsRefuse()`; the "notations" and "as the form posts it" rows |
 | 2 | Unknown keys | Tightened: a blank collection item's keys are read before it is dropped, so an unknown key in it is refused by its path | the cellar's "an unknown key in a blank rack" row; `::testUnknownKeysAreRefusedEverywhere()` |
 | 3 | Untouched stale values | The stale path keeps reading an empty answer as the stored value; an optional stale key's `null` is a value its type allows. A kept stale value itself is storage's, the one stated exception: no schema that states the list accepts it | `::testStaleValueIsStoragesNotAnAnswer()` |
-| 4 | Regex translation | Every shipped pattern gained `D`; the translation carries `u` and `D` and a body only inside the subset both engines read alike, and leaves `pattern` out otherwise, `patternMessage` still carried ([decision](decisions.md#a-pattern-both-engines-read-alike)) | `::testRegexTranslation()` (the audit's table, asserting the new translations and verdicts) |
-| 5 | Null and the empty string | Three-way ([decision](decisions.md#absent-keeps-null-clears)): a key left out keeps what is stored (or the default, creating); `null`, or `''` for nothing, clears an optional key; a value is that value. An optional key's type allows `null` and an optional choice keeps its untitled `{const: null}`; a secret's does not. `''` is a notation of the cleared document, as case 1 | the "clears" rows of both tests; `InputCoercionMatrixTest::testAbsentKeyKeepsWhatItHolds()` |
-| 6 | Required | `required` means present and not null, nothing about size; the partial update is a notation of the accepted document. A secret is optional, never nullable, in both documents and the tool ([decision](decisions.md#a-secret-is-optional-never-nullable)). The suite's validator no longer fills defaults (`allowDefaults` off) | the "partial update" rows; `::testSecretIsOptionalNeverNullable()` |
+| 4 | Regex translation | Every shipped pattern gained `D`; the translation carries `u` and `D` and a body only inside the subset both engines read alike, and leaves `pattern` out otherwise, `patternMessage` still carried (why: [decision](decisions.md#a-pattern-both-engines-read-alike)) | `::testRegexTranslation()` (the audit's table, asserting the new translations and verdicts) |
+| 5 | Null and the empty string | Three-way (why: [decision](decisions.md#absent-keeps-null-clears)): a key left out keeps what is stored (or the default, creating); `null`, or `''` for nothing, clears an optional key; a value is that value. An optional key's type allows `null` and an optional choice keeps its untitled `{const: null}`; a secret's does not. `''` is a notation of the cleared document, as case 1 | the "clears" rows of both tests; `InputCoercionMatrixTest::testAbsentKeyKeepsWhatItHolds()` |
+| 6 | Required | `required` means present and not null, nothing about size; the partial update is a notation of the accepted document. A secret is optional, never nullable, in both documents and the tool (why: [decision](decisions.md#a-secret-is-optional-never-nullable)). The suite's validator no longer fills defaults (`allowDefaults` off) | the "partial update" rows; `::testSecretIsOptionalNeverNullable()` |
 | 7 | Constraints with no keyword | Unchanged where it held; `PluginExists` with `allowFallback` on a fallback manager offers no list, so the schema is as wide as the validator | `::testConstraintsWithNoKeyword()` |
 | 8 | Collections | The decided drop stands; on the accepted document it holds (a blank row is not in it) | the cellar's "four racks and a blank row" row |
 | 9 | Narrowing composition | A locked list's items carry no `const`, only the lock | `::testLockedCollectionItemsCarryNoConst()` |
 | 10 | Locked keys | Neither: the posted value is a notation; the accepted document holds the locked value, which `const` states | the cellar's "a posted larder is ignored" row |
-| Outside | `format` | Stays, as an annotation per JSON Schema 2020-12; the suite's validator does not assert it ([decision](decisions.md#format-is-an-annotation)) | the "format is advisory" rows |
+| Outside | `format` | Stays, as an annotation per JSON Schema 2020-12; the suite's validator does not assert it (why: [decision](decisions.md#format-is-an-annotation)) | the "format is advisory" rows |
 | Outside | Values stored in another type | An alignment with the Tool API's table: `TRUE` for an integer is `1` now. `TRUE` for a float or a string, and `'01'` or `'1.0'` for a boolean, are left by the table and let through by core's PrimitiveType check, at both doors alike | `InputCoercionMatrixTest::testValuesTheTableLeavesAndCoreLetsThrough()` |
 
 What the decisions cost, said once:

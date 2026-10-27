@@ -160,7 +160,7 @@ class OperationToolsTest extends DataSurfaceKernelTestBase {
     $values = $add->getInputDefinition(OperationInputs::VALUES);
     $this->assertInstanceOf(MapInputDefinition::class, $values);
     $this->assertArrayHasKey('type', $values->getPropertyDefinitions());
-    $this->assertArrayHasKey('DataSurfaceUniqueNodeType', $values->getPropertyDefinitions()['type']->getConstraints());
+    $this->assertArrayHasKey('DataSurfaceUnique', $values->getPropertyDefinitions()['type']->getConstraints());
     $this->assertTrue($values->isRequired());
     $this->assertSame([], $add->getInputDefinitionRefiners());
 

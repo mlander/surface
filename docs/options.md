@@ -15,6 +15,36 @@ The principle here is one line:
 Two mechanisms carry it: a constraint that can hold labels, and a plugin
 type that reads any constraint as a list.
 
+## Core's question
+
+Core asks "which values may this hold, and with what labels" through
+one interface, `OptionsProviderInterface`. Field items implement it, and
+core's options widgets read it. It has two halves, and each maps to one
+of the two documents:
+
+- **Possible** (`getPossibleValues()`, `getPossibleOptions()`): every
+  value the key may hold, read from the declared definition. The full
+  schema states this list.
+- **Settable** (`getSettableValues()`, `getSettableOptions()`): what may
+  be set now, read from the definition refined for the values in hand.
+  The schema for these answers states this list. With no refined
+  definition, it is the declared list.
+
+One line gets a key's provider from the options service:
+
+```php
+$provider = \Drupal::service('data_surface.options')->provider($declared, $refined);
+```
+
+The labels are the `OptionSet`'s, and `$provider->cacheability()` holds
+the lists' tags, contexts and max-age, which core's interface has no
+place for. A key with no list answers an empty array. The account core's
+methods take is not read: a definition is refined for an account when
+it is built, so hand in the one built for that account. A resolver stays
+the source of every list; the provider only reads what the resolvers
+answer (why: [decision](decisions.md#our-options-answer-cores-question)).
+The select widget reads its `#options` this way.
+
 ## LabeledChoice
 
 `LabeledChoice` is a `Choice` subclass. Because it *is* a `Choice`, every
@@ -214,24 +244,63 @@ defensiveness: plugin definitions genuinely have three, and core's own
 entity type definition keeps its label behind an accessor. Without the
 third spelling an entity type select reads as machine names.
 
-## Declare the constraint, resolve the list
+## Which constraint to write
 
-Prefer an existence or validity constraint plus a resolver over a
-`LabeledChoice` whose choices are assembled at build time.
+A rule on a key is said by a constraint. Take the first of three steps
+that can say it: each step down tells a client less before it calls
+(why: [decision](decisions.md#a-rule-is-a-keyword-first-a-list-second-code-last)).
 
-The address port is the worked example. Its countries and languages
-started as labeled choices filled from the country repository and the
-language manager, and the cost was not the code: **a definition that
-cannot be written down without services cannot sit in a resource or
-structure class**, which holds no service. Said as the `Country` and
+**1. A stock constraint with data options.** `Range`, `Length`,
+`Count`, `UniqueItems`, `NotBlank`, `Regex`, `Email`, `Choice` and
+`LabeledChoice` are the constraints `ContractEmitter` writes as JSON
+Schema keywords (`minimum`, `maxLength`, `minItems`, `uniqueItems`,
+`pattern`, `format`, `oneOf`). The
+schema reader turns those keywords back into the same constraints, the
+React page narrows on them with no request, and a tool caller reads them
+in the listing before it calls. JSON Schema has a closed set of
+keywords, and a generic validator ignores any other. A constraint the
+emitter has no keyword for is in the same place: a client can read its
+name, and nothing it can check. Keep
+`LabeledChoice` for a vocabulary that is literal, such as
+hidden/optional/required.
+
+`UniqueItems` is a constraint this module adds because core has none.
+Put it on a list whose items must differ; both documents state it as
+`uniqueItems: true`, and a list that repeats an item is refused on the
+list, naming the first item repeated. It is Symfony's `Unique`,
+registered the way core registers `Count`, and compares items strictly.
+`accept()` has already typed every scalar and put every map's keys in
+declaration order, so on the accepted list that is the comparison
+`uniqueItems` makes ([core gaps](core-gaps.md#15-two-constraints-core-is-missing)).
+
+**2. A list the site decides: name the kind, and a resolver lists it.**
+When the allowed values are "every one of a kind that this site has",
+say which kind: `PluginExists`, `EntityBundleExists`, `LanguageExists`
+or the address module's `Country`, each read by a [stock
+resolver](#the-stock-resolvers), or the type string `entity:<type>` for
+an entity's id ([below](#a-key-that-refers-to-an-entity)). There is no
+code per resource: the constraint names the kind, the resolver lists
+it for the site, and both documents state the list as a `oneOf` while it
+is short. Past its budget a reference is looked up and a list of
+variants or keys from the site is `deferred`
+([below](#a-list-the-site-decides-past-its-budget)). A key a static
+refiner narrows by such a key is still `enumerated`: one conditional per
+value it lists. When no stock constraint names the kind, write one for
+the kind, not for a resource, and [its resolver](#writing-a-resolver):
+example 2 does for the rooms of the site's venues (`EventVenueRoom`),
+and `data_surface_examples_keys` for the keys the site manages
+(`ManagedKey`).
+
+The address port shows why this beats a `LabeledChoice` whose choices
+are assembled at build time. Its countries and languages started as
+labeled choices filled from the country repository and the language
+manager, and the cost was not the code: **a definition that cannot be
+written down without services cannot sit in a resource or structure
+class**, which holds no service. Said as the `Country` and
 `LanguageExists` constraints instead, the definitions became literal
 enough to sit in `AddressFieldSettingsResource`, readable without
 instantiating anything, and the live lookup moved to the one place that
 already answers for freshness.
-
-So: when a list is "every one of a kind that this site has", say that and
-write a resolver. Keep `LabeledChoice` for a vocabulary that really is
-literal, such as hidden/optional/required.
 
 `LanguageExists` is a constraint this module adds because core has none.
 Core validates that a plugin, a bundle, an extension or a config object
@@ -241,11 +310,41 @@ It is written to be module-agnostic, in core's own style (`allowLocked`
 as the permission option, a placeholder message), for the same reason
 `LabeledChoice` is.
 
+**3. A constraint of your own, last.** Only for a rule no keyword and no
+list can state: a comparison between two keys, uniqueness against what
+is stored, a check of site state with a reason of its own. One such rule
+needs none: a create's identity held once across what is stored is the
+stock `DataSurfaceUnique`, which the build adds where the storage can
+say whether a thing exists ("A venue named riverside already exists.";
+[A title and its machine name](declaring-a-resource.md#a-title-and-its-machine-name)),
+so no resource writes one. The cost: the
+schema can only name it under `x-surface.checkedOnServer`, it does not
+read back from the schema, the React page cannot narrow on it, and a
+caller learns the rule when a call is refused. When you write a
+constraint, at this step or for a kind at step 2, extend the stock
+constraint closest to it, so its validator, its refusal and its result
+code come with it. Example 2's room constraint extends `Choice`: a room
+no venue has is refused in `Choice`'s words,
+naming the rooms, and its resolver says its list is the whole of the
+constraint ([below](#writing-a-resolver)), so both documents state the
+rooms as a `oneOf` and name nothing under `checkedOnServer`.
+
+**Example 2, before and after.** Its venue was a string with a
+constraint of its own, a `Choice` subclass, a validator that read the
+enabled venues and a resolver that listed them. It is now
+`add('venue', 'entity:event_venue', t('Venue'))`, step 2 with no code:
+its candidates are core's selection handler's, and both documents mark
+it `x-surface.reference`. The room keeps what no stock constraint
+says, a room of one of the site's venues: one constraint with its
+validator and its resolver, and a narrower one its refiner adds for the
+venue chosen
+([example 2](../modules/data_surface_examples/README.md#example-2-answers-depend-on-answers)).
+
 ## A key that refers to an entity
 
 A key that refers to an entity is declared by the data type string of
 what it refers to, and holds the entity's id
-([decision](decisions.md#a-reference-is-an-id-with-a-list-the-site-decides-listed-or-looked-up)):
+(why: [decision](decisions.md#a-reference-is-an-id-with-a-list-the-site-decides-listed-or-looked-up)):
 
 ```php
 $inputs->add('venue', 'entity:event_venue', t('Venue'));    // a venue's machine name
@@ -274,6 +373,15 @@ $inputs->add('thing', 'entity', t('Featured beside'))
   mechanism, and the full schema states the id once per entity type, as
   a conditional. The id does not apply while no entity type is chosen,
   and is required once one is. Stored as `{entity_type, id}`.
+- **In config, a content entity by its uuid.** A config storage
+  (`ConfigObjectStorage`, `ConfigEntityStorage`) stores a reference to a
+  content entity as its uuid, since a content entity's id differs
+  between sites, and a reference to a config entity as its id, its
+  machine name. Every door still sends and answers the id; only the
+  stored config holds the uuid, typed `uuid` in its schema. A config
+  entity also depends on what its keys refer to. A key keeps the id
+  with `->setSetting(References::STORED_AS, References::BY_ID)`
+  ([A reference is stored by uuid](storage.md#a-reference-is-stored-by-uuid)).
 
 The candidates are core's entity reference selection handler's: the
 `default` handler for the entity type, the bundles as its
@@ -320,7 +428,7 @@ per single-directory component) or whose keys do (`addEach()`,
 `attachEach()`) is spelled out in the full schema and the tool listing
 while the site lists at most that many; past it, both state the key
 open and mark it `deferred`, and the deciding key keeps its list of ids
-and labels ([decision](decisions.md#a-budget-for-what-the-site-decides)).
+and labels (why: [decision](decisions.md#a-budget-for-what-the-site-decides)).
 Where a reference key past its limit is looked up by label, such a key
 is fetched per choice: choose the deciding key, then fetch the full
 schema with that choice stated, `GET .../schema?choose=/props=<value>`,
@@ -330,8 +438,8 @@ the site's list changes
 ask with values, `POST .../schema` over HTTP or the narrowing tool,
 `data_surface:<resource>:<operation>:schema`; both answer the chosen
 variant's keys exactly
-([asking again at the tool door](served-contract.md#asking-again-at-the-tool-door),
-[decision](decisions.md#a-list-left-out-for-size-is-deferred-not-refined)).
+([asking again at the tool door](served-contract.md#asking-again-at-the-tool-door);
+why: [decision](decisions.md#a-list-left-out-for-size-is-deferred-not-refined)).
 `SiteListBudget::withLimit()` holds another limit for one call, saving
 nothing, as `References::withLimit()` does.
 
@@ -375,9 +483,9 @@ constraint checks nothing more. A resolver whose list is every value its
 constraint accepts and nothing else, as a `Choice`'s is, says so with
 `exact: TRUE` on its attribute, and the constraint, and every subclass of
 it the resolver reads, is then named under no `checkedOnServer`. Example
-2's venue and room do: their constraints are `Choice`s whose list is the
-venues the site has, read by `EventVenueOptions`
-([decision](decisions.md#a-listing-is-a-read-only-operation-with-outputs-a-reorder-is-an-update-over-the-collection)).
+2's room does: its constraint is a `Choice` whose list is the rooms of
+the venues the site has, read by `EventVenueRoomOptions`
+(why: [decision](decisions.md#a-listing-is-a-read-only-operation-with-outputs-a-reorder-is-an-update-over-the-collection)).
 A memoized answer is dropped when a tag it was read under is
 invalidated, so a definition kept for the rest of a request is answered
 afresh, and a tool's definition carrying the list as its enum is cleared

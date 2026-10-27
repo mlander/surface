@@ -15,7 +15,8 @@ namespace Drupal\data_surface\Resource\Attribute;
  * One with a class is named by its class. A derived resource has none,
  * so it is named by its id, `entity.content:node.page`, or every
  * derivative of one deriver at once by the deriver's base id,
- * `entity.content`.
+ * `entity.content`. The id of one that has a class is refused at
+ * discovery, with the class to name instead.
  */
 #[\Attribute(\Attribute::TARGET_CLASS)]
 final class Alters {

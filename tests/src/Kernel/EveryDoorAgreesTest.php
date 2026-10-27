@@ -293,7 +293,7 @@ class EveryDoorAgreesTest extends DataSurfaceKernelTestBase {
         }
         try {
           if ($rows !== []) {
-            $answered = $this->assertDoorsAgree($definition, $operation, $parameters ?? [], $rows);
+            $answered = $this->assertDoorsAgree($definition, $operation, $parameters, $rows);
             $compared += $answered['compared'];
             foreach ($answered['skipped'] as $kind => $count) {
               $skipped[$kind] = ($skipped[$kind] ?? 0) + $count;

@@ -22,7 +22,7 @@ it.
 
 | Step | What core gains | Carried by |
 | --- | --- | --- |
-| [1](#step-1-facts-on-a-data-definition) | Eleven changes to typed data, validation and the Field API, each small and additive, and one to the coding standards | Eleven drafts, drafted, unfiled; one item not drafted |
+| [1](#step-1-facts-on-a-data-definition) | Eleven changes to typed data, validation and the Field API, each small and additive, and one to the coding standards | Eleven drafts, drafted, unfiled; one item and one constraint not drafted |
 | [2](#step-2-operations-and-access-for-simple-config) | Operations, a permission each, and per-key access for a simple config object, as entity types have | Not drafted |
 | [3](#step-3-third-party-settings-for-simple-config) | A place in a simple config object for another module's keys, as config entities have | Not drafted |
 | [4](#step-4-a-served-contract) | A JSON Schema of what an operation accepts, never stricter than validation | Not drafted as one; its parts are step 1's |
@@ -90,8 +90,7 @@ so the second writes to the first one's entity.
 **Here today.** Every place the module turns a definition into typed data
 goes through `DefinitionTypedData::create()`, which hands core a copy of
 the root carrying a digest of the definition in its settings, so the
-cache key names the definition (`src/DefinitionTypedData.php`; [a
-definition is validated as itself](decisions.md#a-definition-is-validated-as-itself)).
+cache key names the definition (`src/DefinitionTypedData.php`; why: [decision](decisions.md#a-definition-is-validated-as-itself)).
 Field items are built from `FieldConfigBase::getItemDefinition()`
 instead (`Form\DataSurfaceFieldTypeTrait`). It was found when one tool
 call's narrowing leaked into the next call in the same process, and
@@ -125,16 +124,16 @@ description and never call `getConstraints()`: a string with `Length:
 {max: 50}` is advertised as `{"type": "string"}`, so a client learns the
 limit from the refusal.
 
-**Here today.** The emitter maps `Range`, `Length`, `Count`, `Email`,
-`NotBlank`, `Regex`, `Sequentially` and `AtLeastOneOf` to keywords, a
+**Here today.** The emitter maps `Range`, `Length`, `Count`,
+`UniqueItems` (1.5), `Email`, `NotBlank`, `Regex`, `Sequentially` and
+`AtLeastOneOf` to keywords, a
 `Choice` to its values, and names every other constraint under
 `x-surface.checkedOnServer`, with what it checks, so a client knows a
 server-side rule exists
-(`ContractEmitter::keywords()` in `src/Contract/ContractEmitter.php`). A
+(`PropertySchema::keywords()` in `src/Contract/PropertySchema.php`). A
 `Regex` is written only when every construct in its pattern is on an
 allowlist of those PHP and JavaScript read alike, and is otherwise left
-to the server (`src/Contract/PatternTranslation.php`; [a pattern both
-engines read alike](decisions.md#a-pattern-both-engines-read-alike)).
+to the server (`src/Contract/PatternTranslation.php`; why: [decision](decisions.md#a-pattern-both-engines-read-alike)).
 
 **The core change.** The normalizer reads `getConstraints()` and asks
 each constraint for its keywords through an optional interface on the
@@ -209,9 +208,9 @@ unfiled.
 hand-written form that sets `#placeholder` from the definition; one
 spelling that plugin contexts and other wrappers could later delegate to.
 
-### 1.5 A `LanguageExists` constraint
+### 1.5 Two constraints core is missing
 
-**The gap.** Core has `PluginExists`, `EntityBundleExists`,
+**The gap, for languages.** Core has `PluginExists`, `EntityBundleExists`,
 `ExtensionExists` and `ConfigExists`, and nothing for a language code,
 so `langcode` keys in config are left unchecked or checked by a
 hand-written constraint, and cannot offer their allowed values.
@@ -232,6 +231,32 @@ PluginExists, EntityBundleExists, ExtensionExists and ConfigExists",
 drafted, unfiled.
 
 **Alone, it gives.** Validated language codes in config.
+
+**The gap, for lists.** Core registers `Count` for a list's size,
+JSON Schema's `minItems` and `maxItems`, and nothing for `uniqueItems`.
+Symfony has the `Unique` constraint and core does not register it, so a
+list whose items must differ (tags, days, roles) is checked by a
+hand-written constraint, de-duplicated in form code, or not checked.
+
+**Here today.** `UniqueItems`, registered the way core registers
+`Count`: Symfony's `Unique`, under an id of its own, with a message in
+Drupal's placeholder style ("The item %value is listed more than
+once.") and no option but the message. Its validator is Symfony's,
+which compares items strictly, handed a list's plain values. The
+emitter writes it as `uniqueItems: true` and the schema reader reads it
+back (`src/Plugin/Validation/Constraint/UniqueItemsConstraint.php`,
+`UniqueItemsConstraintValidator.php`).
+
+**The core change.** The same constraint beside `Count` in
+`core/lib/Drupal/Core/Validation/Plugin/Validation/Constraint/`; a
+config schema `sequence` may then declare it, and the normalizer of 1.2
+writes it as `uniqueItems`.
+
+**Carried by.** Not drafted. It belongs with the `LanguageExists` draft
+or in one of its own.
+
+**Alone, it gives.** Lists in config whose items are held to differ, by
+a constraint any schema reader can read.
 
 ### 1.6 Labels on `Choice`
 
@@ -263,7 +288,12 @@ so every existing use keeps working; config schema YAML may give
 question), and the normalizer emits `oneOf` with `const` and `title`
 where labels exist. A separable second step: a service answering "the
 options for this definition" from its constraints, one resolver per
-constraint type, `LanguageExists` among them.
+constraint type, `LanguageExists` among them. Core's constraints with a
+list (`Choice`, `PluginExists`, `EntityBundleExists`) could answer
+through the same `OptionsProviderInterface` field items implement; a
+resolver is what that looks like for a constraint, and this module's
+`DataSurfaceOptions::provider()` answers that interface from one
+([Core's question](options.md#cores-question)).
 
 **Carried by.** "Allow Choice constraints to carry option labels, so
 allowed values are declared once for validation, config schema, Form
@@ -333,7 +363,7 @@ the class is first built, so a widening rule never runs. Validation
 enforces it, and both schemas write it as one `if`/`then`
 (`src/Refinement/Condition.php`, `src/Refinement/Rule.php`,
 `DeclaredNarrowingTest`; [Declaring a
-rule](refinement.md#declaring-a-rule); [why](decisions.md#a-rule-declared-as-data)).
+rule](refinement.md#declaring-a-rule); why: [decision](decisions.md#a-rule-declared-as-data)).
 In the honeypot port described at the end of this page, the settings
 form's `#states` dependency became one such rule, stated in the schema
 and refused by name at the form, the tool and the HTTP API alike ([the
@@ -434,8 +464,7 @@ Declarations of definitions are mostly static.
 
 **Here today.** Static declarations call the global `t()` with a literal
 string, and `new TranslatableMarkup` appears only inside attribute
-arguments, where a call is not allowed ([a resource or structure is
-static](decisions.md#a-resource-or-structure-is-static)). The guard that
+arguments, where a call is not allowed (why: [decision](decisions.md#a-resource-or-structure-is-static)). The guard that
 stops a static refiner reading site state lets `t()` through, because
 `t()` only builds the lazy object; the language and the translation are
 read when it is rendered, after the refiner has returned
@@ -643,7 +672,7 @@ their elements), but the form is still written by hand, and
 definitions. A widget is chosen per definition from the definition
 alone, asked for with a setting where the definition does not settle it
 (`setSetting('widget', 'radios')`; [Widgets](widgets.md);
-[why](decisions.md#a-widget-is-chosen-from-the-definition)). A key
+why: [decision](decisions.md#a-widget-is-chosen-from-the-definition)). A key
 another depends on gets `#ajax`, and a change replaces only the
 elements that depend on it ([Wrapper ids and
 AJAX](forms.md#wrapper-ids-and-ajax)). Presentation (grouping, sizes, a
@@ -668,8 +697,7 @@ works around rather than through:
   none is set), so a definition's rule and its message lose to the
   element's. The module clears the element's server-side check and
   keeps the limits as attributes (`min`, `max`, `maxlength`), hints
-  the browser still reads, so the rule speaks ([an element
-  hints and the rule speaks](decisions.md#an-element-hints-and-the-rule-speaks)).
+  the browser still reads, so the rule speaks (why: [decision](decisions.md#an-element-hints-and-the-rule-speaks)).
   Form API reading `#states` from a definition's conditions (1.8) and
   its checks from its constraints would make the element a hint and the
   definition the rule.
@@ -756,6 +784,8 @@ the one core should adopt, or that content entities fit the same way.
 | No `patternProperties` or `additionalProperties` on maps | Not needed yet; maps are closed here | [#3556242](https://www.drupal.org/project/drupal/issues/3556242) |
 | `required` mixes non-empty, nullable and present | `NULL` and `''` mean not configured; anything else is a value ([Value semantics](semantics.md#configured-or-not)) | No issue named here |
 | Nothing says a value is fixed in this context | The identity keys an operation knows are locked by the resource, not by a definition flag | Possibly nothing; revisit |
+| A simple config object records no dependencies | A config object's references to content are stored by uuid, so they deploy, but an export and an uninstall do not know what they name; a config entity's are recorded under `dependencies` ([A reference is stored by uuid](storage.md#a-reference-is-stored-by-uuid)) | No issue named here |
+| A config entity's dependencies come only from its class | Core recalculates them on every save from plugins and third party settings; a key that refers to an entity is neither, so a save through `ConfigEntityStorage` adds them in a presave hook, and a save made any other way drops them | No issue named here |
 
 The contributed Tool API has gaps of its own: it reads `Choice` and
 `AllowedValues` by plugin id, so a subclass such as `LabeledChoice`

@@ -214,8 +214,9 @@ the same message a tool caller gets.
   saying nothing, so `InputDefinitions` converts it as not
   required.
 - **Only list items are validated, not the list.** The uniqueness
-  constraint is enforced by the pipeline, not by the Tool API, and the
-  normalizer has no `uniqueItems` mapping, so it is said in the
-  description.
+  constraint, the stock `UniqueItems`, is enforced by the pipeline, not
+  by the Tool API, and the normalizer has no `uniqueItems` mapping, so
+  the tool says it in the description; the served contract states it as
+  `uniqueItems: true`.
 - **A string sent for a list is wrapped into a list of one item** by
   typed data before validation, rather than refused as the wrong shape.

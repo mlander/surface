@@ -7,6 +7,7 @@ namespace Drupal\Tests\data_surface\Functional;
 use Drupal\data_surface_examples_references\Sponsorship;
 use Drupal\data_surface_examples_references\Storage\SponsorshipStorage;
 use Drupal\Tests\BrowserTestBase;
+use Drupal\node\Entity\Node;
 use Drupal\Tests\data_surface\Traits\ServedApiTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -79,7 +80,8 @@ class ReferenceKeysFormTest extends BrowserTestBase {
     $this->assertSession()->statusMessageContains('The changes have been saved.');
     $stored = $this->config(SponsorshipStorage::CONFIG);
     $this->assertSame('library', $stored->get('venue'));
-    $this->assertSame($nodes['article'], $stored->get('page'), 'An article is stored as its id, an integer.');
+    $this->assertSame(Node::load($nodes['article'])->uuid(), $stored->get('page'), 'An article is stored as its uuid, a content entity.');
+    $this->assertTrue($this->assertSession()->optionExists('surface[page]', (string) $nodes['article'])->isSelected(), 'Read back as its id.');
 
     // Past the limit: core's entity autocomplete, read back as the id.
     $this->config('data_surface.settings')->set('reference_list_limit', 1)->save();
@@ -87,6 +89,7 @@ class ReferenceKeysFormTest extends BrowserTestBase {
     $venue = $this->assertSession()->elementExists('css', 'input[name="surface[venue]"]');
     $this->assertStringContainsString('/entity_reference_autocomplete/event_venue/default/', (string) $venue->getAttribute('data-autocomplete-path'));
     $this->assertSame('Old Library (library)', $venue->getValue());
+    $this->assertSame('Sponsor packages (' . $nodes['article'] . ')', $this->assertSession()->elementExists('css', 'input[name="surface[page]"]')->getValue(), 'The stored uuid, drawn as the id.');
     $this->submitForm([
       'surface[venue]' => 'Riverside Hall (riverside)',
       'surface[page]' => 'Sponsor packages (' . $nodes['article'] . ')',

@@ -37,6 +37,8 @@ class ConfigSchemaDriftTest extends DataSurfaceKernelTestBase {
     'system',
     'user',
     'field',
+    'node',
+    'config_test',
     'serialization',
     'tool',
     'data_surface',
@@ -47,6 +49,7 @@ class ConfigSchemaDriftTest extends DataSurfaceKernelTestBase {
     'data_surface_examples_keys',
     'data_surface_first',
     'data_surface_resource_test',
+    'data_surface_reference_test',
   ];
 
   /**
@@ -58,6 +61,7 @@ class ConfigSchemaDriftTest extends DataSurfaceKernelTestBase {
     'data_surface_examples_keys',
     'data_surface_first',
     'data_surface_resource_test',
+    'data_surface_reference_test',
   ];
 
   /**
@@ -66,7 +70,12 @@ class ConfigSchemaDriftTest extends DataSurfaceKernelTestBase {
   protected function setUp(): void {
     parent::setUp();
     $this->installEntitySchema('user');
-    $this->installConfig(['data_surface_examples', 'data_surface_first', 'data_surface_resource_test']);
+    $this->installConfig([
+      'data_surface_examples',
+      'data_surface_first',
+      'data_surface_resource_test',
+      'data_surface_reference_test',
+    ]);
     $this->setUpCurrentUser(admin: TRUE);
   }
 
@@ -125,6 +134,7 @@ class ConfigSchemaDriftTest extends DataSurfaceKernelTestBase {
     $this->assertContains('data_surface_first.newsletter', $checked);
     $this->assertContains('data_surface_examples.registration_step3', $checked);
     $this->assertContains('data_surface_resource_test.opening_hours', $checked);
+    $this->assertContains('data_surface_reference_test.settings', $checked, 'Its references to content typed uuid, installed holding none.');
     $this->assertContains('data_surface_examples.event_venue.riverside', $checked, 'A config entity type the module declares: each thing it ships.');
   }
 

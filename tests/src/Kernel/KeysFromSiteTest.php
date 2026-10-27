@@ -461,7 +461,9 @@ class KeysFromSiteTest extends DataSurfaceKernelTestBase {
    * or a structure is a variant's, which a key per thing does not read.
    */
   public function testEntriesNoKeyCanBeAreRefused(): void {
-    $resources = $this->container->get('data_surface.resources');
+    // The keys from the site are the attach phase's to read.
+    $build = $this->container->get('data_surface.resources');
+    $resources = (new \ReflectionProperty($build, 'attaching'))->getValue($build);
     $keysFrom = new \ReflectionMethod($resources, 'keysFrom');
     $workshop = $this->container->get('data_surface.resource_registry')->getDefinition(WorkshopResource::class);
     $refusals = [

@@ -38,6 +38,7 @@ export const LOCKED_NOTE = 'Fixed for this operation.';
 export const COMPUTED_NOTES = {
   create: 'Computed from other keys when this is created, and kept as it is after.',
   change: 'Computed from other keys, again whenever they change.',
+  unless_sent: 'Computed from other keys unless one is typed.',
 } as const;
 
 /** The note a secret carries, as the string widget appends it. */

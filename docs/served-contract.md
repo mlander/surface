@@ -70,7 +70,7 @@ Contract 1 is what the module served until 2026-10-20, contract 2 until
 2026-10-22, contract 3 until 2026-10-24; this page describes contract
 4, which cut the `x-surface` keywords that said nothing or said it twice
 and kept contract 3's paths, so no path answers 410 for it
-([decision](decisions.md#contract-4-fewer-keywords-nothing-new-on-the-wire)):
+(why: [decision](decisions.md#contract-4-fewer-keywords-nothing-new-on-the-wire)):
 
 | In contract 3 | In contract 4 | Why |
 | --- | --- | --- |
@@ -93,7 +93,7 @@ The contract diff reports a contract 3 baseline once, "contract version
 
 Contract 3, from 2026-10-22 to 2026-10-24, changed the HTTP door and
 kept both documents as contract 2 writes them, but for the number
-([decision](decisions.md#contract-3-the-operation-is-the-method)). Its
+(why: [decision](decisions.md#contract-3-the-operation-is-the-method)). Its
 paths are contract 4's:
 
 | In contract 2 | In contract 3 | Why |
@@ -119,15 +119,15 @@ to 3", and re-pinned.
 ## Contract 2
 
 What contract 2 moved, from contract 1, all at once so a client moves
-once ([decision](decisions.md#contract-2)):
+once (why: [decision](decisions.md#contract-2)):
 
 | In contract 1 | In contract 2 | Why |
 | --- | --- | --- |
 | No version stated | `x-surface.contract: 2`, first under the top `x-surface`; `Contract-Version: 2` on every answer of `/surface-api` that is not an error | A client tells a document it does not know from one it does |
-| `surface` and `situation`, in the document, a submit's `created`, the React page's settings and a baseline | `resource` and `operation` | The product's retired words off the wire ([the product keeps its name](decisions.md#the-product-keeps-its-name)) |
+| `surface` and `situation`, in the document, a submit's `created`, the React page's settings and a baseline | `resource` and `operation` | The product's retired words off the wire (why: [decision](decisions.md#the-product-keeps-its-name)) |
 | No `$id` | `$id`, the URL a route serves the document at, the operation's parameters as its query string | Local references resolve wherever the document is embedded |
 | No `title` on a def but a shape's, its label | `title` on every def, its id | Stable, language-free names for a type generator |
-| The widget hint `slot` | `variants` | The concept's own word ([Variants, not slots](decisions.md#variants-not-slots)) |
+| The widget hint `slot` | `variants` | The concept's own word (why: [decision](decisions.md#variants-not-slots)) |
 | A key with variants `{"type": ["object", "null"]}`, its `x-surface.variants` a list of values | `anyOf` of a reference to each variant's def, and `{"type": "null"}` where it may be cleared, and no `type` beside it; `variants` a map from each value to its def | A type generator writes `Free \| Paid \| null` |
 | `x-surface` below an applicator: `variant` and the widget on a variant's `then`, `declared: true` on a rule's conditional, a key's `x-surface` in a site's narrowing | None below an applicator: the owning object's `x-surface.rules` and `x-surface.within` | A tool merging `allOf` fell back to the unmerged schema (B21) |
 | `maximum`, `properties` or `required` with no `type` in a narrowing, a `then` or an `if` | The declared type beside them; a narrowing's `required` only what it adds | ajv's strict mode refused them (B22) |
@@ -172,7 +172,7 @@ The emitter writes two documents from one data surface, by one code path.
   answer may still lock or leave out is there, as the static answers
   leave it, marked `x-surface.live`, as a runtime refiner's key is; the
   schema for these answers settles it
-  ([decision](decisions.md#access-is-static-or-runtime-read-from-its-cacheability)).
+  (why: [decision](decisions.md#access-is-static-or-runtime-read-from-its-cacheability)).
   Its `x-surface` carries only what holds for
   any values (`contract`, `version`, `computed`, `dependsOn`,
   `enumerated`, `refine`, `deferred`, `live`, `rules`, `within`,
@@ -191,7 +191,7 @@ The emitter writes two documents from one data surface, by one code path.
 ### Never stricter than the runtime
 
 Neither is ever stricter than the pipeline
-([decision](decisions.md#two-documents-never-stricter-than-the-runtime)),
+(why: [decision](decisions.md#two-documents-never-stricter-than-the-runtime)),
 and the rule is about the **accepted document**: what `accept()` makes
 of the input after coercion, not the raw input. That is the Tool API's
 model: it coerces a tool's inputs by a documented table first and
@@ -210,7 +210,7 @@ and the schema need not admit; the document they become, it does.
   against the schema, that one `null` is the key left out.
 - **`format` is advisory.** `format` is written as JSON Schema 2020-12
   defines it, an annotation a client may opt into asserting
-  ([decision](decisions.md#format-is-an-annotation)). Drupal's checks
+  (why: [decision](decisions.md#format-is-an-annotation)). Drupal's checks
   are not the formats': a URI with a space is accepted by the pipeline
   and refused by a client that asserts `format`. An email address is
   `idn-email` (RFC 6531), which admits a non-ASCII local part as
@@ -229,7 +229,7 @@ and the schema need not admit; the document they become, it does.
   `\d` `\w` `\s` `\b` only without the `u` modifier, the quantifiers,
   alternation and groups, `^`, and `$` only with the `D` modifier, which
   every pattern ending in `$` needs
-  ([decision](decisions.md#a-pattern-both-engines-read-alike)). Anything
+  (why: [decision](decisions.md#a-pattern-both-engines-read-alike)). Anything
   else carries no `pattern` and is named under `checkedOnServer`: the
   fourth newcomer's email shape, `/^[^@\s]+@example\.org$/D`, is checked
   on the server only, for its negated class, where
@@ -276,7 +276,7 @@ runtime refiner carries `live` alone.
 
 An invoker reads the marker to know how far the schema it holds can be
 trusted for a key, and what to do about the rest
-([decision](decisions.md#a-list-left-out-for-size-is-deferred-not-refined)).
+(why: [decision](decisions.md#a-list-left-out-for-size-is-deferred-not-refined)).
 
 | Marker | What it says | What to do |
 | --- | --- | --- |
@@ -339,7 +339,7 @@ its description (what a call does to what, when the operation says
 one), the top's `x-surface` says first which version of the contract
 the document is written in, `contract` ([above](#contract-3)), then how
 the operation behaves, as `#[Operation]` states it
-([decision](decisions.md#an-operation-states-how-it-behaves)), in both
+(why: [decision](decisions.md#an-operation-states-how-it-behaves)), in both
 documents alike:
 
 ```json
@@ -376,12 +376,14 @@ only operation (`#[Operation(readOnly: TRUE)]`), `create` for one that
 creates (`#[Operation(creates: TRUE)]`), and `update` for every other,
 which changes what exists. There is no `readOnly` among the facts:
 `kind: "read"` says it, and JSON Schema's `readOnly` at the same top
-means the resource is [locked whole](decisions.md#locked-at-the-top);
+means the resource is locked whole: every key is held to what is
+stored, and a submit is refused
+(why: [decision](decisions.md#locked-at-the-top));
 contract 1 also stated `readOnly` among them. A
 generated tool asks for what its kind says at its door: a create
 requires the keys the resource requires, and an update requires none,
 since a key left out keeps what is stored
-([decision](decisions.md#required-is-the-resources-and-an-update-tool-requires-nothing-at-its-door)).
+(why: [decision](decisions.md#required-is-the-resources-and-an-update-tool-requires-nothing-at-its-door)).
 `creates` is the attribute's, stamped on the context; `description` is
 there only when the operation says one; `idempotent` is the operation's
 own, derived from `creates` unless declared (a create whose caller names
@@ -403,33 +405,34 @@ under `$defs`, and referred to ([reusable subschemas](#reusable-subschemas)).
 
 | The declaration says | The schema says |
 | --- | --- |
-| label, description | `title`, `description`, as plain text: a placeholder's escaping decoded, a line break a new line, every other tag stripped; the form keeps the markup ([decision](decisions.md#a-machine-document-carries-plain-text)) |
-| `string`, `email`, `uri`, `integer`, `float`, `boolean` | `type` (`format: idn-email` / `uri` for those types, advisory); an optional key also allows `null`, which clears it (a secret does not, nor a key [its storage always holds](decisions.md#a-key-its-storage-always-holds)) |
+| label, description | `title`, `description`, as plain text: a placeholder's escaping decoded, a line break a new line, every other tag stripped; the form keeps the markup (why: [decision](decisions.md#a-machine-document-carries-plain-text)) |
+| `string`, `email`, `uri`, `integer`, `float`, `boolean` | `type` (`format: idn-email` / `uri` for those types, advisory); an optional key also allows `null`, which clears it (a secret does not, nor a key its storage always holds, one a fully validatable config schema does not mark `nullable: true`; why: [decision](decisions.md#a-key-its-storage-always-holds)) |
 | `setRequired(TRUE)` | the key in `required`: present and not null, nothing about size. The contract's `values` always carry every key, so presence is never the question. |
 | a declared default, examples | `default`, `examples` |
 | `Range` | `minimum`, `maximum`, always numbers (core's timestamp field holds its bounds as strings) |
 | `Length` | `minLength`, `maxLength` |
 | `Count` | `minItems`, `maxItems` |
-| `Regex` | `pattern` (`not: {pattern}` for `match: false`), carried only when its body stays inside the subset both engines read alike and its modifiers are `u` and `D`; otherwise left to the server ([decision](decisions.md#a-pattern-both-engines-read-alike)) |
+| `UniqueItems` | `uniqueItems: true`, after the bounds |
+| `Regex` | `pattern` (`not: {pattern}` for `match: false`), carried only when its body stays inside the subset both engines read alike and its modifiers are `u` and `D`; otherwise left to the server (why: [decision](decisions.md#a-pattern-both-engines-read-alike)) |
 | `Email` | `format: idn-email`, advisory |
 | `NotBlank` | `minLength: 1` |
-| `Sequentially`, `AtLeastOneOf` | `allOf`, `anyOf` of its parts, each stated as the constraint alone would be; when any part is not, the composite is left to the server ([decision](decisions.md#a-composite-is-its-parts)) |
+| `Sequentially`, `AtLeastOneOf` | `allOf`, `anyOf` of its parts, each stated as the constraint alone would be; when any part is not, the composite is left to the server (why: [decision](decisions.md#a-composite-is-its-parts)) |
 | any list of allowed values | `oneOf: [{const, title, description?}]`, read from the options service, so the labels travel; never `enum`. An optional key that may be cleared adds an untitled `{const: null}` (not one its storage always holds), and so does a list of no values, which a required key's type then refuses too: nothing is allowed. |
 | a map | a nested object |
 | an attached part | a reference to its def under `$defs`, beside its label ([reusable subschemas](#reusable-subschemas)) |
 | a key with variants | `anyOf` of a reference to each variant's def, and `{"type": "null"}` where it may be cleared, no `type` beside it; each variant stated exactly by a conditional on the parent ([below](#variants-are-conditionals)) |
 | a key that refers to an entity, `entity:<type>[:<bundle>]` | its id's type, `x-surface.reference`, the candidates as `oneOf` up to `data_surface.settings:reference_list_limit`, and `DataSurfaceValidReference` under `checkedOnServer`; past the limit no `oneOf`, `x-surface.widget: autocomplete` ([Options](options.md#a-key-that-refers-to-an-entity)) |
 | a key of any entity type, `entity` | a reference to its def, `{entity_type, id}`: the entity types as `oneOf`, the id a string marked `reference: {by: "entity_type"}`, `enumerated`, its candidates per entity type one conditional on the def |
-| a deciding key whose variants offer one value | `const` of that value, no `oneOf`, the value's label under `x-surface.fixed`; a list the key declares itself, or a stored value no longer offered, is stated as any list ([decision](decisions.md#an-extension-is-a-variant-the-site-adds-or-an-alter)) |
+| a deciding key whose variants offer one value | `const` of that value, no `oneOf`, the value's label under `x-surface.fixed`; a list the key declares itself, or a stored value no longer offered, is stated as any list (why: [decision](decisions.md#an-extension-is-a-variant-the-site-adds-or-an-alter)) |
 | a structure mixed in, `mixIn()` | a reference to its def in the frame's `allOf`, beside the frame's own `properties` (each member in its place: `true`, what differs, or `false`), the frame closed with `unevaluatedProperties: false` ([below](#a-mixed-in-structure-is-composed)) |
-| a list | `type: array`, `items`, never null: an empty item is dropped before anything reads the list ([decision](decisions.md#an-item-is-never-null)) |
+| a list | `type: array`, `items`, never null: an empty item is dropped before anything reads the list (why: [decision](decisions.md#an-item-is-never-null)) |
 | a collection | `type: array`, `items` a reference to the child's def, narrowed by composition only where every item differs from it (a key the child's operation locked, a locked list), `minItems` and `maxItems` from its Count as the parent's refiners left it, and `x-surface.collection: true` ([below](#collections)) |
 | a locked key | `readOnly: true` and `const` of the value the operation knows |
-| a computed key, `compute()` | `readOnly: true` and `x-surface.computed`, no `const` (what it holds follows its sources), never in `required`; in `values` what it holds ([Declaring a resource](declaring-a-resource.md#computed-keys)) |
+| a computed key, `compute()` | `readOnly: true` and `x-surface.computed`, no `const` (what it holds follows its sources), never in `required`; in `values` what it holds ([Declaring a resource](declaring-a-resource.md#computed-keys)). One computed unless sent, a machine name, has no `readOnly` ([A title and its machine name](declaring-a-resource.md#a-title-and-its-machine-name)) |
 | a child its access locked | `readOnly: true` on the part, and on every key inside it with `const` of what is stored (none in the full schema); an omitted child is not there at all ([Three answers](resources.md#three-answers)) |
 | a key under a runtime access answer, in the full schema | there and writable, as the static answers leave it, with `x-surface.live`: it may be locked or left out once the subject is known; the schema for these answers says which, and marks nothing ([Static and runtime access](resources.md#static-and-runtime-access)) |
-| a secret | `writeOnly: true`, its declared type, never in `required` (left out or `null`, the stored secret stands), no default, `null` in `values` ([decision](decisions.md#a-secret-is-optional-never-nullable)) |
-| a key a refiner answers [does not apply](refinement.md#when-a-key-does-not-apply) for these values | no property, not in `required`, not in `values`; the frame's own `x-surface.doesNotApply` names it with what it depends on. In the full schema, `false` under each conditional that rules it out, and `required` under each where it applies and is required ([decision](decisions.md#a-key-that-does-not-apply)) |
+| a secret | `writeOnly: true`, its declared type, never in `required` (left out or `null`, the stored secret stands), no default, `null` in `values` (why: [decision](decisions.md#a-secret-is-optional-never-nullable)) |
+| a key a refiner answers [does not apply](refinement.md#when-a-key-does-not-apply) for these values | no property, not in `required`, not in `values`; the frame's own `x-surface.doesNotApply` names it with what it depends on. In the full schema, `false` under each conditional that rules it out, and `required` under each where it applies and is required (why: [decision](decisions.md#a-key-that-does-not-apply)) |
 | any other constraint | named in `x-surface.checkedOnServer` with what it checks: the schema is not the whole story, ask with `?dryRun=true`; not one whose resolver says its list is the whole of it (`exact: TRUE`), which is the `oneOf` ([Options](options.md#writing-a-resolver)) |
 
 ### `x-surface`
@@ -441,20 +444,20 @@ under `$defs`, and referred to ([reusable subschemas](#reusable-subschemas)).
 | `dependsOn` | Only where it names one: the sibling keys this key's refiners watch, in its own frame; a key an alter mounted, which only that alter may watch, by its dotted path in that frame (`third_party_settings.<module>.<key>`); a port the frame reads, by the port's name. A client refines when one of them changes. |
 | `refined` | Only when `true`, in the schema for these answers: the key is narrowed right now, compared with what the resource or structure advertises in this operation. |
 | `stale` | Only when `true`, in the schema for these answers: the stored value is no longer offered; the key is shown on its empty option, standing for it. |
-| `emptyOption` | On a single select or radios: `{show, label}`, by [the empty option rule](decisions.md#the-empty-option-rule): always for a select that may be cleared (`- None -`), for one that holds a value (required, or [always held by its storage](decisions.md#a-key-its-storage-always-holds)) only while no valid choice is selected (`- Select -`); a select `stale` on a stored value says it keeps it, `- Keep riverside_main (no longer offered) -`, and an orphan of the edit says `- Select -` or `- None -`, since a save refuses it. On radios: `show` is whether a `- None -` radio is drawn, only where the key may be cleared; one that holds a value shows nothing checked while no valid choice is. |
+| `emptyOption` | On a single select or radios: `{show, label}`: always for a select that may be cleared (`- None -`), for one that holds a value (required, or always held by its storage) only while no valid choice is selected (`- Select -`) (why: [decision](decisions.md#the-empty-option-rule), [decision](decisions.md#a-key-its-storage-always-holds)); a select `stale` on a stored value says it keeps it, `- Keep riverside_main (no longer offered) -`, and an orphan of the edit says `- Select -` or `- None -`, since a save refuses it. On radios: `show` is whether a `- None -` radio is drawn, only where the key may be cleared; one that holds a value shows nothing checked while no valid choice is. |
 | `multiple` | With the widget hints, on a list of allowed values drawn as a select: a multiple select. A list drawn as checkboxes says `checkboxes` and no `multiple`. |
 | `arrangement` | With the widget hints, on a key that declares one ([Arranging the keys](forms.md#arranging-the-keys)): how it is drawn, never what it accepts. Only what was declared: `group` (`{id, label, as: "fieldset" \| "details", collapsed, weight}`, `collapsed` only when `true` and `weight` only when declared: the keys of one object naming one `id` are drawn in one group, where the first of them is), `weight` (among the object's keys, or the group's; lighter first, declaration order between equals), `placeholder`, `prefix`, `suffix` and `help` (said after the description, and no part of what the key means), all plain text: `{"group": {"id": "pricing", "label": "Pricing", "as": "details", "collapsed": true}, "placeholder": "For example, 40", "prefix": "$"}`. Additive in contract 2: a client that does not read it draws the keys in order. |
 | `by`, `variants`, `chosen` | On a key with variants: the deciding key; a map from each value that chooses a variant to its def's pointer, `{"free": "#/$defs/registration.step3.ticket.free", "paid": "#/$defs/registration.step3.ticket.paid"}` (a list of the values in contract 1), absent where no variant is declared; and the value chosen now, absent while none is. |
 | `fixed` | On a deciding key whose variants offer one value, beside its `const`: the label that value is offered as, which a renderer draws in place of a select of one. Additive in contract 3. |
-| `reference` | On a key that refers to an entity, in both documents, listed or not: what it refers to, `{"entityType": "node", "bundles": ["article"]}` (`bundles` only where the key names any), or for the id of a key of any entity type `{"by": "entity_type"}`, its entity type the sibling's value. The value is the id. A client finds an id at the resource's lookup ([below](#a-lookup)). Additive in contract 3 ([decision](decisions.md#a-reference-is-an-id-with-a-list-the-site-decides-listed-or-looked-up)). |
-| `computed` | On a computed key, in both documents, beside `readOnly: true`: the keys it is computed from and when, `{"from": ["label"], "when": "create"}`, `create` for once, while storage holds nothing for it, `change` for again on every write that changes one of them. Nobody types it: a client shows it, narrows with `POST .../schema` when a key in `from` changes, which answers the value it would compute, and leaves it out of a write; a value sent equal to what it holds is noted, code `computed`, and any other refused. Additive in contract 3 ([decision](decisions.md#a-computed-key-is-a-pure-function-of-its-sources)). |
+| `reference` | On a key that refers to an entity, in both documents, listed or not: what it refers to, `{"entityType": "node", "bundles": ["article"]}` (`bundles` only where the key names any), or for the id of a key of any entity type `{"by": "entity_type"}`, its entity type the sibling's value. The value is the id. A client finds an id at the resource's lookup ([below](#a-lookup)). Additive in contract 3 (why: [decision](decisions.md#a-reference-is-an-id-with-a-list-the-site-decides-listed-or-looked-up)). |
+| `computed` | On a computed key, in both documents, beside `readOnly: true`: the keys it is computed from and when, `{"from": ["label"], "when": "create"}`, `create` for once, while storage holds nothing for it, `change` for again on every write that changes one of them. Nobody types it: a client shows it, narrows with `POST .../schema` when a key in `from` changes, which answers the value it would compute, and leaves it out of a write; a value sent equal to what it holds is noted, code `computed`, and any other refused. Additive in contract 3 (why: [decision](decisions.md#a-computed-key-is-a-pure-function-of-its-sources)). `unless_sent`, with no `readOnly`, for a key computed as `create` computes it only when a write leaves it out or sends it empty: a client shows the narrowing's value as a suggestion, sends it once the person typed over it, and a value sent is kept (why: [decision](decisions.md#a-machine-name-is-a-computed-identity)). |
 | `group` | Only when `true`, on `third_party_settings`: the object only groups one object per contributing module, each that module's fieldset, so it has no `title` or `description` and a renderer draws nothing around them, as the form does. |
 | `after` | On a module's object inside a `group`, when its alter placed it (`describe(..., after:)`): draw this fieldset after the named property of the object that contains its group. Only where it is drawn: its properties stay in the group, where its values are sent, and the schema's order and nesting do not move. |
-| `checkedOnServer` | Constraints no keyword states, each `{constraint, message}`: the constraint's plugin id, and what it checks, the constraint's own `message` where it was given one (a Regex's), else its plugin's label, else the id: `[{"constraint": "DataSurfaceUniqueNodeType", "message": "Unique content type machine name"}]`. A list of plugin ids in contract 1. A `JsonSchema` entry, what a structure read from a schema kept of it, carries the schema beside its message, `{"constraint": "JsonSchema", "message": "Checked on the server against the schema it was read from: uniqueItems.", "schema": {"uniqueItems": true}}`; on an object (the top, a def) it is what that schema says of the object as a whole ([Reading a schema](reading-a-schema.md#what-is-kept)). |
+| `checkedOnServer` | Constraints no keyword states, each `{constraint, message}`: the constraint's plugin id, and what it checks, the constraint's own `reason` where it was given one (the stock `DataSurfaceUnique`'s), else its own `message` (a Regex's), else its plugin's label, else the id: `[{"constraint": "DataSurfaceUnique", "message": "Refused when a venue named this already exists."}]`. A list of plugin ids in contract 1. A `JsonSchema` entry, what a structure read from a schema kept of it, carries the schema beside its message, `{"constraint": "JsonSchema", "message": "Checked on the server against the schema it was read from: contains.", "schema": {"contains": {"const": "news"}}}`; on an object (the top, a def) it is what that schema says of the object as a whole ([Reading a schema](reading-a-schema.md#what-is-kept)). |
 | `patternMessage` | On a key with a `pattern`: the Regex's own message, which is how a person is told what the pattern allows. The pattern is for machines; a renderer explains the key by this, never by the pattern. |
 | `enumerated` | Only when `true`: the key's static refiners have nothing to refine against yet, and what they answer for every value they could be handed is stated as conditionals on the parent ([below](#exact-where-it-can-be)). Captured exactly: the schema is exact for this key with no round trip, less what `live` adds. |
-| `refine` | Only when `true` (`dynamic` in contract 1): the key's static refiners have nothing to refine against yet, and what they would answer cannot be listed (a watched key with no list of values, or too many combinations). Static by declaration, not captured here: the schema is the unrefined, looser one, wider than the pipeline and never narrower ([decision](decisions.md#two-documents-never-stricter-than-the-runtime)); refine when a `dependsOn` key changes. In [the full schema](#two-documents) every key that cannot be listed carries it. |
-| `deferred` | On a key whose list the site decides and has more entries than the site list limit, in [the full schema](#two-documents) and in the schema for these answers while nothing is chosen: the key is an open object, variants with `by` beside it and no def per variant, or a map of keys from the site ([a list the site decides](#a-list-the-site-decides)). Static and stated, left out for its size. An object: `fetch`, an RFC 6570 template, the full schema's URL with `choose=<pointer>={value}` for the key and a `choose` for each variant on the way to it, `{value}` the deciding key's value or an entry's id, its query alone in a document no route serves, read against the full schema's URL; and, on a map of keys from the site only, `entries`, each key the map holds, `{"id": "bench_7", "label": "Bench 7"}`, in order, whose keys the schema for these answers states, and `fetch` one at a time. `refine` until 2026-10-24; `deferred: true` with `fetch` and `entries` beside it in contract 3 ([decision](decisions.md#a-list-left-out-for-size-is-deferred-not-refined)). |
+| `refine` | Only when `true` (`dynamic` in contract 1): the key's static refiners have nothing to refine against yet, and what they would answer cannot be listed (a watched key with no list of values, or too many combinations). Static by declaration, not captured here: the schema is the unrefined, looser one, wider than the pipeline and never narrower (why: [decision](decisions.md#two-documents-never-stricter-than-the-runtime)); refine when a `dependsOn` key changes. In [the full schema](#two-documents) every key that cannot be listed carries it. |
+| `deferred` | On a key whose list the site decides and has more entries than the site list limit, in [the full schema](#two-documents) and in the schema for these answers while nothing is chosen: the key is an open object, variants with `by` beside it and no def per variant, or a map of keys from the site ([a list the site decides](#a-list-the-site-decides)). Static and stated, left out for its size. An object: `fetch`, an RFC 6570 template, the full schema's URL with `choose=<pointer>={value}` for the key and a `choose` for each variant on the way to it, `{value}` the deciding key's value or an entry's id, its query alone in a document no route serves, read against the full schema's URL; and, on a map of keys from the site only, `entries`, each key the map holds, `{"id": "bench_7", "label": "Bench 7"}`, in order, whose keys the schema for these answers states, and `fetch` one at a time. `refine` until 2026-10-24; `deferred: true` with `fetch` and `entries` beside it in contract 3 (why: [decision](decisions.md#a-list-left-out-for-size-is-deferred-not-refined)). |
 | `collection` | Only when `true`, on a collection: an array whose every item is a child, its `items` a reference to the child's def. A renderer draws each item as that def's fieldset, adds and removes items within `minItems` and `maxItems`, and reads `dependsOn` inside each item under its delta (`shelves.1.unit`). `list` in contract 3. |
 | `rules` | On an object owning an `allOf` (the top frame, a def), in [the full schema](#two-documents) and in a def: the indexes in that `allOf` of the conditionals that state a declared rule ([refinement](refinement.md#declaring-a-rule)), `"rules": [9]`, each stated as written, after the key's enumerated ones; the key a rule narrows is the one its `then` names, and carries no marker of its own (`declared: true` in contract 3). Exact: a client evaluates each `if` and tightens the key by its `then` (the lower maximum, the values both lists offer), whatever the keys it reads hold, and an enumerated conditional only once every key it watches holds a value, so it tells them apart by this list. The schema for these answers evaluates the rules for its values and writes none. Contract 1 wrote `x-surface: {"declared": true}` on the conditional itself. |
 | `within` | On an object owning an applicator (a site, a frame, a def): what a schema below the applicator says under `x-surface`, as a map from its JSON pointer, relative to the object, to that `x-surface`. On the compliance mount, in the schema for these answers, whose narrowing refines the stewards: `{"/allOf/1/properties/stewards": {"dependsOn": ["capacity"], "refined": true}}`. Nothing below an applicator carries `x-surface` ([Contract 2](#contract-2)); `SchemaResolver::restored()` and the app's `inlineSchema()` put each entry back where it points. |
@@ -468,7 +471,7 @@ under `$defs`, and referred to ([reusable subschemas](#reusable-subschemas)).
 Removed in contract 4 ([Contract 4](#contract-4)): `locked` (a locked
 key is `readOnly: true`, with `const` where it holds a value, and a
 resource locked whole is `readOnly: true` at the top, where a submit is
-refused and a renderer offers none,
+refused and a renderer offers none; why:
 [decision](decisions.md#locked-at-the-top)), `declared` (the frame's
 `rules`), `access` (`live`), `fetch` and `entries` (inside `deferred`)
 and `list` (`collection`).
@@ -495,7 +498,7 @@ keeps its own refiners and alters
 ([attached structures](resources.md#children)).
 That makes a child a self-contained subschema, and both documents say
 so with JSON Schema 2020-12's own `$defs` and `$ref`, through the one
-code path they share (`ContractEmitter::define()` and `reference()`):
+code path they share (`ContractEmitter::define()` and `PropertySchema::reference()`):
 
 A [shape](#a-shape-is-one-def) is a def too, one per shape, which each
 key declared with it refers to.
@@ -690,7 +693,7 @@ nothing else: the key's `x-surface.variants` maps each value to its
 def. There is no
 OpenAPI `discriminator` beside it: OpenAPI's names a property inside the
 object whose alternatives it picks, and the variants' deciding key is a
-sibling of it ([decision](decisions.md#no-openapi-discriminator-for-variants)). Example
+sibling of it (why: [decision](decisions.md#no-openapi-discriminator-for-variants)). Example
 3's ticket, abbreviated, as `/surface-api` serves it (with the widget
 hints):
 
@@ -959,7 +962,7 @@ no round trip to `POST .../schema`.
   cannot be listed, the key is not enumerated and is marked
   `x-surface.refine: true` instead: its schema is the unrefined one and
   `dependsOn` says what to refine on, as before
-  ([decision](decisions.md#enumeration-is-capped)).
+  (why: [decision](decisions.md#enumeration-is-capped)).
 - **Each conditional is what `POST .../schema` answers, less the
   runtime.** It is computed by refining the whole data surface against
   the values with the combination over them, the same call a narrowing
@@ -1011,9 +1014,9 @@ site, not the code: a component per single-directory component a theme
 provides, a key per bench a configuration lists. Each is spelled out in
 the full schema while it has at most `data_surface.settings:site_list_limit`
 entries (20 as shipped), and the tool listing spells it out the same
-way ([decision](decisions.md#a-budget-for-what-the-site-decides)). Past it
+way (why: [decision](decisions.md#a-budget-for-what-the-site-decides)). Past it
 the key is `deferred`: static, and left out for its size
-([decision](decisions.md#a-list-left-out-for-size-is-deferred-not-refined)).
+(why: [decision](decisions.md#a-list-left-out-for-size-is-deferred-not-refined)).
 
 - **A key with variants** is an open object, `deferred`, its deciding
   key under `by`, with no def and no conditional per variant; the
@@ -1104,8 +1107,8 @@ Riverside Hall and its main hall, as `/surface-api` serves it:
       "title": {"title": "Event title", "type": "string", "x-surface": {"widget": "text", ...}},
       "open": {"title": "Registration open", "type": ["boolean", "null"], "default": true, ...},
       "venue": {"title": "Venue", "type": "string",
-                "oneOf": [{"const": "riverside", "title": "Riverside Hall"}, {"const": "library", "title": "Old Library"}, {"const": "harbour", "title": "Harbour Centre"}],
-                "x-surface": {"widget": "select", "emptyOption": {"show": false, "label": "- Select -"}, ...}},
+                "oneOf": [{"const": "harbour", "title": "Harbour Centre"}, {"const": "library", "title": "Old Library"}, {"const": "riverside", "title": "Riverside Hall"}],
+                "x-surface": {"widget": "select", "reference": {"entityType": "event_venue"}, ...}},
       "room": {"title": "Room", "type": "string",
                "oneOf": [{"const": "riverside_main", "title": "Main hall"}, {"const": "riverside_east", "title": "East room"}],
                "x-surface": {"widget": "select", "dependsOn": ["venue"], "refined": true, ...}},
@@ -1127,7 +1130,7 @@ What the emitter's `widget`, when asked for, mirrors is
 `DataSurfaceWidgetManager`'s choice, in its weight order
 ([Widgets](widgets.md)): the emitter asks the stock widgets' own rule
 for which element a list of choices is, so the hint and the form never
-disagree ([decision](decisions.md#a-widget-is-chosen-from-the-definition)).
+disagree (why: [decision](decisions.md#a-widget-is-chosen-from-the-definition)).
 A definition asks for an element with `setSetting('widget', ...)` in
 the hint's words: `radios`, `checkboxes`, `select`, `time`.
 
@@ -1159,7 +1162,7 @@ the hint's words: `radios`, `checkboxes`, `select`, `time`.
 ## The API
 
 The path is the resource and the method is the operation
-([decision](decisions.md#contract-3-the-operation-is-the-method)). One
+(why: [decision](decisions.md#contract-3-the-operation-is-the-method)). One
 route, `data_surface_react.api`, answers every path below;
 `ServedPaths` reads which operation a path and a method name.
 
@@ -1198,7 +1201,7 @@ operation whose id is the kind's standard one (`create`, `update`,
 `read` or `list`, `delete`), or `configure` for an update on a
 singleton; or else the only operation of that kind at the path; two of
 a kind with neither named so leaves the kind with no default
-([decision](decisions.md#the-ids-are-the-standard-five-the-labels-are-drupals)).
+(why: [decision](decisions.md#the-ids-are-the-standard-five-the-labels-are-drupals)).
 An id `add`, `edit`, `remove` or `get` is refused at discovery, naming
 the standard id. A read is a
 default only where no update is, and the collection of a resource with
@@ -1230,7 +1233,7 @@ account without the operation's permission) gives one fixed reason,
 parameters.", so it never says whether an id exists, and only an
 account holding the operation's permission hears the access class's
 own, and that an id names nothing (404)
-([decision](decisions.md#every-door-projects-what-the-read-tool-projects)).
+(why: [decision](decisions.md#every-door-projects-what-the-read-tool-projects)).
 A `POST`, a `PATCH` or a `DELETE` carrying the session cookie requires
 `X-CSRF-Token` from `/session/token` (`_csrf_request_header_token`).
 
@@ -1244,7 +1247,7 @@ does, by the header or by the document.
 
 A resource with identity whose collection has a read only operation
 that names no thing, its default read there, is listed by `GET` on the
-collection ([decision](decisions.md#a-listing-is-a-read-only-operation-with-outputs-a-reorder-is-an-update-over-the-collection)).
+collection (why: [decision](decisions.md#a-listing-is-a-read-only-operation-with-outputs-a-reorder-is-an-update-over-the-collection)).
 The query string is the listing's values, read by
 [the coercion table](semantics.md#the-coercion-table) as a form's text
 is, the operation's parameters and `dryRun` aside; the pipeline accepts
@@ -1275,7 +1278,7 @@ A key that refers to an entity lists its candidates while there are at
 most `data_surface.settings:reference_list_limit`; past that it lists
 none, and a client finds an id with the lookup, a custom read every
 resource path answers
-([decision](decisions.md#a-reference-is-an-id-with-a-list-the-site-decides-listed-or-looked-up)):
+(why: [decision](decisions.md#a-reference-is-an-id-with-a-list-the-site-decides-listed-or-looked-up)):
 
 ```
 GET /surface-api/event.sponsorship:lookup?key=/venue&q=riv&limit=10
@@ -1360,7 +1363,7 @@ read's, the document it stands in for:
    stored. Typing "Town Hall" as a new venue's name answers its slug,
    `town-hall`, in `values`, so a client shows the slug as the name is
    typed and never sends it
-   ([decision](decisions.md#a-computed-key-is-a-pure-function-of-its-sources)).
+   (why: [decision](decisions.md#a-computed-key-is-a-pure-function-of-its-sources)).
 
 The document is emitted from the form's own overlay,
 `refinementOverlay()`, settled to [the same fixed point](forms.md#the-in-form-half-discarding-orphaned-input)
@@ -1385,7 +1388,7 @@ document moved, and refuses it, as the form's Save does.
 
 A key `deferred` for its size names, under `x-surface.deferred.fetch`, the full
 schema with one of its entries stated
-([decision](decisions.md#a-list-left-out-for-size-is-deferred-not-refined)).
+(why: [decision](decisions.md#a-list-left-out-for-size-is-deferred-not-refined)).
 `GET .../schema?choose=<pointer>=<value>` answers it: the full schema,
 built for the account as the plain one is, with each choice stated in
 full at its key, as the full schema states it under the limit, and the
@@ -1469,7 +1472,7 @@ refused.
 | `X-CSRF-Token` | The session's token, with the session cookie. |
 
 It answers the one result shape every door answers a run in
-([decision](decisions.md#one-result-at-every-door)), every key always
+(why: [decision](decisions.md#one-result-at-every-door)), every key always
 present, then three keys of its own:
 
 | Key | Holds |
@@ -1477,10 +1480,10 @@ present, then three keys of its own:
 | `ok` | Whether nothing was refused; `true` on every 2xx. |
 | `committed` | Whether the values were written; `false` on a dry run and for a read-only operation. |
 | `changed` | Whether the write moved a stored value; `false` unless committed. |
-| `changes` | The JSON Pointer of each stored value the write changes, or on a dry run would change, a map by its own keys, a list whole: a plan, empty when the values are what is stored ([decision](decisions.md#absent-keeps-null-clears)). |
+| `changes` | The JSON Pointer of each stored value the write changes, or on a dry run would change, a map by its own keys, a list whole: a plan, empty when the values are what is stored (why: [decision](decisions.md#absent-keeps-null-clears)). |
 | `values` | What `accept()` made of the input, as the read tool would answer it once written: no key the build left out for this account, no secret, no key that does not apply, and no key never stored that the run left at its default. |
 | `violations` | Empty on a 2xx; a refusal is [problem details](#problem-details). |
-| `notes` | Each value sent for a locked key that the key did not take, `{path, code, message}`, code `locked`, once per key: "Machine name is locked and kept as stored; the value sent was not taken." The key keeps what it holds and nothing is refused ([decision](decisions.md#locked-at-the-top)); a value sent as it is held says nothing. |
+| `notes` | Each value sent for a locked key that the key did not take, `{path, code, message}`, code `locked`, once per key: "Machine name is locked and kept as stored; the value sent was not taken." The key keeps what it holds and nothing is refused (why: [decision](decisions.md#locked-at-the-top)); a value sent as it is held says nothing. |
 | `stale` | Each stale reference kept, `{path, code, message, stored}`, code `stale`, with the stored value it keeps: the operation form's warning, said out loud. |
 | `outputs` | The declared outputs as storage reads them back after the write (`StorageAdapter::outputs()`), the tool's same answer; on a dry run, and for an operation that changes nothing, what its `prepare()` answered under an output's name; `{}` when none are declared or none was answered. |
 | `contract` | On a write, the envelope rebuilt from what is stored now, its `$id` the read's, so a client re-renders without a second request; `null` otherwise. Its fingerprint is the answer's `ETag`. |
@@ -1494,7 +1497,7 @@ it, a key it depends on and a value by their labels alone; the tool
 renders the same refusal for a machine, a key by its path and a value
 by what is sent with its label beside it; the path and the code are the
 same at both doors, so a program calling the API branches on them
-([decision](decisions.md#one-result-at-every-door)).
+(why: [decision](decisions.md#one-result-at-every-door)).
 
 | Status | When |
 | --- | --- |
@@ -1511,7 +1514,7 @@ same at both doors, so a program calling the API branches on them
 
 What storage rehearsed is not served: it holds what the caller may not
 see, so a dry run answers the accepted document and its verdict
-([decision](decisions.md#every-door-projects-what-the-read-tool-projects)).
+(why: [decision](decisions.md#every-door-projects-what-the-read-tool-projects)).
 
 Example 2, the harbour's deck written with `PATCH
 /surface-api/registration.step2`, `If-Match` the read's `ETag`:
@@ -1551,7 +1554,7 @@ client says the rest.
 delete: an operation that says `#[Operation(deletes: TRUE)]` (and
 `destructive: TRUE`), whose kind is `delete`, named `delete` or the
 only delete there
-([decision](decisions.md#a-placed-block-is-a-resource)). A delete takes
+(why: [decision](decisions.md#a-placed-block-is-a-resource)). A delete takes
 no values, so the request has no body; one sent is held to JSON and each
 of its keys refused, code `unknown_key`. Nothing is accepted or
 validated: the storage rehearses the removal, and removes the thing,
@@ -1678,7 +1681,7 @@ the stored values `load()` returned, narrowed to the data surface's keys
 when the write arrives, the write is refused before the pipeline runs,
 412 [conflict](#conflict), with nothing written. When it is not sent,
 the last write wins, as on the operation form
-([decision](decisions.md#a-fingerprint-is-opt-in)). A tag is compared
+(why: [decision](decisions.md#a-fingerprint-is-opt-in)). A tag is compared
 by its opaque value, weak or strong: a compressing proxy weakens the tag
 it passes on, and the tag names the stored values, which compression
 does not change. A narrowing never carries one: it re-reads storage. A
@@ -1693,7 +1696,7 @@ in it depend on, those an [enumerated](#exact-where-it-can-be)
 conditional was read from included, the access answer's own, and
 `url.query_args`, but is never stored: the values in it come from
 storage, and storage says nothing about how long what it loaded holds
-([decision](decisions.md#a-served-contract-is-never-stored)). It is
+(why: [decision](decisions.md#a-served-contract-is-never-stored)). It is
 answered `Cache-Control: no-store, private`, which also keeps its `ETag`
 (core strips the tag from a response it marks uncacheable itself). The
 full schema carries the same metadata, and
@@ -1711,7 +1714,7 @@ their tags or max-age, since it states none of their answers. An option list var
 `user.permissions`, and by `user.node_grants:view` for a node or a
 comment, whose selection node grants narrow, so a cached schema is never
 another account's labels
-([decision](decisions.md#every-door-projects-what-the-read-tool-projects)).
+(why: [decision](decisions.md#every-door-projects-what-the-read-tool-projects)).
 
 ## An OpenAPI document
 
@@ -1719,7 +1722,7 @@ With `data_surface_openapi` enabled, `GET /surface-api/openapi.json`
 (and `/surface-api/openapi.yaml`) answers an OpenAPI 3.1 document of the
 API above, for every operation that can be asked on its own, so an
 OpenAPI client, a code generator or a UI drives a resource from it
-([decision](decisions.md#an-openapi-document-is-one-more-door)).
+(why: [decision](decisions.md#an-openapi-document-is-one-more-door)).
 OpenAPI 3.1, because its schema objects are JSON Schema 2020-12, the
 dialect both documents are written in. `GET /surface-api/docs` renders
 Swagger UI over it, whose "try it out" calls the API with the logged-in
@@ -1824,8 +1827,8 @@ itself. The rule, as `data_surface_react` applies it:
   choices orphan is dropped and falls back to what is stored; a stored
   value its moved dependency no longer offers is held unanswered, shown
   on the empty option, and listed in `stale`; and the reading of a select
-  (the [empty option rule](decisions.md#the-empty-option-rule), a value
-  no longer offered shown as nothing) and of a key holding nothing (its
+  (a value no longer offered shown as the empty option; why:
+  [decision](decisions.md#the-empty-option-rule)) and of a key holding nothing (its
   default) is the emitter's. A number above a lowered maximum is kept,
   as the server keeps it, and the pipeline refuses it on submit.
 - **Fetch when a dependent is `deferred`.** A key left out for its size
@@ -1837,7 +1840,7 @@ itself. The rule, as `data_surface_react` applies it:
   changes after. With nothing chosen the key is open, as the server
   answers it; a map of keys from the site, which has no deciding key,
   and a fetch that fails, are asked as `refine` is
-  ([decision](decisions.md#a-list-left-out-for-size-is-deferred-not-refined)).
+  (why: [decision](decisions.md#a-list-left-out-for-size-is-deferred-not-refined)).
 - **Ask when a dependent is `refine` or `live`.** Its rule is not in
   the full schema, so the client posts the values to `.../schema`. It also
   asks for anything it cannot settle: a stale value it was handed as
@@ -1874,7 +1877,7 @@ site serves the API (data_surface_react on), and answers
 HTTP client keeps per component; the narrowing tool is the tool door's
 `POST .../schema`, derived beside the write tool only where the
 operation's listing has such a key
-([decision](decisions.md#a-list-left-out-for-size-is-deferred-not-refined)):
+(why: [decision](decisions.md#a-list-left-out-for-size-is-deferred-not-refined)):
 
 | | |
 | --- | --- |

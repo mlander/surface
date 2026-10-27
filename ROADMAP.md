@@ -1385,9 +1385,11 @@ renames sit in A because they are cheapest before new code exists.
     `data_surface_first` byte for byte, a foreign constraint is a comment
     naming the keyword and the key, and a routing or permissions file is
     added to, never replaced ([Generating a resource](docs/generating.md)).
-    Open: a resource with identity in a config entity type; a variant, a
-    mixin or a port read from a schema written as code rather than as a
-    comment.
+    Open: a resource with identity in a config entity type, its identity
+    written as a title and a machine name
+    (`docs/decisions.md#a-machine-name-is-a-computed-identity`); a
+    variant, a mixin or a port read from a schema written as code rather
+    than as a comment.
 23. **The site's catalog.** DONE 2026-10-24
     (`docs/decisions.md#the-catalog-is-the-sites-live-map`,
     `docs/catalog-command.md`). `drush surface:catalog` lists every
@@ -1460,6 +1462,21 @@ renames sit in A because they are cheapest before new code exists.
     operation; a gate per item inside an item; the tool listing's
     sentence on a gated list says "locked or left out" where a gate
     refuses.
+
+28. **References in config, carried forward.** Open after 2026-10-27
+    (`docs/decisions.md#a-config-object-stores-a-reference-by-uuid`,
+    `docs/decisions.md#a-layout-is-the-storages-one-word-on-its-shape`).
+    A content entity referenced from config is stored by uuid and the
+    wire stays the id; a storage's layout is what the schema check and
+    the generator read. What those two left open: a site default in
+    `data_surface.defaults` for a content reference key holds an id, so
+    it deploys as badly as a stored id did, and should be a uuid the
+    build resolves; the keys of an entry from the site (`addEach`,
+    `attachEach`) are not translated; an alter's layout on a config
+    object's mount says nothing to the check or the generator; a config
+    entity resource has no id-to-uuid conversion helper; and a config
+    entity saved by a path other than the storage drops the reference
+    dependencies the storage adds until the next save through it.
 
 ## Maintenance
 

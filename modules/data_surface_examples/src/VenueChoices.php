@@ -9,13 +9,15 @@ use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\data_surface_examples\Entity\EventVenue;
 
 /**
- * The venues and rooms an event may be held in: example 15's entities.
+ * The rooms an event may be held in: those of example 15's venues.
  *
- * The enabled venues, lighter first, and their rooms in the order each
- * venue lists them, read under the venues' list tag, so a venue added,
- * changed or disabled is in every list at the next request. Example 2's
- * venue and room are chosen from them, through EventVenueOptions and
- * EventVenueRoomOptions, which read the constraints the keys declare.
+ * Every venue's rooms, the venues lighter first and each venue's rooms in
+ * the order it lists them, read under the venues' list tag, so a venue
+ * added, changed or removed is in the list at the next request. Example
+ * 2's room is chosen from them, through EventVenueRoomOptions, which reads
+ * the constraint the room declares. Every venue, enabled or not, since the
+ * venue is a reference whose candidates are core's selection's, which
+ * lists every venue.
  */
 final class VenueChoices {
 
@@ -30,16 +32,6 @@ final class VenueChoices {
   ) {}
 
   /**
-   * Gets the venues an event may be held in.
-   *
-   * @return array<string, string>
-   *   Their names, by machine name.
-   */
-  public function venues(): array {
-    return array_map(static fn (EventVenue $venue): string => (string) $venue->label(), $this->enabled());
-  }
-
-  /**
    * Gets the rooms an event may be held in.
    *
    * @param string|null $venue
@@ -50,7 +42,7 @@ final class VenueChoices {
    */
   public function rooms(?string $venue = NULL): array {
     $rooms = [];
-    foreach ($this->enabled() as $id => $entity) {
+    foreach ($this->venues() as $id => $entity) {
       if ($venue !== NULL && $id !== $venue) {
         continue;
       }
@@ -62,7 +54,7 @@ final class VenueChoices {
   }
 
   /**
-   * Says what the lists are read from.
+   * Says what the list is read from.
    *
    * @return \Drupal\Core\Cache\CacheableMetadata
    *   The venues' list tag.
@@ -72,13 +64,13 @@ final class VenueChoices {
   }
 
   /**
-   * Loads the enabled venues, lighter first.
+   * Loads the venues, lighter first.
    *
    * @return array<string, \Drupal\data_surface_examples\Entity\EventVenue>
    *   The venues, by machine name.
    */
-  protected function enabled(): array {
-    $venues = array_filter($this->entityTypeManager->getStorage('event_venue')->loadMultiple(), static fn ($venue): bool => $venue instanceof EventVenue && $venue->status());
+  protected function venues(): array {
+    $venues = array_filter($this->entityTypeManager->getStorage('event_venue')->loadMultiple(), static fn ($venue): bool => $venue instanceof EventVenue);
     uasort($venues, [EventVenue::class, 'sort']);
     return $venues;
   }

@@ -107,7 +107,7 @@ trait DataSurfaceHostFormTrait {
   protected function buildDataSurfaceForm(array $form, FormStateInterface $form_state): array {
     $surface = $this->getDataSurface();
     $builder = $this->surfaceFormBuilder();
-    $values = $this->surfaceFormValues($surface, $this->storedSurfaceValues($surface), $form_state);
+    $values = $this->surfaceFormValues($surface, $surface->withDefaults($this->storedSurfaceValues($surface)), $form_state);
     // Merged through the builder rather than with a plain union: the
     // host's fragment is the host's element, and a union would hand the
     // data surface's container type, attributes and tree flag to it.

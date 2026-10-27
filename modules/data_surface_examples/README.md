@@ -199,14 +199,29 @@ only when its context needs more.
 final class RegistrationStep1Resource implements ResourceInterface {
 
   /**
+   * The event title key.
+   */
+  public const TITLE = 'title';
+
+  /**
+   * The capacity key.
+   */
+  public const CAPACITY = 'capacity';
+
+  /**
+   * The registration open key.
+   */
+  public const OPEN = 'open';
+
+  /**
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('title', 'string', t('Event title'))
+    $inputs->add(self::TITLE, 'string', t('Event title'))
       ->setRequired(TRUE);
-    $inputs->add('capacity', 'integer', t('Capacity'), default: 50)
+    $inputs->add(self::CAPACITY, 'integer', t('Capacity'), default: 50)
       ->addConstraint('Range', ['min' => 1, 'max' => 1000]);
-    $inputs->add('open', 'boolean', t('Registration open'), default: TRUE);
+    $inputs->add(self::OPEN, 'boolean', t('Registration open'), default: TRUE);
   }
 
 }
@@ -283,7 +298,7 @@ of code, counted without blank lines or comments:
 
 | File | What it is | Lines |
 | --- | --- | --- |
-| [`modules/data_surface_examples/src/Resource/RegistrationStep1Resource.php`](src/Resource/RegistrationStep1Resource.php) | the resource: three keys, each with what it allows, and the operation that asks for them | 15 |
+| [`modules/data_surface_examples/src/Resource/RegistrationStep1Resource.php`](src/Resource/RegistrationStep1Resource.php) | the resource: three keys, each with what it allows, and the operation that asks for them | 18 |
 | [`modules/data_surface_examples/src/Storage/RegistrationStep1Storage.php`](src/Storage/RegistrationStep1Storage.php) | the storage: names the config object | 3 |
 | [`modules/data_surface_examples/data_surface_examples.routing.yml`](data_surface_examples.routing.yml), entry `data_surface_examples.step1` | the route: the generic operation form, serving the resource | 8 |
 | [`modules/data_surface_examples/config/schema/data_surface_examples.schema.yml`](config/schema/data_surface_examples.schema.yml), entry `data_surface_examples.registration_step1` | the config schema, generated from the class | 21 |
@@ -313,26 +328,53 @@ declared after the room it depends on.
 final class RegistrationStep2Resource implements ResourceInterface {
 
   /**
+   * The event title key.
+   */
+  public const TITLE = 'title';
+
+  /**
+   * The registration open key.
+   */
+  public const OPEN = 'open';
+
+  /**
+   * The venue key.
+   */
+  public const VENUE = 'venue';
+
+  /**
+   * The room key.
+   */
+  public const ROOM = 'room';
+
+  /**
+   * The capacity key.
+   */
+  public const CAPACITY = 'capacity';
+
+  /**
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('title', 'string', t('Event title'))
+    $inputs->add(self::TITLE, 'string', t('Event title'))
       ->setRequired(TRUE);
-    $inputs->add('open', 'boolean', t('Registration open'), default: TRUE);
-    $inputs->add('venue', 'string', t('Venue'))
-      ->setRequired(TRUE)
-      ->addConstraint('EventVenue');
-    $inputs->add('room', 'string', t('Room'))
+    $inputs->add(self::OPEN, 'boolean', t('Registration open'), default: TRUE);
+    $inputs->add(self::VENUE, 'entity:event_venue', t('Venue'))
+      ->setRequired(TRUE);
+    $inputs->add(self::ROOM, 'string', t('Room'))
       ->setRequired(TRUE)
       ->addConstraint('EventVenueRoom');
-    $inputs->add('capacity', 'integer', t('Capacity'), default: 50)
+    $inputs->add(self::CAPACITY, 'integer', t('Capacity'), default: 50)
       ->addConstraint('Range', ['min' => 1]);
   }
 
   /**
    * The room must be one of the chosen venue's rooms.
+   *
+   * The parameter $venue watches self::VENUE by its name, the one place the
+   * key is spelled as a string: rename the key, rename the parameter.
    */
-  #[RefinesInput('room')]
+  #[RefinesInput(self::ROOM)]
   public static function roomInVenue(DataDefinitionInterface $room, string $venue): DataDefinitionInterface {
     return $room->addConstraint('RoomOfEventVenue', ['venue' => $venue]);
   }
@@ -341,9 +383,10 @@ final class RegistrationStep2Resource implements ResourceInterface {
    * No more people than the chosen room seats, said under the field.
    *
    * A room that seats no known number changes nothing: the capacity keeps
-   * its lower bound and has no upper one.
+   * its lower bound and has no upper one. The parameter $room watches
+   * self::ROOM by its name.
    */
-  #[RefinesInput('capacity')]
+  #[RefinesInput(self::CAPACITY)]
   public static function capacityOfRoom(DataDefinitionInterface $capacity, string $room): DataDefinitionInterface {
     $seats = Venues::seats($room);
     if ($seats !== NULL && $capacity instanceof DataDefinition) {
@@ -359,22 +402,38 @@ final class RegistrationStep2Resource implements ResourceInterface {
 }
 ```
 
-The venues and their rooms are example 15's venue entities: the venue
-declares `EventVenue` and the room `EventVenueRoom`, two constraints
-whose list is the site's, and the room's refiner adds
-`RoomOfEventVenue` for the venue chosen, a pure function of it. One
-resolver, `EventVenueOptions`, reads all three as the enabled venues or
-their rooms, under the venues' list tag, so a venue added through
-example 15 is offered here at the next request, with no cache rebuild,
-and a venue disabled is not. The resolver says its list is the whole of
-the constraint (`exact: TRUE`), as a `Choice`'s is, so both documents
-state the venues and rooms as the `oneOf` they always did and name
-nothing under `checkedOnServer`: the three venues shipped are the list
-the class held before, so example 2's documents are as they were, byte
-for byte. The seats the capacity reads are still `Venues::seats()`: a
-static refiner reads only what it watches, and cannot say what site
-state it read, so a room example 15 adds is offered with no cap on the
-capacity.
+The venue refers to one of example 15's venue entities, by the data
+type string `entity:event_venue`: it holds the venue's machine name, its
+candidates are core's entity reference selection handler's for the
+account, and both documents mark it `x-surface.reference`. This module
+writes no code for it. The list differs from the one example 2 had
+before the venue was a reference: core's selection for a config entity
+type lists every venue, enabled or not, sorted by name, where the old
+list left a disabled venue out and put the lighter first.
+
+The room is the one rule no stock constraint states, "a room of a venue
+this site has", so it keeps a constraint of its own, `EventVenueRoom`, a
+`Choice` whose list is the site's. Its refiner adds `RoomOfEventVenue`
+for the venue chosen, a pure function of it. One resolver,
+`EventVenueRoomOptions`, reads both as the rooms of every venue, under
+the venues' list tag, so a venue added through example 15 is offered
+here at the next request with no cache rebuild, and its rooms with it.
+The resolver says its list is the whole of the constraint
+(`exact: TRUE`), as a `Choice`'s is, so both documents state the rooms
+as a `oneOf` and name nothing under `checkedOnServer` for the room. The full
+schema states each venue's rooms as a conditional per venue the
+reference lists.
+
+The refiner adds a second constraint rather than `EventVenueRoom` again
+with the venue because core's `addConstraint()` replaces a constraint of
+the same name, and the narrowing check refuses a constraint whose
+options were replaced: it cannot read what an option means. Adding a
+constraint is narrower by its rule. Which constraint to write, and why
+the venue needs none, is in
+[Options](../../docs/options.md#which-constraint-to-write). The seats
+the capacity reads are still `Venues::seats()`: a static refiner reads
+only what it watches, and cannot say what site state it read, so a room
+example 15 adds is offered with no cap on the capacity.
 
 The example ships at Riverside Hall's main hall, so the text under the
 capacity says "Up to 400 for the Main hall." Change the venue to the Old
@@ -410,7 +469,7 @@ the resource uses. It edits the same config object. It chooses from
 Its page says what the two forms share and counts both, from the files,
 the way the landing page counts every class: without the namespace, the
 use statements, blank lines and comments. The twin is **94 lines of
-code**; example 2's resource and its storage are **40**. The storage is
+code**; example 2's resource and its storage are **44**. The storage is
 counted with the resource because the twin names its config object
 itself, which the resource leaves to its storage.
 
@@ -573,13 +632,12 @@ of code, counted without blank lines or comments:
 
 | File | What it is | Lines |
 | --- | --- | --- |
-| [`modules/data_surface_examples/src/Resource/RegistrationStep2Resource.php`](src/Resource/RegistrationStep2Resource.php) | the resource: five keys and two refiners, the rooms by the venue and the capacity by the room | 37 |
-| [`modules/data_surface_examples/src/Plugin/Validation/Constraint/EventVenueConstraint.php`](src/Plugin/Validation/Constraint/EventVenueConstraint.php) | the venue's constraint: a venue an event may be held in, a Choice whose list is the site's | 10 |
-| [`modules/data_surface_examples/src/Plugin/Validation/Constraint/EventVenueRoomConstraint.php`](src/Plugin/Validation/Constraint/EventVenueRoomConstraint.php) | the room's constraint: a room of any of those venues | 14 |
+| [`modules/data_surface_examples/src/Resource/RegistrationStep2Resource.php`](src/Resource/RegistrationStep2Resource.php) | the resource: five keys and two refiners, the rooms by the venue and the capacity by the room; the venue refers to a venue entity | 41 |
+| [`modules/data_surface_examples/src/Plugin/Validation/Constraint/EventVenueRoomConstraint.php`](src/Plugin/Validation/Constraint/EventVenueRoomConstraint.php) | the room's constraint: a room of a venue the site has, a Choice whose list is the site's | 17 |
 | [`modules/data_surface_examples/src/Plugin/Validation/Constraint/RoomOfEventVenueConstraint.php`](src/Plugin/Validation/Constraint/RoomOfEventVenueConstraint.php) | the constraint the room refiner adds: a room of the chosen venue | 6 |
-| [`modules/data_surface_examples/src/Plugin/Validation/Constraint/VenueChoiceValidator.php`](src/Plugin/Validation/Constraint/VenueChoiceValidator.php) | their validator: reads the list, then holds the value to it as Choice does | 14 |
-| [`modules/data_surface_examples/src/Plugin/DataSurfaceOptionsResolver/EventVenueOptions.php`](src/Plugin/DataSurfaceOptionsResolver/EventVenueOptions.php) | the resolver that reads the three constraints as the venues or their rooms, an exact list | 30 |
-| [`modules/data_surface_examples/src/VenueChoices.php`](src/VenueChoices.php) | the venues and rooms an event may be held in: example 15's venue entities, read under their list tag | 28 |
+| [`modules/data_surface_examples/src/Plugin/Validation/Constraint/EventVenueRoomConstraintValidator.php`](src/Plugin/Validation/Constraint/EventVenueRoomConstraintValidator.php) | their validator: reads the rooms, then holds the value to them as Choice does | 14 |
+| [`modules/data_surface_examples/src/Plugin/DataSurfaceOptionsResolver/EventVenueRoomOptions.php`](src/Plugin/DataSurfaceOptionsResolver/EventVenueRoomOptions.php) | the resolver that reads both constraints as the rooms, an exact list | 30 |
+| [`modules/data_surface_examples/src/VenueChoices.php`](src/VenueChoices.php) | the rooms an event may be held in: those of example 15's venue entities, read under their list tag | 25 |
 | [`modules/data_surface_examples/src/Venues.php`](src/Venues.php) | the seats of each room, which the capacity reads, beside the fixed lists of venues and rooms example 3 and the classic twin choose from | 27 |
 | [`modules/data_surface_examples/src/Storage/RegistrationStep2Storage.php`](src/Storage/RegistrationStep2Storage.php) | the storage: names the config object | 3 |
 | [`modules/data_surface_examples/data_surface_examples.routing.yml`](data_surface_examples.routing.yml), entry `data_surface_examples.step2` | the route | 8 |
@@ -1121,7 +1179,7 @@ tool runs (types, the keys it requires, its nesting) and the pipeline
 holds it to every rule, against the definitions the values sent narrow,
 so a value outside the listing's list is answered with the list that
 applies rather than refused with none
-([decision](../../docs/decisions.md#a-refusal-names-what-it-depends-on)).
+(why: [decision](../../docs/decisions.md#a-refusal-names-what-it-depends-on)).
 
 ### Files
 
@@ -1820,7 +1878,7 @@ final class ProgramResource implements ResourceInterface {
 ```
 
 Each operation also states how a call behaves
-([An operation states how it behaves](../../docs/decisions.md#an-operation-states-how-it-behaves)).
+(why: [decision](../../docs/decisions.md#an-operation-states-how-it-behaves)).
 Configuring changes what exists and may be repeated; checking changes
 nothing, `readOnly: TRUE`, so its form at `/surface-examples/10/check`
 and its tool accept and validate and write nothing, and it has no read
@@ -2247,8 +2305,7 @@ components it names under `expected`, by id or by a tag a component lists
 under `tags`, and no component for an empty list; `minItems` and
 `maxItems` bound the list, and a `maxItems` of 1 leaves no list. Slots
 nest three deep, and a slot at that depth holds text alone
-([A slot holds text, a component, or
-components](../../docs/decisions.md#a-slot-holds-text-a-component-or-components)).
+(why: [decision](../../docs/decisions.md#a-slot-holds-text-a-component-or-components)).
 
 The module ships four components, so the page holds something whatever
 the site's themes provide: a card, a hero, a call to action and a
@@ -2398,9 +2455,9 @@ in each `deferred`; the full schema fetched with a component chosen,
 states that component's defs exactly, and so does the schema for these
 answers. The React page fetches it once per component chosen, and the
 tool listing names that fetch beside the narrowing tool
-([decision](../../docs/decisions.md#a-list-left-out-for-size-is-deferred-not-refined)). The full schema went from 3 MB and 2,465 defs to 18 KB there,
+(why: [decision](../../docs/decisions.md#a-list-left-out-for-size-is-deferred-not-refined)). The full schema went from 3 MB and 2,465 defs to 18 KB there,
 and the tool's definition from 1.6 MB to 12 KB
-([decision](../../docs/decisions.md#a-budget-for-what-the-site-decides)).
+(why: [decision](../../docs/decisions.md#a-budget-for-what-the-site-decides)).
 The props in the full schema, past the limit:
 
 ```json
@@ -2727,8 +2784,7 @@ below it over AJAX, read from its schema; choose another and they are
 that component's. Without JavaScript the props are drawn for what is
 stored, so a component whose props require something is refused on the
 first save, and its props are there on the block's form once it is
-saved ([A plugin host cannot overlay a full
-submission](../../docs/decisions.md#a-plugin-host-cannot-overlay-a-full-submission)).
+saved (why: [decision](../../docs/decisions.md#a-plugin-host-cannot-overlay-a-full-submission)).
 
 With all three modules on, whichever came last places two blocks
 through the placement resource's create operation, with the values of the
@@ -2774,7 +2830,7 @@ drush tool:run data_surface:block.placement:create --uid=1 --input='{"values":{"
 ```
 1. The Spotlight block placed through create, made again: refused for the machine name it took
 Failed: The values were refused:
-/id: The machine name data_surface_examples_spotlight is already in use: choose another.
+/id: A block named data_surface_examples_spotlight already exists.
 ```
 
 ```bash
@@ -2784,7 +2840,7 @@ drush tool:run data_surface:block.placement:create --uid=1 --input='{"values":{"
 ```
 2. The Tonight block, a section holding a card, placed through create, made again: refused for the machine name it took
 Failed: The values were refused:
-/id: The machine name data_surface_examples_section is already in use: choose another.
+/id: A block named data_surface_examples_section already exists.
 ```
 
 ```bash
@@ -2855,7 +2911,7 @@ Each page shows both resources as they are now, says whether the module
 is on, and makes the calls below that the module allows. Two ways reach
 the same form, each for the case it fits: the owner declares both
 sources, or another module's alter offers the managed key
-([decision](../../docs/decisions.md#an-extension-is-a-variant-the-site-adds-or-an-alter)).
+(why: [decision](../../docs/decisions.md#an-extension-is-a-variant-the-site-adds-or-an-alter)).
 
 ### The owner's way: a variant the site adds
 
@@ -3506,7 +3562,7 @@ over the collection. Neither is a new kind of operation.
 )]
 #[Operation('create',
   label: new TranslatableMarkup('Add a venue'),
-  description: new TranslatableMarkup('Adds a venue under a machine name the caller chooses, with its capacity, address and rooms; a machine name already in use is refused.'),
+  description: new TranslatableMarkup('Adds a venue under a machine name the caller chooses, or one computed from its name, with its capacity, address and rooms; a machine name already in use is refused.'),
   permission: self::ADMINISTER,
   creates: TRUE,
   idempotent: TRUE,
@@ -3569,13 +3625,9 @@ final class VenueResource implements ResourceInterface {
     $inputs->add('label', 'string', t('Name'))
       ->setRequired(TRUE)
       ->addConstraint('Length', ['max' => 128]);
-    $inputs->add('id', 'string', t('Machine name'))
-      ->setDescription(t('A unique name for the venue: lowercase letters, numbers and underscores.'))
-      ->setRequired(TRUE)
-      ->addConstraint('Regex', [
-        'pattern' => '/^[a-z0-9_]+$/D',
-        'message' => t('The machine name may hold only lowercase letters, numbers and underscores.'),
-      ])
+    $inputs->compute('id', 'machine_name', t('Machine name'),
+      from: ['label'], using: MachineName::class, when: Compute::UNLESS_SENT)
+      ->setDescription(t('A unique name for the venue: lowercase letters, numbers and underscores, computed from its name unless one is given.'))
       ->addConstraint('Length', ['max' => 32]);
     $inputs->compute('slug', 'string', t('Slug'), from: ['label'], using: Slugify::class)
       ->setDescription(t('The name in a link: lowercase letters, numbers and dashes, set when the venue is added.'))
@@ -3603,6 +3655,20 @@ final class VenueResource implements ResourceInterface {
 }
 ```
 
+The machine name is the venue's identity, and a computed key a caller
+may type: `machine_name` is core's config schema type, a string with
+the pattern `^[a-z0-9_]+$` and a Length the venue narrows to 32, and
+`when: Compute::UNLESS_SENT` computes it from the name only when a call
+leaves it out. The stock `MachineName` does what core's machine name
+element does in the browser: "Town Hall" is `town_hall`. A call that
+sends one keeps it, so both documents state the key with
+`x-surface.computed: {"from": ["label"], "when": "unless_sent"}` and no
+`readOnly`, and the add tool offers it. The build holds the machine name
+a create names to one no venue holds, with the stock `DataSurfaceUnique`
+it adds to the identity key, "A venue named town_hall already exists.",
+and the add form draws core's machine name element beside the name. On
+edit the machine name is the venue the page is about, fixed.
+
 The slug is a computed key, `compute()`: a key of the venue, stored and
 read like any other, whose value nobody types. `Slugify` computes it
 from the name, once, when the venue is added (`when:` is
@@ -3624,7 +3690,7 @@ final class Slugify implements ComputesValueInterface {
   /**
    * {@inheritdoc}
    */
-  public static function compute(array $from): mixed {
+  public static function compute(array $from, ?DataDefinitionInterface $key = NULL): mixed {
     $slug = trim((string) preg_replace('/[^a-z0-9]+/', '-', mb_strtolower((string) ($from['label'] ?? ''))), '-');
     return $slug === '' ? NULL : $slug;
   }
@@ -4057,11 +4123,9 @@ data_surface_examples.event_venue.*:
     FullyValidatable: ~
   mapping:
     id:
-      type: string
+      type: machine_name
       label: 'Machine name'
       constraints:
-        Regex:
-          pattern: '/^[a-z0-9_]+$/D'
         Length:
           max: 32
     label:
@@ -4301,7 +4365,7 @@ of code, counted without blank lines or comments:
 | File | What it is | Lines |
 | --- | --- | --- |
 | [`modules/data_surface_examples/src/Entity/EventVenue.php`](src/Entity/EventVenue.php) | the entity type: its declaration, its keys and the properties it exports, and no form, list builder or link | 47 |
-| [`modules/data_surface_examples/src/Resource/VenueResource.php`](src/Resource/VenueResource.php) | the resource: a venue by its machine name, added, edited and removed, and the venues listed and reordered; its slug a computed key | 81 |
+| [`modules/data_surface_examples/src/Resource/VenueResource.php`](src/Resource/VenueResource.php) | the resource: a venue by its machine name, computed from its name unless one is given, added, edited and removed, and the venues listed and reordered; its slug a computed key | 77 |
 | [`modules/data_surface_examples/src/Slugify.php`](src/Slugify.php) | the slug's deriver: a pure function of the name, run when a venue is added | 6 |
 | [`modules/data_surface_examples/src/Structure/VenueRoomStructure.php`](src/Structure/VenueRoomStructure.php) | a room: an item of the venue's rooms | 18 |
 | [`modules/data_surface_examples/src/Structure/VenueListingStructure.php`](src/Structure/VenueListingStructure.php) | what the listing takes, a page and a filter, and what it answers, the page and the total | 27 |
@@ -4309,7 +4373,7 @@ of code, counted without blank lines or comments:
 | [`modules/data_surface_examples/src/Structure/VenueOrderStructure.php`](src/Structure/VenueOrderStructure.php) | an item of that list: a venue and its new weight | 12 |
 | [`modules/data_surface_examples/src/Storage/VenueStorage.php`](src/Storage/VenueStorage.php) | the storage: a ConfigEntityStorage, which reads the listing, writes the reorder in one commit, and holds a slug to one venue | 151 |
 | [`modules/data_surface_examples/src/Access/VenueAccess.php`](src/Access/VenueAccess.php) | the access class: a disabled venue is only for an account that administers the venues | 17 |
-| [`modules/data_surface_examples/config/schema/data_surface_examples.schema.yml`](config/schema/data_surface_examples.schema.yml), entry `data_surface_examples.event_venue.*` | the entity type's config schema, generated from the resource | 84 |
+| [`modules/data_surface_examples/config/schema/data_surface_examples.schema.yml`](config/schema/data_surface_examples.schema.yml), entry `data_surface_examples.event_venue.*` | the entity type's config schema, generated from the resource | 82 |
 | [`modules/data_surface_examples/config/install/data_surface_examples.event_venue.riverside.yml`](config/install/data_surface_examples.event_venue.riverside.yml) | Riverside Hall, shipped | 18 |
 | [`modules/data_surface_examples/config/install/data_surface_examples.event_venue.library.yml`](config/install/data_surface_examples.event_venue.library.yml) | the Old Library, shipped | 18 |
 | [`modules/data_surface_examples/config/install/data_surface_examples.event_venue.harbour.yml`](config/install/data_surface_examples.event_venue.harbour.yml) | the Harbour Centre, shipped | 18 |
@@ -4333,8 +4397,11 @@ writes three nodes the calls name: an article, a draft article and a
 page. Uninstalled, it deletes them.
 
 A key that refers to an entity is declared by the data type string of
-what it refers to, and stores the entity's id, as the entity type keeps
-it: an integer for a node or a user, a string for a venue.
+what it refers to, and every door sends and answers the entity's id, as
+the entity type keeps it: an integer for a node or a user, a string for
+a venue. The config object stores a node or a user by its uuid, which
+names the same entity on a site the config is deployed to, and a venue
+or a role by its id, its machine name.
 
 <!-- code: ../data_surface_examples_references/src/Resource/SponsorshipResource.php -->
 
@@ -4475,7 +4542,7 @@ of code, counted without blank lines or comments:
 | [`modules/data_surface_examples_references/src/Storage/SponsorshipStorage.php`](../data_surface_examples_references/src/Storage/SponsorshipStorage.php) | the storage: names the config object | 3 |
 | [`modules/data_surface_examples_references/data_surface_examples_references.routing.yml`](../data_surface_examples_references/data_surface_examples_references.routing.yml), entry `data_surface_examples.step16` | the route: the generic operation form, with the examples' panels | 8 |
 | [`modules/data_surface_examples_references/data_surface_examples_references.permissions.yml`](../data_surface_examples_references/data_surface_examples_references.permissions.yml) | its permission, to set the sponsorship | 3 |
-| [`modules/data_surface_examples_references/config/schema/data_surface_examples_references.schema.yml`](../data_surface_examples_references/config/schema/data_surface_examples_references.schema.yml), entry `data_surface_examples_references.sponsorship` | the config schema, generated from the class: each id an integer or a string, as its entity type keeps it | 53 |
+| [`modules/data_surface_examples_references/config/schema/data_surface_examples_references.schema.yml`](../data_surface_examples_references/config/schema/data_surface_examples_references.schema.yml), entry `data_surface_examples_references.sponsorship` | the config schema, generated from the class: a node or a user typed uuid, which is how the object stores it, a venue its id; a bare key two strings | 53 |
 | [`modules/data_surface_examples_references/config/install/data_surface_examples_references.sponsorship.yml`](../data_surface_examples_references/config/install/data_surface_examples_references.sponsorship.yml) | the settings the module ships with | 12 |
 | [`modules/data_surface_examples_references/config/install/user.role.event_sponsorship_editor.yml`](../data_surface_examples_references/config/install/user.role.event_sponsorship_editor.yml) | the role of the account that may not see a draft, which one call is made as | 13 |
 | [`modules/data_surface_examples_references/config/optional/node.type.article.yml`](../data_surface_examples_references/config/optional/node.type.article.yml) | the article bundle, for a site that has none | 10 |
@@ -4483,8 +4550,10 @@ of code, counted without blank lines or comments:
 | [`modules/data_surface_examples_references/src/Hook/SponsorshipHooks.php`](../data_surface_examples_references/src/Hook/SponsorshipHooks.php) | writes the three nodes the calls name once the module is installed | 11 |
 | [`modules/data_surface_examples_references/data_surface_examples_references.install`](../data_surface_examples_references/data_surface_examples_references.install) | deletes them when it is uninstalled | 3 |
 | [`modules/data_surface_examples_references/src/Sponsorship.php`](../data_surface_examples_references/src/Sponsorship.php) | the three nodes: an article, a draft article and a page, their ids kept in State | 40 |
-| [`src/Reference/References.php`](../../src/Reference/References.php) | what a reference key is: its definition, core's selection handler for its candidates, the limit and the lookup; the main module's | 182 |
-| [`src/Reference/EntityReferenceStructure.php`](../../src/Reference/EntityReferenceStructure.php) | the two parts of a bare entity key, and the refiner that narrows its id to the entity type chosen; the main module's | 46 |
+| [`modules/data_surface_examples_references/data_surface_examples_references.post_update.php`](../data_surface_examples_references/data_surface_examples_references.post_update.php) | stores as uuids the ids a site stored before the object stored uuids | 6 |
+| [`src/Reference/References.php`](../../src/Reference/References.php) | what a reference key is: its definition, core's selection handler for its candidates, the limit and the lookup; the main module's | 234 |
+| [`src/Reference/EntityReferenceStructure.php`](../../src/Reference/EntityReferenceStructure.php) | the two parts of a bare entity key, and the refiner that narrows its id to the entity type chosen; the main module's | 49 |
+| [`src/Reference/ReferenceStorageLayout.php`](../../src/Reference/ReferenceStorageLayout.php) | how a config storage keeps a reference to content: by uuid, read back as the id; the main module's | 355 |
 | [`src/Plugin/Validation/Constraint/ValidReferenceConstraint.php`](../../src/Plugin/Validation/Constraint/ValidReferenceConstraint.php) | the id's constraint, core's ValidReference for a key that holds one id; the main module's | 20 |
 | [`src/Plugin/Validation/Constraint/ReferenceableTypeConstraint.php`](../../src/Plugin/Validation/Constraint/ReferenceableTypeConstraint.php) | the entity type's constraint, which the filters are options of; the main module's | 17 |
 | [`src/Plugin/DataSurfaceOptionsResolver/ReferenceOptions.php`](../../src/Plugin/DataSurfaceOptionsResolver/ReferenceOptions.php) | the resolver that lists the candidates up to the limit; the main module's | 39 |
@@ -4809,8 +4878,8 @@ of code, counted without blank lines or comments:
 Every code block above is the file it names, from its first attribute
 or its class line to its closing brace, and `ExamplesReadmeTest` fails
 when one drifts, and so does the component example 12 quotes. Each
-example's Files table is its list in `Series`, the one its page and the
-landing page's reading order are drawn from, and `ExampleFilesTest`
+example's Files table is its list in `Series`, the one its page and its
+line on the landing page are drawn from, and `ExampleFilesTest`
 fails when a table and the list differ, or the list and the module. The Drush
 commands and answers of examples 7 to 17 are asserted by
 `ExamplesConceptsToolTest`, and example 15's config schema entry is the
@@ -4829,7 +4898,7 @@ Drush commands are checked against `ExampleCalls`.
 | `Kernel\ExamplesTodayPanelTest` | The second panel under examples 1 to 3: its two documents and its table, row by row; its rows read from the resource's full schema, so the pricing, the venue and what is stored leave every row and both documents as they were; example 4's keys on the resource's side only; the classic twins' pages, example 2's with its two line counts. |
 | `Unit\ExamplesReadmeTest` | This page against the files it quotes, its Drush commands, and the two line counts it states for example 2's twin. |
 | `Unit\ExampleFilesTest` | Each example's files in `Series`: every one there, every resource, storage, structure, shape, provider, access class, alter, component, route, config schema entry and shipped settings file of the examples listed by one example, what a listed class names listed with it or before it, each docs page and decision there, the line counts, and each Files table on this page the list's. |
-| `Functional\ExamplesRoutesTest` | Every route answers an administrator and refuses anonymous; the landing page; both panels under example 3, and a save through it; each classic twin's page with its two documents, and a save through it; example 2's twin linked from the landing page with its line counts, and its page saying them; the Files panel of examples 1 to 5, the twins included, each file linked with its lines of code and a short one shown whole; the landing page's reading order, one row per example from `Series`. |
+| `Functional\ExamplesRoutesTest` | Every route answers an administrator and refuses anonymous; the landing page; both panels under example 3, and a save through it; each classic twin's page with its two documents, and a save through it; example 2's twin linked from the landing page with its line counts, and its page saying them; the Files panel of examples 1 to 5, the twins included, each file linked with its lines of code and a short one shown whole; under each example on the landing page, what it introduces, where it is explained, the decision and the file count, one line per example from `Series`. |
 | `Functional\ExamplesStep2ClassicTest` | Example 2 and its twin posted the same answers without JavaScript: a room of another venue refused on the room by both, a capacity beyond the room's seats and one below 1 refused by both in the same words, and a valid set stored identically by each. |
 | `FunctionalJavascript\ExamplesStep2ClassicAjaxTest` | Example 2's twin in a browser: a new venue swaps the room's options and leaves it on "- Select -" with nothing stored changed, a room describes the capacity, the venue moved back shows the stored room again, and a save after a move writes the new venue and room. |
 | `FunctionalJavascript\ExamplesAjaxRefreshTest` | In a browser: example 2's venue replaces the room and the capacity and leaves the venue the same node, the orphaned room on its empty option with the stale marker and the capacity with no upper bound; a room then narrows the capacity and loses `- Select -`. Example 3's paid pricing swaps the note for a price and a currency, and leaves the second panel's table and its two documents as they were. |
@@ -4845,7 +4914,7 @@ Drush commands are checked against `ExampleCalls`.
 | `Kernel\ReferenceKeysTest` | Example 16: the three spellings and what each builds; both documents of the sponsorship pinned whole under the limit and past it, under `tests/fixtures/references/`; the candidates the account's, cached by what they read; the refusals, in one message; the lookup and what it leaves out; the tool listing's enum and the sentence naming the lookup; the OpenAPI document's lookup; the page's panel. |
 | `Kernel\RetitleExampleTest` | Example 17: the module writes its three pages and its two roles, and deletes the pages when uninstalled; both documents of the retitle pinned whole under `tests/fixtures/retitle/`, the list marked `live` in the full schema alone; the tool listing's permission, its description and the sentence on the list; the rewriter the same every time, and again on what it wrote; the page's form and panel, the gates, the calls, and each title put back. |
 | `Functional\RetitleFormTest` | Example 17 through its form and over HTTP: anonymous refused; an account that may edit no page refused on its page, nothing written; the retitler's save written, and the page then making its calls as dry runs; `PATCH` refused with a 422 per item, a dry run answering the titles it would write, a write answering what it wrote, and the titles read back. |
-| `Functional\ReferenceKeysFormTest` | Example 16 without JavaScript: a select up to the limit, core's entity autocomplete past it, the id saved either way and refused in the constraint's words; the lookup answering, refusing an account without the permission and leaving the draft out for one that may not see it; the React page told where the lookup is, and the full schema stating a bare key's id per entity type. |
+| `Functional\ReferenceKeysFormTest` | Example 16 without JavaScript: a select up to the limit, core's entity autocomplete past it, the article saved by its uuid either way and drawn back as its id, and refused in the constraint's words; the lookup answering, refusing an account without the permission and leaving the draft out for one that may not see it; the React page told where the lookup is, and the full schema stating a bare key's id per entity type. |
 | `Functional\ExamplesConceptsRoutesTest` | Every route of examples 7 to 12 and 14 answers an administrator and refuses anonymous; the landing page lists them; each page shows its panel and its Files panel and saves through its form; example 10's check writes nothing. Example 13 refuses anonymous, says to enable its two modules, then, with them on, shows its parts and the calls' answers, and draws the Spotlight card and the Tonight section below on its page alone; its Files panel, the modules on or off. |
 | `Kernel\ExamplesExtensionTest` | Example 14 with the module that manages keys off, then on: both resources' full schemas, whole; the one source stated as `const` and drawn fixed, then two; the second source and the managed key there with no cache rebuild, in the documents and the tool; a pasted key kept across a switch to the managed key and back, and the config schema each source's stored value holds to; the read tool leaving the pasted key out and naming the managed key; the refusals, a pasted key sent while the managed source is chosen, a pasted key beside a managed key on the webhook, a key the site does not manage; the webhook's pasted key back with its value once the module is off; and this page quoting the documents, the gap and the lock it does not ship. |
 | `Functional\ExamplesExtensionFormTest` | Example 14 through its forms without JavaScript: the one source drawn as its label and no select, then a select of two; the mailer's pasted key saved, the managed key chosen and the pasted source chosen back with nothing typed, the key kept; the webhook's pasted box gone once a managed key is saved, and back when the module is off. |

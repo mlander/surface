@@ -51,6 +51,10 @@
                                 {
                                     "constraint": "Regex",
                                     "message": "The machine name may hold only lowercase letters, numbers, underscores and periods, and may not start with a period."
+                                },
+                                {
+                                    "constraint": "DataSurfaceUnique",
+                                    "message": "Refused when a block named this already exists."
                                 }
                             ],
                             "patternMessage": "The machine name may hold only lowercase letters, numbers, underscores and periods, and may not start with a period."

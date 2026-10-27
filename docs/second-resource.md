@@ -105,10 +105,20 @@ use Drupal\data_surface_first\Storage\StoreStorage;
 final class StoreResource implements ResourceInterface {
 
   /**
+   * The country key.
+   */
+  public const COUNTRY = 'country';
+
+  /**
+   * The region key.
+   */
+  public const REGION = 'region';
+
+  /**
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('country', 'string', t('Country'), default: 'CA')
+    $inputs->add(self::COUNTRY, 'string', t('Country'), default: 'CA')
       ->setRequired(TRUE)
       ->addConstraint('LabeledChoice', [
         'choices' => [
@@ -116,7 +126,7 @@ final class StoreResource implements ResourceInterface {
           'US' => t('United States'),
         ],
       ]);
-    $inputs->add('region', 'string', t('Region'), default: 'CA-ON')
+    $inputs->add(self::REGION, 'string', t('Region'), default: 'CA-ON')
       ->setRequired(TRUE)
       ->addConstraint('LabeledChoice', [
         'choices' => self::regions('CA') + self::regions('US'),
@@ -125,8 +135,11 @@ final class StoreResource implements ResourceInterface {
 
   /**
    * The region must be one of the chosen country's.
+   *
+   * The parameter $country watches self::COUNTRY by its name, the one place
+   * the key is spelled as a string: rename the key, rename the parameter.
    */
-  #[RefinesInput('region')]
+  #[RefinesInput(self::REGION)]
   public static function regionOfCountry(DataDefinitionInterface $region, string $country): DataDefinitionInterface {
     return $region->addConstraint('LabeledChoice', [
       'choices' => self::regions($country),
@@ -165,12 +178,16 @@ final class StoreResource implements ResourceInterface {
 any of the six regions. It never reads another key. The dependency is
 the method below it:
 
-- **`#[RefinesInput('region')]`** marks a refiner of `region`, a static
-  method like everything else on the class.
+- **`#[RefinesInput(self::REGION)]`** marks a refiner of `region`, a
+  static method like everything else on the class. The key is named by
+  its constant, as on the first page.
 - **Its first parameter is the key's definition**; each one after it is
   a key it watches, matched by name. `string $country` watches
   `country`, so the method runs once `country` has a value, and is handed
-  that value. The signature is the whole dependency declaration.
+  that value. The signature is the whole dependency declaration. The
+  parameter is the one place the key is named without its constant, so
+  its name must match the value of `self::COUNTRY`, `'country'`, and a
+  rename changes both; the method's docblock says so.
 - **It may only narrow.** The answer replaces the six regions with the
   chosen country's three, which is fewer; an answer that added a region
   not declared, or dropped the constraint, would be refused the moment it

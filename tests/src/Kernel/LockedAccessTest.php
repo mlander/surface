@@ -7,6 +7,7 @@ namespace Drupal\Tests\data_surface\Kernel;
 use Drupal\Component\Render\PlainTextOutput;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\Pipeline\Violation;
+use Drupal\data_surface\ResourceBuild\Gating;
 use Drupal\data_surface\ResourceBuild\Resources;
 use Drupal\data_surface\ResourceBuild\ResourcesInterface;
 use Drupal\data_surface_resource_test\Resource\Gallery\GalleryResource;
@@ -302,10 +303,12 @@ class LockedAccessTest extends DataSurfaceKernelTestBase {
   public function testChildrenAnswerOnlyThroughVariants(): void {
     $resources = $this->resources();
     $this->assertInstanceOf(Resources::class, $resources);
-    $may = new \ReflectionMethod(Resources::class, 'childrenMayAnswer');
+    // What may answer is the access phase's to say.
+    $gating = new \ReflectionProperty(Resources::class, 'gating');
+    $may = new \ReflectionMethod(Gating::class, 'childrenMayAnswer');
     $registry = $this->container->get('data_surface.resource_registry');
     // The code lock is a variant with an access class.
-    $this->assertTrue($may->invoke($resources, $registry->getDefinition(CabinetResource::class)));
+    $this->assertTrue($may->invoke($gating->getValue($resources), $registry->getDefinition(CabinetResource::class)));
 
     // Without this module, the access classes left are none of a variant's,
     // and the one variant answered for is the gallery's oil finish, by an
@@ -329,8 +332,8 @@ class LockedAccessTest extends DataSurfaceKernelTestBase {
     }
     $this->assertSame(['resource_test.gallery.finish.oil'], $answered);
     $this->assertNull($registry->getDefinition(OilFinishStructure::class)->access, 'Answered for by an alter, with no access class.');
-    $this->assertTrue($may->invoke($resources, $registry->getDefinition(GalleryResource::class)));
-    $this->assertFalse($may->invoke($resources, $registry->getDefinition(OilFinishStructure::class)), 'Nothing but itself answers.');
+    $this->assertTrue($may->invoke($gating->getValue($resources), $registry->getDefinition(GalleryResource::class)));
+    $this->assertFalse($may->invoke($gating->getValue($resources), $registry->getDefinition(OilFinishStructure::class)), 'Nothing but itself answers.');
   }
 
   /**

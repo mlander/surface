@@ -12,9 +12,12 @@ use Drupal\Core\Entity\EntityStorageInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslationInterface;
+use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\Pipeline\StorageViolationsException;
 use Drupal\data_surface\Pipeline\Violation;
 use Drupal\data_surface\Pipeline\ViolationSet;
+use Drupal\data_surface\Reference\ReferenceDependencies;
+use Drupal\data_surface\Reference\ReferenceStorageLayout;
 use Drupal\data_surface\Resource\DeletableStorageInterface;
 use Drupal\data_surface\Resource\HeldToConfigSchemaInterface;
 use Drupal\data_surface\Resource\KnowsClearableKeysInterface;
@@ -47,14 +50,20 @@ use Drupal\Core\Session\AccountInterface;
  *   creates, so a new thing starts from what the resource declares.
  * - prepare() builds the entity it would save, unsaved: a copy of the
  *   one the context names, or a new one under the id the values carry,
- *   refused when that id is taken. It calculates the dependencies the
+ *   refused when that id is taken (which DataSurfaceUnique, asking
+ *   exists(), refuses first at every door). It calculates the dependencies the
  *   entity would save with and holds the whole entity to its config
  *   schema, which for a config entity is its validation, filing each
  *   violation under the key that owns the property. It returns the
  *   entity's exported array and writes nothing.
  * - commit() saves exactly that array, the uuid the rehearsal handed out
  *   included, so what was previewed is what is stored. The pipeline
- *   calls it only when something moved.
+ *   calls it only when something moved. The engine adds to the array the
+ *   config dependencies of what the keys refer to (a config entity under
+ *   `config`, a content entity as `<type>:<bundle>:<uuid>` under
+ *   `content`), and the save keeps them.
+ * - A key that refers to a content entity arrives as its uuid, which the
+ *   engine translates (ReferenceStorageLayout).
  * - prepareDelete() and delete() remove the entity the context names.
  * - mayClear() and widerThanSchema() read the entity's config schema,
  *   `<config prefix>.*`, for the keys mapped to a property.
@@ -205,6 +214,15 @@ abstract class ConfigEntityStorage implements DeletableStorageInterface, KnowsCl
   /**
    * {@inheritdoc}
    *
+   * Each reference to a content entity, stored by uuid.
+   */
+  public function translatedKeys(DataSurfaceInterface $built): array {
+    return ReferenceStorageLayout::storedSchemaOf($built);
+  }
+
+  /**
+   * {@inheritdoc}
+   *
    * By core's rule, read from the entity's schema: in a fully validatable
    * one, a property it does not call nullable always holds a value. A key
    * stored otherwise is not known here.
@@ -253,7 +271,12 @@ abstract class ConfigEntityStorage implements DeletableStorageInterface, KnowsCl
       $key = $this->idKey();
       $id = $values[$key] ?? NULL;
       if (is_string($id) && $id !== '' && $this->storage()->load($id) !== NULL) {
-        $violations[] = new Violation($key, '', $this->t('The machine name @id is already in use: choose another.', ['@id' => $id]), Violation::TAKEN);
+        // What DataSurfaceUnique refuses before this runs, in its words,
+        // for a caller of prepare() that skipped validation.
+        $violations[] = new Violation($key, '', $this->t('A @thing named @id already exists.', [
+          '@thing' => $this->singularLabel(),
+          '@id' => $id,
+        ]), Violation::TAKEN);
       }
       $entity = $this->create($values);
     }
@@ -270,6 +293,25 @@ abstract class ConfigEntityStorage implements DeletableStorageInterface, KnowsCl
       throw new StorageViolationsException(new ViolationSet($violations));
     }
     return $record;
+  }
+
+  /**
+   * {@inheritdoc}
+   *
+   * Whether the entity type holds an entity under the id the context
+   * knows.
+   */
+  public function exists(OperationContext $context): bool {
+    return $this->entity($context) !== NULL;
+  }
+
+  /**
+   * {@inheritdoc}
+   *
+   * The entity type's singular label: "venue", "content type".
+   */
+  public function singularLabel(): string|\Stringable {
+    return $this->entityType()->getSingularLabel();
   }
 
   /**
@@ -291,11 +333,13 @@ abstract class ConfigEntityStorage implements DeletableStorageInterface, KnowsCl
       $entity = $this->create(array_intersect_key($prepared, array_flip([$id_key, 'uuid'])) + $prepared);
     }
     // Its identity and uuid are its own, and its dependencies are
-    // recalculated on save.
+    // recalculated on save: the ones the rehearsal found for what its keys
+    // refer to are added after (ReferenceDependencies).
     foreach (array_diff_key($prepared, array_flip([...static::OWNED, $id_key])) as $property => $value) {
       $entity->set((string) $property, $value);
     }
-    $entity->save();
+    $referenced = array_intersect_key(is_array($prepared['dependencies'] ?? NULL) ? $prepared['dependencies'] : [], array_flip(ReferenceDependencies::TYPES));
+    ReferenceDependencies::during($entity, $referenced, static fn () => $entity->save());
   }
 
   /**

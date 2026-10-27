@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace Drupal\data_surface\ResourceBuild;
 
+use Drupal\Core\Config\TypedConfigManagerInterface;
 use Drupal\Core\DependencyInjection\ClassResolverInterface;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
+use Drupal\Core\TypedData\TypedDataManagerInterface;
 use Drupal\data_surface\ConstraintMessages;
 use Drupal\data_surface\DataSurface;
 use Drupal\data_surface\DefinitionMetadata;
@@ -39,10 +41,14 @@ final class Shapes {
    * @param \Drupal\Core\DependencyInjection\ClassResolverInterface $classResolver
    *   What returns each alter as the autowired service discovery
    *   registered.
+   * @param \Drupal\Core\Config\TypedConfigManagerInterface|null $typedConfig
+   *   The config schema, whose data types a key may be declared with;
+   *   NULL for none.
    */
   public function __construct(
     protected readonly ResourceRegistry $registry,
     protected readonly ClassResolverInterface $classResolver,
+    protected readonly ?TypedConfigManagerInterface $typedConfig = NULL,
   ) {
   }
 
@@ -99,6 +105,69 @@ final class Shapes {
   public static function unaltered(string $shape): DataDefinition {
     $id = static::idOf($shape);
     return static::marked($id, static::declared($shape, $id));
+  }
+
+  /**
+   * Gets the definition a key of a config schema data type starts from.
+   *
+   * A type core's config schema names and typed data does not, such as
+   * `machine_name`: followed through what it extends to the typed data
+   * type underneath, a string, which the key is, with every constraint
+   * the config schema type states (a `machine_name`'s Regex and Length)
+   * as the key's own, so both documents state them and a reader of either
+   * reads them back. A Regex anchored with `$` is read with `D`, which
+   * narrows it by a final line break only and lets both engines read it.
+   * Only a type that is one value; a mapping or a sequence is a
+   * structure's to declare.
+   *
+   * Decision: see docs/decisions.md#a-machine-name-is-a-computed-identity.
+   *
+   * @param string $type
+   *   The type handed to add().
+   * @param \Drupal\Core\TypedData\TypedDataManagerInterface $typedDataManager
+   *   The typed data manager, which knows the types underneath.
+   *
+   * @return \Drupal\Core\TypedData\DataDefinition|null
+   *   The key's definition, marked with the type; NULL when typed data
+   *   knows the type, or the config schema names no such value.
+   */
+  public function configType(string $type, TypedDataManagerInterface $typedDataManager): ?DataDefinition {
+    if ($typedDataManager->hasDefinition($type) || preg_match('/^[a-z][a-z0-9_]*$/', $type) !== 1) {
+      return NULL;
+    }
+    $typedConfig = $this->typedConfig;
+    if ($typedConfig === NULL) {
+      return NULL;
+    }
+    $raw = $typedConfig->getDefinitions();
+    $base = $type;
+    $seen = [];
+    while (!$typedDataManager->hasDefinition($base)) {
+      $next = $raw[$base]['type'] ?? NULL;
+      if (!is_string($next) || isset($seen[$base]) || preg_match('/^[a-z][a-z0-9_]*$/', $next) !== 1) {
+        return NULL;
+      }
+      $seen[$base] = TRUE;
+      $base = $next;
+    }
+    $definition = $typedDataManager->createDataDefinition($base);
+    if (!$definition instanceof DataDefinition || $definition instanceof ComplexDataDefinitionInterface || $definition instanceof ListDataDefinitionInterface) {
+      return NULL;
+    }
+    $constraints = $typedConfig->getDefinition($type)['constraints'] ?? [];
+    foreach (is_array($constraints) ? $constraints : [] as $name => $options) {
+      if ($name === 'Regex' && is_array($options) && is_string($options['pattern'] ?? NULL) && preg_match('~^/.*\$/([a-zA-Z]*)$~s', $options['pattern'], $match) === 1 && !str_contains($match[1], 'D')) {
+        // Anchored at the very end, as both engines read `$`: PCRE's own
+        // `$` lets a final line break through, which no machine name
+        // holds, and which keeps the pattern out of both documents.
+        // Decision: see docs/decisions.md#a-pattern-both-engines-read-alike.
+        $options['pattern'] .= 'D';
+      }
+      $definition->addConstraint((string) $name, $options);
+    }
+    $declared = DataSurface::deepClone($definition);
+    DefinitionMetadata::setConfigType($definition, $type, $declared);
+    return $definition;
   }
 
   /**

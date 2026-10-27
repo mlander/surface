@@ -446,7 +446,9 @@ its members are declared into is not one; a named scalar shape, a
 the two never share a name. How accepted values are laid out in storage, where that
 differs from how they are asked for, is a **layout**:
 `StorageLayoutInterface`, and `AltersStorageLayoutInterface::storageLayout()`
-for an alter's mount. "Shape" is the named type, of three kinds, and in
+for an alter's mount (and, *added 2026-10-27*, `ConfigObjectStorage::layout()`
+for a config object, [A layout is the storage's one word on its
+shape](#a-layout-is-the-storages-one-word-on-its-shape)). "Shape" is the named type, of three kinds, and in
 code names the third, `#[Shape]`. (`ResourceBlueprint`,
 `ResourceBlueprintAdditions`, `BlueprintAdapterBase`)
 
@@ -529,8 +531,8 @@ Open: a key, or a container, opting out of a shape's alters, as a
 container cannot yet opt out of a structure's; the catalog listing
 shapes and who uses them. (`Resource\Attribute\Shape`,
 `ShapeInterface`, `ResourceBuild\Shapes`, `ShapeBlueprint`,
-`Resources::assertShapesNarrowed()`, `Resources::unshaped()`,
-`DefinitionMetadata::shapeOf()`, `ContractEmitter::named()`, `isPart()`
+`Declaring::assertShapesNarrowed()`, `Attaching::unshaped()`,
+`DefinitionMetadata::shapeOf()`, `PropertySchema::named()`, `isPart()`
 in `app/src/contract.ts`)
 
 ### Variants, not slots
@@ -598,7 +600,26 @@ and `paid`, in the form and both documents.
   owner wanting another order declares the list.
 
 (`Resource\Attribute\Variant::$label`, `DataSurfaceBuilder::attachVariants()`,
-`Resources::assertListNarrowsVariants()`)
+`Attaching::assertListNarrowsVariants()`)
+
+### A page stands without the decisions page
+
+Decided 2026-10-26, from the fresh-eyes runs: the second reader counted
+more than fifteen links from the build pages into this one and could not
+tell which held an answer needed to build and which held history
+([the log](fresh-eyes-2026-10-19.md), entry 13), and the third met "a
+key left out keeps what is stored" as a surprise, since for a key other
+than a list it was stated only here
+([the log](fresh-eyes-2026-10-19b.md), entry 23).
+
+- **The fact is on the task page.** A rule, a default, the cause of a
+  refusal or what a spelling does is stated in a sentence or two where a
+  builder meets it. This page holds the reasons, and a page that cannot
+  be followed without it is fixed on the page.
+- **One form for the link.** A page links an entry as
+  `(why: [decision](decisions.md#...))`, after the fact it explains, so a
+  reader learns once that every such link may be skipped. The README and
+  the documentation index say so.
 
 ## Authoring
 
@@ -625,7 +646,7 @@ runtime refiner, the one kind that may be an instance method (see
 PHP itself refuses a class that implements
 the interface with an instance `defineInputs()`, so discovery names the
 one that dropped the interface to get one past the compiler.
-(`Resources::buildResource()`, `Resources::assertStaticOnResource()`,
+(`Resources::buildResource()`, `Binding::assertStaticOnResource()`,
 `ResourceRegistry::assertResourceClass()`)
 
 Translatable strings in static context use the global `t()`: a
@@ -692,6 +713,137 @@ work unchanged: a method that names the attribute's id is the same
 operation. (`Operation`, `ResourceRegistry::discover()`,
 `OperationDefinition::isBare()`, `Resources::operation()`,
 `OperationFactsTest`)
+
+### A rule is a keyword first, a list second, code last
+
+Decided 2026-10-26, with example 2's venue moved to a reference. Which
+constraint an author writes is a ladder of three steps, taken from the
+top ([Which constraint to write](options.md#which-constraint-to-write)):
+
+- **A stock constraint with data options first.** `Range`, `Length`,
+  `Count`, `UniqueItems`, `NotBlank`, `Regex`, `Email`, `Choice`,
+  `LabeledChoice`: the ones the emitter writes as JSON Schema keywords.
+  Why: a keyword is read by every client. The schema reader turns it
+  back into the constraint, the React page narrows on it with no
+  request, and a tool caller reads it before calling. JSON Schema has a
+  closed set of keywords and a generic validator ignores any other, so
+  a constraint with no keyword tells a client its name and nothing it
+  can check.
+- **A list the site decides second.** A constraint that names a kind,
+  read by a resolver (`PluginExists`, `EntityBundleExists`,
+  `LanguageExists`, `Country`), or the type string `entity:<type>`. Why:
+  the class stays literal and holds no service, the resolver lists for
+  the site, and the schema states the list as a `oneOf` while it is
+  short, looked up or `deferred` past its budget, and a key a static
+  refiner narrows by it stays `enumerated`. Where no stock constraint
+  names the kind, a module writes one per kind with its resolver, as
+  example 2 does for a venue's rooms.
+- **A constraint of the author's own last.** Only for a rule no keyword
+  and no list states: a comparison between two keys, uniqueness against
+  what is stored, a check of site state with a reason of its own. A
+  create's identity held once is no author's: the build adds the stock
+  `DataSurfaceUnique` (*amended 2026-10-26*,
+  [A machine name is a computed identity](#a-machine-name-is-a-computed-identity)). Why
+  last: the schema can only name it under `checkedOnServer`, nothing
+  reads it back, nothing narrows on it in the browser, and a caller
+  learns it when a call is refused. One that is written extends the
+  closest stock constraint, so its validator, refusal and result code
+  come with it. *Amended 2026-10-26:* the demo's
+  `DataSurfaceDemoExtrasUniqueItems` was a step three constraint for a
+  rule JSON Schema has a keyword for, so it moved to step one as the
+  stock `UniqueItems`, written as `uniqueItems: true` and read back.
+
+Example 2's venue was a `Choice` subclass with a validator and a
+resolver of its own; it is `entity:event_venue` now, with no class. Its
+room keeps a constraint, since no stock one names a venue's rooms.
+Rejected: a constraint per resource for every list the site holds,
+which is how example 2 started, because each one is code a reader must
+open to learn what a key allows, where a type string or a stock
+constraint says it.
+(`PropertySchema::STATED`, `PropertySchema::keywords()`,
+`DataSurfaceOptions::isStatedByList()`, `RegistrationStep2Resource`,
+`EventVenueRoomConstraint`, `UniqueItemsConstraint`)
+
+### Our options answer core's question
+
+Decided 2026-10-27. A key's lists answer core's
+`OptionsProviderInterface`: `DataSurfaceOptions::provider($declared,
+$refined)` returns an `OptionsProvider` whose possible values and
+options are the declared definition's list, and whose settable values
+and options are the refined definition's list, or the declared one when
+no refined definition is handed in
+([Core's question](options.md#cores-question)).
+
+- **Possible is the full schema, settable is these answers.** Core
+  separates the values data may hold from the values that may be set in
+  an editing context. The full schema states every value a key may
+  hold, read from no values; the schema for these answers states what
+  the values in hand allow. The two halves and the two documents draw
+  the same line, so each half reads the definition its document reads.
+- **The resolver stays the source.** The provider reads the `OptionSet`
+  the options service answers and adds nothing to it, so the list that
+  validates, the list a form offers, the list each document states and
+  the list core's interface answers are one list. The cacheability that
+  core's interface has no method for is kept on the provider,
+  `cacheability()`, for the doors that cache what they render.
+- **The account is not read.** Core's methods take one to filter by.
+  Here a definition is refined for an account when it is built, so the
+  caller hands in the definition built for that account; reading the
+  account again would be a second answer that could disagree.
+- **A core consumer needs no knowledge of this module.** Anything that
+  reads an `OptionsProviderInterface` reads a key's list from the
+  provider, with no resolver, constraint or `OptionSet` in its code.
+
+The select widget reads its `#options` through the provider, so the
+generated form asks the question in core's words.
+(`Options\OptionsProvider`, `DataSurfaceOptions::provider()`,
+`OptionsWidget::buildElement()`, `OptionsProviderTest`)
+
+### A key is named once, as a constant
+
+Decided 2026-10-27. A class names each of its keys once, as a constant
+in declaration order with a one-line docblock, `public const VENUE =
+'venue';`, and every later mention is the constant: `add(self::VENUE,
+...)`, `#[RefinesInput(self::ROOM)]`, `narrow(self::ROOM)`,
+`Condition::equals(self::VENUE, ...)`
+([Key names](declaring-a-resource.md#key-names)).
+
+- **The question is the editor's.** A key named as a string in five
+  places is five strings: an editor cannot rename it, and find usages
+  finds nothing. A misspelled key is still refused at build, naming it;
+  the constant moves that to the editor, before anything runs, and makes
+  a rename one refactoring.
+- **What it does not solve.** A refiner's parameter is matched to the
+  key it watches by name, `string $venue`, so the name is spelled there
+  and must match the constant's value; the refiners on the second page
+  and in example 2 each say so in a docblock. The generator writes no
+  refiner. Another module's alter names the owner's keys by
+  string too, or by the owner's constant where it chooses to import the
+  class; a rename in the owner is a breaking change for it either way,
+  which the contract diff reports. Nothing on the wire changes: the
+  constant's value is the key.
+- **Who carries it.** The generator writes it in every mode, for the
+  resource and each structure it writes, with a rule for keys whose
+  names would clash ([Key names](generating.md#key-names)). The first two
+  pages and examples 1 and 2 carry it, since they are what an author
+  copies first and what the generator's output is held to
+  ([The generator writes what the first page shows](#the-generator-writes-what-the-first-page-shows)).
+  Examples 3 to 17 keep their strings: each shows one concept, the
+  constants would add a block to every quoted class for no new idea, and
+  a key named as a string still works the same. It is a convention, not
+  a rule the build checks.
+- **Rejected: passing the definition `add()` returns in place of the
+  key** ([the review](reviews-2026-10-20/creative-generalist.md)), which
+  would need the blueprint to resolve an object to its key by identity
+  in every method that takes a key, and leaves attribute arguments as
+  strings, which PHP requires to be constant expressions. A class
+  constant works in all of them with no change to the API, so
+  `PublicSurfaceTest`'s counts stay where they are.
+
+(`Drush\Generators\Resource\ResourceCode::constantNames()`,
+`ResourceGeneratorTest::testKeysAreNamedOnceAsConstants()`,
+`NewsletterResource`, `StoreResource`, `RegistrationStep1Resource`,
+`RegistrationStep2Resource`)
 
 ## Context
 
@@ -810,8 +962,8 @@ way around it: were the handed path to skip the child's access class,
 any parent could open a field its access closed by building the field's
 context itself. An inherited child with no access class is asked
 nothing and stays open.
-(`Resources::invokeChild()`, `Resources::childOperationContext()`,
-`Resources::childAccess()`, `OperationContext::withChild()`)
+(`Declaring::invokeChild()`, `Declaring::childOperationContext()`,
+`Gating::childAccess()`, `OperationContext::withChild()`)
 
 ### A context's id is the operation id
 
@@ -836,7 +988,7 @@ A context constraint naming the key a child is attached at is refused,
 and the message points at `withChild()`. A child is narrowed by its own
 context, which is the one door
 through the wall
-between parent and child. (`Resources::applyContext()`) *Changed
+between parent and child. (`Declaring::applyContext()`) *Changed
 2026-10-24:* starting values, `OperationContext::withDefaults()`, are
 gone, and so is this entry's half about them ([The surface was counted and cut](#the-surface-was-counted-and-cut)).
 
@@ -909,7 +1061,7 @@ each a resource id, a key path and a value.
   the declared default, while the documents of its settings state the
   site's.
 
-(`SiteDefaults`, `Resources::writeSiteDefaults()`, `SiteDefaultsTest`)
+(`SiteDefaults`, `Declaring::writeSiteDefaults()`, `SiteDefaultsTest`)
 
 ### Known keys that are not identity
 
@@ -930,6 +1082,83 @@ that type; a type several entity types satisfy is taken only as an
 object. A guess between entity types would load the wrong thing.
 (`OperationArguments`)
 
+### One context per walk, not a parameter list
+
+The emitter and the build step each walk a structure, and each used to
+hand the same facts from method to method as loose parameters:
+`ContractEmitter::frame()` took twelve, `Binding::bindRefiners()`
+sixteen. Each walk now carries them in one immutable object, passed
+whole.
+
+- **`Contract\Emission`** holds what the walk of one document shares,
+  the cacheability, the stale paths and the defs (objects written to as
+  the walk goes, so every step collects into the same ones), and what is
+  true of the frame being described: its path, the id it was built from,
+  the orphans standing in it, and whether it is a def, locked whole, or
+  stands for every item of a collection. Descending into a child, a
+  variant or a collection item is a `with...()` call that answers a copy.
+  Whether a frame is described for one set of values, and the kinds of
+  refiner it is answered by, follow from the full schema and the def
+  flag, so they are asked of the object and not held.
+- **`ResourceBuild\Build`** holds what one build of a resource or
+  structure needs: the builder, the definition, the context, the
+  ancestry and the owner's frame, how its keys divide (inputs, outputs,
+  children, collections, ports), and the contributor whose refiners and
+  rules are bound now (an alter's module, the keys it extended and
+  mounted, every key any alter mounted, the keys of a structure at its
+  mount, the ports of a mixed-in structure mapped to the owner's keys).
+  A structure mixed in is built by `forMixin()`, a contributor by
+  `forContributor()`.
+
+A reader sees what a walk carries in one place, and not by comparing two
+signatures that differ by one parameter. A core reviewer reads a method
+signature of a few parameters, each saying what that method decides.
+Nothing changed in what is built or emitted: both classes are internal,
+and the documents, the sealed data surfaces and the contract baselines
+are byte for byte what they were. Neither holds a service of the site
+or the request, so neither carries a door-specific thing into a place
+that runs on an operation's behalf
+([No door-specific context](resources.md#no-door-specific-context)).
+(`Contract\Emission`, `ResourceBuild\Build`, `ContractEmitter::frame()`,
+`Binding::bindRefiners()`, `ContractBaselineTest`)
+
+### The build is read by phase
+
+`ResourceBuild\Resources` held the build step's order, its caches and
+every step between, in five thousand lines. It is split by phase, each
+an internal class that `Resources` constructs from the services it
+already has:
+
+- **`Declaring`** answers what the thing declares: its blueprints filled
+  from the class and its alters, the site's defaults, the context's
+  constraints and known identity, and the context a child is invoked in.
+- **`Attaching`** answers what the thing holds: each child, collection,
+  variant, map of keys from the site, structure mixed in and structure at
+  an alter's mount, each built through the whole sequence again in its
+  own frame, its ports wired to the parent's keys.
+- **`Binding`** answers what each contributor says about its keys: the
+  `#[RefinesInput]` methods and the rules declared as data, bound into
+  the builder, the owner's before any alter's.
+- **`Gating`** answers who may ask and what they may see: the
+  permission, the gates an operation borrows, the access classes and the
+  alters that answer access, at the top and at each child. It alone holds
+  the current user, and only its instance methods read it.
+
+`Resources` stays the one service, and `ResourcesInterface` is
+unchanged. It keeps the order (`buildResource()` reads as the sequence of
+phases), the memo within a request and the build cache, with the two
+builds that set the kind of build under way or are kept by it:
+`settleVariant()` and `buildRead()`. A phase that builds a child calls
+back into it.
+
+A reader who asks why a key is locked reads `Gating`, and one who asks
+where a refiner was bound reads `Binding`; neither reads the other
+phases. A core reviewer reviews one phase at a time, its dependencies
+named by its constructor. Nothing changed in what is built: the method
+bodies moved as they were, and the sealed data surfaces, the documents
+and the contract baselines are byte for byte what they were.
+(`Resources`, `Declaring`, `Attaching`, `Binding`, `Gating`)
+
 ## Refinement
 
 ### Gating per key
@@ -940,14 +1169,14 @@ waits for the union. The pattern runs each method once its own siblings
 have values; gating per key is what the engine's refinement edges, the
 form's AJAX rebuild and the discard cascade already ride, and nothing
 shipped has needed finer. Per-method gating is listed in `ROADMAP.md`, after
-the rework, for when a case needs it. (`Resources::bindRefiners()`)
+the rework, for when a case needs it. (`Binding::bindRefiners()`)
 
 ### A refiner that watches nothing
 
 It runs once, at build, after the context is applied; its result is
 held to the narrowing check and is what the data surface advertises. The
 pattern says it "runs once" without saying when; at build is the only
-time that gives every caller the same answer. (`Resources::bindRefiners()`)
+time that gives every caller the same answer. (`Binding::bindRefiners()`)
 
 ### Sibling values are coerced
 
@@ -1006,7 +1235,7 @@ more values on with `extendChoices()`, it is that contribution's
 refiner instead, handed the alter's values only. The engine keeps one
 chain per contribution, so an alter can tighten the owner's values
 without ever being able to take another module's away.
-(`Resources::bindRefiners()`)
+(`Binding::bindRefiners()`)
 
 ### Cacheability on the blueprint
 
@@ -1066,7 +1295,7 @@ config is the plain case), and no declaration alone stops it:
   alters' refiners that only translated to static methods calling
   `t()` and constructing `PluralTranslatableMarkup`; an alter's
   injected service, the honest way to read state, is now only reachable
-  from a runtime refiner. (`Resources::assertStaticUnlessRuntime()`)
+  from a runtime refiner. (`Binding::assertStaticUnlessRuntime()`)
 - **Observational, under `assert()`.** In development and tests a
   static refiner's call runs with the global container replaced by a
   wrapper that throws when asked for any service or parameter but the
@@ -1081,7 +1310,7 @@ config is the plain case), and no declaration alone stops it:
   answer, which catches a counter or a clock that reads no service; and
   a kernel test trait holds every conditional of a document to a fresh
   `refine()` for its values, run over the examples and the fixtures.
-  (`ContractEmitter::answersAgain()`,
+  (`Conditionals::answersAgain()`,
   `Tests\data_surface\Traits\StaticRefinerAgreementTrait`)
 
 None of them proves purity: running a refiner twice proves nothing about
@@ -1096,8 +1325,8 @@ it does not try static state, which a rule cannot tell from a constant
 without false alarms. The broken fixtures, which exist to be refused
 when they run, are ignored by its identifier.
 (`Tests\data_surface\PHPStan\StaticRefinerRule`, `StaticRefinerRuleTest`,
-`RefinesInput`, `Resources::bindRefiners()`, `RuntimeRefiner`,
-`ContractEmitter::frame()`, `ContractEmitter::enumerate()`)
+`RefinesInput`, `Binding::bindRefiners()`, `RuntimeRefiner`,
+`ContractEmitter::frame()`, `Conditionals::enumerate()`)
 
 ### A definition is validated as itself
 
@@ -1263,7 +1492,7 @@ refuses (decided 2026-10-19; until then the parcel fixture carried a
 `courier` with a default so its mount was never empty).
 (`Refinement\DoesNotApply`, `RefinesInputRefiner::invoke()`,
 `DataSurface::refineAgainst()`, `DataSurfacePipeline::accept()`,
-`DataSurfacePipeline::document()`, `ContractEmitter::enumerate()`,
+`DataSurfacePipeline::document()`, `Conditionals::enumerate()`,
 `narrow()` in `app/src/contract.ts`, `AdvertisedSchemaAcceptanceTest`)
 
 ### A rule declared as data
@@ -1431,8 +1660,8 @@ coded and `refine` (they watch a number), so the React page still asks
 on a license change: the stewards depend on the capacity. Phase C item 9
 of the roadmap (dependent effects as data) is this, but `locked`.
 (`Refinement\Condition`, `Refinement\Rule`, `Refinement\DeclaredRefiner`,
-`Resources::bindRules()`, `DataSurface::refinedEntry()`,
-`ContractEmitter::rules()`, `holdsIf()` in `app/src/contract.ts`)
+`Binding::bindRules()`, `DataSurface::refinedEntry()`,
+`Conditionals::rules()`, `holdsIf()` in `app/src/contract.ts`)
 
 ## Alters
 
@@ -1470,7 +1699,7 @@ that answers for it), is refused at a mount; each is open. *Changed for ports: u
 an alter were both refused, an attached structure inside the mount not
 being built.*
 (`ResourceBlueprintAdditions::attach()`, `ResourceBlueprintAdditions::attachList()`,
-`Resources::mountStructure()`, `DataSurface::refineMounted()`)
+`Attaching::mountStructure()`, `DataSurface::refineMounted()`)
 
 ### An alter refines its own mounted key
 
@@ -1484,7 +1713,7 @@ so the form rebuilds and the discard cascade drops that one key rather
 than the whole mount; the mount itself is gated on the union of what
 its keys watch. *Changed for example 4 of the examples, which needed a
 key the alter adds to tighten with the owner's capacity; until then
-such a method was refused.* (`Resources::bindRefiners()`,
+such a method was refused.* (`Binding::bindRefiners()`,
 `RefinesInputRefiner::refineMounted()`, `DefinitionMap::refinementPaths()`)
 
 ### An alter watches its own mounted key
@@ -1509,7 +1738,7 @@ license while the stewards beside it watch the capacity is no cycle.
 *Changed for example 4 of the examples; until then watching any mounted
 key was refused, pending dotted refinement paths, `ROADMAP.md` item 16,
 of which this is the one case the third-party mount needs.*
-(`Resources::assertNotWatchingForeignMount()`, `Resources::mountedWatches()`,
+(`Binding::assertNotWatchingForeignMount()`, `Binding::mountedWatches()`,
 `DataSurface::dependencyValues()`, `DataSurfaceBuilder::edgesOf()`)
 
 ### A storage layout for a mount
@@ -1531,7 +1760,7 @@ anything; typed data's NotNull for the same path is dropped so it is
 said once. No child judges a plain map's properties, and NotNull alone
 passes an empty string and never sees a map that is absent, so a
 mounted key an alter made required would otherwise never be refused.
-(`DataSurfacePipeline::missingInMap()`)
+(`Validating::missingInMap()`)
 
 ### Placement is a describe option
 
@@ -1563,7 +1792,7 @@ placement was chosen over refusing it at build: the owner groups and
 the alter places, neither knowing the other, so a refusal would make an
 owner's arrangement break another module's alter.
 (`BlueprintAdapterBase::assertPlaceable()`,
-`DataSurfaceFormBuilder::placeMounts()`, `DataSurfaceFormBuilder::holding()`)
+`Form\Drawing::placeMounts()`, `Form\Drawing::holding()`)
 
 ### Adding a key twice
 
@@ -1622,7 +1851,7 @@ examples ship both, each for the case it fits.
   stored value the list no longer offers (`managed` after the key module
   is uninstalled) is drawn as a select under the empty option rule, so a
   save that leaves it keeps it. (`DefinitionMetadata::setOneVariant()`,
-  `OptionsWidget::drawsFixed()`, `ContractEmitter::property()`)
+  `OptionsWidget::drawsFixed()`, `PropertySchema::property()`)
 - **A secret survives a switch of variants.** A value written for
   another variant goes when the deciding key moves on
   ([An empty variant is an empty map](#an-empty-variant-is-an-empty-map)).
@@ -1677,7 +1906,7 @@ the credential it chose is not built until the source is offered again.
 A key with no variant declared stays a placeholder and its deciding
 key gains an empty `Choice`, so nothing can be chosen. Refusing the
 whole parent would break it on every site without a variant module.
-(`Resources::variantKeysOf()`)
+(`Attaching::variantKeysOf()`)
 
 ### Derived variants
 
@@ -1713,7 +1942,7 @@ each, at the limit, so its field tools state every field type's
 settings, as before. Why: one idea, a
 list the site decides, had two mechanisms, one named from outside its
 owner and outside the budget ([The surface was counted and cut](#the-surface-was-counted-and-cut)).
-(`FieldSettingsSchemaVariants`, `Resources::variantKeysOf()`)
+(`FieldSettingsSchemaVariants`, `Attaching::variantKeysOf()`)
 
 ### A parent watching a child
 
@@ -1723,7 +1952,7 @@ the key [does not apply](#a-key-that-does-not-apply), which is the
 parent's to say about a key it owns. The pattern says a parent cannot
 refine into a
 child and a child cannot read a parent's value; refusing the watch too
-makes the wall hold both ways. (`Resources::assertWalled()`)
+makes the wall hold both ways. (`Binding::assertWalled()`)
 
 ### A port is a live sibling value
 
@@ -1798,7 +2027,7 @@ first case. Each choice, and why:
 Open: a container opting out of the alters of a structure it attaches,
 which apply wherever it is used; ports on a variant or a
 collection's item, which nothing wires yet. (`Port`, `BlueprintInterface::reads()`,
-`Attachment::bound()`, `Resources::assertWiring()`, `Resources::wirePorts()`,
+`Attachment::bound()`, `Attaching::assertWiring()`, `Attaching::wirePorts()`,
 `DataSurface::refine()`, `ContractEmitter::site()`, `ContractEmitter::mounts()`)
 
 ### A mixin is merged flat
@@ -1917,8 +2146,8 @@ answered conditionals dropped), where `/refine` inlined carries the
 def's too, the same constraints written twice; the Vitest chain for the
 journal leaves the child's step out for it.
 (`BlueprintAdditionsInterface::mixIn()`, `ResourceBlueprint::mixIn()`,
-`Resources::mixIn()`, `Resources::bindMixin()`,
-`Resources::assertMixinsUnnamed()`, `Mixin`, `ContractEmitter::composed()`,
+`Attaching::mixIn()`, `Binding::bindMixin()`,
+`Attaching::assertMixinsUnnamed()`, `Mixin`, `ContractEmitter::composed()`,
 `SchemaResolver::mixIn()`, `mixIn()` in `app/src/contract.ts`)
 
 ### An empty variant is an empty map
@@ -1966,7 +2195,7 @@ item as a list in its place ([A collection on a
 form](forms.md#a-collection-on-a-form), decided 2026-10-19). *Open:*
 routing an item to its child's storage, which needs an identity key on
 the child to say which stored item it is. (`Resources::buildResource()`,
-`Collection`, `DataSurfaceFormBuilder::buildCollection()`)
+`Collection`, `Form\Drawing::buildCollection()`)
 
 ### Access once per list
 
@@ -1995,7 +2224,7 @@ the child's defaults, not over what is stored at its delta, since the
 list is sent whole and an item may have moved; except a secret, which
 keeps its position's ([Every door projects what the read tool
 projects](#every-door-projects-what-the-read-tool-projects)).
-(`Collection::isEmptyItem()`, `DataSurfacePipeline::acceptCollection()`)
+(`Collection::isEmptyItem()`, `Accepting::acceptCollection()`)
 
 ### An item is never null
 
@@ -2011,7 +2240,7 @@ that offered null would advertise a value no stored list holds. The key
 holding the list still allows null while it is optional, since null
 clears it ([Absent keeps, null clears](#absent-keeps-null-clears)). The
 tool listing is the Tool API's normalizer's, which still reads an item
-as optional. (`ContractEmitter::neverNull()`,
+as optional. (`PropertySchema::neverNull()`,
 `AdvertisedSchemaAcceptanceTest::testListItemsAreNeverNull()`)
 
 ### Count is the parent's
@@ -2118,7 +2347,12 @@ format core is asked to replace with data definitions
   (`ResourceCollectorPass::discover()`), autoloaded from there, and its
   alters, storage and access classes built as the container would build
   them (`AutowiringClassResolver`), with nothing installed or cached.
-  So a new module is written, then its files, then installed once.
+  So a new module is written, then its files, then installed once. The
+  entity types it declares are read from its `src/Entity` as the entity
+  type manager discovers them, so a key that refers to one is built as
+  it will be (`References::knowing()`; *added 2026-10-26*, when example
+  2's venue, a reference to the examples' own entity type, stopped the
+  examples' files being written before their install).
   Decided 2026-10-21, from the fourth fresh-eyes log (entries 13 and
   14): the command read only installed modules, so a module was
   installed without its config object and installed again after the
@@ -2161,7 +2395,7 @@ format core is asked to replace with data definitions
 
 (`Storage\ConfigSchemaGenerator`, `Drush\Commands\ConfigSchemaCommand`,
 `ResourceBuild\AutowiringClassResolver`,
-`Storage\HeldToConfigSchemaTrait`, `Resources::assertHeldToSchema()`,
+`Storage\HeldToConfigSchemaTrait`, `Declaring::assertHeldToSchema()`,
 `ConfigSchemaDriftTest`, `ConfigSchemaCheckTest`, `ConfigSchemaCommandTest`)
 
 ### The generator writes what the first page shows
@@ -2357,10 +2591,306 @@ its mount); computing again on demand, an operation that recomputes a
 stored value its sources no longer give; the React page computing the
 value locally, which needs the class in a language the page runs.
 (`Computed`, `ComputesValueInterface`, `Compute`, `ResourceBlueprint::compute()`,
-`DataSurfacePipeline::acceptComputed()`, `DataSurfacePipeline::notComputed()`,
-`DataSurfacePipeline::namingSources()`, `PipelineGuard::guardCompute()`,
+`Accepting::acceptComputed()`, `Validating::notComputed()`,
+`Validating::namingSources()`, `PipelineGuard::guardCompute()`,
 `DataSurfaceFormBuilder::refinementOverlay()`, `Slugify`, `ComputedKeysTest`,
 `VenueResourceTest`)
+
+*Amended 2026-10-26:* a third `when:`, `Compute::UNLESS_SENT`, computes
+the key only when a call leaves it out, or sends it null or empty, and
+keeps a value sent, with no note and no refusal. Such a key is not
+`readOnly`, the write tool offers it, and a form draws it by its widget.
+A refusal of it names its sources only while it holds the value they
+give, "This is computed from Name unless a value is sent.", and is left
+out while one of them is refused; holding another value, it holds the
+caller's own, and its refusals stand as they are.
+The class computing a key is handed the key's own definition beside the
+values, `compute(array $from, ?DataDefinitionInterface $key = NULL)`:
+static declaration, no site state, which the stock `MachineName` reads
+to cut to the key's Length. And one class may reach one service: the
+guard admits `transliteration` to `MachineName` by name, a function of a
+string and a language code that reads no site state, and refuses every
+other service to every class as before
+([A machine name is a computed identity](#a-machine-name-is-a-computed-identity)).
+
+### A machine name is a computed identity
+
+Decided 2026-10-26, with example 15's venue and the content type demo.
+Drupal pairs a title with a machine name: the machine name is suggested
+from the title, a person may type over it, it is unique, and it does not
+change once the thing exists. It is one spelling with no verb of its
+own, `id` being the resource's identity key:
+
+```php
+$inputs->add('label', 'string', t('Name'))->setRequired(TRUE);
+$inputs->compute('id', 'machine_name', t('Machine name'),
+  from: ['label'], using: MachineName::class, when: Compute::UNLESS_SENT);
+```
+
+Each class's `use` line: [Namespaces](concepts.md#namespaces).
+
+Five parts, each an existing mechanism:
+
+- **The type.** `machine_name` is core's config schema data type: a
+  string with a Regex and a Length of 166. `add()` and `compute()` read
+  a type typed data does not know from the config schema
+  (`Shapes::configType()`): the key is the string underneath, with the
+  type's constraints as its own, marked with the type
+  (`DefinitionMetadata::configTypeOf()`), and held to narrowing them as
+  a key declared with a shape is. Both documents state `pattern` and
+  `maxLength`, the schema reader reads them back, and a tool caller sees
+  them. The generated config schema writes `type: machine_name` and only
+  what the key narrows, as core's `node.type.*` does. Two readings make
+  the pattern one a client can check: a Regex anchored with `$` is read
+  with `D`, which narrows it by a final line break only
+  ([A pattern both engines read alike](#a-pattern-both-engines-read-alike)),
+  and a message that names the value it refuses (core's "The %value
+  machine name is not valid.") is a refusal's sentence, so no
+  `patternMessage` is stated for it. Why the config schema type and not
+  a shape of this module's: a config entity's id is a `machine_name` in
+  core's schema already, so the resource and its storage name one type.
+- **When it is computed, `Compute::UNLESS_SENT`.** Left out of a call,
+  or sent null or empty, it is computed as `ON_CREATE` computes it,
+  while storage holds nothing for it; sent, it is kept as sent and
+  judged by its own constraints. A refusal of the value its sources give
+  names them, "This is computed from Name unless a value is sent.";
+  a refusal of a value of the caller's own names nothing more.
+  `ON_CREATE` and `ON_CHANGE` still refuse a value sent other than the
+  one they hold, code `computed`.
+  Both documents keep `x-surface.computed`, `"when": "unless_sent"`,
+  with no `readOnly`, and never list it in `required`; the write tool's
+  `values` offers it. On an update the identity is what the operation
+  knows, locked at every door, as before. Why a mode and not a verb: it
+  is a computed key in every other respect (its sources, a pure class,
+  the narrowing answering its value), and only what a value sent means
+  differs.
+- **The stock class, `MachineName`.** It transliterates the first source,
+  lowercases, replaces each run of characters outside `[a-z0-9_]` with
+  one underscore, cuts to the key's Length and trims underscores at both
+  ends: the steps of core's `machine-name.js` with its default
+  `replace_pattern`, in its order, so the name the browser suggests and
+  the name the server computes for a call that leaves the key out are
+  one name. "Café Déjà Vu" is `cafe_deja_vu`. It reads the key's Length
+  from the key's own definition, which `compute()` is handed. The guard
+  admits one service to this one class by name, `transliteration`
+  (`PipelineGuard::COMPUTE_ALLOWED`, and the same list in the PHPStan
+  rule): transliteration is a function of a string and a language code
+  with no site state. Every other service stays refused, to it and to
+  every other class. It transliterates for English; the browser
+  transliterates for the page's language, and what it suggests is sent
+  and kept.
+- **Uniqueness, `DataSurfaceUnique`.** A stock constraint nobody writes:
+  the build adds it to the identity key of every operation that creates,
+  when the resource has one identity key and its storage implements
+  `DeletableStorageInterface`, which now also answers `exists()`, whether
+  a thing is stored under the identity a context knows, and
+  `singularLabel()`, "venue" (`Declaring::holdIdentityOnce()`). Its
+  refusal names the id and the thing, code `taken`: "A venue named
+  riverside already exists." Both documents name it under
+  `checkedOnServer` with its reason, "Refused when a venue named this
+  already exists." `ConfigEntityStorage` answers both, and its
+  `prepare()` refuses a taken id in the same sentence for a caller that
+  skips validation. Why on the deletable storage: a storage that
+  removes a thing by its identity loads it by that identity, so it can
+  say whether one is there. A method on `ResourceStorageInterface` would
+  have to be written by every storage, those with no identity included,
+  and a new interface would grow the counted surface for the same
+  question ([The surface was counted and cut](#the-surface-was-counted-and-cut)).
+- **The widget.** A key of type `machine_name` computed unless sent from
+  a key beside it is drawn as core's `machine_name` element
+  (`Form\MachineNameElement`): its source is the source key's element,
+  and its `exists` callback asks the storage what the constraint asks
+  (`UniqueConstraintValidator::taken()`). The element's own validation
+  is off, since a form keeps the first error per element and core's
+  words would replace the constraint's, which are the tool's and HTTP's.
+  On an update the key is locked, drawn disabled with its value, as any
+  locked key is. The React page draws it as a text input, shows the
+  narrowing's suggestion, and sends it once the person typed it.
+
+Moved onto it: example 15's venue `id`, whose slug stays `ON_CREATE`,
+the contrast the page shows, and the content type demo's `type`, whose
+`DataSurfaceUniqueNodeType` constraint and whose cosmetic machine name
+element are deleted. A placed block and the storage test's config entity
+get `DataSurfaceUnique` too: their storages are config entity storages.
+
+Rejected: a blueprint verb of its own, `machineName()`, since it would
+repeat `compute()`'s sources, class and mode under another name, where
+every door reads a computed key already; and a uniqueness constraint per
+resource, as the content type demo had, since each repeats one storage
+question in its own words, and a resource without one lets every door
+offer a taken id.
+
+*Open:* an identity of several keys gets no uniqueness constraint, since
+a constraint sees one key's value; the refusal says "A" before every
+noun, "A image style" included; and a source and its machine name drawn
+in different groups of an arrangement are not paired, since the element
+looks for its source beside it.
+(`Compute::UNLESS_SENT`, `Computed::takesSent()`, `Shapes::configType()`,
+`MachineName`, `PipelineGuard::COMPUTE_ALLOWED`, `UniqueConstraint`,
+`UniqueConstraintValidator`, `DeletableStorageInterface::exists()`,
+`Declaring::holdIdentityOnce()`, `MachineNameElement`,
+`ComputedKeysTest`, `MachineNameTest`, `UniqueIdentityTest`,
+`VenueApiTest`)
+
+### A layout is the storage's one word on its shape
+
+Decided 2026-10-27, with the pathauto port. A key a resource asks for
+one way and a config object keeps another (a checkbox per type, stored
+as the list of the types checked) took three overrides on the storage
+subclass: `load()` and `prepare()` to translate, and `widerThanSchema()`
+to drop the key from the check. The config schema generator read none of
+them, so it wrote the asked shape, which the stored list does not
+match, and such a module kept its schema written by hand.
+
+- **The seam `FieldSettingsStorage` already had.** `ConfigObjectStorage`
+  asks a protected `layout(): ?StorageLayoutInterface`, NULL by default,
+  which a subclass overrides: `load()` reads through its
+  `fromStorage()`, `prepare()` writes through its `toStorage()` before
+  the config schema judges the object. The constructor and the service
+  wiring stay as they are, so a subclass that needs a service for its
+  layout already has one.
+- **The stored schema, said once.** A layout implementing
+  `StoredSchemaInterface` answers `storedSchema()`: the config schema of
+  each key it translates, as stored, by dotted path. The storage's
+  `translatedKeys($built)` joins it with the references the engine
+  stores by uuid ([A config object stores a reference by
+  uuid](#a-config-object-stores-a-reference-by-uuid)), and both readers
+  ask that one method: `widerThanSchema()` skips each key it names, and
+  the generator writes its schema in place of the asked one, labeled
+  with the key's own label where it gives none, `nullable: true` on a
+  key asked as one value by the three-way rule, and installed with what
+  the install file gives it, else nothing, since a declared default is
+  in the asked shape.
+- **Beside `StorageLayoutInterface`, not on it.** Every existing layout
+  could answer the question: `AddressStorageLayout` its countries as a
+  sequence, `ReviewDeadlineLayout` its seconds as an integer. But a field
+  type's settings and an alter's mount are stored under a schema their
+  owner writes, which nothing here generates, so the answer would have
+  no reader, and adding a method to the interface breaks every layout an
+  adopter wrote. An optional interface costs a layout nothing until it
+  is read. It is in `src/Storage/`, which the counted surface does not
+  include ([The surface was counted and cut](#the-surface-was-counted-and-cut)).
+- **A layout stays pure.** It reads no service and no site state, as
+  before; a rule that needs the site stays in the storage's `prepare()`,
+  on the values as asked (the pathauto port leaves out a type whose path
+  field another module provides there, then calls the parent).
+
+Moved onto it: the recipe's alias settings (`CheckedListLayout`), and
+the pathauto port on the development site, whose `widerThanSchema()`
+and `load()` overrides are gone.
+
+Rejected: the generator reading `load()` and `prepare()` by running them
+on sample values, which guesses at a shape a class states in one line;
+a schema override per key on the resource, which puts a storage fact on
+the resource the pattern keeps it out of; and `layout()` on
+`ConfigEntityStorage`, which maps keys to properties and has
+`fromEntity()` and `toEntity()` for the rest, with no case yet.
+
+*Open:* an alter's layout on a config object's mount says nothing to
+the check or the generator; `configSchemaPaths()`, for a key stored
+under another name, is still its own override.
+(`ConfigObjectStorage::layout()`, `StoredSchemaInterface`,
+`HeldToConfigSchemaTrait::translatedKeys()`, `ConfigSchemaGenerator::translated()`,
+`Resources::storageInstance()`, `ReferenceStorageTest`,
+`ConfigSchemaCheckTest`)
+
+### A config object stores a reference by uuid
+
+Decided 2026-10-27, closing the open uuid representation of [A
+reference is an id with a list the site decides, listed or looked
+up](#a-reference-is-an-id-with-a-list-the-site-decides-listed-or-looked-up).
+A content entity's id differs between environments: node 7 on a
+development site is another node, or none, on the site its config is
+imported into. A config entity's id is its machine name and deploys as
+it is. So a reference key whose target is a content entity type, stored
+by a config storage (`ConfigObjectStorage` or `ConfigEntityStorage`), is
+stored as the entity's uuid; a config entity's stays its id.
+
+- **The wire does not change.** The documents, the tool and HTTP take
+  and answer ids and labels, `x-surface.reference` as before; only the
+  stored config holds the uuid. A uuid on the wire would make every
+  caller look an entity up twice, and the lookup and the selection
+  handler answer ids.
+- **A stock layout the engine applies.** `ReferenceStorageLayout`,
+  applied by `StorageAdapter` to every resource whose storage is a
+  config storage, outside the storage's own layout and in the layout
+  values are asked for (as the secrets decorator works in it), so a
+  storage class sees the uuid and its own layout sees the uuid too. It
+  translates on load, uuid to id through the entity repository, and on
+  prepare, id to uuid. It is the one layout that reads the site, since
+  what a uuid names is site state; it reads it the same for every door.
+  The build marks a key that refers to a content entity type
+  (`References::CONTENT`), so the check and the generator know it
+  without a service.
+- **Where.** Wherever a config storage keeps a key: at the top, in an
+  attached structure or a map, in each item of a collection, in the
+  variant a deciding key chose among those a class declares, and in a
+  module's mount. Variants the site lists are stored open (`type:
+  ignore`), and keep the id. A child with storage of its own translates
+  its own.
+- **The bare `entity` key: one shape, `{entity_type, id}`, two strings.**
+  `id` holds the uuid where `entity_type` names a content entity type
+  and the id where it names a config entity type. The stored value
+  carries its entity type, so it says which `id` holds, by the same rule
+  as a key of one entity type, and the generated schema states it as it
+  already did, two strings. Rejected: `{entity_type, uuid}` for content
+  beside `{entity_type, id}` for config, a key that changes its name
+  with its value, which a schema can state only by making both
+  optional; and a uuid for every entity type, which stores a config
+  entity by a uuid that differs on each site that installs it from a
+  module, against core's own naming of config by its name.
+- **The schema.** A key that refers to one content entity type is typed
+  `uuid`, core's type with its `Uuid` constraint, `nullable` by the
+  three-way rule; the generator writes it so, and the check skips it
+  ([A layout is the storage's one word on its
+  shape](#a-layout-is-the-storages-one-word-on-its-shape)).
+- **A uuid that names nothing reads as nothing stored**, a bare key's
+  two parts both, and the stale rule applies: a write that holds nothing
+  for it keeps the stored uuid, as an untouched stale value is kept, and
+  a new choice replaces it. So config deployed before its content keeps
+  its references through a save made before the content arrives. An id
+  stored before this rule that names nothing is not kept: it names
+  nothing on any site.
+- **Ids stored before.** A stored value that is not a uuid is read as an
+  id while that entity exists, and written as its uuid at the next
+  write. It hides nothing: the uuid type's `Uuid` constraint refuses it,
+  so config validation names each one left. A module converts them in a
+  post-update with `data_surface_store_references_by_uuid()`, which
+  reads and writes the object through its storage; example 16's is
+  `data_surface_examples_references_post_update_references_by_uuid()`.
+- **Opting out.** `->setSetting(References::STORED_AS,
+  References::BY_ID)` on the key, or on a bare key itself, keeps the id
+  in config. Right only for config that never leaves its site, or where
+  each site gives the entity the same id by other means (a migration
+  that keeps ids); the reference then deploys as wrong as an id does.
+- **Dependencies.** A config entity saved through `ConfigEntityStorage`
+  depends on what its keys refer to, as core's own config entities do: a
+  config entity by its config name under `config`, a content entity as
+  `<entity type>:<bundle>:<uuid>` under `content`. `StorageAdapter`
+  adds them to the record the storage rehearsed, so a dry run shows
+  them, and `commit()` saves through `ReferenceDependencies::during()`,
+  whose presave hook adds them after core recalculated the entity's own
+  (core invokes `hook_entity_presave()` after `preSave()`). Rejected:
+  enforced dependencies, which core keeps through recalculation but
+  never drops, so a reference changed would leave its old dependency
+  behind. A simple config object records no dependencies in core, and
+  this module does not invent a record; it is a gap
+  ([core gaps](core-gaps.md#smaller-gaps-outside-the-sequence)).
+
+*Open:* a save of the config entity made another way (core's form,
+`$entity->save()`) recalculates without the reference dependencies until
+the next save through the storage; the entity class's own
+`calculateDependencies()` is where core expects them. A config entity
+resource has no conversion helper for ids stored before; keys of an
+entry from the site are not translated; a site's default for such a key
+(`data_surface.defaults`, [A site sets a default in
+configuration](#a-site-sets-a-default-in-configuration)) is an id, and
+deploys as an id does.
+(`ReferenceStorageLayout`, `References::storedByUuid()`,
+`References::stored()`, `ReferenceDependencies`,
+`ReferenceDependencyHooks`, `StorageAdapter::referenceLayout()`,
+`data_surface_store_references_by_uuid()`, `ReferenceStorageTest`,
+`ReferenceStoredByUuidTest`)
 
 ## Access
 
@@ -2392,7 +2922,7 @@ cacheability](#access-is-static-or-runtime-read-from-its-cacheability).
 Another module's alter may answer as well, after the owner, the stricter
 standing: [An alter may answer access, and the stricter
 stands](#an-alter-may-answer-access-and-the-stricter-stands).
-(`AccessAnswer`, `Resources::childAccess()`)
+(`AccessAnswer`, `Gating::childAccess()`)
 
 ### Access is static or runtime, read from its cacheability
 
@@ -2439,13 +2969,13 @@ is known. Decided 2026-10-18, point by point.
   (`DefinitionMap::isRuntimeAccess()`); `build()` applies both. A static
   answer is asked once per context and account kind (the account's roles
   and its permissions hash) and kept, so a class that lied is wrong
-  visibly rather than now and then (`Resources::ask()`); the latest 256
+  visibly rather than now and then (`Gating::ask()`); the latest 256
   are kept, since a context knows its identity and a worker asking for
   one entity after another would otherwise keep one per entity. Under
   `assert()`: the first asking of a static answer is repeated with the
   global container guarded and must answer the same, static, having
   asked for no service that reads site state beside the account
-  (`PipelineGuard::guardAccess()`, `Resources::answersAgain()`).
+  (`PipelineGuard::guardAccess()`, `Gating::answersAgain()`).
   The refiner's guard is reused with another rule for what passes: a
   refiner may reach nothing but the typed data manager, while an access
   class is a service with injected collaborators and core's handlers
@@ -2565,7 +3095,7 @@ for an archivist (static), locking once the exhibit is sealed and
 leaving out once it is withdrawn (runtime, a stored value and a State
 flag); the loan's insurance is runtime for everyone
 (`StaticRuntimeAccessTest`). (`AccessAnswer`, `Resources::buildStatic()`,
-`Resources::childAccess()`, `ContractEmitter::frame()`,
+`Gating::childAccess()`, `ContractEmitter::frame()`,
 `InputDefinitions::runtimeAccessNote()`)
 
 *Changed 2026-10-24, with
@@ -2687,9 +3217,9 @@ alter answers locked or left out is refused, as one whose access class
 does ([An alter attaches at its own mount](#an-alter-attaches-at-its-own-mount));
 a reason an alter gives at a child is not shown, as no child's is.
 (`OperationAccessInterface`, `AlterDefinition::$answersAccess`, `ResourceRegistry::assertAccessClass()`,
-`ResourceDefinition::answersAccess()`, `Resources::answering()`,
-`Resources::answers()`, `Resources::alteredAtTheTop()`,
-`Resources::lockedAtTheTop()`)
+`ResourceDefinition::answersAccess()`, `Gating::answering()`,
+`Gating::answers()`, `Gating::alteredAtTheTop()`,
+`Gating::lockedAtTheTop()`)
 
 ### A gate is borrowed, never copied
 
@@ -2762,8 +3292,8 @@ operation is not asked, since gates are asked where the operation is
 the one called; the tool listing's sentence for a list a gate is asked
 of says "locked or left out", where a gate refuses the item; and a gate
 is asked per item for the collections at the top only, not inside an
-item. (`Gate`, `Gates`, `ItemGates`, `Resources::gatePlaces()`,
-`Resources::gatesAtTheTop()`, `Resources::gatesAside()`)
+item. (`Gate`, `Gates`, `ItemGates`, `Gating::gatePlaces()`,
+`Gating::gatesAtTheTop()`, `Gating::gatesAside()`)
 
 ### A permission a child cannot name
 
@@ -2787,7 +3317,7 @@ gate asked it already, and a child narrows only what the parent allowed.
 That is the storage's case when the field's context does know the
 entity type, so a field is built with its storage for any account, as
 it always was, and only the field's own access decides.
-(`Resources::childAccess()`)
+(`Gating::childAccess()`)
 
 ### Omitted is omitted both ways
 
@@ -2915,7 +3445,7 @@ leaves a secret out" are promises about every door, or about none.
   child cannot name](#a-permission-a-child-cannot-name)).
 
 (`Pipeline\Outbound`, `DataSurfacePipeline::outbound()`,
-`DataSurfacePipeline::acceptCollection()`, `DataSurfacePipeline::takes()`,
+`Accepting::acceptCollection()`, `Accepting::takes()`,
 `ResourceOperationTool::doExecute()`, `ResourceApiController::validate()`,
 `OperationInputs::stored()`, `Resources::permissionAccess()`,
 `ServedOperationAccessCheck`, `ResourceOperationToolBase::checkAccess()`,
@@ -3066,8 +3596,10 @@ that is their job ([No door-specific context](resources.md#no-door-specific-cont
   through the container, so the instance's properties are looked through
   once for one (`PipelineGuard::holdsNothingDoorSpecific()`). Site state
   with cacheability passes; a static refiner and a deriver still reach
-  nothing but the typed data manager, and a static access answer asked
-  again nothing that reads site state. A declared rule is data the
+  nothing but the typed data manager (and the stock `MachineName`
+  transliteration besides, *amended 2026-10-26*,
+  [A machine name is a computed identity](#a-machine-name-is-a-computed-identity)),
+  and a static access answer asked again nothing that reads site state. A declared rule is data the
   engine evaluates and runs no code of the author's, so it has nothing
   to guard. Before anything runs, the module's PHPStan rule
   (`DoorSpecificRule`) flags, in those classes, the `\Drupal` shortcuts
@@ -3155,8 +3687,8 @@ reading under which a locked answer at the top was a refusal.
 Why refused at the pipeline rather than at access: locked is the
 answer that lets the caller see, so access cannot be the refusal; and a
 submit written back unchanged would report a write that did nothing.
-(`Resources::lockedAtTheTop()`, `Resources::atTheTop()`,
-`DataSurfacePipeline::submit()`, `ContractEmitter::lockedWhole()`,
+(`Gating::lockedAtTheTop()`, `Gating::atTheTop()`,
+`DataSurfacePipeline::submit()`, `DocumentHead::lockedWhole()`,
 `LockedAccessTest`, `LockedAccessFormTest`)
 
 **A lock says its own reason, once** (decided 2026-10-20, from the Form
@@ -3170,8 +3702,8 @@ none. A form locked whole says its reason once, above the elements, and
 no element repeats it or carries a required marker: nothing can be
 sent, so nothing is asked for. An operation that changes nothing has
 nothing to save either, so its form's button is the operation's label
-("Check a program"), not "Save". (`DataSurfaceFormBuilder::describeLocked()`,
-`DataSurfaceFormBuilder::withoutRequired()`,
+("Check a program"), not "Save". (`Form\Drawing::describeLocked()`,
+`Form\Drawing::withoutRequired()`,
 `DataSurfaceOperationForm::buildForm()`, `LockReasonFormTest`)
 
 **A locked key inside an open write is said, not refused** (decided
@@ -3192,7 +3724,7 @@ under `notes` beside `stale`, `{path, code, message}`, code `locked`
 ([One result at every door](#one-result-at-every-door)). The form
 needs none: it draws the key disabled, and posts what it holds. A
 resource locked whole is refused above, not noted.
-(`DataSurfacePipeline::acceptKey()`, `DataSurfacePipeline::takes()`,
+(`Accepting::acceptKey()`, `Accepting::takes()`,
 `ResultReportingTrait::withNotes()`, `LockedAccessTest`,
 `KeysFromSiteTest`, `ServedSubmitEndpointTest`)
 
@@ -3243,21 +3775,21 @@ builder that is never sealed, nothing refined and nothing asked. A
 variant that answers access elsewhere on the site costs every other
 resource nothing, and where none does (the index lists the holders),
 nothing is declared at all.
-(`Resources::access()`, `Resources::childAnswers()`,
-`Resources::childrenMayAnswer()`, `VariantsOfThisResourceTest`)
+(`Resources::access()`, `Gating::childAnswers()`,
+`Gating::childrenMayAnswer()`, `VariantsOfThisResourceTest`)
 
 ### No declared operation, no permission tier
 
 A context whose id names no declared operation (a plugin host's
 `configure`) has no permission tier: the access class alone answers, or
 neutral when there is none. The host already checked the permission
-that guards its own form. (`Resources::ownAccess()`)
+that guards its own form. (`Gating::ownAccess()`)
 
 ### An unknown placeholder
 
 A `%key` in an operation's permission that the context does not know
 makes access forbidden. The permission cannot be named, and guessing
-one would grant or refuse the wrong thing. (`Resources::ownAccess()`)
+one would grant or refuse the wrong thing. (`Gating::ownAccess()`)
 
 ### Neutral is a refusal for an operation's caller
 
@@ -3399,7 +3931,7 @@ value not on its list unexplained.
   clauses for every kind. Why the holder alone and not the whole trail:
   one level says where the key is, and the levels above it
   ("Third party settings") are grouping a caller never chose
-  (`DataSurfacePipeline::conditionKey()`, `RefusalLabelsTest`).
+  (`Validating::conditionKey()`, `RefusalLabelsTest`).
 - **Whole sentences, for translation** (decided 2026-10-20, from the
   multilingual review, B10). Every sentence a refusal adds is one source
   string a translator sees entire, in the context `data_surface
@@ -3504,11 +4036,11 @@ value not on its list unexplained.
   says nothing about it. The listing stays small: a key that depends on
   nothing says nothing more.
 
-(`DataSurfacePipeline::sayingWhatIsAllowed()`,
-`DataSurfacePipeline::conditions()`, `DataSurfacePipeline::appliesWhen()`,
+(`Validating::sayingWhatIsAllowed()`,
+`Validating::conditions()`, `Validating::appliesWhen()`,
 `Pipeline\Sentences`, `Pipeline\Named`, `Entry::presenceDependencies()`,
-`DataSurfacePipeline::choices()`,
-`DataSurfacePipeline::isRequired()`,
+`Validating::choices()`,
+`Validating::isRequired()`,
 `InputDefinitions::withDependencies()`, `ToolFeedbackTest`)
 
 ### An operation states how it behaves
@@ -3650,7 +4182,7 @@ the cheapest honest check. Whether a call reaches beyond
 the site (MCP's open world) is a fact of the storage, not the
 operation, and a later flag there; the MCP bridge says open world for
 every tool today. (`Operation`, `OperationDefinition::facts()`, `OperationDefinition::kind()`,
-`ContractEmitter::operation()`, `DataSurfacePipeline::commit()`,
+`DocumentHead::operation()`, `DataSurfacePipeline::commit()`,
 `OperationFactsTest`, `OperationKindsTest`, `LockedAccessTest`)
 
 ### A violation summary is plain text
@@ -3951,7 +4483,7 @@ no value, so its `#required` is the marker alone and stays. A list is
 never drawn required, a multiple select now as the checkboxes already
 were: the empty list satisfies a required list, and a `required`
 attribute would ask for one item more than the rule does. The widgets'
-`#required_error` went with this. (`DataSurfaceFormBuilder::requiredHints()`,
+`#required_error` went with this. (`Form\Refreshing::requiredHints()`,
 `DataSurfaceFormBuilder::preRenderRequired()`, `RefusalMessagesTest`,
 `FirstResourceTest`)
 
@@ -3975,7 +4507,7 @@ named, then what the rebuild changed on the dependents it replaced, in
 whole sentences ("Send day no longer applies. Items per issue now
 allows 1 to 20."), read off what each was drawn as on the page the
 request came from. (`DataSurfaceFormBuilder::flagSurfaceErrors()`,
-`DataSurfaceFormBuilder::named()`, `DataSurfaceFormBuilder::changesSaid()`,
+`Form\Drawing::named()`, `Form\Refreshing::changesSaid()`,
 `Hook\InlineErrorHooks`, `ErrorsNameTheirFieldTest`,
 `RebuildAnnouncesTest`)
 
@@ -3994,7 +4526,7 @@ puts the pattern on the input: an HTML `pattern` makes the browser ask
 for "the requested format", and Form API's `#pattern` says
 "is not in the right format", both vaguer than the message the data
 surface answers with. (`ContractPanel::regex()`,
-`ContractEmitter::keywords()`, `ContractPanel.tsx`)
+`PropertySchema::keywords()`, `ContractPanel.tsx`)
 
 ### The empty option rule
 
@@ -4187,6 +4719,17 @@ page never saw the content type's groups, and a block had none to give.
   could not give the contract an example without giving the form a
   placeholder, and an empty field showing "+1 555 0100" read as filled.
   An example is now the documents' alone.
+- **A map alone in its group is one details** (decided 2026-10-27, from
+  [the adopter log of 2026-10-26](adopters-2026-10-26.md), which drew
+  "Punctuation" inside "Punctuation"). A map draws its own details, so a
+  group around a map of keys from the site, or around an attached
+  structure, drew two. Where a group holds one key and that key is a map,
+  the form draws the group's details alone: the group's label and
+  collapse state, the map's description and required marker moved to it,
+  and the map a plain container inside, still under `@group.<id>` for a
+  cosmetic layer. A group of several keys, or of one key that is not a
+  map, draws as before, so no shipped form's markup moved. The React app
+  still draws the map's fieldset inside the group's details.
 - **The cosmetic layer keeps what is truly one form's**: a borrowed
   element (the content type demo's vertical tabs, which gather the
   groups its resource declares, by their `@group.<id>` keys), markup,
@@ -4195,8 +4738,8 @@ page never saw the content type's groups, and a block had none to give.
 
 (`Resource\Arrangement`, `Resource\ArrangementGroup`,
 `DefinitionMetadata::setArrangement()`, `DataSurfaceWidgetBase::arranged()`,
-`DataSurfaceFormBuilder::withGroups()`, `DataSurfaceFormBuilder::gatherGroups()`,
-`DataSurfaceBuilder::assertGroupsAgree()`, `ContractEmitter::arrangement()`,
+`Form\Drawing::withGroups()`, `Form\Drawing::gatherGroups()`,
+`DataSurfaceBuilder::assertGroupsAgree()`, `PropertySchema::arrangement()`,
 `ArrangementTest`, `ArrangementFormTest`)
 
 Declined, each in a line:
@@ -4209,6 +4752,94 @@ Declined, each in a line:
   `_data_surface_cosmetics` is a route key, which [the product keeps its
   name](#the-product-keeps-its-name) holds to, and with the arrangement
   gone from it, what is left is cosmetic.
+
+### The form builder draws, extracts and refreshes
+
+`DataSurfaceFormBuilder` had grown to 2,973 lines. It is now the service
+and its Form API callbacks, and three final internal classes in
+`src/Form/` do the work:
+
+- **`Drawing`** answers what the form shows: each key drawn by its widget
+  as its arrangement says, a collection with its buttons, a computed key,
+  a key that does not apply, a locked key and its reason, and, when the
+  container is rendered, the groups and the placed fieldsets.
+- **`Extracting`** answers what the form posted: each element read back
+  through its widget into the data surface's shape and handed to
+  `accept()`, each violation flagged on its element, an error on a
+  refinement trigger held for the request, and, on a refinement request,
+  which in-progress input still stands against what is stored
+  (`refinementOverlay()`).
+- **`Refreshing`** answers the rebuild over AJAX: what triggers it, the
+  wrappers it replaces by, the container's `#process`, the response and
+  what it says changed, and the container's place in a host's own
+  element.
+
+`DataSurfaceFormBuilder` stays the one service.
+`DataSurfaceFormBuilderInterface`, the service id and the constructor's
+arguments are unchanged, and the constructor builds the three from the
+services it already has. The Form API callbacks stay on the service
+under their own names: `refreshSurface()`, `processSurfaceContainer()`,
+`processOptionTrigger()`, `preRenderSurfaceContainer()`,
+`preRenderRequired()`, `addListItem()` and `removeListItem()`. A render
+array names a `#process`, `#pre_render`, `#submit` or `#ajax` callback by
+class and method, and the form cache stores that render array, so a
+callback that moved would break every form cached before the move. The
+first three call the static method of the same name on `Refreshing`, and
+`preRenderSurfaceContainer()` calls `Drawing`.
+
+`Drawing` holds the instance of `Refreshing` it wires the container with.
+The static helpers the three share, such as `Drawing::elementChildren()`
+and `Refreshing::containerKey()`, are public on the internal classes and
+not on the service. Nothing changed in what is drawn: the method bodies
+moved as they were, the examples' forms render byte for byte as they did,
+and the documents and tool definitions did not move.
+(`DataSurfaceFormBuilder`, `Form\Drawing`, `Form\Extracting`,
+`Form\Refreshing`)
+
+### Defaults follow the definitions under a stored value
+
+A door that starts from storage lays the declared defaults under what is
+stored by the definitions, in one place, `DataSurfaceInterface::withDefaults()`
+(decided 2026-10-27, from the second port of pathauto's settings form,
+[the adopter log of 2026-10-26](adopters-2026-10-26.md), entry 17):
+
+- **A map's entries merge one by one**, at any depth: the keys of an
+  attached structure, the entries of a map of keys from the site, the
+  properties of a plain map, and each module's part of
+  `third_party_settings`. An entry the stored map leaves out holds its
+  default, as [Maps](semantics.md#maps) says.
+- **A list is the stored list.** Two items stored are two items, never
+  padded with a third default. Each item of a collection merges with the
+  defaults of the structure it is.
+- **Variants merge within the chosen variant.** The deciding key, stored
+  or at its default, chooses; a value written for another variant stays
+  as it is, and the form draws the chosen one from its defaults, as
+  before.
+
+Why: the operation form merged with `array_replace()`, one level deep, so
+a stored map replaced its default map whole. A map of keys from the site
+stored before the site added an entry (a punctuation character, an
+entity type) drew that entry empty: a select on "- None -", saved as
+`null`, and a locked checkbox that starts checked drawn unchecked. The
+pipeline never had the defect: `accept()` fills a child's left-out keys
+from its defaults, and `kept()` and the rule for what does not apply read
+defaults by nested path from `getDefaultValues()`, which is the whole
+tree.
+
+Which doors had it: the operation form (`DataSurfaceOperationForm`). The
+envelope (`GET /surface-api/...`, the React page) and the narrowing (the
+schema route's `POST`, the narrowing tool) seeded with the same one-level
+merge, but the emitter lays each child's defaults under its value as it
+walks, so their values were right; they now seed through the same
+method. A plugin host's form (`DataSurfaceHostFormTrait`) seeds from a
+configuration the pipeline already completed, and does too. The read
+tool and a write's answer report what storage holds: an entry storage
+holds nothing for is left out, never `null`, and a save leaves it
+unstored, since [a default storage never held is not
+written](#absent-keeps-null-clears).
+(`DataSurfaceInterface::withDefaults()`, `DataSurfaceOperationForm::buildForm()`,
+`ServedOperations::current()`, `ResourceOperationSchemaTool`,
+`DataSurfaceHostFormTrait`, `DefaultsUnderStoredMapTest`)
 
 ## Discovery
 
@@ -4234,6 +4865,11 @@ module is off: it carries `#[Resource]` or `#[Structure]`, or it is a
 plugin that is its own structure), is skipped; one naming a class that
 loads and is neither is refused. A disabled module must not break the
 site, and a typo must not pass silently. (`ResourceRegistry`)
+An `#[Alters]` naming by its id a resource, structure or shape that has
+a class is refused with the class to name instead (decided 2026-10-26;
+until then it was skipped as a class that does not load): an id names
+only a derived resource or a deriver's base, and an id nothing claims is
+still skipped. (`ResourceRegistry::assertAltersByClass()`)
 
 ### `#[UsesStructure]` into the plugin definition
 
@@ -4349,7 +4985,7 @@ change the id shape.
 
 (`ResourceRegistry::getIndex()`, `ResourceRegistry::rebuild()`,
 `ResourceOperationToolDeriver::derive()`, `OperationInputs::derivation()`,
-`ContractEmitter::refinedFor()`, `DiscoveryPerDefinitionTest`,
+`Conditionals::refinedFor()`, `DiscoveryPerDefinitionTest`,
 `ToolDefinitionsPerResourceTest`, `EmitMemoTest`,
 `PerformanceBudgetTest`)
 
@@ -4542,7 +5178,7 @@ survive a cached form, where a closure would not. A static callable
 method is called on the class; an instance method on the class
 resolver's instance, so a deriver's own methods may read site state,
 which is what a derived resource is for. (`ResourceDefinition::name()`,
-`Resources::fillBlueprints()`, `Resources::operation()`)
+`Declaring::fillBlueprints()`, `Resources::operation()`)
 
 ### The id shape
 
@@ -4760,9 +5396,9 @@ owner's naming one entry by its id, which waits for a decision from the
 owner, since the code cannot list the ids. Closed: ports on an entry
 (above). (`SiteListInterface`, `SiteList`,
 `BlueprintInterface::addEach()`, `BlueprintInterface::attachEach()`,
-`Resources::buildEach()`, `Resources::keysFrom()`,
-`Resources::assertEachWiring()`, `Port::through()`,
-`DataSurfaceFormBuilder::lockedInside()`, `ToolDefinitionsInvalidator`)
+`Attaching::buildEach()`, `Attaching::keysFrom()`,
+`Attaching::assertEachWiring()`, `Port::through()`,
+`Form\Drawing::lockedInside()`, `ToolDefinitionsInvalidator`)
 
 ### Keys an alter adds to a content entity
 
@@ -4981,9 +5617,9 @@ how strictly to apply them to a display builder. Each choice, and why:
 - **On the block form.** Text and one component are drawn at any depth,
   a nested component's props and slots swapped over AJAX as the top's
   are, each drawn from its own defaults where it was chosen afresh
-  (`DataSurfaceFormBuilder::nestedHeld()`), and a submission is read a
+  (`Form\Drawing::nestedHeld()`), and a submission is read a
   level at a time, each variant through what its own deciding key chose
-  (`DataSurfaceFormBuilder::extractFrame()`).
+  (`Form\Extracting::extractFrame()`).
   A list of components inside a slot is not drawn there: what it holds
   is kept, and the tool, HTTP and the React page set it.
 
@@ -5221,14 +5857,19 @@ listed, and how they are put in order.
   no list builder and no links: the resource's routes add, edit and
   remove a venue.
 - **Example 2 chooses from the venues.** Its venue and room are the
-  venue entities' (`EventVenue`, `EventVenueRoom` and, added by the
-  room's refiner, `RoomOfEventVenue`, read by one resolver under the
-  venues' list tag), so a venue added through example 15 is offered at
-  the next request with no cache rebuild. The shipped venues are the
-  hand-written list's, so example 2's documents are as they were, byte
-  for byte. A resolver may say its list is the whole of its constraint
+  venue entities', so a venue added through example 15 is offered at
+  the next request with no cache rebuild. A resolver may say its list
+  is the whole of its constraint
   (`#[DataSurfaceOptionsResolver(exact: TRUE)]`), as a `Choice`'s is,
   and the emitter then names that constraint under no `checkedOnServer`.
+  *Changed 2026-10-26:* the venue was a constraint of its own, read with
+  the room's by one resolver; it is a reference now, `entity:event_venue`
+  ([A rule is a keyword first, a list second, code
+  last](#a-rule-is-a-keyword-first-a-list-second-code-last)), its
+  candidates core's selection handler's: every venue, enabled or not,
+  sorted by name. The room keeps `EventVenueRoom` and, added by its
+  refiner, `RoomOfEventVenue`, read by `EventVenueRoomOptions` under the
+  venues' list tag, every room of every venue.
   *Open:* the capacity's cap per room still reads `Venues::seats()`: a
   static refiner reads only what it watches and cannot say what site
   state it read, so a room example 15 adds is offered with no cap on the
@@ -5260,7 +5901,10 @@ Decided 2026-10-23, with example 16, the sponsorship
 - **The value is the id.** The key holds the entity's id as the entity
   type keeps it, an integer where a content entity type's id field is
   one and a string for a config entity, never the entity object: what is
-  stored, sent and answered is the id, at every door. The tool door
+  sent and answered is the id, at every door. *Amended 2026-10-27:* what
+  a config storage stores of a content entity is its uuid, which deploys
+  where its id does not ([A config object stores a reference by
+  uuid](#a-config-object-stores-a-reference-by-uuid)). The tool door
   keeps the bridge's own representation, which already sends an
   operation's entity parameter as its id (`OperationInputs::parameterInput()`):
   the Tool API's `EntityInputDefinition` would hand the pipeline a
@@ -5268,8 +5912,9 @@ Decided 2026-10-23, with example 16, the sponsorship
   reference in `values` is the id there too. The read tool answers the
   id and no label beside it: its answer is the write's values, and a
   label is no key of the resource; both documents label each listed id
-  in their `oneOf`, and the lookup answers labels for the rest. A uuid
-  representation stays open.
+  in their `oneOf`, and the lookup answers labels for the rest. The uuid
+  representation is settled for storage and kept off the wire
+  (*2026-10-27*).
 - **The bare `entity` is two keys, narrowed by a refiner.** An entity
   type, then an id, attached at the key: `entity_type`, a choice of the
   entity types the account may reference one of, and `id`, a string,
@@ -5333,7 +5978,7 @@ Decided 2026-10-23, with example 16, the sponsorship
   Portable Schema notes argued for, as an `x-surface` keyword, so a
   client that does not read it reads an id of the key's type.
 
-*Open:* a uuid representation; a multi-value reference, a list of
+*Open:* a multi-value reference, a list of
 references (`addList()` of an entity type); the entity side's two
 shapes, a reference field's `target_id` item (`DataSurfaceReferenceable`,
 no marker) beside a reference key; a lookup tool for an agent with no
@@ -5383,8 +6028,8 @@ components, route, config schema entries and shipped settings, each with
 a line saying what it is. Its page lists them (`FilesPanel`), a file of
 fewer than 80 lines of code shown whole and collapsed, because the
 newcomer logs found whole files were what stopped the guessing; the
-landing page reads its reading order from the same list, and the
-README's Files tables are held to it by `ExampleFilesTest`, which also
+landing page reads each example's line, what it introduces and how many
+files it is made of, from the same list, and the README's Files tables are held to it by `ExampleFilesTest`, which also
 fails when the examples have a part no example lists. The links name a
 branch from `$settings['data_surface_examples_branch']`, `next` by
 default: asking git on every request costs a process, and a site need
@@ -5516,7 +6161,7 @@ document that uses it. Serving each resource's or structure's schema at
 an address of its own, so a def is fetched once and shared between
 documents, is later; it needs a route per id and a decision on what context a
 def at its own address is described in.
-(`ContractEmitter::define()`, `ContractEmitter::reference()`,
+(`ContractEmitter::define()`, `PropertySchema::reference()`,
 `Contract\SchemaResolver`)
 
 ### Enumeration is capped
@@ -5542,7 +6187,7 @@ rule the refiners never made. Such a key keeps `dependsOn`, and a client
 asks the server (`POST .../schema`) when a watched key changes, as before.
 A list the site decides is counted otherwise, by its entries, against a
 setting ([A budget for what the site decides](#a-budget-for-what-the-site-decides)).
-(`ContractEmitter::enumerate()`)
+(`Conditionals::enumerate()`)
 
 ### A budget for what the site decides
 
@@ -5777,7 +6422,7 @@ each of its keys sent null): the empty map, or a map whose keys hold
 nothing, is a value, so the map is not refused as missing, and a key
 inside it that is required is refused in its own words at its path;
 until then core's `NotNull` read it as null and refused the map itself.
-(`ContractEmitter::required()`, `DataSurfacePipeline::validateLevel()`,
+(`PropertySchema::required()`, `Validating::validateLevel()`,
 `AdvertisedSchemaAcceptanceTest::testRequiredMapSentEmpty()`)
 
 ### Absent keeps, null clears
@@ -5813,8 +6458,8 @@ chosen variant) is each of its keys sent `null`: its optional
 keys clear and a required one is refused in its own words, so the
 accepted document is a map its def describes; until 2026-10-18 the
 pipeline took `contact: null` whole, which the schema refused.
-(`DataSurfacePipeline::acceptKey()`, `DataSurfacePipeline::acceptChild()`,
-`ContractEmitter::nullable()`)
+(`Accepting::acceptKey()`, `Accepting::acceptChild()`,
+`PropertySchema::nullable()`)
 
 **Writing back what was read changes nothing** (decided 2026-10-20, from
 the deterministic callers and AI agents reviews, B12). A read then a
@@ -5920,9 +6565,9 @@ On a key so marked:
 
 A required key is not marked: it holds a value already. A secret is
 not either: sent nothing it keeps what it holds, whatever its storage.
-(`DefinitionMetadata::holdsValue()`, `Resources::markAlwaysHeld()`,
-`ConfigObjectStorage::mayClear()`, `DataSurfacePipeline::cannotBeCleared()`,
-`ContractEmitter::nullable()`, `StockWidgetsTest::testKeyItsStorageAlwaysHolds()`,
+(`DefinitionMetadata::holdsValue()`, `Binding::markAlwaysHeld()`,
+`ConfigObjectStorage::mayClear()`, `Validating::cannotBeCleared()`,
+`PropertySchema::nullable()`, `StockWidgetsTest::testKeyItsStorageAlwaysHolds()`,
 `AdvertisedSchemaAcceptanceTest::testOpeningHours()`)
 
 ### A secret is optional, never nullable
@@ -5938,7 +6583,7 @@ that holds nothing out (`DataSurfacePipelineInterface::document()`,
 required secret never set is still refused by the pipeline as missing.
 Before 2026-10-18 a required secret
 was in `required` and its type refused the `null` its own `values`
-carried. (`ContractEmitter::required()`, `InputDefinitions::fromDefinition()`)
+carried. (`PropertySchema::required()`, `InputDefinitions::fromDefinition()`)
 
 ### One coercion table, the Tool API's
 
@@ -5961,7 +6606,66 @@ keeps the principle: a fractional numeric string for an integer is left
 for validation, not truncated. `InputCoercionMatrixTest` holds both
 doors to the same accepted value, row by row. The audit's "a boolean
 stored for an integer" is an alignment now: `TRUE` is `1`.
-(`Pipeline\Coercion`, `DataSurfacePipeline::coerce()`)
+
+Coercion comes first for a second reason: core's typed data throws on
+malformed input instead of reporting it. `Map::setValue()` throws
+`InvalidArgumentException` for a value that is not an array ("Values
+must be represented as an associative array"), `ItemList::setValue()`
+for a list that is not an array and `ItemList::set()` for a delta that
+is not a number, and `TypedDataManager::getPropertyInstance()` for a key
+the map does not declare ("Property ... is unknown"). Each is thrown
+while the value is typed, before any constraint runs, so a caller would
+get an exception where it should get a violation at the key's path.
+`accept()` walks the raw input against the definitions first: it
+applies the table, refuses an array for a scalar and a scalar for a map
+or a list (`TypeMismatchException`) and a key no definition declares
+(`UnknownKeysException`), and turns each refusal into a violation at
+its path. Only values that passed are typed and validated, so the
+pipeline never reaches those exceptions. Another
+contributed module in the same space lets core throw and then parses
+the exception's stack trace to learn which key was malformed; coercion
+first makes that unnecessary.
+(`Pipeline\Coercion`, `Accepting::coerce()`, `Accepting::acceptValue()`)
+
+### The pipeline is read by verb
+
+`Pipeline\DataSurfacePipeline` held every stage from raw values to stored
+values in 2,874 lines. The three verbs before a write are now final
+internal classes in `src/Pipeline/`, which the pipeline's constructor
+builds from the services it already has:
+
+- **`Accepting`** turns raw values into typed values: defaults, stored
+  values and input merged, the coercion table, the three-way rule (a key
+  left out keeps what it holds, one sent nothing is cleared, one sent a
+  value takes it), locked keys, secrets, computed keys, and the
+  violations a refusal of `accept()` becomes.
+- **`Validating`** holds the accepted values to the definition refined
+  for them: each refusal filed under its key with the path below it, the
+  keys it depends on, the values allowed, a key that does not apply, and
+  the stale rule.
+- **`Conforming`** holds outputs to their declared shape and coerces
+  nothing.
+
+`DataSurfacePipeline` stays the one service, and
+`DataSurfacePipelineInterface`, the constructor and the public constants
+are unchanged. It keeps the write path and the document: `kept()`,
+`changes()`, `prepare()`, `commit()`, `submit()`, `commitDryRun()`, a
+delete, `outbound()` and `document()`. Its `accept()`, `validate()` and
+`conformOutput()` call the verbs.
+
+A reader who asks why a key left out kept its value, or why an empty
+secret box kept the secret, reads `Accepting`, which applies the
+three-way rule and its exceptions. A reader who asks why a refusal names
+`tags.2.target_id`, or what it says is allowed, reads `Validating`, which
+holds the frame each path and label is read from. `Validating` calls
+`Accepting` for a computed key's value and sources and for the sentence
+about a key of another variant, and calls the pipeline for `document()`;
+`Accepting` reads only the static `Validating::definitionAt()`. None of
+the three holds a door-specific service. Nothing changed in what is
+accepted, refused or written: the method bodies moved as they were, no
+test changed, and the examples' documents and tool definitions are byte
+for byte what they were. (`DataSurfacePipeline`, `Pipeline\Accepting`,
+`Pipeline\Validating`, `Pipeline\Conforming`)
 
 ### A pattern both engines read alike
 
@@ -6021,7 +6725,7 @@ refuse what the pipeline accepts; the suite's validator does not assert
 them, as a standard one does not. An address is `idn-email` (RFC 6531)
 since [contract 2](#contract-2), which admits a non-ASCII local part
 as Drupal's validator does; it was `email`, which refused one.
-(`ContractEmitter::type()`)
+(`PropertySchema::type()`)
 
 ### A composite is its parts
 
@@ -6041,7 +6745,7 @@ the one checked. Each part's message is the server's to say; only a
 key's own Regex fills `x-surface.patternMessage`. Symfony's `All`
 applies its constraints to each item of a collection, not all of them
 to one value, and core registers no `All` plugin, so it is not read as
-an `allOf`. (`ContractEmitter::parts()`,
+an `allOf`. (`PropertySchema::parts()`,
 `AdvertisedSchemaAcceptanceTest::testCompositesAreTheirParts()`)
 
 ### A machine document carries plain text
@@ -6273,7 +6977,7 @@ B24, the served contract page saying `runtime` was never in the full
 schema, is closed by the page's rewrite. Not changed: `locked: false`
 and `dependsOn: []` are still written on every property (a cut
 json-schema-tooling proposed), and no `x-surface` metaschema is
-published yet. (`ContractEmitter::CONTRACT`, `ContractEmitter::settled()`,
+published yet. (`ContractEmitter::CONTRACT`, `DocumentHead::settled()`,
 `SchemaResolver::restored()`, `ContractDiff::CONTRACT`,
 `ContractChange::CONTRACT`, `ContractBaselines::compare()`,
 `ResourceApiController::VERSION_HEADER`, `CONTRACT` and
@@ -6568,18 +7272,63 @@ signal. Every change removes or moves a keyword; none adds one.
   contract, and the new number is how a client tells: a client of
   contract 3 refuses a contract 4 document rather than reading a key
   with no `locked` as open. The contract diff reports a baseline of
-  contract 3 once, "contract version 3 to 4", as before.
+  contract 3 once, "contract version 3 to 4", as before. *Added
+  2026-10-26:* `uniqueItems: true`, the stock `UniqueItems` constraint's
+  keyword, is a JSON Schema keyword added within contract 4, so no
+  version bump: it appears only where the same rule was named under
+  `checkedOnServer` before, so a client refuses nothing the server
+  accepted, and a client that does not check it is as wide as it was.
 
 The examples' documents differ in these changes and the number alone;
 their tool input schemas are byte for byte as before, since the
 listing is built from the data surface, not from the document, but for
 the description of a map of keys from the site past the limit, which
-names `x-surface.deferred.entries`. (`ContractEmitter::extension()`,
+names `x-surface.deferred.entries`. (`PropertySchema::extension()`,
 `ContractEmitter::frame()`, `ContractEmitter::variants()`,
-`ContractEmitter::withoutWidgets()`, `ContractEmitter::withoutPresent()`,
+`PropertySchema::withoutWidgets()`, `Conditionals::withoutPresent()`,
 `SchemaReader::droppedExtension()`, `CONTRACT` and `compacted()` in
 `app/src/contract.ts`, `ContractBaselineTest`, `SiteListBudgetTest`,
 `StaticRuntimeAccessTest`, `SchemaRoundTripTest`)
+
+### The emitter is one walk and three writers
+
+`ContractEmitter` had grown to 4,300 lines. It is now the walk, and three
+final internal classes in `src/Contract/` write what the walk asks for:
+
+- **`ContractEmitter`** walks a document's frames: each key, child,
+  variant, collection item and mount, and the defs each child is filed
+  under. Its public API, its service and its constructor are unchanged.
+- **`PropertySchema`** describes one key as a JSON Schema property with
+  its `x-surface`: the type, the keywords its constraints state, the
+  allowed values with their labels, the widget hint, what only the
+  server checks, a shape's def, and a child's site as a reference with
+  only what differs from its def.
+- **`Conditionals`** writes what a key's refiners answer as `if`/`then`:
+  a declared rule as written, and the static refiners refined for every
+  combination of the values they watch. Where neither can be stated, it
+  marks the key `refine` or `live` and drops it from `required`. It
+  remembers what it refined during one document.
+- **`DocumentHead`** writes what sits above the properties: the heading,
+  how the operation behaves, the versions, `readOnly` for a resource
+  locked whole, the outputs, and the placement rules that move each
+  marker to the object that owns it.
+
+The seam is the responsibility, not the document. `emit()` and
+`emitFull()` share the walk, and differ only in what `Emission::full()`
+answers at each step. One class per document would copy the walk into
+both, and the two documents could then drift apart
+([Two documents, never stricter than the runtime](#two-documents-never-stricter-than-the-runtime)).
+Calls run one way: the walk calls the three writers, and `Conditionals`
+and `DocumentHead` call `PropertySchema`; no writer calls the walk, and
+the two static helpers they share, `pointer()` and `foreign()`, stay
+public on the emitter.
+`ContractEmitter`'s constructor builds each writer from the services it
+already has, so there is no new container service and none is
+door-specific. Nothing changed in what is emitted: the examples'
+documents and tool definitions are byte for byte what they were, and
+the contract baselines did not move. (`ContractEmitter`,
+`Contract\PropertySchema`, `Contract\Conditionals`,
+`Contract\DocumentHead`, `ContractBaselineTest`)
 
 ### An OpenAPI document is one more door
 
@@ -6742,7 +7491,7 @@ and was removed on 2026-10-24; [The surface was counted and cut](#the-surface-wa
   and the document holds its answers, which are read as declared rules,
   or its `refine` marker, which is not read.
 - **Kept, not refused, not dropped.** What the vocabulary cannot say
-  (`not`, `uniqueItems`, `patternProperties`, `dependentSchemas`, a type
+  (`not`, `contains`, `patternProperties`, `dependentSchemas`, a type
   that is several types, a conditional outside the vocabulary or one
   that widens, a reference to another document) is the part of the
   schema left over, kept as a `JsonSchema` constraint on the key it is
@@ -7027,7 +7776,7 @@ removes from a derived resource, a breaking change no code made; and
 baselines for operations that need a subject, which the lint leaves out.
 (`Resource\Attribute\Resource::$version`, `Structure::$version`,
 `ResourceRegistry::versionOf()`, `DataSurfaceInterface::version()`,
-`ContractEmitter::versioned()`, `Resource\StoredValueMigrationInterface`,
+`DocumentHead::versioned()`, `Resource\StoredValueMigrationInterface`,
 `Contract\ContractDiff`, `Contract\ContractBaselines`,
 `Drush\Commands\ContractDiffCommand`, `ContractBaselineTest`,
 `ContractDiffTest`)

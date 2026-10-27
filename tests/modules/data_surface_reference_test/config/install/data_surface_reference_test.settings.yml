@@ -1,0 +1,12 @@
+page: ~
+kept: ~
+role: ~
+thing:
+  entity_type: ~
+  id: ~
+kept_thing:
+  entity_type: ~
+  id: ~
+nested:
+  author: ~
+items: []

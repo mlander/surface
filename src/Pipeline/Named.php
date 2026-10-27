@@ -19,7 +19,7 @@ use Drupal\Component\Utility\Html;
  * beside it ("riverside (Riverside Hall)"), the vocabulary
  * the listing uses. One sentence, two renderings, so a translation is
  * made once. The key a condition reads is named by its label in both
- * renderings (DataSurfacePipeline::conditionKey()); a key is named here
+ * renderings (Validating::conditionKey()); a key is named here
  * where a sentence names a computed key's sources or the deciding key
  * of variants.
  *

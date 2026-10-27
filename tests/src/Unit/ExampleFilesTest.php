@@ -226,7 +226,7 @@ class ExampleFilesTest extends UnitTestCase {
   }
 
   /**
-   * Tests each docs page and decision the reading order links is there.
+   * Tests each docs page and decision an example's line links is there.
    */
   public function testEachDocsPageAndDecisionIsThere(): void {
     foreach (Series::examples() as $number => $example) {

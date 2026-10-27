@@ -133,9 +133,11 @@ export interface Extension {
    * On a computed key, beside `readOnly`: the keys it is computed from, and
    * whether once, when the thing is created, or again whenever one of them
    * changes. Nobody types it: the page shows what the server's narrowing
-   * answers for it and never sends it.
+   * answers for it and never sends it. One computed `unless_sent`, a
+   * machine name from a title, is no `readOnly`: the page shows what the
+   * narrowing suggests, and sends it only once the person typed it.
    */
-  computed?: { from: string[]; when: 'create' | 'change' };
+  computed?: { from: string[]; when: 'create' | 'change' | 'unless_sent' };
   /** On an object that only groups each module's fieldset: draw nothing around them. */
   group?: boolean;
   /** On a module's fieldset inside a group: draw it right after this sibling of the group instead. */
@@ -1153,16 +1155,40 @@ export function watchedPaths(schema: Schema, values: Values, prefix = ''): Set<s
  *
  * The server computes it from the keys it is computed from as they are
  * sent, so a value the page holds for it, from a narrowing asked before the
- * last change, is never sent and refused.
+ * last change, is never sent and refused. A key computed `unless_sent` is
+ * sent once the person typed it, `typed`, and kept as sent.
  */
-export function withoutComputed(schema: Schema, values: Values): Values {
+export function withoutComputed(schema: Schema, values: Values, typed: ReadonlySet<string> = new Set()): Values {
   const sent: Values = { ...values };
   for (const [name, property] of Object.entries(schema.properties ?? {})) {
-    if (property['x-surface']?.computed !== undefined) {
+    const computed = property['x-surface']?.computed;
+    if (computed !== undefined && !(computed.when === 'unless_sent' && typed.has(name))) {
       delete sent[name];
     }
   }
   return sent;
+}
+
+/**
+ * The values to narrow: every key but one computed `unless_sent` nobody typed.
+ *
+ * What the page holds for it is the server's last suggestion, which a
+ * change of what it is computed from moves; sent, it would be kept as
+ * typed.
+ */
+export function withoutSuggested(schema: Schema, values: Values, typed: ReadonlySet<string>): Values {
+  const sent: Values = { ...values };
+  for (const [name, property] of Object.entries(schema.properties ?? {})) {
+    if (property['x-surface']?.computed?.when === 'unless_sent' && !typed.has(name)) {
+      delete sent[name];
+    }
+  }
+  return sent;
+}
+
+/** Answers whether a top level key is computed unless sent: one a person may type. */
+export function isSuggested(schema: Schema | null, path: string): boolean {
+  return schema?.properties?.[path]?.['x-surface']?.computed?.when === 'unless_sent';
 }
 
 export function isObject(value: unknown): value is Values {
@@ -1205,8 +1231,8 @@ export function fieldId(path: string): string {
 // in the page, from the full schema, by the module's own rules; a change
 // with a `refine` or `live` dependent is asked of the server. The page's
 // answer must be the server's: the same discard and orphan rule
-// (DataSurfaceFormBuilder::settle()), the same reading of a select
-// (ContractEmitter::property()), keyword for keyword.
+// (Form\Extracting::settle()), the same reading of a select
+// (PropertySchema::property()), keyword for keyword.
 
 /** Why a change was asked of the server rather than narrowed here. */
 export type Marker = 'live' | 'refine' | 'deferred' | 'stored' | 'computed' | 'unsettled' | 'pending';
@@ -1607,7 +1633,7 @@ function allows(list: unknown[], value: unknown): boolean {
   return (typeof value === 'string' || Number.isInteger(value)) && list.some((option) => String(option) === String(value));
 }
 
-/** DataSurfaceFormBuilder::sameAnswer(): a form posts every scalar as a string. */
+/** Form\Extracting::sameAnswer(): a form posts every scalar as a string. */
 function sameAnswer(answer: unknown, stored: unknown): boolean {
   if (isEmpty(answer) || isEmpty(stored)) {
     return isEmpty(answer) === isEmpty(stored);
@@ -1626,7 +1652,7 @@ function met(condition: Conditional, values: Values): boolean {
   return Object.entries(condition.if.properties).every(([key, { const: value }]) => !isEmpty(getAt(values, key)) && sameValue(value, getAt(values, key)));
 }
 
-/** The keywords whose change the emitter counts as narrowed (ContractEmitter::signature()). */
+/** The keywords whose change the emitter counts as narrowed (PropertySchema::signature()). */
 const NARROWING = ['type', 'minimum', 'maximum', 'minLength', 'maxLength', 'minItems', 'maxItems', 'pattern', 'not', 'format'] as const;
 
 function narrows(declared: Schema, effective: Schema): boolean {
@@ -1716,7 +1742,7 @@ interface Context {
 }
 
 /**
- * Settles one frame, then each child in it, as DataSurfaceFormBuilder::settle().
+ * Settles one frame, then each child in it, as Form\Extracting::settle().
  *
  * Every key that refines against a sibling is a target. An input whose
  * dependency moved under it, or that the narrowed list no longer offers,
@@ -2344,7 +2370,7 @@ function compacted(node: unknown): unknown {
   return out;
 }
 
-/** ContractEmitter::anyRefined(): a property of the frame says it is narrowed now. */
+/** PropertySchema::anyRefined(): a property of the frame says it is narrowed now. */
 
 function anyRefined(schema: Schema): boolean {
   return Object.values(schema.properties ?? {}).some((property) => Boolean(property['x-surface']?.refined));

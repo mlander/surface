@@ -127,7 +127,9 @@ class LongLivedWorkerMemoryTest extends DataSurfaceKernelTestBase {
    * access is, for one thing after another.
    */
   public function testStaticAnswersStayBoundedAcrossEntities(): void {
-    $resources = $this->container->get('data_surface.resources');
+    // The static answers are the access phase's to keep.
+    $build = $this->container->get('data_surface.resources');
+    $resources = (new \ReflectionProperty($build, 'gating'))->getValue($build);
     $memo = new \ReflectionProperty($resources, 'staticAnswers');
     $limit = (new \ReflectionClassConstant($resources, 'STATIC_ANSWERS_KEPT'))->getValue();
     $this->assertIsInt($limit);

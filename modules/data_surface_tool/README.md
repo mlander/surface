@@ -31,7 +31,7 @@ as a string's `max_length`), and every tool takes `dry_run`, which runs
 storage's own checks and writes nothing, and answers the accepted
 `values` as the read tool would: what storage would have been handed is
 never served, since it holds what the caller may not see
-([decision](../../docs/decisions.md#every-door-projects-what-the-read-tool-projects)). The
+(why: [decision](../../docs/decisions.md#every-door-projects-what-the-read-tool-projects)). The
 field type key offers every field type offered in the UI. One whose
 module marks a settings class with `#[Variant]` is described
 by that class; every other, a plain `string` or `integer` field
@@ -137,7 +137,7 @@ other. Sending `{"label": "Address", "settings": {"field_overrides":
 {"organization": null}}}` to the update tool removes that one override and
 leaves the rest alone, which is what a caller correcting one mistake
 actually wants to say. A key left out keeps what is stored; a null
-clears it ([decision](../../docs/decisions.md#absent-keeps-null-clears)).
+clears it (why: [decision](../../docs/decisions.md#absent-keeps-null-clears)).
 A secret is the one exception: it is optional, a null or a key left out
 keeps the stored secret, and only the clear marker
 (`@data_surface:clear-secret`) empties it. The label could be left out
@@ -147,7 +147,7 @@ what is stored, which the pipeline judges (below).
 ## What a tool answers
 
 A write tool answers a run in the one result shape every door answers
-([decision](../../docs/decisions.md#one-result-at-every-door)), on a
+(why: [decision](../../docs/decisions.md#one-result-at-every-door)), on a
 refusal as on a success, as its result's context, which `drush tool:run
 --json` prints as `outputs`. Every key is declared as an output, with a
 description, and always present:
@@ -157,7 +157,7 @@ description, and always present:
 | `ok` | Whether nothing was refused. |
 | `committed` | Whether the values were written; false for a dry run, a refusal and a read only operation. |
 | `changed` | Whether the write moved a stored value; false when the values were what is stored, and then nothing was saved. |
-| `changes` | The JSON Pointer of each stored value the write changed, or a dry run would, so writing back what the read tool returned changes nothing ([decision](../../docs/decisions.md#absent-keeps-null-clears)). |
+| `changes` | The JSON Pointer of each stored value the write changed, or a dry run would, so writing back what the read tool returned changes nothing (why: [decision](../../docs/decisions.md#absent-keeps-null-clears)). |
 | `values` | The accepted values, as the read tool would answer them after the write: no secret, no key this account may not see, and no key never stored that the write left at its default (a mounted key not sent). |
 | `violations` | Each refusal, `{path, code, message}`; a refusal of the whole call has an empty path. |
 | `notes` | Each value sent for a locked key and not taken, `{path, code, message}`, code `locked`. |
@@ -199,7 +199,7 @@ A refused value is in the Tool API's `Input` category; a permission
 refusal, an access refusal and a resource locked whole are in the
 `Access` category, which no client treats as correctable, so none is
 handed the input schema to retry with
-([decision](../../docs/decisions.md#every-door-projects-what-the-read-tool-projects)).
+(why: [decision](../../docs/decisions.md#every-door-projects-what-the-read-tool-projects)).
 A read only operation's tool takes no `dry_run` and answers the same
 keys, `committed` and `changed` false and `changes` empty: it writes
 nothing. The read tool answers a read, `values` alone, and its
@@ -208,7 +208,7 @@ refusals in the shape.
 `values` is always sent, an object and never null: `{}` on an update
 changes nothing. The Tool API refuses a call that leaves it out or
 sends `null` before the tool runs
-([decision](../../docs/decisions.md#required-is-the-resources-and-an-update-tool-requires-nothing-at-its-door)).
+(why: [decision](../../docs/decisions.md#required-is-the-resources-and-an-update-tool-requires-nothing-at-its-door)).
 That refusal, and any other the Tool API makes on the input's shape (a
 key of the wrong type, a key a create requires left out), is the one
 answer not in the shape when it comes through the Tool API's runner
@@ -308,7 +308,8 @@ base plugin id:
   required. A read reports storage as it is, and a stale value
   ([`docs/semantics.md`](../../docs/semantics.md)) must not fail the
   output validation the Tool API runs on every result; a key storage
-  holds nothing for is absent.
+  holds nothing for is absent, and so is an entry a stored map leaves
+  out, which holds its default at every door that draws.
 - **Secrets.** A key the resource marks secret is never returned, at any
   depth, and is not in the output definition: left out, as the write
   tool's defaults leave it out, not sent as a placeholder.
@@ -319,7 +320,7 @@ base plugin id:
   the build left out for the account, at any depth, no secret, no key
   that does not apply. The write tool's `values`, on a dry run and on a
   write, go through the same, so neither door says more than the other
-  ([decision](../../docs/decisions.md#every-door-projects-what-the-read-tool-projects)).
+  (why: [decision](../../docs/decisions.md#every-door-projects-what-the-read-tool-projects)).
 - **Access.** The write tool's, deliberately, for now: the operation's
   permission, then the resource's access class, for the context the
   parameters build. A caller who may not change a thing may not read it
@@ -385,9 +386,9 @@ drush tool:run data_surface:event.spotlight:configure --uid=1 --input='{"values"
 ```
 
 ([Asking again at the tool door](../../docs/served-contract.md#asking-again-at-the-tool-door),
-[the fetch per choice](../../docs/served-contract.md#the-fetch-per-choice),
-[decision](../../docs/decisions.md#a-budget-for-what-the-site-decides),
-[deferred](../../docs/decisions.md#a-list-left-out-for-size-is-deferred-not-refined).)
+[the fetch per choice](../../docs/served-contract.md#the-fetch-per-choice);
+why: [decision](../../docs/decisions.md#a-budget-for-what-the-site-decides),
+[decision](../../docs/decisions.md#a-list-left-out-for-size-is-deferred-not-refined).)
 
 ## The contract panel
 
@@ -487,13 +488,13 @@ same one.
 
 A listing is cached by clients, so it says only what the account's own
 permissions and roles decide, for the account that asks
-([decision](../../docs/decisions.md#access-is-static-or-runtime-read-from-its-cacheability)).
+(why: [decision](../../docs/decisions.md#access-is-static-or-runtime-read-from-its-cacheability)).
 The derived definitions, cached for every account, are no account's:
 built for no account (`ResourcesInterface::buildDeclared()`), every key
 as declared and each one an access answer could lock or leave out
 marked, and derived as the anonymous account, so an option list read
 from the site is never a privileged account's
-([decision](../../docs/decisions.md#a-static-tool-definition-is-no-accounts)).
+(why: [decision](../../docs/decisions.md#a-static-tool-definition-is-no-accounts)).
 A tool instance lists `values` again for the current account, built for
 the account alone (`OperationInputs::listedValues()`,
 `ResourcesInterface::buildStatic()`), so `tool:info` and anything that
@@ -586,7 +587,7 @@ changing the Tool API.
   it requires, none on an update, its nesting: `validateInputValues()`,
   `InputDefinitions::shapeOf()`) and leaves every rule to the pipeline,
   which narrows `values` from the document sent and says what is allowed
-  for it ([decision](../../docs/decisions.md#a-refusal-names-what-it-depends-on)).
+  for it (why: [decision](../../docs/decisions.md#a-refusal-names-what-it-depends-on)).
   A self-refinement through `input_definition_refiners` would not do:
   a refiner's own dependencies are validated before it runs, so a
   document that breaks the listing is never narrowed, and a document
@@ -603,7 +604,7 @@ changing the Tool API.
   also say the tool changes nothing. Both schema documents state the
   operation's own answer under `x-surface.operation`. An idempotent flag
   on the definition, beside `setDestructive()`, would let it say so
-  ([decision](../../docs/decisions.md#an-operation-states-how-it-behaves)).
+  (why: [decision](../../docs/decisions.md#an-operation-states-how-it-behaves)).
 - **A declared permission cannot depend on the input.**
   `ToolDefinition::setPermission()` takes one route-style string, checked
   before any input is read, so a permission named from what a call is

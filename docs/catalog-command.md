@@ -28,7 +28,7 @@ where the module that opens it is installed:
 | `http` | The method and path that run it under contract 3: `PATCH /surface-api/first.store`, a listing's `GET` on the collection. | `data_surface_react` |
 | `tool` | The derived tool, `data_surface:<id>:<operation>`. | `data_surface_tool` |
 | `read tool` | The read tool beside it, for an operation that changes a thing that exists. | `data_surface_tool` |
-| `schema tool` | The narrowing tool beside it, `data_surface:<id>:<operation>:schema`, where its listing states a key open because the site's list for it is past the budget ([decision](decisions.md#a-budget-for-what-the-site-decides)). | `data_surface_tool` |
+| `schema tool` | The narrowing tool beside it, `data_surface:<id>:<operation>:schema`, where its listing states a key open because the site's list for it is past the budget (why: [decision](decisions.md#a-budget-for-what-the-site-decides)). | `data_surface_tool` |
 | `openapi` | The OpenAPI operation that runs it: `<id>:<operation>:write`, a listing's `:list`. | `data_surface_openapi` |
 | `react` | The React page its form mounts on, `/surface-react/<id>/<operation>`. | `data_surface_react` |
 
@@ -96,7 +96,7 @@ are listed by value, `listed: false` in the JSON and a note in the
 table, and their keys are not walked: a structure walked once per place
 it is used grows with the product of the lists, which exhausted 3 GB
 for a placed block on a site with 312 components
-([decision](decisions.md#a-budget-for-what-the-site-decides)). Each
+(why: [decision](decisions.md#a-budget-for-what-the-site-decides)). Each
 variant's structure is still listed under "Read from a schema".
 
 ## What did not build
@@ -112,8 +112,7 @@ is one refusal of the whole site, since nothing can be read past it.
 can run it.
 
 Every build is for no account, asked as the anonymous one, as the tool
-listing is ([A static tool definition is no
-account's](decisions.md#a-static-tool-definition-is-no-accounts)), so
+listing is (why: [decision](decisions.md#a-static-tool-definition-is-no-accounts)), so
 the map is the same whoever runs the command. On this module's
 development site it takes about 10 seconds for 35 resources, 73
 structures, 153 operations and 3,133 structures read from a schema.

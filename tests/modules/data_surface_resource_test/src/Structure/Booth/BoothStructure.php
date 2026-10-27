@@ -16,7 +16,7 @@ use Drupal\data_surface\Resource\StructureInterface;
  *
  * Two keys watching one sibling, so the full schema enumerates both over
  * the same three sizes: each combination is refined once for the two of
- * them (ContractEmitter::refinedFor()).
+ * them (Conditionals::refinedFor()).
  */
 #[Structure('resource_test.booth')]
 final class BoothStructure implements StructureInterface {

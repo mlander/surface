@@ -14,7 +14,7 @@ cacheability of the configuration object. A key that names a managed
 key declares the `ManagedKey` constraint, which `ManagedKeyOptions`
 reads as the list, so a form offers the keys and both documents state
 them, and its validator refuses a name the site does not manage
-([Declare the constraint, resolve the list](../../docs/options.md#declare-the-constraint-resolve-the-list)).
+([Which constraint to write](../../docs/options.md#which-constraint-to-write)).
 
 The examples use it twice. The mailer, `/surface-examples/14`, knows
 this module: its provider lists a managed source beside the pasted one
@@ -26,7 +26,7 @@ so the form draws no pasted box, a pasted key sent is refused naming the
 managed key, and what is stored for the pasted key is kept. The alter
 cannot hand the webhook's code the managed key's value, since the
 webhook reads only its own keys; the mailer, which reads its own
-variant, can ([decision](../../docs/decisions.md#an-extension-is-a-variant-the-site-adds-or-an-alter)).
+variant, can (why: [decision](../../docs/decisions.md#an-extension-is-a-variant-the-site-adds-or-an-alter)).
 
 ## Try it
 

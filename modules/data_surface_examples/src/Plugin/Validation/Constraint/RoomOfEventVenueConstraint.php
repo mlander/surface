@@ -12,7 +12,10 @@ use Drupal\Core\Validation\Attribute\Constraint;
  *
  * Added by the room's refiner beside EventVenueRoomConstraint,
  * `addConstraint('RoomOfEventVenue', ['venue' => $venue])`: one more
- * constraint narrows, and the list both name is the venue's rooms.
+ * constraint narrows, and the list both name is the venue's rooms. It has
+ * a name of its own because adding EventVenueRoom again with a venue
+ * replaces the declared one, and the narrowing check refuses a constraint
+ * whose options were replaced, since it cannot read what they mean.
  */
 #[Constraint(
   id: 'RoomOfEventVenue',

@@ -28,8 +28,18 @@ final class Compute {
   public const ON_CHANGE = 'change';
 
   /**
+   * When a call leaves it out; a value sent is kept as sent.
+   *
+   * A machine name suggested from a title, which a person may type over:
+   * left out, or sent empty, it is computed while storage holds nothing
+   * for it, as ON_CREATE computes it, and kept as stored after; sent, it
+   * is taken as it was sent and judged by its own constraints.
+   */
+  public const UNLESS_SENT = 'unless_sent';
+
+  /**
    * Every value `when:` takes.
    */
-  public const ALL = [self::ON_CREATE, self::ON_CHANGE];
+  public const ALL = [self::ON_CREATE, self::ON_CHANGE, self::UNLESS_SENT];
 
 }

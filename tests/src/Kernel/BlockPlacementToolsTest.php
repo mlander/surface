@@ -186,7 +186,7 @@ class BlockPlacementToolsTest extends DataSurfaceKernelTestBase {
       [
         'path' => '/id',
         'code' => Violation::TAKEN,
-        'message' => 'The machine name doors_hero is already in use: choose another.',
+        'message' => 'A block named doors_hero already exists.',
       ],
     ], $again['violations']);
   }

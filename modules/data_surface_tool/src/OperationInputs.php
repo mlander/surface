@@ -723,7 +723,8 @@ final class OperationInputs {
    *   key would; NULL when it is not known.
    * @param bool $computed
    *   TRUE to keep the computed keys, which the read answers; the write
-   *   takes none, so its `values` leaves them out.
+   *   takes none but those computed unless sent, so its `values` leaves
+   *   the rest out.
    *   Decision: see
    *   docs/decisions.md#a-computed-key-is-a-pure-function-of-its-sources.
    *
@@ -748,7 +749,8 @@ final class OperationInputs {
     $this->listedTags = Cache::mergeTags($this->listedTags, SettledCacheability::of($built)->getCacheTags());
     $properties = array_diff_key($map->getPropertyDefinitions(), array_flip($known));
     if (!$computed) {
-      $properties = array_filter($properties, static fn (string $name): bool => Computed::of($built->getDefinition($name)) === NULL || $built->getDefinitions()->isLocked($name), ARRAY_FILTER_USE_KEY);
+      // One computed unless sent is a value a caller may give.
+      $properties = array_filter($properties, static fn (string $name): bool => Computed::of($built->getDefinition($name))?->takesSent() !== FALSE || $built->getDefinitions()->isLocked($name), ARRAY_FILTER_USE_KEY);
     }
     $map->setPropertyDefinitions($properties);
     $map->setRequired(array_filter($properties, static fn (DataDefinitionInterface $property): bool => $property->isRequired()) !== []);

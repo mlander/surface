@@ -13,7 +13,7 @@ use Symfony\Component\Validator\Constraint as SymfonyConstraint;
  * Holds a value to a JSON Schema the data definitions have no words for.
  *
  * What a schema says that no constraint of the vocabulary does (`not`,
- * `uniqueItems`, `patternProperties`, `dependentSchemas`, a reference to
+ * `contains`, `patternProperties`, `dependentSchemas`, a reference to
  * a document outside it, a type that is several types), kept by
  * SchemaReader as the part of the schema it was read from that is left
  * over, and checked here at runtime against that part, so a structure

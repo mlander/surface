@@ -15,20 +15,29 @@ drush pm:install data_surface_examples_references
 of what it refers to: `entity:event_venue`, `entity:user`,
 `entity:node:article`, and three bare `entity` keys, each two parts, an
 entity type and an id, filtered by what kind of entity type it is and by
-bundle. Each stores the id, as its entity type keeps it.
+bundle. Every door sends and answers the id, as its entity type keeps
+it. The config object stores a content entity by its uuid, so it means
+the same entity on a site it is deployed to: the contact, the
+announcement, and the content a bare key holds; the venue and a role
+stay their ids, their machine names
+([A reference is stored by uuid](../../docs/storage.md#a-reference-is-stored-by-uuid)).
 
 The candidates are core's selection handler's for the account asking,
 listed while there are at most
 `data_surface.settings:reference_list_limit` and looked up past that:
 on the form with core's entity autocomplete, over HTTP with the
 resource's lookup, `GET /surface-api/event.sponsorship:lookup?key=/venue&q=riv`
-([A key that refers to an entity](../../docs/options.md#a-key-that-refers-to-an-entity),
-[decision](../../docs/decisions.md#a-reference-is-an-id-with-a-list-the-site-decides-listed-or-looked-up)).
+([A key that refers to an entity](../../docs/options.md#a-key-that-refers-to-an-entity);
+why: [decision](../../docs/decisions.md#a-reference-is-an-id-with-a-list-the-site-decides-listed-or-looked-up)).
 
 ## What it ships
 
 - The sponsorship's settings, `data_surface_examples_references.sponsorship`,
-  its config schema generated from the resource.
+  its config schema generated from the resource: the contact and the
+  announcement typed `uuid`.
+- A post-update, `data_surface_examples_references_post_update_references_by_uuid()`,
+  which stores as uuids the ids a site stored before the module stored
+  uuids.
 - The article and page bundles, as optional config, for a site that has
   neither.
 - A role, Sponsorship editor (`event_sponsorship_editor`), which may set
