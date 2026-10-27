@@ -77,7 +77,7 @@ so it is the whole of the storage code. What it does:
   tool's null for it is refused naming its default, both schemas leave
   null out of its type, and its select offers no `- None -` once a
   valid choice is selected
-  ([decision](decisions.md#a-key-its-storage-always-holds)). A generated
+  (why: [decision](decisions.md#a-key-its-storage-always-holds)). A generated
   schema is fully validatable, so `nullable: true` is what decides it.
 - **`widerThanSchema()`** says where the resource advertises more than
   the schema allows, and the build refuses such a resource
@@ -89,7 +89,7 @@ so it is the whole of the storage code. What it does:
 The resource is the one description of the config object; its config
 schema and the values it is installed with are written from it, until
 core can read a data definition as the schema
-([decision](decisions.md#a-config-object-is-described-by-its-resource)):
+(why: [decision](decisions.md#a-config-object-is-described-by-its-resource)):
 
 ```bash
 drush data_surface:config-schema --module=my_module
@@ -103,7 +103,7 @@ check can run it. The second writes them; commit what it writes. Without
 a simple config object, or writing an entry for one. An object another
 module provides (its name's first part is that module) keeps its
 owner's schema, which the resource is held to, and no entry is written
-for it ([decision](decisions.md#the-generator-writes-what-the-first-page-shows)).
+for it (why: [decision](decisions.md#the-generator-writes-what-the-first-page-shows)).
 
 A module named need not be installed. Its resources, structures, shapes
 and alters are read from its `src/`, as discovery reads an installed
@@ -407,7 +407,7 @@ context that creates.
   included, so what a dry run showed is what is stored.
 - **`prepareDelete()` and `delete()`** remove the entity the context
   names, for an operation that deletes
-  ([A placed block is a resource](decisions.md#a-placed-block-is-a-resource)).
+  (why: [decision](decisions.md#a-placed-block-is-a-resource)).
 - **`mayClear()` and `widerThanSchema()`** read the entity's config
   schema, `<config prefix>.*`, for the keys stored under a property: the
   build refuses a resource that advertises what that schema refuses.
@@ -467,7 +467,7 @@ The storage may read and write more than one thing for an operation
 that names no thing: `VenueStorage` answers a listing from every venue
 in its `prepare()` and writes a reorder's weights to each venue it names
 in one `commit()`
-([decision](decisions.md#a-listing-is-a-read-only-operation-with-outputs-a-reorder-is-an-update-over-the-collection)).
+(why: [decision](decisions.md#a-listing-is-a-read-only-operation-with-outputs-a-reorder-is-an-update-over-the-collection)).
 
 ### Keys a mixed-in structure brings
 
@@ -670,7 +670,7 @@ entity cannot be pointed at another bin for one call. An unsaved clone,
 held to the schema, is as far as a dry run goes; a resource's storage
 class returns that clone's exported array from `prepare()`, which a
 PHP caller reads on the result; a derived tool's dry run answers the
-accepted values instead ([decision](decisions.md#every-door-projects-what-the-read-tool-projects)).
+accepted values instead (why: [decision](decisions.md#every-door-projects-what-the-read-tool-projects)).
 
 ## The engine storage classes
 
@@ -690,7 +690,7 @@ fresh-eyes reader had to write ([the log](fresh-eyes-2026-10-18.md)).
 `ConfigEntityStorage` became one a resource names when the placed block
 became a resource (2026-10-23); until then it was an engine class no
 host used, with the same short name as core's
-([decision](decisions.md#a-placed-block-is-a-resource)).
+(why: [decision](decisions.md#a-placed-block-is-a-resource)).
 
 The namespace says which kind a class is. A class in `Storage\` is one
 you name on `#[Resource(storage:)]` or extend: `ConfigObjectStorage`

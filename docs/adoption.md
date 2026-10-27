@@ -194,7 +194,7 @@ typed-config validation on the unsaved entity's export array, refuses an
 id in use on add, commits with `save()`, and deletes for an operation
 that deletes. Two resources use it. `data_surface_block` makes a placed
 block one, `block.placement`, its plugin choosing its settings
-([A placed block is a resource](decisions.md#a-placed-block-is-a-resource)).
+(why: [decision](decisions.md#a-placed-block-is-a-resource)).
 `data_surface_demo_node_type` is the other: one resource,
 `NodeTypeResource`, with a create and an update operation, the machine
 name locked on an update because the update operation knows it, and its storage,

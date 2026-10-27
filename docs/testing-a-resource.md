@@ -68,7 +68,7 @@ no operation as a host builds it):
 | Test | Holds |
 | --- | --- |
 | `testEveryOperationBuilds` | Every operation builds, for no account and for an administrator, who sees every key it declares, and its full schema is emitted. One that needs a subject is built with none. |
-| `testNeverStricterThanThePipeline` | The full schema and the schema for these answers accept every document the pipeline accepts, post-coercion, and refuse every one it refuses where the schema is exact ([Two documents, never stricter than the runtime](decisions.md#two-documents-never-stricter-than-the-runtime)). The documents are the declared defaults, each key sent `null`, each key sent a value of another type, and your rows. A refusal at a key the schema marks wider (`refine`, `live`, `checkedOnServer`, a `format`, a secret's required, a stale value) may be accepted. |
+| `testNeverStricterThanThePipeline` | The full schema and the schema for these answers accept every document the pipeline accepts, post-coercion, and refuse every one it refuses where the schema is exact (why: [decision](decisions.md#two-documents-never-stricter-than-the-runtime)). The documents are the declared defaults, each key sent `null`, each key sent a value of another type, and your rows. A refusal at a key the schema marks wider (`refine`, `live`, `checkedOnServer`, a `format`, a secret's required, a stale value) may be accepted. |
 | `testFullSchemaReadsBackToItself` | The full schema, read back by `SchemaReader`, builds a structure whose full schema is byte-equal ([Reading a schema](reading-a-schema.md#the-round-trip)). A document of a kind that cannot round-trip (a coded refiner, an access answer, an alter's mount, keys from the site, a computed key, a constraint only the server checks, a port, a runtime refiner) is reported as skipped, naming the kind and why; any other difference fails, printing both documents. |
 | `testStaticRefinersAgree` | Each conditional the full schema states for a static refiner is what a fresh refinement answers, and each declared rule's is, over sampled values; then again for the schema of the defaults and of each accepted row ([Enforcing the kind](refinement.md#enforcing-the-kind)). |
 | `testStaticAccessAgrees` | What the full schema states about access (read only where locked or computed, marked `live` where set aside, no key it leaves out) holds for an administrator, an account with the operation's permission and one with none, as installed and with each of your accepted rows stored. |
@@ -109,5 +109,5 @@ process, as every kernel test here is.
   [second](second-resource.md) resources.
 - [The site's catalog](catalog-command.md), to find the ids, the doors
   and what did not build.
-- [An adopter's tests hold the
-  invariants](decisions.md#an-adopters-tests-hold-the-invariants).
+- An adopter's tests hold the invariants
+  (why: [decision](decisions.md#an-adopters-tests-hold-the-invariants)).

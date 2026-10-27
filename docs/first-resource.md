@@ -220,14 +220,27 @@ Read it top to bottom:
   description.
 - **What a key allows** is a constraint. `Length` becomes a maximum
   length, `Range` a number field bounded at 1 and 10000, and
-  `LabeledChoice` a select whose options are its labels. The form, the
-  tool and the schema all read the same constraint, and a value outside
-  it is refused with the constraint's message, wherever it came from.
+  `LabeledChoice` a select whose options are its labels. The select
+  comes from the list: a key whose constraint lists its allowed values
+  is drawn as a select, and stays one if a later rule empties the list,
+  offering only its empty option, since a text field there would invite
+  a value the constraint refuses. The form, the tool and the schema all
+  read the same constraint, and a value outside it is refused with the
+  constraint's message, wherever it came from.
 - **Everything is static.** The class is never instantiated, so there is
   nothing to inject a translation service into: labels call the global
   `t()` with a literal string. An attribute argument cannot call a
   function, so the operation's label and description are
-  `new TranslatableMarkup()`.
+  `new TranslatableMarkup()`. A method you add later to narrow one key
+  by another's value, as the second page does, is static for the same
+  reason: it reads only the keys its parameters name and holds no
+  service, so the schema can state its answer ahead of time. A rule that
+  must read the site or the account, such as a value in State, declares
+  `runtime: TRUE` and runs only against the values of a call
+  ([Enforcing the kind](refinement.md#enforcing-the-kind)). The module
+  refuses a method that is not static when it reads the class, and, with
+  PHP assertions on as under DDEV, stops a static one that asks for a
+  service, naming the method and the service.
 
 ## 5. The permission
 
@@ -302,7 +315,7 @@ them: the three the class requires say "Required; a value already
 stored stands when left out." in their descriptions. `values` itself is
 always sent, `{}` when nothing changes. The write answers, in the one
 result shape every door answers
-([decision](decisions.md#one-result-at-every-door)):
+(why: [decision](decisions.md#one-result-at-every-door)):
 
 ```
 Success: Configure the newsletter: the values were accepted and written.
@@ -318,7 +331,11 @@ Outputs:
   stale: []
 ```
 
-The key left out, `max_recipients`, kept what was stored. A key the
+The key left out, `max_recipients`, kept what was stored. A key sent
+`null` is cleared instead, unless its storage always holds it, and then
+the call is refused: here, every key the schema in step 2 does not mark
+`nullable: true`
+([Absent, null, or a value](semantics.md#absent-null-or-a-value)). A key the
 class requires may be left out too once a value for it is stored, and
 the stored value stands. Where nothing is stored for it, on an
 operation that creates or for a thing that has no value yet, it cannot

@@ -16,8 +16,8 @@ each layer changes one thing about it and nothing else:
 
 | Layer | What it transforms | Who declares it | Where it is documented |
 | --- | --- | --- | --- |
-| Coercion, at the door | A raw value into the declared type, before validation: `'7'` becomes `7` for an integer, `'yes'` becomes `TRUE` for a boolean. Only when the intended value is unambiguous; anything else is left for a constraint to refuse. | Nobody: one table, the Tool API's, mirrored in `Pipeline\Coercion` and run by `accept()` for every door. | [The coercion table](semantics.md#the-coercion-table), [decision](decisions.md#one-coercion-table-the-tool-apis) |
-| Storage layout | The accepted document into the shape storage keeps, and back: a deadline asked as an amount and a unit, stored as seconds. | The storage class, in its own `load()` and `prepare()`; a field type, by handing `FieldSettingsStorage` a `StorageLayoutInterface`; an alter, for its own mount, with `AltersStorageLayoutInterface::storageLayout()`. | [StorageLayoutInterface](storage.md#storagelayoutinterface), [decision](decisions.md#blueprints-and-layouts) |
+| Coercion, at the door | A raw value into the declared type, before validation: `'7'` becomes `7` for an integer, `'yes'` becomes `TRUE` for a boolean. Only when the intended value is unambiguous; anything else is left for a constraint to refuse. | Nobody: one table, the Tool API's, mirrored in `Pipeline\Coercion` and run by `accept()` for every door. | [The coercion table](semantics.md#the-coercion-table) (why: [decision](decisions.md#one-coercion-table-the-tool-apis)) |
+| Storage layout | The accepted document into the shape storage keeps, and back: a deadline asked as an amount and a unit, stored as seconds. | The storage class, in its own `load()` and `prepare()`; a field type, by handing `FieldSettingsStorage` a `StorageLayoutInterface`; an alter, for its own mount, with `AltersStorageLayoutInterface::storageLayout()`. | [StorageLayoutInterface](storage.md#storagelayoutinterface) (why: [decision](decisions.md#blueprints-and-layouts)) |
 | Wire representation | How a value travels at one door: an operation's entity parameter as its id at the tool door, an update's body as a merge patch over HTTP. | The door: the tool bridge's `OperationInputs`, the React submodule's API controller. | [The Tool API bridge](../modules/data_surface_tool/README.md), [The write](served-contract.md#the-write) |
 
 The resource's keys, as declared, are the one document all three layers
@@ -108,14 +108,14 @@ Its `prepare()` calls `toStorage()` the same way. Every door answers
 values in the resource's layout, a dry run's included; what a layout
 produces is served to no caller, and only PHP code holding the storage
 reads it on the result
-([decision](decisions.md#every-door-projects-what-the-read-tool-projects)).
+(why: [decision](decisions.md#every-door-projects-what-the-read-tool-projects)).
 
 Each class's `use` line: [Namespaces](concepts.md#namespaces).
 
 ### A reference key: the id, and where another shape belongs
 
 A key that refers to an entity holds the entity's id at every door
-([decision](decisions.md#a-reference-is-an-id-with-a-list-the-site-decides-listed-or-looked-up)).
+(why: [decision](decisions.md#a-reference-is-an-id-with-a-list-the-site-decides-listed-or-looked-up)).
 Example 16 declares two of its keys this way:
 
 <!-- excerpt: modules/data_surface_examples_references/src/Resource/SponsorshipResource.php -->
@@ -322,7 +322,7 @@ plugin; ECA meets a resource at two points that already exist:
   resource goes through the pipeline like any other door:
   access, coercion, validation, storage's checks, and the one result
   shape with its violations by path
-  ([decision](decisions.md#one-result-at-every-door)).
+  (why: [decision](decisions.md#one-result-at-every-door)).
 
 Either way the model is site configuration, built and exported on the
 site that wants the reaction, and the resource does not know it exists.
@@ -385,7 +385,7 @@ $outputs->add('total', 'integer', t('Total'))
 
 A listing is a read only operation, which is never committed, so its
 outputs are what its storage's `prepare()` answered
-([decision](decisions.md#who-produces-outputs)). `VenueStorage`
+(why: [decision](decisions.md#who-produces-outputs)). `VenueStorage`
 computes them there:
 
 <!-- excerpt: modules/data_surface_examples/src/Storage/VenueStorage.php -->
@@ -461,7 +461,7 @@ It differs from the two above in what it is: an output is not stored
 and no read answers it, and what `prepare()` adds is in no contract. A
 computed key is stored, loaded and answered by the read like any key,
 and both documents state it. Three choices settle it
-([decision](decisions.md#a-computed-key-is-a-pure-function-of-its-sources)):
+(why: [decision](decisions.md#a-computed-key-is-a-pure-function-of-its-sources)):
 
 - **Pure functions only.** The class that computes it runs under the guard a static
   refiner runs under, and the PHPStan rule flags `\Drupal::` in it, so

@@ -90,8 +90,7 @@ so the second writes to the first one's entity.
 **Here today.** Every place the module turns a definition into typed data
 goes through `DefinitionTypedData::create()`, which hands core a copy of
 the root carrying a digest of the definition in its settings, so the
-cache key names the definition (`src/DefinitionTypedData.php`; [a
-definition is validated as itself](decisions.md#a-definition-is-validated-as-itself)).
+cache key names the definition (`src/DefinitionTypedData.php`; why: [decision](decisions.md#a-definition-is-validated-as-itself)).
 Field items are built from `FieldConfigBase::getItemDefinition()`
 instead (`Form\DataSurfaceFieldTypeTrait`). It was found when one tool
 call's narrowing leaked into the next call in the same process, and
@@ -133,8 +132,7 @@ server-side rule exists
 (`PropertySchema::keywords()` in `src/Contract/PropertySchema.php`). A
 `Regex` is written only when every construct in its pattern is on an
 allowlist of those PHP and JavaScript read alike, and is otherwise left
-to the server (`src/Contract/PatternTranslation.php`; [a pattern both
-engines read alike](decisions.md#a-pattern-both-engines-read-alike)).
+to the server (`src/Contract/PatternTranslation.php`; why: [decision](decisions.md#a-pattern-both-engines-read-alike)).
 
 **The core change.** The normalizer reads `getConstraints()` and asks
 each constraint for its keywords through an optional interface on the
@@ -333,7 +331,7 @@ the class is first built, so a widening rule never runs. Validation
 enforces it, and both schemas write it as one `if`/`then`
 (`src/Refinement/Condition.php`, `src/Refinement/Rule.php`,
 `DeclaredNarrowingTest`; [Declaring a
-rule](refinement.md#declaring-a-rule); [why](decisions.md#a-rule-declared-as-data)).
+rule](refinement.md#declaring-a-rule); why: [decision](decisions.md#a-rule-declared-as-data)).
 In the honeypot port described at the end of this page, the settings
 form's `#states` dependency became one such rule, stated in the schema
 and refused by name at the form, the tool and the HTTP API alike ([the
@@ -434,8 +432,7 @@ Declarations of definitions are mostly static.
 
 **Here today.** Static declarations call the global `t()` with a literal
 string, and `new TranslatableMarkup` appears only inside attribute
-arguments, where a call is not allowed ([a resource or structure is
-static](decisions.md#a-resource-or-structure-is-static)). The guard that
+arguments, where a call is not allowed (why: [decision](decisions.md#a-resource-or-structure-is-static)). The guard that
 stops a static refiner reading site state lets `t()` through, because
 `t()` only builds the lazy object; the language and the translation are
 read when it is rendered, after the refiner has returned
@@ -643,7 +640,7 @@ their elements), but the form is still written by hand, and
 definitions. A widget is chosen per definition from the definition
 alone, asked for with a setting where the definition does not settle it
 (`setSetting('widget', 'radios')`; [Widgets](widgets.md);
-[why](decisions.md#a-widget-is-chosen-from-the-definition)). A key
+why: [decision](decisions.md#a-widget-is-chosen-from-the-definition)). A key
 another depends on gets `#ajax`, and a change replaces only the
 elements that depend on it ([Wrapper ids and
 AJAX](forms.md#wrapper-ids-and-ajax)). Presentation (grouping, sizes, a
@@ -668,8 +665,7 @@ works around rather than through:
   none is set), so a definition's rule and its message lose to the
   element's. The module clears the element's server-side check and
   keeps the limits as attributes (`min`, `max`, `maxlength`), hints
-  the browser still reads, so the rule speaks ([an element
-  hints and the rule speaks](decisions.md#an-element-hints-and-the-rule-speaks)).
+  the browser still reads, so the rule speaks (why: [decision](decisions.md#an-element-hints-and-the-rule-speaks)).
   Form API reading `#states` from a definition's conditions (1.8) and
   its checks from its constraints would make the element a hint and the
   definition the rule.

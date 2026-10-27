@@ -26,7 +26,7 @@ so the form draws no pasted box, a pasted key sent is refused naming the
 managed key, and what is stored for the pasted key is kept. The alter
 cannot hand the webhook's code the managed key's value, since the
 webhook reads only its own keys; the mailer, which reads its own
-variant, can ([decision](../../docs/decisions.md#an-extension-is-a-variant-the-site-adds-or-an-alter)).
+variant, can (why: [decision](../../docs/decisions.md#an-extension-is-a-variant-the-site-adds-or-an-alter)).
 
 ## Try it
 

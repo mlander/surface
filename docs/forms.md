@@ -12,7 +12,7 @@ into a container of elements and read it back. The host traits know how to
 satisfy one host family's protocol using it. The service draws through
 `Form\Drawing`, reads back through `Form\Extracting` and refines over
 AJAX through `Form\Refreshing`, three internal classes
-([The form builder draws, extracts and refreshes](decisions.md#the-form-builder-draws-extracts-and-refreshes)).
+(why: [decision](decisions.md#the-form-builder-draws-extracts-and-refreshes)).
 
 ## Pick your host family
 
@@ -138,7 +138,7 @@ How a form is laid out is declared once, on the keys, and every door
 that draws them reads it: the operation form, each plugin host (a
 block, a condition, a formatter, a field type), the demo's standalone
 form, and the React app through the served contract
-([decision](decisions.md#arrangement-is-declared-once)). A key's
+(why: [decision](decisions.md#arrangement-is-declared-once)). A key's
 `Resource\Arrangement` says the group it is drawn in, its weight, a
 placeholder, a prefix and a suffix beside its input, and a help text:
 
@@ -361,8 +361,8 @@ made a Form API error, because Form API skips the rebuild
 once anything has errored and every dependent would come back refined
 against the answer before this one: the builder holds it for the
 request, the rebuild goes ahead (refining as though the refused value
-were not there, since [a refiner never sees an invalid
-sibling](decisions.md#a-refiner-never-sees-an-invalid-sibling)), and
+were not there, since a refiner never sees an invalid sibling; why:
+[decision](decisions.md#a-refiner-never-sees-an-invalid-sibling)), and
 the callback replaces the trigger with the error under it, in the form
 element template's own error slot, with `aria-invalid` and the `error`
 class. The error carries an id, the input's own followed by `--error`,
@@ -376,7 +376,7 @@ held over to the next page. An error Form API's own element validation
 sets on the trigger, a maximum length, still stops the rebuild, and is
 printed the same way and taken off the top. The trigger's next request
 replaces it again, so an error the person fixed goes away with it
-([decision](decisions.md#an-error-on-the-trigger-renders-inline)).
+(why: [decision](decisions.md#an-error-on-the-trigger-renders-inline)).
 
 The same exception covers the case that used to be this section's
 trade-off. A trigger keeps the options it was rendered with, and a
@@ -471,7 +471,7 @@ and an "Add another" button:
 A list of single values with no list of allowed values (keywords, a
 list of free strings) is drawn by the stock list widget the same way,
 in a `fieldset` of rows rather than a `details` of items
-([decision](decisions.md#a-widget-is-chosen-from-the-definition)):
+(why: [decision](decisions.md#a-widget-is-chosen-from-the-definition)):
 
 - **Each row** is the element the item's own widget draws, its title
   the list's label and the row's number, read by screen readers and not
@@ -588,8 +588,10 @@ standing for it rather than as a key that holds nothing.
 container is its own top level key; a plugin host nested inside another
 form cannot know its position before Form API assigns it, answers NULL,
 and is built from what is stored, so without JavaScript a plugin host
-refuses a valid save that moves a parent and its dependent together
-([decisions](decisions.md#a-plugin-host-cannot-overlay-a-full-submission)).
+refuses a valid save that moves a parent and its dependent together.
+With JavaScript the parent's AJAX rebuild offers the dependent's new
+choices before the save, and the save is accepted
+(why: [decision](decisions.md#a-plugin-host-cannot-overlay-a-full-submission)).
 
 ## Current values on extraction
 
@@ -733,16 +735,17 @@ an option:
 
 The empty option says what it stands for, "- Keep @value (no longer
 offered) -", and still posts the empty string, never a value the key
-does not take ([decision](decisions.md#the-empty-option-rule)). An
+does not take (why: [decision](decisions.md#the-empty-option-rule)). An
 orphan of an edit, which a save refuses rather than keeps, says "- Select
 -" or "- None -" as before, and so does a select on a declared default
 the list does not offer, since nothing is stored to keep.
 
-The whole of the rule for when a single select shows its empty option
-is [a decision](decisions.md#the-empty-option-rule): whenever no valid
-choice is selected, and always on a select that may be cleared, an
-optional key its storage does not [always
-hold](decisions.md#a-key-its-storage-always-holds). A required select,
+A single select shows its empty option whenever no valid choice is
+selected, and always on a select that may be cleared: an optional key
+its storage does not always hold. A key its storage always holds is one
+a fully validatable config schema does not mark `nullable: true`
+(why: [decision](decisions.md#the-empty-option-rule),
+[decision](decisions.md#a-key-its-storage-always-holds)). A required select,
 or one its storage always holds,
 with a stored value it still offers, or a declared default it offers,
 has no empty option at all; on first entry it comes up on `- Select -`,
@@ -750,7 +753,7 @@ and a save leaving it there is refused with the data surface's own
 words, "@label is required." (or "... is required when ..." where a rule
 made it so): the form builder keeps core's own required check off every
 element it draws, which still draws the marker and the browser's
-`required` attribute ([decision](decisions.md#an-element-hints-and-the-rule-speaks)).
+`required` attribute (why: [decision](decisions.md#an-element-hints-and-the-rule-speaks)).
 
 Four things are true of a stale select, and each closes a different way
 of losing the value:
@@ -789,8 +792,7 @@ asked, and it has no `required` attribute, which would have the browser
 refuse the option that keeps the value. The rest of the required hint is
 drawn as on every required element: the label keeps the marker, and the
 select says `aria-required="true"`, so a screen reader and the eye agree
-([An element hints and the rule
-speaks](decisions.md#an-element-hints-and-the-rule-speaks)).
+(why: [decision](decisions.md#an-element-hints-and-the-rule-speaks)).
 
 Only an explicit new choice replaces the value. Choosing the empty
 option of an optional select clears the key when the select could show
@@ -825,7 +827,7 @@ between 1 and 1000." A message that already begins with the title (a
 required key's "Event title is required.") and an element with no title
 are left as they are, and with Inline Form Errors on nothing is added:
 it prints the message beside the element and names the field in its own
-summary ([decision](decisions.md#an-element-hints-and-the-rule-speaks)).
+summary (why: [decision](decisions.md#an-element-hints-and-the-rule-speaks)).
 
 ## Finding the container again
 
@@ -919,13 +921,12 @@ whole run dry, access and storage's own `prepare()` included, so every
 refusal is said on its element while Form API still takes errors, and
 the submit runs it again and writes; a refusal that arrives only then,
 what is stored having moved in between, is said as a message
-([Nothing an operation runs reads the
-request](decisions.md#nothing-an-operation-runs-reads-the-request)). A locked identity key
+(why: [decision](decisions.md#nothing-an-operation-runs-reads-the-request)). A locked identity key
 renders as a disabled element holding the value the operation knows,
 and extraction keeps that value whatever is posted. A resource its
 access locks at the top renders every element disabled, says why above
 them, once, and has no Save; nothing on it is marked required, since
-nothing is asked ([Locked at the top](decisions.md#locked-at-the-top)).
+nothing is asked (why: [decision](decisions.md#locked-at-the-top)).
 A key locked on its own (a child its access locked, the fees of
 example 10 once the program is published) says why in its description:
 the access answer's reason, "The fees are fixed once the program is
@@ -1026,7 +1027,7 @@ with the element answers first and the data surface's own violation
 does exactly this where it borrows core's machine name element, and the
 stock number widget does the same for core's number element, whose own
 `#min` and `#max` check would otherwise answer before a `Range` and its
-message ([decision](decisions.md#an-element-hints-and-the-rule-speaks)).
+message (why: [decision](decisions.md#an-element-hints-and-the-rule-speaks)).
 
 A swap must also keep the shape the element posts. The widget that drew
 the element reads the value back from what it posts, in the

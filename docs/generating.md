@@ -81,7 +81,7 @@ JSON Schema of the same values would be.
   label is named from its key, and one comment lists them.
 - `Choice`, `Range`, `Length`, `Count` and `NotBlank`, and a `Regex`
   inside the subset both engines read alike
-  ([decision](decisions.md#a-pattern-both-engines-read-alike)).
+  (why: [decision](decisions.md#a-pattern-both-engines-read-alike)).
 - In a fully validatable object, every key not marked `requiredKey:
   false` is required, since core holds such an object to every key.
 - Each default is what the object holds on the site now, or what its
@@ -141,7 +141,7 @@ how many such comments the class has.
 
 ## The decision
 
-[The generator writes what the first page shows](decisions.md#the-generator-writes-what-the-first-page-shows)
-says why there is one generator for three sources, why the page stays
-the truth, why a foreign constraint is a comment, and why a YAML file is
-added to and never replaced.
+One generator serves three sources, the first page stays the source of
+truth, a foreign constraint is written as a comment, and a YAML file is
+added to and never replaced
+(why: [decision](decisions.md#the-generator-writes-what-the-first-page-shows)).

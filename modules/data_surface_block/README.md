@@ -63,9 +63,12 @@ settings and visibility as core stores them. It holds the whole block to
 save would, and files each violation under the key that owns it, a
 condition's by its place in the list.
 
-What was decided, and what is open (context-aware plugins, moving a
-block between themes, Layout Builder): [A placed block is a
-resource](../../docs/decisions.md#a-placed-block-is-a-resource).
+Not built yet: a plugin that declares a context is not offered; an
+update keeps a block in the theme it is in, so a block cannot move
+between themes; Layout Builder's components are not placements; and a
+create without JavaScript draws a plugin's settings only once the
+plugin is chosen
+(why: [decision](../../docs/decisions.md#a-placed-block-is-a-resource)).
 
 ### The doors
 

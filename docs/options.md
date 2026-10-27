@@ -218,7 +218,7 @@ third spelling an entity type select reads as machine names.
 
 A rule on a key is said by a constraint. Take the first of three steps
 that can say it: each step down tells a client less before it calls
-([decision](decisions.md#a-rule-is-a-keyword-first-a-list-second-code-last)).
+(why: [decision](decisions.md#a-rule-is-a-keyword-first-a-list-second-code-last)).
 
 **1. A stock constraint with data options.** `Range`, `Length`,
 `Count`, `NotBlank`, `Regex`, `Email`, `Choice` and `LabeledChoice` are
@@ -299,7 +299,7 @@ venue chosen
 
 A key that refers to an entity is declared by the data type string of
 what it refers to, and holds the entity's id
-([decision](decisions.md#a-reference-is-an-id-with-a-list-the-site-decides-listed-or-looked-up)):
+(why: [decision](decisions.md#a-reference-is-an-id-with-a-list-the-site-decides-listed-or-looked-up)):
 
 ```php
 $inputs->add('venue', 'entity:event_venue', t('Venue'));    // a venue's machine name
@@ -374,7 +374,7 @@ per single-directory component) or whose keys do (`addEach()`,
 `attachEach()`) is spelled out in the full schema and the tool listing
 while the site lists at most that many; past it, both state the key
 open and mark it `deferred`, and the deciding key keeps its list of ids
-and labels ([decision](decisions.md#a-budget-for-what-the-site-decides)).
+and labels (why: [decision](decisions.md#a-budget-for-what-the-site-decides)).
 Where a reference key past its limit is looked up by label, such a key
 is fetched per choice: choose the deciding key, then fetch the full
 schema with that choice stated, `GET .../schema?choose=/props=<value>`,
@@ -384,8 +384,8 @@ the site's list changes
 ask with values, `POST .../schema` over HTTP or the narrowing tool,
 `data_surface:<resource>:<operation>:schema`; both answer the chosen
 variant's keys exactly
-([asking again at the tool door](served-contract.md#asking-again-at-the-tool-door),
-[decision](decisions.md#a-list-left-out-for-size-is-deferred-not-refined)).
+([asking again at the tool door](served-contract.md#asking-again-at-the-tool-door);
+why: [decision](decisions.md#a-list-left-out-for-size-is-deferred-not-refined)).
 `SiteListBudget::withLimit()` holds another limit for one call, saving
 nothing, as `References::withLimit()` does.
 
@@ -431,7 +431,7 @@ constraint accepts and nothing else, as a `Choice`'s is, says so with
 it the resolver reads, is then named under no `checkedOnServer`. Example
 2's room does: its constraint is a `Choice` whose list is the rooms of
 the venues the site has, read by `EventVenueRoomOptions`
-([decision](decisions.md#a-listing-is-a-read-only-operation-with-outputs-a-reorder-is-an-update-over-the-collection)).
+(why: [decision](decisions.md#a-listing-is-a-read-only-operation-with-outputs-a-reorder-is-an-update-over-the-collection)).
 A memoized answer is dropped when a tag it was read under is
 invalidated, so a definition kept for the rest of a request is answered
 afresh, and a tool's definition carrying the list as its enum is cleared

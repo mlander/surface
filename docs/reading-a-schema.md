@@ -45,7 +45,7 @@ the emitter wrote reads back as what it was written from
 | any other `format` | dropped, noted: an annotation, which no constraint checks |
 | `null` beside the type (`["string", "null"]`) | a key null clears |
 | `required` | the key required |
-| an optional property whose type refuses null and that has a `default` | a key its storage always holds, which null cannot clear ([decision](decisions.md#a-key-its-storage-always-holds)); with no default, a key null clears, since a key always held with nothing to hold would refuse every submission |
+| an optional property whose type refuses null and that has a `default` | a key its storage always holds, which null cannot clear (why: [decision](decisions.md#a-key-its-storage-always-holds)); with no default, a key null clears, since a key always held with nothing to hold would refuse every submission |
 | `default`, `examples` | its default, its examples |
 | `enum` | a `Choice`; with `meta:enum` labels (single-directory components), a `LabeledChoice` |
 | `oneOf` of `const` with `title` and `description` | a `LabeledChoice`, its labels and descriptions; an untitled `{"const": null}` the key null clears |
@@ -55,9 +55,9 @@ the emitter wrote reads back as what it was written from
 | `exclusiveMinimum`, `exclusiveMaximum` | on an integer, `Range` to the next whole number in; on a number, kept ([below](#what-is-kept)) |
 | `minLength`, `maxLength` | `Length` |
 | `minItems`, `maxItems` | `Count` |
-| `pattern` | a `Regex`, when it is inside the subset PHP and an ECMA engine read alike: the body, delimited, with `D` and, for a character outside ASCII, `u` ([decision](decisions.md#a-pattern-both-engines-read-alike)); `x-surface.patternMessage` its message; outside the subset, kept |
+| `pattern` | a `Regex`, when it is inside the subset PHP and an ECMA engine read alike: the body, delimited, with `D` and, for a character outside ASCII, `u` (why: [decision](decisions.md#a-pattern-both-engines-read-alike)); `x-surface.patternMessage` its message; outside the subset, kept |
 | `not: {pattern}` | a `Regex` that must not match |
-| `allOf`, `anyOf` of parts each one constraint | `Sequentially`, `AtLeastOneOf` of them ([decision](decisions.md#a-composite-is-its-parts)) |
+| `allOf`, `anyOf` of parts each one constraint | `Sequentially`, `AtLeastOneOf` of them (why: [decision](decisions.md#a-composite-is-its-parts)) |
 | `readOnly` | the key locked, at its `const` |
 | `writeOnly` | a secret |
 | an object with properties | a map, each property a definition of its own; where it holds more than a map can (a reference, a rule, variants), a structure attached at the key, `<owner>.<key>` |
@@ -86,7 +86,7 @@ has: `present`, `absent`, `equals`, `in`, the four bounds, `not`,
 | --- | --- |
 | `ports` | `reads()`, each port's type, or its shape where the site has one |
 | `reads` | the wiring of a child's ports, where the wired key is a key of the object holding the child |
-| `by`, `variants` | variants, and the def each value chooses; `by` beside `deferred` with no union and no `variants`, a list the site decides past its budget ([decision](decisions.md#a-list-left-out-for-size-is-deferred-not-refined)), is an object like any other, the marker noted: no variant is in the document to read |
+| `by`, `variants` | variants, and the def each value chooses; `by` beside `deferred` with no union and no `variants`, a list the site decides past its budget (why: [decision](decisions.md#a-list-left-out-for-size-is-deferred-not-refined)), is an object like any other, the marker noted: no variant is in the document to read |
 | `collection` | a collection (`list` in contract 3) |
 | `patternMessage` | the `Regex`'s message |
 | `widget` `radios`, `time`, `checkboxes`; `textarea` | the widget it asks for; a multiline string |
@@ -143,7 +143,7 @@ reader of a document reads it back as the same constraint:
 
 The documents are wider there than the pipeline, as they are wherever
 a rule is checked on the server alone, and never stricter
-([decision](decisions.md#two-documents-never-stricter-than-the-runtime)).
+(why: [decision](decisions.md#two-documents-never-stricter-than-the-runtime)).
 
 ## What is noted
 
@@ -221,7 +221,7 @@ says; what it loses is a marker or the code that would compute it.
 
 ## The decision
 
-[A schema can be read back into a structure](decisions.md#a-schema-can-be-read-back-into-a-structure)
-says why each choice here was made: what is kept over refused, opis at
-runtime, open objects, the drafts converted first, and variants from a
-provider.
+What is kept rather than refused, opis at runtime, open objects, the
+drafts converted first and variants from a provider are as this page
+says them
+(why: [decision](decisions.md#a-schema-can-be-read-back-into-a-structure)).

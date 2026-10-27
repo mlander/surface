@@ -50,8 +50,7 @@ section below says what else is kept.
 DataSurfaceInterface`, in `Resources::buildResource()`, which calls its
 phases in order: `Declaring` for steps 1 to 4, `Attaching` and `Binding`
 for the mixins, the refiners and the children, and `Gating` for every
-access answer ([The build is read by
-phase](decisions.md#the-build-is-read-by-phase)):
+access answer (why: [decision](decisions.md#the-build-is-read-by-phase)):
 
 ```
 build(FieldInstanceResource::class, $context):
@@ -261,7 +260,7 @@ resource or a key.
 
 Everything a request may reuse is kept by what it was read from and
 dropped by tag; nothing is one account's, and nothing holds a stored
-value ([decision](decisions.md#what-is-paid-once-and-what-per-request)).
+value (why: [decision](decisions.md#what-is-paid-once-and-what-per-request)).
 
 - **Discovery** is an index in the discovery bin (every resource's and
   structure's name, id, kind, module and base, and the shapes) and one
@@ -278,7 +277,7 @@ value ([decision](decisions.md#what-is-paid-once-and-what-per-request)).
 - **A sealed build** is kept for the rest of the request, by resource,
   context, kind and account kind, until a tag it read is invalidated;
   never one that expires or varies by more than the account
-  ([decision](decisions.md#a-build-is-not-cached-across-requests)). A
+  (why: [decision](decisions.md#a-build-is-not-cached-across-requests)). A
   route's access check asks with the context alone and builds nothing.
 - **One document** refines each combination of watched values once,
   however many keys watch it, and a static access answer is asked once

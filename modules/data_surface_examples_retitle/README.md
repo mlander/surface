@@ -20,8 +20,8 @@ access on the node's title, with every module that alters them. Each is
 asked of every node in the list; a node either refuses is refused on its
 own item, `/items/0/node`, with the owner's reason, and the storage never
 sees it
-([A gate borrowed from another thing](../../docs/resources.md#a-gate-borrowed-from-another-thing),
-[decision](../../docs/decisions.md#a-gate-is-borrowed-never-copied)).
+([A gate borrowed from another thing](../../docs/resources.md#a-gate-borrowed-from-another-thing);
+why: [decision](../../docs/decisions.md#a-gate-is-borrowed-never-copied)).
 
 `TitleRewriter` writes each title not sent, in title case, sentence case
 or after a prefix: a pure function of the title and the style, so every

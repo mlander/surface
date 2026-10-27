@@ -89,7 +89,7 @@ fallback.
 
 The definition alone does not say whether a list of choices is
 checkboxes or a multiple select, nor one choice a select or radios, so
-the stock widgets have a rule ([decision](decisions.md#a-widget-is-chosen-from-the-definition)):
+the stock widgets have a rule (why: [decision](decisions.md#a-widget-is-chosen-from-the-definition)):
 
 - **A list of choices is checkboxes up to twelve, a multiple select
   above.** A multiple select needs a modifier key for a second value and
@@ -102,7 +102,7 @@ the stock widgets have a rule ([decision](decisions.md#a-widget-is-chosen-from-t
   offer one value, which may not be cleared, is drawn as an `item`
   showing that value's label and posting the value, while it holds it or
   nothing; a list the key declares, or a stored value no longer offered,
-  is a select as above ([decision](decisions.md#an-extension-is-a-variant-the-site-adds-or-an-alter)).
+  is a select as above (why: [decision](decisions.md#an-extension-is-a-variant-the-site-adds-or-an-alter)).
 - **A list of free values is rows**, each the element the item's own
   widget draws, added and removed over AJAX. Each item keeps its own
   element's hints, and a refusal of one is shown on its row.
@@ -155,12 +155,15 @@ own wording ("must be lower than or equal to") would otherwise replace
 the rule's message, and the string widget clears `#maxlength`, which
 core checks the same way ("cannot be longer than"), so a refusal says
 what the `Range` or the `Length`, and any message a refiner gave it,
-says ([decision](decisions.md#an-element-hints-and-the-rule-speaks)). A select offers an empty option by [the empty
-option rule](decisions.md#the-empty-option-rule): always when the key
-may be cleared, and when it holds a value (required, or [always held by
-its storage](decisions.md#a-key-its-storage-always-holds)) only while no
-valid choice is selected; standing for a stored value no longer offered,
-it reads "- Keep @value (no longer offered) -". Radios show nothing checked where a select
+says (why: [decision](decisions.md#an-element-hints-and-the-rule-speaks)). A select offers an empty option
+always when the key may be cleared, and when it holds a value only while
+no valid choice is selected; standing for a stored value no longer
+offered, it reads "- Keep @value (no longer offered) -". A key holds a
+value when it is required, or when its storage always holds it: a key a
+fully validatable config schema does not mark `nullable: true`, which
+null cannot clear
+(why: [decision](decisions.md#the-empty-option-rule),
+[decision](decisions.md#a-key-its-storage-always-holds)). Radios show nothing checked where a select
 shows that empty option, and a `- None -` radio only where the key may
 be cleared. The string
 widget picks its element type from the definition (`textarea` when the
@@ -258,7 +261,7 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
 that is its own. `#required` draws the marker and the browser's
 `required` attribute and is never checked by core: the form builder
 keeps that check off, so a required key left empty is refused in the
-data surface's words ([decision](decisions.md#an-element-hints-and-the-rule-speaks)). The attribute takes `id`, `label`, `weight`, and
+data surface's words (why: [decision](decisions.md#an-element-hints-and-the-rule-speaks)). The attribute takes `id`, `label`, `weight`, and
 optionally a `deriver`, as every core plugin attribute does, and
 `claims` and `priority` ([below](#a-module-serves-a-widget-to-every-key-of-a-kind)).
 
@@ -338,4 +341,4 @@ string a text input (`stockWidget()` in the app). A key no widget draws,
 `widget: null`, stays "Not editable here". The OpenAPI document carries
 no widget hints. The `format` setting is read by claims alone: no
 document writes it as JSON Schema's `format`, and no rule checks it
-([decision](decisions.md#a-widget-is-chosen-from-the-definition)).
+(why: [decision](decisions.md#a-widget-is-chosen-from-the-definition)).

@@ -186,9 +186,9 @@ $inputs->add('license', License::class, t('Event license'));
 
 The test module's stock code, `Shape\Sku`, is used at two keys of the
 depot that narrow it differently, read by the shelf tag's port, and
-tightened by `Alter\SkuAlter`. Why a shape is a named definition rather
-than a data type plugin is in
-[Decisions](decisions.md#a-shape-is-a-named-definition).
+tightened by `Alter\SkuAlter`. A shape is a named definition, not a
+data type plugin: a module writes no plugin for it
+(why: [decision](decisions.md#a-shape-is-a-named-definition)).
 
 ### Nothing live in the blueprint
 
@@ -535,7 +535,7 @@ and the catalog lists the refusal:
 
 Every build carries the config object's cache tag,
 `config:data_surface.defaults`, so a change reaches every door at the
-next request ([decision](decisions.md#a-site-sets-a-default-in-configuration)).
+next request (why: [decision](decisions.md#a-site-sets-a-default-in-configuration)).
 
 ## Locking
 
@@ -659,7 +659,7 @@ computed key: a storage's `prepare()` adds it.
   equal to the one it holds is noted, code `computed`, and not taken, so
   a client that writes back the document it read is not refused; any
   other is refused with the same code
-  ([decision](decisions.md#a-computed-key-is-a-pure-function-of-its-sources)).
+  (why: [decision](decisions.md#a-computed-key-is-a-pure-function-of-its-sources)).
 
 A computed key is a resource's own key, at its top: `compute()` is on the
 owner's blueprint only, and refused in a structure, a structure mixed in

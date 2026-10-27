@@ -600,6 +600,25 @@ and `paid`, in the form and both documents.
 (`Resource\Attribute\Variant::$label`, `DataSurfaceBuilder::attachVariants()`,
 `Attaching::assertListNarrowsVariants()`)
 
+### A page stands without the decisions page
+
+Decided 2026-10-26, from the fresh-eyes runs: the second reader counted
+more than fifteen links from the build pages into this one and could not
+tell which held an answer needed to build and which held history
+([the log](fresh-eyes-2026-10-19.md), entry 13), and the third met "a
+key left out keeps what is stored" as a surprise, since for a key other
+than a list it was stated only here
+([the log](fresh-eyes-2026-10-19b.md), entry 23).
+
+- **The fact is on the task page.** A rule, a default, the cause of a
+  refusal or what a spelling does is stated in a sentence or two where a
+  builder meets it. This page holds the reasons, and a page that cannot
+  be followed without it is fixed on the page.
+- **One form for the link.** A page links an entry as
+  `(why: [decision](decisions.md#...))`, after the fact it explains, so a
+  reader learns once that every such link may be skipped. The README and
+  the documentation index say so.
+
 ## Authoring
 
 ### A resource or structure is static

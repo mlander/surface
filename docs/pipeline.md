@@ -162,7 +162,7 @@ at its position when the list is as long as the one stored; with items
 added or removed, an item leaving out a secret stored where it now sits
 is noted for `submit()` to refuse by the secret's path, since that
 position may hold another item now
-([decision](decisions.md#every-door-projects-what-the-read-tool-projects)).
+(why: [decision](decisions.md#every-door-projects-what-the-read-tool-projects)).
 
 The rules it applies (what counts as configured, the coercion table, how
 lists and maps merge) are [Value semantics](semantics.md), which is the
@@ -316,7 +316,7 @@ message, stored}`, the message as plain text, rendered by the door's
 choice: for a machine at the tool, as the form renders it at React.
 The write tool, the HTTP API (a refusal there as problem details, its
 `errors` the violations) and Drush's `tool:run --json` all answer it,
-every path a JSON Pointer ([decision](decisions.md#one-result-at-every-door)).
+every path a JSON Pointer (why: [decision](decisions.md#one-result-at-every-door)).
 Every violation carries a stable `code`; the table is in
 [Value semantics](semantics.md#codes).
 
@@ -325,7 +325,7 @@ per locked key whose value sent was not taken, "Machine name is locked
 and kept as stored; the value sent was not taken." They are no
 violation, so `isValid()` never reads them; the write tool and the
 React endpoints say them beside the stale references
-([decision](decisions.md#locked-at-the-top)).
+(why: [decision](decisions.md#locked-at-the-top)).
 
 A secret inside a locked key is never compared: anything sent for one
 was not taken, so whether a note is said tells a caller nothing of it.
@@ -404,7 +404,7 @@ writes its `values` document from it. `document()` writes
 what it is handed, so a door hands it what this projected. The
 `prepared` artifact is never handed to a caller: it is storage's own
 shape, with what the caller could not see put back
-([decision](decisions.md#every-door-projects-what-the-read-tool-projects)).
+(why: [decision](decisions.md#every-door-projects-what-the-read-tool-projects)).
 
 ## Dry runs
 

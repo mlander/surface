@@ -114,7 +114,7 @@ method.
   structure at the alter's own mount and nowhere else, while
   `attachList()` refuses by name for now: an alter's keys are mounted
   under its module, and a collection inside a mount is not built
-  ([decision](decisions.md#an-alter-attaches-at-its-own-mount)). An alter can add keys, reword a label or
+  (why: [decision](decisions.md#an-alter-attaches-at-its-own-mount)). An alter can add keys, reword a label or
   description with `describe()` (and, on its own mount, say where its
   fieldset is drawn), and offer more values on a fixed choice list with
   `extendChoices()`. It cannot remove a key or change its type. Inputs
@@ -210,13 +210,13 @@ below.)
   signature states what it reads.
 - **A refiner trusts what it is handed.** A sibling value its own key
   refuses is never passed in: the engine treats it as unanswered
-  ([decision](decisions.md#a-refiner-never-sees-an-invalid-sibling)).
+  (why: [decision](decisions.md#a-refiner-never-sees-an-invalid-sibling)).
   So a refiner asks whether a license is there, not whether it is well
   formed.
 - **A Regex carries a message.** The pattern cannot be read by the
   person it refuses, so its `message` is what they are told, in the
   error and wherever the key's allowed values are explained
-  ([decision](decisions.md#a-regex-is-explained-by-its-message)). A
+  (why: [decision](decisions.md#a-regex-is-explained-by-its-message)). A
   Regex without one is a smell: the panel can only show the pattern.
 - **Everything named by class.** Children, variants, storage, access,
   the resource or structure an alter or operation belongs to: always
@@ -414,7 +414,7 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
   the access class's interface, its role read from `#[Alters]`: it
   is asked after the owner's answer and the stricter stands, so it locks
   or leaves out and never opens
-  ([decision](decisions.md#an-alter-may-answer-access-and-the-stricter-stands)).
+  (why: [decision](decisions.md#an-alter-may-answer-access-and-the-stricter-stands)).
 
 [Refinement and contributions](refinement.md) has the rules.
 

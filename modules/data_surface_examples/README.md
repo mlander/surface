@@ -1135,7 +1135,7 @@ tool runs (types, the keys it requires, its nesting) and the pipeline
 holds it to every rule, against the definitions the values sent narrow,
 so a value outside the listing's list is answered with the list that
 applies rather than refused with none
-([decision](../../docs/decisions.md#a-refusal-names-what-it-depends-on)).
+(why: [decision](../../docs/decisions.md#a-refusal-names-what-it-depends-on)).
 
 ### Files
 
@@ -1834,7 +1834,7 @@ final class ProgramResource implements ResourceInterface {
 ```
 
 Each operation also states how a call behaves
-([An operation states how it behaves](../../docs/decisions.md#an-operation-states-how-it-behaves)).
+(why: [decision](../../docs/decisions.md#an-operation-states-how-it-behaves)).
 Configuring changes what exists and may be repeated; checking changes
 nothing, `readOnly: TRUE`, so its form at `/surface-examples/10/check`
 and its tool accept and validate and write nothing, and it has no read
@@ -2261,8 +2261,7 @@ components it names under `expected`, by id or by a tag a component lists
 under `tags`, and no component for an empty list; `minItems` and
 `maxItems` bound the list, and a `maxItems` of 1 leaves no list. Slots
 nest three deep, and a slot at that depth holds text alone
-([A slot holds text, a component, or
-components](../../docs/decisions.md#a-slot-holds-text-a-component-or-components)).
+(why: [decision](../../docs/decisions.md#a-slot-holds-text-a-component-or-components)).
 
 The module ships four components, so the page holds something whatever
 the site's themes provide: a card, a hero, a call to action and a
@@ -2412,9 +2411,9 @@ in each `deferred`; the full schema fetched with a component chosen,
 states that component's defs exactly, and so does the schema for these
 answers. The React page fetches it once per component chosen, and the
 tool listing names that fetch beside the narrowing tool
-([decision](../../docs/decisions.md#a-list-left-out-for-size-is-deferred-not-refined)). The full schema went from 3 MB and 2,465 defs to 18 KB there,
+(why: [decision](../../docs/decisions.md#a-list-left-out-for-size-is-deferred-not-refined)). The full schema went from 3 MB and 2,465 defs to 18 KB there,
 and the tool's definition from 1.6 MB to 12 KB
-([decision](../../docs/decisions.md#a-budget-for-what-the-site-decides)).
+(why: [decision](../../docs/decisions.md#a-budget-for-what-the-site-decides)).
 The props in the full schema, past the limit:
 
 ```json
@@ -2741,8 +2740,7 @@ below it over AJAX, read from its schema; choose another and they are
 that component's. Without JavaScript the props are drawn for what is
 stored, so a component whose props require something is refused on the
 first save, and its props are there on the block's form once it is
-saved ([A plugin host cannot overlay a full
-submission](../../docs/decisions.md#a-plugin-host-cannot-overlay-a-full-submission)).
+saved (why: [decision](../../docs/decisions.md#a-plugin-host-cannot-overlay-a-full-submission)).
 
 With all three modules on, whichever came last places two blocks
 through the placement resource's create operation, with the values of the
@@ -2869,7 +2867,7 @@ Each page shows both resources as they are now, says whether the module
 is on, and makes the calls below that the module allows. Two ways reach
 the same form, each for the case it fits: the owner declares both
 sources, or another module's alter offers the managed key
-([decision](../../docs/decisions.md#an-extension-is-a-variant-the-site-adds-or-an-alter)).
+(why: [decision](../../docs/decisions.md#an-extension-is-a-variant-the-site-adds-or-an-alter)).
 
 ### The owner's way: a variant the site adds
 

@@ -211,7 +211,8 @@ The pages fall in the same groups as the README's documentation table.
 - **The engine and the record**: [The pattern](pattern.md), [How it
   fits](how-it-fits.md), [Decisions](decisions.md) (the reasons behind
   each rule, for a reader who wants the why; nothing on it is needed to
-  build), the [Catalog](catalog.md) and [the site's
+  build: a page states the rule and links its reason as `(why:
+  decision)`, which you may skip), the [Catalog](catalog.md) and [the site's
   catalog](catalog-command.md) (`drush surface:catalog`), [Evolving a
   resource](evolution.md), [Testing a resource](testing-a-resource.md)
   (the invariants, held for your own resources by one base class),

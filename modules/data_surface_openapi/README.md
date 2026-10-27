@@ -83,10 +83,11 @@ the site's name, the modules or the anonymous role change. The
 per-request read and `/schema` answer for the account that asks.
 
 [The served contract](../../docs/served-contract.md#an-openapi-document)
-has the format; [the decision](../../docs/decisions.md#an-openapi-document-is-one-more-door)
-has why 3.1 and why its own route rather than the contributed `openapi`
-module; [Contract 3](../../docs/decisions.md#contract-3-the-operation-is-the-method)
-why the paths are what they are.
+has the format. The document is OpenAPI 3.1 on a route of its own, not
+the contributed `openapi` module's
+(why: [decision](../../docs/decisions.md#an-openapi-document-is-one-more-door)),
+and its paths are contract 3's
+(why: [decision](../../docs/decisions.md#contract-3-the-operation-is-the-method)).
 
 `drush surface:catalog` names, per operation, the OpenAPI operation
 that runs it (`<resource>:<operation>:write`, a listing's `:list`),

@@ -98,10 +98,8 @@ action at most in its `actions`; their section takes any component
 tagged `block` in its `content`, the card and the hero. On the block
 form a slot's kind draws what it holds and a nested component swaps its
 props and slots over AJAX; a list of components inside a slot is not
-drawn there, and is set through the tool, HTTP or the React page.
-[A slot holds text, a component, or
-components](../../docs/decisions.md#a-slot-holds-text-a-component-or-components)
-says why each.
+drawn there, and is set through the tool, HTTP or the React page
+(why: [decision](../../docs/decisions.md#a-slot-holds-text-a-component-or-components)).
 
 ### A placed block, through the placement resource
 
@@ -124,14 +122,13 @@ This module needs no resource of its own for it, and does not depend on
 `data_surface_block`: until 2026-10-23 it declared a stop-gap,
 `block.placed_component`, which the general resource replaced.
 
-What was decided, and what is open (the create form without JavaScript, a
-list of components on the block form): [A block embeds a component
-through its
-structure](../../docs/decisions.md#a-block-embeds-a-component-through-its-structure),
-[A slot holds text, a component, or
-components](../../docs/decisions.md#a-slot-holds-text-a-component-or-components),
-and [A placed block is a
-resource](../../docs/decisions.md#a-placed-block-is-a-resource).
+Not built yet: without JavaScript the create form draws the props of
+no component, so a component chosen and saved at once is refused for
+the props it requires, and its props are drawn once it is saved; and
+the block form draws no list of components inside a slot
+(why: [decision](../../docs/decisions.md#a-block-embeds-a-component-through-its-structure),
+[decision](../../docs/decisions.md#a-slot-holds-text-a-component-or-components),
+[decision](../../docs/decisions.md#a-placed-block-is-a-resource)).
 
 ## How to try it
 

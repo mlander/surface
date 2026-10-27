@@ -44,7 +44,7 @@ The form draws the browser's time input, the served contract says
 Prefer the string. What a person picks, what an agent sends and what the
 config object stores are the same `09:00`, a refusal is the pattern's
 own message, and the pattern reaches both schemas (it ends in `$` with
-the `D` modifier, which both engines read alike:
+the `D` modifier, which both engines read alike; why:
 [decision](decisions.md#a-pattern-both-engines-read-alike)). Take an
 integer of minutes after midnight instead when something compares the
 time: a bound, as the closing time below, or a
@@ -210,7 +210,7 @@ refusal is the rule's message, with the condition after it, or core's
 sentence when the rule gives none.
 
 **A key left out keeps what is stored**
-([decision](decisions.md#absent-keeps-null-clears)), and that meets
+(why: [decision](decisions.md#absent-keeps-null-clears)), and that meets
 required on an edit: a key required by its declaration, or by a rule's
 `->require()`, is refused only when it is sent empty (`""` or `null`)
 or nothing is stored for it. Turning after-hours access on with a code

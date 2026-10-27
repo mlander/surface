@@ -401,7 +401,8 @@ it.
 
 Full documentation is under [`docs/`](docs/). [Decisions](docs/decisions.md)
 holds the reasons behind each rule, for a reader who wants the why;
-nothing on it is needed to build.
+nothing on it is needed to build. Every page states the rule itself and
+links its reason in one form, `(why: decision)`, which you may skip.
 
 **Start here**
 

@@ -195,8 +195,8 @@ The full schema states each rule as written, one conditional whose
 index the parent's `x-surface.rules` lists, without running anything;
 the key carries no marker of its own
 ([served contract](served-contract.md#x-surface)). The schema for one
-set of values evaluates it, as the pipeline does. The decision, with
-what was weighed: [A rule declared as data](decisions.md#a-rule-declared-as-data).
+set of values evaluates it, as the pipeline does
+(why: [decision](decisions.md#a-rule-declared-as-data)).
 
 ### Refining
 
@@ -237,7 +237,7 @@ takes the key's definition first and one parameter per sibling it
 watches, and runs once every watched sibling has a value. A watched
 value its own key's refined definition refuses counts as no value: a
 refiner never sees an invalid sibling, so a license in the wrong format
-is no license ([decision](decisions.md#a-refiner-never-sees-an-invalid-sibling)).
+is no license (why: [decision](decisions.md#a-refiner-never-sees-an-invalid-sibling)).
 
 A refiner is handed a deep clone, so it may mutate what it is given and
 hand it back, or answer with a fresh definition. A fresh definition does
@@ -288,7 +288,7 @@ narrowing check. Two differences follow from the kind:
 - **One that watches nothing runs on every refinement.** A static
   refiner that watches nothing runs once, at build, and its answer is
   what the data surface advertises
-  ([decision](decisions.md#a-refiner-that-watches-nothing)). A runtime
+  (why: [decision](decisions.md#a-refiner-that-watches-nothing)). A runtime
   one cannot be fixed at build, so it runs on every refinement,
   validation and submission instead, whatever the key's other refiners
   are waiting for, and the data surface advertises the key as declared.
@@ -313,7 +313,7 @@ emitted before still says the old cap, for every value, and a client
 holding it refuses or accepts what the pipeline now does not. That is a
 runtime rule, and it says `runtime: TRUE`. So the kind is not taken on
 trust; three layers hold a static refiner to it
-([decision](decisions.md#static-by-default-runtime-by-declaration)):
+(why: [decision](decisions.md#static-by-default-runtime-by-declaration)):
 
 1. **Structural, at build: a static refiner is a static method.** The
    one thing a static method cannot have is injected services, so the
@@ -457,8 +457,8 @@ A key that does not apply is not a key narrowed to no values. A list
 narrowed to nothing (the extras' ribbon slice below, were it the whole
 key) is a select offering nothing, and refuses every value; it applies,
 and nothing it could hold is allowed. Nor is it an empty variant, which
-applies and has nothing to say. The decision, and why each door does
-what it does: [A key that does not apply](decisions.md#a-key-that-does-not-apply).
+applies and has nothing to say
+(why: [decision](decisions.md#a-key-that-does-not-apply)).
 
 ## The narrowing table
 
@@ -503,7 +503,7 @@ narrower one in the first place. For `Length`, `Range` and a list's
 `exactly`, which only narrows by staying what it was), because the rest
 of their options are messages. `Count` joined the comparison with
 collections, whose Count the parent narrows
-([decision](decisions.md#count-is-the-parents)); before, a changed
+(why: [decision](decisions.md#count-is-the-parents)); before, a changed
 `Count` was compared whole and refused.
 
 A collection's parent may narrow the list and not its items: a refiner
@@ -665,7 +665,7 @@ contract all see the same five values, narrowed the same way.
 - **An alter watches only the keys it mounted.** An alter's
   `#[RefinesInput]` method may refine and watch the keys it mounted, by
   their own names, beside the owner's
-  ([Decisions](decisions.md#an-alter-watches-its-own-mounted-key));
+  (why: [decision](decisions.md#an-alter-watches-its-own-mounted-key));
   the compliance alter of the examples caps the capacity at a hundred
   until the license is given, by a declared rule reading the license of
   the compliance structure it attached at its mount, whose own refiner
