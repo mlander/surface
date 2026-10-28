@@ -115,8 +115,11 @@ Five pieces:
   `field.storage_settings.<field type>` and the field type's default
   storage settings. A variant from the site has no storage of its own,
   so the field, or the storage, stores it. It is a list the site
-  decides: past `data_surface.settings:site_list_limit` field types the
-  tools state `settings` open and `deferred`, fetched per field type.
+  decides: past `data_surface.settings:site_list_limit` field types both
+  documents state `settings` open and `deferred`, fetched per field type,
+  and the tools never spell it out: they state the stored field type's
+  settings, once a field is named, and name the fetch and the narrowing
+  tool for any other.
 - `InputDefinitions`: converts core data definitions into the
   Tool API's input definitions: type, label, description, required,
   default value and constraints, with maps and lists becoming the Tool
@@ -259,10 +262,11 @@ settings once `storage` names an address storage. Compare with
 
 `tool:info` shows the Tool API's rendering of an operation, not the
 resource's whole contract. The Tool API cannot say a structure chosen by a
-sibling key, so variants are flattened to one map: the variant the stored
-values choose (example 3's ticket, as the free ticket while `pricing`
-is `free`), or every variant's keys with none required before anything
-chooses. The full contract, with an `if`/`then` per variant on the key
+sibling key, so variants a class declares are flattened to one map: the
+variant chosen where the deciding key is locked, or every variant's keys
+with none required (example 3's ticket). Variants the site lists state
+the keys of the variant the stored values choose and no other
+([the narrowing tool](#the-narrowing-tool)). The full contract, with an `if`/`then` per variant on the key
 that chooses it, is the main module's `data_surface.contract_emitter`:
 see it in the contract panel below, or, with `data_surface_react`
 enabled, at `/surface-api/{resource}`
@@ -339,20 +343,32 @@ serializer emits, and what an MCP client sees as `outputSchema`.
 
 ## The narrowing tool
 
-A key whose list the site decides (a component per single-directory
-component, a key per thing a provider lists) is spelled out in the
-listing while the site lists at most `data_surface.settings:site_list_limit`
-entries, 20 as shipped. Past it, the full schema marks the key
-`deferred` and the write tool lists it as an open map, the deciding key
-keeps its enum, and the key's description names two ways to learn its
-keys: the full schema fetched with the choice stated, once per value,
-where the site serves its API (data_surface_react on), and a third tool
-beside the write and read tools, asked with the values:
+Variants the site lists (a component per single-directory component, a
+field type's settings, a block plugin's) are never spelled out in a
+tool's listing, whatever `data_surface.settings:site_list_limit` says:
+the listing is sent with every request that offers the tool, and the
+Tool API cannot say which keys a sibling chooses, so every variant's
+keys would be one map with none required, 1.6 MB for example 12 with
+312 components. The deciding key keeps its enum. The key holds the keys
+of the variant the stored values choose, where the listing reads what
+is stored (an operation that needs nothing to start from, or the refined
+`values` once the parameters arrive), and none otherwise, and its
+description names two ways to learn the keys of any other: the full
+schema fetched with the choice stated, once per value, where the site
+serves its API (data_surface_react on), and a third tool beside the
+write and read tools, asked with the values:
 
-> Too many to list: choose component, then fetch GET
+> Its keys depend on component: listed here are those of
+> data_surface_examples:card, the component stored. For another
+> component, fetch GET
 > /surface-api/event.spotlight/schema?choose=/props={component} once per
 > component, or call data_surface:event.spotlight:configure:schema with
 > your values, to get this key's schema.
+
+So a prop of the stored component changes in one call. A map of keys
+from the site (a key per thing a provider lists) is spelled out while
+the site lists at most the limit, 20 as shipped, and past it is an open
+map whose description names the same two ways.
 
 A key inside a variant names the choice on the way,
 `?choose=/settings=data_surface_component&choose=/settings/props={component}`;
@@ -366,9 +382,10 @@ changes. The narrowing tool's own description says both.
 | --- | --- | --- |
 | `data_surface:<resource>:<operation>:schema` | the operation's parameters; `values`, optional and open | `schema`, `values` |
 
-- **Which operations.** One whose listing has such a key, at any depth
-  (`OperationInputs::narrows()`); a resource whose lists are all spelled
-  out adds no tool. A delete has none.
+- **Which operations.** One whose listing leaves such a key out, at any
+  depth (`OperationInputs::narrows()`): every operation with variants
+  the site lists, and one with a map of keys from the site past the
+  limit. A delete has none.
 - **What it answers.** What `POST /surface-api/{resource}/schema`
   answers for the same values and account, with no widget hints: the
   schema for these answers, which states the chosen variant's keys

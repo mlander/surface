@@ -28,7 +28,7 @@ where the module that opens it is installed:
 | `http` | The method and path that run it under contract 3: `PATCH /surface-api/first.store`, a listing's `GET` on the collection. | `data_surface_react` |
 | `tool` | The derived tool, `data_surface:<id>:<operation>`. | `data_surface_tool` |
 | `read tool` | The read tool beside it, for an operation that changes a thing that exists. | `data_surface_tool` |
-| `schema tool` | The narrowing tool beside it, `data_surface:<id>:<operation>:schema`, where its listing states a key open because the site's list for it is past the budget (why: [decision](decisions.md#a-budget-for-what-the-site-decides)). | `data_surface_tool` |
+| `schema tool` | The narrowing tool beside it, `data_surface:<id>:<operation>:schema`, where its listing leaves a key's entries out: variants the site lists, or a map of keys from the site past the budget (why: [decision](decisions.md#a-budget-for-what-the-site-decides)). | `data_surface_tool` |
 | `openapi` | The OpenAPI operation that runs it: `<id>:<operation>:write`, a listing's `:list`. | `data_surface_openapi` |
 | `react` | The React page its form mounts on, `/surface-react/<id>/<operation>`. | `data_surface_react` |
 

@@ -6619,7 +6619,7 @@ counted; the build of a resource still reads every variant. *Closed
 2026-10-24:* a field type's settings, derived until then and not
 counted, come from a provider and are counted
 ([Derived variants](#derived-variants)). (`Contract\SiteListBudget`, `ContractEmitter::variants()`,
-`InputDefinitions::tooMany()`, `OperationInputs::narrows()`,
+`InputDefinitions::leftOut()`, `OperationInputs::narrows()`,
 `ResourceOperationSchemaTool`, `SiteCatalog::keys()`,
 `SiteListBudgetTest`, `CatalogMemoryTest`,
 `AdvertisedSchemaAcceptanceTest::testListsPastTheSiteListLimit()`)
@@ -6636,6 +6636,64 @@ allowlist leaves out stays stored and readable: the chooser stands for
 it on its empty option and a save that leaves it keeps it, as any
 stored value the list no longer offers; its props are not drawn until
 it is offered again. (`ComponentsOfferedTest`)
+
+*Amended 2026-10-28, the owner's decision:* the tool door leaves out
+the variants the site lists whatever `site_list_limit` says. The limit
+governs the two schema documents, the full schema and the schema for
+these answers, and nothing else of variants. There is no new setting.
+
+- **The rule.** In a tool's listing, a key whose variants the site lists
+  (`attachVariants(from:)`, a field type's settings, the variants inside
+  a structure read from a schema, a component in a slot) holds the keys
+  of the variant the stored values choose, each saying "Only when" that
+  value, as a class's variants say it, and no other. Where nothing
+  stored chooses one (the cached definition, a create, an operation with
+  parameters before they arrive) it holds no key. The deciding key keeps
+  every value. The description names the two ways the past-limit path
+  named: the full schema fetched with the choice, once per value, and
+  the narrowing tool, which every such operation now has. Variants the
+  build chose, their deciding key locked, are one shape and stated
+  whole, as before. Variants a class declares keep the one map. A map
+  of keys from the site still follows the limit at the tool door, since
+  it is stated exactly key by key.
+- **Why.** A tool's definition is sent to the model in every request
+  that lists it. Measured on the development site for
+  `data_surface:event.spotlight:configure` with 312 components: left
+  out, its normalized input schema is 8 KB; spelled out with the limit
+  raised to 1000, 1.6 MB. Twenty spelled-out components would be about
+  100 KB per turn. And the Tool API cannot state a shape chosen by a
+  sibling key, so under the limit the tool showed every variant's keys
+  as one map with none required: large and loose at once. The HTTP
+  document is the opposite case: fetched once, cacheable by the site's
+  tags, stating the conditional exactly, so a limit there is a real
+  trade.
+- **One call for the stored choice.** The listing of an operation that
+  needs nothing to start from and changes what exists reads what is
+  stored, for an account the operation is open to, and the refined
+  `values` of an operation with parameters reads it once they arrive. So
+  changing a prop of the stored component is one call; choosing another
+  is two, the fetch or the narrowing, then the write. Only the stored
+  choice is built: no other entry's schema is read
+  (`InputDefinitions::deferred()`, `InputDefinitions::anyDeferred()`).
+- **What moved on the development site.** The tool documents alone, no
+  schema document: example 12's spotlight now states the stored card's
+  props and slots (8,075 bytes before, 9,221 after; 1,620,895 bytes
+  before with the limit at 1000, 9,221 after); example 14's mailer
+  states the stored source's credential keys and gains a narrowing tool
+  (1,664 to 1,645 bytes); the placed block's visibility conditions, five
+  plugins, are left out (create 5,696 to 4,668 bytes); and the field
+  tools state no field type's settings until a field is named, each
+  gaining a narrowing tool (`field.instance:create` 11,870 to 3,845
+  bytes). Example 9's ticket types are keys from the site, not variants,
+  and did not move (2,094 bytes).
+
+*Open:* the fetch a create with parameters names omits them
+(`GET /surface-api/field.instance/schema?choose=...` answers 400 until
+`entity_type_id` and `bundle` are added to the query), which the field
+tools now name on every site.
+(`InputDefinitions::deferred()`, `InputDefinitions::leftOut()`,
+`OperationInputs::listedValues()`, `ResourceOperationTool::mayListStored()`,
+`SiteListBudget::anyKey()`, `SiteListToolDoorTest`)
 
 ### A list left out for size is deferred, not refined
 
@@ -6711,7 +6769,7 @@ it was written from; the page leaves out the declared rules a slot's def
 carries in the narrowing's answer, as it does from a full schema that
 lists every component. (`Contract\Choices`, `ContractEmitter::fetch()`,
 `ContractEmitter::variants()`, `ResourceApiController::schema()`,
-`SchemaTagSubscriber`, `InputDefinitions::tooMany()`,
+`SchemaTagSubscriber`, `InputDefinitions::leftOut()`,
 `OperationInputs::schemaDescription()`, `SiteListBudgetTest`)
 
 ### A served contract is never stored

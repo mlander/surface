@@ -107,7 +107,8 @@ A variant the site lists is built the first time a door reads it:
 
 | Door | Builds |
 | --- | --- |
-| The full schema, the tool listing | the variants it states: all of them within the site's list limit, none past it |
+| The full schema | the variants it states: all of them within the site's list limit, none past it |
+| The tool listing | the one the stored values choose, where it reads what is stored; none otherwise, whatever the limit |
 | The schema for values, `?choose=`, the narrowing tool | the chosen one |
 | The form | the chosen one, to draw it |
 | The pipeline | every variant at a key it judges whose document may state a secret: a secret any of them declares is never returned under that key; one read from a document that states none is not built |

@@ -333,13 +333,18 @@ operation that changes a thing that exists it derives a read tool,
 `data_surface:<id>:<operation>:read`, taking the parameters and
 answering with the stored values less secrets
 (`ResourceCatalog::reads()`, `ResourceOperationReadTool`). Where an
-operation's listing has a key whose list the site decides (variants or
-keys from the site) past `data_surface.settings:site_list_limit`, which
-the full schema and the listing state open and `deferred`, it derives a
-narrowing tool too, `data_surface:<id>:<operation>:schema`, answering
-what `POST .../schema` answers for the values sent, and the key's
-description names the fetch beside it, `GET .../schema?choose=<pointer>=<value>`
-(`OperationInputs::narrows()`, `ResourceOperationSchemaTool`,
+operation's listing leaves a key's entries out, it derives a narrowing
+tool too, `data_surface:<id>:<operation>:schema`, answering what
+`POST .../schema` answers for the values sent, and the key's description
+names the fetch beside it, `GET .../schema?choose=<pointer>=<value>`. The
+listing leaves out variants the site lists whatever
+`data_surface.settings:site_list_limit` says, stating the keys of the
+variant the stored values choose and no other (the listing of an
+operation that needs nothing reads what is stored, for an account it is
+open to), and a map of keys from the site past the limit; the limit
+governs the two schema documents otherwise
+(`InputDefinitions::deferred()`, `OperationInputs::narrows()`,
+`ResourceOperationSchemaTool`,
 `docs/decisions.md#a-budget-for-what-the-site-decides`). Both declare
 the operation's permission to the Tool API, unless it has a `%key`
 (`ResourceOperationToolDeriver::declaredPermission()`). A tool's title
@@ -475,7 +480,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 The full lane's phpunit line reads, as of this writing:
 
 ```
-phpunit: Tests: 1701, Assertions: 38988, Errors: 0, Failures: 0, Skipped: 3. Classes: 238 of 238, 8 at a time, browser classes 4.
+phpunit: Tests: 1704, Assertions: 38929, Errors: 0, Failures: 0, Skipped: 3. Classes: 239 of 239, 8 at a time, browser classes 4.
 ```
 
 the same counts a plain phpunit run of the tree gives. The skipped

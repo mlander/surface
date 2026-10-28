@@ -675,10 +675,20 @@ class ExamplesConceptsTest extends DataSurfaceKernelTestBase {
     $actions = json_decode((string) $page['parts']['actions']['content']['#code'], TRUE);
     $this->assertSame(['data_surface_examples:call_to_action'], array_column($actions['component.nested.data_surface_examples:call_to_action.1']['properties']['component']['oneOf'], 'const'), 'The actions offer the call to action alone.');
     $this->assertSame(2, $actions['component.slot.data_surface_examples:hero.actions.1']['properties']['components']['maxItems']);
+    // The plugin's settings are variants the site lists, which a tool's
+    // listing leaves out whatever their count, so each placement tool that
+    // takes values has a narrowing tool beside it.
     $this->assertSame([
       ['data_surface:block.placement:create', 'Place a block', 'write', 'values, dry_run'],
+      ['data_surface:block.placement:create:schema', 'Schema for these values: Place a block', 'read', 'values'],
       ['data_surface:block.placement:update', 'Edit a placed block', 'write', 'id, values, dry_run'],
       ['data_surface:block.placement:update:read', 'Current values: Edit a placed block', 'read', 'id'],
+      [
+        'data_surface:block.placement:update:schema',
+        'Schema for these values: Edit a placed block',
+        'read',
+        'id, values',
+      ],
       ['data_surface:block.placement:delete', 'Remove a placed block', 'write', 'id, dry_run'],
     ], $page['parts']['tools']['#rows']);
     $answer = static fn (string $call): string => (string) $page['calls']['block.placement:' . $call]['answer']['#code'];

@@ -439,10 +439,13 @@ A reference key's limit has a sibling for variants and keys the site
 lists: `data_surface.settings:site_list_limit`, 20 as shipped. A key
 whose variants come from the site (`attachVariants(from:)`, a component
 per single-directory component) or whose keys do (`addEach()`,
-`attachEach()`) is spelled out in the full schema and the tool listing
-while the site lists at most that many; past it, both state the key
-open and mark it `deferred`, and the deciding key keeps its list of ids
-and labels (why: [decision](decisions.md#a-budget-for-what-the-site-decides)).
+`attachEach()`) is spelled out in the full schema while the site lists
+at most that many; past it, the full schema states the key open and
+marks it `deferred`, and the deciding key keeps its list of ids and
+labels. The tool listing follows the limit for keys from the site
+alone: it never spells out variants the site lists, and states the keys
+of the variant the stored values choose, if any
+(why: [decision](decisions.md#a-budget-for-what-the-site-decides)).
 Where a reference key past its limit is looked up by label, such a key
 is fetched per choice: choose the deciding key, then fetch the full
 schema with that choice stated, `GET .../schema?choose=/props=<value>`,

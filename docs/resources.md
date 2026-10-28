@@ -1541,10 +1541,12 @@ What that means, end to end:
   parent under its key. `ResourcesInterface::storage()` builds the
   composed storage (see Storage, above).
 - **Emission.** The tool bridge converts an attached child to a nested
-  map input, and variants nothing has chosen yet to the widest honest
-  map: every variant's keys, none required and none with a default,
-  each annotated with the values it belongs to, the table in the
-  description. The Tool API cannot say a union keyed by a sibling. The
+  map input, and variants a class declares that nothing has chosen yet
+  to the widest honest map: every variant's keys, none required and none
+  with a default, each annotated with the values it belongs to, the
+  table in the description. The Tool API cannot say a union keyed by a
+  sibling. Variants the site lists state only the keys of the one the
+  stored values choose ([Variants from the site](#variants-from-the-site)). The
   served contract can, and writes each child once, as a def under
   `$defs` that every place it is used refers to: the wall is where a
   reference starts ([reusable subschemas](served-contract.md#reusable-subschemas)).
@@ -1991,14 +1993,19 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
   variant, but component chose data_surface_examples:card.`
 - **Past the site list limit, deferred.** While the provider lists at
   most `data_surface.settings:site_list_limit` variants (20 as shipped),
-  both documents and the tool listing state each. Past it, the full
-  schema and the listing state the key open, marked `deferred`, the
-  deciding key still listing every value; the full schema fetched with
-  a value chosen, `GET .../schema?choose=/props=<value>`, and the schema
-  for these answers state the variant chosen, and the narrowing tool,
-  `data_surface:<resource>:<operation>:schema`, answers it to an agent
-  that asks with values
+  both documents state each. Past it, the full schema states the key
+  open, marked `deferred`, the deciding key still listing every value;
+  the full schema fetched with a value chosen,
+  `GET .../schema?choose=/props=<value>`, and the schema for these
+  answers state the variant chosen
   (why: [decision](decisions.md#a-list-left-out-for-size-is-deferred-not-refined)).
+- **Never spelled out in a tool's listing.** Whatever the limit, the
+  tool listing states the keys of the variant the stored values choose
+  and no other, the deciding key still listing every value, and names
+  the fetch and the narrowing tool,
+  `data_surface:<resource>:<operation>:schema`, which answers the chosen
+  variant to an agent that asks with values
+  (why: [decision](decisions.md#a-budget-for-what-the-site-decides)).
 - **Fewer components than the site has.** `ComponentProps` and
   `ComponentSlots` list the components `data_surface.settings:components_offered`
   allows: an entry with a colon is a component id (`provider:name`), one

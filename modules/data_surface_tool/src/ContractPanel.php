@@ -52,10 +52,12 @@ use Drupal\tool\Tool\ToolManager;
  * when one changes. Then
  * what the derived tool for the same operation advertises, normalized by
  * the Tool API's own serializer: the rendering `tool:info` prints, which
- * cannot say a shape keyed by a sibling and so shows variants as one map,
- * the variant chosen when the tool was derived or every variant's keys
- * before anything chooses. The panel needs the Tool API for that second
- * block, which is why it lives in this submodule.
+ * cannot say a shape keyed by a sibling and so shows variants a class
+ * declares as one map, the variant chosen when the tool was derived or
+ * every variant's keys before anything chooses, and of variants the site
+ * lists only the keys of the one the stored values choose. The panel
+ * needs the Tool API for that second block, which is why it lives in
+ * this submodule.
  *
  * Everything here is read from the two data surfaces the form already
  * holds, the one built in the operation's context and the same one
@@ -170,7 +172,7 @@ final class ContractPanel implements DataSurfaceFormPanelInterface {
         '#open' => FALSE,
         '#title' => $this->t('What the Tool API can advertise: @tool', ['@tool' => $tool_id]),
         'note' => [
-          '#markup' => '<p>' . $this->t("The input schema of the tool for the same operation, as <code>tool:info</code> prints it. The Tool API cannot say a shape chosen by a sibling key, so variants appear as one map, not as a conditional on the key that chooses between them: the variant the stored values choose, or, before anything chooses, every variant's keys with none required.") . '</p>',
+          '#markup' => '<p>' . $this->t("The input schema of the tool for the same operation, as <code>tool:info</code> prints it. The Tool API cannot say a shape chosen by a sibling key, so variants a class declares appear as one map, not as a conditional on the key that chooses between them: the variant chosen, or, before anything chooses, every variant's keys with none required. Of variants the site lists, it shows only the keys of the one the stored values choose, and names two ways to learn the others: the full schema fetched with that choice, or the tool that answers the schema for some values.") . '</p>',
         ],
         'json' => $this->json($this->definitionSerializer->normalizeInputSchema($tool)),
       ];

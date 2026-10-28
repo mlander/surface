@@ -74,7 +74,7 @@ plugin is chosen
 
 | Door | Where |
 | --- | --- |
-| Tools | `data_surface:block.placement:create` (`values`, `dry_run`), `:update` (`id`, `values`, `dry_run`), `:update:read` (`id`), `:delete` (`id`, `dry_run`), with `data_surface_tool`; and `:create:schema` and `:update:schema` where the site has more block plugins than `data_surface.settings:site_list_limit`, or a component block with more components ([the narrowing tool](../data_surface_tool/README.md#the-narrowing-tool)) |
+| Tools | `data_surface:block.placement:create` (`values`, `dry_run`), `:update` (`id`, `values`, `dry_run`), `:update:read` (`id`), `:delete` (`id`, `dry_run`), with `data_surface_tool`; and `:create:schema` and `:update:schema`, since a plugin's settings are variants the site lists, which a tool's listing never spells out ([the narrowing tool](../data_surface_tool/README.md#the-narrowing-tool)) |
 | HTTP | `POST /surface-api/block.placement` (201, `Location`), `GET` and `PATCH /surface-api/block.placement/{id}`, `DELETE /surface-api/block.placement/{id}`, with `data_surface_react` |
 | Forms | `/admin/structure/block/surface/add`, `/admin/structure/block/surface/{id}`, and `/admin/structure/block/surface/{id}/delete`, a confirmation |
 | React | `/surface-react/block.placement/create`, `/surface-react/block.placement/update?id={id}` |

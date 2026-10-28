@@ -127,8 +127,8 @@ last, under Refused. `docs/resources.md` says how each part works.
 | `update` | Edit a placed block | `BlockInterface $id` | no | `administer blocks` | yes | yes | `BlockPlacementResource::update()` (`data_surface_block`) |
 | `delete` | Remove a placed block | `BlockInterface $id` | no | `administer blocks` | yes | no: it deletes | `BlockPlacementResource::delete()` (`data_surface_block`) |
 
-- `create` reaches form `/admin/structure/block/surface/add (data_surface_block.create)`, http `POST /surface-api/block.placement`, tool `data_surface:block.placement:create`, openapi `block.placement:create:write`, react `/surface-react/block.placement/create`.
-- `update` reaches form `/admin/structure/block/surface/{id} (data_surface_block.update)`, http `PATCH /surface-api/block.placement/{id}`, tool `data_surface:block.placement:update`, read tool `data_surface:block.placement:update:read`, openapi `block.placement:update:write`, react `/surface-react/block.placement/update`.
+- `create` reaches form `/admin/structure/block/surface/add (data_surface_block.create)`, http `POST /surface-api/block.placement`, tool `data_surface:block.placement:create`, schema tool `data_surface:block.placement:create:schema`, openapi `block.placement:create:write`, react `/surface-react/block.placement/create`.
+- `update` reaches form `/admin/structure/block/surface/{id} (data_surface_block.update)`, http `PATCH /surface-api/block.placement/{id}`, tool `data_surface:block.placement:update`, read tool `data_surface:block.placement:update:read`, schema tool `data_surface:block.placement:update:schema`, openapi `block.placement:update:write`, react `/surface-react/block.placement/update`.
 - `delete` reaches form `/admin/structure/block/surface/{id}/delete (data_surface_block.delete)`, http `DELETE /surface-api/block.placement/{id}`, tool `data_surface:block.placement:delete`, openapi `block.placement:delete:write`, react `/surface-react/block.placement/delete`.
 
 ## block.placement.condition
@@ -209,7 +209,7 @@ last, under Refused. `docs/resources.md` says how each part works.
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `configure` | Configure the mailer | nothing | no | `administer site configuration` | yes | yes | `#[Operation] on MailerResource` (`data_surface_examples`) |
 
-- `configure` reaches form `/surface-examples/14 (data_surface_examples.step14)`, http `PATCH /surface-api/event.mailer`, tool `data_surface:event.mailer:configure`, read tool `data_surface:event.mailer:configure:read`, openapi `event.mailer:configure:write`, react `/surface-react/event.mailer/configure`.
+- `configure` reaches form `/surface-examples/14 (data_surface_examples.step14)`, http `PATCH /surface-api/event.mailer`, tool `data_surface:event.mailer:configure`, read tool `data_surface:event.mailer:configure:read`, schema tool `data_surface:event.mailer:configure:schema`, openapi `event.mailer:configure:write`, react `/surface-react/event.mailer/configure`.
 
 ## event.mailer.credential.managed
 
@@ -309,7 +309,7 @@ last, under Refused. `docs/resources.md` says how each part works.
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `configure` | Configure the spotlight | nothing | no | `administer site configuration` | yes | yes | `#[Operation] on SpotlightResource` (`data_surface_examples`) |
 
-- `configure` reaches form `/surface-examples/12 (data_surface_examples.step12)`, http `PATCH /surface-api/event.spotlight`, tool `data_surface:event.spotlight:configure`, read tool `data_surface:event.spotlight:configure:read`, openapi `event.spotlight:configure:write`, react `/surface-react/event.spotlight/configure`.
+- `configure` reaches form `/surface-examples/12 (data_surface_examples.step12)`, http `PATCH /surface-api/event.spotlight`, tool `data_surface:event.spotlight:configure`, read tool `data_surface:event.spotlight:configure:read`, schema tool `data_surface:event.spotlight:configure:schema`, openapi `event.spotlight:configure:write`, react `/surface-react/event.spotlight/configure`.
 
 ## event.ticket_limit
 

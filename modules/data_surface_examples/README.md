@@ -2484,16 +2484,25 @@ limit, `data_surface.settings:site_list_limit`. This module's four are
 under it, and so is every site its tests run on, so this page and its
 tests show every component spelled out. A site whose themes provide
 more is past it, as the development site this page was written on is,
-with 312: the full schema and the tool listing then list each component
-by id and label, and state the props and slots open, marked `deferred`,
-with no def and no conditional per component and a `fetch` template
-in each `deferred`; the full schema fetched with a component chosen,
+with 312: the full schema then lists each component by id and label,
+and states the props and slots open, marked `deferred`, with no def and
+no conditional per component and a `fetch` template in each `deferred`;
+the full schema fetched with a component chosen,
 `GET /surface-api/event.spotlight/schema?choose=/props={component}`,
 states that component's defs exactly, and so does the schema for these
-answers. The React page fetches it once per component chosen, and the
-tool listing names that fetch beside the narrowing tool
-(why: [decision](../../docs/decisions.md#a-list-left-out-for-size-is-deferred-not-refined)). The full schema went from 3 MB and 2,465 defs to 18 KB there,
-and the tool's definition from 1.6 MB to 12 KB
+answers. The React page fetches it once per component chosen
+(why: [decision](../../docs/decisions.md#a-list-left-out-for-size-is-deferred-not-refined)).
+The full schema went from 3 MB and 2,465 defs to 18 KB there
+(why: [decision](../../docs/decisions.md#a-budget-for-what-the-site-decides)).
+
+The tool listing does not wait for the limit. On every site it offers
+every component under `component`, states the props and slots with the
+keys of the component stored and no other, and names that fetch and the
+narrowing tool for any other component. A tool's definition is sent with
+every request that offers the tool, and the Tool API cannot say which
+keys the component chooses, so spelled out, the listing would hold every
+component's keys in one map with none required: 1.6 MB with the 312
+components, 9 KB as it is
 (why: [decision](../../docs/decisions.md#a-budget-for-what-the-site-decides)).
 The props in the full schema, past the limit:
 
@@ -2506,17 +2515,20 @@ The props in the full schema, past the limit:
 The form still swaps the props over AJAX, and the React page fetches
 `GET /surface-api/event.spotlight/schema?choose=/props={component}`
 when the component changes (then the slots, joined), once per
-component, and narrows from it. An agent reads in the write tool's
-listing both ways to learn them: that fetch, or the tool it asks with
-its values, in two calls, that one and then the write:
+component, and narrows from it. An agent changing a prop of the
+component stored writes it in one call; for another component it reads
+in the write tool's listing both ways to learn the keys: that fetch, or
+the tool it asks with its values, in two calls, that one and then the
+write:
 
 ```bash
 drush tool:run data_surface:event.spotlight:configure:schema --uid=1 --input='{"values":{"component":"data_surface_examples:call_to_action"}}'
 drush tool:run data_surface:event.spotlight:configure --uid=1 --input='{"values":{"component":"data_surface_examples:call_to_action","props":{"text":"Buy a ticket","url":"https://example.com/tickets"}}}' --input=dry_run=true
 ```
 
-The narrowing tool is there only past the limit; the page's panel says
-which state the site is in, and why.
+The narrowing tool is there on every site, since the tool listing never
+states every component's keys; the page's panel says which state the
+documents are in, and why.
 
 A site can offer fewer components than it has:
 `data_surface.settings:components_offered` lists component ids
@@ -2862,12 +2874,13 @@ actions slot as the full schema narrows it, the four tools a placed
 block has, a link to place one, and what it cost. Past the site list
 limit the block's props and slots are open and `deferred`, as example
 12's are, the hero's actions slot is read from the full schema fetched
-with the hero chosen, and the placement's create and update
+with the hero chosen. On every site the placement's create and update
 have a narrowing tool each, `data_surface:block.placement:create:schema`
 and `data_surface:block.placement:update:schema`, which the table lists
-too: a site with more than 20 block plugins is past the limit for the
-plugin's settings as well. The test sites have 11 to 16 block plugins
-and four components, under it.
+too: the plugin's settings are variants the site lists, so a tool
+listing states the keys of the stored plugin at most, as example 12's
+states the stored component's. The test sites
+have 11 to 16 block plugins and four components, under the limit.
 
 A plugin's structure is held by its host and is no tool. A placed block
 is a config entity, `block.block.<id>`, with a machine name and storage

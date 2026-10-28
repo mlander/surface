@@ -12,7 +12,6 @@ use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\StringTranslation\TranslationInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\data_surface\Computed;
-use Drupal\data_surface\Contract\SiteListBudget;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\SettledCacheability;
 use Drupal\data_surface\Pipeline\Outbound;
@@ -196,9 +195,6 @@ final class OperationInputs {
    * @param \Drupal\Core\Extension\ModuleHandlerInterface|null $moduleHandler
    *   The module handler, which says whether the site serves the API a
    *   reference key's lookup is on.
-   * @param \Drupal\data_surface\Contract\SiteListBudget|null $budget
-   *   How many entries of a list the site decides a listing spells out,
-   *   which says whether an operation has a narrowing tool.
    * @param \Drupal\data_surface_react\ServedPaths|null $servedPaths
    *   The API's paths, where the site serves it: the path a key left out
    *   for its size names to fetch one of its entries at.
@@ -209,7 +205,6 @@ final class OperationInputs {
     protected readonly InputDefinitions $inputDefinitions,
     TranslationInterface $string_translation,
     protected readonly ?ModuleHandlerInterface $moduleHandler = NULL,
-    protected readonly ?SiteListBudget $budget = NULL,
     protected readonly ?ServedPaths $servedPaths = NULL,
   ) {
     $this->stringTranslation = $string_translation;
@@ -366,11 +361,12 @@ final class OperationInputs {
     foreach ($resource->operations as $declared) {
       $operation = $declared->id === $context->id ? $declared : $operation;
     }
-    $map = $this->inputDefinitions->withDependencies($this->map($resource, $built, $this->knownIdentity($resource, $context), $operation), $built);
-    if (!$context->creates) {
+    $stored = $context->creates ? NULL : $this->resources->storage($resource->name(), $context, $built)->load($built);
+    $map = $this->inputDefinitions->withDependencies($this->map($resource, $built, $this->knownIdentity($resource, $context), $operation, stored: $stored), $built);
+    if ($stored !== NULL) {
       // Decision: see
       // docs/decisions.md#required-is-the-resources-and-an-update-tool-requires-nothing-at-its-door.
-      $this->inputDefinitions->withStored($map, $built, $this->resources->storage($resource->name(), $context, $built)->load($built));
+      $this->inputDefinitions->withStored($map, $built, $stored);
       $this->inputDefinitions->withoutRequired($map);
     }
     return $this->alwaysSent($map);
@@ -383,19 +379,29 @@ final class OperationInputs {
    * account: the derived definitions are cached for every account, and a
    * tool instance is made for one.
    *
+   * For an operation that needs nothing to start from and changes what
+   * exists, it may read what is stored, so a key whose variants the site
+   * lists states the variant the stored values choose
+   * (InputDefinitions::deferred()); the caller says whether the account
+   * may read it.
+   *
    * Decision: see
-   * docs/decisions.md#access-is-static-or-runtime-read-from-its-cacheability.
+   * docs/decisions.md#access-is-static-or-runtime-read-from-its-cacheability,
+   * and docs/decisions.md#a-budget-for-what-the-site-decides.
    *
    * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $resource
    *   The resource.
    * @param \Drupal\data_surface\ResourceBuild\OperationDefinition $operation
    *   The operation.
+   * @param bool $stored
+   *   Whether the account may read what is stored, which the listing reads
+   *   only where a key it leaves out has variants to choose.
    *
    * @return \Drupal\tool\TypedData\MapInputDefinition
    *   The map.
    */
-  public function listedValues(ResourceDefinition $resource, OperationDefinition $operation): MapInputDefinition {
-    return $this->declaredValues($resource, $operation, $this->neutral($resource, $operation, FALSE));
+  public function listedValues(ResourceDefinition $resource, OperationDefinition $operation, bool $stored = FALSE): MapInputDefinition {
+    return $this->declaredValues($resource, $operation, $this->neutral($resource, $operation, FALSE), stored: $stored);
   }
 
   /**
@@ -426,15 +432,22 @@ final class OperationInputs {
    *   TRUE for the cached definition, built for no account
    *   (ResourcesInterface::buildDeclared()); FALSE for the listing an
    *   account asks for, built for that account alone.
+   * @param bool $stored
+   *   Whether to read what is stored, for an operation that needs nothing
+   *   and changes what exists, where a key the listing leaves out has
+   *   variants to choose.
    *
    * @return \Drupal\tool\TypedData\MapInputDefinition
    *   The map.
    */
-  protected function declaredValues(ResourceDefinition $resource, OperationDefinition $operation, ?DataSurfaceInterface $neutral, bool $input = TRUE, bool $declared = FALSE): MapInputDefinition {
+  protected function declaredValues(ResourceDefinition $resource, OperationDefinition $operation, ?DataSurfaceInterface $neutral, bool $input = TRUE, bool $declared = FALSE, bool $stored = FALSE): MapInputDefinition {
     if ($operation->needsNothing()) {
       $context = $this->resources->operation($resource->name(), $operation->id);
       $built = $this->listed($resource, $context, $declared);
-      $map = $this->map($resource, $built, $this->knownIdentity($resource, $context), $operation, !$input);
+      $values = $stored && !$context->creates && $this->inputDefinitions->anyDeferred($built)
+        ? $this->resources->storage($resource->name(), $context, $built)->load($built)
+        : NULL;
+      $map = $this->map($resource, $built, $this->knownIdentity($resource, $context), $operation, !$input, $values);
     }
     else {
       // Decision: see docs/decisions.md#identity-before-the-parameters.
@@ -543,10 +556,10 @@ final class OperationInputs {
   /**
    * Answers whether an operation has a narrowing tool.
    *
-   * It has one when its declared listing has a key whose list the site
-   * decides past the budget (SiteListBudget::anyOver()), at any depth: a
-   * key the listing states open, whose keys only the schema for some
-   * values says. A resource with none adds no tool.
+   * It has one when its declared listing leaves out a key's entries
+   * (InputDefinitions::anyDeferred()), at any depth: variants the site
+   * lists, or a map of keys from the site past the budget, whose keys only
+   * the schema for some values says. A resource with none adds no tool.
    *
    * Decision: see docs/decisions.md#a-budget-for-what-the-site-decides.
    *
@@ -559,11 +572,11 @@ final class OperationInputs {
    *   TRUE when `<resource>:<operation>:schema` is derived.
    */
   public function narrows(ResourceDefinition $resource, OperationDefinition $operation): bool {
-    if ($this->budget === NULL || $operation->kind() === OperationDefinition::DELETE) {
+    if ($operation->kind() === OperationDefinition::DELETE) {
       return FALSE;
     }
     $context = $operation->needsNothing() ? $this->resources->operation($resource->name(), $operation->id) : new OperationContext($operation->id);
-    return $this->budget->anyOver($this->listed($resource, $context, TRUE));
+    return $this->inputDefinitions->anyDeferred($this->listed($resource, $context, TRUE));
   }
 
   /**
@@ -727,11 +740,14 @@ final class OperationInputs {
    *   the rest out.
    *   Decision: see
    *   docs/decisions.md#a-computed-key-is-a-pure-function-of-its-sources.
+   * @param array|null $stored
+   *   What is stored, which chooses the variant a key the site lists
+   *   states; NULL when nothing stored is read.
    *
    * @return \Drupal\tool\TypedData\MapInputDefinition
    *   The map, required when any of its properties is.
    */
-  protected function map(ResourceDefinition $resource, DataSurfaceInterface $built, array $known, ?OperationDefinition $operation = NULL, bool $computed = FALSE): MapInputDefinition {
+  protected function map(ResourceDefinition $resource, DataSurfaceInterface $built, array $known, ?OperationDefinition $operation = NULL, bool $computed = FALSE, ?array $stored = NULL): MapInputDefinition {
     $this->listedTags = Cache::mergeTags($this->listedTags, $built->getCacheTags());
     $map = $this->inputDefinitions->fromSurface(
       $built,
@@ -740,6 +756,7 @@ final class OperationInputs {
       runtimeAccessSaidOnce: $operation !== NULL && $this->runtimeAccessWhole($resource, $operation),
       narrowing: $operation === NULL ? NULL : static::narrowingTool($resource, $operation),
       schema: $operation === NULL ? NULL : $this->schemaPath($resource, $operation),
+      stored: $stored,
     );
     $this->inputDefinitions->withLookups($map, $built, $operation === NULL ? NULL : $this->lookup($resource, $operation));
     $this->listedTags = Cache::mergeTags($this->listedTags, $this->inputDefinitions->takeListTags());
@@ -1081,8 +1098,8 @@ final class OperationInputs {
     // Decision: see
     // docs/decisions.md#a-list-left-out-for-size-is-deferred-not-refined.
     return $arguments['@path'] === ''
-      ? $this->t('Answers the schema of @label for the values you have so far, and writes nothing. @needs Some keys of @label take their list from the site and have too many to list, so the write tool lists them open: choose the key that decides them, send your values here, and read the keys the choice offers under schema. Send the values again when a choice changes.', $arguments)
-      : $this->t("Answers the schema of @label for the values you have so far, and writes nothing. @needs Some keys of @label take their list from the site and have too many to list, so the write tool lists them open, each naming two ways to learn its keys once you choose the key that decides them: fetch GET @path?choose={key}={value} once per value and keep the answer, a schema that changes only when the site's list does; or send your values here and read the keys the choice offers under schema, again when a choice changes.", $arguments);
+      ? $this->t('Answers the schema of @label for the values you have so far, and writes nothing. @needs Some keys of @label depend on a list the site decides, and the write tool does not list them in full: choose the key that decides them, send your values here, and read the keys the choice offers under schema. Send the values again when a choice changes.', $arguments)
+      : $this->t("Answers the schema of @label for the values you have so far, and writes nothing. @needs Some keys of @label depend on a list the site decides, and the write tool does not list them in full, each naming two ways to learn its keys once you choose the key that decides them: fetch GET @path?choose={key}={value} once per value and keep the answer, a schema that changes only when the site's list does; or send your values here and read the keys the choice offers under schema, again when a choice changes.", $arguments);
   }
 
   /**

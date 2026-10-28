@@ -49,10 +49,13 @@ JSON Schema cannot say them. This one can.
   enabled: the whole document, widget hints included. The full schema is
   `GET .../schema` beside it ([the API](#the-api)).
 - **Not `drush tool:info`.** That prints the Tool API's rendering of the
-  derived tool, which cannot say keys a sibling chooses: variants are
-  flattened to one map, the variant the stored values choose, or every
-  variant's keys with none required before anything chooses
-  ([resources](resources.md), "Emission"). The `allOf` of `if`/`then`
+  derived tool, which cannot say keys a sibling chooses: variants a class
+  declares are flattened to one map, the variant chosen, or every
+  variant's keys with none required before anything chooses; of variants
+  the site lists it states only the keys of the one the stored values
+  choose, whatever the site list limit says
+  ([resources](resources.md), "Emission";
+  [the tool door](#asking-again-at-the-tool-door)). The `allOf` of `if`/`then`
   below is only in this contract, for variants and for
   [an enumerated key](#exact-where-it-can-be) alike: a Tool API context
   definition has no conditional, so the tool's schema stays as loose as
@@ -1879,17 +1882,32 @@ narrowing; choosing it again fetches nothing.
 
 ## Asking again at the tool door
 
-A key `deferred` because its list is past the site list limit is listed
-open by the write tool too, and its description names both ways to
-learn its keys: "Too many to list: choose component, then fetch GET
+The write tool never spells out variants the site lists, whatever the
+site list limit says: the limit governs the two documents above and
+nothing at the tool door. A tool's definition is sent with every request
+that offers the tool, and the Tool API cannot say which keys a sibling
+chooses, so spelled out, every variant's keys would be one map with none
+required: 1.6 MB for example 12 on a site with 312 components
+(why: [decision](decisions.md#a-budget-for-what-the-site-decides)). The
+key states the keys of the variant the stored values choose and no
+other, where the listing reads what is stored (an operation that needs
+nothing to start from, or the refined `values` once the parameters
+arrive), and none where nothing chooses one, and its description names
+both ways to learn the keys of any other: "Its keys depend on component:
+listed here are those of data_surface_examples:card, the component
+stored. For another component, fetch GET
 /surface-api/event.spotlight/schema?choose=/props={component} once per
 component, or call data_surface:event.spotlight:configure:schema with
-your values, to get this key's schema." The fetch is named where the
-site serves the API (data_surface_react on), and answers
+your values, to get this key's schema." So changing a prop of the stored
+component is one call. A map of keys from the site past the limit is
+listed open too, its description naming the fetch of an entry and the
+narrowing tool. The fetch is named where the site serves the API
+(data_surface_react on), and answers
 [the fetch per choice](#the-fetch-per-choice), which an agent with an
-HTTP client keeps per component; the narrowing tool is the tool door's
-`POST .../schema`, derived beside the write tool only where the
-operation's listing has such a key
+HTTP client keeps per component; under the limit it answers the full
+schema, which states every variant already. The narrowing tool is the
+tool door's `POST .../schema`, derived beside the write tool wherever
+the operation's listing leaves such a key out
 (why: [decision](decisions.md#a-list-left-out-for-size-is-deferred-not-refined)):
 
 | | |
