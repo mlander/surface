@@ -637,7 +637,7 @@ final class ExamplesController extends ControllerBase {
       ],
       8 => [
         'title' => $series[8]['title'],
-        'sentence' => $this->t('A person structure attached by two resources, its port wired to a different key by each; a phone shape asked for at two keys; a review mixed in; and a collection of volunteers.'),
+        'sentence' => $this->t('A person structure attached by two resources, its port wired to a different key by each; a phone shape asked for at two keys; a review mixed in, its date a date input; and a collection of volunteers.'),
         'items' => [
           $this->route('data_surface_examples.step8'),
           $this->route('data_surface_examples.step8_desk'),

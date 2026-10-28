@@ -1407,7 +1407,9 @@ final class PhoneNumber implements ShapeInterface {
 The press page wires the port to `public`, and mixes the review in, so
 the review's two keys are the page's own: stored flat beside `public`,
 drawn among its keys, and named in a refusal as `reviewed_by`, not under
-a parent ([Mixins](../../docs/resources.md#mixins)).
+a parent ([Mixins](../../docs/resources.md#mixins)). The review date asks
+for a date input, `setSetting('widget', 'date')`, which both documents
+state as `format: date`.
 
 <!-- code: src/Structure/ReviewStructure.php -->
 
@@ -1421,8 +1423,9 @@ final class ReviewStructure implements StructureInterface {
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('reviewed_on', 'string', t('Reviewed on'))
       ->setDescription(t('YYYY-MM-DD.'))
+      ->setSetting('widget', 'date')
       ->addConstraint('Regex', [
-        'pattern' => '/^\d{4}-\d{2}-\d{2}$/D',
+        'pattern' => '/^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/D',
         'message' => t('Write the date as YYYY-MM-DD, such as 2026-10-19.'),
       ]);
 
@@ -1550,7 +1553,7 @@ of code, counted without blank lines or comments:
 | --- | --- | --- |
 | [`modules/data_surface_examples/src/Structure/PersonStructure.php`](src/Structure/PersonStructure.php) | the person: three keys, and a rule that reads a port, listed | 14 |
 | [`modules/data_surface_examples/src/Shape/PhoneNumber.php`](src/Shape/PhoneNumber.php) | the phone: a named shape | 14 |
-| [`modules/data_surface_examples/src/Structure/ReviewStructure.php`](src/Structure/ReviewStructure.php) | the review: two keys and a rule, mixed into the press page | 16 |
+| [`modules/data_surface_examples/src/Structure/ReviewStructure.php`](src/Structure/ReviewStructure.php) | the review: two keys and a rule, mixed into the press page | 17 |
 | [`modules/data_surface_examples/src/Resource/PressResource.php`](src/Resource/PressResource.php) | the press page: one key, the person attached, the review mixed in | 14 |
 | [`modules/data_surface_examples/src/Storage/PressStorage.php`](src/Storage/PressStorage.php) | its storage: names the config object | 3 |
 | [`modules/data_surface_examples/src/Resource/InfoDeskResource.php`](src/Resource/InfoDeskResource.php) | the information desk: the phone, the person attached, and a collection of up to four | 17 |

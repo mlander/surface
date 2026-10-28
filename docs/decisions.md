@@ -4746,6 +4746,19 @@ catalog's view of one resource names each key's widget. The `format`
 setting is read by claims alone: no document writes it, and no rule
 checks it. (`DataSurfaceWidgetManager::claimed()`, `WidgetClaimTest`)
 
+*Amended 2026-10-27:* a date is the time input's twin,
+`setSetting('widget', 'date')` on a string, drawn as core's `date`
+element with its default input type. It also states `format: date` in
+both documents, because a date input posts the RFC 3339 full-date,
+`YYYY-MM-DD`, exactly; the reader reads `format: date` back as the
+setting, so a full schema still reads back to itself. A time states no
+format: a time input posts `HH:MM`, and RFC 3339's time requires seconds
+and an offset, so `format: time` would refuse every value the input
+posts. The format stays an annotation
+([`format` is an annotation](#format-is-an-annotation)), and the key's
+Regex is still the rule. (`DateWidget::draws()`, `PropertySchema::type()`,
+`SchemaReader::value()`)
+
 ### Arrangement is declared once
 
 How a key is laid out where it is drawn is declared on its definition,

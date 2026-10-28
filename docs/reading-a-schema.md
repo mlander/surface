@@ -41,7 +41,7 @@ the emitter wrote reads back as what it was written from
 | a property | a key; `title` its label, `description` its description (a property with no title has no label) |
 | `type` `string`, `integer`, `number`, `boolean` | the data type `string`, `integer`, `float`, `boolean` |
 | `format` `idn-email` or `email`, `uri`, `date-time` | the data type `email`, `uri`, `datetime_iso8601`; `email` is written back as `idn-email`, which Drupal's validator holds to |
-| `format` `date`, `time`, `uuid` | a `Regex` of RFC 3339's date or full time, a `Uuid` constraint |
+| `format` `date`, `time`, `uuid` | a `Regex` of RFC 3339's date or full time (none beside a `pattern`, which is the rule), a `Uuid` constraint; a `date` is drawn as a date input |
 | any other `format` | dropped, noted: an annotation, which no constraint checks |
 | `null` beside the type (`["string", "null"]`) | a key null clears |
 | `required` | the key required |
@@ -90,7 +90,7 @@ has: `present`, `absent`, `equals`, `in`, the four bounds, `not`,
 | `by`, `variants` | variants, and the def each value chooses; `by` beside `deferred` with no union and no `variants`, a list the site decides past its budget (why: [decision](decisions.md#a-list-left-out-for-size-is-deferred-not-refined)), is an object like any other, the marker noted: no variant is in the document to read |
 | `collection` | a collection (`list` in contract 3) |
 | `patternMessage` | the `Regex`'s message |
-| `widget` `radios`, `time`, `checkboxes`; `textarea` | the widget it asks for; a multiline string |
+| `widget` `radios`, `time`, `date`, `checkboxes`; `textarea` | the widget it asks for; a multiline string |
 | `group`, `after` | a map that only groups, a map placed after a key |
 | `checkedOnServer` of a `JsonSchema` constraint | that constraint, from the schema beside its message |
 | `rules`, `within` | where the emitter moved its markers, put back first (`SchemaResolver::restored()`) |

@@ -72,6 +72,7 @@ function my_module_data_surface_widget_info_alter(array &$definitions): void {
 | `fieldset` | 5 | A `ComplexDataDefinitionInterface`. One that declares no property, such as a variant for a choice with nothing more to say, renders as an empty container and answers an empty map. | `details` |
 | `list` | 8 | A list of single values with no list of allowed values, whose item a widget draws: keywords, a list of free strings or numbers. | a `fieldset` of rows, "Remove" beside each, "Add another" under them |
 | `time` | 9 | A `string` that asks for a time. | a time input |
+| `date` | 9 | A `string` that asks for a date. | a date input |
 | `string` | 10 | `string`, `email`, `uri`. | `textfield`, `email`, `url`; `textarea` when multiline; `password` for a secret |
 | `number` | 10 | `integer`, `float`. | `number` |
 | `checkbox` | 10 | `boolean`. | `checkbox`, never `#required` |
@@ -120,9 +121,12 @@ $inputs->addList('days', $day, t('Days'))
 
 $inputs->add('opens', 'string', t('Opens at'))
   ->setSetting('widget', 'time');     // the Regex is still the rule
+
+$inputs->add('reviewed_on', 'string', t('Reviewed on'))
+  ->setSetting('widget', 'date');     // both schemas say `format: date`
 ```
 
-`checkboxes`, `radios`, `select` and `time` are the words the stock
+`checkboxes`, `radios`, `select`, `time` and `date` are the words the stock
 widgets answer to (`DataSurfaceWidgetBase::answersTo()`): each is the
 widget's plugin ID, as `fieldset` and `checkbox` are, and the word
 `x-surface.widget` says. *Renamed 2026-10-24:* the select, fieldset and

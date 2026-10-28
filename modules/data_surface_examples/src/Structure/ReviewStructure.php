@@ -25,8 +25,9 @@ final class ReviewStructure implements StructureInterface {
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('reviewed_on', 'string', t('Reviewed on'))
       ->setDescription(t('YYYY-MM-DD.'))
+      ->setSetting('widget', 'date')
       ->addConstraint('Regex', [
-        'pattern' => '/^\d{4}-\d{2}-\d{2}$/D',
+        'pattern' => '/^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/D',
         'message' => t('Write the date as YYYY-MM-DD, such as 2026-10-19.'),
       ]);
 

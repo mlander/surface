@@ -23,7 +23,7 @@ use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
 /**
- * The stock widget set: checkboxes, radios, a free list, a time, the rule.
+ * The stock widget set: checkboxes, radios, a free list, a time, a date.
  *
  * Each widget's element is built from the definition alone, its posted
  * shape is read back in the definition's shape, absent keeps, emptied
@@ -194,6 +194,7 @@ class StockWidgetsTest extends DataSurfaceKernelTestBase {
       'radios for a list' => static::choices(3)->setSetting('widget', 'radios'),
       'checkboxes for one value' => DataDefinition::create('string')->addConstraint('Choice', ['choices' => ['a']])->setSetting('widget', 'checkboxes'),
       'a time for a number' => DataDefinition::create('integer')->setSetting('widget', 'time'),
+      'a date for a number' => DataDefinition::create('integer')->setSetting('widget', 'date'),
       'a word no widget answers to' => DataDefinition::create('string')->setSetting('widget', 'sparkly'),
     ] as $label => $definition) {
       try {
@@ -207,6 +208,7 @@ class StockWidgetsTest extends DataSurfaceKernelTestBase {
       'radios for a list' => '"Choices" asks for the radios widget, which does not draw a key of type list of string; the select widget does. Ask for a widget that draws it, or for none.',
       'checkboxes for one value' => '"string" asks for the checkboxes widget, which does not draw a key of type string; the select widget does. Ask for a widget that draws it, or for none.',
       'a time for a number' => '"integer" asks for the time widget, which does not draw a key of type integer; the number widget does. Ask for a widget that draws it, or for none.',
+      'a date for a number' => '"integer" asks for the date widget, which does not draw a key of type integer; the number widget does. Ask for a widget that draws it, or for none.',
       'a word no widget answers to' => '"string" asks for the sparkly widget, which does not draw a key of type string; the string widget does. Ask for a widget that draws it, or for none.',
     ], $refusals);
   }
@@ -360,6 +362,27 @@ class StockWidgetsTest extends DataSurfaceKernelTestBase {
     $schema = $this->container->get('data_surface.contract_emitter')->emitFull($hours, 'resource_test.opening_hours', widgets: TRUE)->document['schema'];
     $this->assertSame('time', $schema['properties']['opens']['x-surface']['widget']);
     $this->assertSame('^([01]\d|2[0-3]):[0-5]\d$', $schema['properties']['opens']['pattern']);
+    $this->assertArrayNotHasKey('format', $schema['properties']['opens'], 'A time input posts HH:MM, which RFC 3339 time refuses.');
+  }
+
+  /**
+   * A date is a date input, stated as `format: date`; the pattern rules.
+   */
+  public function testDate(): void {
+    $day = DataDefinition::create('string')
+      ->setLabel('Reviewed on')
+      ->setSetting('widget', 'date')
+      ->addConstraint('Regex', ['pattern' => '/^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/D']);
+    $surface = $this->one($day);
+    $element = $this->form($surface, ['key' => '2026-10-19'])['key'];
+    $this->assertSame(['date', '2026-10-19'], [$element['#type'], $element['#default_value']]);
+    $this->assertArrayNotHasKey('#attributes', $element, "Core's date element is a date input as it stands.");
+    $this->assertSame('date', $this->container->get('element_info')->getInfo('date')['#attributes']['type']);
+    $this->assertSame('2026-10-20', $this->extracted($day, $element, '2026-10-20'));
+    $emitter = $this->container->get('data_surface.contract_emitter');
+    $property = $emitter->emitFull($surface, 'test', widgets: TRUE)->document['schema']['properties']['key'];
+    $this->assertSame(['date', 'date'], [$property['x-surface']['widget'], $property['format']]);
+    $this->assertSame('date', $emitter->emitFull($surface, 'test')->document['schema']['properties']['key']['format'], 'The format is stated without the widget hints.');
   }
 
 }

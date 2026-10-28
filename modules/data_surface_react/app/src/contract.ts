@@ -48,6 +48,7 @@ export type Widget =
   | 'checkboxes'
   | 'checkbox'
   | 'time'
+  | 'date'
   | 'number'
   | 'text'
   | 'textarea'

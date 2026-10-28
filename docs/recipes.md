@@ -42,7 +42,10 @@ $inputs->add('opens', 'string', t('Opens at'), default: '09:00')
 The form draws the browser's time input, the served contract says
 `x-surface.widget: "time"` and React draws the same; the browser posts
 `09:00`, and the pattern is still the rule, at every door
-([Widgets](widgets.md#which-element-a-list-of-choices-is)).
+([Widgets](widgets.md#which-element-a-list-of-choices-is)). A date is the
+same with `setSetting('widget', 'date')` and RFC 3339's full-date
+pattern, which both schemas also state as `format: date` (example 8's
+review date).
 
 Prefer the string. What a person picks, what an agent sends and what the
 config object stores are the same `09:00`, a refusal is the pattern's

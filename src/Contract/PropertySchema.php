@@ -17,6 +17,7 @@ use Drupal\data_surface\Computed;
 use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Plugin\DataSurfaceWidget\AutocompleteWidget;
 use Drupal\data_surface\Plugin\DataSurfaceWidget\CheckboxesWidget;
+use Drupal\data_surface\Plugin\DataSurfaceWidget\DateWidget;
 use Drupal\data_surface\Plugin\DataSurfaceWidget\OptionsWidget;
 use Drupal\data_surface\Plugin\DataSurfaceWidget\RadiosWidget;
 use Drupal\data_surface\Plugin\DataSurfaceWidget\TimeWidget;
@@ -659,12 +660,17 @@ final class PropertySchema {
    *   The definition.
    *
    * @return array
-   *   `type`, and `format` where the data type has one; empty for a type
-   *   JSON Schema says nothing about, such as `any`.
+   *   `type`, and `format` where the data type has one or the key is
+   *   drawn as a date; empty for a type JSON Schema says nothing about,
+   *   such as `any`.
    */
   protected function type(DataDefinitionInterface $definition): array {
     return match ($definition->getDataType()) {
-      'string' => ['type' => 'string'],
+      // A date input posts the RFC 3339 full-date, `YYYY-MM-DD`, so a key
+      // drawn as one is that format. A time input posts `HH:MM`, which
+      // RFC 3339's time refuses (it needs seconds and an offset), so a
+      // time states no format.
+      'string' => DateWidget::draws($definition) ? ['type' => 'string', 'format' => 'date'] : ['type' => 'string'],
       // Drupal's validator admits a non-ASCII local part, which `email`
       // (RFC 5321) refuses and `idn-email` (RFC 6531) admits.
       'email' => ['type' => 'string', 'format' => 'idn-email'],
@@ -770,6 +776,7 @@ final class PropertySchema {
     $type = $definition->getDataType();
     return match (TRUE) {
       TimeWidget::draws($definition) => 'time',
+      DateWidget::draws($definition) => 'date',
       in_array($type, ['string', 'email', 'uri'], TRUE) => match (TRUE) {
         (bool) $definition->getSetting('multiline') => 'textarea',
         $type === 'email' => 'email',

@@ -19,7 +19,7 @@ import { Description, Errors, isLocked, RequiredMarker, type FieldProps } from '
  * One component per `x-surface.widget`, as the Form API maps each
  * definition to an element: options to a select or radios, a list of
  * them to checkboxes or a multiple select, a map to a fieldset, a string
- * to a text input, a time input or a textarea, a number to a number
+ * to a text input, a time or date input or a textarea, a number to a number
  * input, a boolean to a checkbox, a list of free values to rows; and the
  * one the Form API has no element for, variants (the widget hint `variants`).
  */
@@ -39,6 +39,7 @@ export function Field(props: FieldProps): JSX.Element | null {
     case 'text':
     case 'email':
     case 'time':
+    case 'date':
       return <TextField {...props} />;
     case 'textarea':
       return <TextareaField {...props} />;

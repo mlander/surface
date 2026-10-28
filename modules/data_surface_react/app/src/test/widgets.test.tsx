@@ -274,7 +274,7 @@ describe('select and the empty option rule', () => {
   });
 });
 
-describe('checkboxes, radios and a time', () => {
+describe('checkboxes, radios, a time and a date', () => {
   const days: Schema = {
     title: 'Days open',
     type: 'array',
@@ -335,6 +335,13 @@ describe('checkboxes, radios and a time', () => {
     const input = screen.getByLabelText(/Opens at/);
     expect(input).toHaveAttribute('type', 'time');
     expect(input).toHaveValue('09:00');
+  });
+
+  it('maps `date` to a date input', () => {
+    render(<Form schema={object({ reviewed_on: { title: 'Reviewed on', type: 'string', format: 'date', 'x-surface': x('date') } })} initial={{ reviewed_on: '2026-10-19' }} />);
+    const input = screen.getByLabelText(/Reviewed on/);
+    expect(input).toHaveAttribute('type', 'date');
+    expect(input).toHaveValue('2026-10-19');
   });
 
   it('maps `list` to rows to add and remove, each the item\'s own field', async () => {

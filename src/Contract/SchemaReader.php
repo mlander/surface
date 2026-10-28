@@ -40,7 +40,8 @@ use Drupal\data_surface\ResourceBuild\ResourceRegistry;
  *   UniqueItems, `pattern` a Regex through the
  *   subset both engines read alike, run backwards (PatternTranslation),
  *   and `not: {pattern}` one that must not match; `format` `date`, `time`
- *   and `uuid` the constraint that checks it; an `allOf` or `anyOf` of
+ *   and `uuid` the constraint that checks it, and `date` a key drawn as a
+ *   date input; an `allOf` or `anyOf` of
  *   such parts a Sequentially or an AtLeastOneOf;
  * - `readOnly` a key locked at its `const`, `writeOnly` a secret;
  * - a nested object a map, or, where it says more than a map can (a
@@ -1878,6 +1879,11 @@ final class SchemaReader {
     if ($type === 'string' && $format === 'uuid') {
       $definition->addConstraint('Uuid', []);
     }
+    if ($type === 'string' && $format === 'date' && !isset($property['oneOf']) && !isset($property['enum'])) {
+      // A date is drawn as a date input, which is what the emitter states
+      // the format for; an `x-surface.widget` read below still decides.
+      $definition->setSetting('widget', 'date');
+    }
     if ($foreign !== []) {
       $definition->addConstraint('JsonSchema', ['schema' => $this->withDefs($foreign, $root)]);
     }
@@ -1937,7 +1943,7 @@ final class SchemaReader {
       return;
     }
     $widget = $extension['widget'] ?? NULL;
-    if (in_array($widget, ['radios', 'time', 'checkboxes'], TRUE)) {
+    if (in_array($widget, ['radios', 'time', 'date', 'checkboxes'], TRUE)) {
       $definition->setSetting('widget', $widget);
     }
     elseif ($widget === 'textarea') {
