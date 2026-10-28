@@ -7,6 +7,7 @@ namespace Drupal\data_surface\ResourceBuild;
 use Drupal\Core\Session\AccountSwitcherInterface;
 use Drupal\Core\Session\AnonymousUserSession;
 use Drupal\Core\TypedData\DataDefinitionInterface;
+use Drupal\data_surface\Collection;
 use Drupal\data_surface\Computed;
 use Drupal\data_surface\Contract\ContractBaselines;
 use Drupal\data_surface\Contract\SiteListBudget;
@@ -598,7 +599,8 @@ final class SiteCatalog {
           'listed' => !$open,
         ],
         'items' => $entry->list === NULL ? NULL : ($entry->list->item->id ?? $entry->list->item->source),
-        'widget' => $entry->attachment === NULL && $entry->variants === NULL && $entry->list === NULL ? $this->widget($definition) : NULL,
+        // A list of maps is drawn as a collection, which no widget is.
+        'widget' => $entry->attachment === NULL && $entry->variants === NULL && $entry->list === NULL && !Collection::holdsMaps($definition) ? $this->widget($definition) : NULL,
       ];
       if ($entry->attachment !== NULL) {
         array_push($keys, ...$this->keys($entry->attachment->child, $entry->attachment->source, $path . '.', $within));

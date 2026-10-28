@@ -1,0 +1,20 @@
+$schema: https://git.drupalcode.org/project/drupal/-/raw/HEAD/core/assets/schemas/v1/metadata.schema.json
+name: Mixed
+status: stable
+description: 'Props no stock widget draws: one typed as several JSON types, a list of lists and a list of anything.'
+props:
+  type: object
+  properties:
+    meta:
+      type: ['object', 'array', 'string', 'null']
+      title: Meta
+    grid:
+      type: array
+      title: Grid
+      items:
+        type: array
+        items:
+          type: string
+    classes:
+      type: array
+      title: Classes

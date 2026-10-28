@@ -9,6 +9,7 @@ use Drupal\Core\Extension\ModuleHandlerInterface;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Form\SubformStateInterface;
 use Drupal\Core\Messenger\MessengerInterface;
+use Drupal\Core\StringTranslation\TranslationInterface;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
@@ -17,10 +18,12 @@ use Drupal\data_surface\Computed;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Options\DataSurfaceOptions;
+use Drupal\data_surface\Pipeline\Accepting;
 use Drupal\data_surface\Pipeline\DataSurfacePipelineInterface;
+use Drupal\data_surface\Pipeline\TypeMismatchException;
 use Drupal\data_surface\Pipeline\ValueState;
 use Drupal\data_surface\Pipeline\ViolationSet;
-use Drupal\data_surface\Entry;
+use Drupal\data_surface\Variants;
 use Drupal\data_surface\Collection;
 use Drupal\data_surface\Widget\DataSurfaceWidgetManager;
 
@@ -82,6 +85,9 @@ final class Extracting {
    * @param \Drupal\Core\Extension\ModuleHandlerInterface $moduleHandler
    *   The module handler, which says whether Inline Form Errors prints
    *   an error beside its element, so the message need not name it.
+   * @param \Drupal\Core\StringTranslation\TranslationInterface $stringTranslation
+   *   The string translation service, which words a value of the wrong
+   *   shape refused.
    */
   public function __construct(
     protected readonly DataSurfaceWidgetManager $widgetManager,
@@ -89,6 +95,7 @@ final class Extracting {
     protected readonly MessengerInterface $messenger,
     protected readonly DataSurfaceOptions $options,
     protected readonly ModuleHandlerInterface $moduleHandler,
+    protected readonly TranslationInterface $stringTranslation,
   ) {
   }
 
@@ -262,7 +269,7 @@ final class Extracting {
       if ($entry->variants !== NULL) {
         // What is stored was written for another variant, and says
         // nothing about this one.
-        $held = $entry->variants->held((string) $entry->variants->chosen($values[$entry->variants->by] ?? NULL), $held);
+        $held = $entry->variants->heldFor((string) $entry->variants->chosen($values[$entry->variants->by] ?? NULL), $held, $stored[$entry->variants->by] ?? NULL);
       }
       $child_stored = array_replace($child->getDefaultValues(), is_array($held) ? $held : []);
       [$child_discarded, $child_orphaned] = $this->settle($child, $child_stored, $input[$name]);
@@ -558,11 +565,11 @@ final class Extracting {
         $variantKeys[] = $name;
         continue;
       }
-      if ($entry->list !== NULL) {
-        $raw += $this->extractCollection($entry, $container, $form_state);
+      if ($entry->list !== NULL || Collection::holdsMaps($entry->definition)) {
+        $raw += $this->extractCollection((string) $name, $entry->definition, $entry->list, $container, $form_state);
         continue;
       }
-      $raw += $this->extractKey((string) $name, $entry->definition, $container, $form_state);
+      $raw += $this->extractKey((string) $name, $entry->definition, $container, $form_state, $entry->attachment?->child);
     }
     if ($variantKeys !== []) {
       // A key's element is the chosen variant's, so it is read through
@@ -576,15 +583,20 @@ final class Extracting {
         }
         $variants = $definitions->entry((string) $name)->variants;
         $chosen = $variants->chosen($raw[$variants->by] ?? $current[$variants->by] ?? $surface->getDefault($variants->by));
+        if (static::drawnForAnother($container[$name] ?? NULL, $chosen)) {
+          // Drawn for the variant the deciding key chose before this
+          // submission: what it posted is that variant's, and says nothing.
+          continue;
+        }
         $child = $chosen === NULL ? NULL : $variants->variant($chosen)->child;
         if ($child !== NULL && Drawing::nestsVariants($child) && is_array($container[$name] ?? NULL) && empty($container[$name][DataSurfaceFormBuilderInterface::PLACEHOLDER_KEY])) {
           // Variants inside the variant (a component's slots, each holding
           // a component that chooses its own props): each level is read
           // through what its own deciding key chose in this submission.
-          $raw[$name] = $this->extractFrame($child, $container[$name], $form_state);
+          $raw[$name] = $this->extractFrame($child, $container[$name], $form_state, Refreshing::containerKey($container));
           continue;
         }
-        $raw += $this->extractKey((string) $name, $definition, $container, $form_state);
+        $raw += $this->extractKey((string) $name, $definition, $container, $form_state, $child);
       }
     }
     // A key drawn as nothing when the page was drawn sent nothing, even
@@ -596,7 +608,201 @@ final class Extracting {
     // One coercion path for every caller: the form hands its raw tree to
     // the same accept() a payload goes through, which is also where
     // locked keys take the value the data surface declares.
-    return $this->pipeline->accept($surface, $raw, $current);
+    return $this->accepted($surface, $raw, $current, $container, $form_state);
+  }
+
+  /**
+   * Accepts what a form posted, a value of the wrong shape refused.
+   *
+   * The pipeline's accept() throws on a value its key cannot hold at all,
+   * an array for a string; through a payload that is a refusal, and
+   * through a form it is one too: an error on the element, the value left
+   * out and the rest accepted, never an exception.
+   *
+   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   *   The data surface.
+   * @param array $raw
+   *   What the form posted, by key.
+   * @param array $current
+   *   What is stored.
+   * @param array $container
+   *   The data surface container.
+   * @param \Drupal\Core\Form\FormStateInterface $form_state
+   *   The form state.
+   *
+   * @return array
+   *   The accepted values.
+   *
+   * @throws \Drupal\data_surface\Pipeline\TypeMismatchException
+   *   When the value refused is not one the form posted.
+   */
+  protected function accepted(DataSurfaceInterface $surface, array $raw, array $current, array $container, FormStateInterface $form_state): array {
+    $refused = [];
+    while (TRUE) {
+      try {
+        $values = $this->pipeline->accept($surface, $raw, $current);
+        break;
+      }
+      catch (TypeMismatchException $e) {
+        // Left out where it was posted; a list's items are counted again
+        // by accept(), so a path into one leaves out the whole list.
+        $parents = explode('.', $e->getPath());
+        while (count($parents) > 1 && !NestedArray::keyExists($raw, $parents)) {
+          array_pop($parents);
+        }
+        if (!NestedArray::keyExists($raw, $parents)) {
+          throw $e;
+        }
+        NestedArray::unsetValue($raw, $parents);
+        $refused[] = Accepting::typeMismatchViolation($e, $this->stringTranslation);
+      }
+    }
+    $state = $form_state instanceof SubformStateInterface ? $form_state->getCompleteFormState() : $form_state;
+    if ($refused !== [] && !$state->isValidationComplete()) {
+      $this->flagSurfaceErrors(new ViolationSet($refused), $container, $form_state);
+    }
+    return $values;
+  }
+
+  /**
+   * Starts afresh each variant whose deciding key moved since it was drawn.
+   *
+   * Read from the form as drawn: each variant key's element says the
+   * variant it was drawn for (DataSurfaceFormBuilderInterface::DRAWN_FOR_KEY).
+   * Where the deciding key's input now chooses another, the input under
+   * the key was drawn for the variant no longer chosen, and is replaced by
+   * what the chosen one starts from, as a reload would draw it: what is
+   * stored, when what is stored was written for it, and its defaults
+   * otherwise. Keys of the same variant at another depth go with it.
+   *
+   * Decision: see
+   * docs/decisions.md#an-extension-is-a-variant-the-site-adds-or-an-alter.
+   *
+   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   *   The data surface, as advertised.
+   * @param array|null $form
+   *   The form as it was drawn, or NULL when there is none.
+   * @param string[] $path
+   *   The container's input path.
+   * @param array $input
+   *   The in-progress input, by key.
+   * @param array $stored
+   *   What is stored, by key.
+   *
+   * @return array{0: string[], 1: array}
+   *   The dotted paths whose posted input is dropped, and the input with
+   *   what each starts from in its place.
+   */
+  public static function switchedVariants(DataSurfaceInterface $surface, ?array $form, array $path, array $input, array $stored): array {
+    $switched = [];
+    foreach (static::drawnVariants($form ?? [], $path) as [$parents, $drawn]) {
+      foreach ($switched as $done) {
+        if (array_slice($parents, 0, count($done)) === $done) {
+          continue 2;
+        }
+      }
+      $by = [...array_slice($parents, 0, -1), (string) ($drawn['by'] ?? '')];
+      $exists = FALSE;
+      $now = NestedArray::getValue($input, $by, $exists);
+      if (!$exists || !is_scalar($now) || (string) $now === (string) ($drawn['for'] ?? '')) {
+        continue;
+      }
+      $switched[] = $parents;
+      $variants = static::variantsAt($surface, $parents, $input, $stored);
+      $chosen = $variants?->chosen($now);
+      if ($chosen === NULL) {
+        NestedArray::unsetValue($input, $parents);
+        continue;
+      }
+      $was = NestedArray::getValue($stored, $by);
+      $held = is_scalar($was) && (string) $was === (string) $now ? $variants->held($chosen, NestedArray::getValue($stored, $parents)) : NULL;
+      NestedArray::setValue($input, $parents, $held ?? $variants->defaultsOf($chosen), TRUE);
+    }
+    return [array_map(static fn (array $parents): string => implode('.', $parents), $switched), $input];
+  }
+
+  /**
+   * Finds the variant keys drawn under a container, and what each was for.
+   *
+   * @param array $element
+   *   The form as drawn, or an element in it.
+   * @param string[] $path
+   *   The container's input path.
+   *
+   * @return list<array{0: string[], 1: array}>
+   *   Each one's input path below the container, and its mark, the
+   *   shallowest first.
+   */
+  protected static function drawnVariants(array $element, array $path): array {
+    $found = [];
+    $parents = $element['#parents'] ?? NULL;
+    if (isset($element[DataSurfaceFormBuilderInterface::DRAWN_FOR_KEY]) && is_array($parents) && count($parents) > count($path) && array_slice($parents, 0, count($path)) === $path) {
+      $found[] = [array_slice($parents, count($path)), $element[DataSurfaceFormBuilderInterface::DRAWN_FOR_KEY]];
+    }
+    foreach ($element as $key => $child) {
+      if (is_array($child) && !str_starts_with((string) $key, '#')) {
+        array_push($found, ...static::drawnVariants($child, $path));
+      }
+    }
+    return $found;
+  }
+
+  /**
+   * Finds the variants at a path, each level read through what it chose.
+   *
+   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   *   The data surface, as advertised.
+   * @param string[] $parents
+   *   The path of the key with variants.
+   * @param array $input
+   *   The in-progress input, by key.
+   * @param array $stored
+   *   What is stored, by key.
+   *
+   * @return \Drupal\data_surface\Variants|null
+   *   The variants, or NULL when nothing holds variants there.
+   */
+  protected static function variantsAt(DataSurfaceInterface $surface, array $parents, array $input, array $stored): ?Variants {
+    $frame = $surface;
+    foreach ($parents as $position => $name) {
+      $entry = $frame->getDefinitions()->entry((string) $name);
+      if ($position === count($parents) - 1 || $entry === NULL) {
+        return $entry?->variants;
+      }
+      if ($entry->variants !== NULL) {
+        $by = [...array_slice($parents, 0, $position), $entry->variants->by];
+        $exists = FALSE;
+        $value = NestedArray::getValue($input, $by, $exists);
+        $chosen = $entry->variants->chosen($exists ? $value : NestedArray::getValue($stored, $by));
+        if ($chosen === NULL) {
+          return NULL;
+        }
+        $frame = $entry->variants->variant($chosen)->child;
+      }
+      elseif ($entry->attachment !== NULL) {
+        $frame = $entry->attachment->child;
+      }
+      else {
+        return NULL;
+      }
+    }
+    return NULL;
+  }
+
+  /**
+   * Answers whether a variant key's element was drawn for another variant.
+   *
+   * @param mixed $element
+   *   The element.
+   * @param string|null $chosen
+   *   The variant its deciding key chose in this submission.
+   *
+   * @return bool
+   *   TRUE when the element says it was drawn for another.
+   */
+  protected static function drawnForAnother(mixed $element, ?string $chosen): bool {
+    $drawn = is_array($element) ? ($element[DataSurfaceFormBuilderInterface::DRAWN_FOR_KEY]['for'] ?? NULL) : NULL;
+    return $drawn !== NULL && $drawn !== $chosen;
   }
 
   /**
@@ -605,8 +811,7 @@ final class Extracting {
    * A key is read through its widget; an attached child through its own
    * keys; variants through the variant their deciding key chose in what
    * was just read, so an element drawn for another variant gives nothing
-   * of its own. A collection below the top is not drawn, so nothing is
-   * read for it, and what it holds is kept.
+   * of its own; a collection item by item.
    *
    * @param \Drupal\data_surface\DataSurfaceInterface $surface
    *   The child.
@@ -614,30 +819,37 @@ final class Extracting {
    *   Its element.
    * @param \Drupal\Core\Form\FormStateInterface $form_state
    *   The form state.
+   * @param string $container_key
+   *   The data surface container's key, which a collection inside keeps
+   *   its items' deltas under.
    *
    * @return array
    *   The raw values read, by key.
    */
-  protected function extractFrame(DataSurfaceInterface $surface, array $element, FormStateInterface $form_state): array {
+  protected function extractFrame(DataSurfaceInterface $surface, array $element, FormStateInterface $form_state, string $container_key): array {
     $raw = [];
     foreach ($surface->getDefinitions()->entries() as $name => $entry) {
       $name = (string) $name;
       $at = $element[$name] ?? NULL;
-      if (!is_array($at) || !empty($at[DataSurfaceFormBuilderInterface::PLACEHOLDER_KEY]) || $entry->list !== NULL) {
+      if (!is_array($at) || !empty($at[DataSurfaceFormBuilderInterface::PLACEHOLDER_KEY])) {
+        continue;
+      }
+      if ($entry->list !== NULL || Collection::holdsMaps($entry->definition)) {
+        $raw += $this->extractCollection($name, $entry->definition, $entry->list, $element, $form_state, $container_key);
         continue;
       }
       if ($entry->variants !== NULL) {
         $chosen = $entry->variants->chosen($raw[$entry->variants->by] ?? $surface->getDefault($entry->variants->by));
-        if ($chosen !== NULL) {
-          $raw[$name] = $this->extractFrame($entry->variants->variant($chosen)->child, $at, $form_state);
+        if ($chosen !== NULL && !static::drawnForAnother($at, $chosen)) {
+          $raw[$name] = $this->extractFrame($entry->variants->variant($chosen)->child, $at, $form_state, $container_key);
         }
         continue;
       }
       if ($entry->attachment !== NULL) {
-        $raw[$name] = $this->extractFrame($entry->attachment->child, $at, $form_state);
+        $raw[$name] = $this->extractFrame($entry->attachment->child, $at, $form_state, $container_key);
         continue;
       }
-      $raw += $this->extractKey($name, $entry->definition, $element, $form_state);
+      $raw += $this->extractKey($name, $entry->definition, $element, $form_state, NULL, $container_key);
     }
     return $raw;
   }
@@ -649,44 +861,50 @@ final class Extracting {
    * An item that holds nothing at all, a row added and left blank, is
    * dropped here, before the pipeline would drop it, and the delta each
    * item kept was drawn at is remembered for the request, so a violation
-   * about it is flagged on the element it came from.
+   * about it is flagged on the element it came from. A collection inside
+   * an item, or inside a map in it, is read as one, at any depth.
    *
-   * @param \Drupal\data_surface\Entry $entry
-   *   The collection.
+   * @param string $name
+   *   The list's key in its frame.
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The list.
+   * @param \Drupal\data_surface\Collection|null $list
+   *   The collection attachList() declared, or NULL for a list of maps no
+   *   collection stands behind.
    * @param array $container
-   *   The data surface container.
+   *   The element holding the list's: the data surface container, an
+   *   item's, or a child's.
    * @param \Drupal\Core\Form\FormStateInterface $form_state
    *   The form state.
    * @param string|null $container_key
-   *   The data surface container's key, for a list inside an item, whose
-   *   container is the item; NULL for the container's own.
+   *   The data surface container's key, for a list below the container's
+   *   own keys; NULL for one of them.
    *
    * @return array
    *   The items keyed by data surface key, or nothing for a list with no
    *   element.
    */
-  protected function extractCollection(Entry $entry, array $container, FormStateInterface $form_state, ?string $container_key = NULL): array {
+  protected function extractCollection(string $name, DataDefinitionInterface $definition, ?Collection $list, array $container, FormStateInterface $form_state, ?string $container_key = NULL): array {
     $container_key ??= Refreshing::containerKey($container);
-    $name = $entry->name;
     $element = $container[$name] ?? NULL;
-    $item = $entry->definition instanceof ListDataDefinitionInterface ? $entry->definition->getItemDefinition() : NULL;
+    $item = $definition instanceof ListDataDefinitionInterface ? $definition->getItemDefinition() : NULL;
     if (!is_array($element) || !isset($element[Drawing::LIST_KEY]) || $item === NULL) {
       return [];
     }
     // A collection inside an item is read as one, and the item's map
     // reads the rest.
-    $child = $entry->list?->child();
+    $child = $list?->child();
     $inner = [];
     $map = $item;
-    if ($child !== NULL && $item instanceof ComplexDataDefinitionInterface) {
+    if ($item instanceof ComplexDataDefinitionInterface) {
       $map = MapDataDefinition::create();
-      foreach ($item->getPropertyDefinitions() as $property => $definition) {
-        $nested = $child->getDefinitions()->entry((string) $property);
-        if ($nested?->list !== NULL) {
-          $inner[] = $nested;
+      foreach ($item->getPropertyDefinitions() as $property => $property_definition) {
+        $nested = $child?->getDefinitions()->entry((string) $property)?->list;
+        if ($nested !== NULL || Collection::holdsMaps($property_definition)) {
+          $inner[(string) $property] = [$property_definition, $nested];
           continue;
         }
-        $map->setPropertyDefinition((string) $property, $definition);
+        $map->setPropertyDefinition((string) $property, $property_definition);
       }
     }
     $widget = $this->widgetManager->getWidgetFor($map);
@@ -702,11 +920,17 @@ final class Extracting {
       if (!is_int($delta)) {
         continue;
       }
-      $value = $frame
-        ? $this->extractFrame($child, $element[$delta], $form_state)
-        : $widget->extractValue($map, $element[$delta], $form_state, [$name, $delta]);
-      foreach ($inner as $nested) {
-        $value += $this->extractCollection($nested, $element[$delta], $form_state, $container_key);
+      if ($frame) {
+        $value = $this->extractFrame($child, $element[$delta], $form_state, $container_key);
+      }
+      else {
+        $value = $widget->extractValue($map, $element[$delta], $form_state, [$name, $delta]);
+        if ($map instanceof ComplexDataDefinitionInterface && is_array($value)) {
+          $value = $this->collectionsIn($value, $map, $child, $element[$delta], $form_state, $container_key);
+        }
+      }
+      foreach ($inner as $property => [$property_definition, $nested]) {
+        $value += $this->extractCollection($property, $property_definition, $nested, $element[$delta], $form_state, $container_key);
       }
       if (Collection::isEmptyItem($value)) {
         continue;
@@ -720,6 +944,54 @@ final class Extracting {
   }
 
   /**
+   * Reads each collection inside a map its widget read, at any depth.
+   *
+   * The map's widget reads its keys and leaves a list of maps out, since
+   * the form builder drew it as a collection (Drawing::collectionsInside());
+   * each is read here as one, and each map inside the map walked the same
+   * way.
+   *
+   * @param array $value
+   *   What the map's widget read.
+   * @param \Drupal\Core\TypedData\ComplexDataDefinitionInterface $definition
+   *   The map.
+   * @param \Drupal\data_surface\DataSurfaceInterface|null $frame
+   *   The child the map was drawn from, or NULL for a plain map.
+   * @param array $element
+   *   The map's element.
+   * @param \Drupal\Core\Form\FormStateInterface $form_state
+   *   The form state.
+   * @param string $container_key
+   *   The data surface container's key.
+   *
+   * @return array
+   *   The value, each collection inside it read.
+   */
+  protected function collectionsIn(array $value, ComplexDataDefinitionInterface $definition, ?DataSurfaceInterface $frame, array $element, FormStateInterface $form_state, string $container_key): array {
+    foreach ($definition->getPropertyDefinitions() as $name => $property) {
+      $name = (string) $name;
+      if (!is_array($element[$name] ?? NULL)) {
+        continue;
+      }
+      $entry = $frame?->getDefinitions()->entry($name);
+      if (Collection::holdsMaps($property)) {
+        $value += $this->extractCollection($name, $property, $entry?->list, $element, $form_state, $container_key);
+        continue;
+      }
+      if (!$property instanceof ComplexDataDefinitionInterface || !is_array($value[$name] ?? NULL)) {
+        continue;
+      }
+      $inner = $entry?->attachment?->child;
+      if ($entry?->variants !== NULL) {
+        $chosen = $entry->variants->chosen($value[$entry->variants->by] ?? NULL);
+        $inner = $chosen === NULL ? NULL : $entry->variants->variant($chosen)->child;
+      }
+      $value[$name] = $this->collectionsIn($value[$name], $property, $inner, $element[$name], $form_state, $container_key);
+    }
+    return $value;
+  }
+
+  /**
    * Reads one key's raw value out of the container, if it was rendered.
    *
    * @param string $name
@@ -730,23 +1002,30 @@ final class Extracting {
    *   The data surface container.
    * @param \Drupal\Core\Form\FormStateInterface $form_state
    *   The form state.
+   * @param \Drupal\data_surface\DataSurfaceInterface|null $frame
+   *   The child a map is drawn from (an attached child, a variant), or
+   *   NULL: what a list of maps inside it is read through.
+   * @param string|null $container_key
+   *   The data surface container's key; NULL reads it off the container.
    *
    * @return array
    *   The raw value keyed by data surface key, or nothing for a key with no
    *   element: it was never offered, so it has nothing to say, and
    *   accept() keeps whatever the key already holds.
    */
-  protected function extractKey(string $name, ?DataDefinitionInterface $definition, array $container, FormStateInterface $form_state): array {
+  protected function extractKey(string $name, ?DataDefinitionInterface $definition, array $container, FormStateInterface $form_state, ?DataSurfaceInterface $frame = NULL, ?string $container_key = NULL): array {
     if ($definition === NULL || !isset($container[$name]) || !is_array($container[$name]) || !empty($container[$name][DataSurfaceFormBuilderInterface::PLACEHOLDER_KEY])) {
       // A placeholder is a wrapper and nothing else (variants nothing
       // chose, a key that does not apply): no element was offered, so the
       // key has said nothing.
       return [];
     }
-    return [
-      $name => $this->widgetManager->getWidgetFor($definition)
-        ->extractValue($definition, $container[$name], $form_state, [$name]),
-    ];
+    $value = $this->widgetManager->getWidgetFor($definition)
+      ->extractValue($definition, $container[$name], $form_state, [$name]);
+    if ($definition instanceof ComplexDataDefinitionInterface && is_array($value)) {
+      $value = $this->collectionsIn($value, $definition, $frame, $container[$name], $form_state, $container_key ?? Refreshing::containerKey($container));
+    }
+    return [$name => $value];
   }
 
   /**

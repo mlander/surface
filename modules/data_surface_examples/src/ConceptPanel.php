@@ -30,6 +30,7 @@ use Drupal\data_surface\ResourceBuild\ResourceRegistry;
 use Drupal\data_surface\Reference\References;
 use Drupal\data_surface\ResourceBuild\ResourcesInterface;
 use Drupal\data_surface\Variants\ComponentProps;
+use Drupal\data_surface\Variants\ComponentsOffered;
 use Drupal\data_surface_component_block\Structure\ComponentBlockStructure;
 use Drupal\data_surface_examples\Access\FeesAccess;
 use Drupal\data_surface_examples\Entity\EventVenue;
@@ -327,7 +328,7 @@ final class ConceptPanel {
   public function paragraph(string $id): \Stringable {
     return match ($id) {
       'event.bulletin' => $this->t('A rule between keys whose condition and effect a schema can state is declared as data, <code>narrow()->when()</code>, beside the keys it is about. Two rules read the frequency here: a weekly issue holds at most five items, and a monthly bulletin has no send day. The send day is required wherever it applies; where it does not, the form draws no element for it, a value sent for it is refused, and what is stored is kept for the day it applies again. Nothing is run to learn either rule: the full schema states both as written, each an <code>if</code>/<code>then</code> its frame lists under <code>x-surface.rules</code>.'),
-      'event.press', 'event.desk' => $this->t('A person to contact is one structure, declared once and attached by two resources: the press page at /surface-examples/8, and the information desk at /surface-examples/8/desk. The person asks for an email while it is listed publicly, which only its container knows, so it reads a port, <code>listed</code>, and each container wires it to a key of its own: <code>public</code> on the press page, <code>in_program</code> at the desk. The desk also holds a collection of up to four volunteers, each the same structure, whose port nothing wires. The phone is a named shape, asked for by the person and by the desk itself, and the two keys of the review are mixed into the press page, so they are its own. Both documents write each part once, under <code>$defs</code>, and refer to it where it is used.'),
+      'event.press', 'event.desk' => $this->t("A person to contact is one structure, declared once and attached by two resources: the press page at /surface-examples/8, and the information desk at /surface-examples/8/desk. The person asks for an email while it is listed publicly, which only its container knows, so it reads a port, <code>listed</code>, and each container wires it to a key of its own: <code>public</code> on the press page, <code>in_program</code> at the desk. The desk also holds a collection of up to four volunteers, each the same structure, whose port nothing wires. The phone is a named shape, asked for by the person and by the desk itself, and the two keys of the review are mixed into the press page, so they are its own. The review date asks for a date input, <code>setSetting('widget', 'date')</code>, which both documents state as <code>format: date</code>. Both documents write each part once, under <code>\$defs</code>, and refer to it where it is used."),
       'event.sales' => $this->t("The ticket types are the site's, not the code's: one checkbox and one set of limits per type, listed by a provider that reads the site's configuration and says so in its cacheability. Add a type and reload: the form, both documents and the tool have its keys at the next request, with no cache rebuild. Each type's limits read whether that type is on sale, through a port the resource wires per type, <code>reads: ['selling' => 'on_sale']</code>: untick a type and its limits go, tick it and they return as stored. The full schema states the rule once per type, an <code>if</code> on <code>on_sale.&lt;type&gt;</code> and a <code>then</code> reaching into <code>limits.&lt;type&gt;</code>, and a tool that sends a limit for a type off sale is refused. The speaker type is locked there, so it is drawn fixed, <code>readOnly</code> in both documents, and a value a tool sends for it is not taken, which the answer says."),
       'event.program' => $this->t('Access says whether keys may be changed, seen, or neither, and its kind is read from its cacheability, never declared. The access class of the fees locks them for an account without "set event fees", which the account alone decides, so the full schema states the lock for that account. For any other account the program decides: once it is published, the fees are fixed, which only what is stored can say, so the full schema marks the fees <code>access: live</code> and the schema for these answers settles it. Each operation also states how a call behaves: configuring changes what exists and may be repeated, and checking, at /surface-examples/10/check, changes nothing, so its tool is a read and has no read tool beside it.'),
       'event.doors' => $this->t('Every stock widget, each chosen by what its key declares: a time input for a string that asks for one, checkboxes for a short list of choices, radios for one choice that asks for them, a text area for a multiline string, and rows with "Add another" for a list of free values. The config schema is fully validatable, so the storage knows which keys may hold nothing. A key a call leaves out keeps what is stored, null clears it, and a value replaces it; the badges, which the storage always holds, refuse null and name their default. The four dry runs below show each.'),
@@ -1194,11 +1195,11 @@ final class ConceptPanel {
    *
    * @return array{listed: bool, '@count': int, '@limit': int}
    *   Whether the documents and the tool listing spell every component out,
-   *   which they do while the site has at most the site list limit of them;
-   *   how many it has; and the limit.
+   *   which they do while the site offers at most the site list limit of
+   *   them; how many it offers (ComponentsOffered); and the limit.
    */
   protected function componentsListed(): array {
-    $count = count($this->components->getDefinitions());
+    $count = count($this->classResolver->getInstanceFromDefinition(ComponentsOffered::class)->offered());
     $limit = $this->budget?->limit() ?? PHP_INT_MAX;
     return ['listed' => $count <= $limit, '@count' => $count, '@limit' => $limit];
   }

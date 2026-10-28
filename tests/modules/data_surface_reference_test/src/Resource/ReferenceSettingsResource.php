@@ -11,6 +11,7 @@ use Drupal\data_surface\Resource\Attribute\Operation;
 use Drupal\data_surface\Resource\Attribute\Resource;
 use Drupal\data_surface\Resource\BlueprintInterface;
 use Drupal\data_surface\Resource\ResourceInterface;
+use Drupal\data_surface_reference_test\Keys\ReferenceSlots;
 use Drupal\data_surface_reference_test\Storage\ReferenceSettingsStorage;
 use Drupal\data_surface_reference_test\Structure\AuthorStructure;
 use Drupal\data_surface_reference_test\Structure\ItemStructure;
@@ -19,8 +20,9 @@ use Drupal\data_surface_reference_test\Structure\ItemStructure;
  * Settings that refer to entities, in a simple config object.
  *
  * A node by uuid, a node its author keeps by id, a role by its id, any
- * content entity, a user inside an attached structure, and a node in each
- * item of a collection.
+ * content entity, a user inside an attached structure, a node in each
+ * item of a collection, and a node and a user in each entry of a map of
+ * keys from the site.
  */
 #[Resource('reference_test.settings', storage: ReferenceSettingsStorage::class)]
 #[Operation('configure',
@@ -46,6 +48,12 @@ final class ReferenceSettingsResource implements ResourceInterface {
       ->setLabel('Nested');
     $inputs->attachList('items', ItemStructure::class, max: 5)
       ->setLabel('Items');
+
+    $inputs->addEach('pages', 'entity:node', from: ReferenceSlots::class)
+      ->setLabel('Pages');
+
+    $inputs->attachEach('authors', AuthorStructure::class, from: ReferenceSlots::class)
+      ->setLabel('Authors');
   }
 
 }

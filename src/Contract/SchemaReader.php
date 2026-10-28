@@ -40,7 +40,8 @@ use Drupal\data_surface\ResourceBuild\ResourceRegistry;
  *   UniqueItems, `pattern` a Regex through the
  *   subset both engines read alike, run backwards (PatternTranslation),
  *   and `not: {pattern}` one that must not match; `format` `date`, `time`
- *   and `uuid` the constraint that checks it; an `allOf` or `anyOf` of
+ *   and `uuid` the constraint that checks it, and `date` a key drawn as a
+ *   date input; an `allOf` or `anyOf` of
  *   such parts a Sequentially or an AtLeastOneOf;
  * - `readOnly` a key locked at its `const`, `writeOnly` a secret;
  * - a nested object a map, or, where it says more than a map can (a
@@ -1878,6 +1879,11 @@ final class SchemaReader {
     if ($type === 'string' && $format === 'uuid') {
       $definition->addConstraint('Uuid', []);
     }
+    if ($type === 'string' && $format === 'date' && !isset($property['oneOf']) && !isset($property['enum'])) {
+      // A date is drawn as a date input, which is what the emitter states
+      // the format for; an `x-surface.widget` read below still decides.
+      $definition->setSetting('widget', 'date');
+    }
     if ($foreign !== []) {
       $definition->addConstraint('JsonSchema', ['schema' => $this->withDefs($foreign, $root)]);
     }
@@ -1911,6 +1917,28 @@ final class SchemaReader {
   }
 
   /**
+   * Reads the JSON types a value held whole to its schema was stated as.
+   *
+   * A property no data type says, a value of several JSON types among
+   * them, is read as `any` with its schema kept whole on a JsonSchema
+   * constraint (foreignValue()); the types are that schema's `type`, which
+   * is where a widget reads them.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The definition.
+   *
+   * @return string[]
+   *   The types its kept schema states, `null` among them where it is
+   *   allowed, in the order stated; none for a definition that keeps no
+   *   schema or a schema that states no type.
+   */
+  public static function statedTypes(DataDefinitionInterface $definition): array {
+    $schema = $definition->getConstraints()['JsonSchema']['schema'] ?? NULL;
+    $types = is_array($schema) ? ($schema['type'] ?? []) : [];
+    return array_values(array_filter((array) $types, static fn (mixed $type): bool => is_string($type) && in_array($type, self::TYPES, TRUE)));
+  }
+
+  /**
    * Reads a value's examples.
    *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
@@ -1937,7 +1965,7 @@ final class SchemaReader {
       return;
     }
     $widget = $extension['widget'] ?? NULL;
-    if (in_array($widget, ['radios', 'time', 'checkboxes'], TRUE)) {
+    if (in_array($widget, ['radios', 'time', 'date', 'checkboxes'], TRUE)) {
       $definition->setSetting('widget', $widget);
     }
     elseif ($widget === 'textarea') {

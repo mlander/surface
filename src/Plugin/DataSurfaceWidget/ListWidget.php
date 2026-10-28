@@ -99,7 +99,9 @@ final class ListWidget extends DataSurfaceWidgetBase implements ContainerFactory
    *
    * A list of single values a widget draws, offering no list of values:
    * a list of maps is a collection, and a list of choices is checkboxes
-   * or a multiple select.
+   * or a multiple select. An item only the JSON widget draws is not a
+   * single value a row holds, so the whole list is drawn as JSON; an item
+   * the form does not draw leaves the list not drawn.
    */
   public function isApplicable(DataDefinitionInterface $definition): bool {
     if (!$definition instanceof ListDataDefinitionInterface) {
@@ -110,12 +112,12 @@ final class ListWidget extends DataSurfaceWidgetBase implements ContainerFactory
       return FALSE;
     }
     try {
-      $this->widgetManager->getWidgetFor($item);
+      $widget = $this->widgetManager->getWidgetFor($item);
+      return !$widget instanceof JsonWidget && !$widget instanceof NotDrawnWidget;
     }
     catch (\InvalidArgumentException) {
       return FALSE;
     }
-    return TRUE;
   }
 
   /**

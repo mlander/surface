@@ -10,8 +10,8 @@ use Drupal\Core\Render\Element;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
-use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\data_surface\Attribute\DataSurfaceWidget;
+use Drupal\data_surface\Collection;
 use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Form\DataSurfaceFormBuilderInterface;
 use Drupal\data_surface\Refinement\DoesNotApply;
@@ -119,18 +119,13 @@ final class MapWidget extends DataSurfaceWidgetBase implements ContainerFactoryP
         $element[$property_name] = static::arranged($placeholder, $property_definition);
         continue;
       }
-      if ($property_definition instanceof ListDataDefinitionInterface && $property_definition->getItemDefinition() instanceof ComplexDataDefinitionInterface) {
-        // A collection inside a child's map: the form draws one at the top
-        // of a frame or inside an item, not here, so what it holds is kept
-        // and set through the other doors.
+      if (Collection::holdsMaps($property_definition)) {
+        // A list of maps: a widget knows neither its place in the form nor
+        // the container its buttons rebuild, so this stands in for it, and
+        // the form builder draws the collection in its place.
         // Decision: see
-        // docs/decisions.md#a-slot-holds-text-a-component-or-components.
-        $element[$property_name] = static::arranged([
-          '#type' => 'item',
-          '#title' => $property_definition->getLabel(),
-          '#markup' => (string) new TranslatableMarkup('A list of these is not drawn on this form; what it holds is kept. Set it through the tool, over HTTP or on the React page.'),
-          DataSurfaceFormBuilderInterface::PLACEHOLDER_KEY => TRUE,
-        ], $property_definition);
+        // docs/decisions.md#the-form-never-refuses-to-draw-a-declared-key.
+        $element[$property_name] = static::arranged(static::notDrawn($property_definition), $property_definition);
         continue;
       }
       // Each key drawn as its arrangement says, whichever widget drew it.
@@ -162,6 +157,10 @@ final class MapWidget extends DataSurfaceWidgetBase implements ContainerFactoryP
       if ($property_definition->getDataType() === 'any' && DefinitionMetadata::variantsBy($property_definition) !== NULL) {
         // Drawn for a variant its deciding key no longer chooses: what was
         // posted for it belongs to that variant, and is dropped with it.
+        continue;
+      }
+      if (Collection::holdsMaps($property_definition)) {
+        // Drawn by the form builder as a collection, and read back by it.
         continue;
       }
       // A rendered property is collected empty or not: what an empty

@@ -203,7 +203,6 @@ PHP, $resource, 'Required in a fully validatable object, its default the value t
 
     $inputs->add(self::TONE, 'string', t('Tone'), default: 'plain')
       ->addConstraint('LabeledChoice', [
-        'choices' => ['plain', 'highlight'],
         'labels' => [
           'plain' => t('Plain'),
           'highlight' => t('Highlighted'),
@@ -265,6 +264,24 @@ PHP, $resource, 'A foreign constraint is a comment naming the keyword and the ke
       ->when(Condition::equals(self::KIND, 'conference'))
       ->require();
 PHP, $resource, 'uniqueItems is the stock UniqueItems; the if/then is a declared rule.');
+    $this->assertStringContainsString(<<<'PHP'
+    $inputs->add(self::LEVEL, 'integer', t('Level'))
+      ->addConstraint('LabeledChoice', [
+        'labels' => [
+          1 => t('Open'),
+          2 => t('Invited'),
+        ],
+      ]);
+
+    $inputs->add(self::SIZE, 'string', t('Size'))
+      ->addConstraint('LabeledChoice', [
+        'choices' => ['1', '2'],
+        'labels' => [
+          1 => t('Small'),
+          2 => t('Large'),
+        ],
+      ]);
+PHP, $resource, 'A labeled choice is its labels alone, unless a value is a numeric string, which PHP would key as an integer.');
     $structure = $this->written('src/Structure/VenueStructure.php', $out);
     $this->assertStringContainsString("#[Structure('first.event.venue')]", $structure);
     $this->assertStringContainsString("  public const CITY = 'city';\n  public const CAPACITY = 'capacity';\n\n", $structure, 'A structure names its own keys.');

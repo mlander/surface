@@ -589,6 +589,9 @@ final class ResourceCode {
         $this->comments++;
         continue;
       }
+      if ($constraint === 'LabeledChoice' && is_array($options)) {
+        $options = static::labeledChoice($options);
+      }
       $translate = static fn (array $path): bool => in_array(end($path), ['labels', 'descriptions', 'message'], TRUE)
         || (count($path) >= 2 && in_array($path[count($path) - 2], ['labels', 'descriptions'], TRUE))
         || ($constraint === 'LabeledChoice' && count($path) === 2 && $path[0] === 'choices' && is_string($path[1]));
@@ -599,6 +602,40 @@ final class ResourceCode {
       $calls[] = sprintf('->setSetting(%s, %s)', PhpLiteral::string((string) $setting), PhpLiteral::write($value, $indent));
     }
     return $calls;
+  }
+
+  /**
+   * Writes a LabeledChoice read from a schema in its plain spelling.
+   *
+   * The reader gives `choices` and a label for each; where every value is
+   * the key PHP keeps it under, the labels alone say both, the spelling
+   * docs/options.md reaches for first.
+   *
+   * @param array $options
+   *   The constraint's options.
+   *
+   * @return array
+   *   The options, `labels` alone where they say every value.
+   */
+  protected static function labeledChoice(array $options): array {
+    $choices = $options['choices'] ?? NULL;
+    $labels = $options['labels'] ?? NULL;
+    if (!is_array($choices) || !array_is_list($choices) || !is_array($labels) || count($labels) !== count($choices)) {
+      return $options;
+    }
+    $ordered = [];
+    foreach ($choices as $choice) {
+      if ((!is_int($choice) && !is_string($choice)) || !array_key_exists($choice, $labels)) {
+        return $options;
+      }
+      $ordered[$choice] = $labels[$choice];
+    }
+    // A numeric string is no key PHP keeps as it is ('1' becomes 1).
+    if (array_keys($ordered) !== $choices) {
+      return $options;
+    }
+    unset($options['choices']);
+    return ['labels' => $ordered] + $options;
   }
 
   /**

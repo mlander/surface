@@ -1999,6 +1999,21 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
   `data_surface:<resource>:<operation>:schema`, answers it to an agent
   that asks with values
   (why: [decision](decisions.md#a-list-left-out-for-size-is-deferred-not-refined)).
+- **Fewer components than the site has.** `ComponentProps` and
+  `ComponentSlots` list the components `data_surface.settings:components_offered`
+  allows: an entry with a colon is a component id (`provider:name`), one
+  without a provider, meaning every component it provides; empty, as
+  shipped, every component (`ComponentsOffered`). A slot that expects
+  nothing in particular offers the same; one that names its components
+  keeps them. Both lists carry the settings' cache tag, so the documents,
+  the form and the tool listing follow a change. A stored component left
+  out is never made unreadable: the chooser stands for it on its empty
+  option ("- Keep ... (no longer offered) -"), a save that leaves it
+  keeps the component, its props and its slots as stored, and every door
+  reads them back; its props are drawn again once it is offered. The
+  limit and the allowlist are two answers: one moves a long list out of
+  the documents, the other shortens it
+  (why: [decision](decisions.md#a-budget-for-what-the-site-decides)).
 - **Storage.** The key is open in the config schema written from the
   resource (`type: ignore`): which variants a site has is not the
   code's, and the chosen variant holds the value to its own keys before
@@ -2234,6 +2249,10 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
   states that key, the schema for these answers states every key, and
   the narrowing tool answers it to an agent
   (why: [decision](decisions.md#a-list-left-out-for-size-is-deferred-not-refined)).
+  The limit only moves a long list out of the documents; a provider that
+  should list fewer things reads a setting of its own, as the component
+  lists read `components_offered`
+  ([Variants from the site](#variants-from-the-site)).
 - **A locked thing** (`add($id, $label, locked: TRUE)`) is held to what
   is stored: drawn fixed on the form, `readOnly` in both documents, locked
   in the tool listing, and a value posted for it is not taken, which the

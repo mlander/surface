@@ -93,7 +93,10 @@ $definition->addConstraint('LabeledChoice', [
 
 **`choices` as a list with `labels` beside it** is `Choice`'s own form,
 for a label set that covers only some of the values. It is also the
-form the module writes back after narrowing or extending a list.
+form the module writes back after narrowing or extending a list, and the
+form for values that are numeric strings, which PHP would key as
+integers (`'1'` as `1`): the resource generator writes `labels` alone
+otherwise ([Generating](generating.md#keys-from-a-json-schema-document)).
 
 ```php
 $definition->addConstraint('LabeledChoice', [
@@ -453,6 +456,15 @@ variant's keys exactly
 why: [decision](decisions.md#a-list-left-out-for-size-is-deferred-not-refined)).
 `SiteListBudget::withLimit()` holds another limit for one call, saving
 nothing, as `References::withLimit()` does.
+
+The limit defers a long list; it does not shorten it. A site shortens
+the components offered with `data_surface.settings:components_offered`:
+component ids (`provider:name`) and providers (every component one
+provides), empty for every one. Both component lists read it, so the
+chooser, the props and the slots offer the same components, and both
+carry the settings' cache tag. A stored component it leaves out is kept
+as stored, as any stored value the list no longer offers
+([Variants from the site](resources.md#variants-from-the-site)).
 
 ## Writing a resolver
 

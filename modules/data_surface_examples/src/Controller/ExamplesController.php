@@ -51,6 +51,7 @@ use Drupal\data_surface_examples\Structure\VenueRoomStructure;
 use Drupal\data_surface_examples\Variants\CredentialSources;
 use Drupal\data_surface\Variants\ComponentProps;
 use Drupal\data_surface\Variants\ComponentSlots;
+use Drupal\data_surface\Variants\ComponentsOffered;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -637,7 +638,7 @@ final class ExamplesController extends ControllerBase {
       ],
       8 => [
         'title' => $series[8]['title'],
-        'sentence' => $this->t('A person structure attached by two resources, its port wired to a different key by each; a phone shape asked for at two keys; a review mixed in; and a collection of volunteers.'),
+        'sentence' => $this->t('A person structure attached by two resources, its port wired to a different key by each; a phone shape asked for at two keys; a review mixed in, its date a date input; and a collection of volunteers.'),
         'items' => [
           $this->route('data_surface_examples.step8'),
           $this->route('data_surface_examples.step8_desk'),
@@ -903,13 +904,13 @@ final class ExamplesController extends ControllerBase {
   }
 
   /**
-   * Counts the lines of example 12's resource, provider and storage.
+   * Counts the lines of example 12's resource, providers and storage.
    *
    * @return int
    *   The lines of code; the components' schemas are none.
    */
   protected function spotlightLines(): int {
-    return CodeLines::count($this->file(SpotlightResource::class)) + CodeLines::count($this->file(ComponentProps::class)) + CodeLines::count($this->file(ComponentSlots::class)) + CodeLines::count($this->file(SpotlightStorage::class));
+    return CodeLines::count($this->file(SpotlightResource::class)) + CodeLines::count($this->file(ComponentProps::class)) + CodeLines::count($this->file(ComponentSlots::class)) + CodeLines::count($this->file(ComponentsOffered::class)) + CodeLines::count($this->file(SpotlightStorage::class));
   }
 
   /**

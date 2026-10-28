@@ -708,18 +708,21 @@ final class ConfigSchemaGenerator {
             'type' => 'mapping',
             'label' => $label,
             // An entry is stored as it was accepted, so a key of it may be
-            // absent.
-            'mapping' => $this->mapping($child->getDefinitions(), $path, $owner, $entries, $existing, absent: TRUE),
+            // absent. Which entries there are is the site's: a key the
+            // storage keeps otherwise is named under `*`.
+            'mapping' => $this->mapping($child->getDefinitions(), $path, $owner, $entries, $existing, absent: TRUE, at: $at . '.*.'),
           ],
         ];
       }
       if ($each instanceof DataDefinitionInterface) {
         // Each entry is a key of its own, which may hold nothing as one
-        // would.
+        // would, and is stored as the storage says under `*`.
         return [
           'type' => 'sequence',
           'label' => $label,
-          'sequence' => $this->definition($each, $label),
+          'sequence' => isset($this->translated[$at . '.*'])
+            ? $this->translated($this->translated[$at . '.*'], $each, $label, $at . '.*')
+            : $this->definition($each, $label),
         ];
       }
       return [

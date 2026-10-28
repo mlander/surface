@@ -12,6 +12,7 @@ use Drupal\Core\Form\SubformStateInterface;
 use Drupal\Core\Messenger\MessengerInterface;
 use Drupal\Core\Render\ElementInfoManagerInterface;
 use Drupal\Core\Security\TrustedCallbackInterface;
+use Drupal\Core\StringTranslation\TranslationInterface;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\Options\DataSurfaceOptions;
 use Drupal\data_surface\Pipeline\DataSurfacePipelineInterface;
@@ -84,6 +85,9 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
    * @param \Drupal\Core\Extension\ModuleHandlerInterface $moduleHandler
    *   The module handler, which says whether Inline Form Errors prints
    *   an error beside its element, so the message need not name it.
+   * @param \Drupal\Core\StringTranslation\TranslationInterface $stringTranslation
+   *   The string translation service, which words a value of the wrong
+   *   shape the form refuses.
    */
   public function __construct(
     protected readonly DataSurfaceWidgetManager $widgetManager,
@@ -92,10 +96,11 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
     protected readonly MessengerInterface $messenger,
     protected readonly DataSurfaceOptions $options,
     protected readonly ModuleHandlerInterface $moduleHandler,
+    TranslationInterface $stringTranslation,
   ) {
     $this->refreshing = new Refreshing($elementInfo);
     $this->drawing = new Drawing($widgetManager, $this->refreshing);
-    $this->extracting = new Extracting($widgetManager, $pipeline, $messenger, $options, $moduleHandler);
+    $this->extracting = new Extracting($widgetManager, $pipeline, $messenger, $options, $moduleHandler, $stringTranslation);
   }
 
   /**
@@ -284,6 +289,15 @@ class DataSurfaceFormBuilder implements DataSurfaceFormBuilderInterface, Trusted
    */
   public static function processOptionTrigger(array $element): array {
     return Refreshing::processOptionTrigger($element);
+  }
+
+  /**
+   * Starts afresh each variant whose deciding key moved since it was drawn.
+   *
+   * @see \Drupal\data_surface\Form\Extracting::switchedVariants()
+   */
+  public static function switchedVariants(DataSurfaceInterface $surface, ?array $form, array $path, array $input, array $stored): array {
+    return Extracting::switchedVariants($surface, $form, $path, $input, $stored);
   }
 
   /**

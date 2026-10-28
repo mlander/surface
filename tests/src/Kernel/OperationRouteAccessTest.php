@@ -92,7 +92,7 @@ class OperationRouteAccessTest extends DataSurfaceKernelTestBase {
     $settings = $this->config('data_surface.settings');
     $this->assertSame(7, $settings->get('reference_list_limit'));
     $this->assertNull($settings->get('reference_enum_limit'));
-    $this->assertSame(['reference_list_limit', 'site_list_limit'], array_values(array_filter(array_keys($settings->getRawData()), static fn (string $key): bool => !str_starts_with($key, '_'))));
+    $this->assertSame(['reference_list_limit', 'site_list_limit', 'components_offered'], array_values(array_filter(array_keys($settings->getRawData()), static fn (string $key): bool => !str_starts_with($key, '_'))));
   }
 
 }

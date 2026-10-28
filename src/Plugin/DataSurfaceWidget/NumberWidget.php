@@ -10,7 +10,11 @@ use Drupal\data_surface\Attribute\DataSurfaceWidget;
 use Drupal\data_surface\Widget\DataSurfaceWidgetBase;
 
 /**
- * Number input for integer and float definitions.
+ * Number input for integer, float, decimal, timestamp and timespan.
+ *
+ * A timestamp and a timespan are a whole number of seconds, drawn as an
+ * integer is: the value the other doors send and answer. A decimal is a
+ * number held as a string, drawn as a float is.
  */
 #[DataSurfaceWidget(
   id: 'number',
@@ -23,7 +27,7 @@ final class NumberWidget extends DataSurfaceWidgetBase {
    * {@inheritdoc}
    */
   public function isApplicable(DataDefinitionInterface $definition): bool {
-    return in_array($definition->getDataType(), ['integer', 'float'], TRUE);
+    return in_array($definition->getDataType(), ['integer', 'float', 'decimal', 'timestamp', 'timespan'], TRUE);
   }
 
   /**
@@ -33,7 +37,7 @@ final class NumberWidget extends DataSurfaceWidgetBase {
     $element = $this->baseElement($definition) + [
       '#type' => 'number',
       '#default_value' => $value,
-      '#step' => $definition->getDataType() === 'integer' ? 1 : 'any',
+      '#step' => in_array($definition->getDataType(), ['float', 'decimal'], TRUE) ? 'any' : 1,
       // Core's number element checks #min, #max and #step itself, before
       // any form level handler, and a form keeps the first error per
       // element, so its own wording would replace the rule's message.

@@ -102,7 +102,7 @@ request after it
 - **Renders** one component per `x-surface.widget`, mirroring the Form
   API mapping: select and radios with the empty option rule, checkboxes
   and a multiple select for a list of choices, checkbox, number with
-  its bounds and step, text with its maxlength, a time input, textarea,
+  its bounds and step, text with its maxlength, a time input, a date input, textarea,
   email, a
   fieldset for a map or an attached part (none around the modules'
   third-party settings, `x-surface.group`, each module's map being its

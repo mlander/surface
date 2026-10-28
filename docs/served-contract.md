@@ -406,7 +406,7 @@ under `$defs`, and referred to ([reusable subschemas](#reusable-subschemas)).
 | The declaration says | The schema says |
 | --- | --- |
 | label, description | `title`, `description`, as plain text: a placeholder's escaping decoded, a line break a new line, every other tag stripped; the form keeps the markup (why: [decision](decisions.md#a-machine-document-carries-plain-text)) |
-| `string`, `email`, `uri`, `integer`, `float`, `boolean` | `type` (`format: idn-email` / `uri` for those types, advisory); an optional key also allows `null`, which clears it (a secret does not, nor a key its storage always holds, one a fully validatable config schema does not mark `nullable: true`; why: [decision](decisions.md#a-key-its-storage-always-holds)) |
+| `string`, `email`, `uri`, `integer`, `float`, `boolean` | `type` (`format: idn-email` / `uri` for those types, `date` for a string drawn as a date, advisory); an optional key also allows `null`, which clears it (a secret does not, nor a key its storage always holds, one a fully validatable config schema does not mark `nullable: true`; why: [decision](decisions.md#a-key-its-storage-always-holds)) |
 | `setRequired(TRUE)` | the key in `required`: present and not null, nothing about size. The contract's `values` always carry every key, so presence is never the question. |
 | a declared default, examples | `default`, `examples` |
 | `Range` | `minimum`, `maximum`, always numbers (core's timestamp field holds its bounds as strings) |
@@ -440,7 +440,7 @@ under `$defs`, and referred to ([reusable subschemas](#reusable-subschemas)).
 | Keyword | Holds |
 | --- | --- |
 | `contract` | At the top always, first: the version of the wire format the document is written in, `4` ([Contract 4](#contract-4)), which the `Contract-Version` header of every answer of the API says too. A client refuses a version it does not know ([Evolving a resource](evolution.md#the-contracts-own-version)). |
-| `widget` | Only when the caller asks for widget hints (`data_surface_react` does). The Form API-equivalent hint, the widget's choice ([the widget mapping](#the-widget-mapping)): a module's widget that claims the key, by its plugin ID ([Widgets](widgets.md#a-module-serves-a-widget-to-every-key-of-a-kind)), or a stock word, `select`, `radios`, `checkboxes`, `checkbox`, `number`, `text`, `textarea`, `email`, `time`, `fieldset`, `variants` (a key with variants; `slot` in contract 1), `list` (a list of free values, and a collection), `fixed` (a deciding key whose variants offer one value, drawn as its label), `autocomplete` (a key that refers to an entity and lists no candidates, past the limit, and a bare reference's id, which is a select once its entity type's conditional lists them); `null` when no widget would claim the key. |
+| `widget` | Only when the caller asks for widget hints (`data_surface_react` does). The Form API-equivalent hint, the widget's choice ([the widget mapping](#the-widget-mapping)): a module's widget that claims the key, by its plugin ID ([Widgets](widgets.md#a-module-serves-a-widget-to-every-key-of-a-kind)), or a stock word, `select`, `radios`, `checkboxes`, `checkbox`, `number`, `text`, `textarea`, `email`, `time`, `date`, `fieldset`, `variants` (a key with variants; `slot` in contract 1), `list` (a list of free values, and a collection), `fixed` (a deciding key whose variants offer one value, drawn as its label), `autocomplete` (a key that refers to an entity and lists no candidates, past the limit, and a bare reference's id, which is a select once its entity type's conditional lists them); `null` when no widget would claim the key. |
 | `dependsOn` | Only where it names one: the sibling keys this key's refiners watch, in its own frame; a key an alter mounted, which only that alter may watch, by its dotted path in that frame (`third_party_settings.<module>.<key>`); a port the frame reads, by the port's name. A client refines when one of them changes. |
 | `refined` | Only when `true`, in the schema for these answers: the key is narrowed right now, compared with what the resource or structure advertises in this operation. |
 | `stale` | Only when `true`, in the schema for these answers: the stored value is no longer offered; the key is shown on its empty option, standing for it. |
@@ -1151,13 +1151,26 @@ the hint's words: `radios`, `checkboxes`, `select`, `time`.
 | `string` with the `multiline` setting | `textarea`, no maxlength, no placeholder | `textarea` | `TextareaField` |
 | `email` | `email` | `email` | `TextField` (type email) |
 | `string` asking for a time, `setSetting('widget', 'time')` | a time input (`date`, type `time`), the Regex still the rule | `time` | `TextField` (type time) |
+| `string` asking for a date, `setSetting('widget', 'date')` | a date input (`date`), the Regex still the rule; both documents state `format: date` | `date` | `TextField` (type date) |
 | `string`, `uri` | `textfield`, `url` | `text` | `TextField` (type text, url; password for a secret) |
 | `integer`, `float` | `number`, `#min`/`#max` from Range, `#step` 1 or any | `number` | `NumberField` |
 | `boolean` | `checkbox`, never `#required` | `checkbox` | `CheckboxField` |
 | a list of single values with no allowed values | a `fieldset` of rows, each the item's element, "Remove" beside each and "Add another" under them, over AJAX | `list` | `ListField` (add and remove rows) |
-| a collection | a `details` of item `details`, "Add another" and "Remove" over AJAX | `list`, `collection: true` | `ListField`, each item the child's `FieldsetField`, at least `minItems`, at most `maxItems` |
+| a collection, at any depth (inside a variant, an attached part or a map), and a list of maps no collection stands behind | a `details` of item `details`, "Add another" and "Remove" over AJAX | `list`, `collection: true` (a list of maps alone: `list`) | `ListField`, each item the child's `FieldsetField`, at least `minItems`, at most `maxItems` |
 | a locked key | `#disabled`, "Fixed for this operation." | `readOnly: true` | disabled, the same note |
 | a locked child | its fieldset `#disabled`, every element inside with it | `readOnly: true` on the fieldset and on every key inside | a fieldset of disabled keys |
+| `timestamp`, `timespan`, `decimal` | `number`, `#step` 1 (any for a decimal) | `null` | the stock field for the key's JSON type (`stockWidget()`) |
+| `datetime_iso8601` | core's `datetime` element, a date and a time input in the site's time zone, read back as the ISO 8601 string | `null` | the stock field for the key's JSON type (`stockWidget()`) |
+| `duration_iso8601` | `textfield` | `null` | the stock field for the key's JSON type (`stockWidget()`) |
+| `binary`, `language`, `language_reference`, `entity_reference`, and a list of them | an `item`: "This is not drawn on this form; what it holds is kept.", posting nothing | `null` | the stock field for the key's JSON type (`stockWidget()`) |
+| an `any` key read from a schema typed as several scalar types (string, integer, number, boolean), the `scalars` widget | `textfield`, read as the first stated type the text spells: integer, number, `true` or `false`, then string | `null` | the stock field for the key's JSON type (`stockWidget()`) |
+| what no other widget draws: an `any` key with no variants whose types include an object or a list, or state none; a list of lists or of `any` | `textarea` of JSON, the `json` widget | `null` | the stock field for the key's JSON type (`stockWidget()`) |
+
+The last six rows name no hint: the contract says nothing about how a
+form draws them, and the documents did not move when they were drawn.
+The last is the Form API's last resort, so the form never refuses to
+draw a declared key
+(why: [decision](decisions.md#the-form-never-refuses-to-draw-a-declared-key)).
 
 ## The API
 

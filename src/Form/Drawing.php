@@ -9,6 +9,7 @@ use Drupal\Component\Utility\NestedArray;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Form\SubformStateInterface;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
+use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
@@ -151,7 +152,8 @@ final class Drawing {
         $container[$name] = DataSurfaceWidgetBase::arranged(static::computedItem($definition, $computed, $surface, $shown[$name] ?? NULL), $declared);
         continue;
       }
-      $list = $definitions->entry($name)?->list;
+      // A list of maps no collection was attached for is drawn as one.
+      $list = $definitions->entry($name)->list ?? Collection::forList($definition);
       if ($list !== NULL && $definition instanceof ListDataDefinitionInterface) {
         // Decision: see docs/decisions.md#a-list-of-child-invocations.
         $container[$name] = DataSurfaceWidgetBase::arranged($this->buildCollection(
@@ -229,6 +231,19 @@ final class Drawing {
         $reason ??= $variant;
       }
       $element = DataSurfaceWidgetBase::arranged($this->widgetManager->getWidgetFor($definition)->buildElement($definition, $value), $declared);
+      if ($definition instanceof ComplexDataDefinitionInterface) {
+        // A list of maps inside the map, at any depth, is a collection in
+        // its place: a variant's, an attached child's, or a plain map's.
+        $frame = $variants !== NULL ? $variants->variant($chosen)->child : $definitions->entry($name)?->attachment?->child;
+        $element = $this->collectionsInside($element, $definition, $frame, $value, [(string) $name], $wrapper_id, $whole);
+      }
+      if ($variants !== NULL && $chosen !== '') {
+        // What the elements were drawn for, read back by extraction and
+        // by the rebuild: input drawn for another variant is dropped.
+        // Decision: see
+        // docs/decisions.md#an-extension-is-a-variant-the-site-adds-or-an-alter.
+        $element = static::drawnFor($element, $variants->by, $chosen, $variants->variant($chosen)->child, $value);
+      }
       if (isset($element[OptionsWidget::UNKEPT_LABEL_KEY]) && !array_key_exists($name, $shown)) {
         // Nothing stored: a declared default the list does not offer is
         // no value to keep, so the empty option does not say "keep".
@@ -421,7 +436,7 @@ final class Drawing {
       $map = MapDataDefinition::create()->setLabel(static::itemLabel($label, $delta));
       $lists = [];
       foreach ($refined->getDefinitions() as $name => $property) {
-        $inner = $refined->getDefinitions()->entry((string) $name)?->list;
+        $inner = $refined->getDefinitions()->entry((string) $name)->list ?? Collection::forList($property);
         if ($inner !== NULL && $property instanceof ListDataDefinitionInterface) {
           $lists[(string) $name] = $this->buildCollection(
             $inner,
@@ -438,7 +453,9 @@ final class Drawing {
         }
         $map->setPropertyDefinition((string) $name, $property);
       }
-      $element[$delta] = $this->widgetManager->getWidgetFor($map)->buildElement($map, $showing_item);
+      $drawn = $this->widgetManager->getWidgetFor($map)->buildElement($map, $showing_item);
+      $at = [...$path, (string) $delta];
+      $element[$delta] = $this->collectionsInside($drawn, $map, $refined, $showing_item, $at, $wrapper_id, $whole);
       if ($lists !== []) {
         $drawn = $element[$delta];
         $ordered = [];
@@ -459,6 +476,67 @@ final class Drawing {
     if ($locked) {
       $element['#disabled'] = TRUE;
       $element = $whole ? static::withoutRequired($element) : static::describeLocked($element, $reason);
+    }
+    return $element;
+  }
+
+  /**
+   * Draws each list of maps inside a drawn map as a collection, in its place.
+   *
+   * The map's widget draws a list of maps as an item standing in for it,
+   * since a widget knows neither the list's place in the form nor the
+   * container its buttons rebuild; here it is drawn as a collection is at
+   * the top of a frame (buildCollection()), at any depth: inside a
+   * variant, an attached child, or a plain map. The collection is the
+   * frame's, where the list is one attachList() declared, and one sealed
+   * from the item's keys otherwise (Collection::forList()).
+   *
+   * Decision: see
+   * docs/decisions.md#the-form-never-refuses-to-draw-a-declared-key.
+   *
+   * @param array $element
+   *   The map's element, as its widget drew it.
+   * @param \Drupal\Core\TypedData\ComplexDataDefinitionInterface $definition
+   *   The map, as drawn.
+   * @param \Drupal\data_surface\DataSurfaceInterface|null $frame
+   *   The child the map is drawn from, or NULL for a plain map.
+   * @param mixed $value
+   *   What the map holds, as drawn.
+   * @param string[] $path
+   *   The map's path below the container.
+   * @param string $wrapper_id
+   *   The container's id.
+   * @param bool $whole
+   *   Whether the data surface is locked whole.
+   *
+   * @return array
+   *   The element, each list of maps in it a collection.
+   */
+  protected function collectionsInside(array $element, ComplexDataDefinitionInterface $definition, ?DataSurfaceInterface $frame, mixed $value, array $path, string $wrapper_id, bool $whole): array {
+    foreach ($definition->getPropertyDefinitions() as $name => $property) {
+      $name = (string) $name;
+      if (!is_array($element[$name] ?? NULL) || DoesNotApply::marks($property)) {
+        continue;
+      }
+      $entry = $frame?->getDefinitions()->entry($name);
+      $held = is_array($value) ? ($value[$name] ?? NULL) : NULL;
+      $list = $entry->list ?? Collection::forList($property);
+      if ($list !== NULL && $property instanceof ListDataDefinitionInterface) {
+        $locked = $frame !== NULL && $frame->getDefinitions()->isLocked($name);
+        $at = [...$path, $name];
+        $collection = $this->buildCollection($list, $property, $held, $held, $locked, $at, $wrapper_id, $entry?->lockedBecause, $whole);
+        $element[$name] = DataSurfaceWidgetBase::arranged($collection, $property);
+        continue;
+      }
+      if (!$property instanceof ComplexDataDefinitionInterface || !empty($element[$name][DataSurfaceFormBuilderInterface::PLACEHOLDER_KEY])) {
+        continue;
+      }
+      $inner = $entry?->attachment?->child;
+      if ($entry?->variants !== NULL) {
+        $chosen = $entry->variants->chosen(is_array($value) ? ($value[$entry->variants->by] ?? NULL) : NULL);
+        $inner = $chosen === NULL ? NULL : $entry->variants->variant($chosen)->child;
+      }
+      $element[$name] = $this->collectionsInside($element[$name], $property, $inner, $held, [...$path, $name], $wrapper_id, $whole);
     }
     return $element;
   }
@@ -866,6 +944,66 @@ final class Drawing {
       }
     }
     return $value;
+  }
+
+  /**
+   * Marks a variant key's element with the variant it was drawn for.
+   *
+   * At every depth: each variant key inside the chosen variant, or inside
+   * a child attached in it, is marked with what its own deciding key held
+   * when it was drawn. A rebuild draws the element again, so the mark
+   * always says what the values posted under it were drawn for.
+   *
+   * @param array $element
+   *   The variant key's element.
+   * @param string $by
+   *   Its deciding key.
+   * @param string $chosen
+   *   The variant drawn.
+   * @param \Drupal\data_surface\DataSurfaceInterface $child
+   *   That variant.
+   * @param mixed $value
+   *   What it was drawn from.
+   *
+   * @return array
+   *   The element, marked.
+   */
+  protected static function drawnFor(array $element, string $by, string $chosen, DataSurfaceInterface $child, mixed $value): array {
+    $element[DataSurfaceFormBuilderInterface::DRAWN_FOR_KEY] = ['by' => $by, 'for' => $chosen];
+    return static::drawnForInside($element, $child, $value);
+  }
+
+  /**
+   * Marks each variant key inside a frame's element.
+   *
+   * @param array $element
+   *   The frame's element.
+   * @param \Drupal\data_surface\DataSurfaceInterface $frame
+   *   The frame: a variant, or a child attached in one.
+   * @param mixed $value
+   *   What it was drawn from.
+   *
+   * @return array
+   *   The element, each variant key inside it marked.
+   */
+  protected static function drawnForInside(array $element, DataSurfaceInterface $frame, mixed $value): array {
+    foreach ($frame->getDefinitions()->entries() as $name => $entry) {
+      $name = (string) $name;
+      if (!is_array($element[$name] ?? NULL) || !empty($element[$name][DataSurfaceFormBuilderInterface::PLACEHOLDER_KEY])) {
+        continue;
+      }
+      $held = is_array($value) ? ($value[$name] ?? NULL) : NULL;
+      if ($entry->variants !== NULL) {
+        $chosen = $entry->variants->chosen(is_array($value) ? ($value[$entry->variants->by] ?? NULL) : NULL);
+        if ($chosen !== NULL) {
+          $element[$name] = static::drawnFor($element[$name], $entry->variants->by, $chosen, $entry->variants->variant($chosen)->child, $held);
+        }
+      }
+      elseif ($entry->attachment !== NULL) {
+        $element[$name] = static::drawnForInside($element[$name], $entry->attachment->child, $held);
+      }
+    }
+    return $element;
   }
 
   /**

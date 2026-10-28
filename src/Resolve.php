@@ -86,10 +86,15 @@ final class Resolve {
    * Puts every resolved value of a built resource over its stored values.
    *
    * The resource's own keys and the keys each alter mounted, at
-   * `third_party_settings.<module>.<key>`. Each class is handed what is
-   * stored, never another resolve's answer, and runs on the operation's
-   * behalf: with assertions on, its own code may not ask for a
-   * door-specific service.
+   * `third_party_settings.<module>.<key>`, and the same in every child
+   * stored with it: a structure attached at a key, each item of a
+   * collection, each entry of a map of keys from the site, and the variant
+   * its deciding key chose. A child's resolve reads and writes the child's
+   * own values, so its paths are the child's, under the key it is held
+   * at; a mixed-in structure's are the owner's, as its members are. Each
+   * class is handed what is stored, never another resolve's answer, and
+   * runs on the operation's behalf: with assertions on, its own code may
+   * not ask for a door-specific service.
    *
    * @param \Drupal\data_surface\DataSurfaceInterface $surface
    *   The resource as built.
@@ -101,8 +106,23 @@ final class Resolve {
    *   while every key it is resolved from holds a value.
    */
   public static function apply(DataSurfaceInterface $surface, array $stored): array {
+    return static::applyIn($surface->getDefinitions(), $stored);
+  }
+
+  /**
+   * Puts the resolved values of one frame, and of its children, over it.
+   *
+   * @param \Drupal\data_surface\DefinitionMap $map
+   *   The frame's keys.
+   * @param array $stored
+   *   What is stored for them.
+   *
+   * @return array
+   *   The stored values, resolved.
+   */
+  protected static function applyIn(DefinitionMap $map, array $stored): array {
     $values = $stored;
-    foreach (static::declared($surface) as $path => [$resolve, $definition]) {
+    foreach (static::own($map) as $path => [$resolve, $definition]) {
       $from = $resolve->sources($stored);
       if ($from === NULL) {
         continue;
@@ -110,6 +130,34 @@ final class Resolve {
       $using = $resolve->using;
       $value = PipelineGuard::onBehalf(PipelineGuard::RESOLVE, $using, 'compute', static fn (): mixed => $using::compute($from, $definition));
       NestedArray::setValue($values, explode('.', (string) $path), $value, TRUE);
+    }
+    foreach ($map->entries() as $name => $entry) {
+      $held = $stored[$name] ?? NULL;
+      if (!is_array($held)) {
+        continue;
+      }
+      if ($entry->list !== NULL) {
+        $item = $entry->list->child()->getDefinitions();
+        foreach ($held as $delta => $one) {
+          if (is_array($one)) {
+            $values[$name][$delta] = static::applyIn($item, $one);
+          }
+        }
+        continue;
+      }
+      $child = $entry->attachment?->child;
+      if ($entry->variants !== NULL) {
+        $chosen = $entry->variants->chosen($stored[$entry->variants->by] ?? NULL);
+        $child = $chosen === NULL ? NULL : $entry->variants->variant($chosen)->child;
+      }
+      if ($child !== NULL) {
+        $values[$name] = static::applyIn($child->getDefinitions(), $held);
+      }
+      foreach ($entry->mounted as $module => $mounted) {
+        if (is_array($held[$module] ?? NULL)) {
+          $values[$name][$module] = static::applyIn($mounted->child->getDefinitions(), $held[$module]);
+        }
+      }
     }
     return $values;
   }
@@ -121,14 +169,94 @@ final class Resolve {
    *   The resource as built.
    *
    * @return array<string, array{0: static, 1: \Drupal\Core\TypedData\DataDefinitionInterface}>
-   *   What each is resolved from and its definition, by its dotted path.
+   *   What each is resolved from and its definition, by its dotted path
+   *   from the top: a child's under the key it is held at, an item's or an
+   *   entry's from the site under `*`, a variant's under its key, whichever
+   *   variant it is.
    */
   public static function declared(DataSurfaceInterface $surface): array {
+    return static::declaredIn($surface->getDefinitions(), '');
+  }
+
+  /**
+   * Lists the resolved keys of one frame and of its children.
+   *
+   * @param \Drupal\data_surface\DefinitionMap $map
+   *   The frame's keys.
+   * @param string $prefix
+   *   Their path, a dotted path and a dot; empty at the top.
+   *
+   * @return array<string, array{0: static, 1: \Drupal\Core\TypedData\DataDefinitionInterface}>
+   *   What each is resolved from and its definition, by its dotted path.
+   */
+  protected static function declaredIn(DefinitionMap $map, string $prefix): array {
     $declared = [];
-    foreach ($surface->getDefinitions()->entries() as $name => $entry) {
+    foreach (static::own($map) as $path => $resolved) {
+      $declared[$prefix . $path] = $resolved;
+    }
+    foreach ($map->entries() as $name => $entry) {
+      $children = [];
+      if ($entry->list !== NULL) {
+        $children[] = [$name . '.*.', $entry->list->child()];
+      }
+      elseif ($entry->variants !== NULL) {
+        foreach ($entry->variants->variants as $variant) {
+          $children[] = [$name . '.', $variant->child];
+        }
+      }
+      elseif ($entry->attachment !== NULL) {
+        $at = DefinitionMetadata::eachOf($entry->definition) === NULL ? $name . '.' : $name . '.*.';
+        $children[] = [$at, static::entryChild($entry)];
+      }
+      foreach ($children as [$at, $child]) {
+        if ($child !== NULL) {
+          $declared += static::declaredIn($child->getDefinitions(), $prefix . $at);
+        }
+      }
+      foreach ($entry->mounted as $module => $mounted) {
+        $declared += static::declaredIn($mounted->child->getDefinitions(), $prefix . $name . '.' . $module . '.');
+      }
+    }
+    return $declared;
+  }
+
+  /**
+   * Gets the child an attached key holds: its structure, or an entry's.
+   *
+   * @param \Drupal\data_surface\Entry $entry
+   *   The key, which holds an attachment.
+   *
+   * @return \Drupal\data_surface\DataSurfaceInterface|null
+   *   The attached structure; for a map of keys from the site, the
+   *   structure at its first entry, every entry being the same; NULL for
+   *   a map whose entries are values.
+   */
+  protected static function entryChild(Entry $entry): ?DataSurfaceInterface {
+    $child = $entry->attachment?->child;
+    if ($child === NULL || DefinitionMetadata::eachOf($entry->definition) === NULL) {
+      return $child;
+    }
+    $entries = $child->getDefinitions()->entries();
+    $first = reset($entries);
+    return $first === FALSE ? NULL : $first->attachment?->child;
+  }
+
+  /**
+   * Lists the resolved keys of one frame: its own and its alters' mounts.
+   *
+   * @param \Drupal\data_surface\DefinitionMap $map
+   *   The frame's keys.
+   *
+   * @return array<string, array{0: static, 1: \Drupal\Core\TypedData\DataDefinitionInterface}>
+   *   What each is resolved from and its definition, by its dotted path in
+   *   the frame.
+   */
+  protected static function own(DefinitionMap $map): array {
+    $declared = [];
+    foreach ($map->entries() as $name => $entry) {
       if ($name === RefinesInputRefiner::MOUNT && $entry->definition instanceof ComplexDataDefinitionInterface) {
         foreach ($entry->definition->getPropertyDefinitions() as $module => $mount) {
-          if (!$mount instanceof ComplexDataDefinitionInterface) {
+          if (!$mount instanceof ComplexDataDefinitionInterface || isset($entry->mounted[$module])) {
             continue;
           }
           foreach ($mount->getPropertyDefinitions() as $key => $definition) {

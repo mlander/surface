@@ -311,7 +311,8 @@ final class Accepting {
     // What the key already holds: the stored value when storage has
     // one, and the declared default only when it has none. A stored
     // NULL is a stored value, so array_key_exists rather than ??.
-    $fallback = array_key_exists($name, $current) ? $current[$name] : $surface->getDefault($name);
+    $was_stored = array_key_exists($name, $current);
+    $fallback = $was_stored ? $current[$name] : $surface->getDefault($name);
     if ($fallback === NULL && DefinitionMetadata::isGrouping($entry->definition)) {
       // The map each module's mounted keys sit in is a map, never null,
       // even when nothing is stored and no mounted key has a default.
@@ -324,10 +325,13 @@ final class Accepting {
       // deciding key has moved on: it starts again from the chosen
       // variant's defaults rather than carrying keys that mean nothing
       // here, and from the secrets of its own kept while it was not
-      // chosen.
+      // chosen. Which variant it was written for is what the deciding
+      // key holds beside it, never the names of its keys.
       // Decision: see
       // docs/decisions.md#an-extension-is-a-variant-the-site-adds-or-an-alter.
-      $fallback = $entry->variants->held($chosen, $fallback)
+      $by = $entry->variants->by;
+      $decided = $was_stored ? ($current[$by] ?? NULL) : $surface->getDefault($by);
+      $fallback = $entry->variants->heldFor($chosen, $fallback, $decided)
         ?? (is_array($fallback) ? $entry->variants->ownSecrets($chosen, $fallback) : []) + $entry->variants->defaultsOf($chosen);
     }
     if ($entry->list !== NULL) {
@@ -1096,19 +1100,36 @@ final class Accepting {
    *   value.
    */
   public function typeMismatchViolations(TypeMismatchException $exception): ViolationSet {
+    return new ViolationSet([static::typeMismatchViolation($exception, $this->getStringTranslation())]);
+  }
+
+  /**
+   * Words a type mismatch as the violation every door files it as.
+   *
+   * The form's door accepts what was posted through the same accept(),
+   * and refuses the value it could not hold with this violation, as the
+   * other doors do.
+   *
+   * @param \Drupal\data_surface\Pipeline\TypeMismatchException $exception
+   *   The refusal from accept().
+   * @param \Drupal\Core\StringTranslation\TranslationInterface $translation
+   *   The string translation service.
+   *
+   * @return \Drupal\data_surface\Pipeline\Violation
+   *   The violation, filed under the top level key that carries the value.
+   */
+  public static function typeMismatchViolation(TypeMismatchException $exception, TranslationInterface $translation): Violation {
     $segments = explode('.', $exception->getPath());
     $name = array_shift($segments);
-    return new ViolationSet([
-      new Violation(
-        (string) $name,
-        implode('.', $segments),
-        $this->t('This value must be of type @expected, @actual given.', [
-          '@expected' => $exception->getExpected(),
-          '@actual' => $exception->getActual(),
-        ]),
-        Violation::TYPE_MISMATCH,
-      ),
-    ]);
+    return new Violation(
+      (string) $name,
+      implode('.', $segments),
+      $translation->translate('This value must be of type @expected, @actual given.', [
+        '@expected' => $exception->getExpected(),
+        '@actual' => $exception->getActual(),
+      ]),
+      Violation::TYPE_MISMATCH,
+    );
   }
 
   /**

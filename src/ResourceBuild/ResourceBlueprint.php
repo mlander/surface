@@ -814,20 +814,14 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
   /**
    * {@inheritdoc}
    *
-   * A resource's own, at its top: Resources::resolved() reads it from the
-   * resource's storage.
-   *
-   * Decision: see docs/decisions.md#a-key-may-stand-for-another-at-use.
+   * A structure mixed in names its own members alone: what it resolves,
+   * and what from, are keys it brought.
    */
-  public function resolve(string $key, array $from, string $using): static {
-    $refuse = fn (string $why): \LogicException => new \LogicException(sprintf('resolve("%s") in %s %s', $key, $this->who(), $why));
-    if ($this->into !== NULL) {
-      throw $refuse(sprintf('is inside %s, mixed in: a resolve is a resource\'s own, for now.', $this->name($this->root()->owner)));
+  protected function storedPath(string $key): ?string {
+    if ($this->into !== NULL && !in_array($key, $this->keys, TRUE)) {
+      return NULL;
     }
-    if ($this->owner !== NULL && $this->registry?->hasDefinition($this->owner) && !$this->registry->getDefinition($this->owner)->isResource()) {
-      throw $refuse('is in a structure: a resolve is a resource\'s own, read from its storage, for now. Declare it on the resource that holds the structure.');
-    }
-    return parent::resolve($key, $from, $using);
+    return parent::storedPath($key);
   }
 
   /**

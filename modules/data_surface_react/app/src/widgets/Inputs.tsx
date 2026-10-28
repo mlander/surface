@@ -253,7 +253,7 @@ export function NumberField(props: FieldProps): JSX.Element {
 }
 
 /**
- * A text input: email, time or url by type, a password for a secret.
+ * A text input: email, time, date or url by type, a password for a secret.
  *
  * Length's max is the maxlength, and the placeholder the one its
  * arrangement declares; a secret is never shown a value and gets no
@@ -263,7 +263,7 @@ export function TextField(props: FieldProps): JSX.Element {
   const id = fieldId(props.path);
   const secret = Boolean(props.schema.writeOnly);
   const widget = props.schema['x-surface']?.widget;
-  const type = secret ? 'password' : widget === 'email' ? 'email' : widget === 'time' ? 'time' : props.schema.format === 'uri' ? 'url' : 'text';
+  const type = secret ? 'password' : widget === 'email' ? 'email' : widget === 'time' || widget === 'date' ? widget : props.schema.format === 'uri' ? 'url' : 'text';
   return (
     <Item props={props} marker={props.required}>
       <Affixed props={props}>

@@ -68,13 +68,6 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
   protected array $rules = [];
 
   /**
-   * The keys resolved at use through this blueprint, by stored path.
-   *
-   * @var string[]
-   */
-  protected array $resolves = [];
-
-  /**
    * The collections attached through this blueprint, keyed by key.
    *
    * @var array<string, string>
@@ -469,8 +462,10 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
    * {@inheritdoc}
    *
    * Written on the key's definition now, every name translated to the
-   * path its value is stored at, so Resources::resolved() reads it from
-   * what storage loads with nothing more to look up.
+   * path its value is stored at in the frame declaring it, so
+   * Resources::resolved() reads it from what storage loads with nothing
+   * more to look up. A structure's paths are its own, applied where the
+   * structure is held; a mixed-in structure's are its owner's.
    *
    * Decision: see docs/decisions.md#a-key-may-stand-for-another-at-use.
    */
@@ -507,18 +502,7 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
       $paths[$source] = $at;
     }
     DefinitionMetadata::setResolve($definition, new Resolve($paths, $using, $this->who()));
-    $this->resolves[] = $path;
     return $this;
-  }
-
-  /**
-   * Gets the keys resolved at use through this blueprint.
-   *
-   * @return string[]
-   *   Each key's stored path, in the order resolved.
-   */
-  public function resolves(): array {
-    return $this->resolves;
   }
 
   /**

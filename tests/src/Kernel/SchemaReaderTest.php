@@ -538,6 +538,26 @@ class SchemaReaderTest extends DataSurfaceKernelTestBase {
   }
 
   /**
+   * Tests a date: `format: date` and the marker are one key, one Regex.
+   */
+  public function testDate(): void {
+    $read = $this->read(static::json(<<<'JSON'
+      {"type": "object", "additionalProperties": false, "properties": {
+        "marked": {"type": "string", "format": "date", "x-surface": {"widget": "date"}},
+        "patterned": {"type": "string", "format": "date", "pattern": "^\\d{4}-\\d{2}-\\d{2}$", "x-surface": {"widget": "date"}},
+        "bare": {"type": "string", "format": "date"}
+      }}
+      JSON));
+    $checks = array_flip(['Regex', 'Sequentially', 'AtLeastOneOf', 'JsonSchema']);
+    $rules = static fn (string $key): array => array_intersect_key($read->getDefinition($key)->getConstraints(), $checks);
+    $this->assertSame(['Regex' => ['pattern' => '/^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/D']], $rules('marked'), "RFC 3339's date, once.");
+    $this->assertSame(['Regex' => ['pattern' => '/^\d{4}-\d{2}-\d{2}$/D']], $rules('patterned'), 'Beside a pattern, the pattern alone.');
+    foreach (['marked', 'patterned', 'bare'] as $key) {
+      $this->assertSame('date', $read->getDefinition($key)->getSetting('widget'), $key . ' is drawn as a date input.');
+    }
+  }
+
+  /**
    * Tests our own keywords read back: ports, wiring, widgets, foreign kept.
    */
   public function testOwnKeywords(): void {

@@ -1407,7 +1407,9 @@ final class PhoneNumber implements ShapeInterface {
 The press page wires the port to `public`, and mixes the review in, so
 the review's two keys are the page's own: stored flat beside `public`,
 drawn among its keys, and named in a refusal as `reviewed_by`, not under
-a parent ([Mixins](../../docs/resources.md#mixins)).
+a parent ([Mixins](../../docs/resources.md#mixins)). The review date asks
+for a date input, `setSetting('widget', 'date')`, which both documents
+state as `format: date`.
 
 <!-- code: src/Structure/ReviewStructure.php -->
 
@@ -1421,8 +1423,9 @@ final class ReviewStructure implements StructureInterface {
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('reviewed_on', 'string', t('Reviewed on'))
       ->setDescription(t('YYYY-MM-DD.'))
+      ->setSetting('widget', 'date')
       ->addConstraint('Regex', [
-        'pattern' => '/^\d{4}-\d{2}-\d{2}$/D',
+        'pattern' => '/^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/D',
         'message' => t('Write the date as YYYY-MM-DD, such as 2026-10-19.'),
       ]);
 
@@ -1550,7 +1553,7 @@ of code, counted without blank lines or comments:
 | --- | --- | --- |
 | [`modules/data_surface_examples/src/Structure/PersonStructure.php`](src/Structure/PersonStructure.php) | the person: three keys, and a rule that reads a port, listed | 14 |
 | [`modules/data_surface_examples/src/Shape/PhoneNumber.php`](src/Shape/PhoneNumber.php) | the phone: a named shape | 14 |
-| [`modules/data_surface_examples/src/Structure/ReviewStructure.php`](src/Structure/ReviewStructure.php) | the review: two keys and a rule, mixed into the press page | 16 |
+| [`modules/data_surface_examples/src/Structure/ReviewStructure.php`](src/Structure/ReviewStructure.php) | the review: two keys and a rule, mixed into the press page | 17 |
 | [`modules/data_surface_examples/src/Resource/PressResource.php`](src/Resource/PressResource.php) | the press page: one key, the person attached, the review mixed in | 14 |
 | [`modules/data_surface_examples/src/Storage/PressStorage.php`](src/Storage/PressStorage.php) | its storage: names the config object | 3 |
 | [`modules/data_surface_examples/src/Resource/InfoDeskResource.php`](src/Resource/InfoDeskResource.php) | the information desk: the phone, the person attached, and a collection of up to four | 17 |
@@ -2224,9 +2227,9 @@ final class SpotlightResource implements ResourceInterface {
 }
 ```
 
-The provider lists every component, the four this module ships among
-them, each by its id and its name, with its props as the component
-declares them. A prop typed by a PHP class takes a value only Twig code
+The provider lists every component the site offers, the four this
+module ships among them, each by its id and its name, with its props as
+the component declares them. A prop typed by a PHP class takes a value only Twig code
 passes, which nothing stores: that type is left out, as the reader would
 refuse it. It is the main module's, not this module's, since example 13's
 block reads the components through it too.
@@ -2244,28 +2247,26 @@ final class ComponentProps implements SiteListInterface, ContainerInjectionInter
   /**
    * Constructs the provider.
    *
-   * @param \Drupal\Core\Theme\ComponentPluginManager $components
-   *   The single-directory components the site has.
+   * @param \Drupal\data_surface\Variants\ComponentsOffered $components
+   *   The components the site offers.
    */
   public function __construct(
-    protected readonly ComponentPluginManager $components,
+    protected readonly ComponentsOffered $components,
   ) {}
 
   /**
    * {@inheritdoc}
    */
   public static function create(ContainerInterface $container): static {
-    return new static($container->get('plugin.manager.sdc'));
+    return new static(ComponentsOffered::create($container));
   }
 
   /**
    * {@inheritdoc}
    */
   public function list(): SiteList {
-    $variants = (new SiteList())->addCacheTags(['config:core.extension']);
-    $components = $this->components->getDefinitions();
-    ksort($components);
-    foreach ($components as $id => $component) {
+    $variants = (new SiteList())->addCacheTags(ComponentsOffered::CACHE_TAGS);
+    foreach ($this->components->offered() as $id => $component) {
       $variants->add((string) $id, (string) ($component['name'] ?? $id), schema: self::props($component['props'] ?? []));
     }
     return $variants;
@@ -2493,6 +2494,26 @@ drush tool:run data_surface:event.spotlight:configure --uid=1 --input='{"values"
 The narrowing tool is there only past the limit; the page's panel says
 which state the site is in, and why.
 
+A site can offer fewer components than it has:
+`data_surface.settings:components_offered` lists component ids
+(`provider:name`) and providers (an entry with no colon, every component
+it provides), and both providers offer only those; empty, the shipped
+value, offers every one. It shortens the list, where the site list limit
+only moves a long one out of the documents
+(why: [decision](../../docs/decisions.md#a-budget-for-what-the-site-decides)).
+To offer this module's four alone:
+
+```bash
+ddev drush config:set data_surface.settings components_offered.0 data_surface_examples
+```
+
+A stored component the setting leaves out is not lost: the chooser stands
+for it on its empty option ("- Keep data_surface_examples:card (no longer
+offered) -"), a save that leaves the chooser alone keeps the component,
+its props and its slots as stored, and every door reads them back as
+stored. Its props are not drawn until it is offered again, since the
+variants are the components offered.
+
 The config object holds the component's id, its props and its slots.
 Its config schema is written from the resource, and the props and the
 slots are `type: ignore` there: which components a site has is the
@@ -2538,8 +2559,9 @@ of code, counted without blank lines or comments:
 | File | What it is | Lines |
 | --- | --- | --- |
 | [`modules/data_surface_examples/src/Resource/SpotlightResource.php`](src/Resource/SpotlightResource.php) | the resource: a component, and its props and slots as variants the component chooses | 16 |
-| [`src/Variants/ComponentProps.php`](../../src/Variants/ComponentProps.php) | the provider of the props: one variant per component, read from its props schema; the main module's | 36 |
-| [`src/Variants/ComponentSlots.php`](../../src/Variants/ComponentSlots.php) | the provider of the slots: one variant per component, read from its metadata; the main module's | 198 |
+| [`src/Variants/ComponentProps.php`](../../src/Variants/ComponentProps.php) | the provider of the props: one variant per component, read from its props schema; the main module's | 34 |
+| [`src/Variants/ComponentSlots.php`](../../src/Variants/ComponentSlots.php) | the provider of the slots: one variant per component, read from its metadata; the main module's | 195 |
+| [`src/Variants/ComponentsOffered.php`](../../src/Variants/ComponentsOffered.php) | the components both providers offer: every one, or those data_surface.settings:components_offered allows; the main module's | 31 |
 | [`modules/data_surface_examples/src/Storage/SpotlightStorage.php`](src/Storage/SpotlightStorage.php) | the storage: names the config object | 3 |
 | [`modules/data_surface_examples/data_surface_examples.routing.yml`](data_surface_examples.routing.yml), entry `data_surface_examples.step12` | the route | 8 |
 | [`modules/data_surface_examples/config/schema/data_surface_examples.schema.yml`](config/schema/data_surface_examples.schema.yml), entry `data_surface_examples.spotlight` | the config schema, generated from the class | 15 |
@@ -4651,7 +4673,7 @@ of code, counted without blank lines or comments:
 | [`modules/data_surface_examples_references/data_surface_examples_references.post_update.php`](../data_surface_examples_references/data_surface_examples_references.post_update.php) | stores as uuids the ids a site stored before the object stored uuids | 6 |
 | [`src/Reference/References.php`](../../src/Reference/References.php) | what a reference key is: its definition, core's selection handler for its candidates, the limit and the lookup; the main module's | 234 |
 | [`src/Reference/EntityReferenceStructure.php`](../../src/Reference/EntityReferenceStructure.php) | the two parts of a bare entity key, and the refiner that narrows its id to the entity type chosen; the main module's | 49 |
-| [`src/Reference/ReferenceStorageLayout.php`](../../src/Reference/ReferenceStorageLayout.php) | how a config storage keeps a reference to content: by uuid, read back as the id; the main module's | 355 |
+| [`src/Reference/ReferenceStorageLayout.php`](../../src/Reference/ReferenceStorageLayout.php) | how a config storage keeps a reference to content: by uuid, read back as the id; the main module's | 373 |
 | [`src/Plugin/Validation/Constraint/ValidReferenceConstraint.php`](../../src/Plugin/Validation/Constraint/ValidReferenceConstraint.php) | the id's constraint, core's ValidReference for a key that holds one id; the main module's | 20 |
 | [`src/Plugin/Validation/Constraint/ReferenceableTypeConstraint.php`](../../src/Plugin/Validation/Constraint/ReferenceableTypeConstraint.php) | the entity type's constraint, which the filters are options of; the main module's | 17 |
 | [`src/Plugin/DataSurfaceOptionsResolver/ReferenceOptions.php`](../../src/Plugin/DataSurfaceOptionsResolver/ReferenceOptions.php) | the resolver that lists the candidates up to the limit; the main module's | 39 |

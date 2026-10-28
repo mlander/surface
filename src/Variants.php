@@ -184,6 +184,34 @@ final class Variants {
   }
 
   /**
+   * Reads a stored value as the chosen variant's, if it was stored for it.
+   *
+   * A stored value is the variant its deciding key's stored value chose:
+   * it is held for the chosen variant only when that is the one chosen
+   * now, and then as held() reads it. Two variants may name their keys
+   * alike (two components with a `link` each, a map in one and text in
+   * the other), so the names say nothing about which variant a stored
+   * value was written for.
+   *
+   * Decision: see
+   * docs/decisions.md#an-extension-is-a-variant-the-site-adds-or-an-alter.
+   *
+   * @param string $id
+   *   The chosen variant.
+   * @param mixed $value
+   *   What storage holds at the key.
+   * @param mixed $decided
+   *   What storage holds at the deciding key.
+   *
+   * @return array|null
+   *   The chosen variant's value, or NULL when it was stored for another
+   *   variant, or for none.
+   */
+  public function heldFor(string $id, mixed $value, mixed $decided): ?array {
+    return $this->chosen($decided) === $id ? $this->held($id, $value) : NULL;
+  }
+
+  /**
    * Sets aside the secrets of variants not chosen that a value holds.
    *
    * A secret is never read back, so a caller who chose another variant
