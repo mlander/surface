@@ -1,6 +1,6 @@
 name: 'Data Surface widget test'
 type: module
-description: 'A widget that claims every string key whose format is color, and a structure with keys it serves and one whose owner asks for another.'
+description: 'A widget that claims every string key whose format is color, a structure with keys it serves and one whose owner asks for another, and two components: one a switch from the examples card posts the wrong shape to, one with props only the JSON widget draws.'
 package: Testing
 version: VERSION
 core_version_requirement: ^11.3 || ^12

@@ -1159,6 +1159,13 @@ the hint's words: `radios`, `checkboxes`, `select`, `time`.
 | a collection | a `details` of item `details`, "Add another" and "Remove" over AJAX | `list`, `collection: true` | `ListField`, each item the child's `FieldsetField`, at least `minItems`, at most `maxItems` |
 | a locked key | `#disabled`, "Fixed for this operation." | `readOnly: true` | disabled, the same note |
 | a locked child | its fieldset `#disabled`, every element inside with it | `readOnly: true` on the fieldset and on every key inside | a fieldset of disabled keys |
+| what no other widget draws: an `any` key with no variants, a list of lists or of `any` (a list of maps outside a collection too) | `textarea` of JSON, the `json` widget | `null` | the stock field for the key's JSON type (`stockWidget()`) |
+
+The last row is the Form API's last resort, so the form never refuses
+to draw a declared key, and the hint stays `null`: it says nothing about
+the key. A text field for a value of several scalar types and rows for
+a list of maps should replace it ([roadmap](../ROADMAP.md), item 29;
+why: [decision](decisions.md#the-form-never-refuses-to-draw-a-declared-key)).
 
 ## The API
 

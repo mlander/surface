@@ -1484,6 +1484,23 @@ renames sit in A because they are cheapest before new code exists.
     entity saved by a path other than the storage drops the reference
     dependencies the storage adds until the next save through it.
 
+29. **Proper widgets where the JSON fallback draws today.** Open,
+    2026-10-27, a stopgap marked for replacement
+    (`docs/decisions.md#the-form-never-refuses-to-draw-a-declared-key`).
+    The `json` widget draws a key no other widget draws as a text area
+    of JSON: a prop typed as several JSON types (read as `any` with a
+    JsonSchema constraint), and a list whose items are lists or `any`.
+    It keeps the form up and every declared key editable, and it is the
+    worst acceptable form of that. Two widgets should replace it: one
+    for a value of several scalar types, a text field whose value the
+    JsonSchema constraint coerces and checks, or one input per type; and
+    one for a list of maps, rows of the map's keys, as the React app's
+    `ListField` draws them (a list of maps inside a map is drawn today as
+    an item saying it is not drawn here). Measured on the development
+    site, 312 components: example 12's form threw for 91 components with
+    a prop of several types and 25 with a list it could not draw; with
+    the `json` widget all 312 draw.
+
 ## Maintenance
 
 - **Functional tests convert to kernel tests as units touch them**, by

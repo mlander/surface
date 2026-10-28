@@ -1,0 +1,22 @@
+$schema: https://git.drupalcode.org/project/drupal/-/raw/HEAD/core/assets/schemas/v1/metadata.schema.json
+name: Teaser
+status: stable
+description: 'The keys of the examples card, its link a string: a switch from the card posts a map where this takes text.'
+props:
+  type: object
+  properties:
+    heading:
+      type: string
+      title: Heading
+      default: 'Read the program'
+    tone:
+      type: string
+      title: Tone
+      enum:
+        - plain
+        - highlight
+      default: plain
+    link:
+      type: string
+      title: Link
+      default: 'https://example.com/program'

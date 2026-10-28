@@ -9,6 +9,7 @@ use Drupal\Core\Extension\ModuleHandlerInterface;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Form\SubformStateInterface;
 use Drupal\Core\Messenger\MessengerInterface;
+use Drupal\Core\StringTranslation\TranslationInterface;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
@@ -17,10 +18,13 @@ use Drupal\data_surface\Computed;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Options\DataSurfaceOptions;
+use Drupal\data_surface\Pipeline\Accepting;
 use Drupal\data_surface\Pipeline\DataSurfacePipelineInterface;
+use Drupal\data_surface\Pipeline\TypeMismatchException;
 use Drupal\data_surface\Pipeline\ValueState;
 use Drupal\data_surface\Pipeline\ViolationSet;
 use Drupal\data_surface\Entry;
+use Drupal\data_surface\Variants;
 use Drupal\data_surface\Collection;
 use Drupal\data_surface\Widget\DataSurfaceWidgetManager;
 
@@ -82,6 +86,9 @@ final class Extracting {
    * @param \Drupal\Core\Extension\ModuleHandlerInterface $moduleHandler
    *   The module handler, which says whether Inline Form Errors prints
    *   an error beside its element, so the message need not name it.
+   * @param \Drupal\Core\StringTranslation\TranslationInterface $stringTranslation
+   *   The string translation service, which words a value of the wrong
+   *   shape refused.
    */
   public function __construct(
     protected readonly DataSurfaceWidgetManager $widgetManager,
@@ -89,6 +96,7 @@ final class Extracting {
     protected readonly MessengerInterface $messenger,
     protected readonly DataSurfaceOptions $options,
     protected readonly ModuleHandlerInterface $moduleHandler,
+    protected readonly TranslationInterface $stringTranslation,
   ) {
   }
 
@@ -576,6 +584,11 @@ final class Extracting {
         }
         $variants = $definitions->entry((string) $name)->variants;
         $chosen = $variants->chosen($raw[$variants->by] ?? $current[$variants->by] ?? $surface->getDefault($variants->by));
+        if (static::drawnForAnother($container[$name] ?? NULL, $chosen)) {
+          // Drawn for the variant the deciding key chose before this
+          // submission: what it posted is that variant's, and says nothing.
+          continue;
+        }
         $child = $chosen === NULL ? NULL : $variants->variant($chosen)->child;
         if ($child !== NULL && Drawing::nestsVariants($child) && is_array($container[$name] ?? NULL) && empty($container[$name][DataSurfaceFormBuilderInterface::PLACEHOLDER_KEY])) {
           // Variants inside the variant (a component's slots, each holding
@@ -596,7 +609,201 @@ final class Extracting {
     // One coercion path for every caller: the form hands its raw tree to
     // the same accept() a payload goes through, which is also where
     // locked keys take the value the data surface declares.
-    return $this->pipeline->accept($surface, $raw, $current);
+    return $this->accepted($surface, $raw, $current, $container, $form_state);
+  }
+
+  /**
+   * Accepts what a form posted, a value of the wrong shape refused.
+   *
+   * The pipeline's accept() throws on a value its key cannot hold at all,
+   * an array for a string; through a payload that is a refusal, and
+   * through a form it is one too: an error on the element, the value left
+   * out and the rest accepted, never an exception.
+   *
+   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   *   The data surface.
+   * @param array $raw
+   *   What the form posted, by key.
+   * @param array $current
+   *   What is stored.
+   * @param array $container
+   *   The data surface container.
+   * @param \Drupal\Core\Form\FormStateInterface $form_state
+   *   The form state.
+   *
+   * @return array
+   *   The accepted values.
+   *
+   * @throws \Drupal\data_surface\Pipeline\TypeMismatchException
+   *   When the value refused is not one the form posted.
+   */
+  protected function accepted(DataSurfaceInterface $surface, array $raw, array $current, array $container, FormStateInterface $form_state): array {
+    $refused = [];
+    while (TRUE) {
+      try {
+        $values = $this->pipeline->accept($surface, $raw, $current);
+        break;
+      }
+      catch (TypeMismatchException $e) {
+        // Left out where it was posted; a list's items are counted again
+        // by accept(), so a path into one leaves out the whole list.
+        $parents = explode('.', $e->getPath());
+        while (count($parents) > 1 && !NestedArray::keyExists($raw, $parents)) {
+          array_pop($parents);
+        }
+        if (!NestedArray::keyExists($raw, $parents)) {
+          throw $e;
+        }
+        NestedArray::unsetValue($raw, $parents);
+        $refused[] = Accepting::typeMismatchViolation($e, $this->stringTranslation);
+      }
+    }
+    $state = $form_state instanceof SubformStateInterface ? $form_state->getCompleteFormState() : $form_state;
+    if ($refused !== [] && !$state->isValidationComplete()) {
+      $this->flagSurfaceErrors(new ViolationSet($refused), $container, $form_state);
+    }
+    return $values;
+  }
+
+  /**
+   * Starts afresh each variant whose deciding key moved since it was drawn.
+   *
+   * Read from the form as drawn: each variant key's element says the
+   * variant it was drawn for (DataSurfaceFormBuilderInterface::DRAWN_FOR_KEY).
+   * Where the deciding key's input now chooses another, the input under
+   * the key was drawn for the variant no longer chosen, and is replaced by
+   * what the chosen one starts from, as a reload would draw it: what is
+   * stored, when what is stored was written for it, and its defaults
+   * otherwise. Keys of the same variant at another depth go with it.
+   *
+   * Decision: see
+   * docs/decisions.md#an-extension-is-a-variant-the-site-adds-or-an-alter.
+   *
+   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   *   The data surface, as advertised.
+   * @param array|null $form
+   *   The form as it was drawn, or NULL when there is none.
+   * @param string[] $path
+   *   The container's input path.
+   * @param array $input
+   *   The in-progress input, by key.
+   * @param array $stored
+   *   What is stored, by key.
+   *
+   * @return array{0: string[], 1: array}
+   *   The dotted paths whose posted input is dropped, and the input with
+   *   what each starts from in its place.
+   */
+  public static function switchedVariants(DataSurfaceInterface $surface, ?array $form, array $path, array $input, array $stored): array {
+    $switched = [];
+    foreach (static::drawnVariants($form ?? [], $path) as [$parents, $drawn]) {
+      foreach ($switched as $done) {
+        if (array_slice($parents, 0, count($done)) === $done) {
+          continue 2;
+        }
+      }
+      $by = [...array_slice($parents, 0, -1), (string) ($drawn['by'] ?? '')];
+      $exists = FALSE;
+      $now = NestedArray::getValue($input, $by, $exists);
+      if (!$exists || !is_scalar($now) || (string) $now === (string) ($drawn['for'] ?? '')) {
+        continue;
+      }
+      $switched[] = $parents;
+      $variants = static::variantsAt($surface, $parents, $input, $stored);
+      $chosen = $variants?->chosen($now);
+      if ($chosen === NULL) {
+        NestedArray::unsetValue($input, $parents);
+        continue;
+      }
+      $was = NestedArray::getValue($stored, $by);
+      $held = is_scalar($was) && (string) $was === (string) $now ? $variants->held($chosen, NestedArray::getValue($stored, $parents)) : NULL;
+      NestedArray::setValue($input, $parents, $held ?? $variants->defaultsOf($chosen), TRUE);
+    }
+    return [array_map(static fn (array $parents): string => implode('.', $parents), $switched), $input];
+  }
+
+  /**
+   * Finds the variant keys drawn under a container, and what each was for.
+   *
+   * @param array $element
+   *   The form as drawn, or an element in it.
+   * @param string[] $path
+   *   The container's input path.
+   *
+   * @return list<array{0: string[], 1: array}>
+   *   Each one's input path below the container, and its mark, the
+   *   shallowest first.
+   */
+  protected static function drawnVariants(array $element, array $path): array {
+    $found = [];
+    $parents = $element['#parents'] ?? NULL;
+    if (isset($element[DataSurfaceFormBuilderInterface::DRAWN_FOR_KEY]) && is_array($parents) && count($parents) > count($path) && array_slice($parents, 0, count($path)) === $path) {
+      $found[] = [array_slice($parents, count($path)), $element[DataSurfaceFormBuilderInterface::DRAWN_FOR_KEY]];
+    }
+    foreach ($element as $key => $child) {
+      if (is_array($child) && !str_starts_with((string) $key, '#')) {
+        array_push($found, ...static::drawnVariants($child, $path));
+      }
+    }
+    return $found;
+  }
+
+  /**
+   * Finds the variants at a path, each level read through what it chose.
+   *
+   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   *   The data surface, as advertised.
+   * @param string[] $parents
+   *   The path of the key with variants.
+   * @param array $input
+   *   The in-progress input, by key.
+   * @param array $stored
+   *   What is stored, by key.
+   *
+   * @return \Drupal\data_surface\Variants|null
+   *   The variants, or NULL when nothing holds variants there.
+   */
+  protected static function variantsAt(DataSurfaceInterface $surface, array $parents, array $input, array $stored): ?Variants {
+    $frame = $surface;
+    foreach ($parents as $position => $name) {
+      $entry = $frame->getDefinitions()->entry((string) $name);
+      if ($position === count($parents) - 1 || $entry === NULL) {
+        return $entry?->variants;
+      }
+      if ($entry->variants !== NULL) {
+        $by = [...array_slice($parents, 0, $position), $entry->variants->by];
+        $exists = FALSE;
+        $value = NestedArray::getValue($input, $by, $exists);
+        $chosen = $entry->variants->chosen($exists ? $value : NestedArray::getValue($stored, $by));
+        if ($chosen === NULL) {
+          return NULL;
+        }
+        $frame = $entry->variants->variant($chosen)->child;
+      }
+      elseif ($entry->attachment !== NULL) {
+        $frame = $entry->attachment->child;
+      }
+      else {
+        return NULL;
+      }
+    }
+    return NULL;
+  }
+
+  /**
+   * Answers whether a variant key's element was drawn for another variant.
+   *
+   * @param mixed $element
+   *   The element.
+   * @param string|null $chosen
+   *   The variant its deciding key chose in this submission.
+   *
+   * @return bool
+   *   TRUE when the element says it was drawn for another.
+   */
+  protected static function drawnForAnother(mixed $element, ?string $chosen): bool {
+    $drawn = is_array($element) ? ($element[DataSurfaceFormBuilderInterface::DRAWN_FOR_KEY]['for'] ?? NULL) : NULL;
+    return $drawn !== NULL && $drawn !== $chosen;
   }
 
   /**
@@ -628,7 +835,7 @@ final class Extracting {
       }
       if ($entry->variants !== NULL) {
         $chosen = $entry->variants->chosen($raw[$entry->variants->by] ?? $surface->getDefault($entry->variants->by));
-        if ($chosen !== NULL) {
+        if ($chosen !== NULL && !static::drawnForAnother($at, $chosen)) {
           $raw[$name] = $this->extractFrame($entry->variants->variant($chosen)->child, $at, $form_state);
         }
         continue;

@@ -89,7 +89,8 @@ class InputCoercionMatrixTest extends DataSurfaceKernelTestBase {
    *   What storage holds.
    *
    * @return array|null
-   *   The accepted values, or NULL when they are refused.
+   *   The accepted values, or NULL when they are refused: a value of a
+   *   shape its key cannot hold is an error on its element.
    */
   protected function form(array $input, array $stored): ?array {
     $surface = $this->specimen();
@@ -99,7 +100,10 @@ class InputCoercionMatrixTest extends DataSurfaceKernelTestBase {
     try {
       $values = $this->formBuilder()->extractSurfaceValues($surface, $form, $form_state, $stored);
     }
-    catch (UnknownKeysException | TypeMismatchException | VariantMismatchException) {
+    catch (UnknownKeysException | VariantMismatchException) {
+      return NULL;
+    }
+    if ($form_state->hasAnyErrors()) {
       return NULL;
     }
     return $this->pipeline()->validate($surface, $values, $stored)->isEmpty() ? $values : NULL;

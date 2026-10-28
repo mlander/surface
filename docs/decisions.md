@@ -1872,6 +1872,19 @@ examples ship both, each for the case it fits.
   still goes: it can be read and sent again. (`Variants::keptSecrets()`,
   `Variants::held()`, `DataSurfacePipeline::kept()`,
   `ConfigSchemaGenerator::keptSecrets()`)
+- **On the form, a switch is read off what was drawn.** Whether posted
+  values fit a variant cannot be told by their keys alone: the card's
+  `link` map and a teaser's `link` string share a name. So each variant
+  key's element says the variant it was drawn for
+  (`DataSurfaceFormBuilderInterface::DRAWN_FOR_KEY`, a render key, at
+  every depth). When the deciding key now chooses another, extraction
+  reads nothing from the element, and the rebuild draws the chosen
+  variant as a reload would: from what is stored when what is stored was
+  written for it, from its defaults otherwise. A render key and not a
+  posted field: the AJAX request is processed against the form as drawn,
+  which carries it, and nothing a browser sends can change it.
+  (`Drawing::drawnFor()`, `Extracting::switchedVariants()`,
+  `DataSurfaceHostTrait::surfaceFormValues()`, `SpotlightFormTest`)
 - **The owner does not integrate: an alter.** The webhook declares a
   pasted key and nothing else. The key module's alter mounts `key_id` at
   its own mount, offering the keys the site manages through a constraint
@@ -4759,6 +4772,36 @@ posts. The format stays an annotation
 Regex is still the rule. (`DateWidget::draws()`, `PropertySchema::type()`,
 `SchemaReader::value()`)
 
+### The form never refuses to draw a declared key
+
+Decided 2026-10-27, from example 12 on the development site: of 312
+components, 91 took the form down with "No data surface widget serves
+the "any" data type" (a prop typed as several JSON types, read as `any`
+with a JsonSchema constraint), and 25 with the same for a list (a list
+of anything). The tool, HTTP and the React page worked from the schema;
+only the form had no answer.
+
+A key the schema states must be editable at every door. The `json`
+widget is the Form API's last resort, by weight: a text area of the
+value as JSON for an `any` key holding no variants and a list the list
+widget refuses, decoded on save and accepted and validated as any value,
+text that is not JSON an error on the element. It is the worst
+acceptable form of an editable key, and it is marked for replacement
+([roadmap](../ROADMAP.md), item 29): a text field for a value of several
+scalar types, and rows for a list of maps. The served contract names no
+widget for it, since it says nothing about the key.
+
+Rejected: throwing, today's behavior, which takes the whole form down
+for one key; and leaving the key out of the form, which makes the form
+and the contract disagree about what may be set.
+(`JsonWidget`, `ListWidget::isApplicable()`, `SpotlightFormTest`)
+
+*Also 2026-10-27, the form's door:* a value of a shape its key cannot
+hold, an array for a string, is refused on the form as at every other
+door: an error on its element, in the pipeline's words, the value left
+out and the rest accepted, never an exception
+(`Extracting::accepted()`, `Accepting::typeMismatchViolation()`).
+
 ### Arrangement is declared once
 
 How a key is laid out where it is drawn is declared on its definition,
@@ -6393,6 +6436,19 @@ counted, come from a provider and are counted
 `ResourceOperationSchemaTool`, `SiteCatalog::keys()`,
 `SiteListBudgetTest`, `CatalogMemoryTest`,
 `AdvertisedSchemaAcceptanceTest::testListsPastTheSiteListLimit()`)
+
+*Amended 2026-10-27:* a site may also offer fewer components than it
+has: `data_surface.settings:components_offered` lists component ids and
+providers, empty for every one, and `ComponentProps` and
+`ComponentSlots` read it in one place (`ComponentsOffered`), both lists
+carrying its cache tag. The two settings answer different questions
+and both stay: the count moves a long list out of the documents and
+keeps every entry on offer; the allowlist shortens the list itself,
+for the person choosing and for every document. A stored component the
+allowlist leaves out stays stored and readable: the chooser stands for
+it on its empty option and a save that leaves it keeps it, as any
+stored value the list no longer offers; its props are not drawn until
+it is offered again. (`ComponentsOfferedTest`)
 
 ### A list left out for size is deferred, not refined
 

@@ -383,6 +383,15 @@ trait DataSurfaceHostTrait {
     // took away, left empty while the room was touched — would otherwise
     // be overlaid as empty, and rebuilt as a key that holds nothing.
     $path = static::surfaceInputPath($state) ?? [];
+    // Variants drawn for what their deciding key held before this edit:
+    // the input under them is that variant's, and goes, out of the raw
+    // input too, so the rebuilt elements take the chosen one's start.
+    // Decision: see
+    // docs/decisions.md#an-extension-is-a-variant-the-site-adds-or-an-alter.
+    [$switched, $input] = DataSurfaceFormBuilder::switchedVariants($surface, $state->getCompleteForm(), $path, $input, $stored);
+    if ($switched !== []) {
+      $this->forgetSurfaceInput($switched, $form_state);
+    }
     $kept = static::staleKeptPaths($state, $path, $input, $stored);
     if ($kept !== []) {
       // Out of the raw input as well, so that the rebuilt element takes

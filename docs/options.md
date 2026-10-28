@@ -454,6 +454,15 @@ why: [decision](decisions.md#a-list-left-out-for-size-is-deferred-not-refined)).
 `SiteListBudget::withLimit()` holds another limit for one call, saving
 nothing, as `References::withLimit()` does.
 
+The limit defers a long list; it does not shorten it. A site shortens
+the components offered with `data_surface.settings:components_offered`:
+component ids (`provider:name`) and providers (every component one
+provides), empty for every one. Both component lists read it, so the
+chooser, the props and the slots offer the same components, and both
+carry the settings' cache tag. A stored component it leaves out is kept
+as stored, as any stored value the list no longer offers
+([Variants from the site](resources.md#variants-from-the-site)).
+
 ## Writing a resolver
 
 ```php

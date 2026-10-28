@@ -229,6 +229,13 @@ final class Drawing {
         $reason ??= $variant;
       }
       $element = DataSurfaceWidgetBase::arranged($this->widgetManager->getWidgetFor($definition)->buildElement($definition, $value), $declared);
+      if ($variants !== NULL && $chosen !== '') {
+        // What the elements were drawn for, read back by extraction and
+        // by the rebuild: input drawn for another variant is dropped.
+        // Decision: see
+        // docs/decisions.md#an-extension-is-a-variant-the-site-adds-or-an-alter.
+        $element = static::drawnFor($element, $variants->by, $chosen, $variants->variant($chosen)->child, $value);
+      }
       if (isset($element[OptionsWidget::UNKEPT_LABEL_KEY]) && !array_key_exists($name, $shown)) {
         // Nothing stored: a declared default the list does not offer is
         // no value to keep, so the empty option does not say "keep".
@@ -866,6 +873,66 @@ final class Drawing {
       }
     }
     return $value;
+  }
+
+  /**
+   * Marks a variant key's element with the variant it was drawn for.
+   *
+   * At every depth: each variant key inside the chosen variant, or inside
+   * a child attached in it, is marked with what its own deciding key held
+   * when it was drawn. A rebuild draws the element again, so the mark
+   * always says what the values posted under it were drawn for.
+   *
+   * @param array $element
+   *   The variant key's element.
+   * @param string $by
+   *   Its deciding key.
+   * @param string $chosen
+   *   The variant drawn.
+   * @param \Drupal\data_surface\DataSurfaceInterface $child
+   *   That variant.
+   * @param mixed $value
+   *   What it was drawn from.
+   *
+   * @return array
+   *   The element, marked.
+   */
+  protected static function drawnFor(array $element, string $by, string $chosen, DataSurfaceInterface $child, mixed $value): array {
+    $element[DataSurfaceFormBuilderInterface::DRAWN_FOR_KEY] = ['by' => $by, 'for' => $chosen];
+    return static::drawnForInside($element, $child, $value);
+  }
+
+  /**
+   * Marks each variant key inside a frame's element.
+   *
+   * @param array $element
+   *   The frame's element.
+   * @param \Drupal\data_surface\DataSurfaceInterface $frame
+   *   The frame: a variant, or a child attached in one.
+   * @param mixed $value
+   *   What it was drawn from.
+   *
+   * @return array
+   *   The element, each variant key inside it marked.
+   */
+  protected static function drawnForInside(array $element, DataSurfaceInterface $frame, mixed $value): array {
+    foreach ($frame->getDefinitions()->entries() as $name => $entry) {
+      $name = (string) $name;
+      if (!is_array($element[$name] ?? NULL) || !empty($element[$name][DataSurfaceFormBuilderInterface::PLACEHOLDER_KEY])) {
+        continue;
+      }
+      $held = is_array($value) ? ($value[$name] ?? NULL) : NULL;
+      if ($entry->variants !== NULL) {
+        $chosen = $entry->variants->chosen(is_array($value) ? ($value[$entry->variants->by] ?? NULL) : NULL);
+        if ($chosen !== NULL) {
+          $element[$name] = static::drawnFor($element[$name], $entry->variants->by, $chosen, $entry->variants->variant($chosen)->child, $held);
+        }
+      }
+      elseif ($entry->attachment !== NULL) {
+        $element[$name] = static::drawnForInside($element[$name], $entry->attachment->child, $held);
+      }
+    }
+    return $element;
   }
 
   /**

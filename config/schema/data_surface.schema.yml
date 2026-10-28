@@ -16,6 +16,14 @@ data_surface.settings:
       constraints:
         Range:
           min: 0
+    components_offered:
+      type: sequence
+      label: 'The components offered where a key chooses one, by id or by provider; empty for every one'
+      sequence:
+        type: string
+        label: 'A component id (provider:name), or a provider'
+        constraints:
+          NotBlank: {}
 
 # The defaults a site sets over the ones a resource declares. A config key
 # may not hold a dot, and a resource id and a key path do, so each entry

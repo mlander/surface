@@ -76,6 +76,7 @@ function my_module_data_surface_widget_info_alter(array &$definitions): void {
 | `string` | 10 | `string`, `email`, `uri`. | `textfield`, `email`, `url`; `textarea` when multiline; `password` for a secret |
 | `number` | 10 | `integer`, `float`. | `number` |
 | `checkbox` | 10 | `boolean`. | `checkbox`, never `#required` |
+| `json` | 1000 | What every other widget refused: a key of type `any` that holds no variants (a value typed as several JSON types, read from a schema), and a list the list widget refuses, its items lists, maps or `any`, where the form draws no collection (a list of maps inside a map is drawn as an item saying it is not drawn here). | `textarea` of pretty-printed JSON, its description naming the type; empty sends nothing, text that is not JSON is an error on the element |
 
 The weights say the selection rule out loud: the checkboxes and radios
 are asked first, and each claims only what its rule gives it; the
@@ -85,6 +86,18 @@ to list next, so it is no number or text field; the fieldset widget comes next, 
 definition that also resolves to options is still a select; the list
 widget takes a list with no choices; and the per-type widgets are the
 fallback.
+
+The `json` widget is the last resort, so the form draws every key it is
+declared with instead of throwing: a stopgap, to be replaced by a text
+field for a value of several scalar types and rows for a list of maps
+([roadmap](../ROADMAP.md), item 29;
+why: [decision](decisions.md#the-form-never-refuses-to-draw-a-declared-key)).
+The served contract names no widget for it. What it decodes goes
+through `accept()` and the key's own constraints, the JsonSchema
+constraint of a value read from a schema among them. A key of a data
+type no widget serves and the JSON widget does not take, such as
+`timestamp` or `datetime_iso8601`, still has no widget, and the manager
+throws naming it.
 
 ### Which element a list of choices is
 

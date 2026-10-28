@@ -51,6 +51,7 @@ use Drupal\data_surface_examples\Structure\VenueRoomStructure;
 use Drupal\data_surface_examples\Variants\CredentialSources;
 use Drupal\data_surface\Variants\ComponentProps;
 use Drupal\data_surface\Variants\ComponentSlots;
+use Drupal\data_surface\Variants\ComponentsOffered;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -903,13 +904,13 @@ final class ExamplesController extends ControllerBase {
   }
 
   /**
-   * Counts the lines of example 12's resource, provider and storage.
+   * Counts the lines of example 12's resource, providers and storage.
    *
    * @return int
    *   The lines of code; the components' schemas are none.
    */
   protected function spotlightLines(): int {
-    return CodeLines::count($this->file(SpotlightResource::class)) + CodeLines::count($this->file(ComponentProps::class)) + CodeLines::count($this->file(ComponentSlots::class)) + CodeLines::count($this->file(SpotlightStorage::class));
+    return CodeLines::count($this->file(SpotlightResource::class)) + CodeLines::count($this->file(ComponentProps::class)) + CodeLines::count($this->file(ComponentSlots::class)) + CodeLines::count($this->file(ComponentsOffered::class)) + CodeLines::count($this->file(SpotlightStorage::class));
   }
 
   /**

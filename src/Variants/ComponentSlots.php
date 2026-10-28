@@ -7,7 +7,6 @@ namespace Drupal\data_surface\Variants;
 use Drupal\Core\DependencyInjection\ContainerInjectionInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslationInterface;
-use Drupal\Core\Theme\ComponentPluginManager;
 use Drupal\data_surface\Resource\SiteList;
 use Drupal\data_surface\Resource\SiteListInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -16,9 +15,10 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * One variant per single-directory component, from its slots.
  *
  * The sibling of ComponentProps at `slots`, chosen by the same component:
- * every component the site has, in the order of their ids, each the
- * object of its slots, one key per slot. A component with no slot is a
- * variant with no keys, so the two lists offer the same components.
+ * every component the site offers (ComponentsOffered), in the order of
+ * their ids, each the object of its slots, one key per slot. A component
+ * with no slot is a variant with no keys, so the two lists offer the same
+ * components.
  *
  * Each slot holds one of three things, chosen by its `kind`: `text`, a
  * plain string; `component`, one nested component, its `component`, its
@@ -73,15 +73,22 @@ final class ComponentSlots implements SiteListInterface, ContainerInjectionInter
   protected ?array $definitions = NULL;
 
   /**
+   * The components the site offers, by id, in the order of their ids.
+   *
+   * @var array<string, array>|null
+   */
+  protected ?array $offered = NULL;
+
+  /**
    * Constructs the provider.
    *
-   * @param \Drupal\Core\Theme\ComponentPluginManager $components
-   *   The single-directory components the site has.
+   * @param \Drupal\data_surface\Variants\ComponentsOffered $components
+   *   The components the site has, and those it offers.
    * @param \Drupal\Core\StringTranslation\TranslationInterface $stringTranslation
    *   The string translation service.
    */
   public function __construct(
-    protected readonly ComponentPluginManager $components,
+    protected readonly ComponentsOffered $components,
     TranslationInterface $stringTranslation,
   ) {
     $this->stringTranslation = $stringTranslation;
@@ -91,16 +98,16 @@ final class ComponentSlots implements SiteListInterface, ContainerInjectionInter
    * {@inheritdoc}
    */
   public static function create(ContainerInterface $container): static {
-    return new static($container->get('plugin.manager.sdc'), $container->get('string_translation'));
+    return new static(ComponentsOffered::create($container), $container->get('string_translation'));
   }
 
   /**
    * {@inheritdoc}
    */
   public function list(): SiteList {
-    $variants = (new SiteList())->addCacheTags(['config:core.extension']);
+    $variants = (new SiteList())->addCacheTags(ComponentsOffered::CACHE_TAGS);
     $defs = [];
-    foreach ($this->definitions() as $id => $component) {
+    foreach ($this->offered() as $id => $component) {
       $variants->add($id, (string) ($component['name'] ?? $id), schema: ['$ref' => '#/$defs/' . $this->slots($id, 1, $defs)]);
     }
     ksort($defs);
@@ -133,12 +140,13 @@ final class ComponentSlots implements SiteListInterface, ContainerInjectionInter
    *
    * @return string[]
    *   The ids of the components it offers, in the order of their ids: every
-   *   component the site has when it expects nothing in particular; those
-   *   it names, by id or by tag, when it does; none for an empty list.
+   *   component the site offers (ComponentsOffered) when it expects
+   *   nothing in particular; those it names, by id or by tag, when it
+   *   does; none for an empty list.
    */
   public function expected(array $slot): array {
     if (!isset($slot['expected']) || !is_array($slot['expected'])) {
-      return array_keys($this->definitions());
+      return array_keys($this->offered());
     }
     [$ids, $tags] = $this->entries($slot);
     $offered = [];
@@ -384,14 +392,17 @@ final class ComponentSlots implements SiteListInterface, ContainerInjectionInter
    *   Each component's definition, by id, in the order of their ids.
    */
   protected function definitions(): array {
-    if ($this->definitions === NULL) {
-      $this->definitions = [];
-      foreach ($this->components->getDefinitions() as $id => $component) {
-        $this->definitions[(string) $id] = $component;
-      }
-      ksort($this->definitions);
-    }
-    return $this->definitions;
+    return $this->definitions ??= $this->components->all();
+  }
+
+  /**
+   * Gets the components the site offers to choose.
+   *
+   * @return array<string, array>
+   *   Each component's definition, by id, in the order of their ids.
+   */
+  protected function offered(): array {
+    return $this->offered ??= $this->components->offered();
   }
 
 }

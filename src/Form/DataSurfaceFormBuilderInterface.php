@@ -190,6 +190,21 @@ interface DataSurfaceFormBuilderInterface {
   public const PLACEHOLDER_KEY = '#data_surface_placeholder';
 
   /**
+   * Render key on a variant key's element: the variant it was drawn for.
+   *
+   * Holds the deciding key's name (`by`) and the variant drawn (`for`).
+   * When the deciding key's value in a submission is another, what was
+   * posted under the element was drawn for the variant no longer chosen:
+   * extraction reads nothing from it, and a rebuild draws the chosen
+   * variant from its defaults, or from what is stored when the stored
+   * value was written for it.
+   *
+   * Decision: see
+   * docs/decisions.md#an-extension-is-a-variant-the-site-adds-or-an-alter.
+   */
+  public const DRAWN_FOR_KEY = '#data_surface_drawn_for';
+
+  /**
    * Render key on an element its key's arrangement draws in a group.
    *
    * Holds the group's id, label, kind (`as`), whether it starts

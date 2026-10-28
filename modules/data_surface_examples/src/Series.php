@@ -293,6 +293,7 @@ final class Series {
           self::MODULE . 'src/Resource/SpotlightResource.php' => t('the resource: a component, and its props and slots as variants the component chooses'),
           'src/Variants/ComponentProps.php' => t("the provider of the props: one variant per component, read from its props schema; the main module's"),
           'src/Variants/ComponentSlots.php' => t("the provider of the slots: one variant per component, read from its metadata; the main module's"),
+          'src/Variants/ComponentsOffered.php' => t("the components both providers offer: every one, or those data_surface.settings:components_offered allows; the main module's"),
           self::MODULE . 'src/Storage/SpotlightStorage.php' => t('the storage: names the config object'),
           self::ROUTES . 'data_surface_examples.step12' => t('the route'),
           self::SCHEMA . 'data_surface_examples.spotlight' => t('the config schema, generated from the class'),

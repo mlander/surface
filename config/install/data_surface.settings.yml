@@ -5,3 +5,8 @@ reference_list_limit: 50
 # site, keys from the site) is spelled out in the full schema and the tool
 # listing; above it, the key is stated open and marked deferred.
 site_list_limit: 20
+# The single-directory components offered where a key chooses one: an
+# entry with a colon is a component id (provider:name), one without a
+# provider and every component it provides. Empty offers every component
+# the site has. A stored component left out is kept as stored.
+components_offered: []

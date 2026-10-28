@@ -2227,9 +2227,9 @@ final class SpotlightResource implements ResourceInterface {
 }
 ```
 
-The provider lists every component, the four this module ships among
-them, each by its id and its name, with its props as the component
-declares them. A prop typed by a PHP class takes a value only Twig code
+The provider lists every component the site offers, the four this
+module ships among them, each by its id and its name, with its props as
+the component declares them. A prop typed by a PHP class takes a value only Twig code
 passes, which nothing stores: that type is left out, as the reader would
 refuse it. It is the main module's, not this module's, since example 13's
 block reads the components through it too.
@@ -2247,28 +2247,26 @@ final class ComponentProps implements SiteListInterface, ContainerInjectionInter
   /**
    * Constructs the provider.
    *
-   * @param \Drupal\Core\Theme\ComponentPluginManager $components
-   *   The single-directory components the site has.
+   * @param \Drupal\data_surface\Variants\ComponentsOffered $components
+   *   The components the site offers.
    */
   public function __construct(
-    protected readonly ComponentPluginManager $components,
+    protected readonly ComponentsOffered $components,
   ) {}
 
   /**
    * {@inheritdoc}
    */
   public static function create(ContainerInterface $container): static {
-    return new static($container->get('plugin.manager.sdc'));
+    return new static(ComponentsOffered::create($container));
   }
 
   /**
    * {@inheritdoc}
    */
   public function list(): SiteList {
-    $variants = (new SiteList())->addCacheTags(['config:core.extension']);
-    $components = $this->components->getDefinitions();
-    ksort($components);
-    foreach ($components as $id => $component) {
+    $variants = (new SiteList())->addCacheTags(ComponentsOffered::CACHE_TAGS);
+    foreach ($this->components->offered() as $id => $component) {
       $variants->add((string) $id, (string) ($component['name'] ?? $id), schema: self::props($component['props'] ?? []));
     }
     return $variants;
@@ -2496,6 +2494,26 @@ drush tool:run data_surface:event.spotlight:configure --uid=1 --input='{"values"
 The narrowing tool is there only past the limit; the page's panel says
 which state the site is in, and why.
 
+A site can offer fewer components than it has:
+`data_surface.settings:components_offered` lists component ids
+(`provider:name`) and providers (an entry with no colon, every component
+it provides), and both providers offer only those; empty, the shipped
+value, offers every one. It shortens the list, where the site list limit
+only moves a long one out of the documents
+(why: [decision](../../docs/decisions.md#a-budget-for-what-the-site-decides)).
+To offer this module's four alone:
+
+```bash
+ddev drush config:set data_surface.settings components_offered.0 data_surface_examples
+```
+
+A stored component the setting leaves out is not lost: the chooser stands
+for it on its empty option ("- Keep data_surface_examples:card (no longer
+offered) -"), a save that leaves the chooser alone keeps the component,
+its props and its slots as stored, and every door reads them back as
+stored. Its props are not drawn until it is offered again, since the
+variants are the components offered.
+
 The config object holds the component's id, its props and its slots.
 Its config schema is written from the resource, and the props and the
 slots are `type: ignore` there: which components a site has is the
@@ -2541,8 +2559,9 @@ of code, counted without blank lines or comments:
 | File | What it is | Lines |
 | --- | --- | --- |
 | [`modules/data_surface_examples/src/Resource/SpotlightResource.php`](src/Resource/SpotlightResource.php) | the resource: a component, and its props and slots as variants the component chooses | 16 |
-| [`src/Variants/ComponentProps.php`](../../src/Variants/ComponentProps.php) | the provider of the props: one variant per component, read from its props schema; the main module's | 36 |
-| [`src/Variants/ComponentSlots.php`](../../src/Variants/ComponentSlots.php) | the provider of the slots: one variant per component, read from its metadata; the main module's | 198 |
+| [`src/Variants/ComponentProps.php`](../../src/Variants/ComponentProps.php) | the provider of the props: one variant per component, read from its props schema; the main module's | 34 |
+| [`src/Variants/ComponentSlots.php`](../../src/Variants/ComponentSlots.php) | the provider of the slots: one variant per component, read from its metadata; the main module's | 195 |
+| [`src/Variants/ComponentsOffered.php`](../../src/Variants/ComponentsOffered.php) | the components both providers offer: every one, or those data_surface.settings:components_offered allows; the main module's | 31 |
 | [`modules/data_surface_examples/src/Storage/SpotlightStorage.php`](src/Storage/SpotlightStorage.php) | the storage: names the config object | 3 |
 | [`modules/data_surface_examples/data_surface_examples.routing.yml`](data_surface_examples.routing.yml), entry `data_surface_examples.step12` | the route | 8 |
 | [`modules/data_surface_examples/config/schema/data_surface_examples.schema.yml`](config/schema/data_surface_examples.schema.yml), entry `data_surface_examples.spotlight` | the config schema, generated from the class | 15 |

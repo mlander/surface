@@ -46,3 +46,13 @@ function data_surface_post_update_reference_list_limit(): void {
 function data_surface_post_update_site_defaults(): void {
   data_surface_install_missing_config('data_surface');
 }
+
+/**
+ * Adds the components offered where a key chooses one: every one.
+ */
+function data_surface_post_update_components_offered(): void {
+  $config = \Drupal::configFactory()->getEditable('data_surface.settings');
+  if ($config->get('components_offered') === NULL) {
+    $config->set('components_offered', [])->save();
+  }
+}

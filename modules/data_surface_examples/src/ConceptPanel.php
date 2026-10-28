@@ -30,6 +30,7 @@ use Drupal\data_surface\ResourceBuild\ResourceRegistry;
 use Drupal\data_surface\Reference\References;
 use Drupal\data_surface\ResourceBuild\ResourcesInterface;
 use Drupal\data_surface\Variants\ComponentProps;
+use Drupal\data_surface\Variants\ComponentsOffered;
 use Drupal\data_surface_component_block\Structure\ComponentBlockStructure;
 use Drupal\data_surface_examples\Access\FeesAccess;
 use Drupal\data_surface_examples\Entity\EventVenue;
@@ -1194,11 +1195,11 @@ final class ConceptPanel {
    *
    * @return array{listed: bool, '@count': int, '@limit': int}
    *   Whether the documents and the tool listing spell every component out,
-   *   which they do while the site has at most the site list limit of them;
-   *   how many it has; and the limit.
+   *   which they do while the site offers at most the site list limit of
+   *   them; how many it offers (ComponentsOffered); and the limit.
    */
   protected function componentsListed(): array {
-    $count = count($this->components->getDefinitions());
+    $count = count($this->classResolver->getInstanceFromDefinition(ComponentsOffered::class)->offered());
     $limit = $this->budget?->limit() ?? PHP_INT_MAX;
     return ['listed' => $count <= $limit, '@count' => $count, '@limit' => $limit];
   }
