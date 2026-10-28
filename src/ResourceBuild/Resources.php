@@ -8,6 +8,7 @@ use Drupal\Core\Access\AccessResultInterface;
 use Drupal\Core\Cache\Cache;
 use Drupal\Core\Cache\CacheBackendInterface;
 use Drupal\Core\Config\TypedConfigManagerInterface;
+use Drupal\Core\Language\LanguageInterface;
 use Drupal\Core\Language\LanguageManagerInterface;
 use Drupal\Core\DependencyInjection\ClassResolverInterface;
 use Drupal\Core\Session\AccountInterface;
@@ -164,6 +165,21 @@ final class Resources implements ResourcesInterface {
    * route, the URL, the time) is built every time it is asked.
    */
   protected const KEPT_CONTEXTS = ['user', 'user.permissions', 'user.roles'];
+
+  /**
+   * The language context a build may vary by, kept and stored all the same.
+   *
+   * What core's language module puts on every configuration object
+   * (LanguageConfigFactoryOverride), so on a site with it every build
+   * that reads configuration carries it. Both keys name the language it
+   * stands for, the current interface language and the configuration
+   * override language (languages()); another language type is in
+   * neither key, so a build varying by one is built every time.
+   *
+   * Decision: see
+   * docs/decisions.md#the-static-build-is-cached-the-rest-is-per-request.
+   */
+  protected const LANGUAGE_CONTEXT = 'languages:' . LanguageInterface::TYPE_INTERFACE;
 
   /**
    * The sealed builds asked for lately, by memo key, the latest last.
@@ -452,7 +468,9 @@ final class Resources implements ResourcesInterface {
    * reference key lists its candidates, and the account kind: none
    * for a build for no account, the roles and permissions for one for the
    * account alone, and the account itself beside them for a build with
-   * every answer applied, which a runtime answer may read.
+   * every answer applied, which a runtime answer may read; and the
+   * languages a label read from configuration is in (languages()), so a
+   * process that serves two languages never hands one the other's.
    *
    * @param string $resource
    *   The class, or its id.
@@ -490,6 +508,7 @@ final class Resources implements ResourcesInterface {
         $this->declaring->holdsToSchema,
         $kind,
         $this->declaring->references()->limit(),
+        $this->languages(),
       ]));
     }
     catch (\Throwable) {
@@ -501,8 +520,9 @@ final class Resources implements ResourcesInterface {
    * Answers whether a sealed build may be kept for the rest of the request.
    *
    * Only what says it stays true until a tag of it is invalidated, and
-   * varies by nothing but the account the memo is keyed by: a build that
-   * expires, or varies by the route or the time, is built every time.
+   * varies by nothing but the account and the languages the memo is keyed
+   * by: a build that expires, or varies by the route or the time, is built
+   * every time.
    *
    * @param \Drupal\data_surface\DataSurfaceInterface $built
    *   The build.
@@ -515,7 +535,7 @@ final class Resources implements ResourcesInterface {
       return FALSE;
     }
     foreach ($built->getCacheContexts() as $context) {
-      if (!in_array($context, self::KEPT_CONTEXTS, TRUE) && !str_starts_with($context, 'user.roles:')) {
+      if (!in_array($context, self::KEPT_CONTEXTS, TRUE) && $context !== self::LANGUAGE_CONTEXT && !str_starts_with($context, 'user.roles:')) {
         return FALSE;
       }
     }
@@ -542,11 +562,22 @@ final class Resources implements ResourcesInterface {
     if ($this->buildCache === NULL || !$this->declaring->holdsToSchema) {
       return NULL;
     }
-    $languages = $this->languageManager === NULL ? [] : [
+    $hash = hash('xxh3', serialize([$key, $this->languages()]));
+    return 'declared:' . $this->registry->getDefinition($resource)->id . ':' . $hash;
+  }
+
+  /**
+   * Names the languages a label read from configuration may be in.
+   *
+   * @return string[]
+   *   The current interface language's id and the configuration override
+   *   language's, or none without a language manager.
+   */
+  protected function languages(): array {
+    return $this->languageManager === NULL ? [] : [
       $this->languageManager->getCurrentLanguage()->getId(),
       $this->languageManager->getConfigOverrideLanguage()->getId(),
     ];
-    return 'declared:' . $this->registry->getDefinition($resource)->id . ':' . hash('xxh3', serialize([$key, $languages]));
   }
 
   /**
@@ -635,10 +666,11 @@ final class Resources implements ResourcesInterface {
    * Keeps a build for no account in the build cache, or refuses it.
    *
    * Only one that stays true until a tag of it is invalidated and varies
-   * by nothing: no expiry and no cache context. Tagged with what it read
-   * (each provider's list, the site's defaults), what discovery found for
-   * each resource and structure it built, discovery's index, and
-   * KEPT_TAGS.
+   * by nothing the cache id does not name: no expiry, and no cache
+   * context but the interface language's (LANGUAGE_CONTEXT). Tagged with
+   * what it read (each provider's list, the site's defaults), what
+   * discovery found for each resource and structure it built, discovery's
+   * index, and KEPT_TAGS.
    *
    * @param string $cid
    *   Its cache id.
@@ -656,7 +688,7 @@ final class Resources implements ResourcesInterface {
    *   an object rather than by its id.
    */
   protected function keep(string $cid, string $resource, OperationContext $context, DataSurfaceInterface $built, array $visited): void {
-    if ($built->getCacheMaxAge() !== Cache::PERMANENT || $built->getCacheContexts() !== []) {
+    if ($built->getCacheMaxAge() !== Cache::PERMANENT || array_diff($built->getCacheContexts(), [self::LANGUAGE_CONTEXT]) !== []) {
       return;
     }
     $tags = Cache::mergeTags($built->getCacheTags(), $this->registry->getIndexCacheTags(), self::KEPT_TAGS);
@@ -704,6 +736,10 @@ final class Resources implements ResourcesInterface {
    * @internal
    */
   public function invalidateTags(array $tags): void {
+    // The defs a provider's entries share, read when one was built.
+    if ($tags !== []) {
+      SiteEntries::forget();
+    }
     // What a kept build read, with what each variant built since read.
     // Decision: see
     // docs/decisions.md#the-static-build-is-cached-the-rest-is-per-request.
@@ -741,6 +777,7 @@ final class Resources implements ResourcesInterface {
   public function forgetBuilds(): void {
     $this->builds = [];
     $this->readBuilds = [];
+    SiteEntries::forget();
     $this->attaching->forget();
     $this->gating->forget();
   }
@@ -1021,6 +1058,34 @@ final class Resources implements ResourcesInterface {
   }
 
   /**
+   * Answers whether a variant held unsettled holds no secret, unread.
+   *
+   * Read from the document the variant is read from, an entry a provider
+   * lists without its schema asking the provider for that entry alone; a
+   * build read from the build cache registers its owner's list first, as
+   * settleVariant() does.
+   *
+   * Decision: see
+   * docs/decisions.md#the-static-build-is-cached-the-rest-is-per-request.
+   *
+   * @param \Drupal\data_surface\ResourceBuild\VariantsToSettle $at
+   *   Where the variant sits.
+   * @param string $name
+   *   The variant, by name.
+   *
+   * @return bool
+   *   TRUE when nothing in it can be secret.
+   *
+   * @internal
+   */
+  public function variantHoldsNoSecret(VariantsToSettle $at, string $name): bool {
+    if (!$this->registry->hasDefinition($name)) {
+      $this->attaching->registerVariantsOf($at->ancestry[count($at->ancestry) - 1]['class']);
+    }
+    return $this->attaching->readHoldsNoSecret($this->registry->getDefinition($name), $this->classResolver->getInstanceFromDefinition(SiteEntries::class));
+  }
+
+  /**
    * Builds a structure read from a schema once for every site it is at.
    *
    * Kept for the rest of the request by its name, its context and the
@@ -1045,6 +1110,7 @@ final class Resources implements ResourcesInterface {
       $this->gating->forNoAccount,
       $this->declaring->holdsToSchema,
       $this->declaring->references()->limit(),
+      $this->languages(),
     ]));
     if (isset($this->readBuilds[$key])) {
       $this->buildCounts['reused']++;

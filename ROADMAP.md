@@ -1506,6 +1506,22 @@ renames sit in A because they are cheapest before new code exists.
     lists or of `any`; and a data type a module adds that no widget
     names (`filter_format`), which still throws.
 
+30. **Memory at PHP's stock limit.** DONE 2026-10-28
+    (`docs/decisions.md#the-static-build-is-cached-the-rest-is-per-request`,
+    `docs/performance.md#memory`). Example 12 ran out of 128 MB on a site
+    with the development site's 312 components. A provider answers an
+    entry's schema when a door reads it (`EntrySchemasInterface`), a
+    prepared document is shared, the secrets walk asks a document before
+    building its variant, and the memo keeps builds that vary by the
+    interface language, which a site with core's language module puts on
+    every one. Every example page now answers under 128 MB, example 12 at
+    92 to 96 MB where it was 144. Held by `ManyListedVariantsTest` and
+    `LanguageMemoTest`. Open: reading one slots variant reads every
+    component's defs, about 42 KB each (a provider answering one def by
+    name, and read names hashed per def, would read only what the entry
+    reaches); a refusal naming the variants that declare a stray key
+    builds every variant (`Variants::owners()`).
+
 ## Maintenance
 
 - **Functional tests convert to kernel tests as units touch them**, by

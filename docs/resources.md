@@ -2083,6 +2083,19 @@ against the site list limit by itself: on a site with 312 components,
 the props and slots are `deferred` at every depth, and the documents hold
 the chosen component's defs alone.
 
+A long list need not be read whole to be listed. A provider that
+implements `EntrySchemasInterface` lists each entry by value and label
+alone and answers one entry's schema when a door reads that variant,
+`entrySchema($id)`, and the defs the entries share only when one of them
+refers to them, `entryDefs()`. What the two answer is what `list()` would
+have said with `schema:` and `addDefs()`, so a variant reads the same
+either way; an entry the list gives a schema keeps it. `ComponentProps`
+and `ComponentSlots` are both: building the spotlight reads no component,
+the full schema past the limit reads none, the form and `?choose=` read
+the chosen one, and the pipeline reads each entry's schema, without
+building it, to know which keys are secret (why:
+[decision](decisions.md#the-static-build-is-cached-the-rest-is-per-request)).
+
 ### A child that cannot be listed
 
 Variants cover a child chosen from a set of values someone can name. A

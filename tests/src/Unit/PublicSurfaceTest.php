@@ -29,6 +29,11 @@ use PHPUnit\Framework\Attributes\Group;
  * Grown on 2026-10-27 by one blueprint method, `resolve()`, a key read
  * otherwise at use than it is stored
  * (docs/decisions.md#a-key-may-stand-for-another-at-use): 16 methods.
+ * Grown on 2026-10-28 by one interface, EntrySchemasInterface, a provider
+ * of variants that answers an entry's schema only when a door reads it,
+ * so a long list costs a request the entries it reads
+ * (docs/decisions.md#the-static-build-is-cached-the-rest-is-per-request):
+ * 21 interfaces.
  *
  * @see docs/decisions.md#the-surface-was-counted-and-cut
  */
@@ -52,7 +57,7 @@ class PublicSurfaceTest extends UnitTestCase {
     'attributes' => 9,
     'attribute arguments' => 31,
     'blueprint methods' => 16,
-    'interfaces' => 20,
+    'interfaces' => 21,
   ];
 
   /**

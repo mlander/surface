@@ -49,6 +49,9 @@ final class VariantToSettle implements SettlesChildInterface {
    * @param bool $read
    *   Whether it is a structure read from a schema, built once per
    *   request wherever it is attached.
+   * @param bool|null $noSecret
+   *   Whether the document it is read from states no secret, so nothing
+   *   in it is one (SchemaReader::holdsNoSecret()); NULL until asked.
    */
   public function __construct(
     private VariantsToSettle $at,
@@ -56,6 +59,7 @@ final class VariantToSettle implements SettlesChildInterface {
     private ?OperationContext $context,
     private readonly ?string $locked,
     private readonly bool $read,
+    private ?bool $noSecret = NULL,
   ) {
   }
 
@@ -79,6 +83,15 @@ final class VariantToSettle implements SettlesChildInterface {
   }
 
   /**
+   * {@inheritdoc}
+   */
+  public function holdsNoSecret(): bool {
+    // Asked of its document, not of the variant built: a structure read
+    // from a schema says each secret where the schema says it.
+    return $this->read && ($this->noSecret ??= $this->at->holdsNoSecret($this->name));
+  }
+
+  /**
    * Stores what builds a variant held for no account, else the variant.
    *
    * @return array
@@ -92,6 +105,7 @@ final class VariantToSettle implements SettlesChildInterface {
         'context' => $this->context,
         'locked' => $this->locked,
         'read' => $this->read,
+        'noSecret' => $this->noSecret,
       ];
     }
     return [
@@ -100,6 +114,7 @@ final class VariantToSettle implements SettlesChildInterface {
       'name' => $this->name,
       'locked' => $this->locked,
       'read' => $this->read,
+      'noSecret' => $this->noSecret,
     ];
   }
 
@@ -116,6 +131,7 @@ final class VariantToSettle implements SettlesChildInterface {
     $this->context = $data['context'] ?? NULL;
     $this->locked = $data['locked'];
     $this->read = $data['read'];
+    $this->noSecret = $data['noSecret'] ?? NULL;
   }
 
 }

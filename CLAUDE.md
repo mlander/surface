@@ -135,7 +135,13 @@ the record of the rework that brought the module to the pattern.
   Defs the entries share are listed once, `SiteList::addDefs()`, and
   each read structure is built once per request and context, wherever it
   is attached (`Resources::buildRead()`), so variants nest: a component's
-  slots, each holding a component with its own props and slots
+  slots, each holding a component with its own props and slots. A
+  provider implementing `EntrySchemasInterface` lists values and labels
+  alone and answers `entrySchema($id)` and `entryDefs()` when a door
+  reads a variant (`SiteEntries`), as `ComponentProps` and
+  `ComponentSlots` do; the pipeline asks an unsettled variant's document,
+  not the variant, whether it holds a secret
+  (`SchemaReader::holdsNoSecret()`)
   (`docs/resources.md#variants-from-the-site`,
   `docs/decisions.md#a-slot-holds-text-a-component-or-components`).
 - **Reading a schema**: `Contract\SchemaReader`
@@ -469,7 +475,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 The full lane's phpunit line reads, as of this writing:
 
 ```
-phpunit: Tests: 1694, Assertions: 38903, Errors: 0, Failures: 0, Skipped: 3. Classes: 236 of 236, 8 at a time, browser classes 4.
+phpunit: Tests: 1701, Assertions: 38988, Errors: 0, Failures: 0, Skipped: 3. Classes: 238 of 238, 8 at a time, browser classes 4.
 ```
 
 the same counts a plain phpunit run of the tree gives. The skipped

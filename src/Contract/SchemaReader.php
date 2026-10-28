@@ -99,6 +99,26 @@ final class SchemaReader {
   protected const TYPES = ['string', 'integer', 'number', 'boolean', 'object', 'array', 'null'];
 
   /**
+   * The JSON length from which a prepared document is kept and shared.
+   *
+   * Below it, preparing again costs less than keeping it: a component's
+   * props, a field type's settings.
+   */
+  protected const SHARED_PREPARED = 65536;
+
+  /**
+   * How many large prepared documents are kept, the oldest let go first.
+   */
+  protected const PREPARED_KEPT = 8;
+
+  /**
+   * The large documents prepared so far, by a hash of their JSON.
+   *
+   * @var array<string, array>
+   */
+  private static array $prepared = [];
+
+  /**
    * The keywords that hold one subschema.
    */
   protected const SINGLE = [
@@ -410,9 +430,125 @@ final class SchemaReader {
    */
   public static function prepared(array $document): array {
     // Read as JSON: an object the emitter holds as a stdClass (an empty
-    // map, the variants' map) is an array like any other.
-    $decoded = json_decode((string) json_encode($document, JSON_PRESERVE_ZERO_FRACTION), TRUE);
-    return static::localized(SchemaResolver::restored(static::upconvert(is_array($decoded) ? $decoded : [])));
+    // map, the variants' map) is an array like any other. What this
+    // answers is a function of the JSON alone, so a large document is
+    // prepared once and shared, however many builds read it.
+    // Decision: see
+    // docs/decisions.md#the-static-build-is-cached-the-rest-is-per-request.
+    $json = json_encode($document, JSON_PRESERVE_ZERO_FRACTION);
+    $key = $json === FALSE || strlen($json) < self::SHARED_PREPARED ? NULL : hash('xxh128', $json);
+    if ($key !== NULL && isset(self::$prepared[$key])) {
+      $kept = self::$prepared[$key];
+      unset(self::$prepared[$key]);
+      return self::$prepared[$key] = $kept;
+    }
+    // A document holding no object decodes to itself: it is read as it
+    // is, so it shares its arrays and strings with what the caller holds.
+    $decoded = match (TRUE) {
+      $json === FALSE => [],
+      static::decodesToItself($document) => $document,
+      default => json_decode($json, TRUE),
+    };
+    $prepared = static::localized(SchemaResolver::restored(static::upconvert(is_array($decoded) ? $decoded : [])));
+    if ($key !== NULL) {
+      self::$prepared[$key] = $prepared;
+      if (count(self::$prepared) > self::PREPARED_KEPT) {
+        unset(self::$prepared[array_key_first(self::$prepared)]);
+      }
+    }
+    return $prepared;
+  }
+
+  /**
+   * Answers whether a document is what decoding its JSON gives back.
+   *
+   * It is when it holds no object at any depth (a decoded object is an
+   * array) and floats are written to round trip, as PHP writes them by
+   * default.
+   *
+   * @param array $document
+   *   The document.
+   *
+   * @return bool
+   *   TRUE when JSON would give the same array back.
+   */
+  protected static function decodesToItself(array $document): bool {
+    if ((string) ini_get('serialize_precision') !== '-1') {
+      return FALSE;
+    }
+    foreach ($document as $value) {
+      if (is_object($value) || (is_array($value) && !static::decodesToItself($value))) {
+        return FALSE;
+      }
+    }
+    return TRUE;
+  }
+
+  /**
+   * Answers whether no structure read from a document holds a secret.
+   *
+   * A key read from a document is secret only where its schema says
+   * `writeOnly: true` (finished()), or where it holds a named shape, whose
+   * own definition says what it says. A document that says neither
+   * anywhere, at any depth and in any def, holds no secret in any
+   * structure read from it, so a door that only asks for secrets need not
+   * build one to know. Read with a margin: a `writeOnly` key holding
+   * TRUE anywhere, or any def a shape is known by, answers FALSE.
+   *
+   * Decision: see
+   * docs/decisions.md#the-static-build-is-cached-the-rest-is-per-request.
+   *
+   * @param array $root
+   *   The document, prepared.
+   * @param \Closure(string): bool $isShape
+   *   Whether the site has a shape of an id.
+   *
+   * @return bool
+   *   TRUE when nothing read from it can be secret.
+   */
+  public static function holdsNoSecret(array $root, \Closure $isShape): bool {
+    $defs = [];
+    if (!static::writesNoSecret($root, $defs)) {
+      return FALSE;
+    }
+    foreach (array_keys(is_array($root['$defs'] ?? NULL) ? $root['$defs'] : []) as $name) {
+      $defs[(string) $name] = TRUE;
+    }
+    foreach (array_keys($defs) as $name) {
+      if ($isShape((string) $name)) {
+        return FALSE;
+      }
+    }
+    return TRUE;
+  }
+
+  /**
+   * Looks through a schema for `writeOnly: true`, noting each def it names.
+   *
+   * @param array $schema
+   *   The schema, or any value inside it.
+   * @param array<string, true> $defs
+   *   Collects the defs a `$ref` names.
+   *
+   * @return bool
+   *   FALSE as soon as one is found.
+   */
+  protected static function writesNoSecret(array $schema, array &$defs): bool {
+    if (($schema['writeOnly'] ?? NULL) === TRUE) {
+      return FALSE;
+    }
+    if (is_string($schema['$ref'] ?? NULL)) {
+      $name = SchemaResolver::defName($schema['$ref']);
+      if ($name !== NULL) {
+        $defs[$name] = TRUE;
+      }
+    }
+    foreach ($schema as $value) {
+      if (is_array($value) && !static::writesNoSecret($value, $defs)) {
+        return FALSE;
+      }
+    }
+    return TRUE;
   }
 
   /**
@@ -479,7 +615,11 @@ final class SchemaReader {
         $schema['enum'][] = NULL;
       }
     }
-    unset($schema['nullable']);
+    // Each change only where there is one, so a subschema with nothing
+    // to convert stays the array it was, shared with what it came from.
+    if (array_key_exists('nullable', $schema)) {
+      unset($schema['nullable']);
+    }
     if (isset($schema['items']) && is_array($schema['items']) && array_is_list($schema['items']) && $schema['items'] !== []) {
       $schema['prefixItems'] = $schema['items'];
       unset($schema['items']);
@@ -487,7 +627,9 @@ final class SchemaReader {
         $schema['items'] = $schema['additionalItems'];
       }
     }
-    unset($schema['additionalItems']);
+    if (array_key_exists('additionalItems', $schema)) {
+      unset($schema['additionalItems']);
+    }
     if (isset($schema['dependencies']) && is_array($schema['dependencies'])) {
       $split = [];
       foreach ($schema['dependencies'] as $name => $dependency) {
@@ -500,15 +642,24 @@ final class SchemaReader {
         continue;
       }
       if (in_array($keyword, self::SINGLE, TRUE) && !array_is_list($value)) {
-        $schema[$keyword] = static::upconverted($value);
+        $converted = static::upconverted($value);
+        if ($converted !== $value) {
+          $schema[$keyword] = $converted;
+        }
       }
       elseif (in_array($keyword, self::LISTS, TRUE) && array_is_list($value)) {
-        $schema[$keyword] = array_map(static fn (mixed $member): mixed => is_array($member) ? static::upconverted($member) : $member, $value);
+        $converted = array_map(static fn (mixed $member): mixed => is_array($member) ? static::upconverted($member) : $member, $value);
+        if ($converted !== $value) {
+          $schema[$keyword] = $converted;
+        }
       }
       elseif (in_array($keyword, self::MAPS, TRUE)) {
         foreach ($value as $name => $member) {
           if (is_array($member)) {
-            $schema[$keyword][$name] = static::upconverted($member);
+            $converted = static::upconverted($member);
+            if ($converted !== $member) {
+              $schema[$keyword][$name] = $converted;
+            }
           }
         }
       }
@@ -598,7 +749,10 @@ final class SchemaReader {
     foreach (['properties', '$defs'] as $keyword) {
       foreach (is_array($frame[$keyword] ?? NULL) ? $frame[$keyword] : [] as $name => $property) {
         if (is_array($property) && (isset($property['properties']) || isset($property['$defs']))) {
-          $frame[$keyword][$name] = static::localizedIn($property, $root, $moved);
+          $localized = static::localizedIn($property, $root, $moved);
+          if ($localized !== $property) {
+            $frame[$keyword][$name] = $localized;
+          }
         }
       }
     }

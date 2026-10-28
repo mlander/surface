@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Drupal\data_surface\Variants;
 
 use Drupal\Core\DependencyInjection\ContainerInjectionInterface;
+use Drupal\data_surface\Resource\EntrySchemasInterface;
 use Drupal\data_surface\Resource\SiteList;
-use Drupal\data_surface\Resource\SiteListInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -15,13 +15,14 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * Every component the site's modules and themes provide, or those
  * `data_surface.settings:components_offered` allows (ComponentsOffered),
  * in the order of their ids, each labeled with its name, its props schema
- * as the component declares it. Which components there are follows from
+ * as the component declares it, read only when a door reads that
+ * component's variant (entrySchema()). Which components there are follows from
  * the extensions installed and the setting, so the list is cached by both
  * configurations' tags. Example 12 reads the props of its spotlight with
  * it, and the component block of data_surface_component_block the props
  * of a placed block.
  */
-final class ComponentProps implements SiteListInterface, ContainerInjectionInterface {
+final class ComponentProps implements EntrySchemasInterface, ContainerInjectionInterface {
 
   /**
    * The JSON Schema types; a component may also name a PHP class.
@@ -51,9 +52,23 @@ final class ComponentProps implements SiteListInterface, ContainerInjectionInter
   public function list(): SiteList {
     $variants = (new SiteList())->addCacheTags(ComponentsOffered::CACHE_TAGS);
     foreach ($this->components->offered() as $id => $component) {
-      $variants->add((string) $id, (string) ($component['name'] ?? $id), schema: self::props($component['props'] ?? []));
+      $variants->add((string) $id, (string) ($component['name'] ?? $id));
     }
     return $variants;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function entrySchema(string $id): array {
+    return self::props($this->components->all()[$id]['props'] ?? []);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function entryDefs(): array {
+    return [];
   }
 
   /**

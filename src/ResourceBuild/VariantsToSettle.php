@@ -106,6 +106,20 @@ final class VariantsToSettle {
   }
 
   /**
+   * Answers whether one of the variants holds no secret, without building it.
+   *
+   * @param string $name
+   *   The variant, by name.
+   *
+   * @return bool
+   *   TRUE when the document it is read from states none; FALSE when it
+   *   may, or there is no build step to ask.
+   */
+  public function holdsNoSecret(string $name): bool {
+    return $this->resources?->variantHoldsNoSecret($this, $name) ?? FALSE;
+  }
+
+  /**
    * Answers whether the variants may be stored as what builds them.
    *
    * @return bool

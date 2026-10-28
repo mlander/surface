@@ -146,6 +146,23 @@ final class Attachment {
   }
 
   /**
+   * Answers whether the child is unsettled and known to hold no secret.
+   *
+   * What a door walking every variant for its secrets asks first: such a
+   * child is left unsettled, since building it would find none.
+   *
+   * Decision: see
+   * docs/decisions.md#the-static-build-is-cached-the-rest-is-per-request.
+   *
+   * @return bool
+   *   TRUE for a child nothing has read yet, read from a document that
+   *   states no secret; FALSE otherwise, built or not.
+   */
+  public function holdsNoSecretUnsettled(): bool {
+    return $this->holds instanceof SettlesChildInterface && $this->holds->settled() === NULL && $this->holds->holdsNoSecret();
+  }
+
+  /**
    * Returns the same attachment with its ports wired.
    *
    * @param array<string, string> $reads
