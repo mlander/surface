@@ -367,7 +367,7 @@ class ExamplesStepsTest extends DataSurfaceKernelTestBase {
     $form = $this->container->get('form_builder')->getForm(DataSurfaceOperationForm::class);
     $panel = $form[DataSurfaceOperationForm::SURFACE_KEY][DataSurfaceOperationForm::PANEL_KEY][ExamplePanels::CONTRACT];
     $this->assertSame('The schema for these answers', (string) $panel['contract']['#title']);
-    $contract = json_decode(htmlspecialchars_decode((string) $panel['contract']['json']['#value']), TRUE);
+    $contract = json_decode((string) $panel['contract']['json']['#code'], TRUE);
     $this->assertSame('https://json-schema.org/draft/2020-12/schema', $contract['$schema']);
     $branches = [];
     foreach ($contract['allOf'] as $branch) {
@@ -391,7 +391,7 @@ class ExamplesStepsTest extends DataSurfaceKernelTestBase {
     // the table says is "one of Main hall, East room" lists all six here.
     $this->assertSame('The full schema, for any answers', (string) $panel['full']['#title']);
     $this->assertStringContainsString('does not change when an answer changes', (string) $panel['full']['note']['#markup']);
-    $full = json_decode(htmlspecialchars_decode((string) $panel['full']['json']['#value']), TRUE);
+    $full = json_decode((string) $panel['full']['json']['#code'], TRUE);
     $this->assertCount(2, $contract['properties']['room']['oneOf']);
     $this->assertCount(6, $full['properties']['room']['oneOf']);
     $this->assertArrayNotHasKey('maximum', $full['properties']['capacity'], 'With no room, no upper bound.');
@@ -413,7 +413,7 @@ class ExamplesStepsTest extends DataSurfaceKernelTestBase {
     $this->assertStringContainsString('What the Tool API can advertise', (string) $panel['tool']['#title']);
     $this->assertStringContainsString('data_surface:registration.step3:configure', (string) $panel['tool']['#title']);
     $this->assertStringContainsString('cannot say a shape chosen by a sibling key', (string) $panel['tool']['note']['#markup']);
-    $schema = json_decode(htmlspecialchars_decode((string) $panel['tool']['json']['#value']), TRUE);
+    $schema = json_decode((string) $panel['tool']['json']['#code'], TRUE);
     $this->assertSame(['values', 'dry_run'], array_keys($schema['properties']));
     $this->assertArrayNotHasKey('allOf', $schema['properties']['values']);
   }

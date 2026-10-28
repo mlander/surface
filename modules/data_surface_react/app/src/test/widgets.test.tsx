@@ -966,3 +966,25 @@ describe("a module's widget the page has no field for", () => {
     expect(screen.getByText('Not editable here: no widget claims this key.')).toBeInTheDocument();
   });
 });
+
+describe('the contract JSON', () => {
+  it('is highlighted by Prism, each token in a span, and every part of the text escaped', () => {
+    const title = '<b>Fair & "fun"</b>';
+    render(
+      <ContractPanel
+        contract={{ resource: 'example', operation: 'configure', label: null, stale: [], values: { title }, schema: object({}) }}
+        full={object({ title: { title: 'Title', type: 'string', 'x-surface': x('text') } })}
+        values={{}}
+      />,
+    );
+    const blocks = document.querySelectorAll('details.dsr-contract__json > pre.language-json > code.language-json');
+    expect(blocks).toHaveLength(2);
+    const now = blocks[0] as HTMLElement;
+    // The text reads back as the JSON itself, the title's markup as text.
+    expect(JSON.parse(now.textContent ?? '')).toMatchObject({ resource: 'example', values: { title } });
+    expect(now.querySelector('b')).toBeNull();
+    expect(now.querySelector('span.token.property')?.textContent).toBe('"resource"');
+    expect(Array.from(now.querySelectorAll('span.token.string')).map((token) => token.textContent)).toContain(JSON.stringify(title));
+    expect((blocks[1] as HTMLElement).querySelector('span.token.property')).not.toBeNull();
+  });
+});

@@ -48,6 +48,15 @@ keeps its settings in a config object of its own
 `.program`, `.doors`, `.spotlight`, `.mailer` and `.webhook`), so the examples never write over
 each other.
 
+Every code block on the pages is highlighted with Prism 1.30.0: the
+contract panel's JSON, the commands and their answers, and each file
+shown whole, by its extension. The core, the JSON, YAML, PHP, Twig and
+Bash languages and the default theme come from cdnjs, each pinned and
+held to its integrity hash (`data_surface.libraries.yml`), as
+`data_surface_openapi` loads Swagger UI. The React page bundles Prism
+for its JSON and takes the same theme. When the CDN cannot be reached,
+the blocks show as plain text.
+
 To take the examples again from the start, follow **Reset to defaults**
 on the landing page (`/surface-examples/reset`). It puts every config
 object back to the files the module ships in `config/install`, the

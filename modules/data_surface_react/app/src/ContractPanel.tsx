@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import type { Contract, Schema, Values } from './contract';
 import { choices, inlineSchema, isObject, jsonType, resolveVariants } from './contract';
+import { highlightJson } from './highlight';
 
 interface Row {
   path: string;
@@ -129,6 +130,17 @@ function rows(schema: Schema, values: Values, prefix = ''): Row[] {
  * narrowed: here, naming the keys, or by the server, naming the key and
  * the marker that sent it there.
  */
+/** Shows a value as pretty-printed JSON, highlighted by Prism. */
+function Json({ value }: { value: unknown }): JSX.Element {
+  // Prism's own markup of a string this app wrote, every part of it escaped.
+  const html = useMemo(() => highlightJson(JSON.stringify(value, null, 2)), [value]);
+  return (
+    <pre className="language-json">
+      <code className="language-json" dangerouslySetInnerHTML={{ __html: html }} />
+    </pre>
+  );
+}
+
 export function ContractPanel({
   contract,
   full,
@@ -190,12 +202,12 @@ export function ContractPanel({
       </div>
       <details className="dsr-contract__json">
         <summary>JSON</summary>
-        <pre>{JSON.stringify(contract, null, 2)}</pre>
+        <Json value={contract} />
       </details>
       {full ? (
         <details className="dsr-contract__json">
           <summary>The full schema, for any answers</summary>
-          <pre>{JSON.stringify(full, null, 2)}</pre>
+          <Json value={full} />
         </details>
       ) : null}
     </details>

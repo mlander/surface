@@ -7451,6 +7451,13 @@ door spells a path. The endpoint table is in
   runs a CDN's script on the site's origin, which a site grants to the
   roles it chooses, and `access content` belongs to node, which the
   submodule does not need.
+  The code blocks the module renders are highlighted the same way:
+  Prism (`data_surface/prism`, attached by the `data_surface_code`
+  element) from cdnjs, the version pinned, each file held to its
+  integrity hash, its core and only the languages the blocks are in, so
+  no language is fetched at run time. It takes no permission of its own:
+  it is attached only beside a code block, on pages already behind the
+  permissions of the example or the operation they show.
 
 The tool and HTTP doors now agree: one operation, one call, a dry run as
 a flag. (`ServedPaths`, `ServedTarget`, `ResourceApiController`,

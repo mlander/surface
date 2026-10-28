@@ -48,9 +48,9 @@ trait ExampleFilesPanelTrait {
       if (Series::whole($file)) {
         $this->assertNotNull($whole, sprintf('%s is short, so it is shown whole.', $file));
         $this->assertNull($whole->getAttribute('open'));
-        $pre = $whole->find('css', 'pre');
-        $this->assertNotNull($pre);
-        $this->assertSame(Series::text($file), htmlspecialchars_decode($pre->getHtml(), ENT_QUOTES), sprintf('%s is shown whole as it is.', $file));
+        $code = $whole->find('css', 'pre > code');
+        $this->assertNotNull($code);
+        $this->assertSame(Series::text($file), htmlspecialchars_decode($code->getHtml(), ENT_QUOTES), sprintf('%s is shown whole as it is.', $file));
       }
       else {
         $this->assertNull($whole, sprintf('%s is long, so it is linked, not shown.', $file));

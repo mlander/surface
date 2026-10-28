@@ -479,13 +479,13 @@ class ReferenceKeysTest extends DataSurfaceKernelTestBase {
       ['page', 'select', '2'],
       ['thing', 'fieldset', '—'],
     ], array_map(static fn (array $row): array => [$row[0], $row[2], $row[3]], array_slice($concept['keys']['#rows'], 0, 4)));
-    $past = json_decode(htmlspecialchars_decode((string) $concept['past']['content']['#value']), TRUE);
+    $past = json_decode((string) $concept['past']['content']['#code'], TRUE);
     $this->assertSame('autocomplete', $past['venue']['x-surface']['widget']);
     $this->assertArrayNotHasKey('oneOf', $past['contact']);
-    $listing = json_decode(htmlspecialchars_decode((string) $concept['listing']['content']['#value']), TRUE);
+    $listing = json_decode((string) $concept['listing']['content']['#code'], TRUE);
     $this->assertSame([1, 2], $listing['now']['contact']['enum'], 'Derived as the anonymous account: the active users, admin and the sponsor.');
     $this->assertStringContainsString('GET /surface-api/event.sponsorship:lookup?key=/contact&q={text}', $listing['past the limit']['contact']['description']);
-    $lookups = htmlspecialchars_decode((string) $concept['lookup']['content']['#value']);
+    $lookups = (string) $concept['lookup']['content']['#code'];
     $this->assertStringContainsString("GET /surface-api/event.sponsorship:lookup?key=/venue&q=riv&limit=10\n200 {\"key\":\"/venue\",\"entityType\":\"event_venue\",\"bundles\":[],\"items\":[{\"id\":\"riverside\",\"label\":\"Riverside Hall\"}]}", $lookups);
     $this->assertStringContainsString("GET /surface-api/event.sponsorship:lookup?key=/setting&type=node&q=Sponsor\n404 ", $lookups, 'Node is no config entity.');
     $this->assertSame([

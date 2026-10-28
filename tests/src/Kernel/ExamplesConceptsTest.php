@@ -582,11 +582,11 @@ class ExamplesConceptsTest extends DataSurfaceKernelTestBase {
     $this->assertArrayHasKey('conditionals', $panels[ExamplePanels::CONCEPT]);
     $bulletin = $panels[ExamplePanels::FILES]['files']['#items'][0];
     $this->assertSame(Series::MODULE . 'src/Resource/BulletinResource.php', $bulletin['#wrapper_attributes']['data-file']);
-    $rules = htmlspecialchars_decode((string) $bulletin['whole']['text']['#value']);
+    $rules = (string) $bulletin['whole']['text']['#code'];
     $this->assertStringContainsString("    \$inputs->narrow('send_day')\n      ->when(Condition::equals('frequency', 'monthly'))\n      ->doesNotApply();", $rules);
     // Example 10's two accounts and its facts.
     $panel = $this->formAt('data_surface_examples.step10')[DataSurfaceOperationForm::PANEL_KEY][ExamplePanels::CONCEPT];
-    $accounts = json_decode(htmlspecialchars_decode((string) $panel['accounts']['content']['#value']), TRUE);
+    $accounts = json_decode((string) $panel['accounts']['content']['#code'], TRUE);
     $this->assertTrue($accounts['you']['property'][ContractEmitter::EXTENSION]['live']);
     $this->assertTrue($accounts['without the permission']['property']['readOnly']);
     $this->assertStringContainsString('Enable data_surface_examples_workflow and reload', (string) $panel['workflow']['#markup'], 'Without the workflow module, the panel says how to see its answers.');
@@ -604,17 +604,17 @@ class ExamplesConceptsTest extends DataSurfaceKernelTestBase {
     ], $panel['facts']['#rows'][1]);
     // Example 12's component, its schema beside the structure it became.
     $panel = $this->formAt('data_surface_examples.step12')[DataSurfaceOperationForm::PANEL_KEY][ExamplePanels::CONCEPT];
-    $read = json_decode(htmlspecialchars_decode((string) $panel['read']['content']['#value']), TRUE);
+    $read = json_decode((string) $panel['read']['content']['#code'], TRUE);
     $this->assertSame(['heading'], $read['schema']['required']);
     $this->assertSame('event.spotlight.props.data_surface_examples:card', $read['structure']['title']);
-    $notes = json_decode(htmlspecialchars_decode((string) $panel['notes']['content']['#value']), TRUE);
+    $notes = json_decode((string) $panel['notes']['content']['#code'], TRUE);
     $this->assertSame(['/properties/link/additionalProperties' => 'Read closed: a map holds the keys it declares, and a key the schema leaves open is refused.'], $notes);
-    $contract = json_decode(htmlspecialchars_decode((string) $panel['contract']['content']['#value']), TRUE);
+    $contract = json_decode((string) $panel['contract']['content']['#code'], TRUE);
     $this->assertSame(self::COMPONENTS, array_column($contract['component']['oneOf'], 'const'));
     $this->assertSame('data_surface_examples:card', $contract['allOf'][0]['if']['properties']['component']['const']);
     $this->assertSame(['props', 'slots'], array_merge(...array_map(static fn (array $branch): array => array_keys($branch['then']['properties']), $contract['allOf'])), 'One conditional per key the component chooses.');
     $this->assertSame('#/$defs/event.spotlight.slots.data_surface_examples:card', $contract['slots'][ContractEmitter::EXTENSION]['variants']['data_surface_examples:card']);
-    $slots = json_decode(htmlspecialchars_decode((string) $panel['slots']['content']['#value']), TRUE);
+    $slots = json_decode((string) $panel['slots']['content']['#code'], TRUE);
     $this->assertSame([], $slots['metadata']['body']['expected']);
     $this->assertSame('event.spotlight.slots.data_surface_examples:card', $slots['structure']['title']);
     $this->assertSame(['component.slot.text'], array_keys($slots['slot']));
@@ -664,15 +664,15 @@ class ExamplesConceptsTest extends DataSurfaceKernelTestBase {
     $items = array_map(static fn ($item): string => strip_tags((string) (is_array($item) ? ($item['#title'] ?? $item['#markup'] ?? '') : $item)), $page['how']['#items']);
     $this->assertSame('Both are enabled on this site now.', $items[1]);
     $this->assertSame('Place a component block in stark: /admin/structure/block/add/data_surface_component/stark', $items[4]);
-    [$spotlight, $block_lines] = array_map(static fn (array $cell): string => htmlspecialchars_decode((string) $cell['data']['#value']), $page['parts']['two_lines']['#rows'][0]);
+    [$spotlight, $block_lines] = array_map(static fn (array $cell): string => (string) $cell['data']['#code'], $page['parts']['two_lines']['#rows'][0]);
     $lines = "\$inputs->attachVariants('props', by: 'component', from: ComponentProps::class)\n  ->setLabel(t('Props'));\n\$inputs->attachVariants('slots', by: 'component', from: ComponentSlots::class)\n  ->setLabel(t('Slots'));";
     $this->assertStringContainsString($lines, $spotlight);
     $this->assertSame("\$inputs->add('component', 'string', t('Component'));\n" . $lines, $block_lines);
-    $contract = json_decode(htmlspecialchars_decode((string) $page['parts']['contract']['content']['#value']), TRUE);
+    $contract = json_decode((string) $page['parts']['contract']['content']['#code'], TRUE);
     $this->assertSame(self::COMPONENTS, array_column($contract['component']['oneOf'], 'const'));
     $this->assertSame('#/$defs/block.data_surface_component.props.data_surface_examples:card', $contract['props'][ContractEmitter::EXTENSION]['variants']['data_surface_examples:card']);
     $this->assertSame('#/$defs/block.data_surface_component.slots.data_surface_examples:hero', $contract['slots'][ContractEmitter::EXTENSION]['variants']['data_surface_examples:hero']);
-    $actions = json_decode(htmlspecialchars_decode((string) $page['parts']['actions']['content']['#value']), TRUE);
+    $actions = json_decode((string) $page['parts']['actions']['content']['#code'], TRUE);
     $this->assertSame(['data_surface_examples:call_to_action'], array_column($actions['component.nested.data_surface_examples:call_to_action.1']['properties']['component']['oneOf'], 'const'), 'The actions offer the call to action alone.');
     $this->assertSame(2, $actions['component.slot.data_surface_examples:hero.actions.1']['properties']['components']['maxItems']);
     $this->assertSame([
@@ -681,7 +681,7 @@ class ExamplesConceptsTest extends DataSurfaceKernelTestBase {
       ['data_surface:block.placement:update:read', 'Current values: Edit a placed block', 'read', 'id'],
       ['data_surface:block.placement:delete', 'Remove a placed block', 'write', 'id, dry_run'],
     ], $page['parts']['tools']['#rows']);
-    $answer = static fn (string $call): string => htmlspecialchars_decode((string) $page['calls']['block.placement:' . $call]['answer']['#value']);
+    $answer = static fn (string $call): string => (string) $page['calls']['block.placement:' . $call]['answer']['#code'];
     $this->assertStringStartsWith("Failed: The values were refused:\n/id: A block named data_surface_examples_spotlight already exists.", $answer('place'));
     $this->assertStringStartsWith("Failed: The values were refused:\n/id: A block named data_surface_examples_section already exists.", $answer('section'));
     $this->assertStringStartsWith('Success: Dry run of Edit a placed block', $answer('props'));
@@ -702,13 +702,13 @@ class ExamplesConceptsTest extends DataSurfaceKernelTestBase {
     $this->installConfig(['data_surface']);
     $this->config('data_surface.settings')->set('site_list_limit', 2)->save();
     $page = $this->thirteen();
-    $contract = json_decode(htmlspecialchars_decode((string) $page['parts']['contract']['content']['#value']), TRUE);
+    $contract = json_decode((string) $page['parts']['contract']['content']['#code'], TRUE);
     $this->assertSame(self::COMPONENTS, array_column($contract['component']['oneOf'], 'const'), 'The chooser keeps its options.');
     $this->assertArrayHasKey('fetch', $contract['props'][ContractEmitter::EXTENSION]['deferred']);
     $this->assertArrayNotHasKey('anyOf', $contract['props']);
     $this->assertSame([], $contract['allOf']);
     $this->assertStringContainsString('more than 2, the site list limit', (string) $page['parts']['contract']['note']['#markup']);
-    $actions = json_decode(htmlspecialchars_decode((string) $page['parts']['actions']['content']['#value']), TRUE);
+    $actions = json_decode((string) $page['parts']['actions']['content']['#code'], TRUE);
     $this->assertSame(['data_surface_examples:call_to_action'], array_column($actions['component.nested.data_surface_examples:call_to_action.1']['properties']['component']['oneOf'], 'const'), 'Read from the full schema fetched with the hero chosen.');
     $this->assertContains('data_surface:block.placement:create:schema', array_column($page['parts']['tools']['#rows'], 0));
     $this->assertContains('data_surface:block.placement:update:schema', array_column($page['parts']['tools']['#rows'], 0));
@@ -717,9 +717,9 @@ class ExamplesConceptsTest extends DataSurfaceKernelTestBase {
     $this->assertStringContainsString('The site has 4 components, more than 2, the site list limit', (string) $panel['what']['#markup']);
     $this->assertStringContainsString('data_surface:event.spotlight:configure:schema', (string) $panel['what']['#markup']);
     $this->assertStringContainsString('GET /surface-api/event.spotlight/schema?choose=/props={component}', (string) $panel['what']['#markup']);
-    $read = json_decode(htmlspecialchars_decode((string) $panel['read']['content']['#value']), TRUE);
+    $read = json_decode((string) $panel['read']['content']['#code'], TRUE);
     $this->assertSame('event.spotlight.props.data_surface_examples:card', $read['structure']['title'], 'The chosen component\'s def, from the full schema fetched with it chosen.');
-    $contract = json_decode(htmlspecialchars_decode((string) $panel['contract']['content']['#value']), TRUE);
+    $contract = json_decode((string) $panel['contract']['content']['#code'], TRUE);
     $this->assertSame(['fetch' => '?choose=/props={value}'], $contract['props'][ContractEmitter::EXTENSION]['deferred'], 'Its query alone: the panel shows a document no route serves.');
     $this->assertSame('data_surface_examples:card', $contract['allOf'][0]['if']['properties']['component']['const']);
     $this->assertCount(2, $contract['allOf'], 'The card\'s two conditionals, one per key.');
@@ -737,12 +737,12 @@ class ExamplesConceptsTest extends DataSurfaceKernelTestBase {
     $items = array_map(static fn ($item): string => strip_tags((string) (is_array($item) ? ($item['#markup'] ?? '') : $item)), $concept['enable']['#items']);
     $this->assertSame('Enable it: ddev drush pm:install data_surface_examples_keys; take it away again with ddev drush pm:uninstall data_surface_examples_keys.', $items[0]);
     $this->assertStringStartsWith('It is not enabled on this site yet: the mailer has one source', $items[1]);
-    $contract = json_decode(htmlspecialchars_decode((string) $concept['contract']['content']['#value']), TRUE);
+    $contract = json_decode((string) $concept['contract']['content']['#code'], TRUE);
     $this->assertSame('pasted', $contract['event.mailer']['source']['const']);
     $this->assertSame('Pasted here', $contract['event.mailer']['source'][ContractEmitter::EXTENSION]['fixed']);
     $this->assertSame([], $contract['event.webhook']['rules']);
     $this->assertSame('<p>' . $this->container->get('data_surface_examples.concept_panel')->atUse() . '</p><p>A post cannot be signed now: no key is pasted, and no managed key is chosen.</p>', (string) $concept['use']['#markup']);
-    $this->assertSame(ConceptPanel::LOCKING, htmlspecialchars_decode((string) $concept['alternative']['content']['#value']));
+    $this->assertSame(ConceptPanel::LOCKING, (string) $concept['alternative']['content']['#code']);
     $this->assertSame(['event.mailer:pasted', 'event.mailer:read', 'event.webhook:pasted'], array_values(array_filter(array_keys($concept['calls']), static fn (string $key): bool => str_contains($key, ':'))), 'With the module off, the calls that need nothing of it.');
     $this->assertSame(array_keys($concept['calls']), array_keys($this->formAt('data_surface_examples.step14_webhook')[DataSurfaceOperationForm::PANEL_KEY][ExamplePanels::CONCEPT]['calls']), 'Both pages make both resources\' calls.');
 
@@ -750,11 +750,11 @@ class ExamplesConceptsTest extends DataSurfaceKernelTestBase {
     $this->setUpCurrentUser(admin: TRUE);
     $concept = $this->formAt('data_surface_examples.step14')[DataSurfaceOperationForm::PANEL_KEY][ExamplePanels::CONCEPT];
     $this->assertStringStartsWith('It is enabled on this site now: the mailer offers two sources', strip_tags((string) $concept['enable']['#items'][1]));
-    $contract = json_decode(htmlspecialchars_decode((string) $concept['contract']['content']['#value']), TRUE);
+    $contract = json_decode((string) $concept['contract']['content']['#code'], TRUE);
     $this->assertSame(['pasted', 'managed'], array_column($contract['event.mailer']['source']['oneOf'], 'const'));
     $this->assertSame(['pasted', 'managed'], array_keys($contract['event.mailer']['credential'][ContractEmitter::EXTENSION]['variants']));
     $this->assertSame(['api_key' => FALSE], $contract['event.webhook']['rules'][0]['then']['properties']);
-    $answer = static fn (string $call): string => htmlspecialchars_decode((string) $concept['calls'][$call]['answer']['#value']);
+    $answer = static fn (string $call): string => (string) $concept['calls'][$call]['answer']['#code'];
     $this->assertStringStartsWith('Success: Dry run of Configure the mailer', $answer('event.mailer:managed'));
     $this->assertStringStartsWith("Failed: The values were refused:\n/credential/api_key: credential.api_key belongs to the pasted variant", $answer('event.mailer:pasted_while_managed'));
     $this->assertStringStartsWith("Failed: The values were refused:\n/api_key: API key does not apply", $answer('event.webhook:pasted_beside_managed'));
@@ -784,7 +784,7 @@ class ExamplesConceptsTest extends DataSurfaceKernelTestBase {
       'data_surface:event.venue:update:read',
       'data_surface:event.venue:delete',
     ], array_column($page['served']['tools']['#rows'], 0));
-    $answer = static fn (array $page, string $call): string => htmlspecialchars_decode((string) $page['calls']['event.venue:' . $call]['answer']['#value']);
+    $answer = static fn (array $page, string $call): string => (string) $page['calls']['event.venue:' . $call]['answer']['#code'];
     $this->assertStringContainsString('  total: 3', $answer($page, 'list'));
     $this->assertSame('Success: Add a venue: the values were accepted and written.', $answer($page, 'create'));
     $this->assertStringStartsWith('Success: Remove a venue: removed.', $answer($page, 'delete'));
