@@ -25,6 +25,23 @@ final class FilesPanel {
   use StringTranslationTrait;
 
   /**
+   * The Prism language of a file shown whole, by its extension.
+   *
+   * Only languages the data_surface/prism library loads; a file of any
+   * other extension is shown as plain text.
+   */
+  protected const LANGUAGES = [
+    'php' => 'php',
+    'install' => 'php',
+    'module' => 'php',
+    'inc' => 'php',
+    'yml' => 'yaml',
+    'yaml' => 'yaml',
+    'twig' => 'twig',
+    'json' => 'json',
+  ];
+
+  /**
    * Constructs a FilesPanel.
    *
    * @param \Drupal\Core\StringTranslation\TranslationInterface $string_translation
@@ -86,9 +103,9 @@ final class FilesPanel {
           '#open' => FALSE,
           '#title' => $this->t('@file, whole', ['@file' => basename($path) . ($key === NULL ? '' : ', ' . $key)]),
           'text' => [
-            '#type' => 'html_tag',
-            '#tag' => 'pre',
-            '#value' => htmlspecialchars(Series::text($file)),
+            '#type' => 'data_surface_code',
+            '#code' => Series::text($file),
+            '#language' => self::LANGUAGES[pathinfo($path, PATHINFO_EXTENSION)] ?? NULL,
           ],
         ];
       }

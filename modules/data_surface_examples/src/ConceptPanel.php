@@ -582,7 +582,7 @@ final class ConceptPanel {
       }
       $answers[] = 'GET ' . $path . "\n" . $answer;
     }
-    return $this->pre(implode("\n\n", $answers));
+    return $this->code(implode("\n\n", $answers));
   }
 
   /**
@@ -633,7 +633,7 @@ final class ConceptPanel {
       'alternative' => $this->details(
         $this->t('The alter not shipped: lock the pasted key instead of ruling it out'),
         $this->t('A lock would keep the pasted key drawn, an empty password box that cannot be used, and would take a pasted key sent with a note instead of a refusal, so a caller who sends both learns of it only from the note. Ruling it out takes the box away, refuses the pasted key naming the managed key, and keeps what is stored, as a lock would. A conditional lock is also no effect a declared rule has, so this is the spelling it would have:'),
-        $this->pre(self::LOCKING),
+        $this->code(self::LOCKING, 'php'),
       ),
     ];
   }
@@ -758,7 +758,7 @@ final class ConceptPanel {
       'add' => [
         '#markup' => '<p>' . $this->t("Add a type to the site's configuration and reload this page, with no cache rebuild; the second command takes it away again:") . '</p>',
       ],
-      'add_command' => $this->pre(self::ADD_TYPE . "\n" . self::REMOVE_TYPE),
+      'add_command' => $this->code(self::ADD_TYPE . "\n" . self::REMOVE_TYPE, 'bash'),
       'per_type' => $this->details($this->t("One type's limits, as the full schema states them"), $this->t("The student type's two rules, each a conditional on the resource's frame: the structure says what it reads, <code>selling</code>, and the resource says which key that is for each type."), $this->json(array_values(array_filter($full['allOf'] ?? [], static fn (array $condition): bool => isset($condition['if']['properties']['on_sale']['properties']['student']))))),
       'lock' => $this->details($this->t('The locked type, in both documents'), $this->t('In the full schema (<code>full</code>) and the schema for these answers (<code>now</code>): <code>readOnly</code>, the standard keyword, with its <code>const</code> in the schema for these answers.'), $this->json($lock)),
     ];
@@ -1038,8 +1038,8 @@ final class ConceptPanel {
         ],
         '#rows' => [
           [
-            ['data' => $this->pre(implode("\n", self::statements(self::file(SpotlightResource::class), '$inputs->')))],
-            ['data' => $this->pre(implode("\n", self::statements(self::file(ComponentBlockStructure::class), '$inputs->')))],
+            ['data' => $this->code(implode("\n", self::statements(self::file(SpotlightResource::class), '$inputs->')), 'php')],
+            ['data' => $this->code(implode("\n", self::statements(self::file(ComponentBlockStructure::class), '$inputs->')), 'php')],
           ],
         ],
         '#attributes' => ['class' => ['data-surface-concept-two-lines']],
@@ -1251,8 +1251,8 @@ final class ConceptPanel {
       foreach (ConceptCalls::of($resource, array_keys($this->moduleHandler->getModuleList())) as $name => $call) {
         $calls[$resource . ':' . $name] = [
           'label' => ['#markup' => '<h3>' . htmlspecialchars($call['label']) . '</h3>'],
-          'command' => $this->pre(ConceptCalls::drush($resource, $name)),
-          'answer' => $this->pre($this->answer($resource, $name, $rehearsed)),
+          'command' => $this->code(ConceptCalls::drush($resource, $name), 'bash'),
+          'answer' => $this->code($this->answer($resource, $name, $rehearsed)),
         ];
       }
     }
@@ -1394,26 +1394,28 @@ final class ConceptPanel {
    *   The value.
    *
    * @return array
-   *   A render array: the JSON in a `pre`, escaped.
+   *   A render array: the JSON as a code block.
    */
   protected function json(array $value): array {
-    return $this->pre((string) json_encode($value, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION));
+    return $this->code((string) json_encode($value, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION), 'json');
   }
 
   /**
-   * Shows text as it is.
+   * Shows text as a code block.
    *
    * @param string $text
-   *   The text.
+   *   The text, raw: the element escapes it.
+   * @param string|null $language
+   *   The Prism language id, or NULL for plain text.
    *
    * @return array
-   *   A render array: the text in a `pre`, escaped.
+   *   A render array: a data_surface_code element.
    */
-  protected function pre(string $text): array {
+  protected function code(string $text, ?string $language = NULL): array {
     return [
-      '#type' => 'html_tag',
-      '#tag' => 'pre',
-      '#value' => htmlspecialchars($text),
+      '#type' => 'data_surface_code',
+      '#code' => $text,
+      '#language' => $language,
     ];
   }
 

@@ -195,11 +195,11 @@ class ExamplesWorkflowTest extends DataSurfaceKernelTestBase {
     $panel = $form[DataSurfaceOperationForm::SURFACE_KEY][DataSurfaceOperationForm::PANEL_KEY][ExamplePanels::CONCEPT];
     $this->assertStringContainsString('data_surface_examples_workflow', (string) $panel['workflow']['#markup']);
     $this->assertStringContainsString('see event fees', (string) $panel['workflow']['#markup']);
-    $accounts = json_decode(htmlspecialchars_decode((string) $panel['accounts']['content']['#value']), TRUE);
+    $accounts = json_decode((string) $panel['accounts']['content']['#code'], TRUE);
     $this->assertNull($accounts['without the permission']['property'], 'Left out for the account without either permission.');
     $this->assertTrue($accounts['you']['property'][ContractEmitter::EXTENSION]['live']);
     $this->assertArrayHasKey('event.program:published_in_workflow', $panel['calls']);
-    $this->assertStringContainsString('The program is published in its workflow', (string) $panel['calls']['event.program:published_in_workflow']['answer']['#value']);
+    $this->assertStringContainsString('The program is published in its workflow', (string) $panel['calls']['event.program:published_in_workflow']['answer']['#code']);
     $this->assertNull($this->container->get('state')->get(ProgramWorkflowAlter::STATE), 'The State the call was made in is put back.');
   }
 

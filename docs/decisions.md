@@ -252,8 +252,12 @@ attribute arguments (33 before; 30 until 2026-10-25, when
 `#[Operation(gate:)]` was added, [A gate is borrowed, never
 copied](#a-gate-is-borrowed-never-copied)), 16 blueprint methods (17
 before; 15 until 2026-10-27, when `resolve()` was added, [A key may
-stand for another at use](#a-key-may-stand-for-another-at-use)), 20
-interfaces (23). It is the concept budget for the code, as
+stand for another at use](#a-key-may-stand-for-another-at-use)), 21
+interfaces (23 before; 20 until 2026-10-28, when
+`EntrySchemasInterface` was added, a provider that answers an entry's
+schema when a door reads it, [The static build is cached, the rest is
+per request](#the-static-build-is-cached-the-rest-is-per-request)). It
+is the concept budget for the code, as
 [Your first resource](first-resource.md) is for the docs.
 
 What changed, old → new, to grep:
@@ -5315,6 +5319,78 @@ version, the site and the language, and served with an `ETag` and 304.
 `OpenApiDocument::build()`, `BuildCacheTest`, `LazyVariantsTest`,
 `OnePreparePerSubmitTest`, `BuildBenchmarkTest`)
 
+*Amended 2026-10-28,* from a site at PHP's stock 128 MB `memory_limit`,
+where example 12 ran out of memory. On the development site (312
+components; each page a Drush sub-request as user 1, the peak PHP
+allocated) example 12 peaked at 144 MB, example 13 at 184 MB, the
+spotlight's schema at 132 MB and its React page at 114 MB. Five choices:
+
+- **A provider may answer an entry when a door reads it.** A provider
+  implementing `EntrySchemasInterface` lists each entry by value and
+  label alone; `entrySchema($id)` and `entryDefs()` answer what `schema:`
+  and `addDefs()` would have said. The build registers each such entry
+  by name, its inputs `SiteEntries::fill()`, and reads nothing of it.
+  `ComponentProps` and `ComponentSlots` are such providers, so building
+  the spotlight reads no component. Why: the slots' defs are 13 MB as PHP
+  arrays at 312 components (2.2 MB serialized), and every build of the
+  spotlight wrote them again, two to four builds a request, whether a
+  door read an entry or not.
+- **A prepared document is shared.** `SchemaReader::prepared()` reads a
+  document that holds no object as it is, not through JSON, writes a
+  subschema again only where it changes, and keeps a large one (from
+  64 KB of JSON, eight at most) by a hash of its JSON. Preparing the
+  slots' defs held 18 MB beside the 13 MB they were read from, and
+  peaked 36 MB above them; it now holds 0.2 MB more and peaks 1.7 MB
+  above. Why: decoding the JSON made a copy that shared no string with
+  the list, and each of the three passes after it copied every array.
+- **A document is asked for secrets before its variant is built.** A key
+  read from a schema is secret only where the schema says `writeOnly:
+  true`, or where it holds a named shape. A variant held unsettled whose
+  document says neither, at any depth, holds no secret
+  (`SchemaReader::holdsNoSecret()`), so the pipeline's walk for secrets,
+  `Variants::keptSecrets()` and every door's projection leave it unsettled;
+  for an entry a provider answers when read, its schema is read and the
+  variant is not built. A secret any variant declares is still never
+  returned under its key. Why: example 13's five tool calls built 6,142
+  variants to learn that none held a secret.
+- **The memo keeps a build that varies by the interface language.** Core's
+  language module puts `languages:language_interface` on every
+  configuration object (`LanguageConfigFactoryOverride`), so on a site
+  with it every build carries that context, and the memo refused every
+  one: no build and no structure read from a schema was reused, and each
+  variant built its whole tree again (281,821 builds and 1.8 GB for one
+  OpenAPI document on such a site). The memo's key, the key of a
+  structure read from a schema and the build cache's id name the current
+  interface language and the configuration override language, so that
+  context is kept and stored. No other language type is in those keys,
+  so a build varying by one is still built every time. Within one
+  request nothing else the build reads varies without its key: the
+  reference limit is in the key, the site list limit is read by the
+  documents and not by the build, and the account is in the key of every
+  build for one.
+- **What is left grows with the list.** Reading one slots variant reads
+  all of the shared defs, since a slot that holds any component refers
+  to every component's props and slots: about 42 KB per component, 13 MB
+  at 312. Reading only the defs one entry reaches would take a provider
+  that answers one def by name, a reader that fetches a document's defs
+  one at a time, and read structure names hashed from the def and its
+  provider rather than from the whole document. Each entry still costs
+  the build a read definition, an attachment and a holder, about 2 KB per
+  component. A refusal naming the variants that declare a stray key
+  (`Variants::owners()`) builds every variant.
+
+After, the same pages: example 12 at 92 to 96 MB, example 13 at 88 MB, the
+spotlight's schema at 60 MB (88 MB for `?choose=/slots=`, which reads the
+defs), its React page at 72 MB, and the schema tool at 78 MB where it was
+114 MB; every example page answers under a 128 MB limit. About 34 MB of
+each page is this development site's own: its discovery bin is the null
+backend, so each request derives every tool again
+([Performance](performance.md#method)).
+
+(`EntrySchemasInterface`, `SiteEntries`, `SchemaReader::prepared()`,
+`SchemaReader::holdsNoSecret()`, `Resources::keepable()`,
+`Resources::languages()`, `ManyListedVariantsTest`, `LanguageMemoTest`)
+
 ### The catalog is the site's live map
 
 Decided 2026-10-24. `drush surface:catalog` lists what discovery finds
@@ -7451,6 +7527,13 @@ door spells a path. The endpoint table is in
   runs a CDN's script on the site's origin, which a site grants to the
   roles it chooses, and `access content` belongs to node, which the
   submodule does not need.
+  The code blocks the module renders are highlighted the same way:
+  Prism (`data_surface/prism`, attached by the `data_surface_code`
+  element) from cdnjs, the version pinned, each file held to its
+  integrity hash, its core and only the languages the blocks are in, so
+  no language is fetched at run time. It takes no permission of its own:
+  it is attached only beside a code block, on pages already behind the
+  permissions of the example or the operation they show.
 
 The tool and HTTP doors now agree: one operation, one call, a dry run as
 a flag. (`ServedPaths`, `ServedTarget`, `ResourceApiController`,

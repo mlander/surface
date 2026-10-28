@@ -6,17 +6,21 @@ namespace Drupal\data_surface_resource_test\Variants;
 
 use Drupal\Core\DependencyInjection\ContainerInjectionInterface;
 use Drupal\Core\State\StateInterface;
+use Drupal\data_surface\Resource\EntrySchemasInterface;
 use Drupal\data_surface\Resource\SiteList;
-use Drupal\data_surface\Resource\SiteListInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
  * The poster's layouts: one variant each, from the schema it carries.
  *
- * Three layouts are always listed; State may list more, cleared by the
- * cache tag this declares, as a site's configuration would be.
+ * Three layouts are always listed; State may list more, and defs they
+ * share, cleared by the cache tag this declares, as a site's
+ * configuration would be. Those State lists are given with their schema
+ * and the defs, or, once State says LAZY, by value and label alone, each
+ * schema and the defs answered when asked (entrySchema(), entryDefs()),
+ * which READ records.
  */
-final class PosterLayouts implements SiteListInterface, ContainerInjectionInterface {
+final class PosterLayouts implements EntrySchemasInterface, ContainerInjectionInterface {
 
   /**
    * The cache tag of the list.
@@ -27,6 +31,23 @@ final class PosterLayouts implements SiteListInterface, ContainerInjectionInterf
    * The State key a test lists more layouts under, by value.
    */
   public const STATE = 'data_surface_resource_test.poster_layouts';
+
+  /**
+   * The State key a test lists defs the layouts share under, by name.
+   */
+  public const DEFS = 'data_surface_resource_test.poster_layout_defs';
+
+  /**
+   * The State key that has the layouts State lists read when asked.
+   */
+  public const LAZY = 'data_surface_resource_test.poster_layouts_lazy';
+
+  /**
+   * What was asked of entrySchema() and entryDefs() (`$defs`), in order.
+   *
+   * @var string[]
+   */
+  public static array $read = [];
 
   /**
    * The layouts always listed: a label and a schema each, by value.
@@ -109,10 +130,33 @@ final class PosterLayouts implements SiteListInterface, ContainerInjectionInterf
    */
   public function list(): SiteList {
     $list = (new SiteList())->addCacheTags([self::TAG]);
-    foreach (self::LAYOUTS + (array) $this->state->get(self::STATE, []) as $value => $layout) {
+    $lazy = (bool) $this->state->get(self::LAZY, FALSE);
+    foreach (self::LAYOUTS as $value => $layout) {
       $list->add((string) $value, $layout['label'], schema: $layout['schema']);
     }
-    return $list;
+    foreach ((array) $this->state->get(self::STATE, []) as $value => $layout) {
+      $list->add((string) $value, $layout['label'], schema: $lazy ? NULL : $layout['schema']);
+    }
+    $defs = $lazy ? [] : $this->entryDefs();
+    return $defs === [] ? $list : $list->addDefs($defs);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function entrySchema(string $id): array {
+    self::$read[] = $id;
+    return (self::LAYOUTS + (array) $this->state->get(self::STATE, []))[$id]['schema'];
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function entryDefs(): array {
+    if ($this->state->get(self::LAZY, FALSE)) {
+      self::$read[] = '$defs';
+    }
+    return (array) $this->state->get(self::DEFS, []);
   }
 
 }

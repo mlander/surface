@@ -48,6 +48,15 @@ keeps its settings in a config object of its own
 `.program`, `.doors`, `.spotlight`, `.mailer` and `.webhook`), so the examples never write over
 each other.
 
+Every code block on the pages is highlighted with Prism 1.30.0: the
+contract panel's JSON, the commands and their answers, and each file
+shown whole, by its extension. The core, the JSON, YAML, PHP, Twig and
+Bash languages and the default theme come from cdnjs, each pinned and
+held to its integrity hash (`data_surface.libraries.yml`), as
+`data_surface_openapi` loads Swagger UI. The React page bundles Prism
+for its JSON and takes the same theme. When the CDN cannot be reached,
+the blocks show as plain text.
+
 To take the examples again from the start, follow **Reset to defaults**
 on the landing page (`/surface-examples/reset`). It puts every config
 object back to the files the module ships in `config/install`, the
@@ -2228,8 +2237,9 @@ final class SpotlightResource implements ResourceInterface {
 ```
 
 The provider lists every component the site offers, the four this
-module ships among them, each by its id and its name, with its props as
-the component declares them. A prop typed by a PHP class takes a value only Twig code
+module ships among them, each by its id and its name, and answers a
+component's props, as the component declares them, only when a door
+reads that component's variant (`entrySchema()`). A prop typed by a PHP class takes a value only Twig code
 passes, which nothing stores: that type is left out, as the reader would
 refuse it. It is the main module's, not this module's, since example 13's
 block reads the components through it too.
@@ -2237,7 +2247,7 @@ block reads the components through it too.
 <!-- code: ../../src/Variants/ComponentProps.php -->
 
 ```php
-final class ComponentProps implements SiteListInterface, ContainerInjectionInterface {
+final class ComponentProps implements EntrySchemasInterface, ContainerInjectionInterface {
 
   /**
    * The JSON Schema types; a component may also name a PHP class.
@@ -2267,9 +2277,23 @@ final class ComponentProps implements SiteListInterface, ContainerInjectionInter
   public function list(): SiteList {
     $variants = (new SiteList())->addCacheTags(ComponentsOffered::CACHE_TAGS);
     foreach ($this->components->offered() as $id => $component) {
-      $variants->add((string) $id, (string) ($component['name'] ?? $id), schema: self::props($component['props'] ?? []));
+      $variants->add((string) $id, (string) ($component['name'] ?? $id));
     }
     return $variants;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function entrySchema(string $id): array {
+    return self::props($this->components->all()[$id]['props'] ?? []);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function entryDefs(): array {
+    return [];
   }
 
   /**
@@ -2559,8 +2583,8 @@ of code, counted without blank lines or comments:
 | File | What it is | Lines |
 | --- | --- | --- |
 | [`modules/data_surface_examples/src/Resource/SpotlightResource.php`](src/Resource/SpotlightResource.php) | the resource: a component, and its props and slots as variants the component chooses | 16 |
-| [`src/Variants/ComponentProps.php`](../../src/Variants/ComponentProps.php) | the provider of the props: one variant per component, read from its props schema; the main module's | 34 |
-| [`src/Variants/ComponentSlots.php`](../../src/Variants/ComponentSlots.php) | the provider of the slots: one variant per component, read from its metadata; the main module's | 195 |
+| [`src/Variants/ComponentProps.php`](../../src/Variants/ComponentProps.php) | the provider of the props: one variant per component, read from its props schema; the main module's | 40 |
+| [`src/Variants/ComponentSlots.php`](../../src/Variants/ComponentSlots.php) | the provider of the slots: one variant per component, read from its metadata; the main module's | 229 |
 | [`src/Variants/ComponentsOffered.php`](../../src/Variants/ComponentsOffered.php) | the components both providers offer: every one, or those data_surface.settings:components_offered allows; the main module's | 31 |
 | [`modules/data_surface_examples/src/Storage/SpotlightStorage.php`](src/Storage/SpotlightStorage.php) | the storage: names the config object | 3 |
 | [`modules/data_surface_examples/data_surface_examples.routing.yml`](data_surface_examples.routing.yml), entry `data_surface_examples.step12` | the route | 8 |

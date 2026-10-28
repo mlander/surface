@@ -122,7 +122,7 @@ class ExamplesTodayPanelTest extends DataSurfaceKernelTestBase {
    *   The document.
    */
   protected function document(array $block): array {
-    return json_decode(htmlspecialchars_decode((string) $block['json']['#value']), TRUE);
+    return json_decode((string) $block['json']['#code'], TRUE);
   }
 
   /**
@@ -232,8 +232,8 @@ class ExamplesTodayPanelTest extends DataSurfaceKernelTestBase {
       'title, anyOf, if/then on pricing (2 variants: free has note, $ref (registration.step3.ticket.free); paid has price, currency, $ref (registration.step3.ticket.paid))',
     ], $this->comparison($after)['ticket']);
     $this->assertSame($this->comparison($before), $this->comparison($after));
-    $this->assertSame($before['core']['json']['#value'], $after['core']['json']['#value']);
-    $this->assertSame($before['derived']['json']['#value'], $after['derived']['json']['#value']);
+    $this->assertSame($before['core']['json']['#code'], $after['core']['json']['#code']);
+    $this->assertSame($before['derived']['json']['#code'], $after['derived']['json']['#code']);
     // And as the browser is sent it.
     $markup = $this->ajaxMarkup($response, $panels);
     $this->assertStringContainsString('Behind the scenes: the contract, as it stands', $markup);
@@ -245,7 +245,7 @@ class ExamplesTodayPanelTest extends DataSurfaceKernelTestBase {
     $panels = $state->getCompleteForm()[DataSurfaceOperationForm::SURFACE_KEY][DataSurfaceOperationForm::PANEL_KEY];
     $after = $panels[ExamplePanels::TODAY];
     $this->assertSame($this->comparison($before), $this->comparison($after));
-    $this->assertSame($before['derived']['json']['#value'], $after['derived']['json']['#value']);
+    $this->assertSame($before['derived']['json']['#code'], $after['derived']['json']['#code']);
     // The contract panel beside it did follow: the schema for these
     // answers offers the harbour's two rooms, the full schema all six.
     $contract = $panels[ExamplePanels::CONTRACT];
@@ -268,8 +268,8 @@ class ExamplesTodayPanelTest extends DataSurfaceKernelTestBase {
     $before = $this->panelsOf(3)[ExamplePanels::TODAY];
     $this->enableModules(['data_surface_examples_compliance']);
     $today = $this->panelsOf(3)[ExamplePanels::TODAY];
-    $this->assertSame($before['core']['json']['#value'], $today['core']['json']['#value']);
-    $this->assertSame($before['derived']['json']['#value'], $today['derived']['json']['#value']);
+    $this->assertSame($before['core']['json']['#code'], $today['core']['json']['#code']);
+    $this->assertSame($before['derived']['json']['#code'], $today['derived']['json']['#code']);
     $rows = $this->comparison($today);
     $this->assertSame(['title, type, additionalProperties', 'type, properties, additionalProperties'], $rows['third_party_settings']);
     $this->assertSame(['third_party_settings'], array_keys(array_diff_key($rows, $this->comparison($before))));

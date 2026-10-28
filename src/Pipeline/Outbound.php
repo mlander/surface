@@ -7,6 +7,7 @@ namespace Drupal\data_surface\Pipeline;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
+use Drupal\data_surface\Attachment;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Entry;
@@ -113,7 +114,9 @@ final class Outbound {
    * keys whose variants it states, `$walks`: a variant it never states
    * holds no key of its document, so it is not built to be asked. What
    * answers values (the pipeline, every door's projection) asks with
-   * none, and every variant is asked.
+   * none, and every variant is asked, but for one not built yet that is
+   * read from a document stating no secret (SchemaReader::holdsNoSecret()),
+   * which holds none and stays unsettled.
    *
    * @param \Drupal\data_surface\DataSurfaceInterface $surface
    *   The data surface.
@@ -159,7 +162,10 @@ final class Outbound {
    */
   public static function secretsAt(Entry $entry, ?\Closure $walks = NULL): true|array {
     $found = static::secretsOf($entry->definition);
-    $children = $entry->variants === NULL || ($walks !== NULL && !$walks($entry)) ? [] : array_map(static fn ($variant): DataSurfaceInterface => $variant->child, $entry->variants->variants);
+    // A variant not built yet whose document states no secret holds none:
+    // it is left unsettled.
+    $variants = $entry->variants === NULL || ($walks !== NULL && !$walks($entry)) ? [] : array_filter($entry->variants->variants, static fn (Attachment $variant): bool => !$variant->holdsNoSecretUnsettled());
+    $children = array_values(array_map(static fn (Attachment $variant): DataSurfaceInterface => $variant->child, $variants));
     if ($entry->attachment !== NULL) {
       $children[] = $entry->attachment->child;
     }

@@ -453,6 +453,43 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
   }
 
   /**
+   * Registers a variant a provider lists, read from its schema when built.
+   *
+   * Nothing of the entry's schema is read here: the structure's inputs are
+   * SiteEntries::fill(), which asks the provider for it when a door builds
+   * the variant. Named by the provider and the entry, so the same entry is
+   * one structure however many builds list it.
+   *
+   * Decision: see
+   * docs/decisions.md#the-static-build-is-cached-the-rest-is-per-request.
+   *
+   * @param string $id
+   *   Its id: the owner's, the key, then the entry's.
+   * @param class-string<\Drupal\data_surface\Resource\EntrySchemasInterface> $from
+   *   The provider.
+   * @param string $value
+   *   The entry's id.
+   *
+   * @return string
+   *   The name it is chosen by.
+   *
+   * @internal
+   *   For the build step alone.
+   */
+  public function readListed(string $id, string $from, string $value): string {
+    if ($this->registry === NULL) {
+      throw new \LogicException(sprintf('The variants %s lists for %s are read from a schema, and this blueprint has no registry to build one by.', $from, $this->name($this->owner)));
+    }
+    $owner = $this->owner === NULL ? NULL : $this->registry->getDefinition($this->owner);
+    return $this->registry->defineRead(
+      $id,
+      $owner->module ?? 'data_surface',
+      new ResourceCallable(SiteEntries::class, 'fill', [$from, $value]),
+      hash('xxh128', serialize([$id, $from, $value])),
+    );
+  }
+
+  /**
    * Hashes a document a structure is read from.
    *
    * @param array $root

@@ -18,6 +18,7 @@ use Drupal\data_surface\Refinement\WatchedValueCheckInterface;
 use Drupal\data_surface\Resource\SiteList;
 use Drupal\data_surface\Resource\SiteListInterface;
 use Drupal\data_surface\Resource\ClosedSiteListInterface;
+use Drupal\data_surface\Resource\EntrySchemasInterface;
 use Drupal\data_surface\Contract\SchemaReader;
 use Drupal\data_surface\Contract\SchemaResolver;
 use Drupal\data_surface\Resource\Attribute\Variant;
@@ -54,6 +55,13 @@ final class Attaching {
    * @var array<string, array{0: array<string, \Drupal\data_surface\Port>, 1: string[]}>
    */
   protected array $readPorts = [];
+
+  /**
+   * Whether each document read so far states no secret, by its hash.
+   *
+   * @var array<string, bool>
+   */
+  protected array $noSecret = [];
 
   /**
    * Constructs the attach phase.
@@ -169,6 +177,44 @@ final class Attaching {
       $child_context,
       $runtime,
     ];
+  }
+
+  /**
+   * Answers whether a structure read from a schema holds no secret.
+   *
+   * Asked of its document once per document, which every variant a list
+   * reads from it shares.
+   *
+   * Decision: see
+   * docs/decisions.md#the-static-build-is-cached-the-rest-is-per-request.
+   *
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   *   The read structure.
+   * @param \Drupal\data_surface\ResourceBuild\SiteEntries $entries
+   *   What reads an entry a provider lists without its schema: that
+   *   entry's schema alone is read.
+   *
+   * @return bool
+   *   TRUE when its document states no secret (SchemaReader::holdsNoSecret()).
+   */
+  public function readHoldsNoSecret(ResourceDefinition $definition, SiteEntries $entries): bool {
+    $inputs = $definition->inputs;
+    $root = $hash = NULL;
+    if ($inputs?->class === SiteEntries::class && $inputs->method === 'fill') {
+      [$from, $value] = $inputs->arguments + [NULL, NULL];
+      if (!is_string($from) || !is_string($value)) {
+        return FALSE;
+      }
+      [$root, , $hash] = $entries->document($from, $value);
+    }
+    elseif ($inputs?->class === SchemaReader::class && $inputs->method === 'fill') {
+      [$root, , $hash] = $inputs->arguments + [NULL, NULL, NULL];
+    }
+    if (!is_array($root)) {
+      return FALSE;
+    }
+    $hash = is_string($hash) ? $hash : ResourceBlueprint::documentHash($root);
+    return $this->noSecret[$hash] ??= SchemaReader::holdsNoSecret($root, fn (string $id): bool => $this->registry->hasShape($id));
   }
 
   /**
@@ -1223,6 +1269,9 @@ final class Attaching {
       if ($from !== NULL) {
         $list = $this->variantsFrom($definition, (string) $key, $from);
         $builder->addCacheableDependency($list);
+        // A provider that answers an entry's schema when it is read: the
+        // entry is registered by name, its schema read when it is built.
+        $lazy = is_subclass_of($from, EntrySchemasInterface::class);
         // The defs the entries share, read once for all of them.
         $shared = $list->defs() === [] ? NULL : SchemaReader::prepared(['$defs' => $list->defs()]);
         $shared_hash = $shared === NULL ? NULL : ResourceBlueprint::documentHash($shared);
@@ -1240,6 +1289,7 @@ final class Attaching {
           $pointer = '/$defs/' . str_replace(['~', '/'], ['~0', '~1'], (string) $reference);
           $children[$value] = match (TRUE) {
             isset($entry['structure']) => $this->registry->getDefinition($entry['structure'])->name(),
+            $lazy && $entry['schema'] === NULL => $inputs->readListed($id, $from, $value),
             $shared_def => $inputs->readStructure($id, $shared, $pointer, $shared_hash),
             default => $inputs->readStructure($id, SchemaReader::prepared($schema + ($list->defs() === [] ? [] : ['$defs' => $list->defs()])), ''),
           };
@@ -1402,7 +1452,7 @@ final class Attaching {
         throw new \LogicException(sprintf('%s lists "%s" for the variants at "%s" on %s with a %s, which a variant does not read: each entry is a value of the deciding key, its label, and the schema or structure it chooses.', $from, $value, $key, $definition->id, $entry['locked'] ? 'lock' : 'start'));
       }
       if ($closed === NULL) {
-        if ($entry['schema'] === NULL && $entry['structure'] === NULL) {
+        if ($entry['schema'] === NULL && $entry['structure'] === NULL && !is_subclass_of($from, EntrySchemasInterface::class)) {
           throw new \LogicException(sprintf('%s lists "%s" for the variants at "%s" on %s with no schema and no structure: each variant from the site is one of them, SiteList::add(..., schema: ...) or add(..., structure: ...).', $from, $value, $key, $definition->id));
         }
         $named->add($value, $entry['label'], schema: $entry['schema'], structure: $entry['structure']);
@@ -1541,6 +1591,7 @@ final class Attaching {
    */
   public function forget(): void {
     $this->readPorts = [];
+    $this->noSecret = [];
   }
 
 }

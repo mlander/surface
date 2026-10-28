@@ -372,22 +372,25 @@ final class SchemaResolver {
       if (!is_array($value)) {
         continue;
       }
-      if (in_array($keyword, ['properties', '$defs', 'patternProperties'], TRUE)) {
+      // Written back only where something moved, so a subschema with no
+      // marker to put back stays the array it was.
+      $maps = in_array($keyword, ['properties', '$defs', 'patternProperties'], TRUE);
+      $lists = in_array($keyword, ['allOf', 'anyOf', 'oneOf'], TRUE) && array_is_list($value);
+      if ($maps || $lists) {
         foreach ($value as $name => $child) {
           if (is_array($child)) {
-            $schema[$keyword][$name] = self::restored($child);
-          }
-        }
-      }
-      elseif (in_array($keyword, ['allOf', 'anyOf', 'oneOf'], TRUE) && array_is_list($value)) {
-        foreach ($value as $i => $member) {
-          if (is_array($member)) {
-            $schema[$keyword][$i] = self::restored($member);
+            $restored = self::restored($child);
+            if ($restored !== $child) {
+              $schema[$keyword][$name] = $restored;
+            }
           }
         }
       }
       elseif (in_array($keyword, self::SINGLE, TRUE)) {
-        $schema[$keyword] = self::restored($value);
+        $restored = self::restored($value);
+        if ($restored !== $value) {
+          $schema[$keyword] = $restored;
+        }
       }
     }
     $extension = $schema[ContractEmitter::EXTENSION] ?? NULL;

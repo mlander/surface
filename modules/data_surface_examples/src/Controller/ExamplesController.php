@@ -384,17 +384,17 @@ final class ExamplesController extends ControllerBase {
         '#markup' => '<p>' . $this->t('The three calls, made by a kernel test and printed, from the site root:') . '</p>',
       ],
       'script_command' => [
-        '#type' => 'html_tag',
-        '#tag' => 'pre',
-        '#value' => 'ddev exec php web/modules/custom/data_surface/scripts/examples-dry-run.php',
+        '#type' => 'data_surface_code',
+        '#code' => 'ddev exec php web/modules/custom/data_surface/scripts/examples-dry-run.php',
+        '#language' => 'bash',
       ],
       'drush' => [
         '#markup' => '<p>' . $this->t('The same tool, the same three calls, from Drush, after the read tool beside it, <code>@read</code>, which answers with what is stored and writes nothing:', ['@read' => ExampleCalls::READ_TOOL]) . '</p>',
       ],
       'commands' => [
-        '#type' => 'html_tag',
-        '#tag' => 'pre',
-        '#value' => htmlspecialchars(implode("\n\n", $commands)),
+        '#type' => 'data_surface_code',
+        '#code' => implode("\n\n", $commands),
+        '#language' => 'bash',
       ],
       'files' => $this->filesPanel->build(5),
     ];

@@ -7,8 +7,8 @@ namespace Drupal\data_surface\Variants;
 use Drupal\Core\DependencyInjection\ContainerInjectionInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslationInterface;
+use Drupal\data_surface\Resource\EntrySchemasInterface;
 use Drupal\data_surface\Resource\SiteList;
-use Drupal\data_surface\Resource\SiteListInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -30,8 +30,9 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * `maxItems` of 1 leaves no list. Slots nest DEPTH deep: a slot at that
  * depth holds text alone.
  *
- * Every variant refers to defs the list holds once for all of them
- * (SiteList::addDefs()), so a def several slots use is one structure:
+ * Every variant refers to defs held once for all of them (entryDefs()),
+ * written only when a door reads one of the variants, so a def several
+ * slots use is one structure:
  * `component.props.<id>`, `component.slots.<id>.<depth>`,
  * `component.slot.<id>.<slot>.<depth>`, `component.slot.text` for a slot
  * that holds text alone, and `component.nested.<expected>.<depth>` for
@@ -43,7 +44,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  *
  * @see \Drupal\data_surface\Variants\ComponentProps
  */
-final class ComponentSlots implements SiteListInterface, ContainerInjectionInterface {
+final class ComponentSlots implements EntrySchemasInterface, ContainerInjectionInterface {
 
   use StringTranslationTrait;
 
@@ -80,6 +81,25 @@ final class ComponentSlots implements SiteListInterface, ContainerInjectionInter
   protected ?array $offered = NULL;
 
   /**
+   * The words the defs are labeled with, in the current language.
+   *
+   * @var array<string, string>|null
+   */
+  protected ?array $words = NULL;
+
+  /**
+   * How many sets of defs are kept, the oldest let go first.
+   */
+  protected const WRITTEN_KEPT = 4;
+
+  /**
+   * The defs written so far, by a hash of what they follow from.
+   *
+   * @var array<string, array<string, array>>
+   */
+  private static array $written = [];
+
+  /**
    * Constructs the provider.
    *
    * @param \Drupal\data_surface\Variants\ComponentsOffered $components
@@ -106,12 +126,54 @@ final class ComponentSlots implements SiteListInterface, ContainerInjectionInter
    */
   public function list(): SiteList {
     $variants = (new SiteList())->addCacheTags(ComponentsOffered::CACHE_TAGS);
-    $defs = [];
     foreach ($this->offered() as $id => $component) {
-      $variants->add($id, (string) ($component['name'] ?? $id), schema: ['$ref' => '#/$defs/' . $this->slots($id, 1, $defs)]);
+      $variants->add($id, (string) ($component['name'] ?? $id));
     }
-    ksort($defs);
-    return $variants->addDefs($defs);
+    return $variants;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function entrySchema(string $id): array {
+    return ['$ref' => '#/$defs/' . self::slotsDef($id, 1)];
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function entryDefs(): array {
+    // The defs follow from the components, those offered and the words
+    // they are labeled with alone: written once for the same three and
+    // shared by every provider asked for them in the process.
+    $key = hash('xxh128', serialize([$this->definitions(), array_keys($this->offered()), $this->words()]));
+    if (!isset(self::$written[$key])) {
+      $defs = [];
+      foreach (array_keys($this->offered()) as $id) {
+        $this->slots($id, 1, $defs);
+      }
+      ksort($defs);
+      self::$written[$key] = $defs;
+      if (count(self::$written) > self::WRITTEN_KEPT) {
+        unset(self::$written[array_key_first(self::$written)]);
+      }
+    }
+    return self::$written[$key];
+  }
+
+  /**
+   * Names the def of a component's slots at a depth.
+   *
+   * @param string $id
+   *   The component's id.
+   * @param int $depth
+   *   The depth its slots are at.
+   *
+   * @return string
+   *   The def's name.
+   */
+  protected static function slotsDef(string $id, int $depth): string {
+    return 'component.slots.' . $id . '.' . $depth;
   }
 
   /**
@@ -210,7 +272,7 @@ final class ComponentSlots implements SiteListInterface, ContainerInjectionInter
    *   The def's name.
    */
   protected function slots(string $id, int $depth, array &$defs): string {
-    $name = 'component.slots.' . $id . '.' . $depth;
+    $name = self::slotsDef($id, $depth);
     if (isset($defs[$name])) {
       return $name;
     }
@@ -249,30 +311,31 @@ final class ComponentSlots implements SiteListInterface, ContainerInjectionInter
     if (isset($defs[$name])) {
       return $name;
     }
+    $words = $this->words();
     $labels = [
-      'text' => (string) $this->t('Text'),
-      'component' => (string) $this->t('A component'),
-      'components' => (string) $this->t('Components'),
+      'text' => $words['text'],
+      'component' => $words['a component'],
+      'components' => $words['components'],
     ];
     $properties = [
       'kind' => [
-        'title' => (string) $this->t('Holds'),
+        'title' => $words['holds'],
         'type' => 'string',
         'oneOf' => array_map(static fn (string $kind): array => ['const' => $kind, 'title' => $labels[$kind]], $kinds),
         'default' => 'text',
       ],
       'text' => [
-        'title' => (string) $this->t('Text'),
+        'title' => $words['text'],
         'type' => ['string', 'null'],
         'x-surface' => ['widget' => 'textarea'],
       ],
     ];
     if ($kinds !== ['text']) {
       $nested = $this->nested($metadata, $depth, $defs);
-      $properties['component'] = ['title' => (string) $this->t('Component'), '$ref' => '#/$defs/' . $nested];
+      $properties['component'] = ['title' => $words['component'], '$ref' => '#/$defs/' . $nested];
       if (in_array('components', $kinds, TRUE)) {
         $properties['components'] = [
-          'title' => (string) $this->t('Components'),
+          'title' => $words['components'],
           'type' => 'array',
           'items' => ['$ref' => '#/$defs/' . $nested],
         ];
@@ -342,14 +405,14 @@ final class ComponentSlots implements SiteListInterface, ContainerInjectionInter
     $defs[$name] = [
       'type' => 'object',
       'properties' => [
-        'component' => ['title' => (string) $this->t('Component'), 'type' => 'string', 'oneOf' => $choices],
+        'component' => ['title' => $this->words()['component'], 'type' => 'string', 'oneOf' => $choices],
         'props' => [
-          'title' => (string) $this->t('Props'),
+          'title' => $this->words()['props'],
           'anyOf' => array_map(static fn (string $reference): array => ['$ref' => $reference], array_values($props)),
           'x-surface' => ['by' => 'component', 'variants' => $props],
         ],
         'slots' => [
-          'title' => (string) $this->t('Slots'),
+          'title' => $this->words()['slots'],
           'anyOf' => array_map(static fn (string $reference): array => ['$ref' => $reference], array_values($slots)),
           'x-surface' => ['by' => 'component', 'variants' => $slots],
         ],
@@ -383,6 +446,27 @@ final class ComponentSlots implements SiteListInterface, ContainerInjectionInter
       }
     }
     return [$ids, $tags];
+  }
+
+  /**
+   * Gets every word the defs are labeled with, translated.
+   *
+   * The defs are kept by these (list()), so a def labels nothing with a
+   * word that is not here.
+   *
+   * @return array<string, string>
+   *   Each word, by its source in lower case.
+   */
+  protected function words(): array {
+    return $this->words ??= [
+      'text' => (string) $this->t('Text'),
+      'a component' => (string) $this->t('A component'),
+      'components' => (string) $this->t('Components'),
+      'holds' => (string) $this->t('Holds'),
+      'component' => (string) $this->t('Component'),
+      'props' => (string) $this->t('Props'),
+      'slots' => (string) $this->t('Slots'),
+    ];
   }
 
   /**

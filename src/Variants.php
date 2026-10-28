@@ -233,7 +233,9 @@ final class Variants {
     $kept = [];
     foreach ($this->strangers($id, $value) as $key) {
       foreach ($this->variants as $other => $variant) {
-        $definition = (string) $other === $id ? NULL : $variant->child->getDefinition($key);
+        // One not built yet that is known to hold no secret is not built
+        // to be asked.
+        $definition = (string) $other === $id || $variant->holdsNoSecretUnsettled() ? NULL : $variant->child->getDefinition($key);
         if ($definition !== NULL && DefinitionMetadata::isSecret($definition)) {
           // A secret that holds nothing has nothing to keep.
           if ($value[$key] !== NULL && $value[$key] !== '') {

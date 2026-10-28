@@ -185,13 +185,13 @@ final class ContractPanel implements DataSurfaceFormPanelInterface {
    *   The schema.
    *
    * @return array
-   *   A render array: the JSON in a `pre`, escaped.
+   *   A render array: the JSON as a code block.
    */
   protected function json(array $schema): array {
     return [
-      '#type' => 'html_tag',
-      '#tag' => 'pre',
-      '#value' => htmlspecialchars((string) json_encode($schema, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)),
+      '#type' => 'data_surface_code',
+      '#code' => (string) json_encode($schema, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
+      '#language' => 'json',
     ];
   }
 

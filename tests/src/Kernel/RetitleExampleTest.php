@@ -195,7 +195,7 @@ class RetitleExampleTest extends DataSurfaceKernelTestBase {
       $this->assertFileExists(dirname(__DIR__, 3) . '/' . strtok($page, '#'));
     }
     $this->assertSame([['entity:node:update'], ['field:node.title:edit']], array_map(static fn (array $row): array => [$row[0]], $concept['gates']['#rows']));
-    $listing = json_decode(htmlspecialchars_decode((string) $concept['listing']['content']['#value']), TRUE);
+    $listing = json_decode((string) $concept['listing']['content']['#code'], TRUE);
     $this->assertSame('retitle nodes', $listing['permission']);
     $this->assertSame(array_map(static fn (string $name): string => 'ai.retitle:' . $name, array_keys(ConceptCalls::CALLS['ai.retitle'])), array_values(array_filter(Element::children($concept['calls']), static fn (string $key): bool => str_starts_with($key, 'ai.retitle:'))));
     $ids = $this->container->get('class_resolver')->getInstanceFromDefinition(Retitle::class)->ids();

@@ -110,8 +110,56 @@ A variant the site lists is built the first time a door reads it:
 | The full schema, the tool listing | the variants it states: all of them within the site's list limit, none past it |
 | The schema for values, `?choose=`, the narrowing tool | the chosen one |
 | The form | the chosen one, to draw it |
-| The pipeline | every variant at a key it judges: a secret any of them declares is never returned under that key |
+| The pipeline | every variant at a key it judges whose document may state a secret: a secret any of them declares is never returned under that key; one read from a document that states none is not built |
 | The catalog | all of them, so a refusal inside one is listed, and every structure read from a schema is |
+
+A provider implementing `EntrySchemasInterface` is asked for an entry's
+schema only by a door that reads that entry: the form and `?choose=`
+for the chosen one, the full schema and the tool listing for those they
+state, the pipeline for each one's schema, without building it.
+
+## Memory
+
+Measured 2026-10-28 on the same site, each page a Drush sub-request as
+user 1 with warm caches, the peak PHP allocated
+(`memory_get_peak_usage(TRUE)`); Drush's bootstrap alone is 24 MB, and
+about 34 MB of every page is the tool definitions this site derives on
+each request. With `ini_set('memory_limit', '128M')` every page below
+answers; before, the four over 128 MB ran out of memory.
+
+| Page | Before | After |
+| --- | --- | --- |
+| `/surface-examples/12` | 144 MB | 92 to 96 MB |
+| `/surface-examples/13` | 184 MB | 88 MB |
+| `/surface-react/event.spotlight/configure` | 114 MB | 72 MB |
+| `/surface-api/event.spotlight/schema` | 132 MB | 60 MB |
+| `.../schema?choose=/props=aries:sq-card` | 132 MB | 60 MB |
+| `.../schema?choose=/slots=aries:sq-card` | 132 MB | 88 MB |
+| `drush tool:run data_surface:event.spotlight:configure:schema` | 114 MB | 78 MB |
+| `/admin/structure/block/surface/add` | 74 MB | 74 MB |
+| Every other example page | 70 to 76 MB | 70 to 76 MB |
+
+Where it went, at 312 components:
+
+- **The slots' defs, written on every build.** 13 MB as PHP arrays,
+  written by `ComponentSlots::list()` two to four times a request. Now
+  written when a slots variant is read (`entryDefs()`), once per process
+  for the same components and words.
+- **Preparing them.** The JSON pass and three walks each copied the
+  document: 18 MB kept beside the list, 36 MB at the peak. Now the
+  prepared document shares the list's arrays: 0.2 MB kept, 1.7 MB at the
+  peak, and a second build reads the one already prepared.
+- **The secrets walk.** Each read of stored values (a form, a tool call)
+  built every variant to ask it for secrets: 2,021 on example 12 and
+  6,142 on example 13. Now none is built whose document states none.
+- **Not the per-entry objects.** The read definitions, attachments and
+  holders of 624 variants are about 0.6 MB. The spotlight's build for
+  the account now costs 6 MB at 312 components and 5.4 MB at four, most
+  of it the components' definitions core reads.
+
+What stays: reading one slots variant reads all the defs (the form,
+`?choose=/slots=`), about 42 KB per component, since a slot that holds
+any component refers to every one.
 
 ## The benchmark
 

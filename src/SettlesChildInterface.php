@@ -43,4 +43,16 @@ interface SettlesChildInterface {
    */
   public function settled(): ?DataSurfaceInterface;
 
+  /**
+   * Answers whether the child, built or not, holds no secret at any depth.
+   *
+   * Known without building it for a structure read from a document that
+   * states none (SchemaReader::holdsNoSecret()), so a door that walks
+   * every variant for its secrets builds none of those.
+   *
+   * @return bool
+   *   TRUE when nothing in the child is secret; FALSE when it may be.
+   */
+  public function holdsNoSecret(): bool;
+
 }
