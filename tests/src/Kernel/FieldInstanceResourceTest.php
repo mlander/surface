@@ -12,6 +12,7 @@ use Drupal\data_surface\ResourceBuild\ResourcesInterface;
 use Drupal\data_surface_address\Resource\AddressFieldSettingsResource;
 use Drupal\data_surface_tool\Resource\FieldInstanceResource;
 use Drupal\data_surface_tool\Resource\FieldStorageResource;
+use Drupal\entity_test\EntityTestHelper;
 use Drupal\field\Entity\FieldConfig;
 use Drupal\field\Entity\FieldStorageConfig;
 use Drupal\field\FieldConfigInterface;
@@ -87,8 +88,9 @@ class FieldInstanceResourceTest extends DataSurfaceKernelTestBase {
    */
   protected function addContext(): OperationContext {
     return $this->resources()->operation(FieldInstanceResource::class, 'reuse', [
-      'storage' => 'entity_test.field_address',
+      'entity_type' => 'entity_test',
       'bundle' => 'entity_test',
+      'field_name' => 'field_address',
     ]);
   }
 
@@ -124,10 +126,10 @@ class FieldInstanceResourceTest extends DataSurfaceKernelTestBase {
    * Tests that editing chooses the variant by the locked field type.
    */
   public function testEditResolvesTheVariantFromTheFieldType(): void {
-    $field = $this->createField();
-    $surface = $this->resources()->build(FieldInstanceResource::class, FieldInstanceResource::update($field));
+    $this->createField();
+    $surface = $this->resources()->build(FieldInstanceResource::class, FieldInstanceResource::update('entity_test', 'entity_test', 'field_address'));
 
-    foreach (['entity_type_id', 'bundle', 'field_name', 'field_type'] as $key) {
+    foreach (['entity_type', 'bundle', 'field_name', 'field_type'] as $key) {
       $this->assertTrue($surface->isLocked($key), $key);
     }
     // The field type offers exactly the types the variants are for:
@@ -159,7 +161,7 @@ class FieldInstanceResourceTest extends DataSurfaceKernelTestBase {
     $this->assertInstanceOf(MapDataDefinition::class, $resolved);
     $this->assertArrayHasKey('field_overrides', $resolved->getPropertyDefinitions());
     // And the bundle is refined by the entity type, in the parent's frame.
-    $this->assertSame(['entityTypeId' => 'entity_test'], $surface->refine(['entity_type_id' => 'entity_test'])
+    $this->assertSame(['entityTypeId' => 'entity_test'], $surface->refine(['entity_type' => 'entity_test'])
       ->getDefinition('bundle')->getConstraints()['EntityBundleExists']);
   }
 
@@ -188,7 +190,8 @@ class FieldInstanceResourceTest extends DataSurfaceKernelTestBase {
 
     // Edited: loaded through both storage classes, and a partial payload
     // changes what it names and nothing else.
-    $context = $this->resources()->operation(FieldInstanceResource::class, 'update', [$field]);
+    $parts = ['entity_test', 'entity_test', 'field_address'];
+    $context = $this->resources()->operation(FieldInstanceResource::class, 'update', $parts);
     $surface = $this->resources()->build(FieldInstanceResource::class, $context);
     $resource_storage = $this->resources()->storage(FieldInstanceResource::class, $context, $surface);
     $loaded = $resource_storage->load($surface);
@@ -212,9 +215,9 @@ class FieldInstanceResourceTest extends DataSurfaceKernelTestBase {
    * Tests the run-time access the permission cannot say.
    */
   public function testLockedStorageIsRefused(): void {
-    $field = $this->createField();
+    $this->createField();
     $account = $this->setUpCurrentUser([], ['administer entity_test fields']);
-    $context = FieldInstanceResource::update($field);
+    $context = FieldInstanceResource::update('entity_test', 'entity_test', 'field_address');
     $this->assertTrue($this->resources()->access(FieldInstanceResource::class, $context, $account)->isAllowed());
 
     FieldStorageConfig::loadByName('entity_test', 'field_address')->setLocked(TRUE)->save();
@@ -235,11 +238,11 @@ class FieldInstanceResourceTest extends DataSurfaceKernelTestBase {
    */
   public function testTheStorageChildIsOpenOnEveryPath(): void {
     $this->assertNull($this->container->get('data_surface.resource_registry')->getDefinition(FieldStorageResource::class)->access);
-    $field = $this->createField();
+    $this->createField();
     $contexts = [
       'create' => FieldInstanceResource::create('entity_test', 'entity_test'),
       'reuse' => $this->addContext(),
-      'update' => FieldInstanceResource::update($field),
+      'update' => FieldInstanceResource::update('entity_test', 'entity_test', 'field_address'),
     ];
     foreach (['with' => ['administer entity_test fields'], 'without' => []] as $who => $permissions) {
       $account = $this->setUpCurrentUser([], $permissions);
@@ -270,18 +273,18 @@ class FieldInstanceResourceTest extends DataSurfaceKernelTestBase {
     $this->assertSame('reuse', $reuse->forChild('settings')->id);
 
     $surface = $this->resources()->build(FieldInstanceResource::class, $reuse);
-    foreach (['entity_type_id', 'bundle', 'field_name', 'field_type'] as $key) {
+    foreach (['entity_type', 'bundle', 'field_name', 'field_type'] as $key) {
       $this->assertTrue($surface->isLocked($key), $key);
     }
     $storage = $surface->getDefinitions()->entry('storage');
     $this->assertSame(FieldStorageResource::class, $storage->attachment->source);
-    $this->assertSame(['field_type', 'cardinality', 'translatable', 'settings'], $storage->attachment->child->getDefinitions()->names());
+    $this->assertSame(['entity_type', 'field_name', 'field_type', 'cardinality', 'translatable', 'settings'], $storage->attachment->child->getDefinitions()->names());
     // The storage's edit knows the type, so its settings are resolved.
     $this->assertTrue($storage->attachment->child->isLocked('field_type'));
     $this->assertSame('address', $storage->attachment->child->getDefault('field_type'));
     $this->assertSame(
       [
-        'entity_type_id',
+        'entity_type',
         'bundle',
         'field_type',
         'field_name',
@@ -300,7 +303,14 @@ class FieldInstanceResourceTest extends DataSurfaceKernelTestBase {
     // The address field type has no storage settings, so its derived
     // variant is empty.
     $this->assertSame(
-      ['field_type' => 'address', 'cardinality' => 1, 'translatable' => TRUE, 'settings' => []],
+      [
+        'entity_type' => 'entity_test',
+        'field_name' => 'field_address',
+        'field_type' => 'address',
+        'cardinality' => 1,
+        'translatable' => TRUE,
+        'settings' => [],
+      ],
       $resource_storage->load($surface)['storage'],
     );
     $result = $this->pipeline()->submit($surface, ['label' => 'Address', 'storage' => ['cardinality' => 2]], $resource_storage);
@@ -332,16 +342,16 @@ class FieldInstanceResourceTest extends DataSurfaceKernelTestBase {
    * a constraint, so a form, a payload and a tool all meet it.
    */
   public function testStorageWithDataMayNotShrink(): void {
-    $field = $this->createField();
+    $this->createField();
     FieldStorageConfig::loadByName('entity_test', 'field_address')->setCardinality(3)->save();
-    $context = FieldInstanceResource::update($field);
+    $context = FieldInstanceResource::update('entity_test', 'entity_test', 'field_address');
     $this->assertSame([], $context->forChild('storage')->constraints());
 
     $this->container->get('entity_type.manager')->getStorage('entity_test')->create([
       'field_address' => [['country_code' => 'US', 'locality' => 'Boston']],
     ])->save();
-    $field = $this->reloadField();
-    $context = FieldInstanceResource::update($field);
+    $this->reloadField();
+    $context = FieldInstanceResource::update('entity_test', 'entity_test', 'field_address');
     $this->assertSame(['cardinality' => ['Range' => ['min' => 3]]], $context->forChild('storage')->constraints());
     $surface = $this->resources()->build(FieldInstanceResource::class, $context);
     $cardinality = $surface->getDefinitions()->entry('storage')->attachment->child->getDefinition('cardinality');
@@ -353,6 +363,94 @@ class FieldInstanceResourceTest extends DataSurfaceKernelTestBase {
     $result = $this->pipeline()->submit($surface, ['storage' => ['cardinality' => 5]], $resource_storage);
     $this->assertTrue($result->committed, implode(', ', $result->violations->keys()));
     $this->assertSame(5, FieldStorageConfig::loadByName('entity_test', 'field_address')->getCardinality());
+  }
+
+  /**
+   * Tests that each operation takes the field by its parts.
+   *
+   * A parameter is identity the caller knows: create names the bundle it
+   * adds to, reuse and update the whole field, field.storage's update the
+   * storage, each by the names core's field config stores them under. A
+   * part left out is refused naming it, and so is a part that names
+   * nothing.
+   */
+  public function testOperationsTakeTheFieldByItsParts(): void {
+    $this->createField();
+    $registry = $this->container->get('data_surface.resource_registry');
+    $names = static fn (string $resource, string $operation): array => array_map(
+      static fn ($parameter): string => $parameter->name,
+      $registry->getOperation($resource, $operation)->parameters,
+    );
+    $this->assertSame(['entity_type', 'bundle'], $names('field.instance', 'create'));
+    $this->assertSame(['entity_type', 'bundle', 'field_name'], $names('field.instance', 'reuse'));
+    $this->assertSame(['entity_type', 'bundle', 'field_name'], $names('field.instance', 'update'));
+    $this->assertSame(['entity_type', 'field_name'], $names('field.storage', 'update'));
+    $this->assertSame(['entity_type', 'bundle', 'field_name', 'field_type'], $registry->getDefinition('field.instance')->identity);
+    $this->assertSame(['entity_type', 'field_name', 'field_type'], $registry->getDefinition('field.storage')->identity);
+
+    $parts = ['entity_type' => 'entity_test', 'bundle' => 'entity_test', 'field_name' => 'field_address'];
+    $update = $this->resources()->operation('field.instance', 'update', $parts);
+    $identity = array_flip(['entity_type', 'bundle', 'field_name', 'field_type']);
+    $this->assertEquals($parts + ['field_type' => 'address'], array_intersect_key($update->known, $identity));
+    $this->assertSame(['entity_type' => 'entity_test', 'field_name' => 'field_address', 'field_type' => 'address'], $update->forChild('storage')->known);
+    $named = ['entity_type' => 'entity_test', 'field_name' => 'field_address'];
+    $storage = $this->resources()->operation('field.storage', 'update', $named);
+    $this->assertSame(['entity_type' => 'entity_test', 'field_name' => 'field_address', 'field_type' => 'address'], $storage->known);
+
+    $refusals = [
+      'a part left out' => [
+        'update',
+        $named,
+        'needs string $bundle',
+      ],
+      'an entity type that has no fields' => [
+        'update',
+        ['entity_type' => 'no_such_type'] + $parts,
+        'entity_type "no_such_type" names no entity type that has fields.',
+      ],
+      'a field name that names no storage' => [
+        'update',
+        ['field_name' => 'field_none'] + $parts,
+        'field_name "field_none" names no field of the entity_test entity type.',
+      ],
+      'a bundle that does not exist' => [
+        'update',
+        ['bundle' => 'no_such_bundle'] + $parts,
+        'bundle "no_such_bundle" names no bundle of the entity_test entity type.',
+      ],
+      'a reuse of a storage that does not exist' => [
+        'reuse',
+        ['field_name' => 'field_none'] + $parts,
+        'field_name "field_none" names no field of the entity_test entity type.',
+      ],
+    ];
+    foreach ($refusals as $case => [$operation, $arguments, $message]) {
+      try {
+        $this->resources()->operation('field.instance', $operation, $arguments);
+        $this->fail("$case is refused.");
+      }
+      catch (\InvalidArgumentException $e) {
+        $this->assertStringContainsString($message, $e->getMessage(), $case);
+      }
+    }
+    try {
+      $this->resources()->operation('field.storage', 'update', ['field_name' => 'field_none'] + $named);
+      $this->fail('A storage that does not exist is refused.');
+    }
+    catch (\InvalidArgumentException $e) {
+      $this->assertSame('field_name "field_none" names no field of the entity_test entity type.', $e->getMessage());
+    }
+
+    // A field whose storage exists but which is not on the bundle names
+    // the operation that adds it.
+    EntityTestHelper::createBundle('other');
+    try {
+      $this->resources()->operation('field.instance', 'update', ['bundle' => 'other'] + $parts);
+      $this->fail('A field not on the bundle is refused.');
+    }
+    catch (\InvalidArgumentException $e) {
+      $this->assertSame('field_name "field_address" names no field on the other bundle of the entity_test entity type; the reuse operation adds it there.', $e->getMessage());
+    }
   }
 
 }

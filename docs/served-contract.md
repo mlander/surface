@@ -615,24 +615,27 @@ its def, so every reference is bare:
 
 A narrowing, from the full schema of `field.instance:update` for a long
 text field: the field's storage is attached in the storage's own `update`
-context, which knows its field type and locks it, while the
-`field.storage` def is the storage as declared, with the field type
-open:
+context, which knows its identity, the entity type, the field name and
+the field type, and locks it, while the `field.storage` def is the
+storage as declared, with its identity open:
 
 ```json
 "storage": {
   "title": "Field storage", "description": "What every bundle using this field shares.",
   "allOf": [
     {"$ref": "#/$defs/field.storage"},
-    {"type": "object", "properties": {"field_type": {"default": "string_long", "readOnly": true, "const": "string_long"}}}
+    {"type": "object", "properties": {
+      "entity_type": {"default": "node", "readOnly": true, "const": "node"},
+      "field_name": {"default": "field_description", "readOnly": true, "const": "field_description"},
+      "field_type": {"default": "string_long", "readOnly": true, "const": "string_long"}}}
   ]
 }
 ```
 
 The narrowing states `"type": "object"` beside its `properties`, the
-def's own type, which narrows nothing. The field type is locked by
-`readOnly` and `const`; its `x-surface` says nothing the def does not,
-so the site carries none. Where a narrowed key's `x-surface` does
+def's own type, which narrows nothing. The identity is locked by
+`readOnly` and `const`; the keys' `x-surface` says nothing the def does
+not, so the site carries none. Where a narrowed key's `x-surface` does
 differ, it is said on the site, in `within`, by the pointer from the
 site to the key's narrowing (contract 3 also wrote `{"locked": true}`
 there).
@@ -1187,6 +1190,7 @@ route, `data_surface_react.api`, answers every path below;
 | `GET /surface-api/{resource}` | A singleton's envelope: what is stored and the schema for it. On a collection, the listing where the resource declares one, a read only operation that names no thing: its query string the values, its outputs the answer ([a listing](#a-listing)). Else the default create's envelope: its declared defaults and the schema a `POST` takes. |
 | `PATCH /surface-api/{resource}` | A singleton's default update. A collection has none. |
 | `POST /surface-api/{resource}` | The default create, on the collection of a resource with identity. |
+| `GET` and `POST /surface-api/{resource}/{parent}` | A create that names the parent it adds to, its envelope and a run of it: `POST /surface-api/field.instance/node/article` adds a field to the article bundle. |
 | `GET /surface-api/{resource}/{id}` | One thing's envelope, its default update's (or default read's). |
 | `PATCH /surface-api/{resource}/{id}` | One thing's default update. |
 | `DELETE /surface-api/{resource}/{id}` | One thing's default delete: removes it, with no body. |
@@ -1199,18 +1203,26 @@ route, `data_surface_react.api`, answers every path below;
 | `GET` and `POST .../{x}:{operation}/schema` | Its full schema, and its schema for values. |
 | `GET .../{x}:lookup` | The candidates of one key that refers to an entity, of the operation `GET` serves at the path, by label: the lookup ([below](#a-lookup)). A resource that declares an operation named `lookup` has that operation there instead. |
 
-`{id}` is the identity: the parameters of the operation that addresses
-one thing, as path segments in declaration order, joined by `/` when
-there is more than one (up to four). It is the identity key where the
-operation is asked by it (`/surface-api/node.type/recipe`) and the
-thing's own id where it is asked by that
-(`/surface-api/entity.content:node.page/12`,
-`/surface-api/field.instance/node.article.field_x`). An operation
-addresses one thing when its resource has identity keys, it does not
-create, and it needs a parameter; any other, a create and every
-operation of a singleton, is addressed at `/surface-api/{resource}`.
-An operation's parameters that are not in the path arrive in the query
-string: `POST /surface-api/field.instance?entity_type_id=node&bundle=article`.
+`{id}` is the identity: an operation's parameters named for the
+resource's identity keys, as path segments in the order
+`#[Resource(identity:)]` lists the keys, from the first key on, joined
+by `/` (up to four). A parameter is identity the caller knows before the
+call, so it is in the path at every operation that takes it, named as
+the key is: `/surface-api/node.type/recipe`,
+`/surface-api/entity.content:node.page/12`, and for the field instance,
+whose identity is `entity_type`, `bundle`, `field_name`, `field_type`,
+`/surface-api/field.instance/node/article/field_x`. A create names the
+parent it adds to, and leaves the keys it chooses to the body: the field
+instance's create is `POST /surface-api/field.instance/node/article`, its
+machine name and type in the body. An edit names the whole thing; an
+identity key it leaves out follows from the rest (a field's type from
+the field). A create that takes no identity, and every operation of a
+singleton, is addressed at `/surface-api/{resource}`. An identity key no
+operation takes as a parameter has no segment: a content entity
+resource's entity type and bundle are in its id. A parameter named for
+no identity key arrives in the query string
+(`ResourceDefinition::identityParameters()`, why:
+[decision](decisions.md#a-parameter-is-identity-the-caller-knows)).
 
 **Which operation is the default.** At each path, of each kind: the
 operation whose id is the kind's standard one (`create`, `update`,
@@ -1223,17 +1235,21 @@ the standard id. A read is a
 default only where no update is, and the collection of a resource with
 identity has no default update: `PATCH` there would change every thing,
 which no operation means, so an update over the collection, example
-15's reorder, is a custom method. `GET` serves the default update, else
-the default read, else, on a collection, the default create; on the
-collection of a resource with identity, a default read is its listing,
-which `GET` runs. `PATCH` is the default update; `POST` on the
-collection is the default create; `DELETE` is the default delete. Every
-other operation is a custom method, `:{operation}` after the last
-segment of the path it addresses, run with `PATCH` when it is an update
-and `POST` otherwise: example 10's `check`, read-only beside the
-program's `configure`, is `POST /surface-api/event.program:check`; the
-field instance's `reuse`, a second create beside `create`, is `POST
-/surface-api/field.instance:reuse`; example 15's `reorder` is `PATCH
+15's reorder, is a custom method, as is an update at a path shorter
+than the deepest one the resource's operations are addressed at. A path
+an update is served at names a thing, so it has no default create. `GET`
+serves the default update,
+else the default read, else the default create; on the collection of a
+resource with identity, a default read is its listing, which `GET` runs.
+`PATCH` is the default update; `POST` is the default create; `DELETE` is
+the default delete. Every other operation is a custom method,
+`:{operation}` after the last segment of the path it addresses, run with
+`PATCH` when it is an update and `POST` otherwise: example 10's `check`,
+read-only beside the program's `configure`, is `POST
+/surface-api/event.program:check`; the field instance's `reuse`, a
+create that names the whole field, at the path its edit is served at,
+is `POST /surface-api/field.instance/node/page/body:reuse`; example
+15's `reorder` is `PATCH
 /surface-api/event.venue:reorder`. A resource id with a colon of its own,
 `entity.content:node.page`, is read whole first. A default may be named
 the same way.
@@ -1681,11 +1697,10 @@ parameter loads what its id names), its context must not create, and
 every identity key it knows must equal what was written. The content
 type's `update(NodeTypeInterface $type)` is answered by the `type` the
 write accepted, and its read is the `Location`. A field added at
-`field.instance:create` gets `null` and no `Location`: its
-`update(FieldConfigInterface $field)` takes the field's own id
-(`node.article.field_x`), which neither its outputs (it declares none)
-nor its identity keys carry by that name; declaring a `field` output
-would answer it. Example 2's `configure` creates nothing, so `null`.
+`field.instance:create` lives at its `update(string $entity_type, string
+$bundle, string $field_name)`, answered by the identity the write
+accepted: `Location: /surface-api/field.instance/node/article/field_x`.
+Example 2's `configure` creates nothing, so `null`.
 
 ### If-Match
 
@@ -1949,8 +1964,9 @@ What this list asked for before Submit was wired, and where each is now:
 - An operation that creates (`create`) answering where the created thing
   now lives, so the app can move to its `update` operation's page. **Done**
   for any resource whose non-creating operation's parameters the outputs
-  or identity answer (the content type); not for the field instance,
-  [above](#where-a-created-thing-lives).
+  or identity answer: the content type, and since its edit takes the
+  field by its parts, the field instance
+  ([above](#where-a-created-thing-lives)).
 - A decision on concurrent edits. **Done**: the opt-in
   [`If-Match`](#if-match); without it the last write wins, as on the
   form.

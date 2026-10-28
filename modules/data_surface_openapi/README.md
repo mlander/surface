@@ -39,6 +39,16 @@ schema) and `post` (the schema for values sent). Any other operation is
 a custom method, a path item of its own: `/surface-api/event.program:check`,
 `get` and `post`.
 
+- **Parameters.** An operation's parameter named for one of its
+  resource's identity keys is a path parameter, in identity order, named
+  as the key is: `/surface-api/field.instance/{entity_type}/{bundle}`
+  for the field instance's create, the bundle it adds to, and
+  `/surface-api/field.instance/{entity_type}/{bundle}/{field_name}` for
+  its edit. Any other parameter is a query parameter. One that takes a
+  value and is named for a key says what that key says; an entity's id
+  says it is the identity of the thing
+  ([decision](../../docs/decisions.md#a-parameter-is-identity-the-caller-knows)).
+
 - **Schemas.** Each operation's full schema, split into components: each
   def a component named by its def id, the root the operation's values
   component (`first.newsletter.configure`), every other `x-surface`

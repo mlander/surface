@@ -146,7 +146,7 @@ method.
 
 ```php
 #[Resource('field.instance',
-  identity: ['entity_type_id', 'bundle', 'field_name', 'field_type'],
+  identity: ['entity_type', 'bundle', 'field_name', 'field_type'],
   storage: FieldInstanceStorage::class,
   access: FieldInstanceAccess::class,
 )]
@@ -154,7 +154,7 @@ final class FieldInstanceResource implements ResourceInterface {
 
   public static function defineInputs(BlueprintInterface $inputs): void {
     // Which field this is.
-    $inputs->add('entity_type_id', 'string', t('Entity type'))->setRequired(TRUE);
+    $inputs->add('entity_type', 'string', t('Entity type'))->setRequired(TRUE);
 
     $inputs->add('bundle', 'string', t('Bundle'))->setRequired(TRUE);
 
@@ -181,8 +181,8 @@ final class FieldInstanceResource implements ResourceInterface {
    * The bundle must belong to the chosen entity type.
    */
   #[RefinesInput('bundle')]
-  public static function bundleOfEntityType(DataDefinitionInterface $bundle, string $entity_type_id): DataDefinitionInterface {
-    return $bundle->addConstraint('EntityBundleExists', ['entityTypeId' => $entity_type_id]);
+  public static function bundleOfEntityType(DataDefinitionInterface $bundle, string $entity_type): DataDefinitionInterface {
+    return $bundle->addConstraint('EntityBundleExists', ['entityTypeId' => $entity_type]);
   }
 
 }
@@ -318,6 +318,13 @@ not which keys there are. It is how much is already known.
   an `OperationContext` and knows more than the last; what it needs is
   its own signature. Whether it creates is on the attribute, stamped on
   the context, where the storage reads it.
+- **A parameter is identity the caller knows.** An operation takes the
+  identity keys it knows as parameters of the same names, never as a
+  composite id: `create(string $entity_type, string $bundle)` names the
+  bundle a field is added to, `update(string $entity_type, string
+  $bundle, string $field_name)` the field, and every door names them
+  alike, in the path in identity order
+  ([decision](decisions.md#a-parameter-is-identity-the-caller-knows)).
 - **On the owner's class only.** An operation stands on its
   resource's or structure's own class, found the way a hook method is,
   no interface needed; one on any other class is refused at discovery.
@@ -454,7 +461,7 @@ Two tiers, and alters touch neither.
 
 - **Static**: the permission on each `#[Operation]`, answerable with no
   subject. A `%key` in it is filled from the identity the context knows
-  (`administer %entity_type_id fields`).
+  (`administer %entity_type fields`).
 - **Run time**: `access:` on `#[Resource]` or `#[Structure]`, an
   `OperationAccessInterface` that may hold services, asked once the
   permission allows. `FieldInstanceAccess` refuses a locked storage;

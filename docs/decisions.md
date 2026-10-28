@@ -1083,7 +1083,10 @@ field name this way, which `FieldStorageStorage` loads by, while
 `field_type`, its one
 identity key, is locked. (Before storage settings existed, the field
 type was known the same way; it became identity when it started
-choosing between the settings variants.)
+choosing between the settings variants.) *Amended 2026-10-28:* the storage's entity type and field name are
+identity too, beside its field type ([A parameter is identity the caller
+knows](#a-parameter-is-identity-the-caller-knows)); a field's settings
+child still knows the field's bundle this way.
 
 ### An entity parameter given as an id
 
@@ -1092,6 +1095,103 @@ entity interface is loaded by the one entity type whose class satisfies
 that type; a type several entity types satisfy is taken only as an
 object. A guess between entity types would load the wrong thing.
 (`OperationArguments`)
+
+### A parameter is identity the caller knows
+
+Decided 2026-10-28, the owner's rule: a parameter is identity the caller
+already knows before the call, and the body is what the call decides. An
+add names the parent it adds to and leaves the keys it chooses open in
+the body; an edit names the whole identity. Every identity key is named
+the same way at every door (route, OpenAPI document, tool, React page),
+with the words a person uses, never a composite id a caller has to
+assemble.
+
+- **Parts, not a composite id.** The field instance's reuse took
+  `FieldStorageConfigInterface $storage`, core's `node.body`, and its
+  update `FieldConfigInterface $field`, `node.article.body`: ids that
+  join identity keys with dots, which a caller had to know how to
+  build. Both take `string $entity_type, string $bundle, string
+  $field_name` now, load what they name and refuse, naming the part,
+  when it names nothing; `field.storage`'s update takes `$entity_type,
+  $field_name`. A parameter named for a resource's one identity key and
+  typed as the entity (`node.type`'s `type`, `block.placement`'s `id`)
+  is that key already, and stays.
+- **One name for the entity type, `entity_type`.** The field resources
+  called it `entity_type_id`, the content entity resources
+  `entity_type`. `entity_type` is the name core's field config stores
+  it under (`field.field.node.page.body` holds `entity_type`, `bundle`,
+  `field_name` and `field_type`, the field instance's four identity
+  keys), the name the content entity resources, the reference key's two
+  parts, a gate's `entity_type` and `id` pair and the demo block already
+  used, and the words a person says; `entity_type_id` is core's name
+  for a PHP variable holding it. So the field resources moved and
+  nothing else did: no stored value changed, and the content entity
+  resources' documents did not move. The permission is `administer
+  %entity_type fields`.
+- **The storage's identity is core's.** `field.storage` named only
+  `field_type`, the key that chooses its settings, and knew the entity
+  type and the field name as keys that were no identity. Its identity
+  is `entity_type`, `field_name`, `field_type` now, each a declared key,
+  locked wherever its context knows it; as the field's child they are
+  the field's, handed in its context on reuse and update, the entity
+  type on create, and otherwise learned from the field's accepted
+  identity when it is committed. A storage value naming another is
+  refused. This amends [Known keys that are not
+  identity](#known-keys-that-are-not-identity).
+- **The path.** A parameter named for one of the resource's identity
+  keys is a path segment, in identity order, from the first key on, as
+  far as the operation names them; any other parameter is in the query
+  string. One rule at every door: the route reads it, the OpenAPI
+  document writes a path parameter for it, the tool names its fetch
+  with it, and the React page reads its endpoints off it. A create
+  names its parent's path, `POST /surface-api/field.instance/node/article`;
+  a path an update is served at names a thing, so a create there is a
+  custom method, `POST .../node/article/body:reuse`. The deepest path
+  any operation of the resource is addressed at is the thing's, and an
+  update at a shorter one, over a parent's things as the venues' reorder
+  is over all of them, is a custom method. An identity key no operation
+  takes as a parameter is the resource's own and has no segment: a
+  content entity resource's entity type and bundle, which its id names,
+  `/surface-api/entity.content:node.page/12`. A resource with one
+  identity key came out the same: its operations' parameters were
+  already named for it. This amends [Contract
+  3](#contract-3-the-operation-is-the-method), whose path held the
+  parameters of the operation that addresses one thing, in declaration
+  order, and put a create's in the query.
+- **What a static tool definition knows.** An operation whose
+  parameters name a whole thing (an edit, or a create that names as
+  much identity as an edit does, the field's reuse) knows every
+  identity key, those it leaves out too, so its `values` lists none of
+  them. This amends [Identity before the
+  parameters](#identity-before-the-parameters).
+- **Who hears that a part names nothing.** When the parameters build no
+  context, a permission with a `%key` placeholder is filled from the
+  parameters as sent: an account holding `administer node fields`
+  hears `field_name "nope" names no field of the node entity type.`, at
+  the tool and over HTTP (404); any other account gets the one fixed
+  refusal, as before.
+- **What it closed.** The fetch a tool names carries every parameter,
+  `GET /surface-api/field.instance/{entity_type}/{bundle}/schema?choose=/settings={field_type}`,
+  where it named the path without them and answered 400 (the open
+  point of [A budget for what the site
+  decides](#a-budget-for-what-the-site-decides)). A field added over
+  HTTP answers 201 with its edit's path as `Location`, which its
+  composite id could not give.
+
+*Open:* the field's storage child still repeats the field's identity
+keys in its body (`storage.entity_type`, `storage.field_name`,
+`storage.field_type`): optional, locked where its context knows them,
+and refused when they name another field. An engine rule that a
+child's identity key named as one of its parent's identity keys is the
+parent's, never asked in the child, would drop them.
+
+(`ResourceDefinition::identityParameters()`,
+`ResourceDefinition::namesWholeThing()`, `ServedPaths::depth()`,
+`ServedPaths::defaults()`, `OpenApiDocument::operationParameters()`,
+`OperationInputs::schemaPath()`,
+`ResourceOperationToolBase::sentPermissionAccess()`,
+`ServedOperationAccessCheck::access()`, `FieldInstanceResourceTest`,
+`IdentityPathsTest`)
 
 ### One context per walk, not a parameter list
 
@@ -3956,7 +4056,12 @@ off its signature: a scalar parameter supplies its own name, an entity
 parameter every identity key no scalar names. The tool then refines
 `values` to the real context once the parameters arrive. What an
 operation knows is only on the context it returns, and a static
-definition cannot call it. (`OperationInputs::inputs()`)
+definition cannot call it. (`OperationInputs::inputs()`) *Amended
+2026-10-28:* an operation whose parameters name a whole thing, an edit
+or a create that names as much identity as an edit does, supplies every
+identity key ([A parameter is identity the caller
+knows](#a-parameter-is-identity-the-caller-knows)).
+(`ResourceDefinition::namesWholeThing()`)
 
 ### A parameter named for a key
 
@@ -6687,10 +6792,14 @@ these answers, and nothing else of variants. There is no new setting.
   bytes). Example 9's ticket types are keys from the site, not variants,
   and did not move (2,094 bytes).
 
-*Open:* the fetch a create with parameters names omits them
-(`GET /surface-api/field.instance/schema?choose=...` answers 400 until
-`entity_type_id` and `bundle` are added to the query), which the field
-tools now name on every site.
+*Closed 2026-10-28:* the fetch a create with parameters named omitted
+them (`GET /surface-api/field.instance/schema?choose=...` answered 400
+until the entity type and the bundle were added to the query). The
+fetch now carries every parameter, the identity in the path and any
+other in the query,
+`GET /surface-api/field.instance/{entity_type}/{bundle}/schema?choose=/settings={field_type}`
+([A parameter is identity the caller
+knows](#a-parameter-is-identity-the-caller-knows)).
 (`InputDefinitions::deferred()`, `InputDefinitions::leftOut()`,
 `OperationInputs::listedValues()`, `ResourceOperationTool::mayListStored()`,
 `SiteListBudget::anyKey()`, `SiteListToolDoorTest`)
@@ -7413,7 +7522,14 @@ door spells a path. The endpoint table is in
   create, and it needs a parameter; any other is addressed at the
   collection, `/surface-api/{resource}`, its parameters in the query
   string (`field.instance`'s create, `?entity_type_id=node&bundle=article`).
-  (`ServedPaths::placement()`)
+  (`ServedPaths::placement()`) *Amended 2026-10-28:* the path holds an
+  operation's parameters named for identity keys, in identity order,
+  and any other parameter is in the query; the field instance's
+  operations take the field by its parts, so its create is `POST
+  /surface-api/field.instance/node/article` and its edit `PATCH
+  /surface-api/field.instance/node/article/field_x`
+  ([A parameter is identity the caller
+  knows](#a-parameter-is-identity-the-caller-knows); `ServedPaths::depth()`).
 - **The method is the operation.** At each path, `GET` reads, `PATCH` is
   the default update and `POST` on the collection the default create.
   The default of a kind is the operation whose id is the kind's standard

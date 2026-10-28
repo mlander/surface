@@ -195,7 +195,7 @@ class ResourceCatalogTest extends DataSurfaceKernelTestBase {
 
     $field = $catalog['field.instance'];
     $this->assertSame(['create', 'reuse', 'update'], array_column($field['operations'], 'id'));
-    $this->assertSame(['FieldStorageConfigInterface $storage', 'string $bundle'], $field['operations'][1]['parameters']);
+    $this->assertSame(['string $entity_type', 'string $bundle', 'string $field_name'], $field['operations'][1]['parameters']);
     $this->assertSame(['settings' => ['address' => AddressFieldSettingsResource::class]], $field['variants']);
     $this->assertSame(FieldInstanceResource::class, $field['class']);
     $this->assertSame([], $field['plugins']);
@@ -212,7 +212,7 @@ class ResourceCatalogTest extends DataSurfaceKernelTestBase {
   public function testTheCatalogueSaysWhatCanBeAskedOnItsOwn(): void {
     $catalog = $this->catalog();
     $storage = array_column($catalog['field.storage']['operations'], NULL, 'id');
-    $this->assertSame(['entity_type_id'], $storage['create']['unresolvable']);
+    $this->assertSame(['entity_type'], $storage['create']['unresolvable']);
     $this->assertFalse($storage['create']['standalone']);
     $this->assertTrue($storage['update']['standalone']);
 

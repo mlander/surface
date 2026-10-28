@@ -141,8 +141,8 @@ class FieldToolsAccessTest extends DataSurfaceKernelTestBase {
    */
   public function testAccessIsRefusedByTheFieldTypeAlone(): void {
     $account = $this->createUser([self::PERMISSION]);
-    $reuse = ['storage' => 'entity_test.field_gated', 'bundle' => 'entity_test'];
-    $edit = ['field' => 'entity_test.entity_test.field_gated'];
+    $reuse = ['entity_type' => 'entity_test', 'bundle' => 'entity_test', 'field_name' => 'field_gated'];
+    $edit = $reuse;
 
     // Holding everything core asks for, both tools are allowed.
     $this->assertTrue($this->checkAccess('data_surface:field.instance:reuse', $reuse, $account)->isAllowed());
@@ -168,7 +168,9 @@ class FieldToolsAccessTest extends DataSurfaceKernelTestBase {
     $field = $this->createField();
     $this->setFieldTypeRefusal(TRUE);
     $tool = $this->toolManager->createInstance('data_surface:field.instance:update');
-    $tool->setInputValue('field', 'entity_test.entity_test.field_gated');
+    $tool->setInputValue('entity_type', 'entity_test');
+    $tool->setInputValue('bundle', 'entity_test');
+    $tool->setInputValue('field_name', 'field_gated');
     $tool->setInputValue(OperationInputs::VALUES, ['label' => 'Gated', 'settings' => ['note' => 'Refused.']]);
 
     $tool->execute();
@@ -194,7 +196,9 @@ class FieldToolsAccessTest extends DataSurfaceKernelTestBase {
   public function testTheSameCallSucceedsWhenTheFieldTypeAllows(): void {
     $this->createField();
     $tool = $this->toolManager->createInstance('data_surface:field.instance:update');
-    $tool->setInputValue('field', 'entity_test.entity_test.field_gated');
+    $tool->setInputValue('entity_type', 'entity_test');
+    $tool->setInputValue('bundle', 'entity_test');
+    $tool->setInputValue('field_name', 'field_gated');
     $tool->setInputValue(OperationInputs::VALUES, ['label' => 'Gated', 'settings' => ['note' => 'Allowed.']]);
 
     $tool->execute();
@@ -241,7 +245,7 @@ class FieldToolsAccessTest extends DataSurfaceKernelTestBase {
    */
   public function testRuntimeVariantIsOfferedForTheAccountAlone(): void {
     $resources = $this->container->get('data_surface.resources');
-    $arguments = ['entity_type_id' => 'entity_test', 'bundle' => 'entity_test'];
+    $arguments = ['entity_type' => 'entity_test', 'bundle' => 'entity_test'];
     $context = $resources->operation('field.instance', 'create', $arguments);
     $this->setFieldTypeRefusal(TRUE);
     $built = $resources->build('field.instance', $context)->getDefinitions()->entry('settings');

@@ -46,7 +46,7 @@ final class FieldInstanceStorage implements ResourceStorageInterface {
   public function load(OperationContext $context): array {
     $field = $this->field($context->known);
     return $field === NULL ? [] : [
-      'entity_type_id' => $field->getTargetEntityTypeId(),
+      'entity_type' => $field->getTargetEntityTypeId(),
       'bundle' => $field->getTargetBundle(),
       'field_type' => $field->getType(),
       'field_name' => $field->getName(),
@@ -109,7 +109,7 @@ final class FieldInstanceStorage implements ResourceStorageInterface {
    */
   public function commit(OperationContext $context, array $prepared, AccountInterface $account): void {
     $identity = $context->known + [
-      'entity_type_id' => $prepared['entity_type'] ?? NULL,
+      'entity_type' => $prepared['entity_type'] ?? NULL,
       'bundle' => $prepared['bundle'] ?? NULL,
       'field_name' => $prepared['field_name'] ?? NULL,
     ];
@@ -120,7 +120,7 @@ final class FieldInstanceStorage implements ResourceStorageInterface {
         throw new \LogicException(sprintf('The "%s" context edits a field that does not exist.', $context->id));
       }
       $field = $this->entityTypeManager->getStorage('field_config')->create(array_filter([
-        'entity_type' => $identity['entity_type_id'],
+        'entity_type' => $identity['entity_type'],
         'bundle' => $identity['bundle'],
         'field_name' => $identity['field_name'],
         'uuid' => $prepared['uuid'] ?? NULL,
@@ -147,7 +147,7 @@ final class FieldInstanceStorage implements ResourceStorageInterface {
    * Builds a new, unsaved field from an identity.
    *
    * @param array $identity
-   *   The identity: entity_type_id, bundle, field_name and field_type.
+   *   The identity: entity_type, bundle, field_name and field_type.
    *
    * @return \Drupal\field\Entity\FieldConfig
    *   The unsaved field, on its stored storage or on an unsaved stand-in
@@ -155,9 +155,9 @@ final class FieldInstanceStorage implements ResourceStorageInterface {
    */
   protected function create(array $identity): FieldConfig {
     $storage = $this->entityTypeManager->getStorage('field_storage_config')
-      ->load($identity['entity_type_id'] . '.' . $identity['field_name'])
+      ->load($identity['entity_type'] . '.' . $identity['field_name'])
       ?? $this->entityTypeManager->getStorage('field_storage_config')->create([
-        'entity_type' => $identity['entity_type_id'],
+        'entity_type' => $identity['entity_type'],
         'field_name' => $identity['field_name'],
         'type' => $identity['field_type'],
       ]);
@@ -172,17 +172,17 @@ final class FieldInstanceStorage implements ResourceStorageInterface {
    * Loads the field some identity names.
    *
    * @param array $identity
-   *   The identity: entity_type_id, bundle and field_name.
+   *   The identity: entity_type, bundle and field_name.
    *
    * @return \Drupal\field\Entity\FieldConfig|null
    *   The field, or NULL when the identity names none that exists.
    */
   protected function field(array $identity): ?FieldConfig {
-    if (!isset($identity['entity_type_id'], $identity['bundle'], $identity['field_name'])) {
+    if (!isset($identity['entity_type'], $identity['bundle'], $identity['field_name'])) {
       return NULL;
     }
     $field = $this->entityTypeManager->getStorage('field_config')
-      ->load($identity['entity_type_id'] . '.' . $identity['bundle'] . '.' . $identity['field_name']);
+      ->load($identity['entity_type'] . '.' . $identity['bundle'] . '.' . $identity['field_name']);
     return $field instanceof FieldConfig ? $field : NULL;
   }
 

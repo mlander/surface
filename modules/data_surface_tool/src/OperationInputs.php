@@ -12,6 +12,7 @@ use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\StringTranslation\TranslationInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\data_surface\Computed;
+use Drupal\data_surface\Contract\Choices;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\SettledCacheability;
 use Drupal\data_surface\Pipeline\Outbound;
@@ -777,9 +778,9 @@ final class OperationInputs {
   /**
    * Names the resource's lookup, where the site serves its API.
    *
-   * `GET /surface-api/{resource}:lookup`, or for an operation about one
-   * thing `/surface-api/{resource}/{<parameter>}:lookup`, as
-   * data_surface_react serves it.
+   * `GET /surface-api/{resource}:lookup`, or for an operation whose
+   * parameters name identity `/surface-api/{resource}/{<key>}/...:lookup`,
+   * as data_surface_react serves it (ServedPaths::lookupTemplate()).
    *
    * Decision: see
    * docs/decisions.md#a-reference-is-an-id-with-a-list-the-site-decides-listed-or-looked-up.
@@ -793,19 +794,11 @@ final class OperationInputs {
    *   The path, or NULL when data_surface_react is not on.
    */
   protected function lookup(ResourceDefinition $resource, OperationDefinition $operation): ?string {
-    if (!$this->moduleHandler?->moduleExists('data_surface_react')) {
+    if ($this->servedPaths === NULL || !$this->moduleHandler?->moduleExists('data_surface_react')) {
       return NULL;
     }
-    $path = '/surface-api/' . $resource->id;
-    if ($resource->identity !== [] && !$operation->creates && !$operation->needsNothing()) {
-      foreach ($operation->parameters as $parameter) {
-        if ($parameter->optional) {
-          break;
-        }
-        $path .= '/{' . $parameter->name . '}';
-      }
-    }
-    return $path . ':lookup';
+    [$path] = $this->servedPaths->lookupTemplate($resource, $operation);
+    return $path;
   }
 
   /**
@@ -1095,19 +1088,25 @@ final class OperationInputs {
       '@needs' => $this->needs($operation),
       '@path' => (string) $this->schemaPath($resource, $operation),
     ];
+    $arguments['@fetch'] = 'GET ' . $arguments['@path'] . (str_contains($arguments['@path'], '?') ? '&' : '?') . Choices::PARAMETER . '={key}={value}';
     // Decision: see
     // docs/decisions.md#a-list-left-out-for-size-is-deferred-not-refined.
     return $arguments['@path'] === ''
       ? $this->t('Answers the schema of @label for the values you have so far, and writes nothing. @needs Some keys of @label depend on a list the site decides, and the write tool does not list them in full: choose the key that decides them, send your values here, and read the keys the choice offers under schema. Send the values again when a choice changes.', $arguments)
-      : $this->t("Answers the schema of @label for the values you have so far, and writes nothing. @needs Some keys of @label depend on a list the site decides, and the write tool does not list them in full, each naming two ways to learn its keys once you choose the key that decides them: fetch GET @path?choose={key}={value} once per value and keep the answer, a schema that changes only when the site's list does; or send your values here and read the keys the choice offers under schema, again when a choice changes.", $arguments);
+      : $this->t("Answers the schema of @label for the values you have so far, and writes nothing. @needs Some keys of @label depend on a list the site decides, and the write tool does not list them in full, each naming two ways to learn its keys once you choose the key that decides them: fetch @fetch once per value and keep the answer, a schema that changes only when the site's list does; or send your values here and read the keys the choice offers under schema, again when a choice changes.", $arguments);
   }
 
   /**
-   * Names the path an operation's full schema is fetched at.
+   * Names the URL an operation's full schema is fetched at.
    *
-   * Where the site serves its API: `/surface-api/{resource}[/{id}]/schema`,
+   * Where the site serves its API: `/surface-api/{resource}[/{key}...]/schema`,
    * `:{operation}` before `/schema` for an operation `GET` does not serve
-   * at the plain path, each identity segment a `{parameter}`.
+   * at the plain path, each identity segment a `{parameter}`, and each
+   * parameter that is not identity in the query, `?name={name}`: every
+   * parameter the operation takes, so the fetch it names answers once
+   * they are filled in.
+   *
+   * Decision: see docs/decisions.md#a-parameter-is-identity-the-caller-knows.
    *
    * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $resource
    *   The resource.
@@ -1121,7 +1120,7 @@ final class OperationInputs {
     if ($this->servedPaths === NULL || !$this->moduleHandler?->moduleExists('data_surface_react')) {
       return NULL;
     }
-    [$path] = $this->servedPaths->template($resource, $operation, !$this->servedPaths->readsPlain($resource, $operation), TRUE);
+    [$path] = $this->servedPaths->template($resource, $operation, !$this->servedPaths->readsPlain($resource, $operation), TRUE, TRUE);
     return $path;
   }
 
@@ -1214,6 +1213,13 @@ final class OperationInputs {
   /**
    * Reads the identity keys an operation knows off its signature.
    *
+   * A parameter named for an identity key supplies that key. One whose
+   * parameters name a whole thing supplies every key: an edit, and a
+   * create that names what it makes (ResourceDefinition::namesWholeThing()).
+   * An entity parameter supplies every key no scalar names.
+   *
+   * Decision: see docs/decisions.md#identity-before-the-parameters.
+   *
    * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $resource
    *   The resource.
    * @param \Drupal\data_surface\ResourceBuild\OperationDefinition $operation
@@ -1223,6 +1229,9 @@ final class OperationInputs {
    *   The identity keys its parameters supply.
    */
   protected function suppliedIdentity(ResourceDefinition $resource, OperationDefinition $operation): array {
+    if ($resource->namesWholeThing($operation)) {
+      return $resource->identity;
+    }
     $named = [];
     $subject = FALSE;
     foreach ($operation->parameters as $parameter) {

@@ -110,11 +110,11 @@ final class AddressFieldSettingsStorage implements ResourceStorageInterface {
    */
   protected function field(OperationContext $context): ?FieldConfigInterface {
     $known = $context->known;
-    if (!isset($known['entity_type_id'], $known['bundle'], $known['field_name'])) {
+    if (!isset($known['entity_type'], $known['bundle'], $known['field_name'])) {
       return NULL;
     }
     $field = $this->entityTypeManager->getStorage('field_config')
-      ->load($known['entity_type_id'] . '.' . $known['bundle'] . '.' . $known['field_name']);
+      ->load($known['entity_type'] . '.' . $known['bundle'] . '.' . $known['field_name']);
     return $field instanceof FieldConfigInterface ? $field : NULL;
   }
 

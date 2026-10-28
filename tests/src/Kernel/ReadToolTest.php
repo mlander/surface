@@ -254,9 +254,9 @@ class ReadToolTest extends DataSurfaceKernelTestBase {
     // machine name, and everything that says which field it is.
     $this->assertSame(['type'], array_keys($this->definition('data_surface:node.type:update:read')->getInputDefinitions(TRUE)));
     $this->assertNotContains('type', self::properties($this->readValues('data_surface:node.type:update:read')));
-    $this->assertSame(['field'], array_keys($this->definition('data_surface:field.instance:update:read')->getInputDefinitions(TRUE)));
+    $this->assertSame(['entity_type', 'bundle', 'field_name'], array_keys($this->definition('data_surface:field.instance:update:read')->getInputDefinitions(TRUE)));
     $field = self::properties($this->readValues('data_surface:field.instance:update:read'));
-    $this->assertSame([], array_intersect(['entity_type_id', 'bundle', 'field_name', 'field_type'], $field));
+    $this->assertSame([], array_intersect(['entity_type', 'bundle', 'field_name', 'field_type'], $field));
     $this->assertContains('settings', $field);
     $this->assertContains('storage', $field);
 

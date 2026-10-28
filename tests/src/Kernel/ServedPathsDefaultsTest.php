@@ -43,41 +43,41 @@ class ServedPathsDefaultsTest extends DataSurfaceKernelTestBase {
    */
   public function testTheStandardIdsAreTheDefaults(): void {
     $this->assertSame([
-      'collection' => [
+      0 => [
         OperationDefinition::CREATE => 'create',
         OperationDefinition::UPDATE => NULL,
         OperationDefinition::READ => 'list',
         OperationDefinition::DELETE => NULL,
       ],
-      'item' => [
+      1 => [
         OperationDefinition::CREATE => NULL,
         OperationDefinition::UPDATE => NULL,
         OperationDefinition::READ => 'read',
         OperationDefinition::DELETE => 'delete',
       ],
     ], $this->defaults(ShelfResource::class), 'create beside stock, list, read, and delete beside clear: each the standard id.');
-    $this->assertSame('update', $this->defaults(BoardResource::class)['collection'][OperationDefinition::UPDATE], 'update beside touch, on a singleton.');
-    $this->assertSame('configure', $this->defaults(PanelResource::class)['collection'][OperationDefinition::UPDATE], 'configure beside touch, on a singleton.');
+    $this->assertSame('update', $this->defaults(BoardResource::class)[0][OperationDefinition::UPDATE], 'update beside touch, on a singleton.');
+    $this->assertSame('configure', $this->defaults(PanelResource::class)[0][OperationDefinition::UPDATE], 'configure beside touch, on a singleton.');
   }
 
   /**
    * Tests where no id or two ids name the default, there is none.
    */
   public function testNoDefaultWithoutOneName(): void {
-    $this->assertNull($this->defaults(DeskResource::class)['collection'][OperationDefinition::UPDATE], 'Both update and configure on one singleton: neither.');
-    $this->assertNull($this->defaults(CrateResource::class)['item'][OperationDefinition::UPDATE], 'configure off a singleton names no default, so two updates leave none.');
+    $this->assertNull($this->defaults(DeskResource::class)[0][OperationDefinition::UPDATE], 'Both update and configure on one singleton: neither.');
+    $this->assertNull($this->defaults(CrateResource::class)[1][OperationDefinition::UPDATE], 'configure off a singleton names no default, so two updates leave none.');
     $this->assertSame(['update', 'configure'], OperationDefinition::defaultIds(OperationDefinition::UPDATE, TRUE), 'configure names an update on a singleton.');
     $this->assertSame(['update'], OperationDefinition::defaultIds(OperationDefinition::UPDATE, FALSE));
     $this->assertSame(['read', 'list'], OperationDefinition::defaultIds(OperationDefinition::READ, TRUE));
   }
 
   /**
-   * Gets the defaults of a resource, by placement and kind.
+   * Gets the defaults of a resource, by depth and kind.
    *
    * @param class-string $class
    *   The resource.
    *
-   * @return array<string, array<string, string|null>>
+   * @return array<int, array<string, string|null>>
    *   ServedPaths::defaults().
    */
   protected function defaults(string $class): array {

@@ -371,8 +371,9 @@ class SecurityProjectionTest extends DataSurfaceKernelTestBase {
     // refusal says the same whether it was there.
     FieldStorageConfig::create(['field_name' => 'field_note', 'entity_type' => 'entity_test', 'type' => 'string'])->save();
     FieldConfig::create(['field_name' => 'field_note', 'entity_type' => 'entity_test', 'bundle' => 'entity_test'])->save();
-    $there = $this->reactAccess('field.instance', 'update', ['field' => 'entity_test.entity_test.field_note']);
-    $missing = $this->reactAccess('field.instance', 'update', ['field' => 'entity_test.entity_test.field_none']);
+    $field = ['entity_type' => 'entity_test', 'bundle' => 'entity_test'];
+    $there = $this->reactAccess('field.instance', 'update', $field + ['field_name' => 'field_note']);
+    $missing = $this->reactAccess('field.instance', 'update', $field + ['field_name' => 'field_none']);
     $this->assertSame([FALSE, ServedOperationAccessCheck::REFUSED], $there);
     $this->assertSame($there, $missing);
 
@@ -381,7 +382,9 @@ class SecurityProjectionTest extends DataSurfaceKernelTestBase {
     $reasons = [];
     foreach (['field_note', 'field_none'] as $name) {
       $tool = $tools->createInstance('data_surface:field.instance:update');
-      $tool->setInputValue('field', 'entity_test.entity_test.' . $name);
+      $tool->setInputValue('entity_type', 'entity_test');
+      $tool->setInputValue('bundle', 'entity_test');
+      $tool->setInputValue('field_name', $name);
       $tool->setInputValue(OperationInputs::VALUES, []);
       $result = $tool->access(User::getAnonymousUser(), TRUE);
       $this->assertFalse($result->isAllowed());
@@ -402,7 +405,7 @@ class SecurityProjectionTest extends DataSurfaceKernelTestBase {
   /**
    * Tests a child permission nothing can name is refused (B26).
    *
-   * The field's storage is added with `administer %entity_type_id
+   * The field's storage is added with `administer %entity_type
    * fields`. Built where the context knows no entity type, only a static
    * listing may describe it; any other build leaves it out.
    */
@@ -412,7 +415,7 @@ class SecurityProjectionTest extends DataSurfaceKernelTestBase {
     $this->assertFalse($resources->build('field.instance', $bare)->getDefinitions()->has('storage'));
     $this->assertTrue($resources->buildStatic('field.instance', $bare)->getDefinitions()->has('storage'), 'A static listing describes it as it may be.');
     $named = $resources->operation('field.instance', 'create', [
-      'entity_type_id' => 'entity_test',
+      'entity_type' => 'entity_test',
       'bundle' => 'entity_test',
     ]);
     $this->assertTrue($resources->build('field.instance', $named)->getDefinitions()->has('storage'));

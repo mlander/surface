@@ -298,13 +298,17 @@ final class NewsletterResource implements ResourceInterface {
 ```
 
 and the field instance resource has three, each knowing more than the
-last: `create($entity_type_id, $bundle)`, `reuse($storage, $bundle)` (a
-create for the field and, through `withChild('storage',
-FieldStorageResource::update($storage))`, an update for its storage) and
-`update($field)`. The storage's update operation narrows cardinality not to
-shrink once the field has data, with `withConstraint()`, and knows the
-field type, its one identity key, which locks its settings to that
-type's.
+last: `create($entity_type, $bundle)`, `reuse($entity_type, $bundle,
+$field_name)` (a create for the field and, through `withChild('storage',
+FieldStorageResource::update($entity_type, $field_name))`, an update for
+its storage) and `update($entity_type, $bundle, $field_name)`, each
+taking the field by its parts, never by a composite id such as
+`node.article.body`
+([decision](decisions.md#a-parameter-is-identity-the-caller-knows)).
+The storage's update operation narrows cardinality not to shrink once
+the field has data, with `withConstraint()`, and knows the storage's
+identity, the entity type, the field name and the field type, which
+locks its settings to that type's.
 
 Each class's `use` line: [Namespaces](concepts.md#namespaces).
 
@@ -416,7 +420,7 @@ may answer after both ([An alter's answer](#an-alters-answer)):
 - **The operation's permission**, on `#[Operation(permission:)]`: the
   static part, answerable with nothing loaded. A `%key` in it is filled
   from the identity the context knows
-  (`administer %entity_type_id fields`); a placeholder the context does
+  (`administer %entity_type fields`); a placeholder the context does
   not know is refused. The permission is the module's own, declared in
   its `MODULE.permissions.yml` as any permission is (or one another
   module declares, such as `administer site configuration`); an
@@ -796,10 +800,10 @@ own is a tool, `data_surface:<resource id>:<operation id>`, derived by
 | --- | --- |
 | `data_surface:node.type:create` | `values` (every key, `type` unique), `dry_run` |
 | `data_surface:node.type:update` | `type` (the content type's id), `values` (every key but `type`), `dry_run` |
-| `data_surface:field.instance:create` | `entity_type_id`, `bundle`, `values`, `dry_run` |
-| `data_surface:field.instance:reuse` | `storage` (its id), `bundle`, `values`, `dry_run` |
-| `data_surface:field.instance:update` | `field` (its id), `values`, `dry_run` |
-| `data_surface:field.storage:update` | `storage` (its id), `values`, `dry_run` |
+| `data_surface:field.instance:create` | `entity_type`, `bundle`, `values`, `dry_run` |
+| `data_surface:field.instance:reuse` | `entity_type`, `bundle`, `field_name`, `values`, `dry_run` |
+| `data_surface:field.instance:update` | `entity_type`, `bundle`, `field_name`, `values`, `dry_run` |
+| `data_surface:field.storage:update` | `entity_type`, `field_name`, `values`, `dry_run` |
 
 - **Inputs** are the operation's parameters, by name (an entity
   parameter as the entity's id, resolved when the tool runs; a scalar
@@ -866,7 +870,7 @@ two (`ResourceCatalog::standalone()`):
    a `%key` placeholder that none of its parameters can supply (one
    named for it, or an entity its operation reads identity off) could
    never be allowed, so it is no tool. `field.storage`'s `create` needs
-   nothing and asks `administer %entity_type_id fields`: only a field
+   nothing and asks `administer %entity_type fields`: only a field
    adding its storage can ask it, as that field's child.
 2. **Something a host or a parent stores.** A class with no storage of
    its own (every structure), or one any plugin names with

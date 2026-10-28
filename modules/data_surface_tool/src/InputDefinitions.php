@@ -808,7 +808,9 @@ final class InputDefinitions {
       }
       $query = Choices::query($choices);
       $arguments['@path'] = $this->schemaPath;
-      $arguments['@fetch'] = 'GET ' . $this->schemaPath . '?' . $query . ($query === '' ? '' : '&') . Choices::PARAMETER . '=' . $this->at['pointer'] . '/' . Choices::escape($entry->name) . '=';
+      // The path carries a query of its own when the operation takes a
+      // parameter that is not identity.
+      $arguments['@fetch'] = 'GET ' . $this->schemaPath . (str_contains($this->schemaPath, '?') ? '&' : '?') . $query . ($query === '' ? '' : '&') . Choices::PARAMETER . '=' . $this->at['pointer'] . '/' . Choices::escape($entry->name) . '=';
       $fetch = $entry->variants !== NULL;
     }
     if ($entry->variants !== NULL) {

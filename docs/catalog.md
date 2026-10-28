@@ -55,9 +55,9 @@ last, under Refused. `docs/resources.md` says how each part works.
 | [`event.venue.reorder`](#eventvenuereorder) | `VenueReorderStructure` | none | none |
 | [`event.venue.room`](#eventvenueroom) | `VenueRoomStructure` | none | none |
 | [`event.webhook`](#eventwebhook) | `WebhookResource` | none | `configure` |
-| [`field.instance`](#fieldinstance) | `FieldInstanceResource` | `entity_type_id`, `bundle`, `field_name`, `field_type` | `create`, `reuse`, `update` |
+| [`field.instance`](#fieldinstance) | `FieldInstanceResource` | `entity_type`, `bundle`, `field_name`, `field_type` | `create`, `reuse`, `update` |
 | [`field.settings.address`](#fieldsettingsaddress) | `AddressFieldSettingsResource` | none | none |
-| [`field.storage`](#fieldstorage) | `FieldStorageResource` | `field_type` | `create`, `update` |
+| [`field.storage`](#fieldstorage) | `FieldStorageResource` | `entity_type`, `field_name`, `field_type` | `create`, `update` |
 | [`field_formatter:data_surface_demo_string`](#field_formatterdata_surface_demo_string) | `DataSurfaceDemoFormatter` | none | none |
 | [`first.newsletter`](#firstnewsletter) | `NewsletterResource` | none | `configure` |
 | [`first.store`](#firststore) | `StoreResource` | none | `configure` |
@@ -399,19 +399,19 @@ last, under Refused. `docs/resources.md` says how each part works.
 `Drupal\data_surface_tool\Resource\FieldInstanceResource`, in `data_surface_tool`.
 
 - Kind: resource
-- Identity: `entity_type_id`, `bundle`, `field_name`, `field_type`
+- Identity: `entity_type`, `bundle`, `field_name`, `field_type`
 - Storage: `Drupal\data_surface_tool\Storage\FieldInstanceStorage`
 - Access: `Drupal\data_surface_tool\Access\FieldInstanceAccess`
 
 | Operation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `create` | Add a field to a bundle | `string $entity_type_id`, `string $bundle` | yes | `administer %entity_type_id fields` | yes | no: it creates | `FieldInstanceResource::create()` (`data_surface_tool`) |
-| `reuse` | Add an existing field to another bundle | `FieldStorageConfigInterface $storage`, `string $bundle` | yes | `administer %entity_type_id fields` | yes | no: it creates | `FieldInstanceResource::reuse()` (`data_surface_tool`) |
-| `update` | Edit a field | `FieldConfigInterface $field` | no | `administer %entity_type_id fields` | yes | yes | `FieldInstanceResource::update()` (`data_surface_tool`) |
+| `create` | Add a field to a bundle | `string $entity_type`, `string $bundle` | yes | `administer %entity_type fields` | yes | no: it creates | `FieldInstanceResource::create()` (`data_surface_tool`) |
+| `reuse` | Add an existing field to another bundle | `string $entity_type`, `string $bundle`, `string $field_name` | yes | `administer %entity_type fields` | yes | no: it creates | `FieldInstanceResource::reuse()` (`data_surface_tool`) |
+| `update` | Edit a field | `string $entity_type`, `string $bundle`, `string $field_name` | no | `administer %entity_type fields` | yes | yes | `FieldInstanceResource::update()` (`data_surface_tool`) |
 
-- `create` reaches http `POST /surface-api/field.instance`, tool `data_surface:field.instance:create`, schema tool `data_surface:field.instance:create:schema`, openapi `field.instance:create:write`, react `/surface-react/field.instance/create`.
-- `reuse` reaches http `POST /surface-api/field.instance:reuse`, tool `data_surface:field.instance:reuse`, schema tool `data_surface:field.instance:reuse:schema`, openapi `field.instance:reuse:write`, react `/surface-react/field.instance/reuse`.
-- `update` reaches http `PATCH /surface-api/field.instance/{field}`, tool `data_surface:field.instance:update`, read tool `data_surface:field.instance:update:read`, schema tool `data_surface:field.instance:update:schema`, openapi `field.instance:update:write`, react `/surface-react/field.instance/update`.
+- `create` reaches http `POST /surface-api/field.instance/{entity_type}/{bundle}`, tool `data_surface:field.instance:create`, schema tool `data_surface:field.instance:create:schema`, openapi `field.instance:create:write`, react `/surface-react/field.instance/create`.
+- `reuse` reaches http `POST /surface-api/field.instance/{entity_type}/{bundle}/{field_name}:reuse`, tool `data_surface:field.instance:reuse`, schema tool `data_surface:field.instance:reuse:schema`, openapi `field.instance:reuse:write`, react `/surface-react/field.instance/reuse`.
+- `update` reaches http `PATCH /surface-api/field.instance/{entity_type}/{bundle}/{field_name}`, tool `data_surface:field.instance:update`, read tool `data_surface:field.instance:update:read`, schema tool `data_surface:field.instance:update:schema`, openapi `field.instance:update:write`, react `/surface-react/field.instance/update`.
 
 - Variants at `settings`: `address` → `Drupal\data_surface_address\Resource\AddressFieldSettingsResource`.
 
@@ -430,16 +430,16 @@ last, under Refused. `docs/resources.md` says how each part works.
 `Drupal\data_surface_tool\Resource\FieldStorageResource`, in `data_surface_tool`.
 
 - Kind: resource
-- Identity: `field_type`
+- Identity: `entity_type`, `field_name`, `field_type`
 - Storage: `Drupal\data_surface_tool\Storage\FieldStorageStorage`
 - Access: the operation's permission alone
 
 | Operation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `create` | New field storage | nothing | yes | `administer %entity_type_id fields` | no: nothing supplies `%entity_type_id` | no: not on its own | `FieldStorageResource::create()` (`data_surface_tool`) |
-| `update` | Edit a field storage | `FieldStorageConfigInterface $storage` | no | `administer %entity_type_id fields` | yes | yes | `FieldStorageResource::update()` (`data_surface_tool`) |
+| `create` | New field storage | nothing | yes | `administer %entity_type fields` | no: nothing supplies `%entity_type` | no: not on its own | `FieldStorageResource::create()` (`data_surface_tool`) |
+| `update` | Edit a field storage | `string $entity_type`, `string $field_name` | no | `administer %entity_type fields` | yes | yes | `FieldStorageResource::update()` (`data_surface_tool`) |
 
-- `update` reaches http `PATCH /surface-api/field.storage/{storage}`, tool `data_surface:field.storage:update`, read tool `data_surface:field.storage:update:read`, schema tool `data_surface:field.storage:update:schema`, openapi `field.storage:update:write`, react `/surface-react/field.storage/update`.
+- `update` reaches http `PATCH /surface-api/field.storage/{entity_type}/{field_name}`, tool `data_surface:field.storage:update`, read tool `data_surface:field.storage:update:read`, schema tool `data_surface:field.storage:update:schema`, openapi `field.storage:update:write`, react `/surface-react/field.storage/update`.
 
 ## field_formatter:data_surface_demo_string
 

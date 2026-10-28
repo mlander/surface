@@ -382,6 +382,30 @@ a tool address a resource the same way: by its id and an operation id,
 `data_surface:node.type:update`, with the operation's parameters saying
 which content type.
 
+A parameter is identity the caller already knows before the call; the
+body is what the call decides. So an operation takes identity as
+parameters named for the identity keys, never as a composite id the
+caller has to assemble, and every door names each key the same way: the
+route, the OpenAPI document, the tool and the React page. An add names
+the parent it adds to and leaves the keys it chooses open in the body;
+an edit names the whole thing. The field instance, identity `entity_type`,
+`bundle`, `field_name`, `field_type`, the names core's field config
+stores them under:
+
+```php
+public static function create(string $entity_type, string $bundle): OperationContext
+public static function update(string $entity_type, string $bundle, string $field_name): OperationContext
+```
+
+Each class's `use` line: [Namespaces](concepts.md#namespaces).
+
+Its create is `POST /surface-api/field.instance/node/article`, the field's
+machine name and type in the body; its edit is `PATCH
+/surface-api/field.instance/node/article/body`, the field type following
+from the field. A parameter named for an identity key is a path segment,
+in identity order; any other is in the query string
+([decision](decisions.md#a-parameter-is-identity-the-caller-knows)).
+
 ## Names
 
 Four naming rules, so that a reader who has only a grep finds the rest

@@ -11,6 +11,7 @@ use Drupal\Core\Routing\Access\AccessInterface;
 use Drupal\Core\Routing\RouteMatchInterface;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\data_surface\DataSurfaceAccess;
+use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface_react\ProblemException;
 use Drupal\data_surface_react\ServedOperations;
 use Drupal\data_surface_react\ServedPaths;
@@ -138,10 +139,18 @@ final class ServedOperationAccessCheck implements AccessInterface {
         : $this->servedOperations->context($resource, $operation, $parameters);
     }
     catch (\InvalidArgumentException $e) {
+      // A permission that names a parameter (`administer %entity_type
+      // fields`) is read off the parameters as sent.
+      // Decision: see
+      // docs/decisions.md#a-parameter-is-identity-the-caller-knows.
+      if ($parameters !== NULL && $permission === NULL) {
+        $permission = $this->servedOperations->permissionAccess($resource, $operation, $account, new OperationContext($operation, known: $parameters));
+        $permission = $permission?->isAllowed() ? $permission : NULL;
+      }
       if ($parameters !== NULL && $permission !== NULL) {
-        // The account holds the operation's permission, which is the same
-        // whatever the id: it may hear that the id names nothing, a 404
-        // the controller answers.
+        // The account holds the operation's permission for what the
+        // parameters name: it may hear that one names nothing, a 404 the
+        // controller answers.
         return AccessResult::allowed()->setCacheMaxAge(0);
       }
       return $this->refused($e->getMessage());
