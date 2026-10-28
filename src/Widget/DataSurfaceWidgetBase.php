@@ -140,6 +140,27 @@ abstract class DataSurfaceWidgetBase extends PluginBase implements DataSurfaceWi
   }
 
   /**
+   * Draws a key the form does not draw: an item saying so, posting nothing.
+   *
+   * A placeholder, so extraction reads nothing from it and the key keeps
+   * what it holds; the other doors set it.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The key.
+   *
+   * @return array
+   *   The item.
+   */
+  public static function notDrawn(DataDefinitionInterface $definition): array {
+    return [
+      '#type' => 'item',
+      '#title' => $definition->getLabel(),
+      '#markup' => (string) t('This is not drawn on this form; what it holds is kept. Set it through the tool, over HTTP or on the React page.'),
+      DataSurfaceFormBuilderInterface::PLACEHOLDER_KEY => TRUE,
+    ];
+  }
+
+  /**
    * {@inheritdoc}
    */
   public function extractValue(DataDefinitionInterface $definition, array $element, FormStateInterface $form_state, array $fallback_parents): mixed {

@@ -153,6 +153,31 @@ a nested object a map `addDefinition()`, an object under `$defs` that a
 vocabulary `narrow()->when()`. The config object is a new one of the
 module's, so its schema entry and install file are written.
 
+A `oneOf` of titled constants is a `LabeledChoice` written as its
+`labels` alone, each value a key ([Three ways to write
+it](options.md#three-ways-to-write-it)). Where a value is a numeric
+string, PHP would key it as an integer (`'1'` as `1`), so the values stay
+in `choices` with the `labels` beside them:
+
+```php
+$inputs->add(self::LEVEL, 'integer', t('Level'))
+  ->addConstraint('LabeledChoice', [
+    'labels' => [
+      1 => t('Open'),
+      2 => t('Invited'),
+    ],
+  ]);
+
+$inputs->add(self::SIZE, 'string', t('Size'))
+  ->addConstraint('LabeledChoice', [
+    'choices' => ['1', '2'],
+    'labels' => [
+      1 => t('Small'),
+      2 => t('Large'),
+    ],
+  ]);
+```
+
 ## What it cannot write
 
 What the reader keeps as a `JsonSchema` constraint, a foreign constraint

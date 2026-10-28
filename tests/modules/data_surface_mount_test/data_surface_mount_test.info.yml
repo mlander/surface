@@ -1,0 +1,9 @@
+name: 'Data Surface mount test'
+type: module
+description: 'An alter of the alias settings whose mount holds a reference to a user and a key its layout stores otherwise than it is asked for.'
+package: Testing
+version: VERSION
+core_version_requirement: ^11.3 || ^12
+dependencies:
+  - data_surface:data_surface
+  - data_surface:data_surface_schema_test

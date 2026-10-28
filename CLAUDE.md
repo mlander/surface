@@ -212,8 +212,9 @@ the record of the rework that brought the module to the pattern.
   key's definition) and `Resources::resolved($resource, $operation)`, the
   PHP door that loads the stored values and puts the class's answer at
   the key while every source holds a value; never stored, in no document,
-  tool, form or read, a second resolve of a key refused naming both,
-  refused in a structure (example 14's webhook and `WebhookSigner`,
+  tool, form or read, a second resolve of a key refused naming both; a
+  structure's own applied wherever a resource holds it, by the
+  structure's own paths (example 14's webhook and `WebhookSigner`,
   `docs/decisions.md#a-key-may-stand-for-another-at-use`).
 - **Contract**: the JSON Schema a built resource or structure emits.
 - **Markers**: what a key's `x-surface` says of how far the schema holds
@@ -363,7 +364,8 @@ open: every `#[Variant]` at the key is one, and the parent names none).
 Both return the map at the key, which the owner labels with the core
 setters; `describe()` rewords a key for an alter that does not own it,
 and arranges a key (group, weight, placeholder, prefix, suffix, help)
-for its owner or an alter, after the key is declared.
+for its owner or an alter, after the key is declared; a second alter
+setting a fact another alter set on the key is refused at build.
 A child may be a resource with storage of its own, an attached resource
 (the field's storage, `FieldStorageResource`). A provider named by
 `attachVariants(from:)` lists variants for the values no variant class
@@ -467,7 +469,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 The full lane's phpunit line reads, as of this writing:
 
 ```
-phpunit: Tests: 1679, Assertions: 38713, Errors: 0, Failures: 0, Skipped: 3. Classes: 234 of 234, 8 at a time, browser classes 4.
+phpunit: Tests: 1691, Assertions: 38860, Errors: 0, Failures: 0, Skipped: 3. Classes: 235 of 235, 8 at a time, browser classes 4.
 ```
 
 the same counts a plain phpunit run of the tree gives. The skipped

@@ -11,6 +11,7 @@ use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\data_surface\Attribute\DataSurfaceWidget;
+use Drupal\data_surface\Contract\SchemaReader;
 use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Widget\DataSurfaceWidgetBase;
 
@@ -18,19 +19,18 @@ use Drupal\data_surface\Widget\DataSurfaceWidgetBase;
  * A text area of JSON for a key no other widget draws: a stopgap.
  *
  * The last widget asked, by weight, so it draws only what every other
- * widget refused: a key of type `any` (a value typed as several JSON
- * types at once, read from a schema as `any` with a JsonSchema
- * constraint), and a list the list widget refuses (its items are maps,
- * lists or `any`). The value is drawn as pretty-printed JSON, and read
- * back by decoding what was typed; the decoded value goes through
- * accept() and the key's own constraints as any value does. Text that is
- * not JSON is an error on the element, never an exception.
+ * widget refused: a key of type `any` that is no union of scalars (one
+ * read from a schema whose types include an object or a list, or that
+ * states no type), and a list the list widget refuses (its items are
+ * lists or `any`). A union of scalars is the scalars widget's, and a list
+ * of maps the form builder draws as a collection. The value is drawn as
+ * pretty-printed JSON, and read back by decoding what was typed; the
+ * decoded value goes through accept() and the key's own constraints as
+ * any value does. Text that is not JSON is an error on the element,
+ * never an exception.
  *
- * Marked for replacement: a text field for a value of several scalar
- * types, and rows for a list of maps, are the widgets that should draw
- * these keys (ROADMAP.md, "Proper widgets where the JSON fallback draws
- * today"). The served contract names no widget for it: it is the Form
- * API's last resort, not a fact about the key.
+ * The served contract names no widget for it: it is the Form API's last
+ * resort, not a fact about the key.
  *
  * Decision: see
  * docs/decisions.md#the-form-never-refuses-to-draw-a-declared-key.
@@ -138,8 +138,7 @@ final class JsonWidget extends DataSurfaceWidgetBase {
         default => $this->t('Enter JSON: a list.'),
       };
     }
-    $schema = $this->constraint($definition, 'JsonSchema')['schema'] ?? [];
-    $types = array_values(array_intersect(self::TYPES, (array) (is_array($schema) ? ($schema['type'] ?? []) : [])));
+    $types = array_values(array_intersect(self::TYPES, SchemaReader::statedTypes($definition)));
     if ($types === []) {
       return $this->t('Enter JSON.');
     }

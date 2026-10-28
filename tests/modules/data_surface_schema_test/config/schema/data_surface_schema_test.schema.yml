@@ -49,3 +49,9 @@ data_surface_schema_test.aliases:
       sequence:
         type: integer
         label: 'Action'
+    third_party_settings:
+      type: sequence
+      label: 'Third party settings'
+      requiredKey: false
+      sequence:
+        type: data_surface_schema_test.aliases.third_party.[%key]

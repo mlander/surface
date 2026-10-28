@@ -377,8 +377,9 @@ setting:
   layout the storage declares, in the layout values are asked for. A
   storage class sees the uuid and writes nothing for it.
 - **Where.** At the top, inside an attached structure or a map, in each
-  item of a collection, in the variant a deciding key chose among
-  variants a class declares, and in what another module mounts.
+  item of a collection, in each entry of a map of keys from the site
+  (`addEach()`, `attachEach()`), in the variant a deciding key chose
+  among variants a class declares, and in what another module mounts.
   Variants the site lists are stored open (`type: ignore`) and keep the
   id.
 - **The bare `entity` key** is stored as `{entity_type, id}` whatever
@@ -394,8 +395,9 @@ setting:
   uuid, as a [stale](semantics.md#stale-values-the-third-state) value is
   kept, so it names its entity again once that entity is there; a new
   choice replaces it.
-- **An id stored before** is read as the id, while the entity exists,
-  and written as the uuid at the next write. Config validation still
+- **An id stored before**, or written into a module's install file by
+  hand, is read as the id, while the entity exists, and written as the
+  uuid at the next write. Config validation still
   names it, since the schema's `Uuid` refuses it. A module that stored
   ids converts them in a post-update:
   `data_surface_store_references_by_uuid(MyResource::class, 'configure')`
@@ -468,6 +470,11 @@ module; an owner that declares no `third_party_settings` at all is
 refused by the schema under that key. A structure an alter attaches at
 its mount is written the same way, its keys the mount's
 ([Reusing a structure](resources.md#reusing-a-structure-from-another-module)).
+An alter that stores its mount otherwise than it asks
+(`AltersStorageLayoutInterface`), with a layout that says its stored
+schema (`StoredSchemaInterface`), is read by the check and the generator
+as the storage's own layout is, each key at
+`third_party_settings.<module>.<key>`.
 
 ### A config entity
 

@@ -58,6 +58,15 @@ class ComponentsOfferedTest extends DataSurfaceKernelTestBase {
   ];
 
   /**
+   * The widget test module's components, in the order of their ids.
+   */
+  protected const WIDGET_TEST = [
+    'data_surface_widget_test:mixed',
+    'data_surface_widget_test:several',
+    'data_surface_widget_test:teaser',
+  ];
+
+  /**
    * {@inheritdoc}
    */
   protected function setUp(): void {
@@ -109,7 +118,7 @@ class ComponentsOfferedTest extends DataSurfaceKernelTestBase {
     $resolver = $this->container->get('class_resolver');
     [$props, $slots] = $this->offered();
     $this->assertSame($props, $slots);
-    $this->assertSame([...self::EXAMPLES, 'data_surface_widget_test:mixed', 'data_surface_widget_test:teaser'], array_values(array_filter($props, static fn (string $id): bool => str_starts_with($id, 'data_surface_'))), 'Empty: every component the site has.');
+    $this->assertSame([...self::EXAMPLES, ...self::WIDGET_TEST], array_values(array_filter($props, static fn (string $id): bool => str_starts_with($id, 'data_surface_'))), 'Empty: every component the site has.');
     foreach ([ComponentProps::class, ComponentSlots::class] as $class) {
       $this->assertContains('config:data_surface.settings', $resolver->getInstanceFromDefinition($class)->list()->getCacheTags());
       $this->assertContains('config:core.extension', $resolver->getInstanceFromDefinition($class)->list()->getCacheTags());
@@ -151,7 +160,7 @@ class ComponentsOfferedTest extends DataSurfaceKernelTestBase {
     $form = $this->container->get('form_builder')->getForm(DataSurfaceOperationForm::class);
     $component = $form[DataSurfaceOperationForm::SURFACE_KEY]['component'];
     $this->assertSame('data_surface_examples:card', $component[DataSurfaceWidgetBase::STALE_KEY]);
-    $this->assertSame(['', 'data_surface_widget_test:mixed', 'data_surface_widget_test:teaser'], array_map('strval', array_keys($component['#options'])));
+    $this->assertSame(['', ...self::WIDGET_TEST], array_map('strval', array_keys($component['#options'])));
 
     $form_state = new FormState();
     $form_state->setValues([DataSurfaceOperationForm::SURFACE_KEY => []]);

@@ -1156,16 +1156,21 @@ the hint's words: `radios`, `checkboxes`, `select`, `time`.
 | `integer`, `float` | `number`, `#min`/`#max` from Range, `#step` 1 or any | `number` | `NumberField` |
 | `boolean` | `checkbox`, never `#required` | `checkbox` | `CheckboxField` |
 | a list of single values with no allowed values | a `fieldset` of rows, each the item's element, "Remove" beside each and "Add another" under them, over AJAX | `list` | `ListField` (add and remove rows) |
-| a collection | a `details` of item `details`, "Add another" and "Remove" over AJAX | `list`, `collection: true` | `ListField`, each item the child's `FieldsetField`, at least `minItems`, at most `maxItems` |
+| a collection, at any depth (inside a variant, an attached part or a map), and a list of maps no collection stands behind | a `details` of item `details`, "Add another" and "Remove" over AJAX | `list`, `collection: true` (a list of maps alone: `list`) | `ListField`, each item the child's `FieldsetField`, at least `minItems`, at most `maxItems` |
 | a locked key | `#disabled`, "Fixed for this operation." | `readOnly: true` | disabled, the same note |
 | a locked child | its fieldset `#disabled`, every element inside with it | `readOnly: true` on the fieldset and on every key inside | a fieldset of disabled keys |
-| what no other widget draws: an `any` key with no variants, a list of lists or of `any` (a list of maps outside a collection too) | `textarea` of JSON, the `json` widget | `null` | the stock field for the key's JSON type (`stockWidget()`) |
+| `timestamp`, `timespan`, `decimal` | `number`, `#step` 1 (any for a decimal) | `null` | the stock field for the key's JSON type (`stockWidget()`) |
+| `datetime_iso8601` | core's `datetime` element, a date and a time input in the site's time zone, read back as the ISO 8601 string | `null` | the stock field for the key's JSON type (`stockWidget()`) |
+| `duration_iso8601` | `textfield` | `null` | the stock field for the key's JSON type (`stockWidget()`) |
+| `binary`, `language`, `language_reference`, `entity_reference`, and a list of them | an `item`: "This is not drawn on this form; what it holds is kept.", posting nothing | `null` | the stock field for the key's JSON type (`stockWidget()`) |
+| an `any` key read from a schema typed as several scalar types (string, integer, number, boolean), the `scalars` widget | `textfield`, read as the first stated type the text spells: integer, number, `true` or `false`, then string | `null` | the stock field for the key's JSON type (`stockWidget()`) |
+| what no other widget draws: an `any` key with no variants whose types include an object or a list, or state none; a list of lists or of `any` | `textarea` of JSON, the `json` widget | `null` | the stock field for the key's JSON type (`stockWidget()`) |
 
-The last row is the Form API's last resort, so the form never refuses
-to draw a declared key, and the hint stays `null`: it says nothing about
-the key. A text field for a value of several scalar types and rows for
-a list of maps should replace it ([roadmap](../ROADMAP.md), item 29;
-why: [decision](decisions.md#the-form-never-refuses-to-draw-a-declared-key)).
+The last six rows name no hint: the contract says nothing about how a
+form draws them, and the documents did not move when they were drawn.
+The last is the Form API's last resort, so the form never refuses to
+draw a declared key
+(why: [decision](decisions.md#the-form-never-refuses-to-draw-a-declared-key)).
 
 ## The API
 

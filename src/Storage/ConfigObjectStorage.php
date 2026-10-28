@@ -165,12 +165,13 @@ abstract class ConfigObjectStorage implements ResourceStorageInterface, KnowsCle
   /**
    * {@inheritdoc}
    *
-   * What the layout says of the keys it translates, and each reference
-   * to a content entity, stored by uuid.
+   * What the layout says of the keys it translates, what each alter's
+   * layout says of the keys at its mount, and each reference to a content
+   * entity, stored by uuid.
    */
   public function translatedKeys(DataSurfaceInterface $built): array {
     $layout = $this->layout();
-    return ($layout instanceof StoredSchemaInterface ? $layout->storedSchema() : []) + ReferenceStorageLayout::storedSchemaOf($built);
+    return ($layout instanceof StoredSchemaInterface ? $layout->storedSchema() : []) + static::mountedLayouts($built) + ReferenceStorageLayout::storedSchemaOf($built);
   }
 
   /**

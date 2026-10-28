@@ -12,9 +12,12 @@ use Drupal\data_surface\ResourceBuild\ResourceBlueprintAdditions;
 use Drupal\data_surface\ResourceBuild\ResourceRegistry;
 use Drupal\data_surface_resource_test\Compute\VaultToken;
 use Drupal\data_surface_resource_test\OutsideDiscovery\NorthVaultAlter;
+use Drupal\data_surface_resource_test\OutsideDiscovery\RelayHubResource;
+use Drupal\data_surface_resource_test\OutsideDiscovery\RelayLinkStructure;
 use Drupal\data_surface_resource_test\OutsideDiscovery\SouthVaultAlter;
 use Drupal\data_surface_resource_test\Resource\Relay\PlainRelayResource;
 use Drupal\data_surface_resource_test\Resource\Relay\RelayResource;
+use Drupal\data_surface_resource_test\Storage\RelayHubStorage;
 use Drupal\data_surface_resource_test\Storage\RelayStorage;
 use Drupal\data_surface_resource_test\Structure\ThresholdStructure;
 use Drupal\data_surface_tool\OperationInputs;
@@ -175,7 +178,11 @@ class ResolvedKeysTest extends DataSurfaceKernelTestBase {
       }
     };
     $refused(fn () => $blueprint(TRUE)->resolve('token', ['vault_id'], VaultToken::class), 'resolves an output');
-    $refused(fn () => $blueprint(owner: ThresholdStructure::class)->resolve('token', ['vault_id'], VaultToken::class), 'is in a structure');
+    // A structure resolves among its own keys, as a resource does.
+    $structure = $blueprint(owner: ThresholdStructure::class);
+    $structure->add('token', 'string', 'Token');
+    $structure->add('vault_id', 'string', 'Vault entry');
+    $structure->resolve('token', ['vault_id'], VaultToken::class);
     $inputs = $blueprint();
     $token = $inputs->add('token', 'string', 'Token');
     $inputs->add('vault_id', 'string', 'Vault entry');
@@ -189,6 +196,49 @@ class ResolvedKeysTest extends DataSurfaceKernelTestBase {
     $inputs->resolve('token', ['vault_id'], VaultToken::class);
     $this->assertEquals(new Resolve(['vault_id' => 'vault_id'], VaultToken::class, 'this blueprint'), Resolve::of($token));
     $refused(fn () => $inputs->resolve('token', ['vault_id'], VaultToken::class), 'resolve("token") in this blueprint names a key this blueprint resolves already. A key is resolved once');
+  }
+
+  /**
+   * Tests a structure's resolve applies wherever the structure is held.
+   *
+   * The relay hub holds the link structure three ways: mixed in, its keys
+   * the hub's own; attached at `primary`; and in each item of `backups`.
+   * The link resolves its token from its own vault entry, by paths of its
+   * own, applied under the key it is held at.
+   */
+  public function testResolveInsideStructureIsWalked(): void {
+    $registry = new ResourceRegistry([
+      'resources' => [
+        RelayHubResource::class => 'data_surface_resource_test',
+        RelayLinkStructure::class => 'data_surface_resource_test',
+      ],
+      'operations' => [RelayHubResource::class => 'data_surface_resource_test'],
+    ], $this->container->get('cache.discovery'));
+    $resources = $this->container->get('data_surface.resources')->withRegistry($registry, $this->container->get('class_resolver'));
+    $built = $resources->buildOperation(RelayHubResource::class, 'configure');
+    $declared = Resolve::declared($built);
+    $this->assertSame(['token', 'primary.token', 'backups.*.token'], array_keys($declared));
+    $this->assertSame(['vault_id' => 'vault_id'], $declared['primary.token'][0]->from, 'The structure\'s own path, applied under its key.');
+
+    $this->container->get('state')->set(RelayHubStorage::KEY, [
+      'token' => 'pasted-0',
+      'vault_id' => 'north',
+      'primary' => ['token' => 'pasted-1', 'vault_id' => 'south'],
+      'backups' => [
+        ['token' => 'pasted-2', 'vault_id' => 'north'],
+        ['token' => 'pasted-3'],
+      ],
+    ]);
+    $this->assertSame([
+      'token' => 'tok-north-1',
+      'vault_id' => 'north',
+      'primary' => ['token' => 'tok-south-2', 'vault_id' => 'south'],
+      'backups' => [
+        ['token' => 'tok-north-1', 'vault_id' => 'north'],
+        ['token' => 'pasted-3'],
+      ],
+    ], $resources->resolved(RelayHubResource::class), 'Mixed in, attached and in each item; an item whose entry holds nothing keeps its token.');
+    $this->assertSame('pasted-1', $this->container->get('state')->get(RelayHubStorage::KEY)['primary']['token'], 'Nothing resolved is written back.');
   }
 
   /**

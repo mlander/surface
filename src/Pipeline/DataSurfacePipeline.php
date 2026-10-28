@@ -235,7 +235,7 @@ final class DataSurfacePipeline implements DataSurfacePipelineInterface {
       // docs/decisions.md#an-extension-is-a-variant-the-site-adds-or-an-alter.
       $aside = $chosen === NULL ? [] : $entry->variants->keptSecrets($chosen, $current[$name]);
       $own = array_diff_key($current[$name], $aside);
-      if ($chosen !== NULL && $entry->variants->held($chosen, $current[$name]) === NULL) {
+      if ($chosen !== NULL && $entry->variants->heldFor($chosen, $current[$name], $current[$entry->variants->by] ?? NULL) === NULL) {
         // What it held was another variant's: the chosen one starts here,
         // and is written whole, its defaults included.
         $below = NULL;

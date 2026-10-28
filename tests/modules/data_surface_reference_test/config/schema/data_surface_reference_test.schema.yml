@@ -63,3 +63,22 @@ data_surface_reference_test.settings:
           node:
             type: uuid
             label: 'Node'
+    pages:
+      type: sequence
+      label: 'Pages'
+      sequence:
+        type: uuid
+        label: 'Pages'
+        nullable: true
+    authors:
+      type: sequence
+      label: 'Authors'
+      sequence:
+        type: mapping
+        label: 'Authors'
+        mapping:
+          author:
+            type: uuid
+            label: 'Author'
+            nullable: true
+            requiredKey: false

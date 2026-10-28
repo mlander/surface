@@ -17,8 +17,10 @@ namespace Drupal\data_surface\Storage;
  * generator writes the schema it gives instead of the asked one.
  *
  * Optional, beside StorageLayoutInterface rather than on it: a field
- * type's layout (AddressStorageLayout) and an alter's (a mount's) are
- * stored under schemas their owners write, which no generator reads.
+ * type's layout (AddressStorageLayout) is stored under a schema its owner
+ * writes, which no generator reads. An alter's layout of its mount may
+ * implement it too: the check and the generator then read each key it
+ * names at `third_party_settings.<module>.<key>`.
  *
  * Decision: see
  * docs/decisions.md#a-layout-is-the-storages-one-word-on-its-shape.

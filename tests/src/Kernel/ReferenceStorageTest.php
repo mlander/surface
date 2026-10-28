@@ -27,9 +27,10 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  *
  * In a simple config object, a reference to a content entity is stored as
  * its uuid wherever the object keeps it (at the top, in an attached
- * structure, in each item of a collection, in a bare `entity` key) and
- * read back as its id; a config entity's stays its id, and so does a key
- * whose author kept the id. A config entity saved through its storage
+ * structure, in each item of a collection, in each entry of a map of keys
+ * from the site, in a bare `entity` key) and read back as its id; a
+ * config entity's stays its id, and so does a key whose author kept the
+ * id. A config entity saved through its storage
  * carries the dependencies of what it refers to, as core's own do. And
  * the layout seam a config object's storage declares: it saves and loads
  * through it, and the check and the generator learn its stored schema.
@@ -231,6 +232,65 @@ class ReferenceStorageTest extends DataSurfaceKernelTestBase {
   }
 
   /**
+   * Tests each entry of a map of keys from the site is stored by uuid.
+   *
+   * A node at each entry of one map (addEach()), and a user inside the
+   * structure at each entry of another (attachEach()): the layout
+   * translates inside each entry, and the generated schema types each
+   * entry's reference `uuid`.
+   */
+  public function testEntriesFromTheSiteAreStoredByUuid(): void {
+    $first = $this->nodes['First'];
+    $second = $this->nodes['Second'];
+    $admin = User::load($this->container->get('current_user')->id());
+    $this->submit(ReferenceSettingsResource::class, 'configure', [
+      'pages' => ['lead' => (int) $first->id(), 'aside' => (int) $second->id()],
+      'authors' => ['lead' => ['author' => (int) $admin->id()]],
+    ]);
+    $raw = $this->config('data_surface_reference_test.settings')->getRawData();
+    $this->assertSame(['lead' => $first->uuid(), 'aside' => $second->uuid()], $raw['pages']);
+    $this->assertSame($admin->uuid(), $raw['authors']['lead']['author']);
+    $this->assertSame([], $this->violations('data_surface_reference_test.settings'), 'Held to the generated schema.');
+    $path = $this->container->get('extension.list.module')->getPath('data_surface_reference_test');
+    $schema = $this->container->get('data_surface.config_schema')->files(['data_surface_reference_test'])[$path . '/config/schema/data_surface_reference_test.schema.yml'];
+    $this->assertStringContainsString("    pages:\n      type: sequence\n      label: 'Pages'\n      sequence:\n        type: uuid\n", $schema, 'Generated: each entry a uuid.');
+    $this->assertStringContainsString("        mapping:\n          author:\n            type: uuid\n", substr($schema, (int) strpos($schema, '    authors:')), 'Generated: the reference inside each entry\'s structure a uuid.');
+
+    $loaded = $this->loaded(ReferenceSettingsResource::class, 'configure');
+    $this->assertSame(['lead' => (int) $first->id(), 'aside' => (int) $second->id()], $loaded['pages']);
+    $this->assertSame((int) $admin->id(), $loaded['authors']['lead']['author']);
+
+    // A uuid whose node is gone reads as nothing, and a write that holds
+    // nothing for it keeps it.
+    $uuid = $second->uuid();
+    $second->delete();
+    $this->assertNull($this->loaded(ReferenceSettingsResource::class, 'configure')['pages']['aside']);
+    $this->submit(ReferenceSettingsResource::class, 'configure', ['role' => 'editor']);
+    $this->assertSame($uuid, $this->config('data_surface_reference_test.settings')->get('pages.aside'));
+  }
+
+  /**
+   * Tests an id a module's install file holds is read as the id.
+   *
+   * An install file is written by hand, and may hold an id where the
+   * stored form is a uuid. It is installed as it is written, and read as
+   * any value stored before the uuid rule: the id while its entity
+   * exists, stored as its uuid at the next write.
+   */
+  public function testAnIdTheInstallFileHoldsIsReadAsTheId(): void {
+    $first = $this->nodes['First'];
+    $installed = $this->config('data_surface_reference_test.settings')->getRawData();
+    $installed['page'] = (int) $first->id();
+    // Written as the config installer writes a module's file, unchecked.
+    $this->container->get('config.storage')->write('data_surface_reference_test.settings', $installed);
+    $this->container->get('config.factory')->reset('data_surface_reference_test.settings');
+    $this->assertSame((int) $first->id(), $this->loaded(ReferenceSettingsResource::class, 'configure')['page']);
+
+    $this->submit(ReferenceSettingsResource::class, 'configure', ['role' => 'editor']);
+    $this->assertSame($first->uuid(), $this->config('data_surface_reference_test.settings')->get('page'), 'The next write stores the uuid.');
+  }
+
+  /**
    * Tests the check and the generator learn the uuid keys from the storage.
    */
   public function testTheCheckAndTheGeneratorReadTheStoredShape(): void {
@@ -241,8 +301,10 @@ class ReferenceStorageTest extends DataSurfaceKernelTestBase {
       'page' => ReferenceStorageLayout::UUID_SCHEMA,
       'nested.author' => ReferenceStorageLayout::UUID_SCHEMA,
       'items.node' => ReferenceStorageLayout::UUID_SCHEMA,
-    ], $storage->translatedKeys($built), 'A key that refers to one content entity type, wherever it is; not one kept by id, not a bare key.');
-    $this->assertSame([], $storage->widerThanSchema($built), 'An integer id asked, a uuid stored: not compared.');
+      'pages.*' => ReferenceStorageLayout::UUID_SCHEMA,
+      'authors.*.author' => ReferenceStorageLayout::UUID_SCHEMA,
+    ], $storage->translatedKeys($built), 'A key that refers to one content entity type, wherever it is, an entry from the site as `*`; not one kept by id, not a bare key.');
+    $this->assertSame([], $storage->widerThanSchema($built), 'An integer id asked, a uuid stored: not compared, at every entry from the site too.');
 
     $entity = $this->container->get('class_resolver')->getInstanceFromDefinition(ReferencingEntityStorage::class);
     $built = $resources->build(ReferencingEntityResource::class, $resources->operation(ReferencingEntityResource::class, 'create'));

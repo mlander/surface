@@ -1917,6 +1917,28 @@ final class SchemaReader {
   }
 
   /**
+   * Reads the JSON types a value held whole to its schema was stated as.
+   *
+   * A property no data type says, a value of several JSON types among
+   * them, is read as `any` with its schema kept whole on a JsonSchema
+   * constraint (foreignValue()); the types are that schema's `type`, which
+   * is where a widget reads them.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The definition.
+   *
+   * @return string[]
+   *   The types its kept schema states, `null` among them where it is
+   *   allowed, in the order stated; none for a definition that keeps no
+   *   schema or a schema that states no type.
+   */
+  public static function statedTypes(DataDefinitionInterface $definition): array {
+    $schema = $definition->getConstraints()['JsonSchema']['schema'] ?? NULL;
+    $types = is_array($schema) ? ($schema['type'] ?? []) : [];
+    return array_values(array_filter((array) $types, static fn (mixed $type): bool => is_string($type) && in_array($type, self::TYPES, TRUE)));
+  }
+
+  /**
    * Reads a value's examples.
    *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition

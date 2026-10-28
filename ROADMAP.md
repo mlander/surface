@@ -1469,37 +1469,42 @@ renames sit in A because they are cheapest before new code exists.
     sentence on a gated list says "locked or left out" where a gate
     refuses.
 
-28. **References in config, carried forward.** Open after 2026-10-27
+28. **References in config, carried forward.** Partly DONE 2026-10-27
     (`docs/decisions.md#a-config-object-stores-a-reference-by-uuid`,
     `docs/decisions.md#a-layout-is-the-storages-one-word-on-its-shape`).
     A content entity referenced from config is stored by uuid and the
     wire stays the id; a storage's layout is what the schema check and
-    the generator read. What those two left open: a site default in
-    `data_surface.defaults` for a content reference key holds an id, so
-    it deploys as badly as a stored id did, and should be a uuid the
-    build resolves; the keys of an entry from the site (`addEach`,
-    `attachEach`) are not translated; an alter's layout on a config
-    object's mount says nothing to the check or the generator; a config
-    entity resource has no id-to-uuid conversion helper; and a config
-    entity saved by a path other than the storage drops the reference
+    the generator read. DONE: the entries of a map of keys from the site
+    (`addEach`, `attachEach`) are translated, named `*` in a translated
+    path; an alter's layout of its mount tells the check and the
+    generator, at `third_party_settings.<module>.<key>`; an id a module's
+    install file holds is read as an id stored before is (a test, no
+    code). Still open: a site default in `data_surface.defaults` for a
+    content reference key holds an id, so it deploys as badly as a
+    stored id did, and should be a uuid the build resolves (which makes
+    the build depend on the entity being on the site); a config entity
+    resource has no id-to-uuid conversion helper; and a config entity
+    saved by a path other than the storage drops the reference
     dependencies the storage adds until the next save through it.
 
-29. **Proper widgets where the JSON fallback draws today.** Open,
-    2026-10-27, a stopgap marked for replacement
+29. **Proper widgets where the JSON fallback draws today.** DONE
+    2026-10-27 for what has a better answer
     (`docs/decisions.md#the-form-never-refuses-to-draw-a-declared-key`).
-    The `json` widget draws a key no other widget draws as a text area
-    of JSON: a prop typed as several JSON types (read as `any` with a
-    JsonSchema constraint), and a list whose items are lists or `any`.
-    It keeps the form up and every declared key editable, and it is the
-    worst acceptable form of that. Two widgets should replace it: one
-    for a value of several scalar types, a text field whose value the
-    JsonSchema constraint coerces and checks, or one input per type; and
-    one for a list of maps, rows of the map's keys, as the React app's
-    `ListField` draws them (a list of maps inside a map is drawn today as
-    an item saying it is not drawn here). Measured on the development
-    site, 312 components: example 12's form threw for 91 components with
-    a prop of several types and 25 with a list it could not draw; with
-    the `json` widget all 312 draw.
+    A value of several scalar types is a text field, the `scalars`
+    widget, read as the first stated type it spells and held to its
+    JsonSchema constraint (114 props on example 12's 312 components). A
+    list of maps is a collection wherever it stands, inside a variant,
+    an attached part or a plain map, with the collection drawing; one
+    `attachList()` did not declare gets a child sealed from its item's
+    keys (`Collection::forList()`), and a slot's `components` list is
+    drawn with it. `timestamp`, `timespan` and `decimal` are number
+    inputs, `duration_iso8601` a text field, `datetime_iso8601` core's
+    `datetime` element, and `binary`, `language` and the two reference
+    types an item saying they are not drawn; no data type core defines
+    throws. Still open: the `json` widget itself, for an `any` key whose
+    types include an object or a list or state none, and for a list of
+    lists or of `any`; and a data type a module adds that no widget
+    names (`filter_format`), which still throws.
 
 ## Maintenance
 

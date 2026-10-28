@@ -311,7 +311,8 @@ final class Accepting {
     // What the key already holds: the stored value when storage has
     // one, and the declared default only when it has none. A stored
     // NULL is a stored value, so array_key_exists rather than ??.
-    $fallback = array_key_exists($name, $current) ? $current[$name] : $surface->getDefault($name);
+    $was_stored = array_key_exists($name, $current);
+    $fallback = $was_stored ? $current[$name] : $surface->getDefault($name);
     if ($fallback === NULL && DefinitionMetadata::isGrouping($entry->definition)) {
       // The map each module's mounted keys sit in is a map, never null,
       // even when nothing is stored and no mounted key has a default.
@@ -324,10 +325,13 @@ final class Accepting {
       // deciding key has moved on: it starts again from the chosen
       // variant's defaults rather than carrying keys that mean nothing
       // here, and from the secrets of its own kept while it was not
-      // chosen.
+      // chosen. Which variant it was written for is what the deciding
+      // key holds beside it, never the names of its keys.
       // Decision: see
       // docs/decisions.md#an-extension-is-a-variant-the-site-adds-or-an-alter.
-      $fallback = $entry->variants->held($chosen, $fallback)
+      $by = $entry->variants->by;
+      $decided = $was_stored ? ($current[$by] ?? NULL) : $surface->getDefault($by);
+      $fallback = $entry->variants->heldFor($chosen, $fallback, $decided)
         ?? (is_array($fallback) ? $entry->variants->ownSecrets($chosen, $fallback) : []) + $entry->variants->defaultsOf($chosen);
     }
     if ($entry->list !== NULL) {

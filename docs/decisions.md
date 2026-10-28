@@ -1885,6 +1885,17 @@ examples ship both, each for the case it fits.
   which carries it, and nothing a browser sends can change it.
   (`Drawing::drawnFor()`, `Extracting::switchedVariants()`,
   `DataSurfaceHostTrait::surfaceFormValues()`, `SpotlightFormTest`)
+- **What is stored is the variant the stored deciding key chose**
+  (*amended 2026-10-27*). The same names say as little of a stored value
+  as of a posted one: a tool call sending the teaser alone against a
+  stored card read the card's props as the teaser's, and refused its
+  `link` map as the teaser's text. A stored variant's values are held
+  for a choice only when the deciding key's stored value is that choice;
+  otherwise the chosen variant starts from its defaults, and from the
+  secrets of its own kept beside them, at every door
+  (`Variants::heldFor()`, read by `Accepting::acceptKey()`,
+  `DataSurfacePipeline::kept()` and the form's `Extracting::settle()`;
+  `SpotlightFormTest::testNewComponentSentAloneStartsFromItsDefaults()`).
 - **The owner does not integrate: an alter.** The webhook declares a
   pasted key and nothing else. The key module's alter mounts `key_id` at
   its own mount, offering the keys the site manages through a constraint
@@ -1970,13 +1981,35 @@ never refined or altered. Deriving the rule that rules the pasted key out
 from the resolve would join two facts, what is asked and what is
 answered, into one call; they stay two lines.
 
-*Open:* a resolve inside a structure or a collection (refused for now:
-`resolved()` reads the top level and the alters' mounts); a resolve whose
-class needs the account; two alters relabeling one owner key with
-`describe()`, last-wins today, the same kind of collision, not refused
-yet. (`Resolve`, `BlueprintAdditionsInterface::resolve()`,
-`Resources::resolved()`, `ManagedKeyValue`, `WebhookSigner`,
-`ResolvedKeysTest`, `ExamplesExtensionTest`)
+*Amended 2026-10-27:*
+
+- **A resolve inside a structure is walked.** A structure declares a
+  resolve among its own keys, and its alters among theirs, by paths of
+  its own. `Resources::resolved()` applies it wherever the structure is
+  held: under the key it is attached at, in each item of a collection,
+  in each entry of a map of keys from the site, in the variant its
+  deciding key chose, and in the owner's frame where it is mixed in,
+  whose keys its members are (a mixin resolves among the members it
+  brought). Still refused: a resolve in an alter of a mixed-in
+  structure, and in a shape, which has no keys. A plugin's own
+  structure, built by its host, has no `resolved()` door: what it
+  declares applies only where a resource holds it.
+- **Two alters setting one fact on a key are refused.** The owner's
+  values are what alters lay over. The first alter to set a fact on a
+  key it does not own (label, description, group, weight, placeholder,
+  prefix, suffix, help) sets it; a second alter setting the same fact on
+  the same key is refused at build, naming the key, the fact and both
+  modules, as a second resolve is. Two alters setting different facts on
+  one key compose, and an alter wording its own mount, or one fact
+  twice, is no collision. Why: last-wins by weight is how core's form
+  alters overwrite one another silently; here the order alters run in
+  would decide what every door shows.
+  (`ResourceBlueprintAdditions::claimFacts()`, `AlterWordingTest`)
+
+*Open:* a resolve whose class needs the account. (`Resolve`,
+`BlueprintAdditionsInterface::resolve()`, `Resources::resolved()`,
+`ManagedKeyValue`, `WebhookSigner`, `ResolvedKeysTest`,
+`ExamplesExtensionTest`)
 
 ## Attached structures
 
@@ -2865,9 +2898,20 @@ the resource the pattern keeps it out of; and `layout()` on
 `ConfigEntityStorage`, which maps keys to properties and has
 `fromEntity()` and `toEntity()` for the rest, with no case yet.
 
-*Open:* an alter's layout on a config object's mount says nothing to
-the check or the generator; `configSchemaPaths()`, for a key stored
-under another name, is still its own override.
+*Amended 2026-10-27:* an alter's layout of its mount
+(`AltersStorageLayoutInterface`) that implements `StoredSchemaInterface`
+tells the check and the generator as the storage's own does, each key
+at `third_party_settings.<module>.<key>`
+(`HeldToConfigSchemaTrait::mountedLayouts()`, both config storages'
+`translatedKeys()`). A reference an alter mounts was already among the
+keys the uuid layout names there. An entry of a map of keys from the
+site is named `*` in a translated path (`pages.*`, `authors.*.author`),
+since which entries there are is the site's: the check matches `*`
+against any entry, and the generator writes the sequence's item as
+stored.
+
+*Open:* `configSchemaPaths()`, for a key stored under another name, is
+still its own override.
 (`ConfigObjectStorage::layout()`, `StoredSchemaInterface`,
 `HeldToConfigSchemaTrait::translatedKeys()`, `ConfigSchemaGenerator::translated()`,
 `Resources::storageInstance()`, `ReferenceStorageTest`,
@@ -2956,15 +3000,37 @@ stored as the entity's uuid; a config entity's stays its id.
   this module does not invent a record; it is a gap
   ([core gaps](core-gaps.md#smaller-gaps-outside-the-sequence)).
 
+*Amended 2026-10-27:*
+
+- **An entry from the site is translated.** In a map of keys from the
+  site, each entry of `addEach()` holding a content reference, and each
+  reference inside the structure `attachEach()` attaches at every entry,
+  is stored by uuid, kept when it names nothing, and depended on, as any
+  other place a config storage keeps one. Its translated path names the
+  entry `*` (`pages.*`, `authors.*.author`), which the check and the
+  generator read
+  ([A layout is the storage's one word on its shape](#a-layout-is-the-storages-one-word-on-its-shape)).
+- **An install file that holds an id is read by the rule for ids stored
+  before.** A module's `config/install` file is written by hand, and the
+  generator keeps what it says for a key stored by uuid. Installed as
+  written, an id there is read as the id while its entity exists and
+  stored as the uuid at the next write, as an id stored before this
+  decision is. Nothing new was built for it; `ReferenceStorageTest`
+  pins it. The generator does not convert install values to uuids: a
+  content entity named by an install file is site state the module
+  cannot know.
+
 *Open:* a save of the config entity made another way (core's form,
 `$entity->save()`) recalculates without the reference dependencies until
 the next save through the storage; the entity class's own
 `calculateDependencies()` is where core expects them. A config entity
-resource has no conversion helper for ids stored before; keys of an
-entry from the site are not translated; a site's default for such a key
-(`data_surface.defaults`, [A site sets a default in
-configuration](#a-site-sets-a-default-in-configuration)) is an id, and
-deploys as an id does.
+resource has no conversion helper for ids stored before. A site's
+default for such a key (`data_surface.defaults`, [A site sets a default
+in configuration](#a-site-sets-a-default-in-configuration)) is a value
+as every door sends it, an id, written over the declared default and
+never through the storage's layout, so it deploys as an id does;
+resolving a uuid there would make the build depend on whether the
+entity is on the site yet.
 (`ReferenceStorageLayout`, `References::storedByUuid()`,
 `References::stored()`, `ReferenceDependencies`,
 `ReferenceDependencyHooks`, `StorageAdapter::referenceLayout()`,
@@ -4796,6 +4862,50 @@ for one key; and leaving the key out of the form, which makes the form
 and the contract disagree about what may be set.
 (`JsonWidget`, `ListWidget::isApplicable()`, `SpotlightFormTest`)
 
+*Amended 2026-10-27, the widgets the JSON fallback stood in for:*
+
+- **A union of scalars is a text field**, the `scalars` widget, weight
+  999: an `any` key whose kept schema's `type` lists two or more of
+  string, integer, number and boolean, and nothing else but null. What
+  was typed is read as the first stated type it spells, integer, number,
+  `true` or `false`, then string, and the JsonSchema constraint judges
+  what came out. One input per type was weighed and turned down: a
+  person types `12` or `true` into one field either way, and a choice of
+  type before the value is a step the schema did not ask for. The types
+  are read in one place, `SchemaReader::statedTypes()`, which the JSON
+  widget's description reads too. On example 12, 114 props of 312
+  components.
+- **A list of maps is a collection, wherever it stands**: inside a
+  variant, an attached part, a collection's item or a plain map, and at
+  the top of a frame where no `attachList()` declared it. The form
+  builder draws it with the collection drawing and reads it item by item
+  (`Drawing::collectionsInside()`, `Extracting::collectionsIn()`); the
+  map widget draws only an item standing in for it, since a widget knows
+  neither the list's place nor the container its buttons rebuild. A
+  list read from a schema is an `attachList()` of a read structure, so
+  it has a child; a list declared with a map as its item has none, and
+  one is sealed from the item's keys for the form alone
+  (`Collection::forList()`). This draws the `components` list of a slot
+  too, which the slot decision left not drawn.
+- **Every data type core defines is drawn**: `timestamp`, `timespan` and
+  `decimal` by the number widget, `duration_iso8601` by the string
+  widget, `datetime_iso8601` by core's `datetime` element (read back as
+  the ISO 8601 string), and `binary`, `language`, `language_reference`
+  and `entity_reference`, whose value nobody types, as an item saying it
+  is not drawn on this form, which posts nothing, so the key keeps what
+  it holds (`NotDrawnWidget`). `StockWidgetsTest` walks every type core
+  defines.
+- **What the JSON widget still draws**: an `any` key whose types include
+  an object or a list, or that states none, and a list of lists or of
+  `any`.
+
+No hint moved: the served contract names no widget for any of these,
+and the documents are byte-identical.
+*Left open:* a data type a module adds that no widget names
+(`filter_format`, `layout_section`) still throws naming it.
+(`ScalarsWidget`, `DateTimeWidget`, `NotDrawnWidget`, `Collection::forList()`,
+`StockWidgetsTest`, `SpotlightFormTest::testSeveralTypesAndListsOfObjectsAreDrawn()`)
+
 *Also 2026-10-27, the form's door:* a value of a shape its key cannot
 hold, an array for a string, is refused on the form as at every other
 door: an error on its element, in the pipeline's words, the value left
@@ -5754,10 +5864,11 @@ how strictly to apply them to a display builder. Each choice, and why:
   (`Form\Drawing::nestedHeld()`), and a submission is read a
   level at a time, each variant through what its own deciding key chose
   (`Form\Extracting::extractFrame()`).
-  A list of components inside a slot is not drawn there: what it holds
-  is kept, and the tool, HTTP and the React page set it.
+  A list of components inside a slot is drawn as a collection
+  (*amended 2026-10-27*,
+  [the form never refuses to draw a declared key](#the-form-never-refuses-to-draw-a-declared-key)).
 
-*Open:* the `components` list on the block form; formatted text in a
+*Open:* formatted text in a
 slot; a component that drops a prop a placed block still stores, whose
 edit is refused until the stored prop is removed; whether an empty
 `expected` is how a component should say it takes text; a slot's

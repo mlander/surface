@@ -48,12 +48,18 @@ final class ResourceBlueprintAdditions extends BlueprintAdapterBase {
    *   For an alter of a structure mixed into an owner, the structure's
    *   id, the owner's id and the members the structure brought, which are
    *   all this alter may name there; NULL for an alter of the owner.
+   * @param \ArrayObject<string, string>|null $described
+   *   The facts the alters of one build set on keys they do not own, each
+   *   by the module that set it, keyed by the key and the fact; shared by
+   *   every alter's blueprint of the build, so a second alter setting a
+   *   fact one set already is refused (describe()). NULL checks nothing.
    */
   public function __construct(
     DataSurfaceBuilderInterface $builder,
     TypedDataManagerInterface $typed_data_manager,
     protected readonly string $provider,
     protected readonly ?array $mixedIn = NULL,
+    protected readonly ?\ArrayObject $described = NULL,
   ) {
     parent::__construct($builder, $typed_data_manager);
   }
@@ -99,6 +105,19 @@ final class ResourceBlueprintAdditions extends BlueprintAdapterBase {
       DefinitionMetadata::keepOwnLabel($owned);
     }
     $mine = in_array($key, $this->keys, TRUE) || $key === 'third_party_settings.' . $this->provider || str_starts_with($key, 'third_party_settings.' . $this->provider . '.');
+    if (!$mine) {
+      $this->claimFacts($key, [
+        'label' => $label,
+        'description' => $description,
+        'group' => $group,
+        'weight' => $weight,
+        'placeholder' => $placeholder,
+        'prefix' => $prefix,
+        'suffix' => $suffix,
+        'help' => $help,
+        'after' => $after,
+      ]);
+    }
     $arrangement = static::arrangement($group, $weight, $placeholder, $prefix, $suffix, $help);
     $arranged = $arrangement === NULL || $mine ? NULL : $this->find($key);
     $removed = $arranged === NULL ? [] : $arrangement->removes(DefinitionMetadata::arrangementOf($arranged));
@@ -114,6 +133,47 @@ final class ResourceBlueprintAdditions extends BlueprintAdapterBase {
       ));
     }
     return parent::describe($key, $label, $description, $after, $group, $weight, $placeholder, $prefix, $suffix, $help);
+  }
+
+  /**
+   * Refuses a fact about a key another alter has set already.
+   *
+   * The owner's words and arrangement are what alters lay over. The first
+   * alter to set a fact on a key it does not own sets it; a second alter
+   * setting the same fact on the same key has no right answer beside the
+   * first, so it is refused, naming both. Two alters setting different
+   * facts on one key compose, and a module may say one fact again.
+   *
+   * Decision: see docs/decisions.md#a-key-may-stand-for-another-at-use.
+   *
+   * @param string $key
+   *   The key, as describe() was given it.
+   * @param array<string, mixed> $facts
+   *   What describe() was given, by fact; NULL where it says nothing.
+   *
+   * @throws \LogicException
+   *   When another module set one of the facts already.
+   */
+  protected function claimFacts(string $key, array $facts): void {
+    if ($this->described === NULL) {
+      return;
+    }
+    $set = array_keys(array_filter($facts, static fn (mixed $fact): bool => $fact !== NULL));
+    foreach ($set as $fact) {
+      $by = $this->described[$key . ' ' . $fact] ?? NULL;
+      if ($by !== NULL && $by !== $this->provider) {
+        throw new \LogicException(sprintf(
+          'describe("%s") in %s sets its %s, which the %s alter set already. A fact about a key is set by one alter: the owner\'s is what alters lay over, and two alters setting the same one have no right answer between them. One module words a key, or each sets another fact.',
+          $key,
+          $this->who(),
+          $fact,
+          $by,
+        ));
+      }
+    }
+    foreach ($set as $fact) {
+      $this->described[$key . ' ' . $fact] ??= $this->provider;
+    }
   }
 
   /**

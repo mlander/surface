@@ -46,11 +46,12 @@ asked before any of them, for the keys it claims alone
 ### How a widget declines
 
 By returning `FALSE` from `isApplicable()`. There is no other way to opt
-out, and there is no fallback widget: a definition no widget claims
-throws at build time rather than rendering as something approximate. An
-unrefined `any` key is the case you will meet first: no widget claims
-it, because guessing an element for a type that says nothing would be a
-guess about the contract.
+out. Every data type core defines is drawn by a stock widget, a type
+whose value nobody types (bytes, a language) as an item saying it is not
+drawn here, and the `json` widget is the last resort for an `any` key
+and a list nothing else draws, so the form never refuses a key it is
+declared with. A data type a module adds that no widget names, such as
+`filter_format`, still throws naming it.
 
 To put a widget in front of or behind another module's, alter its
 weight rather than its class:
@@ -69,14 +70,17 @@ function my_module_data_surface_widget_info_alter(array &$definitions): void {
 | `radios` | -15 | One value that resolves to a list of allowed values and asks for radios. | `radios`; `- None -` a radio only where the key may be cleared |
 | `select` | -10 | Any definition whose constraints resolve to a list of allowed values, an empty one included: one value, and a list the checkboxes leave (more than twelve, or asking for a select). See [Options and resolvers](options.md). | `select`; a list's `#multiple`, never `#required`; an `item` showing the one value a deciding key's variants offer |
 | `autocomplete` | -5 | A key that refers to one entity type, `entity:<type>[:<bundle>]` or a bare `entity` key's id once its entity type is chosen, whose candidates are not listed: more than `data_surface.settings:reference_list_limit` ([Options](options.md#a-key-that-refers-to-an-entity)). | core's `entity_autocomplete`, its selection settings the key's; read back as the id in brackets, `Riverside Hall (riverside)` as `riverside`; core's own check of what was typed taken off |
-| `fieldset` | 5 | A `ComplexDataDefinitionInterface`. One that declares no property, such as a variant for a choice with nothing more to say, renders as an empty container and answers an empty map. | `details` |
+| `fieldset` | 5 | A `ComplexDataDefinitionInterface`. One that declares no property, such as a variant for a choice with nothing more to say, renders as an empty container and answers an empty map. A list of maps inside it is the form builder's, drawn as a collection in its place ([below](#a-list-of-maps-is-a-collection)). | `details` |
 | `list` | 8 | A list of single values with no list of allowed values, whose item a widget draws: keywords, a list of free strings or numbers. | a `fieldset` of rows, "Remove" beside each, "Add another" under them |
 | `time` | 9 | A `string` that asks for a time. | a time input |
 | `date` | 9 | A `string` that asks for a date. | a date input |
-| `string` | 10 | `string`, `email`, `uri`. | `textfield`, `email`, `url`; `textarea` when multiline; `password` for a secret |
-| `number` | 10 | `integer`, `float`. | `number` |
+| `string` | 10 | `string`, `email`, `uri`, `duration_iso8601`. | `textfield`, `email`, `url`; `textarea` when multiline; `password` for a secret |
+| `number` | 10 | `integer`, `float`, `decimal`, `timestamp`, `timespan`. | `number`, `#step` 1, or any for a float or a decimal |
 | `checkbox` | 10 | `boolean`. | `checkbox`, never `#required` |
-| `json` | 1000 | What every other widget refused: a key of type `any` that holds no variants (a value typed as several JSON types, read from a schema), and a list the list widget refuses, its items lists, maps or `any`, where the form draws no collection (a list of maps inside a map is drawn as an item saying it is not drawn here). | `textarea` of pretty-printed JSON, its description naming the type; empty sends nothing, text that is not JSON is an error on the element |
+| `datetime` | 10 | `datetime_iso8601`. | core's `datetime`, a date and a time input in the site's time zone; read back as the ISO 8601 string, its offset kept |
+| `not_drawn` | 10 | `binary`, `language`, `language_reference`, `entity_reference`, and a list of any of them: a value nobody types. | `item`: "This is not drawn on this form; what it holds is kept.", posting nothing |
+| `scalars` | 999 | A key of type `any` read from a schema whose `type` lists two or more of string, integer, number and boolean, and nothing else but null (`ScalarsWidget::types()`, from the schema `SchemaReader::statedTypes()` reads off its JsonSchema constraint). | `textfield`, its description naming the types; read as the first stated type the text spells, in this order: integer, number, `true` or `false`, string; empty sends nothing |
+| `json` | 1000 | What every other widget refused: a key of type `any` that holds no variants and is no union of scalars (its types include an object or a list, or it states none), and a list the list widget refuses, its items lists or `any`. | `textarea` of pretty-printed JSON, its description naming the type; empty sends nothing, text that is not JSON is an error on the element |
 
 The weights say the selection rule out loud: the checkboxes and radios
 are asked first, and each claims only what its rule gives it; the
@@ -88,16 +92,35 @@ widget takes a list with no choices; and the per-type widgets are the
 fallback.
 
 The `json` widget is the last resort, so the form draws every key it is
-declared with instead of throwing: a stopgap, to be replaced by a text
-field for a value of several scalar types and rows for a list of maps
-([roadmap](../ROADMAP.md), item 29;
-why: [decision](decisions.md#the-form-never-refuses-to-draw-a-declared-key)).
-The served contract names no widget for it. What it decodes goes
-through `accept()` and the key's own constraints, the JsonSchema
-constraint of a value read from a schema among them. A key of a data
-type no widget serves and the JSON widget does not take, such as
-`timestamp` or `datetime_iso8601`, still has no widget, and the manager
-throws naming it.
+declared with instead of throwing
+(why: [decision](decisions.md#the-form-never-refuses-to-draw-a-declared-key)).
+The served contract names no widget for it, nor for the `scalars`,
+`datetime` and `not_drawn` widgets, nor for a timestamp: none is a fact
+about the key. What the `json` widget decodes, and what the `scalars`
+widget reads, goes through `accept()` and the key's own constraints, the
+JsonSchema constraint of a value read from a schema among them. The
+`scalars` widget is the one stock widget that reads a type out of what
+was typed: the key's type is several, and a text field posts text, so
+nothing else could say which was meant.
+
+### A list of maps is a collection
+
+A list whose item is a map is drawn as a
+[collection](resources.md#collections) is, wherever it stands: one
+details per item, each the map's own fields, "Remove" in each and "Add
+another" under them, over AJAX. At the top of a frame, inside a
+collection's item, inside a variant (a component's props), inside an
+attached part, or inside a plain map. A widget cannot draw it, since it
+knows neither the list's place in the form nor the container its buttons
+rebuild: the map widget draws an item standing in for it, and the form
+builder draws the collection in that place
+(`Drawing::collectionsInside()`) and reads it back item by item
+(`Extracting::collectionsIn()`). Where `attachList()` declared the list,
+its child structure draws each item; a list declared with a map as its
+item has none, so one is sealed from the item's keys for the form
+(`Collection::forList()`), and the list is accepted and validated
+through its own definition, as any list is. A list of lists is the
+`json` widget's.
 
 ### Which element a list of choices is
 

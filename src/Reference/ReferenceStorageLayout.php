@@ -47,7 +47,8 @@ use Drupal\data_surface\Storage\StoredSchemaInterface;
  * before this layout, and stored as the uuid at the next write.
  *
  * Keys are found where a config storage stores them: at the top, inside
- * an attached structure and a map, in each item of a collection, in the
+ * an attached structure and a map, in each item of a collection, in each
+ * entry of a map of keys from the site (addEach(), attachEach()), in the
  * variant a deciding key chose among variants a class declares, and in
  * what another module mounts. Variants the site lists are stored open
  * (`type: ignore`) and keep the id.
@@ -124,7 +125,8 @@ final class ReferenceStorageLayout implements StoredSchemaInterface {
    * @return array<string, array>
    *   UUID_SCHEMA, by each such key's dotted path: a collection's item key
    *   and a variant's key under the key holding them, with no delta and
-   *   no variant.
+   *   no variant; an entry of a map of keys from the site as `*`, since
+   *   which entries there are is the site's (`pages.*`, `authors.*.author`).
    */
   public static function storedSchemaOf(DataSurfaceInterface $surface): array {
     $schema = [];
@@ -270,16 +272,17 @@ final class ReferenceStorageLayout implements StoredSchemaInterface {
    *   The key.
    *
    * @return array<string, \Drupal\data_surface\DefinitionMap>
-   *   An attached structure's keys, a collection's item's, each variant a
-   *   class declares, and each structure an alter mounted, by variant id
-   *   or module; empty for any other key.
+   *   An attached structure's keys, a collection's item's, a map of keys
+   *   from the site's entries, each variant a class declares, and each
+   *   structure an alter mounted, by variant id or module; empty for any
+   *   other key.
    */
   protected static function children(Entry $entry): array {
     if ($entry->list !== NULL) {
       return ['' => $entry->list->child()->getDefinitions()];
     }
     if ($entry->attachment !== NULL) {
-      return DefinitionMetadata::eachOf($entry->definition) === NULL && static::bare($entry) === NULL ? ['' => $entry->attachment->child->getDefinitions()] : [];
+      return static::bare($entry) === NULL ? ['' => $entry->attachment->child->getDefinitions()] : [];
     }
     if ($entry->variants !== NULL) {
       if (DefinitionMetadata::variantsFrom($entry->variants->shell) !== NULL) {
@@ -335,6 +338,11 @@ final class ReferenceStorageLayout implements StoredSchemaInterface {
         $schema[$path] = self::UUID_SCHEMA;
         continue;
       }
+      $each = $entry->attachment === NULL ? NULL : DefinitionMetadata::eachOf($entry->definition);
+      if ($each !== NULL) {
+        static::listEachKeys($entry, $each, $path, $schema);
+        continue;
+      }
       $children = static::children($entry);
       if ($entry->attachment !== NULL || $entry->list !== NULL || $entry->variants !== NULL) {
         // An item's keys, and a variant's, sit under the key itself.
@@ -361,6 +369,37 @@ final class ReferenceStorageLayout implements StoredSchemaInterface {
           }
         }
       }
+    }
+  }
+
+  /**
+   * Lists the keys of a map of keys from the site stored as a uuid.
+   *
+   * Every entry is the same: a value of the type addEach() names, or the
+   * structure attachEach() names. So the entries are named `*`, which
+   * entries there are being the site's: the value of each, or a key of
+   * the structure in each, read off the first entry the site lists.
+   *
+   * @param \Drupal\data_surface\Entry $entry
+   *   The map.
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface|string $each
+   *   What each entry is, as DefinitionMetadata::eachOf() reads it.
+   * @param string $path
+   *   The map's dotted path.
+   * @param array<string, array> $schema
+   *   The keys found, added to.
+   */
+  protected static function listEachKeys(Entry $entry, DataDefinitionInterface|string $each, string $path, array &$schema): void {
+    if ($each instanceof DataDefinitionInterface) {
+      if (References::storedByUuid($each)) {
+        $schema[$path . '.*'] = self::UUID_SCHEMA;
+      }
+      return;
+    }
+    $entries = $entry->attachment?->child->getDefinitions()->entries() ?? [];
+    $first = reset($entries);
+    if ($first !== FALSE && $first->attachment !== NULL) {
+      static::listUuidKeys($first->attachment->child->getDefinitions(), $path . '.*.', $schema);
     }
   }
 

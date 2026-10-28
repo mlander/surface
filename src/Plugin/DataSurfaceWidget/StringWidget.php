@@ -13,6 +13,9 @@ use Drupal\data_surface\Widget\DataSurfaceWidgetBase;
 /**
  * Text input for string definitions.
  *
+ * Also an ISO 8601 duration (`duration_iso8601`), `P1DT2H`, which is
+ * typed as the string it is stored as.
+ *
  * The 'multiline' definition setting renders a textarea — core has no
  * multiline string data type (config schema's 'text' has no typed data
  * counterpart; see PLAN.md), and a setting is the core-native spelling
@@ -32,7 +35,7 @@ final class StringWidget extends DataSurfaceWidgetBase {
    * {@inheritdoc}
    */
   public function isApplicable(DataDefinitionInterface $definition): bool {
-    return in_array($definition->getDataType(), ['string', 'email', 'uri'], TRUE);
+    return in_array($definition->getDataType(), ['string', 'email', 'uri', 'duration_iso8601'], TRUE);
   }
 
   /**

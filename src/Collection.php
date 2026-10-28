@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace Drupal\data_surface;
 
+use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
+use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinition;
+use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\data_surface\Pipeline\ValueState;
 use Drupal\data_surface\Resource\OperationContext;
@@ -46,6 +49,51 @@ final class Collection {
     public readonly Attachment $item,
     public readonly ?OperationContext $context = NULL,
   ) {
+  }
+
+  /**
+   * Answers whether a definition is a list of maps: drawn as a collection.
+   *
+   * What attachList() declares, and a list whose item is a map that no
+   * collection stands behind (a list declared with a map as its item).
+   * The form draws either as one details per item.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The definition.
+   *
+   * @return bool
+   *   TRUE for a list whose item is a complex definition.
+   */
+  public static function holdsMaps(DataDefinitionInterface $definition): bool {
+    return $definition instanceof ListDataDefinitionInterface && $definition->getItemDefinition() instanceof ComplexDataDefinitionInterface;
+  }
+
+  /**
+   * Builds the collection a list of maps stands for, where none was attached.
+   *
+   * A list declared with a map as its item has no child structure behind
+   * it, which is what the form draws a collection's items from. This
+   * seals one from the item's keys, each starting from its own default:
+   * the form's alone, since the list is accepted and validated through
+   * its own definition, as any list is.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The list.
+   *
+   * @return self|null
+   *   The collection, its context none; NULL for a definition that is no
+   *   list of maps.
+   */
+  public static function forList(DataDefinitionInterface $definition): ?self {
+    $item = $definition instanceof ListDataDefinitionInterface ? $definition->getItemDefinition() : NULL;
+    if (!$item instanceof ComplexDataDefinitionInterface) {
+      return NULL;
+    }
+    $builder = new DataSurfaceBuilder();
+    foreach ($item->getPropertyDefinitions() as $name => $property) {
+      $builder->setDefinition((string) $name, $property);
+    }
+    return new self(new Attachment($builder->seal()));
   }
 
   /**

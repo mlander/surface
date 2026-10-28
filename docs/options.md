@@ -93,7 +93,10 @@ $definition->addConstraint('LabeledChoice', [
 
 **`choices` as a list with `labels` beside it** is `Choice`'s own form,
 for a label set that covers only some of the values. It is also the
-form the module writes back after narrowing or extending a list.
+form the module writes back after narrowing or extending a list, and the
+form for values that are numeric strings, which PHP would key as
+integers (`'1'` as `1`): the resource generator writes `labels` alone
+otherwise ([Generating](generating.md#keys-from-a-json-schema-document)).
 
 ```php
 $definition->addConstraint('LabeledChoice', [

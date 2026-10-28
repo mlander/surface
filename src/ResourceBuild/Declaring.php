@@ -634,13 +634,17 @@ final class Declaring {
     }
     $links = array_values($links);
     $additions = [];
+    // What each alter says of a key it does not own, by key and fact, so a
+    // second alter saying the same fact is refused.
+    // Decision: see docs/decisions.md#a-key-may-stand-for-another-at-use.
+    $described = new \ArrayObject();
     foreach ($definition->alters as $alter) {
       if (!$alter->appliesIn($context->id)) {
         continue;
       }
       $instance = $this->alter($alter->class);
       if ($instance instanceof AltersInputsInterface) {
-        $blueprint = $additions[$alter->module] ??= (new ResourceBlueprintAdditions($builder, $this->typedDataManager, $alter->module))->useShapes($this->shapes())->useReferences($this->references());
+        $blueprint = $additions[$alter->module] ??= (new ResourceBlueprintAdditions($builder, $this->typedDataManager, $alter->module, described: $described))->useShapes($this->shapes())->useReferences($this->references());
         PipelineGuard::onBehalf(PipelineGuard::ALTER, $alter->class, 'alterInputs', static fn () => $instance->alterInputs($blueprint));
       }
       if ($instance instanceof AltersStorageLayoutInterface) {
@@ -651,10 +655,6 @@ final class Declaring {
     $declaring = ['' => $inputs, 'output ' => $outputs];
     foreach ($additions as $module => $blueprint) {
       $declaring[sprintf('third_party_settings.%s.', $module)] = $blueprint;
-      // Decision: see docs/decisions.md#a-key-may-stand-for-another-at-use.
-      if ($blueprint->resolves() !== [] && !$definition->isResource()) {
-        throw new \LogicException(sprintf('The %s alter of %s resolves %s, and %s is a structure. A resolve is a resource\'s own, read from its storage, for now: declare it on an alter of the resource that holds the structure.', $module, $definition->id, implode(', ', $blueprint->resolves()), $definition->id));
-      }
     }
     static::assertShapesNarrowed($definition, $declaring);
     return [$builder, $inputs, $outputs, $links, $additions];

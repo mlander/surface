@@ -1,0 +1,44 @@
+$schema: https://git.drupalcode.org/project/drupal/-/raw/HEAD/core/assets/schemas/v1/metadata.schema.json
+name: Several
+status: stable
+description: 'Props of several scalar types, a list of objects, and a list of objects inside an object.'
+props:
+  type: object
+  properties:
+    count:
+      type: ['integer', 'string']
+      title: Count
+    shown:
+      type: ['boolean', 'string', 'null']
+      title: Shown
+    ratio:
+      type: ['number', 'boolean']
+      title: Ratio
+    features:
+      type: array
+      title: Features
+      items:
+        type: object
+        properties:
+          heading:
+            type: string
+            title: Heading
+          note:
+            type: string
+            title: Note
+    panel:
+      type: object
+      title: Panel
+      properties:
+        title:
+          type: string
+          title: Title
+        links:
+          type: array
+          title: Links
+          items:
+            type: object
+            properties:
+              url:
+                type: string
+                title: URL

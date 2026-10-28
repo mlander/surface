@@ -4,16 +4,20 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\data_surface\Kernel;
 
+use Drupal\Core\Datetime\DrupalDateTime;
 use Drupal\Core\Form\FormState;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinition;
+use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\data_surface\DataSurfaceBuilder;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Form\DataSurfaceFormBuilderInterface;
+use Drupal\data_surface\Form\Drawing;
 use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface\Widget\DataSurfaceWidgetBase;
+use Drupal\data_surface\Widget\DataSurfaceWidgetManager;
 use Drupal\data_surface_resource_test\Resource\Library\OpeningHoursResource;
 use Drupal\data_surface_resource_test\Resource\Parcel\ParcelResource;
 use Drupal\data_surface_resource_test\Storage\OpeningHoursStorage;
@@ -23,7 +27,10 @@ use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
 /**
- * The stock widget set: checkboxes, radios, a free list, a time, a date.
+ * The stock widget set, and what no element types in.
+ *
+ * Checkboxes, radios, a free list, a time, a date, a date and time, a
+ * timestamp, a list of maps, and every data type core defines.
  *
  * Each widget's element is built from the definition alone, its posted
  * shape is read back in the definition's shape, absent keeps, emptied
@@ -32,6 +39,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  *
  * @see docs/decisions.md#a-widget-is-chosen-from-the-definition
  * @see docs/decisions.md#a-key-its-storage-always-holds
+ * @see docs/decisions.md#the-form-never-refuses-to-draw-a-declared-key
  */
 #[Group('data_surface')]
 #[RunTestsInSeparateProcesses]
@@ -383,6 +391,128 @@ class StockWidgetsTest extends DataSurfaceKernelTestBase {
     $property = $emitter->emitFull($surface, 'test', widgets: TRUE)->document['schema']['properties']['key'];
     $this->assertSame(['date', 'date'], [$property['x-surface']['widget'], $property['format']]);
     $this->assertSame('date', $emitter->emitFull($surface, 'test')->document['schema']['properties']['key']['format'], 'The format is stated without the widget hints.');
+  }
+
+  /**
+   * Every data type core defines is drawn by a widget: none throws.
+   *
+   * What add() declares a key with is a typed data type, and core defines
+   * them all (this module defines none); each, and a list of each, is
+   * drawn by some widget. A type a contributed or core module adds
+   * (`filter_format`, say) is not walked here: no widget names it.
+   */
+  public function testEveryDataTypeOfCoreIsDrawn(): void {
+    $manager = $this->container->get('plugin.manager.data_surface_widget');
+    $typed = $this->container->get('typed_data_manager');
+    $drawn = [];
+    $lists = [];
+    foreach ($typed->getDefinitions() as $type => $plugin) {
+      if (($plugin['provider'] ?? NULL) !== 'core') {
+        continue;
+      }
+      $definition = $typed->createDataDefinition($type);
+      $drawn[$type] = DataSurfaceWidgetManager::wordOf($manager->getWidgetFor($definition));
+      $lists[$type] = DataSurfaceWidgetManager::wordOf($manager->getWidgetFor(new ListDataDefinition(['type' => 'list'], $definition)));
+    }
+    $primitives = [
+      'any' => 'json',
+      'binary' => 'not_drawn',
+      'boolean' => 'checkbox',
+      'datetime_iso8601' => 'datetime',
+      'decimal' => 'number',
+      'duration_iso8601' => 'string',
+      'email' => 'string',
+      'entity_reference' => 'not_drawn',
+      'float' => 'number',
+      'integer' => 'number',
+      'language' => 'not_drawn',
+      'language_reference' => 'not_drawn',
+      'list' => 'json',
+      'map' => 'fieldset',
+      'string' => 'string',
+      'timespan' => 'number',
+      'timestamp' => 'number',
+      'uri' => 'string',
+    ];
+    ksort($primitives);
+    $read = array_intersect_key($drawn, $primitives);
+    ksort($read);
+    $this->assertSame($primitives, $read);
+    // Every other one core defines (an entity, a field item) is a map.
+    $this->assertSame([], array_diff(array_diff_key($drawn, $primitives), ['fieldset']));
+    $some = ['binary', 'boolean', 'integer', 'list', 'map', 'string', 'timestamp'];
+    $lists = array_intersect_key($lists, array_flip($some));
+    ksort($lists);
+    $this->assertSame([
+      'binary' => 'not_drawn',
+      'boolean' => 'list',
+      'integer' => 'list',
+      'list' => 'json',
+      'map' => 'json',
+      'string' => 'list',
+      'timestamp' => 'list',
+    ], $lists, 'A list of maps the form builder draws as a collection; asked alone, the manager answers the JSON widget.');
+  }
+
+  /**
+   * A timestamp is a whole number; a date and time is core's element.
+   */
+  public function testTimestampAndDateTime(): void {
+    $stamp = DataDefinition::create('timestamp')->setLabel('Opened');
+    $element = $this->form($this->one($stamp), ['key' => 1761562800])['key'];
+    $this->assertSame(['number', 1761562800, 1], [$element['#type'], $element['#default_value'], $element['#step']]);
+    $this->assertSame('1761566400', $this->extracted($stamp, $element, '1761566400'), 'Read raw; accept() casts it.');
+
+    $at = DataDefinition::create('datetime_iso8601')->setLabel('Starts');
+    $element = $this->form($this->one($at), ['key' => '2026-10-27T18:30:00+00:00'])['key'];
+    $this->assertSame('datetime', $element['#type']);
+    $this->assertInstanceOf(DrupalDateTime::class, $element['#default_value']);
+    $this->assertSame((new \DateTimeImmutable('2026-10-27T18:30:00+00:00'))->getTimestamp(), $element['#default_value']->getTimestamp(), 'The same instant, in the site\'s time zone.');
+    $this->assertSame('2026-10-28T09:15:00+00:00', $this->extracted($at, $element, new DrupalDateTime('2026-10-28T09:15:00+00:00')), 'Core\'s DrupalDateTime back to the string.');
+    $typed = ['date' => '2026-10-28', 'time' => '09:15:00'];
+    $this->assertSame((new \DateTimeImmutable('2026-10-28 09:15:00'))->format('c'), $this->extracted($at, $element, $typed), 'What was typed, before core read it, in the site\'s time zone.');
+    $this->assertNull($this->extracted($at, $element, ['date' => '', 'time' => '']), 'Nothing typed sent nothing.');
+  }
+
+  /**
+   * Bytes are not drawn: an item saying so, and what is stored is kept.
+   */
+  public function testBinaryIsNotDrawn(): void {
+    $bytes = DataDefinition::create('binary')->setLabel('Logo');
+    $surface = $this->one($bytes);
+    $element = $this->form($surface, ['key' => 'stored'])['key'];
+    $this->assertSame('item', $element['#type']);
+    $this->assertTrue($element[DataSurfaceFormBuilderInterface::PLACEHOLDER_KEY]);
+    $this->assertSame('This is not drawn on this form; what it holds is kept. Set it through the tool, over HTTP or on the React page.', $element['#markup']);
+    $container = $this->form($surface, ['key' => 'stored']);
+    $this->assertSame(['key' => 'stored'], $this->formBuilder()->extractSurfaceValues($surface, $container, new FormState(), ['key' => 'stored']));
+  }
+
+  /**
+   * A list of maps no collection was attached for is drawn as one.
+   *
+   * One details per item, each the map's own fields, an "Add another"
+   * button under them; read back item by item, an item left empty
+   * dropped.
+   */
+  public function testListOfMapsIsCollection(): void {
+    $stop = MapDataDefinition::create()
+      ->setPropertyDefinition('name', DataDefinition::create('string')->setLabel('Name'))
+      ->setPropertyDefinition('minutes', DataDefinition::create('integer')->setLabel('Minutes'));
+    $stops = (new ListDataDefinition(['type' => 'list'], $stop))->setLabel('Stops');
+    $surface = $this->one($stops);
+    $element = $this->form($surface, ['key' => [['name' => 'Harbor', 'minutes' => 5]]])['key'];
+    $this->assertSame(['details', 'key'], [$element['#type'], $element[Drawing::LIST_KEY]]);
+    $this->assertSame(['textfield', 'Harbor'], [$element[0]['name']['#type'], $element[0]['name']['#default_value']]);
+    $this->assertSame(['number', 5], [$element[0]['minutes']['#type'], $element[0]['minutes']['#default_value']]);
+    $this->assertSame('Stops 1', (string) $element[0]['#title']);
+    $this->assertArrayHasKey('@add', $element);
+
+    $container = $this->form($surface, ['key' => [['name' => 'Harbor', 'minutes' => 5], []]]);
+    $state = (new FormState())->setValues([
+      'key' => [['name' => 'Mill', 'minutes' => '7'], ['name' => '', 'minutes' => '']],
+    ]);
+    $this->assertSame(['key' => [['name' => 'Mill', 'minutes' => 7]]], $this->formBuilder()->extractSurfaceValues($surface, $container, $state));
   }
 
 }

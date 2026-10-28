@@ -6,7 +6,9 @@ namespace Drupal\Tests\data_surface\Kernel;
 
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\data_surface\DataSurfaceBuilder;
+use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\DefinitionMetadata;
+use Drupal\data_surface\Reference\ReferenceStorageLayout;
 use Drupal\data_surface\Storage\ConfigObjectStorage;
 use Drupal\data_surface_demo_node_type\Storage\NodeTypeStorage;
 use Drupal\data_surface_schema_test\Storage\AliasSettingsStorage;
@@ -137,6 +139,61 @@ class ConfigSchemaCheckTest extends DataSurfaceKernelTestBase {
               type: string
               label: 'Type'
       YAML, $schema, 'Generated, the schema says what the layout stores.');
+  }
+
+  /**
+   * Tests an alter's layout of its mount is told to the check and generator.
+   *
+   * The mount test module mounts a reviewer, a user stored by uuid, and a
+   * delay asked in minutes and stored as a duration, which its layout
+   * says. Each is named at third_party_settings.<module>.<key>: the check
+   * skips both, and the generator writes each as it is stored.
+   */
+  public function testAnAltersMountLayoutIsToldToTheCheck(): void {
+    $this->enableModules(['data_surface_mount_test']);
+    $resources = $this->container->get('data_surface.resources');
+    $built = $resources->build('schema_test.aliases', $resources->operation('schema_test.aliases', 'configure'));
+    $storage = $this->container->get('class_resolver')->getInstanceFromDefinition(AliasSettingsStorage::class);
+    $translated = $storage->translatedKeys($built);
+    $mount = 'third_party_settings.data_surface_mount_test.';
+    $this->assertSame(['type' => 'string'], $translated[$mount . 'delay'], 'What the alter\'s layout says.');
+    $this->assertSame(ReferenceStorageLayout::UUID_SCHEMA, $translated[$mount . 'reviewer'], 'A reference at the mount, by uuid.');
+    $this->assertSame([], $storage->widerThanSchema($built));
+    // Told of the references alone, the check names the delay.
+    $references = new class(
+      $this->container->get('config.factory'),
+      $this->container->get('config.typed'),
+      $this->container->get('language_manager'),
+      $this->container->get('string_translation'),
+    ) extends ConfigObjectStorage {
+
+      /**
+       * {@inheritdoc}
+       */
+      public const CONFIG = 'data_surface_schema_test.aliases';
+
+      /**
+       * {@inheritdoc}
+       */
+      public function translatedKeys(DataSurfaceInterface $built): array {
+        return ReferenceStorageLayout::storedSchemaOf($built);
+      }
+
+    };
+    $this->assertSame(['it is an integer, which the schema types string, a string'], array_values(array_intersect_key($references->widerThanSchema($built), [$mount . 'delay' => TRUE])));
+
+    $modules = ['data_surface_schema_test', 'data_surface_mount_test'];
+    $generated = $this->container->get('data_surface.config_schema')->files($modules);
+    $schema = $generated[$this->container->get('extension.list.module')->getPath('data_surface_mount_test') . '/config/schema/data_surface_mount_test.schema.yml'] ?? '';
+    $this->assertStringContainsString(<<<'YAML'
+          delay:
+            type: string
+            label: 'Delay in minutes'
+      YAML, $schema, 'Generated, the mount\'s schema says what its layout stores.');
+    $this->assertStringContainsString(<<<'YAML'
+          reviewer:
+            type: uuid
+      YAML, $schema);
   }
 
   /**

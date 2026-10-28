@@ -11,7 +11,9 @@ use Drupal\Core\Session\AnonymousUserSession;
 use Drupal\data_surface\Form\DataSurfaceFormBuilder;
 use Drupal\data_surface\Form\DataSurfaceFormBuilderInterface;
 use Drupal\data_surface\Form\DataSurfaceOperationForm;
+use Drupal\data_surface\Form\Drawing;
 use Drupal\data_surface\Pipeline\Violation;
+use Drupal\data_surface_tool\OperationInputs;
 use Drupal\data_surface_examples\Resource\SpotlightResource;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use Drupal\user\Entity\Role;
@@ -28,8 +30,9 @@ use Symfony\Component\HttpFoundation\Request;
  * stored one's and another type took the form down, and so did a prop
  * typed as several JSON types and a list of anything. The switch now
  * starts the new component from its defaults, a value of the wrong shape
- * is an error on its element, and the JSON widget draws what no other
- * widget does.
+ * is an error on its element, a prop of several scalar types is a text
+ * field, a list of objects is a collection at any depth, and the JSON
+ * widget draws what no other widget does.
  */
 #[Group('data_surface')]
 #[RunTestsInSeparateProcesses]
@@ -61,6 +64,11 @@ class SpotlightFormTest extends DataSurfaceKernelTestBase {
    * The component whose props only the JSON widget draws.
    */
   protected const MIXED = 'data_surface_widget_test:mixed';
+
+  /**
+   * The component with props of several scalar types and lists of objects.
+   */
+  protected const SEVERAL = 'data_surface_widget_test:several';
 
   /**
    * The card's props as the installed spotlight stores them.
@@ -291,6 +299,92 @@ class SpotlightFormTest extends DataSurfaceKernelTestBase {
     // JSON of a type the key does not take: the key's own constraint.
     $state = $this->save(['component' => self::MIXED, 'props' => ['meta' => '12']]);
     $this->assertSame(['surface][props][meta'], array_keys($state->getErrors()));
+  }
+
+  /**
+   * Tests a prop of several scalar types, and lists of objects at depth.
+   *
+   * A prop typed as several scalar types is a text field, read as the
+   * first stated type it spells, in a fixed order, and held to its
+   * schema; a list of objects is a collection, in the props and inside an
+   * object of them, each item its own fields, read back item by item.
+   */
+  public function testSeveralTypesAndListsOfObjectsAreDrawn(): void {
+    $this->config('data_surface_examples.spotlight')->setData([
+      'component' => self::SEVERAL,
+      'props' => [
+        'count' => 3,
+        'shown' => TRUE,
+        'ratio' => 0.5,
+        'features' => [['heading' => 'Wide', 'note' => 'Fits six']],
+        'panel' => ['title' => 'More', 'links' => [['url' => 'https://example.com/a']]],
+      ],
+      'slots' => [],
+    ])->save();
+    $this->serveSpotlight();
+    $form = $this->container->get('form_builder')->getForm(DataSurfaceOperationForm::class);
+    $props = $form[DataSurfaceOperationForm::SURFACE_KEY]['props'];
+    $this->assertSame(['textfield', '3'], [$props['count']['#type'], $props['count']['#default_value']]);
+    $this->assertSame('Enter a whole number or text.', (string) $props['count']['#description']);
+    $this->assertSame(['textfield', 'true'], [$props['shown']['#type'], $props['shown']['#default_value']]);
+    $this->assertSame('Enter true or false or text.', (string) $props['shown']['#description']);
+    $this->assertSame('Enter a number or true or false.', (string) $props['ratio']['#description']);
+    $this->assertSame('props.features', $props['features'][Drawing::LIST_KEY]);
+    $feature = $props['features'][0];
+    $this->assertSame(['Wide', 'Fits six'], [$feature['heading']['#default_value'], $feature['note']['#default_value']]);
+    $this->assertSame('data_surface_props_features_add', $props['features']['@add']['#name']);
+    $this->assertSame('props.panel.links', $props['panel']['links'][Drawing::LIST_KEY], 'A list of objects inside an object is a collection too.');
+    $this->assertSame('https://example.com/a', $props['panel']['links'][0]['url']['#default_value']);
+
+    $state = $this->save([
+      'component' => self::SEVERAL,
+      'props' => [
+        'count' => '12',
+        'shown' => 'false',
+        'ratio' => '2',
+        'features' => [['heading' => 'Narrow', 'note' => 'Fits two']],
+        'panel' => ['title' => 'More', 'links' => [['url' => 'https://example.com/b']]],
+      ],
+    ]);
+    $this->assertSame([], $state->getErrors());
+    $stored = $this->config('data_surface_examples.spotlight')->get('props');
+    $this->assertSame([12, FALSE, 2], [$stored['count'], $stored['shown'], $stored['ratio']], 'Read as the first stated type each spells.');
+    $this->assertSame([['heading' => 'Narrow', 'note' => 'Fits two']], $stored['features']);
+    $this->assertSame([['url' => 'https://example.com/b']], $stored['panel']['links']);
+
+    // Text that spells no number: a string, where a string is stated.
+    $this->save(['component' => self::SEVERAL, 'props' => ['count' => 'many', 'ratio' => '2']]);
+    $this->assertSame('many', $this->config('data_surface_examples.spotlight')->get('props.count'));
+
+    // Where none is, the schema refuses it on the element, and nothing is
+    // written.
+    $state = $this->save(['component' => self::SEVERAL, 'props' => ['count' => 'many', 'ratio' => 'lots']]);
+    $this->assertSame(['surface][props][ratio'], array_keys($state->getErrors()));
+    $this->assertSame(2, $this->config('data_surface_examples.spotlight')->get('props.ratio'));
+  }
+
+  /**
+   * Tests a new component sent alone starts from its own defaults.
+   *
+   * At the tool door: the stored card's props have the teaser's names,
+   * its `link` a map where the teaser's is text. Read as the teaser's by
+   * their names, they were refused as the teaser's. They were stored for
+   * the card, which the stored component says, so the teaser starts from
+   * its defaults, as it does on the form.
+   */
+  public function testNewComponentSentAloneStartsFromItsDefaults(): void {
+    $tool = $this->container->get('plugin.manager.tool')->createInstance('data_surface:event.spotlight:configure');
+    $tool->setInputValue(OperationInputs::VALUES, ['component' => self::TEASER]);
+    $tool->setInputValue(OperationInputs::DRY_RUN, TRUE);
+    $tool->execute();
+    $result = $tool->getResult();
+    $this->assertTrue($result->isSuccess(), (string) $result->getMessage());
+    $answer = $result->getContextValues();
+    $this->assertSame([], (array) ($answer[OperationInputs::VIOLATIONS] ?? []));
+    $values = json_decode((string) json_encode($answer[OperationInputs::VALUES]), TRUE);
+    $this->assertSame(self::TEASER, $values['component']);
+    $this->assertSame(['heading' => 'Read the program', 'tone' => 'plain', 'link' => 'https://example.com/program'], $values['props'], 'The teaser\'s defaults, none of the card\'s props.');
+    $this->assertSame('data_surface_examples:card', $this->config('data_surface_examples.spotlight')->get('component'), 'A dry run writes nothing.');
   }
 
 }

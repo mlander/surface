@@ -23,7 +23,6 @@ use Drupal\data_surface\Pipeline\DataSurfacePipelineInterface;
 use Drupal\data_surface\Pipeline\TypeMismatchException;
 use Drupal\data_surface\Pipeline\ValueState;
 use Drupal\data_surface\Pipeline\ViolationSet;
-use Drupal\data_surface\Entry;
 use Drupal\data_surface\Variants;
 use Drupal\data_surface\Collection;
 use Drupal\data_surface\Widget\DataSurfaceWidgetManager;
@@ -270,7 +269,7 @@ final class Extracting {
       if ($entry->variants !== NULL) {
         // What is stored was written for another variant, and says
         // nothing about this one.
-        $held = $entry->variants->held((string) $entry->variants->chosen($values[$entry->variants->by] ?? NULL), $held);
+        $held = $entry->variants->heldFor((string) $entry->variants->chosen($values[$entry->variants->by] ?? NULL), $held, $stored[$entry->variants->by] ?? NULL);
       }
       $child_stored = array_replace($child->getDefaultValues(), is_array($held) ? $held : []);
       [$child_discarded, $child_orphaned] = $this->settle($child, $child_stored, $input[$name]);
@@ -566,11 +565,11 @@ final class Extracting {
         $variantKeys[] = $name;
         continue;
       }
-      if ($entry->list !== NULL) {
-        $raw += $this->extractCollection($entry, $container, $form_state);
+      if ($entry->list !== NULL || Collection::holdsMaps($entry->definition)) {
+        $raw += $this->extractCollection((string) $name, $entry->definition, $entry->list, $container, $form_state);
         continue;
       }
-      $raw += $this->extractKey((string) $name, $entry->definition, $container, $form_state);
+      $raw += $this->extractKey((string) $name, $entry->definition, $container, $form_state, $entry->attachment?->child);
     }
     if ($variantKeys !== []) {
       // A key's element is the chosen variant's, so it is read through
@@ -594,10 +593,10 @@ final class Extracting {
           // Variants inside the variant (a component's slots, each holding
           // a component that chooses its own props): each level is read
           // through what its own deciding key chose in this submission.
-          $raw[$name] = $this->extractFrame($child, $container[$name], $form_state);
+          $raw[$name] = $this->extractFrame($child, $container[$name], $form_state, Refreshing::containerKey($container));
           continue;
         }
-        $raw += $this->extractKey((string) $name, $definition, $container, $form_state);
+        $raw += $this->extractKey((string) $name, $definition, $container, $form_state, $child);
       }
     }
     // A key drawn as nothing when the page was drawn sent nothing, even
@@ -812,8 +811,7 @@ final class Extracting {
    * A key is read through its widget; an attached child through its own
    * keys; variants through the variant their deciding key chose in what
    * was just read, so an element drawn for another variant gives nothing
-   * of its own. A collection below the top is not drawn, so nothing is
-   * read for it, and what it holds is kept.
+   * of its own; a collection item by item.
    *
    * @param \Drupal\data_surface\DataSurfaceInterface $surface
    *   The child.
@@ -821,30 +819,37 @@ final class Extracting {
    *   Its element.
    * @param \Drupal\Core\Form\FormStateInterface $form_state
    *   The form state.
+   * @param string $container_key
+   *   The data surface container's key, which a collection inside keeps
+   *   its items' deltas under.
    *
    * @return array
    *   The raw values read, by key.
    */
-  protected function extractFrame(DataSurfaceInterface $surface, array $element, FormStateInterface $form_state): array {
+  protected function extractFrame(DataSurfaceInterface $surface, array $element, FormStateInterface $form_state, string $container_key): array {
     $raw = [];
     foreach ($surface->getDefinitions()->entries() as $name => $entry) {
       $name = (string) $name;
       $at = $element[$name] ?? NULL;
-      if (!is_array($at) || !empty($at[DataSurfaceFormBuilderInterface::PLACEHOLDER_KEY]) || $entry->list !== NULL) {
+      if (!is_array($at) || !empty($at[DataSurfaceFormBuilderInterface::PLACEHOLDER_KEY])) {
+        continue;
+      }
+      if ($entry->list !== NULL || Collection::holdsMaps($entry->definition)) {
+        $raw += $this->extractCollection($name, $entry->definition, $entry->list, $element, $form_state, $container_key);
         continue;
       }
       if ($entry->variants !== NULL) {
         $chosen = $entry->variants->chosen($raw[$entry->variants->by] ?? $surface->getDefault($entry->variants->by));
         if ($chosen !== NULL && !static::drawnForAnother($at, $chosen)) {
-          $raw[$name] = $this->extractFrame($entry->variants->variant($chosen)->child, $at, $form_state);
+          $raw[$name] = $this->extractFrame($entry->variants->variant($chosen)->child, $at, $form_state, $container_key);
         }
         continue;
       }
       if ($entry->attachment !== NULL) {
-        $raw[$name] = $this->extractFrame($entry->attachment->child, $at, $form_state);
+        $raw[$name] = $this->extractFrame($entry->attachment->child, $at, $form_state, $container_key);
         continue;
       }
-      $raw += $this->extractKey($name, $entry->definition, $element, $form_state);
+      $raw += $this->extractKey($name, $entry->definition, $element, $form_state, NULL, $container_key);
     }
     return $raw;
   }
@@ -856,44 +861,50 @@ final class Extracting {
    * An item that holds nothing at all, a row added and left blank, is
    * dropped here, before the pipeline would drop it, and the delta each
    * item kept was drawn at is remembered for the request, so a violation
-   * about it is flagged on the element it came from.
+   * about it is flagged on the element it came from. A collection inside
+   * an item, or inside a map in it, is read as one, at any depth.
    *
-   * @param \Drupal\data_surface\Entry $entry
-   *   The collection.
+   * @param string $name
+   *   The list's key in its frame.
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The list.
+   * @param \Drupal\data_surface\Collection|null $list
+   *   The collection attachList() declared, or NULL for a list of maps no
+   *   collection stands behind.
    * @param array $container
-   *   The data surface container.
+   *   The element holding the list's: the data surface container, an
+   *   item's, or a child's.
    * @param \Drupal\Core\Form\FormStateInterface $form_state
    *   The form state.
    * @param string|null $container_key
-   *   The data surface container's key, for a list inside an item, whose
-   *   container is the item; NULL for the container's own.
+   *   The data surface container's key, for a list below the container's
+   *   own keys; NULL for one of them.
    *
    * @return array
    *   The items keyed by data surface key, or nothing for a list with no
    *   element.
    */
-  protected function extractCollection(Entry $entry, array $container, FormStateInterface $form_state, ?string $container_key = NULL): array {
+  protected function extractCollection(string $name, DataDefinitionInterface $definition, ?Collection $list, array $container, FormStateInterface $form_state, ?string $container_key = NULL): array {
     $container_key ??= Refreshing::containerKey($container);
-    $name = $entry->name;
     $element = $container[$name] ?? NULL;
-    $item = $entry->definition instanceof ListDataDefinitionInterface ? $entry->definition->getItemDefinition() : NULL;
+    $item = $definition instanceof ListDataDefinitionInterface ? $definition->getItemDefinition() : NULL;
     if (!is_array($element) || !isset($element[Drawing::LIST_KEY]) || $item === NULL) {
       return [];
     }
     // A collection inside an item is read as one, and the item's map
     // reads the rest.
-    $child = $entry->list?->child();
+    $child = $list?->child();
     $inner = [];
     $map = $item;
-    if ($child !== NULL && $item instanceof ComplexDataDefinitionInterface) {
+    if ($item instanceof ComplexDataDefinitionInterface) {
       $map = MapDataDefinition::create();
-      foreach ($item->getPropertyDefinitions() as $property => $definition) {
-        $nested = $child->getDefinitions()->entry((string) $property);
-        if ($nested?->list !== NULL) {
-          $inner[] = $nested;
+      foreach ($item->getPropertyDefinitions() as $property => $property_definition) {
+        $nested = $child?->getDefinitions()->entry((string) $property)?->list;
+        if ($nested !== NULL || Collection::holdsMaps($property_definition)) {
+          $inner[(string) $property] = [$property_definition, $nested];
           continue;
         }
-        $map->setPropertyDefinition((string) $property, $definition);
+        $map->setPropertyDefinition((string) $property, $property_definition);
       }
     }
     $widget = $this->widgetManager->getWidgetFor($map);
@@ -909,11 +920,17 @@ final class Extracting {
       if (!is_int($delta)) {
         continue;
       }
-      $value = $frame
-        ? $this->extractFrame($child, $element[$delta], $form_state)
-        : $widget->extractValue($map, $element[$delta], $form_state, [$name, $delta]);
-      foreach ($inner as $nested) {
-        $value += $this->extractCollection($nested, $element[$delta], $form_state, $container_key);
+      if ($frame) {
+        $value = $this->extractFrame($child, $element[$delta], $form_state, $container_key);
+      }
+      else {
+        $value = $widget->extractValue($map, $element[$delta], $form_state, [$name, $delta]);
+        if ($map instanceof ComplexDataDefinitionInterface && is_array($value)) {
+          $value = $this->collectionsIn($value, $map, $child, $element[$delta], $form_state, $container_key);
+        }
+      }
+      foreach ($inner as $property => [$property_definition, $nested]) {
+        $value += $this->extractCollection($property, $property_definition, $nested, $element[$delta], $form_state, $container_key);
       }
       if (Collection::isEmptyItem($value)) {
         continue;
@@ -927,6 +944,54 @@ final class Extracting {
   }
 
   /**
+   * Reads each collection inside a map its widget read, at any depth.
+   *
+   * The map's widget reads its keys and leaves a list of maps out, since
+   * the form builder drew it as a collection (Drawing::collectionsInside());
+   * each is read here as one, and each map inside the map walked the same
+   * way.
+   *
+   * @param array $value
+   *   What the map's widget read.
+   * @param \Drupal\Core\TypedData\ComplexDataDefinitionInterface $definition
+   *   The map.
+   * @param \Drupal\data_surface\DataSurfaceInterface|null $frame
+   *   The child the map was drawn from, or NULL for a plain map.
+   * @param array $element
+   *   The map's element.
+   * @param \Drupal\Core\Form\FormStateInterface $form_state
+   *   The form state.
+   * @param string $container_key
+   *   The data surface container's key.
+   *
+   * @return array
+   *   The value, each collection inside it read.
+   */
+  protected function collectionsIn(array $value, ComplexDataDefinitionInterface $definition, ?DataSurfaceInterface $frame, array $element, FormStateInterface $form_state, string $container_key): array {
+    foreach ($definition->getPropertyDefinitions() as $name => $property) {
+      $name = (string) $name;
+      if (!is_array($element[$name] ?? NULL)) {
+        continue;
+      }
+      $entry = $frame?->getDefinitions()->entry($name);
+      if (Collection::holdsMaps($property)) {
+        $value += $this->extractCollection($name, $property, $entry?->list, $element, $form_state, $container_key);
+        continue;
+      }
+      if (!$property instanceof ComplexDataDefinitionInterface || !is_array($value[$name] ?? NULL)) {
+        continue;
+      }
+      $inner = $entry?->attachment?->child;
+      if ($entry?->variants !== NULL) {
+        $chosen = $entry->variants->chosen($value[$entry->variants->by] ?? NULL);
+        $inner = $chosen === NULL ? NULL : $entry->variants->variant($chosen)->child;
+      }
+      $value[$name] = $this->collectionsIn($value[$name], $property, $inner, $element[$name], $form_state, $container_key);
+    }
+    return $value;
+  }
+
+  /**
    * Reads one key's raw value out of the container, if it was rendered.
    *
    * @param string $name
@@ -937,23 +1002,30 @@ final class Extracting {
    *   The data surface container.
    * @param \Drupal\Core\Form\FormStateInterface $form_state
    *   The form state.
+   * @param \Drupal\data_surface\DataSurfaceInterface|null $frame
+   *   The child a map is drawn from (an attached child, a variant), or
+   *   NULL: what a list of maps inside it is read through.
+   * @param string|null $container_key
+   *   The data surface container's key; NULL reads it off the container.
    *
    * @return array
    *   The raw value keyed by data surface key, or nothing for a key with no
    *   element: it was never offered, so it has nothing to say, and
    *   accept() keeps whatever the key already holds.
    */
-  protected function extractKey(string $name, ?DataDefinitionInterface $definition, array $container, FormStateInterface $form_state): array {
+  protected function extractKey(string $name, ?DataDefinitionInterface $definition, array $container, FormStateInterface $form_state, ?DataSurfaceInterface $frame = NULL, ?string $container_key = NULL): array {
     if ($definition === NULL || !isset($container[$name]) || !is_array($container[$name]) || !empty($container[$name][DataSurfaceFormBuilderInterface::PLACEHOLDER_KEY])) {
       // A placeholder is a wrapper and nothing else (variants nothing
       // chose, a key that does not apply): no element was offered, so the
       // key has said nothing.
       return [];
     }
-    return [
-      $name => $this->widgetManager->getWidgetFor($definition)
-        ->extractValue($definition, $container[$name], $form_state, [$name]),
-    ];
+    $value = $this->widgetManager->getWidgetFor($definition)
+      ->extractValue($definition, $container[$name], $form_state, [$name]);
+    if ($definition instanceof ComplexDataDefinitionInterface && is_array($value)) {
+      $value = $this->collectionsIn($value, $definition, $frame, $container[$name], $form_state, $container_key ?? Refreshing::containerKey($container));
+    }
+    return [$name => $value];
   }
 
   /**

@@ -19,6 +19,7 @@ use Drupal\data_surface\DefinitionMap;
 use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Entry;
 use Drupal\data_surface\Refinement\ChoiceSet;
+use Drupal\data_surface\ResourceBuild\RefinesInputRefiner;
 
 /**
  * Says where a resource is wider than the config schema its storage writes.
@@ -75,11 +76,66 @@ trait HeldToConfigSchemaTrait {
    *   The resource, built.
    *
    * @return array<string, array>
-   *   Each such key's config schema as stored, by its dotted path; none by
-   *   default.
+   *   Each such key's config schema as stored, by its dotted path, an
+   *   entry of a map of keys from the site named `*`; none by default.
    */
   public function translatedKeys(DataSurfaceInterface $built): array {
     return [];
+  }
+
+  /**
+   * Gives the config schema of each key an alter's layout stores otherwise.
+   *
+   * An alter that lays its mount out (AltersStorageLayoutInterface) with a
+   * layout that says its stored schema (StoredSchemaInterface) tells the
+   * check and the generator, as the storage's own layout does: each key at
+   * `third_party_settings.<module>.<key>`.
+   *
+   * Decision: see
+   * docs/decisions.md#a-layout-is-the-storages-one-word-on-its-shape.
+   *
+   * @param \Drupal\data_surface\DataSurfaceInterface $built
+   *   The resource, built.
+   *
+   * @return array<string, array>
+   *   Each such key's config schema as stored, by its dotted path.
+   */
+  protected static function mountedLayouts(DataSurfaceInterface $built): array {
+    $mount = $built->getDefinition(RefinesInputRefiner::MOUNT);
+    $keys = [];
+    foreach ($mount instanceof ComplexDataDefinitionInterface ? array_keys($mount->getPropertyDefinitions()) : [] as $module) {
+      $layout = $built->getThirdPartyLayout((string) $module);
+      foreach ($layout instanceof StoredSchemaInterface ? $layout->storedSchema() : [] as $path => $schema) {
+        $keys[RefinesInputRefiner::path((string) $module, (string) $path)] = $schema;
+      }
+    }
+    return $keys;
+  }
+
+  /**
+   * Answers whether a key's dotted path is at or below a translated key.
+   *
+   * @param string $path
+   *   The key's dotted path, as the check walks it.
+   * @param string $translated
+   *   A translated key's dotted path, where `*` stands for any entry of a
+   *   map of keys from the site.
+   *
+   * @return bool
+   *   TRUE when every segment of the translated path matches.
+   */
+  protected static function translatedAt(string $path, string $translated): bool {
+    $at = explode('.', $path);
+    $skipped = explode('.', $translated);
+    if (count($at) < count($skipped)) {
+      return FALSE;
+    }
+    foreach ($skipped as $position => $segment) {
+      if ($segment !== '*' && $segment !== $at[$position]) {
+        return FALSE;
+      }
+    }
+    return TRUE;
   }
 
   /**
@@ -110,7 +166,7 @@ trait HeldToConfigSchemaTrait {
     }
     return array_filter($wider, static function (string $path) use ($translated): bool {
       foreach ($translated as $skipped) {
-        if ($path === $skipped || str_starts_with($path, $skipped . '.')) {
+        if (static::translatedAt($path, (string) $skipped)) {
           return FALSE;
         }
       }

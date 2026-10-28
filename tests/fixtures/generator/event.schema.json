@@ -19,6 +19,8 @@
         "phone": {"type": ["string", "null"], "title": "Phone"}
       }
     },
+    "level": {"type": "integer", "title": "Level", "oneOf": [{"const": 1, "title": "Open"}, {"const": 2, "title": "Invited"}]},
+    "size": {"type": "string", "title": "Size", "oneOf": [{"const": "1", "title": "Small"}, {"const": "2", "title": "Large"}]},
     "tags": {"type": ["array", "null"], "title": "Tags", "items": {"type": "string"}, "uniqueItems": true}
   },
   "allOf": [
