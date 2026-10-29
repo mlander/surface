@@ -228,7 +228,7 @@ label, the `committed` output's title, now "Committed" (A6).
 | Attribute arguments | 42 | 39 |
 | Blueprint methods | 17 | 15 |
 | Interfaces an author implements or names | 24 | 20 |
-| `OperationContext` public methods | 9 | 8, beside `constraints()`, the build's |
+| `OperationContext` public methods | 9 | 8, beside `constraints()`, the build's; 9 since 2026-10-28 |
 | Settings | 2 | 2 |
 | `x-surface` keywords | 35 | 35, 30 since contract 4 |
 | Module result codes | 20 | 20 |
@@ -245,6 +245,13 @@ one definition setting a claim reads, `format`, and one config object,
 ([A site sets a default in configuration](#a-site-sets-a-default-in-configuration)).
 The widget attribute is in `src/Attribute/`, which `PublicSurfaceTest`
 does not count, so its pins are unchanged.
+
+*Grown 2026-10-28,* by one method: `OperationContext::withDefaults()`,
+beside `defaults()`, the build's, restored for a route that fills keys
+on one page, the shipped use C5 found missing
+([A route may fill or fix what an operation asks for](#a-route-may-fill-or-fix-what-an-operation-asks-for)).
+The table's row says it; `PublicSurfaceTest` does not count a
+context's methods, so its pins are unchanged.
 
 `PublicSurfaceTest` pins what `src/Resource/` declares, so the count
 grows only with that test updated beside a reason: 9 attributes, 31
@@ -336,6 +343,10 @@ What changed, old → new, to grep:
   the constructor takes `id`, `creates` and `known`, the rest the
   withers, and starting values are gone
   ([Starting values without creating](#starting-values-without-creating)).
+  *Restored 2026-10-28:* `withDefaults()`, with its rule, for a route
+  that fills keys on one page; the constructor still takes `id`,
+  `creates` and `known`
+  ([A route may fill or fix what an operation asks for](#a-route-may-fill-or-fix-what-an-operation-asks-for)).
 - **C6.** `#[Operation(of:)]` removed: an operation stands on its
   resource's or structure's own class, and one on any other class is
   refused.
@@ -1002,6 +1013,11 @@ through the wall
 between parent and child. (`Declaring::applyContext()`) *Changed
 2026-10-24:* starting values, `OperationContext::withDefaults()`, are
 gone, and so is this entry's half about them ([The surface was counted and cut](#the-surface-was-counted-and-cut)).
+*Amended 2026-10-28:* a constraint or a default the parent's context
+names by a path into the child (`title.value`) is handed to the child's
+context, by the path below the key, so the child is still narrowed by
+its own context alone; the key itself is still refused
+([A route may fill or fix what an operation asks for](#a-route-may-fill-or-fix-what-an-operation-asks-for)).
 
 ### Starting values without creating
 
@@ -1010,11 +1026,17 @@ one that does not create, until `OperationContext::withDefaults()` and
 the constructor's `defaults:` were removed with no shipped use: no
 shipped operation starts a new thing from values (a clone). Bringing a
 clone back is additive ([The surface was counted and cut](#the-surface-was-counted-and-cut)).
+*Restored 2026-10-28:* `withDefaults()` is back with its one rule, for
+a route that fills keys on one page: a context that does not create and
+carries defaults is refused when the resource is built ([A route may
+fill or fix what an operation asks for](#a-route-may-fill-or-fix-what-an-operation-asks-for)).
 
 ### Starting values are defaults
 
 *Withdrawn 2026-10-24* with starting values: a starting value was the
 key's declared default for that build only ([The surface was counted and cut](#the-surface-was-counted-and-cut)).
+*Restored 2026-10-28:* so it is again, written over the site's default
+too ([A route may fill or fix what an operation asks for](#a-route-may-fill-or-fix-what-an-operation-asks-for)).
 
 ### A site sets a default in configuration
 
@@ -1073,6 +1095,80 @@ each a resource id, a key path and a value.
   site's.
 
 (`SiteDefaults`, `Declaring::writeSiteDefaults()`, `SiteDefaultsTest`)
+*Amended 2026-10-28:* `withDefaults()` is back, for a context that
+creates; its values are written over the site's, with the same reach and
+the same holding, both in `KeyPaths`
+([A route may fill or fix what an operation asks for](#a-route-may-fill-or-fix-what-an-operation-asks-for)).
+
+### A route may fill or fix what an operation asks for
+
+Decided 2026-10-28, from a site's add page: a basic page whose title is
+set, or whose body starts with text, served by the generic `create` of
+`entity.content:node.page`, with no operation of its own. A route says
+it with two defaults, `_data_surface_fixed` and `_data_surface_defaults`,
+each a map of key paths to values, which `OperationRoute` applies to the
+context the operation built ([forms](forms.md#a-route-that-fixes-or-fills-keys)).
+
+- **Filling is a form's matter, so a route is its level.** A tool call
+  and an API write send their values; only a person on a page starts
+  from what the page shows. A default at a route changes what one page
+  starts from and no other door's contract, so parity between doors is
+  not at stake. It is `OperationContext::withDefaults()`, restored with
+  this as its use: each value is what its key starts from in this build,
+  written over the declared default and the site's, read through the
+  coercion table and held to the key, with a site default's reach
+  ([A site sets a default in configuration](#a-site-sets-a-default-in-configuration)).
+- **Only a context that creates carries defaults.** On an update the
+  stored value stands, so a default would be stated and never used. A
+  context that does not create and carries defaults is refused when the
+  resource is built, naming the operation, and at a route, naming the
+  route.
+- **Fixing narrows the contract, so at a route it is true on that page
+  only.** A fixed value is `withConstraint($path, 'Choice', ['choices' =>
+  [$value], 'data_surface_fixed' => TRUE])`, nothing new in either
+  document's vocabulary: a key fixed so, that holds a value, is drawn as
+  that value and stated `const` with `x-surface.fixed`, as a deciding
+  key with one variant is, and a key that starts from another value
+  starts from it. The option says the Choice fixes the key, and the build
+  takes it off before core sees the Choice. The value is held
+  to the key first, so one the key refuses is refused naming the key.
+  The operation's other doors still accept any value it does: a value
+  that must hold at every door is the operation's own constraint, or its
+  access class's answer, and a fact nobody should see or send, such as
+  who a message goes to, belongs in storage keyed by the operation, never
+  in a key a route fixes.
+- **A path into a child is the child's context.** A constraint or a
+  default at `title.value` is handed to the context of the structure
+  attached at `title` (`Declaring::handDown()`), so a child is still
+  narrowed by its own context alone ([Constraints and starting values for
+  an attached key](#constraints-and-starting-values-for-an-attached-key)).
+  One at a key of a map the resource declares narrows that key in place.
+- **A refusal is the route's, said as a parameter's.** The route builds
+  the resource with its values once, for no account, when it is matched.
+  A refusal of them becomes the route's `InvalidArgumentException`, which
+  the access check answers with a refusal saying why, as it answers a
+  route parameter that names nothing. A refusal the operation meets
+  without the route's values stays the operation's.
+- **The React page is left out.** It reads its operation from its own
+  path and calls an API at another, so a route's defaults never reach
+  the API; carrying them would make the API read where it was called
+  from ([Nothing an operation runs reads the
+  request](#nothing-an-operation-runs-reads-the-request)). *Open:* a
+  React page that fixes or fills keys.
+
+- **Fixing says so.** A Choice of one value alone is not a fixed key.
+  Two shipped operations narrow a key that way, a placed block's update
+  its theme and a field storage's update an unlimited cardinality once
+  the field has data, and both are drawn as a select of one and stated
+  as a `oneOf` of one, which the block's pinned documents hold. Drawing
+  every Choice of one value fixed would change those documents, so the
+  route's says it fixes the key, and an operation's own may say it too.
+  *Open:* whether those two should.
+
+(`OperationContext::withDefaults()`, `OperationRoute::withRouteValues()`,
+`Declaring::applyContext()`, `Declaring::writeContextDefaults()`,
+`KeyPaths`, `DefinitionMetadata::setFixed()`, `RouteValuesTest`,
+`ContentEntityRouteValuesTest`)
 
 ### Known keys that are not identity
 

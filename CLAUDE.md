@@ -53,7 +53,14 @@ the record of the rework that brought the module to the pattern.
   `creates` stamped on it and a context saying otherwise refused
   (`docs/decisions.md#an-operation-on-the-class`); only ever on its
   resource's or structure's own class. Its context adds `known`
-  identity, `withConstraint()` and `withChild()`; a child with operations
+  identity, `withConstraint()` (a Choice of one value with `data_surface_fixed`
+  fixes the key),
+  `withDefaults()` (what keys start from, only on a context that
+  creates) and `withChild()`, the first two by key path, a path into a
+  fixed child handed to its context; a route fixes or fills keys of the
+  operation it serves with them, `_data_surface_fixed` and
+  `_data_surface_defaults`
+  (`docs/forms.md#a-route-that-fixes-or-fills-keys`); a child with operations
   is invoked through the one its parent names, else the one with its
   parent's id, else the one of its parent operation's kind. It states how a call
   behaves, `readOnly:` and `destructive:`, and idempotence, derived
@@ -480,7 +487,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 The full lane's phpunit line reads, as of this writing:
 
 ```
-phpunit: Tests: 1714, Assertions: 39458, Errors: 0, Failures: 0, Skipped: 3. Classes: 241 of 241, 8 at a time, browser classes 4.
+phpunit: Tests: 1723, Assertions: 39607, Errors: 0, Failures: 0, Skipped: 3. Classes: 243 of 243, 8 at a time, browser classes 4.
 ```
 
 the same counts a plain phpunit run of the tree gives. The skipped

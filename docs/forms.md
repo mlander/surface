@@ -912,6 +912,8 @@ The defaults:
 | `_data_surface_operation` | One of its operation ids. |
 | `_data_surface_cosmetics` | Optional. A service id or class implementing `Form\DataSurfaceFormCosmeticsInterface`: a borrowed element, markup, the message and the redirect. Grouping and order are the keys' [arrangement](#arranging-the-keys). |
 | `_data_surface_panel` | Optional. A service id or class implementing `Form\DataSurfaceFormPanelInterface`: something shown inside the data surface's container, rebuilt with it. |
+| `_data_surface_fixed` | Optional. A map of key paths to values, each key fixed to its value on this page ([below](#a-route-that-fixes-or-fills-keys)). |
+| `_data_surface_defaults` | Optional. A map of key paths to values, each the value its key starts from on this page, for an operation that creates ([below](#a-route-that-fixes-or-fills-keys)). |
 
 The route's parameters are the operation method's, by name: an upcast
 entity parameter arrives as the entity, a plain one as its value, so
@@ -978,6 +980,93 @@ which returns the contract panel and, below it, what config schema alone
 can say about the same settings
 (`modules/data_surface_examples/README.md`).
 Both sit under the one key, so one rebuild replaces both.
+
+### A route that fixes or fills keys
+
+A route may serve an existing operation with some of its keys fixed or
+filled in, on that page alone, with no new operation. The case is an add
+page: a basic page whose title is set, or whose body starts with text,
+served by the generic `create`:
+
+```yaml
+example.add_welcome:
+  path: '/admin/content/add-welcome'
+  defaults:
+    _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
+    _title: 'Add a welcome page'
+    _data_surface_resource: 'entity.content:node.page'
+    _data_surface_operation: 'create'
+    _data_surface_fixed: { 'title.value': 'Welcome' }
+    _data_surface_defaults: { 'body.value': 'Start here.' }
+```
+
+A basic page's title and body are each a field's structure, attached at
+the field's name, so the paths name the `value` key inside each
+([Content entities](entities.md)). `OperationRoute` reads both defaults
+after the operation has built its context, and applies them to it:
+
+- **`_data_surface_fixed`** narrows each key to its value:
+  `withConstraint($path, 'Choice', ['choices' => [$value],
+  'data_surface_fixed' => TRUE])`, the last option saying the Choice
+  fixes the key, which the build reads and takes off. A key fixed so
+  that holds a value (required, or always held by its storage) is drawn
+  as that value, an item that posts it, and both
+  documents state it as `const`, its label under `x-surface.fixed`. A
+  key that starts from another value starts from this one. Any other
+  value is refused by the key's name. An optional key may still be left
+  empty, so it stays a choice of the value or nothing.
+- **`_data_surface_defaults`** gives each key the value it starts from in
+  this build: `withDefaults([$path => $value])`. The form's element
+  starts from it, both documents state it as `default`, and a create that
+  leaves the key stores it. Only an operation that creates takes
+  defaults: on an update the stored value stands, so a route that names
+  defaults on one is refused.
+
+**Values.** YAML types a value (`3` an integer, `true` a boolean, `'3'`
+a string). Either way it is read through [the coercion
+table](semantics.md#the-coercion-table), so `copies: '3'` and `copies: 3`
+are the same integer, and held to the key's definition with typed data,
+its constraints included, before the build uses it.
+
+**Reach.** A path reaches what [a site
+default](declaring-a-resource.md#a-sites-own-defaults) reaches: a key
+the resource declares, a key inside a map it declares
+(`greeting.format`), a key of a structure attached at a fixed key
+(`title.value`), which the build hands to that child's own context, and
+a key an alter mounts (`third_party_settings.<module>.<key>`). It does
+not reach a key inside variants, a collection's item or a map of keys
+from the site, a whole attached structure, a secret or a computed key,
+and a fixed value is one value, never a list or a map. Each is refused
+saying why.
+
+**Refusal.** The route builds the resource with its values once, for no
+account, when it is matched, and the build cache keeps that build for
+the next request. A path that names no key, a value its key
+refuses, or defaults on an operation that does not create, is refused
+the way a route parameter that names nothing is: the access check
+answers with a refusal whose reason names the route, the key and why,
+"The example.add_welcome route: The "create" operation sets "body.value"
+on entity.content:node.page to ..., which the key does not accept: ...",
+and the page is a 403, never an error.
+
+**Order.** The declared default, then the site's (`data_surface.defaults`),
+then the route's, each over the last.
+
+**What the page states.** The contract panel, and anything else built
+from the form's context, states the `const` and the `default`, since
+both come through the context the build read. The tool, the OpenAPI
+document and HTTP describe operations, not routes, and do not change.
+The React page, `/surface-react/{resource}/{operation}`, reads its
+operation from its own path and calls an API at another, so a route's
+two defaults do not reach it: a React page that fixes or fills keys
+would need the API to know which page it serves.
+
+**Not a gate.** The operation's permission and its access class gate the
+route as before. A fixed value is a convenience for that page: the
+operation's other doors (its tool, HTTP, another route) still accept any
+value the operation does. A value that must hold at every door is the
+operation's own constraint, or its access class's answer
+(why: [decision](decisions.md#a-route-may-fill-or-fix-what-an-operation-asks-for)).
 
 ### Access, twice
 

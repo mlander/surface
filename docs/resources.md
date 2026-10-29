@@ -213,16 +213,28 @@ already known, and that is a **context**, an `OperationContext`:
 - The context is `new OperationContext(known: [])`: the identity keys
   it knows, each with its value. The plugin hosts build their own,
   `new OperationContext('configure')`, under a verb that no operation
-  declares. `withConstraint()` and `withChild()` return a copy that
-  says more.
+  declares. `withConstraint()`, `withDefaults()` and `withChild()`
+  return a copy that says more.
 - An operation stands on its resource's or structure's own class; one
   on any other class is refused at discovery. Two declarations of one
   id are refused, naming both.
 - A context may also narrow a key (`withConstraint()`, checked
-  narrower). It may hand a child a context of its own, or name the child's
-  own operation to invoke (`withChild()`, see [Child
-  operations](#child-operations)). What depends on where you are is the
-  operation's; what depends on what was entered is a refiner's.
+  narrower); a Choice of one value with `'data_surface_fixed' => TRUE`
+  fixes it, drawn as that value and stated `const` where the key holds
+  a value. It may give keys the values they start from in this
+  build (`withDefaults()`), over the declared default and the site's;
+  only a context that creates takes them, since on an update the stored
+  value stands, so a context that does not create and carries defaults
+  is refused when the resource is built, naming the operation. Both name
+  a key by path, with [a site default's](declaring-a-resource.md#a-sites-own-defaults)
+  reach: a path into a structure attached at a fixed key (`title.value`)
+  is handed to that child's own context. A route uses both to fix or
+  fill keys on one page
+  ([forms](forms.md#a-route-that-fixes-or-fills-keys)). It may hand a
+  child a context of its own, or name the child's own operation to
+  invoke (`withChild()`, see [Child operations](#child-operations)).
+  What depends on where you are is the operation's; what depends on
+  what was entered is a refiner's.
 - An operation states how a call behaves, for a client deciding
   whether to ask before calling and whether a retry is safe:
   `#[Operation(readOnly: TRUE)]` for one that changes nothing,

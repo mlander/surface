@@ -610,9 +610,10 @@ concept. The naming of sources and resolvers is undecided.
    dependency the address module already has on fields, and a class
    name is what makes the parent's key one click away.
 3. **Create-only keys that are not identity.** No new verb.
-   `withConstraint()` with a one-value `Choice` is a lock in every way
-   that matters: the form renders it fixed, the pipeline refuses
-   anything else, the schema says one value.
+   `withConstraint()` with a one-value `Choice` that says it fixes the
+   key (`data_surface_fixed`) is a lock in every way that matters: the
+   form renders it fixed where the key holds a value, the pipeline
+   refuses anything else, both documents state it `const`.
 4. **May an options alter remove entries?** Yes, under the stale rule
    (see [Options](#options)), once options alters exist.
 5. **Parent and child.** Keep the wall, with one door: identity in the

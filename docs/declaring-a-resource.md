@@ -634,6 +634,11 @@ Every build carries the config object's cache tag,
 `config:data_surface.defaults`, so a change reaches every door at the
 next request (why: [decision](decisions.md#a-site-sets-a-default-in-configuration)).
 
+One page can start a key from a value of its own: a route's
+`_data_surface_defaults`, an operation context's `withDefaults()`, is
+written over the site's for that page alone, with the same reach and the
+same refusals ([A route that fixes or fills keys](forms.md#a-route-that-fixes-or-fills-keys)).
+
 ## Locking
 
 A locked key's value is fixed. It is the degenerate refinement: the

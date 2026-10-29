@@ -918,8 +918,13 @@ final class Resources implements ResourcesInterface {
     // key is locked to what the context knows.
     // Decision: see docs/decisions.md#a-site-sets-a-default-in-configuration.
     $childDefaults = $this->declaring->writeSiteDefaults($builder, $definition, $inputs, $top, $siteDefaults);
+    // Then the context's, over both, and what it narrows and fixes.
+    // Decision: see
+    // docs/decisions.md#a-route-may-fill-or-fix-what-an-operation-asks-for.
+    $kinds = KeyPaths::kinds($inputs);
+    $this->declaring->writeContextDefaults($builder, $definition, $context, $kinds, $ancestry);
     $build = new Build($builder, $definition, $context, $ancestry, $input_keys, $outputs->keys(), $attached, $lists, $inputs->ports());
-    $this->declaring->applyContext($build);
+    $this->declaring->applyContext($build, $kinds);
     $frame = ['class' => $definition->name(), 'id' => $definition->id, 'key' => '', 'inputs' => $input_keys];
     $permission = $this->registry->getOperations($own->name())[$context->id]->permission ?? NULL;
     $frame['permission'] = $permission === NULL ? NULL : Gating::resolvePermission($permission, $context);

@@ -60,6 +60,17 @@ final class Declaring {
   public bool $holdsToSchema = TRUE;
 
   /**
+   * The Choice option that says a Choice of one value fixes its key.
+   *
+   * Read by the build and taken off before the constraint is added, so
+   * the Choice the key carries is core's own.
+   *
+   * Decision: see
+   * docs/decisions.md#a-route-may-fill-or-fix-what-an-operation-asks-for.
+   */
+  public const FIXED = 'data_surface_fixed';
+
+  /**
    * The resources found no wider than their storage's schema.
    *
    * Keyed by the resource's name and the context's id.
@@ -72,6 +83,11 @@ final class Declaring {
    * What resolves a shape, with its alters, once asked for.
    */
   protected ?Shapes $shapes = NULL;
+
+  /**
+   * What finds the key a path names and holds a value to it, once asked.
+   */
+  protected ?KeyPaths $keyPaths = NULL;
 
   /**
    * Constructs the declaring phase.
@@ -223,7 +239,7 @@ final class Declaring {
       ));
       $own = $this->childOperationContext($child, $operation, $context, $named['known'], $key, $parent);
       assert($own !== NULL);
-      return [$own, $operation];
+      return [static::handDown($context, $key, $own), $operation];
     }
     $handed = $context->forChild($key);
     if ($handed !== $context) {
@@ -231,7 +247,7 @@ final class Declaring {
       // responsibility for entering it: it is taken as it is, and no
       // operation of the child's is invoked, so none of their permissions
       // is asked. The child's access class still answers.
-      return [$handed, NULL];
+      return [static::handDown($context, $key, $handed), NULL];
     }
     // The parent's id is a hint, and so is its kind: either is passed
     // over when the parent knows too little to invoke it, as a context
@@ -246,10 +262,49 @@ final class Declaring {
     foreach ($candidates as $operation) {
       $own = $this->childOperationContext($child, $operation, $context, [], $key, $parent, FALSE);
       if ($own !== NULL) {
-        return [$own, $operation];
+        return [static::handDown($context, $key, $own), $operation];
       }
     }
-    return [Resources::childContext($context, $key), NULL];
+    return [static::handDown($context, $key, Resources::childContext($context, $key)), NULL];
+  }
+
+  /**
+   * Hands a child's context what its parent's says below the child's key.
+   *
+   * A constraint or a default the parent's context names by a path into
+   * the structure attached at $key (`title.value`) is the child's to apply
+   * in its own frame: its context says it, by the path below the key, so a
+   * child is still narrowed by its own context alone.
+   *
+   * Decision: see
+   * docs/decisions.md#a-route-may-fill-or-fix-what-an-operation-asks-for.
+   *
+   * @param \Drupal\data_surface\Resource\OperationContext $parent
+   *   The parent's context.
+   * @param string $key
+   *   The key the child sits at.
+   * @param \Drupal\data_surface\Resource\OperationContext $child
+   *   The child's context as invoked.
+   *
+   * @return \Drupal\data_surface\Resource\OperationContext
+   *   The child's context, saying what the parent's said below the key.
+   */
+  protected static function handDown(OperationContext $parent, string $key, OperationContext $child): OperationContext {
+    $prefix = $key . '.';
+    foreach ($parent->constraints() as $path => $constraints) {
+      if (str_starts_with((string) $path, $prefix)) {
+        foreach ($constraints as $name => $options) {
+          $child = $child->withConstraint(substr((string) $path, strlen($prefix)), (string) $name, $options);
+        }
+      }
+    }
+    $defaults = [];
+    foreach ($parent->defaults() as $path => $value) {
+      if (str_starts_with((string) $path, $prefix)) {
+        $defaults[substr((string) $path, strlen($prefix))] = $value;
+      }
+    }
+    return $defaults === [] ? $child : $child->withDefaults($defaults);
   }
 
   /**
@@ -404,34 +459,154 @@ final class Declaring {
     if ($defaults === NULL || $defaults['values'] === []) {
       return [];
     }
-    $kinds = array_fill_keys(array_map('strval', array_keys($inputs->attachments())), 'child')
-      + array_fill_keys(array_map('strval', array_keys($inputs->variants())), 'variants')
-      + array_fill_keys(array_map('strval', array_keys($inputs->lists())), 'collection')
-      + array_fill_keys(array_map('strval', array_keys($inputs->fromSite())), 'site');
-    return $this->siteDefaults->write($builder, $defaults, $kinds);
+    return $this->siteDefaults->write($builder, $defaults, KeyPaths::kinds($inputs));
+  }
+
+  /**
+   * Writes the defaults the context carries over the site's and the declared.
+   *
+   * Each is what its key starts from in this build: read through the
+   * coercion table and held to the key, by the reach a site default has
+   * (KeyPaths). A path into a structure attached at a fixed key is the
+   * child's, handed to its context (handDown()). Only a context that
+   * creates carries defaults: on an update the stored value stands.
+   *
+   * Decision: see
+   * docs/decisions.md#a-route-may-fill-or-fix-what-an-operation-asks-for.
+   *
+   * @param \Drupal\data_surface\DataSurfaceBuilderInterface $builder
+   *   The builder, its keys and its alters' declared, the site's defaults
+   *   written.
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   *   What is being built.
+   * @param \Drupal\data_surface\Resource\OperationContext $context
+   *   The context it is built in.
+   * @param array<string, string> $kinds
+   *   Its keys that hold no plain value (KeyPaths::kinds()).
+   * @param array<int, array<string, mixed>> $ancestry
+   *   The parents it is built inside, outermost first, for messages.
+   *
+   * @throws \LogicException
+   *   When the context does not create, or a path names no key a default
+   *   reaches, or a value does not fit its key.
+   */
+  public function writeContextDefaults(DataSurfaceBuilderInterface $builder, ResourceDefinition $definition, OperationContext $context, array $kinds, array $ancestry): void {
+    $defaults = $context->defaults();
+    if ($defaults === []) {
+      return;
+    }
+    $where = static::contextWhere($definition, $context, $ancestry, 'sets');
+    if (!$context->creates) {
+      throw new \LogicException(sprintf(
+        '%s on %s does not create, and carries defaults for %s: a default is what a new thing starts from, and on an update the stored value stands.',
+        $where['source'],
+        $where['resource'],
+        implode(', ', array_map(static fn (string|int $path): string => '"' . $where['at'] . $path . '"', array_keys($defaults))),
+      ));
+    }
+    // What is below a child's key is handed to its context (handDown()).
+    $this->keyPaths()->writeDefaults($builder, $where, $defaults, $kinds);
+  }
+
+  /**
+   * Says where a context's value comes from, for its refusals.
+   *
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   *   What is being built.
+   * @param \Drupal\data_surface\Resource\OperationContext $context
+   *   The context it is built in.
+   * @param array<int, array<string, mixed>> $ancestry
+   *   The parents it is built inside, outermost first: the resource named
+   *   is the outermost, and each one's key leads to this frame.
+   * @param string $verb
+   *   What the value does: `sets` for a default, `fixes` for a fixed
+   *   value, `narrows` for any other constraint.
+   *
+   * @return array{resource: string, at: string, source: string, noun: string, verb: string}
+   *   What KeyPaths names in a refusal.
+   */
+  protected static function contextWhere(ResourceDefinition $definition, OperationContext $context, array $ancestry, string $verb): array {
+    return [
+      'resource' => $ancestry === [] ? $definition->id : (string) $ancestry[0]['id'],
+      'at' => $ancestry === [] ? '' : implode('.', array_map(static fn (array $level): string => (string) ($level['key'] ?? ''), $ancestry)) . '.',
+      'source' => sprintf('The "%s" operation', $context->id),
+      'noun' => match ($verb) {
+        'sets' => 'default',
+        'fixes' => 'fixed value',
+        default => 'constraint',
+      },
+      'verb' => $verb,
+    ];
+  }
+
+  /**
+   * Answers whether a constraint fixes its key to one value.
+   *
+   * A Choice of one value that says so, with the FIXED option, as a
+   * route's `_data_surface_fixed` does. A Choice of one value that does
+   * not say so narrows as any constraint does and is drawn as a list of
+   * one, as an operation's own (a placed block's theme on its update)
+   * always was.
+   *
+   * @param string $name
+   *   The constraint plugin ID.
+   * @param mixed $options
+   *   Its options.
+   *
+   * @return bool
+   *   TRUE for a Choice of one value, not of a list's items, that fixes.
+   */
+  public static function fixes(string $name, mixed $options): bool {
+    return $name === 'Choice'
+      && is_array($options)
+      && ($options[self::FIXED] ?? FALSE) === TRUE
+      && is_array($options['choices'] ?? NULL)
+      && count($options['choices']) === 1
+      && empty($options['multiple']);
+  }
+
+  /**
+   * Gets what finds the key a path names and holds a value to it.
+   *
+   * @return \Drupal\data_surface\ResourceBuild\KeyPaths
+   *   The key paths.
+   */
+  protected function keyPaths(): KeyPaths {
+    return $this->keyPaths ??= new KeyPaths($this->typedDataManager);
   }
 
   /**
    * Applies what a context says about where it is asked for.
+   *
+   * A constraint names its key by path, with the reach of a default
+   * (KeyPaths): a path into a structure attached at a fixed key is the
+   * child's, handed to its context (handDown()). A Choice of one value
+   * with the FIXED option fixes its key: the value is read through the
+   * coercion table and held
+   * to the key first, the key is drawn as that value and stated `const`
+   * wherever it holds a value, and a key that starts from another value
+   * starts from it.
    *
    * @param \Drupal\data_surface\ResourceBuild\Build $build
    *   The build: the builder holding the shape, the resource or
    *   structure, the context, the owner's input keys, its keys holding an
    *   attached child or variants, and its collection keys, which a context
    *   may narrow.
+   * @param array<string, string> $kinds
+   *   The owner's keys that hold no plain value (KeyPaths::kinds()).
    *
    * @throws \LogicException
-   *   When the context names a key the shape does not declare, or widens
-   *   a key.
+   *   When the context names a key the shape does not declare, widens a
+   *   key, or fixes one to a value it does not accept.
    */
-  public function applyContext(Build $build): void {
+  public function applyContext(Build $build, array $kinds = []): void {
     $builder = $build->builder;
     $definition = $build->definition;
     $context = $build->context;
     $input_keys = $build->inputKeys;
     $attached = $build->attached;
     $lists = $build->lists;
-    $assert_input = static function (string $key, string $what) use ($definition, $context, $input_keys, $attached, $lists): void {
+    $assert_input = static function (string $key, string $what) use ($definition, $context, $attached, $lists, $kinds): void {
       if (in_array($key, $lists, TRUE)) {
         // The list key is the parent's, so where the parent is asked for
         // may narrow it (its Count).
@@ -439,34 +614,59 @@ final class Declaring {
       }
       if (in_array($key, $attached, TRUE)) {
         throw new \LogicException(sprintf(
-          'The "%s" context gives a %s for "%s", which holds a child in %s: a child is narrowed by its own context, handed to it with withChild(\'%s\', ...).',
+          'The "%s" context gives a %s for "%s", which holds a child in %s: a child is narrowed by its own context, handed to it with withChild(\'%s\', ...)%s.',
           $context->id,
           $what,
           $key,
           $definition->id,
           $key,
-        ));
-      }
-      if (!in_array($key, $input_keys, TRUE)) {
-        throw new \LogicException(sprintf(
-          'The "%s" context gives a %s for "%s", which %s does not declare as an input.',
-          $context->id,
-          $what,
-          $key,
-          $definition->id,
+          ($kinds[$key] ?? NULL) === 'child' ? sprintf(', or by a path to one of its keys, "%s.<key>"', $key) : '',
         ));
       }
     };
 
     foreach ($context->constraints() as $key => $constraints) {
-      $assert_input((string) $key, 'constraint');
-      $target = $builder->getDefinition((string) $key);
+      $key = (string) $key;
+      $segments = explode('.', $key);
+      if (count($segments) > 1 && ($kinds[$segments[0]] ?? NULL) === 'child') {
+        // The child's, narrowed by its own context in its own frame.
+        continue;
+      }
+      $fixing = array_filter($constraints, static fn (mixed $options, string|int $name): bool => static::fixes((string) $name, $options), ARRAY_FILTER_USE_BOTH) !== [];
+      $where = static::contextWhere($definition, $context, $build->ancestry, $fixing ? 'fixes' : 'narrows');
+      $ancestors = [];
+      if (count($segments) > 1) {
+        $this->keyPaths()->assertReached($where, $key, $kinds);
+        [$target, $ancestors] = $this->keyPaths()->resolve($builder, $segments, $where, $key);
+      }
+      else {
+        if (!in_array($key, $input_keys, TRUE) && !in_array($key, $attached, TRUE) && !in_array($key, $build->lists, TRUE)) {
+          throw $this->keyPaths()->noKey($where, $key);
+        }
+        $assert_input($key, 'constraint');
+        $target = $builder->getDefinition($key);
+      }
       assert($target !== NULL);
       $before = DataSurface::deepClone($target);
+      $fixed = [];
       foreach ($constraints as $name => $options) {
+        if (static::fixes((string) $name, $options)) {
+          // Decision: see
+          // docs/decisions.md#a-route-may-fill-or-fix-what-an-operation-asks-for.
+          $options['choices'] = [$this->keyPaths()->held($before, reset($options['choices']), $where, $key)];
+          $fixed = $options['choices'];
+        }
+        unset($options[self::FIXED]);
         $target->addConstraint((string) $name, $options);
       }
-      Narrowing::assertNarrows((string) $key, sprintf('the "%s" operation', $context->id), $before, $target);
+      Narrowing::assertNarrows($key, sprintf('the "%s" operation', $context->id), $before, $target);
+      if ($fixed !== []) {
+        DefinitionMetadata::setFixed($target);
+        $starts = DefinitionMetadata::hasDefaultValue($target) ? DefinitionMetadata::getDefaultValue($target) : NULL;
+        if ($starts !== NULL && $starts !== $fixed[0]) {
+          $this->keyPaths()->setDefault($target, $ancestors, $fixed[0]);
+        }
+      }
     }
 
     // Decision: see docs/decisions.md#known-keys-that-are-not-identity.

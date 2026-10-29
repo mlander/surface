@@ -1,0 +1,66 @@
+# The card's create, served by the generic form with nothing more.
+data_surface_route_test.add:
+  path: '/surface-test/card/add'
+  defaults:
+    _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
+    _title: 'Add a card'
+    _data_surface_resource: 'route_test.card'
+    _data_surface_operation: 'create'
+
+# The same create, on a page that fixes three keys (one of the card's
+# own, one inside the map it declares, one inside the structure it
+# attaches) and fills three more, one written as text, with the contract
+# panel beside the form (data_surface_tool, which a test enables).
+data_surface_route_test.add_welcome:
+  path: '/surface-test/card/add-welcome'
+  defaults:
+    _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
+    _title: 'Add a welcome card'
+    _data_surface_panel: 'data_surface_tool.contract_panel'
+    _data_surface_resource: 'route_test.card'
+    _data_surface_operation: 'create'
+    _data_surface_fixed: { title: 'Welcome', 'greeting.format': 'html', 'envelope.color': 'cream' }
+    _data_surface_defaults: { 'greeting.value': 'Start here.', copies: '3', 'envelope.stamps': 2 }
+
+# Defaults on an update, which keeps what is stored: refused.
+data_surface_route_test.edit_refilled:
+  path: '/surface-test/card/{card}/refill'
+  defaults:
+    _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
+    _title: 'Edit a card'
+    _data_surface_resource: 'route_test.card'
+    _data_surface_operation: 'update'
+    _data_surface_defaults: { copies: 2 }
+
+# A value the key refuses: refused, naming the key.
+data_surface_route_test.add_too_many_stamps:
+  path: '/surface-test/card/add-stamped'
+  defaults:
+    _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
+    _title: 'Add a stamped card'
+    _data_surface_resource: 'route_test.card'
+    _data_surface_operation: 'create'
+    _data_surface_defaults: { 'envelope.stamps': 9 }
+
+# A path that names no key: refused, naming it.
+data_surface_route_test.add_tucked:
+  path: '/surface-test/card/add-tucked'
+  defaults:
+    _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
+    _title: 'Add a tucked card'
+    _data_surface_resource: 'route_test.card'
+    _data_surface_operation: 'create'
+    _data_surface_fixed: { 'envelope.flap': 'tucked' }
+
+# A basic page (data_surface_entity, which a test enables) whose title is
+# fixed and whose body starts filled: each a key of a field's structure,
+# attached at the field's name.
+data_surface_route_test.add_welcome_page:
+  path: '/surface-test/node/page/add-welcome'
+  defaults:
+    _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
+    _title: 'Add a welcome page'
+    _data_surface_resource: 'entity.content:node.page'
+    _data_surface_operation: 'create'
+    _data_surface_fixed: { 'title.value': 'Welcome' }
+    _data_surface_defaults: { 'body.value': 'Start here.' }

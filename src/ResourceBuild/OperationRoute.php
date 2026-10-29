@@ -30,6 +30,31 @@ use Symfony\Component\Routing\Route;
  *         type: 'entity:example'
  * @endcode
  *
+ * A route may also fill or fix what the operation asks for, on this page
+ * alone: `_data_surface_fixed` narrows each key it names to one value
+ * (OperationContext::withConstraint() with a Choice of it that says it
+ * fixes the key, Declaring::FIXED), and
+ * `_data_surface_defaults` gives each key it names the value it starts
+ * from (OperationContext::withDefaults(), on an operation that creates).
+ * Both are maps of key paths to values, applied to the context the
+ * operation built, and held to the resource here: a path that names no
+ * key, or a value its key refuses, is refused as a parameter that names
+ * nothing is, with the route's name.
+ *
+ * @code
+ * example.add_welcome:
+ *   path: '/admin/content/add-welcome'
+ *   defaults:
+ *     _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
+ *     _data_surface_resource: 'entity.content:node.page'
+ *     _data_surface_operation: 'create'
+ *     _data_surface_fixed: { 'title.value': 'Welcome' }
+ *     _data_surface_defaults: { 'body.value': 'Start here.' }
+ * @endcode
+ *
+ * Decision: see
+ * docs/decisions.md#a-route-may-fill-or-fix-what-an-operation-asks-for.
+ *
  * @internal
  */
 final class OperationRoute {
@@ -51,6 +76,16 @@ final class OperationRoute {
    * (OperationRouteSubscriber); a routing file may still say it.
    */
   public const ACCESS = '_data_surface_operation_access';
+
+  /**
+   * The route default fixing keys to one value each: key path => value.
+   */
+  public const FIXED = '_data_surface_fixed';
+
+  /**
+   * The route default giving keys the value each starts from.
+   */
+  public const DEFAULTS = '_data_surface_defaults';
 
   /**
    * Constructs an OperationRoute.
@@ -103,8 +138,9 @@ final class OperationRoute {
    * @throws \LogicException
    *   When the route names no resource or no operation.
    * @throws \InvalidArgumentException
-   *   When the resource or operation is not discovered, or a parameter the
-   *   operation needs is not on the route or names nothing.
+   *   When the resource or operation is not discovered, a parameter the
+   *   operation needs is not on the route or names nothing, or a value
+   *   the route fixes or fills names no key or does not fit its key.
    */
   public static function fromRouteMatch(RouteMatchInterface $route_match, ResourceRegistry $registry, OperationArguments $arguments, ResourcesInterface $resources): self {
     $route = $route_match->getRouteObject();
@@ -129,7 +165,75 @@ final class OperationRoute {
         break;
       }
     }
-    return new self($class, $operation, $resources->operation($class, $id, $given), $subject);
+    $context = $resources->operation($class, $id, $given);
+    return new self($class, $operation, static::withRouteValues($route_match, $class, $context, $resources), $subject);
+  }
+
+  /**
+   * Applies what a route fixes and fills to the context its operation built.
+   *
+   * Held to the resource at once, by building it for no account, which
+   * the build cache keeps for the next request: a refusal of the route's
+   * values is the route's,
+   * thrown as a parameter that names nothing is, which the access check
+   * answers with a refusal saying why. A refusal the operation's own
+   * context meets without the route's values stays the operation's.
+   *
+   * Decision: see
+   * docs/decisions.md#a-route-may-fill-or-fix-what-an-operation-asks-for.
+   *
+   * @param \Drupal\Core\Routing\RouteMatchInterface $route_match
+   *   The route match.
+   * @param string $class
+   *   The resource's class, or a derived resource's id.
+   * @param \Drupal\data_surface\Resource\OperationContext $context
+   *   The context the operation built.
+   * @param \Drupal\data_surface\ResourceBuild\ResourcesInterface $resources
+   *   The build step.
+   *
+   * @return \Drupal\data_surface\Resource\OperationContext
+   *   The context, fixing and filling what the route says.
+   *
+   * @throws \InvalidArgumentException
+   *   When either default is not a map of key paths, a fixed value is not
+   *   one value, or the resource refuses what the route says.
+   */
+  protected static function withRouteValues(RouteMatchInterface $route_match, string $class, OperationContext $context, ResourcesInterface $resources): OperationContext {
+    $route = $route_match->getRouteObject();
+    $name = (string) $route_match->getRouteName();
+    $fixed = $route?->getDefault(self::FIXED) ?? [];
+    $defaults = $route?->getDefault(self::DEFAULTS) ?? [];
+    if ($fixed === [] && $defaults === []) {
+      return $context;
+    }
+    foreach ([self::FIXED => $fixed, self::DEFAULTS => $defaults] as $default => $map) {
+      if (!is_array($map) || array_filter(array_keys($map), static fn (string|int $path): bool => !is_string($path) || $path === '') !== []) {
+        throw new \InvalidArgumentException(sprintf('The %s route\'s "%s" is a map of key paths to values, as { \'title.value\': \'Welcome\' }.', $name, $default));
+      }
+    }
+    $said = $context;
+    foreach ($fixed as $path => $value) {
+      if (!is_scalar($value)) {
+        throw new \InvalidArgumentException(sprintf('The %s route fixes "%s" to %s: a fixed value is one value of a key that holds one.', $name, $path, get_debug_type($value)));
+      }
+      $context = $context->withConstraint((string) $path, 'Choice', ['choices' => [$value], Declaring::FIXED => TRUE]);
+    }
+    if ($defaults !== []) {
+      $context = $context->withDefaults($defaults);
+    }
+    try {
+      $resources->buildDeclared($class, $context);
+    }
+    catch (\LogicException $e) {
+      try {
+        $resources->buildDeclared($class, $said);
+      }
+      catch (\Throwable) {
+        throw $e;
+      }
+      throw new \InvalidArgumentException(sprintf('The %s route: %s', $name, $e->getMessage()), 0, $e);
+    }
+    return $context;
   }
 
 }

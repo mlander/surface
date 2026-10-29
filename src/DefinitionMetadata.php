@@ -133,6 +133,16 @@ final class DefinitionMetadata {
   protected const ONE_VARIANT_KEY = 'data_surface_one_variant';
 
   /**
+   * The offset marking a key its operation's context fixed to one value.
+   *
+   * Written by the build step where a context's Choice of one value that
+   * says it fixes the key narrows it: drawn as that value and stated as
+   * `const` wherever the key holds a value, as a deciding key whose
+   * variants offer one is.
+   */
+  protected const FIXED_KEY = 'data_surface_fixed';
+
+  /**
    * The definition array key holding the label the owner gave a key.
    *
    * Written when an alter rewords a key it does not own, so what
@@ -612,6 +622,38 @@ final class DefinitionMetadata {
    */
   public static function setOneVariant(DataDefinitionInterface $definition): void {
     static::arrayAccess($definition)->offsetSet(static::ONE_VARIANT_KEY, TRUE);
+  }
+
+  /**
+   * Marks a key its operation's context fixed to one value.
+   *
+   * A list the key declares is the author's, drawn as declared; a
+   * context that fixes the key to a single value says the key is that
+   * value where it is asked for, so a form draws the value fixed, with its
+   * label, and both documents state it as `const`.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The key.
+   *
+   * @see docs/decisions.md#a-route-may-fill-or-fix-what-an-operation-asks-for
+   */
+  public static function setFixed(DataDefinitionInterface $definition): void {
+    static::arrayAccess($definition)->offsetSet(static::FIXED_KEY, TRUE);
+  }
+
+  /**
+   * Returns whether a key's context narrowed it to one value.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The definition to read.
+   *
+   * @return bool
+   *   TRUE when a context fixed it to one value.
+   */
+  public static function isFixed(DataDefinitionInterface $definition): bool {
+    return $definition instanceof \ArrayAccess
+      && $definition->offsetExists(static::FIXED_KEY)
+      && (bool) $definition->offsetGet(static::FIXED_KEY);
   }
 
   /**
