@@ -377,6 +377,13 @@ their configuration may change without a deprecation path.
   code of the pages "Your first resource" and "Your second resource", a
   newsletter settings page and a store location, held to the pages by a
   test.
+- **Data Surface - Performance settings** (`data_surface_performance`):
+  the page cache maximum age and asset aggregation from core's
+  performance form, as one resource stored in core's `system.performance`
+  and held to core's config schema unchanged: the title, the description
+  and the list of periods are declared once and read by the form at
+  `/admin/config/development/surface-performance`, the tool and both
+  documents.
 - **Data Surface Examples** (`data_surface_examples`): one resource
   that grows, one idea per example, at `/surface-examples`: each
   example a form beside the contract it emits, a classic twin for

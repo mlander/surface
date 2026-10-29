@@ -69,6 +69,7 @@ last, under Refused. `docs/resources.md` says how each part works.
 | [`registration.step3`](#registrationstep3) | `RegistrationStep3Resource` | none | `configure` |
 | [`registration.step3.ticket.free`](#registrationstep3ticketfree) | `FreeTicketStructure` | none | none |
 | [`registration.step3.ticket.paid`](#registrationstep3ticketpaid) | `PaidTicketStructure` | none | none |
+| [`system.performance`](#systemperformance) | `PerformanceResource` | none | `configure` |
 
 ## block.data_surface_component
 
@@ -586,6 +587,21 @@ last, under Refused. `docs/resources.md` says how each part works.
 - Identity: none
 - Storage: none; its host or its parent stores it
 - Access: the operation's permission alone
+
+## system.performance
+
+`Drupal\data_surface_performance\Resource\PerformanceResource`, in `data_surface_performance`.
+
+- Kind: resource
+- Identity: none
+- Storage: `Drupal\data_surface_performance\Storage\PerformanceStorage`
+- Access: the operation's permission alone
+
+| Operation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `configure` | Configure performance | nothing | no | `administer site configuration` | yes | yes | `#[Operation] on PerformanceResource` (`data_surface_performance`) |
+
+- `configure` reaches form `/admin/config/development/surface-performance (data_surface_performance.configure)`, http `PATCH /surface-api/system.performance`, tool `data_surface:system.performance:configure`, read tool `data_surface:system.performance:configure:read`, openapi `system.performance:configure:write`, react `/surface-react/system.performance/configure`.
 
 ## Derivers
 

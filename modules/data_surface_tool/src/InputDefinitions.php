@@ -6,6 +6,7 @@ namespace Drupal\data_surface_tool;
 
 use Drupal\Core\Cache\Cache;
 use Drupal\Core\Cache\CacheableMetadata;
+use Drupal\Component\Render\MarkupInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\StringTranslation\TranslationInterface;
@@ -15,6 +16,7 @@ use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\data_surface\Attachment;
 use Drupal\data_surface\Contract\Choices;
+use Drupal\data_surface\Contract\PlainText;
 use Drupal\data_surface\Contract\SiteListBudget;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\Pipeline\Outbound;
@@ -1551,8 +1553,9 @@ final class InputDefinitions {
    * refuses an object. A data surface's own constraints may hold objects
    * (a LabeledChoice's labels and descriptions are TranslatableMarkup),
    * because the data surface is the PHP side and they validate the same
-   * either way. So a stringable object converts to the string it reads
-   * as, a backed enum to its value, and anything else is refused here,
+   * either way. So markup converts to its plain text, any other
+   * stringable object to the string it reads as, a backed enum to its
+   * value, and anything else is refused here,
    * by name, rather than as an encoding error on a page that has nothing
    * to do with it.
    *
@@ -1588,6 +1591,12 @@ final class InputDefinitions {
     }
     if ($options instanceof \BackedEnum) {
       return $options->value;
+    }
+    if ($options instanceof MarkupInterface) {
+      // Markup, as a select draws a label: the plain text the documents
+      // carry, so an escaped "&lt;no caching&gt;" reads "<no caching>".
+      // Decision: see docs/decisions.md#a-machine-document-carries-plain-text.
+      return PlainText::of($options);
     }
     if ($options instanceof \Stringable) {
       return (string) $options;

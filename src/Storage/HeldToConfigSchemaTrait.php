@@ -29,7 +29,8 @@ use Drupal\data_surface\ResourceBuild\RefinesInputRefiner;
  * beside the schema: an attached structure beside its mapping, a list
  * beside its sequence, each variant beside the type its deciding value
  * names, each module's mounted keys beside the type `[%key]` names, and
- * holds each key to what the schema states for it:
+ * holds each key to what the schema states for it, at the property its
+ * dotted path names (configSchemaPaths(), storedPath()):
  *
  * - **Type**: a string, integer, float or boolean where the schema says
  *   the same (an integer where it says float), a map where it says a
@@ -53,12 +54,29 @@ trait HeldToConfigSchemaTrait {
    * Gives where each key is in the schema, when not at its own name.
    *
    * @return array<string, string>|null
-   *   The schema's property for each key the schema describes, by key; a
-   *   key left out is stored elsewhere and not compared. NULL when every
-   *   key is the schema's property of the same name.
+   *   The schema's property for each key the schema describes, by key, a
+   *   dotted path for one in a nested mapping; a key left out is stored
+   *   elsewhere and not compared. NULL when every key is compared, at
+   *   the path storedPath() gives.
    */
   protected function configSchemaPaths(): ?array {
     return NULL;
+  }
+
+  /**
+   * Gives where the object keeps a key, when every key is compared.
+   *
+   * Read when configSchemaPaths() answers NULL. A dotted path is followed
+   * through the schema's mappings, level by level.
+   *
+   * @param string $key
+   *   The key.
+   *
+   * @return string
+   *   Its dotted path in the stored object; its own name by default.
+   */
+  protected function storedPath(string $key): string {
+    return $key;
   }
 
   /**
@@ -161,8 +179,8 @@ trait HeldToConfigSchemaTrait {
       if ($paths === NULL && in_array($key, ['_core', 'langcode'], TRUE)) {
         continue;
       }
-      $at = $paths[$key] ?? $key;
-      $this->entryWider($entry, $root['mapping'][$at] ?? NULL, $key, static::fullyValidatable($root), $wider);
+      $at = $paths[$key] ?? $this->storedPath($key);
+      $this->entryWider($entry, $this->schemaAt($root, $at), $key, static::fullyValidatable($root), $wider);
     }
     return array_filter($wider, static function (string $path) use ($translated): bool {
       foreach ($translated as $skipped) {
@@ -172,6 +190,30 @@ trait HeldToConfigSchemaTrait {
       }
       return TRUE;
     }, ARRAY_FILTER_USE_KEY);
+  }
+
+  /**
+   * Finds the schema property at a dotted path, through nested mappings.
+   *
+   * @param array $root
+   *   The root type's definition.
+   * @param string $at
+   *   The property's dotted path from the root.
+   *
+   * @return array|null
+   *   The property, as written there; NULL when the schema describes
+   *   nothing at the path.
+   */
+  protected function schemaAt(array $root, string $at): ?array {
+    $property = $root;
+    foreach (explode('.', $at) as $depth => $segment) {
+      $mapping = $depth === 0 ? $property : $this->merged($property);
+      $property = $mapping['mapping'][$segment] ?? NULL;
+      if (!is_array($property)) {
+        return NULL;
+      }
+    }
+    return $property;
   }
 
   /**

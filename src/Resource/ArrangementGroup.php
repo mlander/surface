@@ -44,6 +44,9 @@ final class ArrangementGroup {
    *   Where the group sits among its frame's keys, as a key's weight;
    *   NULL for where its first key is declared. A key's own weight orders
    *   it inside its group.
+   * @param string|\Stringable|null $description
+   *   What the group's keys are for, drawn under its legend or summary;
+   *   NULL for none.
    */
   protected function __construct(
     public readonly string $id,
@@ -51,6 +54,7 @@ final class ArrangementGroup {
     public readonly string $as,
     public readonly bool $collapsed = FALSE,
     public readonly ?int $weight = NULL,
+    public readonly string|\Stringable|null $description = NULL,
   ) {
     if ($id === '' || strpbrk($id, '.:') !== FALSE) {
       throw new \InvalidArgumentException(sprintf('"%s" cannot name a group: a group is named in its frame, not empty and with no dot or colon.', $id));
@@ -66,12 +70,14 @@ final class ArrangementGroup {
    *   Its legend.
    * @param int|null $weight
    *   Its weight among the frame's keys, or NULL.
+   * @param string|\Stringable|null $description
+   *   What its keys are for, drawn under its legend, or NULL.
    *
    * @return static
    *   The group.
    */
-  public static function fieldset(string $id, string|\Stringable $label, ?int $weight = NULL): static {
-    return new static($id, $label, self::FIELDSET, FALSE, $weight);
+  public static function fieldset(string $id, string|\Stringable $label, ?int $weight = NULL, string|\Stringable|null $description = NULL): static {
+    return new static($id, $label, self::FIELDSET, FALSE, $weight, $description);
   }
 
   /**
@@ -85,12 +91,14 @@ final class ArrangementGroup {
    *   Whether it starts closed.
    * @param int|null $weight
    *   Its weight among the frame's keys, or NULL.
+   * @param string|\Stringable|null $description
+   *   What its keys are for, drawn under its summary, or NULL.
    *
    * @return static
    *   The group.
    */
-  public static function details(string $id, string|\Stringable $label, bool $collapsed = FALSE, ?int $weight = NULL): static {
-    return new static($id, $label, self::DETAILS, $collapsed, $weight);
+  public static function details(string $id, string|\Stringable $label, bool $collapsed = FALSE, ?int $weight = NULL, string|\Stringable|null $description = NULL): static {
+    return new static($id, $label, self::DETAILS, $collapsed, $weight, $description);
   }
 
   /**
@@ -107,15 +115,16 @@ final class ArrangementGroup {
       && (string) $this->label === (string) $other->label
       && $this->as === $other->as
       && $this->collapsed === $other->collapsed
-      && $this->weight === $other->weight;
+      && $this->weight === $other->weight
+      && (string) $this->description === (string) $other->description;
   }
 
   /**
    * States the group for a renderer, as the served contract writes it.
    *
-   * @return array{id: string, label: string, as: string, collapsed?: true, weight?: int}
-   *   The group: `collapsed` only when it starts closed, `weight` only
-   *   when declared.
+   * @return array{id: string, label: string, as: string, collapsed?: true, weight?: int, description?: string}
+   *   The group: `collapsed` only when it starts closed, `weight` and
+   *   `description` only when declared.
    */
   public function toArray(): array {
     $group = ['id' => $this->id, 'label' => (string) $this->label, 'as' => $this->as];
@@ -124,6 +133,9 @@ final class ArrangementGroup {
     }
     if ($this->weight !== NULL) {
       $group['weight'] = $this->weight;
+    }
+    if ($this->description !== NULL && (string) $this->description !== '') {
+      $group['description'] = (string) $this->description;
     }
     return $group;
   }

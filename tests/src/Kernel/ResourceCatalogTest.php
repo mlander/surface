@@ -61,6 +61,7 @@ class ResourceCatalogTest extends DataSurfaceKernelTestBase {
     'data_surface_block',
     'data_surface_react',
     'data_surface_openapi',
+    'data_surface_performance',
   ];
 
   /**
@@ -130,6 +131,7 @@ class ResourceCatalogTest extends DataSurfaceKernelTestBase {
       'registration.step3',
       'registration.step3.ticket.free',
       'registration.step3.ticket.paid',
+      'system.performance',
     ], array_keys($catalog));
 
     $node_type = $catalog['node.type'];

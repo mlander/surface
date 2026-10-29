@@ -3021,6 +3021,55 @@ still its own override.
 `Resources::storageInstance()`, `ReferenceStorageTest`,
 `ConfigSchemaCheckTest`)
 
+### A resource may hold some keys of a config object it does not own
+
+Decided 2026-10-28, with `data_surface_performance`. Core's config
+objects keep settings several forms edit, at paths:
+`system.performance` keeps the page cache's maximum age at
+`cache.page.max_age`, beside `css.compress`, `js.compress` and
+`fast_404.*`, which no form of core's performance page edits. A
+`ConfigObjectStorage` stored each key at its own top-level name, and the
+check resolved one level of the schema, so such an object could not be a
+resource's.
+
+- **The resource declares the keys it edits, by their own names.** A
+  name is what every door shows (`max_age` in the tool, the document and
+  the form), and a dotted name would read as a nested key.
+- **The storage says where each one lives**: `STORED_AT`, a dotted path
+  by key, beside `CONFIG`. `load()` reads it there, `prepare()` lays it
+  into the whole object there and files the schema's violations under
+  the key, `commit()` sets the path alone, and `mayClear()` reads the
+  schema there. A dry run reports the key by its path, which is the
+  storage layout.
+- **What it does not declare is kept byte for byte**: nothing sets the
+  map a path runs through, only the path, so `css.compress` and
+  `fast_404` stay as stored.
+- **The check holds each key to the property at its path.**
+  `HeldToConfigSchemaTrait` follows a dotted path through each nested
+  `mapping`, for `STORED_AT` and for `configSchemaPaths()` alike, so the
+  resource cannot offer a value the schema refuses and a refusal names
+  the key.
+- **No schema is generated for it.** The object's schema is its owner's;
+  the generator writes each key at its own name, so it refuses a storage
+  with `STORED_AT` by name rather than write a wrong one.
+
+What it shows: core's schema says only `type: integer, label: 'Max
+age'`. The resource declares the title, the description and the list of
+fourteen periods with their labels once; the form, the tool, the MCP
+listing, the OpenAPI document and the React page read them from it, and
+core's schema stays as core wrote it. Rejected: a layout
+(`StorageLayoutInterface`) that moves keys, which works on the values
+alone and cannot keep the siblings, and cannot tell the check where to
+look; a constant naming the map the keys share, which a key at another
+depth (`cache.page.max_age` beside `css.preprocess`) does not fit.
+
+This answers the open point of [A layout is the storage's one word on
+its shape](#a-layout-is-the-storages-one-word-on-its-shape) for a config
+object; `ConfigEntityStorage` still answers `configSchemaPaths()` itself.
+(`ConfigObjectStorage::STORED_AT`, `HeldToConfigSchemaTrait::schemaAt()`,
+`ConfigSchemaGenerator::describe()`, `PerformanceStorage`,
+`ConfigObjectStorageTest`, `PerformanceSurfaceTest`)
+
 ### A config object stores a reference by uuid
 
 Decided 2026-10-27, closing the open uuid representation of [A
@@ -5105,6 +5154,13 @@ Declined, each in a line:
   `_data_surface_cosmetics` is a route key, which [the product keeps its
   name](#the-product-keeps-its-name) holds to, and with the arrangement
   gone from it, what is left is cosmetic.
+
+*Amended 2026-10-28:* a group may say what its keys are for,
+`ArrangementGroup::details(..., description:)` (or `fieldset()`), drawn
+under its summary or legend on the form and the React page, and stated
+as plain text in `x-surface.arrangement.group.description`, only when
+declared. Core's performance form says one sentence of its bandwidth
+settings, which `data_surface_performance` declares once.
 
 ### The form builder draws, extracts and refreshes
 

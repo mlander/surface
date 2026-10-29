@@ -99,6 +99,7 @@ of them is meant to replace core's own forms on a production site.
 | Submodule | Shows |
 | --- | --- |
 | `data_surface_first` | The code of [Your first resource](first-resource.md) and [Your second resource](second-resource.md): a newsletter settings page and a store location, held to the pages by a test. Adds its own permission. |
+| `data_surface_performance` | Three settings of core's performance form as one resource stored in core's `system.performance`, each key at core's path, held to core's config schema unchanged. Uses core's "administer site configuration". |
 | `data_surface_demo` | Two structures and three hosts: `DemoBlockStructure` drives a block and a standalone form, and the field formatter is its own structure. |
 | `data_surface_demo_classic` | The same block and formatter written the usual way, without Data Surface, for the side-by-side comparison. Depends on nothing from Data Surface. |
 | `data_surface_demo_extras` | A third-party module extending someone else's resources and structures with alters, with no form alter; and, for content types, the same two settings added to core's own form the classic way, for comparison. |

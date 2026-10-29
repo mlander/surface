@@ -480,7 +480,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 The full lane's phpunit line reads, as of this writing:
 
 ```
-phpunit: Tests: 1709, Assertions: 39389, Errors: 0, Failures: 0, Skipped: 3. Classes: 240 of 240, 8 at a time, browser classes 4.
+phpunit: Tests: 1714, Assertions: 39458, Errors: 0, Failures: 0, Skipped: 3. Classes: 241 of 241, 8 at a time, browser classes 4.
 ```
 
 the same counts a plain phpunit run of the tree gives. The skipped
@@ -759,7 +759,7 @@ src/Widget/ src/Plugin/  Definition to form element; resolvers, hosts, constrain
 src/Options/             Option sets, the resolver plugin base and manager.
 src/Variants/            Variants from the site: ComponentProps and ComponentSlots.
 src/Refinement/          Narrowing and choice sets.
-modules/                 Nineteen experimental submodules; each has its own README.
+modules/                 Twenty experimental submodules; each has its own README.
 tests/src/               Unit, Kernel, Functional, FunctionalJavascript.
 docs/ scripts/           Published documentation; check.sh and the generators.
 ```

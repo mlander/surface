@@ -1159,6 +1159,9 @@ final class PropertySchema {
     $arranged = $arrangement->toArray();
     if ($arrangement->group !== NULL) {
       $arranged['group']['label'] = PlainText::of($arrangement->group->label);
+      if (isset($arranged['group']['description'])) {
+        $arranged['group']['description'] = PlainText::of((string) $arrangement->group->description);
+      }
     }
     foreach (Arrangement::TEXTS as $text) {
       if (isset($arranged[$text])) {

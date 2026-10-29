@@ -87,6 +87,10 @@ so it is the whole of the storage code. What it does:
   than it is asked for: none by default. `load()` reads through the
   layout and `prepare()` writes through it
   ([StorageLayoutInterface](#storagelayoutinterface)).
+- **`STORED_AT`** says where the object keeps a key deeper than its own
+  name, by dotted path, beside keys the resource does not declare: none
+  by default. Every method above reads and writes the key there and
+  keeps the rest ([below](#a-key-stored-under-a-path)).
 - **A key that refers to a content entity is stored as the entity's
   uuid**, and every door still sends and answers the id
   ([below](#a-reference-is-stored-by-uuid)).
@@ -325,6 +329,52 @@ hold a value. A generated schema passes by construction; one generated
 before the resource changed is refused until it is written again, and
 the command builds the resource without this check, since the schema on
 disk is what it replaces.
+
+#### A key stored under a path
+
+Core's config objects keep settings that several forms edit, each at a
+path: `system.performance` keeps the page cache's maximum age at
+`cache.page.max_age`, beside `css.compress` and `fast_404`, which other
+code reads. A resource declares the keys it edits by their own names,
+and its storage says where each one is kept, in the `STORED_AT`
+constant beside `CONFIG`:
+
+```php
+final class PerformanceStorage extends ConfigObjectStorage {
+
+  public const CONFIG = 'system.performance';
+
+  public const STORED_AT = [
+    'max_age' => 'cache.page.max_age',
+    'css_preprocess' => 'css.preprocess',
+    'js_preprocess' => 'js.preprocess',
+  ];
+
+}
+```
+
+Each class's `use` line: [Namespaces](concepts.md#namespaces).
+
+- **`load()`** reads each such key from its path.
+- **`prepare()`** lays each value into the stored object at its path,
+  so the schema judges the whole object as it will be stored, and files
+  what the schema says at the path under the resource's key. It returns
+  the key by its path (`cache.page.max_age`), which a dry run reports.
+- **`commit()`** sets the path alone, so a key the resource does not
+  declare under the same map (`css.compress`) stays as it was.
+- **`mayClear()`** and the build's check read the schema at the path,
+  through each nested `mapping`, so the check compares the key with the
+  property it is stored in and a refusal names the key.
+- **The config schema generator writes no schema** for such an object:
+  it writes each key at its own name, so it refuses a storage with
+  `STORED_AT` by name rather than write a wrong one. A key kept under a
+  path belongs to a schema its owner wrote, which the build holds the
+  resource to.
+
+`data_surface_performance` is the shipped case: three settings of
+core's performance form, stored in core's `system.performance` and held
+to core's schema as core wrote it
+(why: [decision](decisions.md#a-resource-may-hold-some-keys-of-a-config-object-it-does-not-own)).
 
 #### A key stored otherwise than it is asked for
 
@@ -794,7 +844,7 @@ accepted values instead (why: [decision](decisions.md#every-door-projects-what-t
 
 | Storage | Destination | Artifact | Used by |
 | --- | --- | --- | --- |
-| `ConfigObjectStorage` | One simple config object, named by a subclass, laid out by its `layout()`. A `ResourceStorageInterface`, named by a resource. | The values to write, in storage layout, references to content by uuid, plus the language code when the schema asks for one. | the examples, `data_surface_first` |
+| `ConfigObjectStorage` | One simple config object, named by a subclass, laid out by its `layout()`, a key kept under a path by its `STORED_AT`. A `ResourceStorageInterface`, named by a resource. | The values to write, in storage layout, a key kept under a path by that path, references to content by uuid, plus the language code when the schema asks for one. | the examples, `data_surface_first`, `data_surface_performance` |
 | `ConfigEntityStorage` | One config entity, named by a subclass with its properties, plus core's third party settings. A `ResourceStorageInterface` that can delete, named by a resource. | The entity's exported array, references to content by uuid, its dependencies calculated, those of what its keys refer to among them. | `BlockPlacementStorage`, `NodeTypeStorage` |
 | `StateStorage` | One State key. | The accepted values. | the demo form |
 | `FieldSettingsStorage` | One field instance's settings. | The settings array. | the field type host |

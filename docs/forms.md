@@ -165,7 +165,9 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
 
 - **A group** is `ArrangementGroup::fieldset($id, $label)` or
   `ArrangementGroup::details($id, $label, collapsed:)`, with an optional
-  `weight:`. The keys of one frame (the top, an attached part, a
+  `weight:` and an optional `description:`, drawn under its legend or
+  summary (what the group's keys are for, as core's performance form
+  says of its bandwidth settings). The keys of one frame (the top, an attached part, a
   module's mount) that name one id are drawn in one group, so they say
   it alike; the build refuses two that differ. It is drawn where its
   first key is declared: the form builder puts its element in the frame

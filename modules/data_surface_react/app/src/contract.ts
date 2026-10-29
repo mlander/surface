@@ -82,6 +82,8 @@ export interface ArrangementGroup {
   as: 'fieldset' | 'details';
   collapsed?: boolean;
   weight?: number;
+  /** What the group's keys are for, drawn under its legend or summary. */
+  description?: string;
 }
 
 /**
