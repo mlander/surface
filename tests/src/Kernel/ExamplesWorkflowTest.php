@@ -10,7 +10,7 @@ use Drupal\surface\Form\SurfaceOperationForm;
 use Drupal\surface_examples\ExamplePanels;
 use Drupal\surface_examples\Resource\ProgramResource;
 use Drupal\surface_examples_workflow\Alter\ProgramWorkflowAlter;
-use Drupal\surface_tool\OperationInputs;
+use Drupal\surface\Tool\OperationInputs;
 use Drupal\Tests\surface\Traits\StaticAccessAgreementTrait;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
@@ -44,7 +44,6 @@ class ExamplesWorkflowTest extends SurfaceKernelTestBase {
     'serialization',
     'tool',
     'surface',
-    'surface_tool',
     'surface_examples',
     'surface_examples_workflow',
   ];

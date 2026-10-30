@@ -421,8 +421,9 @@ names storage and is no plugin's configuration, and every `%key`
 placeholder in its permission can be supplied by one of its parameters.
 Such an operation reaches the doors the installed modules open: a form
 route a module declares, the HTTP path and the React page
-(`surface_react`), the tool `surface:<id>:<operation>`
-(`surface_tool`) and the OpenAPI operation (`surface_openapi`).
+(`surface_react`), the tool `surface:<id>:<operation>` (the base
+module, with `tool` installed) and the OpenAPI operation
+(`surface_openapi`).
 One that changes a thing that exists, neither creating nor read only, is
 "read on its own" too, a read tool, `surface:<id>:<operation>:read`.
 A structure a plugin uses is configured through the plugin's host. Every

@@ -9,7 +9,7 @@ use Drupal\surface\Resource\Attribute\Variant;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
 use Drupal\surface_test\Access\GatedFieldSettingsAccess;
-use Drupal\surface_tool\Resource\FieldInstanceResource;
+use Drupal\surface_examples_field\Resource\FieldInstanceResource;
 
 /**
  * The gated test field type's settings: one note, and a gate.
@@ -26,7 +26,7 @@ use Drupal\surface_tool\Resource\FieldInstanceResource;
  * field type's own answer refuse it, through either host.
  *
  * The reference to FieldInstanceResource is a class name and nothing
- * more: on a site without the tool bridge it does not load, discovery
+ * more: on a site without surface_examples_field it does not load, discovery
  * skips the variant, and the field type host still builds this structure.
  */
 #[Structure('field.settings.surface_gated', access: GatedFieldSettingsAccess::class)]

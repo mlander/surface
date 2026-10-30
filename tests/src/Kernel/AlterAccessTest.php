@@ -21,7 +21,7 @@ use Drupal\surface_resource_test\Alter\WallOpeningAlter;
 use Drupal\surface_resource_test\Resource\Gallery\GalleryResource;
 use Drupal\surface_resource_test\Structure\Gallery\AnnexStructure;
 use Drupal\surface_resource_test\Structure\Gallery\WallStructure;
-use Drupal\surface_tool\OperationInputs;
+use Drupal\surface\Tool\OperationInputs;
 use Drupal\Tests\surface\Traits\StaticAccessAgreementTrait;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
@@ -56,7 +56,6 @@ class AlterAccessTest extends SurfaceKernelTestBase {
     'serialization',
     'tool',
     'surface',
-    'surface_tool',
     'surface_resource_test',
   ];
 

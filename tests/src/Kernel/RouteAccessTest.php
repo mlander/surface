@@ -76,7 +76,6 @@ class RouteAccessTest extends SurfaceKernelTestBase {
     'serialization',
     'tool',
     'surface',
-    'surface_tool',
     'surface_examples_entity',
     'surface_examples_node_type',
     'surface_react',

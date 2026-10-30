@@ -6,7 +6,7 @@ namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\Form\FormState;
 use Drupal\surface\SurfaceInterface;
-use Drupal\surface_tool\OperationInputs;
+use Drupal\surface\Tool\OperationInputs;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -41,7 +41,6 @@ class SiteDefaultsTest extends SurfaceKernelTestBase {
     'serialization',
     'tool',
     'surface',
-    'surface_tool',
     'surface_examples',
   ];
 

@@ -6,7 +6,7 @@ namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Component\Render\PlainTextOutput;
 use Drupal\surface_resource_test\Resource\PinnedNoteResource;
-use Drupal\surface_tool\OperationInputs;
+use Drupal\surface\Tool\OperationInputs;
 use Drupal\field\Entity\FieldConfig;
 use Drupal\field\Entity\FieldStorageConfig;
 use Drupal\node\Entity\NodeType;
@@ -59,7 +59,7 @@ class OperationToolsTest extends SurfaceKernelTestBase {
     'surface',
     'surface_examples_address',
     'surface_examples_node_type',
-    'surface_tool',
+    'surface_examples_field',
   ];
 
   /**

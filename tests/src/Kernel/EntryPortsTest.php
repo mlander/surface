@@ -13,7 +13,7 @@ use Drupal\surface_resource_test\Structure\Broken\EntryPortStructuresStructure;
 use Drupal\surface_resource_test\Structure\Broken\EntryPortTypeStructure;
 use Drupal\surface_resource_test\Structure\Broken\EntryPortUnmatchedStructure;
 use Drupal\surface_resource_test\Structure\Broken\EntryPortUnreadStructure;
-use Drupal\surface_tool\OperationInputs;
+use Drupal\surface\Tool\OperationInputs;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\Tests\surface\Traits\ContractValidationTrait;
 use Drupal\Tests\surface\Traits\StaticRefinerAgreementTrait;
@@ -52,7 +52,6 @@ class EntryPortsTest extends SurfaceKernelTestBase {
     'serialization',
     'tool',
     'surface',
-    'surface_tool',
     'surface_examples',
     'surface_resource_test',
   ];

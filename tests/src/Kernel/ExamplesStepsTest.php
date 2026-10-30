@@ -24,7 +24,7 @@ use Drupal\surface_examples\Form\RegistrationStep2ClassicForm;
 use Drupal\surface_examples\Resource\RegistrationStep1Resource;
 use Drupal\surface_examples\Resource\RegistrationStep2Resource;
 use Drupal\surface_examples\Resource\RegistrationStep3Resource;
-use Drupal\surface_tool\ContractPanel;
+use Drupal\surface\Form\ContractPanel;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use Drupal\user\Entity\Role;
 use Drupal\user\RoleInterface;
@@ -57,7 +57,6 @@ class ExamplesStepsTest extends SurfaceKernelTestBase {
     'serialization',
     'tool',
     'surface',
-    'surface_tool',
     'surface_examples',
   ];
 
@@ -139,7 +138,7 @@ class ExamplesStepsTest extends SurfaceKernelTestBase {
       $context,
       NULL,
     );
-    $panel = $this->container->get('surface_tool.contract_panel')
+    $panel = $this->container->get('surface.contract_panel')
       ->buildPanel($served, $resources->build($class, $context), $values);
     $rows = [];
     foreach ($panel['keys']['#rows'] as $row) {
@@ -469,7 +468,7 @@ class ExamplesStepsTest extends SurfaceKernelTestBase {
     // A key a runtime rule checks too: narrowed or not, the rule is said,
     // and which of them narrowed it is not.
     $status = new \ReflectionMethod(ContractPanel::class, 'status');
-    $panel = $this->container->get('surface_tool.contract_panel');
+    $panel = $this->container->get('surface.contract_panel');
     $declared = DataDefinition::create('string')->addConstraint('Choice', ['choices' => ['a', 'b']]);
     $narrowed = DataDefinition::create('string')->addConstraint('Choice', ['choices' => ['a']]);
     $this->assertSame('narrowed, and checked at runtime', (string) $status->invoke($panel, $declared, $narrowed, FALSE, TRUE));

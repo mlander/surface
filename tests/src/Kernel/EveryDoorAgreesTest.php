@@ -72,7 +72,7 @@ class EveryDoorAgreesTest extends SurfaceKernelTestBase {
     'serialization',
     'tool',
     'surface',
-    'surface_tool',
+    'surface_examples_field',
     'surface_react',
   ];
 
@@ -107,7 +107,7 @@ class EveryDoorAgreesTest extends SurfaceKernelTestBase {
         'surface_examples_node_type',
         'surface_examples_entity',
       ],
-      'holds' => ['surface_tool'],
+      'holds' => ['surface_examples_field'],
     ],
     'the fixtures' => [
       'modules' => [

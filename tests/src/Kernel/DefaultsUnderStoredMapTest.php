@@ -11,7 +11,7 @@ use Drupal\surface\Form\SurfaceFormBuilderInterface;
 use Drupal\surface\Form\SurfaceOperationForm;
 use Drupal\surface\ResourceBuild\OperationRoute;
 use Drupal\surface_schema_test\Shape\MarkAction;
-use Drupal\surface_tool\OperationInputs;
+use Drupal\surface\Tool\OperationInputs;
 use Drupal\Tests\surface\Traits\ServedControllerTrait;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
@@ -49,7 +49,6 @@ class DefaultsUnderStoredMapTest extends SurfaceKernelTestBase {
     'serialization',
     'tool',
     'surface',
-    'surface_tool',
     'surface_react',
     'surface_schema_test',
   ];

@@ -9,7 +9,7 @@ use Drupal\Core\Access\AccessResult;
 use Drupal\surface\Pipeline\ResultDocument;
 use Drupal\surface\Pipeline\Violation;
 use Drupal\surface_examples\ConceptCalls;
-use Drupal\surface_tool\OperationInputs;
+use Drupal\surface\Tool\OperationInputs;
 use Drupal\surface_tool_test\Storage\VaultStorage;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use Drupal\tool\Tool\ToolInterface;
@@ -48,7 +48,6 @@ class ResultCodesTest extends SurfaceKernelTestBase {
     'tool',
     'surface',
     'surface_examples_node_type',
-    'surface_tool',
     'surface_examples',
     'surface_examples_workflow',
     'surface_react',

@@ -17,7 +17,7 @@ use Drupal\surface_examples\ConceptPanel;
 use Drupal\surface_examples\ExamplePanels;
 use Drupal\surface_examples_references\Resource\SponsorshipResource;
 use Drupal\surface_examples_references\Sponsorship;
-use Drupal\surface_tool\OperationInputs;
+use Drupal\surface\Tool\OperationInputs;
 use Drupal\node\Entity\NodeType;
 use Drupal\user\Entity\Role;
 use Drupal\user\Entity\User;
@@ -62,7 +62,6 @@ class ReferenceKeysTest extends SurfaceKernelTestBase {
     'serialization',
     'tool',
     'surface',
-    'surface_tool',
     'surface_examples',
     'surface_examples_references',
   ];
@@ -407,7 +406,7 @@ class ReferenceKeysTest extends SurfaceKernelTestBase {
    */
   public function testTheToolListing(): void {
     $listed = function (): array {
-      $inputs = $this->container->get('surface_tool.operation_inputs');
+      $inputs = $this->container->get('surface.operation_inputs');
       $registry = $this->container->get('surface.resource_registry');
       $this->container->get('surface.resources')->forgetBuilds();
       $values = $inputs->inputs($registry->getDefinition(SponsorshipResource::class), $registry->getOperation(SponsorshipResource::class, 'configure'))[OperationInputs::VALUES];

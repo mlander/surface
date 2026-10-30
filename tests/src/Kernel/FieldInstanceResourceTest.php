@@ -10,8 +10,8 @@ use Drupal\surface\Refinement\ChoiceSet;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\ResourceBuild\ResourcesInterface;
 use Drupal\surface_examples_address\Resource\AddressFieldSettingsResource;
-use Drupal\surface_tool\Resource\FieldInstanceResource;
-use Drupal\surface_tool\Resource\FieldStorageResource;
+use Drupal\surface_examples_field\Resource\FieldInstanceResource;
+use Drupal\surface_examples_field\Resource\FieldStorageResource;
 use Drupal\entity_test\EntityTestHelper;
 use Drupal\field\Entity\FieldConfig;
 use Drupal\field\Entity\FieldStorageConfig;
@@ -23,6 +23,8 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 /**
  * Tests the field instance resource, its storage child and settings.
  *
+ * The resource is surface_examples_field's, an example that describes
+ * core's field instance and field storage settings to test the pattern.
  * The field resource lists no children: the address module's settings
  * resource is the settings variant for the address field type, by
  * #[Variant]. Editing knows the field type, so the settings are the
@@ -52,7 +54,7 @@ class FieldInstanceResourceTest extends SurfaceKernelTestBase {
     'tool',
     'surface',
     'surface_examples_address',
-    'surface_tool',
+    'surface_examples_field',
   ];
 
   /**

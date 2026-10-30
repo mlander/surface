@@ -11,7 +11,7 @@ use Drupal\surface\Form\SurfaceFormBuilderInterface;
 use Drupal\surface\Form\SurfaceOperationForm;
 use Drupal\surface_examples_first\Resource\NewsletterResource;
 use Drupal\surface_examples_first\Resource\StoreResource;
-use Drupal\surface_tool\OperationInputs;
+use Drupal\surface\Tool\OperationInputs;
 use Drupal\Tests\surface\Unit\FirstResourceDocsTest;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
@@ -43,7 +43,6 @@ class FirstResourceTest extends SurfaceKernelTestBase {
     'serialization',
     'tool',
     'surface',
-    'surface_tool',
     'surface_examples_first',
   ];
 

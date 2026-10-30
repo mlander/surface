@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\surface\Kernel;
 
-use Drupal\surface_tool\OperationInputs;
+use Drupal\surface\Tool\OperationInputs;
 use Drupal\field\Entity\FieldConfig;
 use Drupal\field\Entity\FieldStorageConfig;
 use Drupal\Tests\surface\Traits\ServedControllerTrait;
@@ -49,7 +49,7 @@ class IdentityPathsTest extends SurfaceKernelTestBase {
     'surface_react',
     'surface_openapi',
     'surface_examples_address',
-    'surface_tool',
+    'surface_examples_field',
     'surface_resource_test',
     'surface_paths_test',
   ];

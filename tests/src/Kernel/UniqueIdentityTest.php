@@ -44,7 +44,6 @@ class UniqueIdentityTest extends SurfaceKernelTestBase {
     'serialization',
     'tool',
     'surface',
-    'surface_tool',
     'surface_examples',
     'surface_react',
   ];

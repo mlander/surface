@@ -47,7 +47,6 @@ class SchemaRoundTripTest extends SurfaceKernelTestBase {
     'serialization',
     'tool',
     'surface',
-    'surface_tool',
     'surface_examples',
     'surface_examples_first',
     'surface_resource_test',

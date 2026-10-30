@@ -1,0 +1,10 @@
+name: Surface API examples - Field settings
+type: module
+description: 'Describes core''s field storage and field instance settings as resources, each field type''s settings a variant read from its settings class or its config schema. It exists to test the pattern on a thing core already has, and is not shipped in this form.'
+package: 'Surface API examples'
+lifecycle: experimental
+lifecycle_link: 'https://git.drupalcode.org/project/surface/-/blob/1.0.x/README.md#experimental-submodules'
+core_version_requirement: ^11.3 || ^12
+dependencies:
+  - surface:surface
+  - drupal:field

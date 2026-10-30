@@ -5098,8 +5098,8 @@ along with the dependents of whatever changed, because a panel
 describing the resource as it stands has to follow every change; it is
 handed the values the elements are built with, not a refined data
 surface, so it can tell which variant is shown. The
-contract panel lives in `surface_tool`, since half of it is the
-derived tool's JSON Schema. Its "Right now" column, and the React
+contract panel lives in the base module and shows the
+derived tool's JSON Schema where the tool module is installed. Its "Right now" column, and the React
 page's, says "narrowed, and checked at runtime" for a key that is
 narrowed and that a runtime rule also checks (decided 2026-10-19,
 replacing "narrowed at runtime", which named the runtime rule as what
@@ -6125,7 +6125,7 @@ may not edit, as core's form does. (`ContentEntityStorage::prepare()`)
 site](#keys-that-come-from-the-site).* The registry forgets a derived
 definition when the tags it was read from are invalidated, and the Tool
 API keeps its plugin definitions apart, with no tags, until a cache
-rebuild. An invalidator in `surface_tool` closes the gap without
+rebuild. An invalidator in the tool door closes the gap without
 coupling the engine to the Tool API: the tool deriver remembers the cache
 tags of every derived definition and of every resource it built, and an
 invalidation of any of them clears the tool definitions, so a field added
@@ -6195,7 +6195,7 @@ why:
 - **Cacheability travels.** The list's cacheability is the built
   resource's, so the form, both documents and the schema route are kept
   by it, and a thing added to the site is a key at the next request. The
-  tool listing is cleared by `surface_tool`'s invalidator when one of
+  tool listing is cleared by the tool door's invalidator when one of
   the tags it was built with is invalidated ([settled
   above](#tool-definitions-after-a-field-changes)), and only the
   resources that read the list are derived again. A list with max-age 0
@@ -7131,7 +7131,7 @@ level: a component in a slot counts the components the slot offers.
   site decides carries the settings' cache tag, and the tool listing is
   derived again when the setting changes.
 - **The narrowing tool.** Where an operation's declared listing has such
-  a key, at any depth (`SiteListBudget::anyOver()`), `surface_tool`
+  a key, at any depth (`SiteListBudget::anyOver()`), the tool door
   derives `surface:<resource>:<operation>:schema` beside the write
   tool: the Read kind, so read only and idempotent, its inputs the
   operation's parameters and an optional open `values`, its outputs

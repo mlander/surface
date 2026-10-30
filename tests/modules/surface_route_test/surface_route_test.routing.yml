@@ -10,13 +10,13 @@ surface_route_test.add:
 # The same create, on a page that fixes three keys (one of the card's
 # own, one inside the map it declares, one inside the structure it
 # attaches) and fills three more, one written as text, with the contract
-# panel beside the form (surface_tool, which a test enables).
+# panel beside the form.
 surface_route_test.add_welcome:
   path: '/surface-test/card/add-welcome'
   defaults:
     _form: 'Drupal\surface\Form\SurfaceOperationForm'
     _title: 'Add a welcome card'
-    _surface_panel: 'surface_tool.contract_panel'
+    _surface_panel: 'surface.contract_panel'
     _surface_resource: 'route_test.card'
     _surface_operation: 'create'
     _surface_fixed: { title: 'Welcome', 'greeting.format': 'html', 'envelope.color': 'cream' }
@@ -61,7 +61,7 @@ surface_route_test.add_welcome_page:
   defaults:
     _form: 'Drupal\surface\Form\SurfaceOperationForm'
     _title: 'Add a welcome page'
-    _surface_panel: 'surface_tool.contract_panel'
+    _surface_panel: 'surface.contract_panel'
     _surface_resource: 'entity.content:node.page'
     _surface_operation: 'create'
     _surface_fixed: { 'title.value': 'Welcome' }
@@ -420,7 +420,7 @@ surface_route_test.add_thanks:
   defaults:
     _form: 'Drupal\surface\Form\SurfaceOperationForm'
     _title: 'Add a thank-you card'
-    _surface_panel: 'surface_tool.contract_panel'
+    _surface_panel: 'surface.contract_panel'
     _surface_resource: 'route_test.card'
     _surface_operation: 'create'
     _surface_fixed: { occasion: 'thanks' }

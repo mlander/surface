@@ -11,7 +11,7 @@ use Drupal\surface\SurfaceInterface;
 use Drupal\surface\Pipeline\TypeMismatchException;
 use Drupal\surface\Pipeline\UnknownKeysException;
 use Drupal\surface\Pipeline\VariantMismatchException;
-use Drupal\surface_tool\OperationInputs;
+use Drupal\surface\Tool\OperationInputs;
 use Drupal\surface_tool_test\Storage\SpecimenStorage;
 use Drupal\Tests\surface\Kernel\SurfaceKernelTestBase;
 use Drupal\Tests\user\Traits\UserCreationTrait;
@@ -57,7 +57,6 @@ class InputCoercionMatrixTest extends SurfaceKernelTestBase {
     'serialization',
     'tool',
     'surface',
-    'surface_tool',
     'surface_tool_test',
   ];
 

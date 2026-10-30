@@ -20,8 +20,8 @@ use Drupal\surface_resource_test\Resource\Pantry\LabelResource;
 use Drupal\surface_resource_test\Resource\Pantry\PantryResource;
 use Drupal\surface_resource_test\Structure\Pantry\ShelfStructure;
 use Drupal\surface_resource_test\Storage\LarderStorage;
-use Drupal\surface_tool\Plugin\tool\Tool\ResourceOperationTool;
-use Drupal\surface_tool\OperationInputs;
+use Drupal\surface\Plugin\tool\Tool\ResourceOperationTool;
+use Drupal\surface\Tool\OperationInputs;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use Drupal\tool\Tool\ToolDefinition;
 use Drupal\tool\Tool\ToolInterface;
@@ -94,7 +94,6 @@ class ChildOperationTest extends SurfaceKernelTestBase {
     'serialization',
     'tool',
     'surface',
-    'surface_tool',
     'surface_resource_test',
   ];
 

@@ -13,7 +13,7 @@ use Drupal\surface_examples\ConceptPanel;
 use Drupal\surface_examples\Resource\MailerResource;
 use Drupal\surface_examples\Resource\WebhookResource;
 use Drupal\surface_examples\WebhookSigner;
-use Drupal\surface_tool\OperationInputs;
+use Drupal\surface\Tool\OperationInputs;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -49,7 +49,6 @@ class ExamplesExtensionTest extends SurfaceKernelTestBase {
     'serialization',
     'tool',
     'surface',
-    'surface_tool',
     'surface_examples',
   ];
 

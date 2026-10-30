@@ -823,7 +823,7 @@ for this repository's in `EveryDoorAgreesTest`.
 
 ## Tools
 
-With `surface_tool` enabled, an operation that can be asked on its
+With the `tool` module installed, an operation that can be asked on its
 own is a tool, `surface:<resource id>:<operation id>`, derived by
 `ResourceOperationToolDeriver` from the static layer alone:
 
@@ -1641,14 +1641,14 @@ $inputs->attachVariants('presentation_settings', by: 'presentation')
 #[Structure('block.surface_examples_plugins.presentation.grid')]
 #[Variant(of: DemoBlockStructure::class, at: 'presentation_settings', for: 'grid', label: new TranslatableMarkup('Grid'))]
 
-// FieldInstanceResource, in surface_tool
+// FieldInstanceResource, in surface_examples_field
 $inputs->attach('storage', FieldStorageResource::class)
   ->setLabel(t('Field storage'));
 
 $inputs->attachVariants('settings', by: 'field_type')
   ->setLabel(t('Field settings'));
 
-// FieldStorageResource, in surface_tool
+// FieldStorageResource, in surface_examples_field
 $inputs->attachVariants('settings', by: 'field_type')
   ->setLabel(t('Storage settings'));
 
@@ -2092,7 +2092,7 @@ shows, its theme, region, weight and status) are the resource's own, and
 its visibility a collection of conditions chosen the same way
 (why: [decision](decisions.md#a-placed-block-is-a-resource)).
 
-A field type's settings are the case again, in `surface_tool`.
+A field type's settings are the case again, in `surface_examples_field`.
 `FieldInstanceResource` attaches its `settings` with
 `attachVariants('settings', by: 'field_type', from:
 FieldSettingsSchemaVariants::class)`, and `FieldStorageResource` its own
@@ -2288,7 +2288,7 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
   a render array: the cache tags of the configuration or the entities it
   lists (`addCacheableDependency($config)` takes them from a config
   object). It becomes the built resource's, so the form, both documents
-  and the schema route are cached by it, and `surface_tool` clears
+  and the schema route are cached by it, and the tool door clears
   the tool listing when one of those tags is invalidated: a node type
   added is a checkbox at the next request, at every door. A list with
   max-age 0 is refused when the resource is built, and so is one that
@@ -2460,7 +2460,7 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
   derivatives there are (a bundle created, any form display saved),
   which the index carries; reading the list again keeps every entry
   whose tags did not fire. `ResourceRegistryInvalidator` clears what the
-  registry already read in this request, and `surface_tool`
+  registry already read in this request, and the tool door
   derives again the tools of the resources that read a tag. The tags
   belong in the build's cacheability too
   (`$inputs->addCacheableDependency()`), which is what the schema route

@@ -179,7 +179,7 @@ final class Series {
       5 => [
         'title' => t('same contract, no form'),
         'concept' => t('the tool and the read tool'),
-        'docs' => 'modules/surface_tool/README.md',
+        'docs' => 'docs/tools.md',
         'decision' => 'which-operations-read',
         'routes' => ['surface_examples.step5'],
         'files' => [],

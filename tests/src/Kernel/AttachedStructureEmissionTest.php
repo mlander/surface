@@ -19,7 +19,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * widest honest object, because the Tool API has no way to say a union
  * keyed by a sibling.
  *
- * @see \Drupal\surface_tool\InputDefinitions::fromVariants()
+ * @see \Drupal\surface\Tool\InputDefinitions::fromVariants()
  */
 #[Group('surface')]
 #[RunTestsInSeparateProcesses]
@@ -35,7 +35,7 @@ class AttachedStructureEmissionTest extends SurfaceKernelTestBase {
     'serialization',
     'tool',
     'surface',
-    'surface_tool',
+    'surface_examples_field',
     'surface_resource_test',
   ];
 
@@ -49,7 +49,7 @@ class AttachedStructureEmissionTest extends SurfaceKernelTestBase {
    *   The schema of the map input the data surface converts to.
    */
   protected function schema(SurfaceInterface $surface): array {
-    $definition = $this->container->get('surface_tool.input_definitions')->fromSurface($surface, 'Pantry', '');
+    $definition = $this->container->get('surface.input_definitions')->fromSurface($surface, 'Pantry', '');
     $this->assertInstanceOf(InputDefinitionInterface::class, $definition);
     $tool = $this->container->get('plugin.manager.tool')->createInstance('surface:field.instance:create');
     return $this->container->get('tool.definition_serializer')->normalizeInputDefinition($tool, 'pantry', $definition);

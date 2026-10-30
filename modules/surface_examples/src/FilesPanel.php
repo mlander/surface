@@ -69,7 +69,7 @@ final class FilesPanel {
       '#title' => $this->t('The files of example @number', ['@number' => $number]),
       // The contract panel's own class, for its spacing and type sizes.
       '#attributes' => ['class' => ['surface-contract-panel', 'surface-files-panel']],
-      '#attached' => ['library' => ['surface_tool/contract_panel']],
+      '#attached' => ['library' => ['surface/contract_panel']],
     ];
     if ($example['files'] === []) {
       $build['none'] = [

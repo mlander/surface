@@ -6,7 +6,7 @@ namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Component\Render\PlainTextOutput;
 use Drupal\surface_examples\ExampleCalls;
-use Drupal\surface_tool\OperationInputs;
+use Drupal\surface\Tool\OperationInputs;
 use Drupal\surface_tool_test\Storage\VaultStorage;
 use Drupal\node\Entity\NodeType;
 use Drupal\node\NodePreviewMode;
@@ -89,7 +89,7 @@ class ReadToolTest extends SurfaceKernelTestBase {
     'tool',
     'surface',
     'surface_examples_node_type',
-    'surface_tool',
+    'surface_examples_field',
     'surface_examples',
     'surface_examples_compliance',
     'surface_tool_test',

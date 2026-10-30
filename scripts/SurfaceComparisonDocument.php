@@ -2,7 +2,7 @@
 
 /**
  * @file
- * The renderer behind the surface_tool module's COMPARISON.md.
+ * The renderer behind the surface_examples_field module's COMPARISON.md.
  *
  * Not autoloadable, and deliberately so: it belongs to the generator
  * script beside it, not to the module's runtime. Both the script and

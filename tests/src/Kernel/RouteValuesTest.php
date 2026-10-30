@@ -65,7 +65,6 @@ class RouteValuesTest extends SurfaceKernelTestBase {
     'serialization',
     'tool',
     'surface',
-    'surface_tool',
     'surface_route_test',
   ];
 

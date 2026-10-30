@@ -7,7 +7,7 @@ namespace Drupal\Tests\surface\Kernel;
 use Drupal\Core\Entity\Entity\EntityFormDisplay;
 use Drupal\surface\ResourceBuild\ResourceCollectorPass;
 use Drupal\surface\ResourceBuild\ResourceRegistry;
-use Drupal\surface_tool\Resource\FieldInstanceResource;
+use Drupal\surface_examples_field\Resource\FieldInstanceResource;
 use Drupal\field\Entity\FieldConfig;
 use Drupal\field\Entity\FieldStorageConfig;
 use Drupal\Tests\user\Traits\UserCreationTrait;
@@ -36,7 +36,7 @@ class DiscoveryPerDefinitionTest extends SurfaceKernelTestBase {
   /**
    * {@inheritdoc}
    */
-  protected static $modules = self::ENTITY_MODULES;
+  protected static $modules = [...self::ENTITY_MODULES, 'surface_examples_field'];
 
   /**
    * {@inheritdoc}

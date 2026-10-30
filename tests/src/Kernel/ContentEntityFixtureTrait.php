@@ -42,7 +42,6 @@ trait ContentEntityFixtureTrait {
     'serialization',
     'tool',
     'surface',
-    'surface_tool',
     'surface_examples_entity',
   ];
 

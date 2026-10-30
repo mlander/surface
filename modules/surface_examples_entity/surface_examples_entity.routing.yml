@@ -23,7 +23,7 @@ surface_examples_entity.node_page_create:
     _title: 'Add a basic page (resource)'
     _surface_resource: 'entity.content:node.page'
     _surface_operation: 'create'
-    _surface_panel: 'surface_tool.contract_panel'
+    _surface_panel: 'surface.contract_panel'
 
 surface_examples_entity.node_page_update:
   path: '/surface-entity/node/{id}/edit'
@@ -32,7 +32,7 @@ surface_examples_entity.node_page_update:
     _title: 'Edit a basic page (resource)'
     _surface_resource: 'entity.content:node.page'
     _surface_operation: 'update'
-    _surface_panel: 'surface_tool.contract_panel'
+    _surface_panel: 'surface.contract_panel'
   requirements:
     id: '\d+'
   options:

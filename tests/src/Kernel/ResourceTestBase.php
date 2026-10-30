@@ -25,7 +25,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
  *
  * What the module's own suite holds for its fixtures, one base class for
  * any module's kernel test: extend it, list the modules to install in
- * `$modules` (this class installs the main module, the tool bridge and
+ * `$modules` (this class installs the main module, the tool module and
  * the HTTP door), name the resources in `$resources`, and optionally give
  * rows of values in `$values` and a baselines directory in `$baselines`.
  * For each resource, each test below runs as one data set:
@@ -84,7 +84,6 @@ abstract class ResourceTestBase extends SurfaceKernelTestBase {
     'serialization',
     'tool',
     'surface',
-    'surface_tool',
     'surface_react',
   ];
 

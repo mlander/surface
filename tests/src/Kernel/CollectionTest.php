@@ -23,8 +23,8 @@ use Drupal\surface_resource_test\Structure\Broken\WatchesListStructure;
 use Drupal\surface_resource_test\Resource\Cellar\CellarResource;
 use Drupal\surface_resource_test\Resource\Larder\SpiceRackResource;
 use Drupal\surface_resource_test\Storage\CellarStorage;
-use Drupal\surface_tool\Plugin\tool\Tool\ResourceOperationTool;
-use Drupal\surface_tool\OperationInputs;
+use Drupal\surface\Plugin\tool\Tool\ResourceOperationTool;
+use Drupal\surface\Tool\OperationInputs;
 use Drupal\Tests\surface\Traits\ContractValidationTrait;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use Drupal\tool\Tool\ToolDefinition;
@@ -90,7 +90,6 @@ class CollectionTest extends SurfaceKernelTestBase {
     'serialization',
     'tool',
     'surface',
-    'surface_tool',
     'surface_resource_test',
   ];
 

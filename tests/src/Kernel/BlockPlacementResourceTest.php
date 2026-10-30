@@ -42,7 +42,6 @@ class BlockPlacementResourceTest extends SurfaceKernelTestBase {
     'serialization',
     'tool',
     'surface',
-    'surface_tool',
     'surface_examples',
     'surface_examples_component_block',
     'surface_examples_block',

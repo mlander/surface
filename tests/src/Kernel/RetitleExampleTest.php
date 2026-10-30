@@ -13,7 +13,7 @@ use Drupal\surface_examples\ExamplePanels;
 use Drupal\surface_examples_retitle\Resource\RetitleResource;
 use Drupal\surface_examples_retitle\Retitle;
 use Drupal\surface_examples_retitle\TitleRewriter;
-use Drupal\surface_tool\OperationInputs;
+use Drupal\surface\Tool\OperationInputs;
 use Drupal\node\Entity\Node;
 use Drupal\node\Entity\NodeType;
 use Drupal\Tests\user\Traits\UserCreationTrait;
@@ -53,7 +53,6 @@ class RetitleExampleTest extends SurfaceKernelTestBase {
     'serialization',
     'tool',
     'surface',
-    'surface_tool',
     'surface_examples',
     'surface_examples_retitle',
   ];

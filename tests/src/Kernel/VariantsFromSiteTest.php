@@ -21,7 +21,7 @@ use Drupal\surface_resource_test\Variants\Broken\LockedLayouts;
 use Drupal\surface_resource_test\Variants\Broken\RestatingLayouts;
 use Drupal\surface_resource_test\Variants\Broken\UnnamedLayouts;
 use Drupal\surface_resource_test\Variants\PosterLayouts;
-use Drupal\surface_tool\OperationInputs;
+use Drupal\surface\Tool\OperationInputs;
 use Drupal\Tests\surface\Traits\ContractValidationTrait;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use Drupal\tool\TypedData\MapInputDefinition;
@@ -59,7 +59,6 @@ class VariantsFromSiteTest extends SurfaceKernelTestBase {
     'serialization',
     'tool',
     'surface',
-    'surface_tool',
     'surface_resource_test',
   ];
 
@@ -225,7 +224,7 @@ class VariantsFromSiteTest extends SurfaceKernelTestBase {
     $panels = $listed->getPropertyDefinition('panels');
     $this->assertInstanceOf(MapInputDefinition::class, $panels);
     $this->assertSame(['columns', 'gap'], array_keys($panels->getPropertyDefinitions()));
-    $this->assertContains(PosterLayouts::TAG, $this->container->get('state')->get('surface_tool.listed_cache_tags'));
+    $this->assertContains(PosterLayouts::TAG, $this->container->get('state')->get('surface.tool_listed_cache_tags'));
 
     $read = $manager->createInstance('surface:resource_test.poster:configure:read');
     $read->execute();

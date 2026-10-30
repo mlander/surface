@@ -38,7 +38,7 @@ use Drupal\surface_examples\Keys\TicketTypes;
 use Drupal\surface_examples\Resource\SpotlightResource;
 use Drupal\surface_examples\Resource\VenueResource;
 use Drupal\surface_react\Controller\ResourceApiController;
-use Drupal\surface_tool\OperationInputs;
+use Drupal\surface\Tool\OperationInputs;
 use Drupal\tool\Tool\ToolDefinition;
 use Drupal\tool\Tool\ToolManager;
 use Drupal\tool\TypedData\MapInputDefinition;
@@ -241,7 +241,7 @@ final class ConceptPanel {
    *   The schema reader, for what it noted of example 12's chosen one.
    * @param \Drupal\surface\Reference\References $references
    *   What reference keys are, for example 16's limit, held lower.
-   * @param \Drupal\surface_tool\OperationInputs $operationInputs
+   * @param \Drupal\surface\Tool\OperationInputs $operationInputs
    *   What a tool takes, for example 16's listing past the limit.
    * @param \Drupal\surface\Contract\SiteListBudget|null $budget
    *   How many entries of a list the site decides are spelled out, which
@@ -306,7 +306,7 @@ final class ConceptPanel {
       '#title' => $this->t('What this example shows'),
       // The contract panel's own class, for its spacing and type sizes.
       '#attributes' => ['class' => ['surface-contract-panel', 'surface-concept-panel']],
-      '#attached' => ['library' => ['surface_tool/contract_panel']],
+      '#attached' => ['library' => ['surface/contract_panel']],
       'what' => ['#markup' => '<p>' . $this->paragraph($id) . '</p>'],
       'docs' => [
         '#theme' => 'item_list',

@@ -5,8 +5,8 @@
  * @file
  * Regenerates the two generated COMPARISON.md documents.
  *
- * The surface_tool module's document puts two settings inputs for
- * one field type side by side: the one Tool Belt's field_add derives from
+ * The surface_examples_field module's document puts two settings inputs
+ * for one field type side by side: the one Tool Belt's field_add derives from
  * the field type's config schema, and the one
  * surface:field.instance:reuse, the tool generated from the field
  * instance resource's reuse operation, takes from the field type's
@@ -61,7 +61,7 @@ if (!is_file($phpunit)) {
 }
 
 $documents = [
-  'modules/surface_tool/COMPARISON.md' => 'FieldToolsComparisonTest',
+  'modules/surface_examples_field/COMPARISON.md' => 'FieldToolsComparisonTest',
   'modules/surface_examples_node_type_tool/COMPARISON.md' => 'NodeTypeToolComparisonTest',
 ];
 foreach ($documents as $document => $test) {

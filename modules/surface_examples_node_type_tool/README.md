@@ -4,7 +4,8 @@ The recorded comparison between `surface:node.type:create`, the tool
 generated from the content type resource's create operation, and the tool an
 agent has for the same job without Surface API.
 
-The tool is derived by `surface_tool` for every operation that can
+The tool is derived by the base module, with the `tool` module
+installed, for every operation that can
 be asked on its own (its resource names storage, no plugin uses it, and
 its permission's placeholders are all parameters), so this module holds
 no code: it depends
@@ -42,7 +43,7 @@ the test asserts on every run that it has not drifted.
 
 ## How the tool is built
 
-It is not written. `ResourceOperationToolDeriver` in `surface_tool`
+It is not written. `ResourceOperationToolDeriver` in the base module
 reads the content type resource's `create` operation and derives
 `surface:node.type:create`; `ResourceOperationTool` runs it:
 

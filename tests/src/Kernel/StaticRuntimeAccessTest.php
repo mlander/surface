@@ -19,8 +19,8 @@ use Drupal\surface_resource_test\Resource\Exhibit\ExhibitResource;
 use Drupal\surface_resource_test\Resource\Journal\JournalResource;
 use Drupal\surface_resource_test\Structure\Broken\FickleAccessParentStructure;
 use Drupal\surface_resource_test\Structure\Broken\StateReadingParentStructure;
-use Drupal\surface_tool\OperationInputs;
-use Drupal\surface_tool\Plugin\Derivative\ResourceOperationToolDeriver;
+use Drupal\surface\Tool\OperationInputs;
+use Drupal\surface\Plugin\Derivative\ResourceOperationToolDeriver;
 use Drupal\Tests\surface\Traits\ContractValidationTrait;
 use Drupal\Tests\surface\Traits\StaticAccessAgreementTrait;
 use Drupal\Tests\user\Traits\UserCreationTrait;
@@ -59,7 +59,7 @@ class StaticRuntimeAccessTest extends SurfaceKernelTestBase {
     'serialization',
     'tool',
     'surface',
-    'surface_tool',
+    'surface_examples_field',
     'surface_resource_test',
   ];
 

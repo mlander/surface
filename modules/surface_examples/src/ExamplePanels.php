@@ -26,7 +26,7 @@ use Drupal\surface\Storage\ConfigObjectStorage;
  * replaces them on every rebuild; only the contract panel has anything
  * new to say then.
  *
- * @see \Drupal\surface_tool\ContractPanel
+ * @see \Drupal\surface\Form\ContractPanel
  * @see \Drupal\surface_examples\ConfigSchemaPanel
  * @see \Drupal\surface_examples\FilesPanel
  */

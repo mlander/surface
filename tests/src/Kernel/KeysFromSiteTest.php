@@ -20,7 +20,7 @@ use Drupal\surface_resource_test\Structure\Broken\DefaultedEntryStructure;
 use Drupal\surface_resource_test\Structure\Broken\UncacheableKeysStructure;
 use Drupal\surface_resource_test\Structure\Broken\UnwiredEntryStructure;
 use Drupal\surface_resource_test\Structure\Workshop\BenchStructure;
-use Drupal\surface_tool\OperationInputs;
+use Drupal\surface\Tool\OperationInputs;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\Tests\surface\Traits\ContractValidationTrait;
 use Drupal\Tests\surface\Traits\StaticRefinerAgreementTrait;
@@ -61,7 +61,6 @@ class KeysFromSiteTest extends SurfaceKernelTestBase {
     'serialization',
     'tool',
     'surface',
-    'surface_tool',
     'surface_resource_test',
   ];
 
@@ -323,7 +322,7 @@ class KeysFromSiteTest extends SurfaceKernelTestBase {
     $this->addBench('bench', 'Workbench');
     $properties = $manager->getDefinition('surface:resource_test.workshop:configure')->getInputDefinition(OperationInputs::VALUES)->getPropertyDefinitions();
     $this->assertSame(['lathe', 'press', 'saw', 'bench'], array_keys($properties['lights']->getPropertyDefinitions()));
-    $this->assertContains(self::TAG, $this->container->get('state')->get('surface_tool.listed_cache_tags'));
+    $this->assertContains(self::TAG, $this->container->get('state')->get('surface.tool_listed_cache_tags'));
 
     $read = $manager->createInstance('surface:resource_test.workshop:configure:read');
     $read->execute();

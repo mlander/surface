@@ -65,9 +65,10 @@ production.
 
 ## Optional integrations
 
-Two of the submodules bridge to a contributed module. Both are declared
-as Composer `suggest` entries rather than requirements, so the base
-module installs without them.
+The base module opens the Tool API door when the Tool module is
+installed, and one submodule bridges to the Address module. Both are
+declared as Composer `suggest` entries rather than requirements, so the
+base module installs without them.
 
 ### Address
 
@@ -86,14 +87,18 @@ not modified: the field type class is swapped for a subclass through
 
 ```bash
 composer require drupal/tool
-drush pm:install surface_tool
+drush pm:install tool
 ```
 
-Derives one [Tool](https://www.drupal.org/project/tool) API tool,
-`surface:<id>:<operation>`, for every operation that can be
-asked on its own. Among them are the field tools,
-`surface:field.instance:create`, `:reuse` and `:update` and
-`surface:field.storage:update`, whose settings are derived from the
+With the [Tool](https://www.drupal.org/project/tool) module installed,
+the base module derives one Tool API tool, `surface:<id>:<operation>`,
+for every operation that can be asked on its own, with a read tool and
+a narrowing tool beside it where they apply
+([The Tool API door](tools.md)). No submodule is needed: the base
+module registers the door's services only when the tool module is
+installed. With `surface_examples_field` installed too, the tools include
+the field tools, `surface:field.instance:create`, `:reuse` and `:update`
+and `surface:field.storage:update`, whose settings are derived from the
 field type's own settings class, or from its config schema when it has
 none, so an agent is offered typed, labeled, bounded settings instead of
 a free-form map.
@@ -121,8 +126,8 @@ teaches, in reading order, is in [Examples](examples/index.md).
 | `drush pm:install surface_examples_extras` | A third-party module extending someone else's resources and structures through alters, with no form alter anywhere; and, for content types, the same two settings added to core's own form the classic way, so the two can be compared. | The demo's formatter settings and core's content type form, extended |
 | `drush pm:install surface_examples_node_type` | One resource serving a create form and an update form through two operations, with storage of its own, and two routes that name the generic operation form rather than a form class. Adds its own permission ([below](#the-node-type-demo-permission)). | `/admin/structure/types/surface-add`, `/admin/structure/types/manage/{type}/surface-edit` |
 | `drush pm:install surface_examples_address` | A contributed field type adopting a resource for its settings without being forked. Needs [Address](#address). | Field UI's settings form for an address field |
-| `drush pm:install surface_tool` | The same resources serving a non-form caller: one derived tool per operation of every resource that names storage and that no plugin uses, `surface:<id>:<operation>`; the field resources, with their settings derived from config schema; the contract panel; and a generated comparison of the field tools against Tool Belt's. Needs [Tool](#tool). | The tools, for an agent, MCP, ECA and Drush |
-| `drush pm:install surface_examples_entity` | A resource derived for every content entity bundle with a form display, one structure per field derived from its typed data, field access as each child's access, and storage that validates the entity; a basic page added and edited through it. Needs `node` and `surface_tool`; see [Content entities](entities.md). | `/surface-entity` |
+| `drush pm:install surface_examples_field` | Core's field instance and field storage settings as resources, `field.instance` and `field.storage`, each field type's settings a variant read from its settings class or its config schema; with [Tool](#tool), the field tools, and a generated comparison of them against Tool Belt's. | The field tools, for an agent, MCP, ECA and Drush |
+| `drush pm:install surface_examples_entity` | A resource derived for every content entity bundle with a form display, one structure per field derived from its typed data, field access as each child's access, and storage that validates the entity; a basic page added and edited through it. Needs `node`; see [Content entities](entities.md). | `/surface-entity` |
 | `drush pm:install surface_examples_node_type_tool` | No code of its own, only the generated comparison between `surface:node.type:create`, the tool derived from the content type resource, and Tool Belt's bundle tool and core's form, once another module has extended content types. Needs Tool. | No page: the recorded comparison and its test, in its README |
 | `drush pm:install surface_examples` | One resource that grows, one idea per example, each example a form beside the contract it emits, then a small resource per later concept; examples 16 and 17 are in submodules of their own. Needs Tool. | `/surface-examples` |
 | `drush pm:install surface_examples_compliance` | Example 4: a compliance structure and the one alter that attaches it to example 3's resource, which does not know it, and nothing else. | `/surface-examples/4` |

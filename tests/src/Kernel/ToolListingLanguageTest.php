@@ -8,8 +8,8 @@ use Drupal\Component\Gettext\PoItem;
 use Drupal\Core\StringTranslation\PluralTranslatableMarkup;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\surface_examples\ExampleCalls;
-use Drupal\surface_tool\OperationInputs;
-use Drupal\surface_tool\PlainTextMarkup;
+use Drupal\surface\Tool\OperationInputs;
+use Drupal\surface\Tool\PlainTextMarkup;
 use Drupal\Tests\surface\Kernel\Fixture\FakeLanguageTranslator;
 use Drupal\tool\Tool\ToolDefinition;
 use Drupal\tool\TypedData\MapInputDefinition;
@@ -49,7 +49,6 @@ class ToolListingLanguageTest extends SurfaceKernelTestBase {
     'serialization',
     'tool',
     'surface',
-    'surface_tool',
     'surface_examples',
   ];
 

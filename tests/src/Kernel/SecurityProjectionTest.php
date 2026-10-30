@@ -19,8 +19,8 @@ use Drupal\surface\Pipeline\PreparedValues;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface_examples_workflow\Alter\FeesWorkflowAlter;
 use Drupal\surface_react\Access\ServedOperationAccessCheck;
-use Drupal\surface_tool\OperationInputs;
-use Drupal\surface_tool\Plugin\tool\Tool\ResourceOperationToolBase;
+use Drupal\surface\Tool\OperationInputs;
+use Drupal\surface\Plugin\tool\Tool\ResourceOperationToolBase;
 use Drupal\surface_tool_test\Storage\VaultStorage;
 use Drupal\field\Entity\FieldConfig;
 use Drupal\field\Entity\FieldStorageConfig;
@@ -71,7 +71,7 @@ class SecurityProjectionTest extends SurfaceKernelTestBase {
     'tool',
     'surface',
     'surface_examples_node_type',
-    'surface_tool',
+    'surface_examples_field',
     'surface_examples',
     'surface_examples_workflow',
     'surface_react',

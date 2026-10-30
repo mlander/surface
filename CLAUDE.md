@@ -134,7 +134,7 @@ the record of the rework that brought the module to the pattern.
   unless the provider is closed (`ClosedSiteListInterface`, a static
   `structures()` naming every structure it may list, its list naming
   values and labels alone), whose variants are written as a class's. A
-  field type's settings are one (`surface_tool`'s
+  field type's settings are one (`surface_examples_field`'s
   `FieldSettingsSchemaVariants`, each read from its config schema), and
   count against the site list limit as any list the site decides. A deciding key whose variants offer one value is
   drawn as that value and stated `const`, its label under
@@ -380,9 +380,10 @@ only when nothing in its context came from the request, else held for
 the request alone (`ResourcesInterface::holdDeclared()`)
 (`docs/decisions.md#a-route-may-fill-or-fix-what-an-operation-asks-for`).
 
-`surface_tool` derives one tool per operation that can be asked
-on its own, `surface:<id>:<operation>`: its resource names storage,
-no plugin uses it, and every `%key` in its permission can be supplied by
+With the `tool` module installed, the module derives one tool per
+operation that can be asked on its own, `surface:<id>:<operation>`
+(the Tool API door, `docs/tools.md`): its resource names storage, no
+plugin uses it, and every `%key` in its permission can be supplied by
 a parameter (`ResourceCatalog::standalone()`). Beside each such
 operation that changes a thing that exists it derives a read tool,
 `surface:<id>:<operation>:read`, taking the parameters and
@@ -437,7 +438,7 @@ setting a fact another alter set on the key is refused at build.
 A child may be a resource with storage of its own, an attached resource
 (the field's storage, `FieldStorageResource`). A provider named by
 `attachVariants(from:)` lists variants for the values no variant class
-declares (`surface_tool` lists a field type's settings, and its
+declares (`surface_examples_field` lists a field type's settings, and its
 storage settings, from its config schema). A child
 whose keys cannot be listed at all is a `#[RefinesInput]` method on an
 `any` key returning a map. A structure reads a value of its container
@@ -455,7 +456,7 @@ Keys one resource asks per thing the site has (a checkbox per form) are
 `addEach()` or `attachEach()` with a provider, not a deriver
 (`docs/decisions.md#keys-that-come-from-the-site`); the derived tools are
 cleared when a tag any of them was built with is invalidated
-(`surface_tool`'s `ToolDefinitionsInvalidator`).
+(`Tool\ToolDefinitionsInvalidator`).
 
 A resource or structure whose keys are the site's rather than the
 code's (one per bundle, one per field) is derived: a class in `src/Resource/` or `src/Structure/`
@@ -636,8 +637,9 @@ The emitter is the walk both documents share; `Contract\PropertySchema`,
 `Contract\Conditionals` and `Contract\DocumentHead` write what it asks
 for (`docs/decisions.md#the-emitter-is-one-walk-and-three-writers`).
 It names no widget unless asked
-(`emit(..., widgets: TRUE)`); `surface_tool`'s contract panel shows
-it without, beside what the Tool API can advertise (which flattens
+(`emit(..., widgets: TRUE)`); the contract panel (`Form\ContractPanel`)
+shows it without, beside what the Tool API can advertise where the tool
+module is installed (which flattens
 variants, and is what `tool:info` prints). `modules/surface_react`
 serves it with the widget hints, through the main module's service, on
 an API where the path is the resource and the method the operation
@@ -746,7 +748,7 @@ so the rule is this sentence. `npm test` is not part of
   (`docs/declaring-a-resource.md#the-class`); the generator writes it.
 - Iteration order is load-bearing: the definition map is in declaration
   order, and `FieldToolsComparisonTest`'s drift assertion is the tripwire.
-- `modules/surface_tool/COMPARISON.md` and
+- `modules/surface_examples_field/COMPARISON.md` and
   `modules/surface_examples_node_type_tool/COMPARISON.md` are generated
   by `scripts/generate-comparison.php`, `docs/catalog.md` by
   `scripts/generate-catalog.php` (the markdown of `drush surface:catalog`
@@ -813,10 +815,18 @@ src/Contract/            The served contract's emitter (JSON Schema): ContractEm
 src/Drush/               Drush commands (the site's catalog, the contract diff, the
                          config schema) and the resource generator, drush
                          generate surface:resource.
-src/Form/                Form builder, host traits, the operation form.
+src/Form/                Form builder, host traits, the operation form
+                         and its contract panel (ContractPanel.php).
                          The form builder is SurfaceFormBuilder.php,
                          the service and its Form API callbacks, over
                          Drawing.php, Extracting.php and Refreshing.php.
+src/Tool/                The Tool API door: what a tool takes and answers
+                         (OperationInputs, InputDefinitions), its catalog
+                         doors and the invalidator, registered by
+                         SurfaceServiceProvider only with the tool module.
+src/Plugin/tool/ src/Plugin/Derivative/
+                         The tool plugins and their deriver, found only by
+                         the tool module's plugin manager.
 src/Widget/ src/Plugin/  Definition to form element; resolvers, hosts, constraints.
 src/Options/             Option sets, the resolver plugin base and manager.
 src/Variants/            Variants from the site: ComponentProps and ComponentSlots.

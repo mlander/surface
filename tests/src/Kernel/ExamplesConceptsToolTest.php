@@ -44,7 +44,6 @@ class ExamplesConceptsToolTest extends SurfaceKernelTestBase {
     'serialization',
     'tool',
     'surface',
-    'surface_tool',
     'surface_examples',
     'surface_examples_workflow',
     'block',

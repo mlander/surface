@@ -20,7 +20,7 @@ Four pieces:
   also the field instance resource's `settings` variant for the address
   field type, by
   `#[Variant(of: FieldInstanceResource::class, at: 'settings', for: 'address')]`,
-  so the tool bridge's field resource never names it.
+  so `surface_examples_field`'s field resource never names it.
 - `SurfaceAddressItem`: the Field UI host. It names that resource with
   `#[UsesStructure]`, which the field type trait reads from the field
   type's definition to build it, and supplies the storage bound to the
@@ -79,6 +79,6 @@ before and after are one uninstall apart:
 
 `Kernel\AddressFieldResourceTest` covers the resource, the layout transform
 in both directions, and the settings round trip. The same resource is what
-`surface_tool`'s tools describe, so
+`surface_examples_field`'s tools describe, so
 `Kernel\FieldToolsTest` and `Kernel\FieldToolsComparisonTest` exercise it
 from a non-form caller.

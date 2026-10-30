@@ -8,7 +8,7 @@ use Drupal\Tests\surface\Traits\ServedControllerTrait;
 use Drupal\Component\Render\PlainTextOutput;
 use Drupal\surface\Pipeline\ResultDocument;
 use Drupal\surface\Pipeline\Violation;
-use Drupal\surface_tool\OperationInputs;
+use Drupal\surface\Tool\OperationInputs;
 use Drupal\surface_tool_test\Storage\CabinetStorage;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use Drupal\tool\ExecutableResult;
@@ -46,7 +46,6 @@ class ToolResultShapeTest extends SurfaceKernelTestBase {
     'serialization',
     'tool',
     'surface',
-    'surface_tool',
     'surface_react',
     'surface_tool_test',
     'surface_examples',

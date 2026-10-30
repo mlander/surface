@@ -15,7 +15,7 @@ The form is at `/admin/config/development/surface-performance`, behind
 core's "administer site configuration" permission. The module adds no
 permission of its own.
 
-With `surface_tool` enabled, the resource is also the tool
+With the `tool` module installed, the resource is also the tool
 `surface:system.performance:configure`, with its read tool:
 
 ```bash

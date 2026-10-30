@@ -11,7 +11,7 @@ drush pm:install surface_examples_block
 ```
 
 It needs `block` and nothing contributed. The tools need
-`surface_tool`, the HTTP door `surface_react`.
+the `tool` module, the HTTP door `surface_react`.
 
 ## What it shows
 
@@ -74,7 +74,7 @@ plugin is chosen
 
 | Door | Where |
 | --- | --- |
-| Tools | `surface:block.placement:create` (`values`, `dry_run`), `:update` (`id`, `values`, `dry_run`), `:update:read` (`id`), `:delete` (`id`, `dry_run`), with `surface_tool`; and `:create:schema` and `:update:schema`, since a plugin's settings are variants the site lists, which a tool's listing never spells out ([the narrowing tool](../surface_tool/README.md#the-narrowing-tool)) |
+| Tools | `surface:block.placement:create` (`values`, `dry_run`), `:update` (`id`, `values`, `dry_run`), `:update:read` (`id`), `:delete` (`id`, `dry_run`), with the `tool` module; and `:create:schema` and `:update:schema`, since a plugin's settings are variants the site lists, which a tool's listing never spells out ([the narrowing tool](../../docs/tools.md#the-narrowing-tool)) |
 | HTTP | `POST /surface-api/block.placement` (201, `Location`), `GET` and `PATCH /surface-api/block.placement/{id}`, `DELETE /surface-api/block.placement/{id}`, with `surface_react` |
 | Forms | `/admin/structure/block/surface/add`, `/admin/structure/block/surface/{id}`, and `/admin/structure/block/surface/{id}/delete`, a confirmation |
 | React | `/surface-react/block.placement/create`, `/surface-react/block.placement/update?id={id}` |

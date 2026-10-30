@@ -40,7 +40,6 @@ class PlainTextDocumentsTest extends SurfaceKernelTestBase {
     'serialization',
     'tool',
     'surface',
-    'surface_tool',
     'surface_test',
   ];
 
@@ -101,7 +100,7 @@ class PlainTextDocumentsTest extends SurfaceKernelTestBase {
    * Tests the tool listing carries the text, the appended sentence too.
    */
   public function testTheToolListingCarriesPlainText(): void {
-    $inputs = $this->container->get('surface_tool.input_definitions');
+    $inputs = $this->container->get('surface.input_definitions');
     $map = $inputs->withDependencies($inputs->fromSurface($this->surface(), 'Audit', ''), $this->surface());
     $this->assertSame('Double quotation marks (")', (string) $map->getPropertyDefinition('scope')->getLabel());
     $this->assertSame("Enable it for every form.\nPage caching is disabled.", (string) $map->getPropertyDefinition('protect')->getDescription());

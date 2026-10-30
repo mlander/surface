@@ -18,7 +18,7 @@ use Drupal\surface_gate_test\Resource\GatedNoteResource;
 use Drupal\surface_gate_test\Resource\GatedRelayResource;
 use Drupal\surface_gate_test\Storage\GateBatchStorage;
 use Drupal\surface_gate_test\Storage\GateNoteStorage;
-use Drupal\surface_tool\OperationInputs;
+use Drupal\surface\Tool\OperationInputs;
 use Drupal\node\Entity\Node;
 use Drupal\node\Entity\NodeType;
 use Drupal\node\NodeInterface;
@@ -59,7 +59,6 @@ class GatesTest extends SurfaceKernelTestBase {
     'serialization',
     'tool',
     'surface',
-    'surface_tool',
     'surface_gate_test',
   ];
 

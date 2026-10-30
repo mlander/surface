@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\surface\Kernel;
 
-use Drupal\surface_tool\OperationInputs;
+use Drupal\surface\Tool\OperationInputs;
 use Drupal\field\Entity\FieldStorageConfig;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use Drupal\tool\Tool\ToolManager;
@@ -21,8 +21,8 @@ use PHPUnit\Framework\Attributes\Group;
  * schema; surface:field.instance:reuse, the tool derived from the
  * field instance resource's reuse operation, from the field type's
  * settings resource, the field instance's settings variant for it. The
- * two answers are put side by side in the surface_tool module's
- * COMPARISON.md.
+ * two answers are put side by side in the surface_examples_field
+ * module's COMPARISON.md.
  * That file is written by scripts/generate-comparison.php; the last test
  * here asserts on every ordinary run that it still says what the
  * generator would say.
@@ -53,7 +53,7 @@ class FieldToolsComparisonTest extends SurfaceKernelTestBase {
     'tool_belt_entity',
     'surface',
     'surface_examples_address',
-    'surface_tool',
+    'surface_examples_field',
   ];
 
   /**
@@ -294,7 +294,7 @@ class FieldToolsComparisonTest extends SurfaceKernelTestBase {
     $this->assertNotSame($surface, $belt);
 
     $document = \SurfaceComparisonDocument::render($surface, $belt);
-    $path = dirname(__DIR__, 3) . '/modules/surface_tool/COMPARISON.md';
+    $path = dirname(__DIR__, 3) . '/modules/surface_examples_field/COMPARISON.md';
     if (getenv(\SurfaceComparisonDocument::WRITE_VARIABLE) === '1') {
       file_put_contents($path, $document);
     }
@@ -303,7 +303,7 @@ class FieldToolsComparisonTest extends SurfaceKernelTestBase {
     $this->assertSame(
       \SurfaceComparisonDocument::normalize($document),
       \SurfaceComparisonDocument::normalize((string) file_get_contents($path)),
-      'modules/surface_tool/COMPARISON.md is out of date. Regenerate it with scripts/generate-comparison.php.',
+      'modules/surface_examples_field/COMPARISON.md is out of date. Regenerate it with scripts/generate-comparison.php.',
     );
   }
 

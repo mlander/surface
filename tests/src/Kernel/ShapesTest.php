@@ -34,7 +34,7 @@ use Drupal\surface_resource_test\Structure\Broken\MountedShapeStructure;
 use Drupal\surface_resource_test\Structure\Broken\WideningShapeStructure;
 use Drupal\surface_resource_test\Structure\Broken\WiresShapePortStructure;
 use Drupal\surface_resource_test\Structure\Depot\ShelfTagStructure;
-use Drupal\surface_tool\OperationInputs;
+use Drupal\surface\Tool\OperationInputs;
 use Drupal\Tests\surface\Traits\ContractValidationTrait;
 use Drupal\Tests\surface\Traits\StaticRefinerAgreementTrait;
 use Drupal\Tests\user\Traits\UserCreationTrait;
@@ -72,7 +72,6 @@ class ShapesTest extends SurfaceKernelTestBase {
     'serialization',
     'tool',
     'surface',
-    'surface_tool',
     'surface_resource_test',
   ];
 

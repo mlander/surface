@@ -1,0 +1,8 @@
+services:
+  # The field instance resource's and the field storage resource's
+  # settings variants, one per UI field type, read from its config schema:
+  # providers their attachVariants(from:) names.
+  Drupal\surface_examples_field\FieldSettingsSchemaVariants:
+    arguments: ['@plugin.manager.field.field_type', '@surface.config_schema_document']
+  Drupal\surface_examples_field\FieldStorageSettingsSchemaVariants:
+    arguments: ['@plugin.manager.field.field_type', '@surface.config_schema_document']

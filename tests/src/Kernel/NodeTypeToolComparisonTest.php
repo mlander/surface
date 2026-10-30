@@ -13,9 +13,9 @@ use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\surface\Form\SurfaceOperationForm;
 use Drupal\surface_examples_extras\NodeTypeReviewSettings;
 use Drupal\surface_examples_node_type\Resource\NodeTypeResource;
-use Drupal\surface_tool\Plugin\Derivative\ResourceOperationToolDeriver;
-use Drupal\surface_tool\Plugin\tool\Tool\ResourceOperationTool;
-use Drupal\surface_tool\OperationInputs;
+use Drupal\surface\Plugin\Derivative\ResourceOperationToolDeriver;
+use Drupal\surface\Plugin\tool\Tool\ResourceOperationTool;
+use Drupal\surface\Tool\OperationInputs;
 use Drupal\node\Entity\NodeType;
 use Drupal\node\NodePreviewMode;
 use Drupal\Tests\user\Traits\UserCreationTrait;
@@ -89,7 +89,6 @@ class NodeTypeToolComparisonTest extends SurfaceKernelTestBase {
     'surface_examples_plugins',
     'surface_examples_extras',
     'surface_examples_node_type',
-    'surface_tool',
     'surface_examples_node_type_tool',
   ];
 

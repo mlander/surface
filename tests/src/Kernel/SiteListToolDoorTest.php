@@ -10,7 +10,7 @@ use Drupal\surface\ResourceBuild\Resources;
 use Drupal\surface_resource_test\Resource\Poster\PosterResource;
 use Drupal\surface_resource_test\Storage\PosterStorage;
 use Drupal\surface_resource_test\Variants\PosterLayouts;
-use Drupal\surface_tool\OperationInputs;
+use Drupal\surface\Tool\OperationInputs;
 use Drupal\Tests\surface\Traits\ServedControllerTrait;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use Drupal\tool\TypedData\InputDefinitionInterface;
@@ -47,7 +47,6 @@ class SiteListToolDoorTest extends SurfaceKernelTestBase {
     'serialization',
     'tool',
     'surface',
-    'surface_tool',
     'surface_react',
     'surface_resource_test',
   ];

@@ -44,7 +44,7 @@ your kernel tests. The base class is found the way core's test base
 classes are: every module's `tests/src` is autoloaded under
 `Drupal\Tests\<module>\` when tests run, so `surface` only has to
 be on the site, as it is for your module to work at all. It installs
-`surface`, `surface_tool` and `surface_react` (the tool
+`surface`, `tool` and `surface_react` (the tool
 and HTTP doors it compares), which need the [Tool](installation.md#tool)
 module; `$modules` adds yours. The class attributes go on your class:
 core reads none from an abstract one.

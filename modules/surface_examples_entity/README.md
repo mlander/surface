@@ -39,7 +39,7 @@ drush pm:install surface_examples_entity
 | `/surface-entity/node/{id}/edit` | Edit one |
 | `/surface-react/entity.content:node.page/create` | The same, as the React app, with `surface_react` |
 
-With `surface_tool` enabled, every bundle's resource is three tools:
+With the `tool` module installed, every bundle's resource is three tools:
 
 ```bash
 drush tool:info surface:entity.content:node.page:create
@@ -50,5 +50,5 @@ drush tool:run surface:entity.content:node.page:update:read --uid=1 --input=id=1
 
 ## Requirements
 
-`node` and `surface_tool`, whose contract panel the two routes
-show. Experimental, like every submodule.
+`node`. The two routes show the base module's contract panel, with
+the tool's schema where the `tool` module is installed. Experimental, like every submodule.

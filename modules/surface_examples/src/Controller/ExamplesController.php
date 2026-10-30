@@ -528,7 +528,7 @@ final class ExamplesController extends ControllerBase {
         '#open' => TRUE,
         '#title' => $this->t('What this example shows'),
         '#attributes' => ['class' => ['surface-contract-panel', 'surface-concept-panel']],
-        '#attached' => ['library' => ['surface_tool/contract_panel']],
+        '#attached' => ['library' => ['surface/contract_panel']],
         'what' => ['#markup' => '<p>' . $this->conceptPanel->paragraph('event.venue') . '</p>'],
         'docs' => [
           '#theme' => 'item_list',

@@ -13,7 +13,7 @@ use Drupal\surface\Resource\Attribute\Variant;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\ResourceInterface;
 use Drupal\surface_examples_address\Storage\AddressFieldSettingsStorage;
-use Drupal\surface_tool\Resource\FieldInstanceResource;
+use Drupal\surface_examples_field\Resource\FieldInstanceResource;
 
 /**
  * Settings only an address field has: the address field's settings variant.
@@ -32,7 +32,7 @@ use Drupal\surface_tool\Resource\FieldInstanceResource;
  * field instance resource's settings variants, which any module may add
  * to, so the field resource never names this class. The reference to
  * FieldInstanceResource is a class name and nothing more: on a site
- * without the tool bridge it does not load, discovery skips the variant,
+ * without surface_examples_field it does not load, discovery skips the variant,
  * and the field type's own host still builds this resource for Field UI.
  *
  * The live lists are named as constraints, Country and LanguageExists,

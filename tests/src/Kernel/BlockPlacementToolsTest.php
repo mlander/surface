@@ -6,7 +6,7 @@ namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\block\Entity\Block;
 use Drupal\surface\Pipeline\Violation;
-use Drupal\surface_tool\OperationInputs;
+use Drupal\surface\Tool\OperationInputs;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use Drupal\tool\Tool\ToolOperation;
 use PHPUnit\Framework\Attributes\Group;
@@ -41,7 +41,6 @@ class BlockPlacementToolsTest extends SurfaceKernelTestBase {
     'serialization',
     'tool',
     'surface',
-    'surface_tool',
     'surface_examples',
     'surface_examples_component_block',
     'surface_examples_block',

@@ -196,7 +196,7 @@ inputs get. What is lost, on top of the two the inputs already lose
 - **The `NotEmitted` marker itself**, which is a PHP marker and not a
   value. The statement it makes survives as `required`.
 
-The tools `surface_tool` derives from operations answer with the
+The tools the tool door derives from operations answer with the
 accepted `values`, as the read tool would answer them, `committed`, and
 the resource's own outputs converted here. A resource's outputs are
 what its storage's `load()` hands back once the values are committed; a

@@ -19,8 +19,9 @@ names storage and is no plugin's configuration, and every `%key`
 placeholder in its permission can be supplied by one of its parameters.
 Such an operation reaches the doors the installed modules open: a form
 route a module declares, the HTTP path and the React page
-(`surface_react`), the tool `surface:<id>:<operation>`
-(`surface_tool`) and the OpenAPI operation (`surface_openapi`).
+(`surface_react`), the tool `surface:<id>:<operation>` (the base
+module, with `tool` installed) and the OpenAPI operation
+(`surface_openapi`).
 One that changes a thing that exists, neither creating nor read only, is
 "read on its own" too, a read tool, `surface:<id>:<operation>:read`.
 A structure a plugin uses is configured through the plugin's host. Every
@@ -398,18 +399,18 @@ Refused. `docs/resources.md` says how each part works.
 
 ## field.instance
 
-`Drupal\surface_tool\Resource\FieldInstanceResource`, in `surface_tool`.
+`Drupal\surface_examples_field\Resource\FieldInstanceResource`, in `surface_examples_field`.
 
 - Kind: resource
 - Identity: `entity_type`, `bundle`, `field_name`, `field_type`
-- Storage: `Drupal\surface_tool\Storage\FieldInstanceStorage`
-- Access: `Drupal\surface_tool\Access\FieldInstanceAccess`
+- Storage: `Drupal\surface_examples_field\Storage\FieldInstanceStorage`
+- Access: `Drupal\surface_examples_field\Access\FieldInstanceAccess`
 
 | Operation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `create` | Add a field to a bundle | `string $entity_type`, `string $bundle` | yes | `administer %entity_type fields` | yes | no: it creates | `FieldInstanceResource::create()` (`surface_tool`) |
-| `reuse` | Add an existing field to another bundle | `string $entity_type`, `string $bundle`, `string $field_name` | yes | `administer %entity_type fields` | yes | no: it creates | `FieldInstanceResource::reuse()` (`surface_tool`) |
-| `update` | Edit a field | `string $entity_type`, `string $bundle`, `string $field_name` | no | `administer %entity_type fields` | yes | yes | `FieldInstanceResource::update()` (`surface_tool`) |
+| `create` | Add a field to a bundle | `string $entity_type`, `string $bundle` | yes | `administer %entity_type fields` | yes | no: it creates | `FieldInstanceResource::create()` (`surface_examples_field`) |
+| `reuse` | Add an existing field to another bundle | `string $entity_type`, `string $bundle`, `string $field_name` | yes | `administer %entity_type fields` | yes | no: it creates | `FieldInstanceResource::reuse()` (`surface_examples_field`) |
+| `update` | Edit a field | `string $entity_type`, `string $bundle`, `string $field_name` | no | `administer %entity_type fields` | yes | yes | `FieldInstanceResource::update()` (`surface_examples_field`) |
 
 - `create` reaches http `POST /surface-api/field.instance/{entity_type}/{bundle}`, tool `surface:field.instance:create`, schema tool `surface:field.instance:create:schema`, openapi `field.instance:create:write`, react `/surface-react/field.instance/create`.
 - `reuse` reaches http `POST /surface-api/field.instance/{entity_type}/{bundle}/{field_name}:reuse`, tool `surface:field.instance:reuse`, schema tool `surface:field.instance:reuse:schema`, openapi `field.instance:reuse:write`, react `/surface-react/field.instance/reuse`.
@@ -429,17 +430,17 @@ Refused. `docs/resources.md` says how each part works.
 
 ## field.storage
 
-`Drupal\surface_tool\Resource\FieldStorageResource`, in `surface_tool`.
+`Drupal\surface_examples_field\Resource\FieldStorageResource`, in `surface_examples_field`.
 
 - Kind: resource
 - Identity: `entity_type`, `field_name`, `field_type`
-- Storage: `Drupal\surface_tool\Storage\FieldStorageStorage`
+- Storage: `Drupal\surface_examples_field\Storage\FieldStorageStorage`
 - Access: the operation's permission alone
 
 | Operation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `create` | New field storage | nothing | yes | `administer %entity_type fields` | no: nothing supplies `%entity_type` | no: not on its own | `FieldStorageResource::create()` (`surface_tool`) |
-| `update` | Edit a field storage | `string $entity_type`, `string $field_name` | no | `administer %entity_type fields` | yes | yes | `FieldStorageResource::update()` (`surface_tool`) |
+| `create` | New field storage | nothing | yes | `administer %entity_type fields` | no: nothing supplies `%entity_type` | no: not on its own | `FieldStorageResource::create()` (`surface_examples_field`) |
+| `update` | Edit a field storage | `string $entity_type`, `string $field_name` | no | `administer %entity_type fields` | yes | yes | `FieldStorageResource::update()` (`surface_examples_field`) |
 
 - `update` reaches http `PATCH /surface-api/field.storage/{entity_type}/{field_name}`, tool `surface:field.storage:update`, read tool `surface:field.storage:update:read`, schema tool `surface:field.storage:update:schema`, openapi `field.storage:update:write`, react `/surface-react/field.storage/update`.
 
@@ -639,8 +640,8 @@ operation here read, grouped by where they are read and counted;
 | `component.slots` | 4 | `surface_examples` |
 | `event.spotlight.props` | 4 | `surface_examples` |
 | `event.spotlight.slots` | 4 | `surface_examples` |
-| `field.instance.settings` | 21 | `surface_tool` |
-| `field.storage.settings` | 22 | `surface_tool` |
+| `field.instance.settings` | 21 | `surface_examples_field` |
+| `field.storage.settings` | 22 | `surface_examples_field` |
 
 ## Refused
 

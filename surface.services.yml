@@ -26,6 +26,13 @@ services:
     class: Drupal\surface\Form\SurfaceFormBuilder
     arguments: ['@plugin.manager.surface_widget', '@surface.pipeline', '@element_info', '@messenger', '@surface.options', '@module_handler', '@string_translation']
   Drupal\surface\Form\SurfaceFormBuilderInterface: '@surface.form_builder'
+  # A read-only panel an operation route can name in _surface_panel:
+  # the contract the form's data surface emits, rebuilt with the form, and
+  # what the derived tool can advertise of it where the tool module is
+  # installed (the two optional arguments).
+  surface.contract_panel:
+    class: Drupal\surface\Form\ContractPanel
+    arguments: ['@surface.resource_registry', '@surface.options', '@surface.contract_emitter', '@?plugin.manager.tool', '@?tool.definition_serializer', '@string_translation', '@surface.resources']
   logger.channel.surface:
     parent: logger.channel_base
     arguments: ['surface']

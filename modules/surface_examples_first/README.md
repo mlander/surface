@@ -16,7 +16,7 @@ drush pm:install surface_examples_first
 ```
 
 Both pages ask for "administer surface_examples_first". With
-`surface_tool` enabled, each resource is also the tools
+the `tool` module installed, each resource is also the tools
 `surface:first.newsletter:configure` and
 `surface:first.store:configure`, each with its read tool.
 

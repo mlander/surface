@@ -7,10 +7,10 @@ namespace Drupal\Tests\surface\Kernel;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\ResourceBuild\OperationDefinition;
-use Drupal\surface_tool\OperationInputs;
-use Drupal\surface_tool\Plugin\Derivative\ResourceOperationToolDeriver;
-use Drupal\surface_tool\Plugin\tool\Tool\ResourceOperationReadTool;
-use Drupal\surface_tool\Plugin\tool\Tool\ResourceOperationSchemaTool;
+use Drupal\surface\Tool\OperationInputs;
+use Drupal\surface\Plugin\Derivative\ResourceOperationToolDeriver;
+use Drupal\surface\Plugin\tool\Tool\ResourceOperationReadTool;
+use Drupal\surface\Plugin\tool\Tool\ResourceOperationSchemaTool;
 use Drupal\surface_tool_test\Resource\VaultResource;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use Drupal\tool\TypedData\MapInputDefinition;
@@ -66,7 +66,7 @@ class OperationKindsTest extends SurfaceKernelTestBase {
     'serialization',
     'tool',
     'surface',
-    'surface_tool',
+    'surface_examples_field',
     'surface_examples',
     'surface_examples_compliance',
     'surface_examples_first',
@@ -90,7 +90,7 @@ class OperationKindsTest extends SurfaceKernelTestBase {
     $manager = $this->container->get('plugin.manager.tool');
     $registry = $this->container->get('surface.resource_registry');
     $resources = $this->container->get('surface.resources');
-    $operation_inputs = $this->container->get('surface_tool.operation_inputs');
+    $operation_inputs = $this->container->get('surface.operation_inputs');
     $prefix = OperationInputs::TOOL . ':';
     $kinds = [];
     foreach ($manager->getDefinitions() as $id => $definition) {

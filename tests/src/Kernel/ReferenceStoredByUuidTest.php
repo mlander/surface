@@ -8,7 +8,7 @@ use Drupal\surface\Reference\ReferenceStorageLayout;
 use Drupal\surface_examples_references\Resource\SponsorshipResource;
 use Drupal\surface_examples_references\Sponsorship;
 use Drupal\surface_examples_references\Storage\SponsorshipStorage;
-use Drupal\surface_tool\OperationInputs;
+use Drupal\surface\Tool\OperationInputs;
 use Drupal\node\Entity\Node;
 use Drupal\node\Entity\NodeType;
 use Drupal\user\Entity\Role;
@@ -51,7 +51,6 @@ class ReferenceStoredByUuidTest extends SurfaceKernelTestBase {
     'serialization',
     'tool',
     'surface',
-    'surface_tool',
     'surface_react',
     'surface_examples',
     'surface_examples_references',

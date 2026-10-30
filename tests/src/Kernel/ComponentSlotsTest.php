@@ -43,7 +43,6 @@ class ComponentSlotsTest extends SurfaceKernelTestBase {
     'serialization',
     'tool',
     'surface',
-    'surface_tool',
     'surface_examples',
     'surface_examples_component_block',
     'surface_component_test',

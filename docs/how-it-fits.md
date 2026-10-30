@@ -248,8 +248,9 @@ blueprint alone, with no alter and no context.
 
 ## Tools, derived
 
-`surface_tool` derives one tool per operation that can be asked
-on its own (`ResourceCatalog::standalone()`: the resource names
+With the `tool` module installed, the module derives one tool per
+operation that can be asked on its own
+(`ResourceCatalog::standalone()`: the resource names
 storage, no plugin uses it, and every `%key` in its permission can be
 supplied by a parameter). `ResourceOperationToolDeriver` writes each
 definition from the static layer: `OperationInputs` turns the

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\surface\ResourceBuild\Resources;
-use Drupal\surface_tool\Plugin\Derivative\ResourceOperationToolDeriver;
+use Drupal\surface\Plugin\Derivative\ResourceOperationToolDeriver;
 use Drupal\field\Entity\FieldConfig;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;

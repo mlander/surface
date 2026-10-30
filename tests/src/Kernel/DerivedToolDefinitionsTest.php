@@ -58,7 +58,7 @@ class DerivedToolDefinitionsTest extends SurfaceKernelTestBase {
     'surface_examples_extras',
     'surface_examples_node_type',
     'surface_resource_test',
-    'surface_tool',
+    'surface_examples_field',
   ];
 
   /**

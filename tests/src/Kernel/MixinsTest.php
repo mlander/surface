@@ -24,7 +24,7 @@ use Drupal\surface_resource_test\Structure\Broken\MixinWiresMemberStructure;
 use Drupal\surface_resource_test\Structure\Broken\MixinWithChildStructure;
 use Drupal\surface_resource_test\Structure\Broken\TwoMixinsClashStructure;
 use Drupal\surface_resource_test\Structure\Mixin\EntryStructure;
-use Drupal\surface_tool\OperationInputs;
+use Drupal\surface\Tool\OperationInputs;
 use Drupal\Tests\surface\Traits\ContractValidationTrait;
 use Drupal\Tests\surface\Traits\StaticRefinerAgreementTrait;
 use Drupal\Tests\user\Traits\UserCreationTrait;
@@ -63,7 +63,6 @@ class MixinsTest extends SurfaceKernelTestBase {
     'serialization',
     'tool',
     'surface',
-    'surface_tool',
     'surface_resource_test',
   ];
 

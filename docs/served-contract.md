@@ -41,7 +41,7 @@ JSON Schema cannot say them. This one can.
 
 ## Where to see it
 
-- **Under an operation form.** `surface_tool`'s contract panel,
+- **Under an operation form.** The contract panel,
   which the examples show under each form, shows it collapsed as "The
   schema for these answers", emitted for the operation and the form's
   values as they stand, so it rebuilds with the form. Beside it, "The

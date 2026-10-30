@@ -996,13 +996,15 @@ describes the built resource as the answers stand changes when they
 do. Extraction reads only the data surface's own keys, so nothing in a panel is
 ever taken for a value.
 
-`surface_tool.contract_panel` (`ContractPanel`) is the one
-this repository ships: every key with its type, label, requiredness,
+`surface.contract_panel` (`ContractPanel`) is the one
+the module ships: every key with its type, label, requiredness,
 default, what it allows in words, what it depends on and whether it is
 narrowed right now, children and mounted keys included; and, collapsed,
 the contract as JSON Schema from `surface.contract_emitter`
-([The served contract](served-contract.md)), then what the derived tool
-for the same operation can advertise through the Tool API.
+([The served contract](served-contract.md)), the full schema for any
+answers, then, where the tool module is installed, what the derived
+tool for the same operation can advertise through the Tool API
+([The Tool API door](tools.md#the-contract-panel)).
 
 A route names one panel. Two are one panel that composes them: the
 examples' routes name `surface_examples.panels` (`ExamplePanels`),

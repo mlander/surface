@@ -16,8 +16,8 @@ use Drupal\surface_resource_test\Keys\WorkshopBenches;
 use Drupal\surface_resource_test\Resource\Poster\PosterResource;
 use Drupal\surface_resource_test\Resource\Workshop\WorkshopResource;
 use Drupal\surface_resource_test\Variants\PosterLayouts;
-use Drupal\surface_tool\OperationInputs;
-use Drupal\surface_tool\Plugin\tool\Tool\ResourceOperationSchemaTool;
+use Drupal\surface\Tool\OperationInputs;
+use Drupal\surface\Plugin\tool\Tool\ResourceOperationSchemaTool;
 use Drupal\Tests\surface\Traits\ContractValidationTrait;
 use Drupal\Tests\surface\Traits\SchemaRoundTripTrait;
 use Drupal\Tests\surface\Traits\ServedControllerTrait;
@@ -73,7 +73,6 @@ class SiteListBudgetTest extends SurfaceKernelTestBase {
     'serialization',
     'tool',
     'surface',
-    'surface_tool',
     'surface_react',
     'surface_resource_test',
   ];

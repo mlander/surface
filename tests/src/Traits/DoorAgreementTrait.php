@@ -17,7 +17,7 @@ use Drupal\surface\ResourceBuild\OperationDefinition;
 use Drupal\surface\ResourceBuild\OperationRoute;
 use Drupal\surface\ResourceBuild\ResourceCatalog;
 use Drupal\surface\ResourceBuild\ResourceDefinition;
-use Drupal\surface_tool\OperationInputs;
+use Drupal\surface\Tool\OperationInputs;
 use Drupal\Tests\surface\Kernel\Fixture\DoorAgreementForm;
 use Drupal\tool\Tool\ToolInterface;
 use Symfony\Component\HttpFoundation\InputBag;

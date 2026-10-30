@@ -11,7 +11,7 @@ use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\ResourceBuild\StorageAdapter;
 use Drupal\surface\ResourceBuild\ResourcesInterface;
 use Drupal\surface_examples_entity\Storage\ContentEntityStorage;
-use Drupal\surface_tool\OperationInputs;
+use Drupal\surface\Tool\OperationInputs;
 use Drupal\node\Entity\Node;
 use Drupal\node\NodeInterface;
 use Drupal\Tests\user\Traits\UserCreationTrait;

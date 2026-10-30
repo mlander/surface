@@ -41,7 +41,7 @@ operation's `$type`. The resource declares which keys sit in which of
 its three groups (`Arrangement`), so every door draws them alike. What
 is left of a form here is `NodeTypeResourceFormCosmetics`: core's
 vertical tabs borrowed to hold those groups, the message and the
-redirect, which is the part that should stay bespoke. With `surface_tool` enabled, both
+redirect, which is the part that should stay bespoke. With the `tool` module installed, both
 operations are tools, `surface:node.type:create` and
 `surface:node.type:update`, generated from the resource.
 

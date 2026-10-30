@@ -43,7 +43,6 @@ class RefusalMessagesTest extends SurfaceKernelTestBase {
     'serialization',
     'tool',
     'surface',
-    'surface_tool',
     'surface_examples_first',
   ];
 
@@ -98,7 +97,7 @@ class RefusalMessagesTest extends SurfaceKernelTestBase {
    * API validates it before the pipeline runs, through core's translator.
    */
   public function testTheToolsOwnCheckFillsThemIn(): void {
-    $map = $this->container->get('surface_tool.input_definitions')->fromSurface($this->cappedSurface(), 'Capped', '');
+    $map = $this->container->get('surface.input_definitions')->fromSurface($this->cappedSurface(), 'Capped', '');
     $constraints = $map->getPropertyDefinition('max_recipients')->getConstraints();
     $this->assertSame('At most %max recipients per send until a legal notice is written.', $constraints['Range']['notInRangeMessage']);
 
@@ -117,7 +116,7 @@ class RefusalMessagesTest extends SurfaceKernelTestBase {
     $surface = new Surface(DefinitionMap::fromArrays(definitions: [
       'name' => DataDefinition::create('string')->setLabel('Name')->addConstraint('NotNull'),
     ]));
-    $map = $this->container->get('surface_tool.input_definitions')->fromSurface($surface, 'Named', '');
+    $map = $this->container->get('surface.input_definitions')->fromSurface($surface, 'Named', '');
     $constraints = $map->getPropertyDefinition('name')->getConstraints();
     $this->assertArrayHasKey('NotNull', $constraints);
     $this->assertNull($constraints['NotNull']);

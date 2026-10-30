@@ -35,7 +35,6 @@ class CatalogCommandTest extends SurfaceKernelTestBase {
     'serialization',
     'tool',
     'surface',
-    'surface_tool',
     'surface_react',
     'surface_examples_first',
     'surface_resource_test',

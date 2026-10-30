@@ -20,6 +20,6 @@
     },
     "suggest": {
         "drupal/address": "Enables the surface_examples_address submodule, which describes the address field type's instance settings as a surface.",
-        "drupal/tool": "Enables the surface_tool submodule, which offers field instance settings to Tool API callers as a described input."
+        "drupal/tool": "Opens the Tool API door: one tool per operation, a read tool and a narrowing tool beside it, for agents, MCP, ECA and Drush."
     }
 }

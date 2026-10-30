@@ -15,7 +15,7 @@ use Drupal\surface\Pipeline\SurfaceResult;
 use Drupal\surface\Widget\SurfaceWidgetBase;
 use Drupal\surface_examples\Resource\RegistrationStep2Resource;
 use Drupal\surface_examples\Resource\RegistrationStep3Resource;
-use Drupal\surface_tool\OperationInputs;
+use Drupal\surface\Tool\OperationInputs;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -52,7 +52,6 @@ class FullSubmitTest extends SurfaceKernelTestBase {
     'serialization',
     'tool',
     'surface',
-    'surface_tool',
     'surface_examples',
   ];
 

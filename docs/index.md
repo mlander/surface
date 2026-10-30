@@ -97,11 +97,12 @@ install; read it first.
 - [Value semantics](semantics.md): configured or not, the coercion
   table (the Tool API's), secrets, stale values, type mismatches,
   required, locked keys.
-- [The Tool API bridge](https://github.com/mlander/surface/blob/main/modules/surface_tool/README.md): one
-  tool per operation and a read tool beside it, who may run them, the
-  contract panel, and what MCP and the Tool API are told. Enabling it:
+- [The Tool API door](tools.md): one tool per operation, a read tool
+  and a narrowing tool beside it, who may run them, the contract panel,
+  and what MCP and the Tool API are told. Enabling it:
   [Installation: Tool](installation.md#tool), for an agent, MCP and
-  Drush.
+  Drush. The field tools are an example of their own,
+  [`surface_examples_field`](https://github.com/mlander/surface/blob/main/modules/surface_examples_field/README.md).
 - [The React app](https://github.com/mlander/surface/blob/main/modules/surface_react/README.md): the served
   contract's endpoints and the React form drawn from them.
 - [The OpenAPI document](https://github.com/mlander/surface/blob/main/modules/surface_openapi/README.md):

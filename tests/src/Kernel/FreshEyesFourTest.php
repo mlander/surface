@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Tests\surface\Traits\ServedControllerTrait;
-use Drupal\surface_tool\OperationInputs;
+use Drupal\surface\Tool\OperationInputs;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use Drupal\tool\Tool\ToolInterface;
 use PHPUnit\Framework\Attributes\Group;
@@ -40,7 +40,6 @@ class FreshEyesFourTest extends SurfaceKernelTestBase {
     'serialization',
     'tool',
     'surface',
-    'surface_tool',
     'surface_examples',
     'surface_examples_compliance',
     'surface_examples_workflow',

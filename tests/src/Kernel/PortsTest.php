@@ -24,7 +24,7 @@ use Drupal\surface_resource_test\Structure\Broken\WiresMissingKeyStructure;
 use Drupal\surface_resource_test\Structure\Broken\WiresUnknownPortStructure;
 use Drupal\surface_resource_test\Structure\Broken\WiresWrongTypeStructure;
 use Drupal\surface_resource_test\Structure\Seating\SeatingStructure;
-use Drupal\surface_tool\OperationInputs;
+use Drupal\surface\Tool\OperationInputs;
 use Drupal\Tests\surface\Traits\ContractValidationTrait;
 use Drupal\Tests\surface\Traits\StaticRefinerAgreementTrait;
 use Drupal\Tests\user\Traits\UserCreationTrait;
@@ -61,7 +61,6 @@ class PortsTest extends SurfaceKernelTestBase {
     'serialization',
     'tool',
     'surface',
-    'surface_tool',
     'surface_resource_test',
   ];
 

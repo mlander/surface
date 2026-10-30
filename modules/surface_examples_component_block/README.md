@@ -108,7 +108,7 @@ is a config entity, and `surface_examples_block` declares it as a resource,
 `block.placement`, whose plugin chooses its settings: for this plugin,
 this structure, built as declared, the components its variants in turn
 ([its README](../surface_examples_block/README.md)). With both modules on
-and `surface_tool`, an agent places a component block, chooses its
+and the `tool` module, an agent places a component block, chooses its
 component, props and slots, rehearses the change, moves it within its
 theme and removes it, and is refused, by path, props of another
 component or out of their bounds, and a component a slot does not

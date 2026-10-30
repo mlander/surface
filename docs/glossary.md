@@ -189,7 +189,7 @@ already known (and locked). A structure may declare operations too, for
 what holds it to choose between. Operations are what routes and tools
 are generated from: a route naming a resource class and an operation is
 a working form with no form class behind it, through
-`Form\SurfaceOperationForm`, and `surface_tool` derives one tool
+`Form\SurfaceOperationForm`, and the tool door derives one tool
 per operation that can be asked on its own. Who may submit is the
 operation's permission and then the resource's access class, and the
 pipeline consults that answer before it reads or writes anything, so a

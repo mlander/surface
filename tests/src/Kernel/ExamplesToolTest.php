@@ -7,7 +7,7 @@ namespace Drupal\Tests\surface\Kernel;
 use Drupal\Component\Render\PlainTextOutput;
 use Drupal\Core\Form\FormState;
 use Drupal\surface_examples\ExampleCalls;
-use Drupal\surface_tool\OperationInputs;
+use Drupal\surface\Tool\OperationInputs;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use Drupal\tool\TypedData\MapInputDefinition;
 use PHPUnit\Framework\Attributes\Group;
@@ -47,7 +47,6 @@ class ExamplesToolTest extends SurfaceKernelTestBase {
     'serialization',
     'tool',
     'surface',
-    'surface_tool',
     'surface_examples',
   ];
 

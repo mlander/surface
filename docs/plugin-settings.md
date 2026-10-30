@@ -108,7 +108,7 @@ the block:
 | Door | Where |
 | --- | --- |
 | Form API | `/admin/structure/block/surface/add`: choose the plugin and its settings are drawn |
-| Tool API | `surface:block.placement:create`, with `surface_tool` |
+| Tool API | `surface:block.placement:create`, with `tool` |
 | HTTP | `POST /surface-api/block.placement`, with `surface_react` |
 | React | `/surface-react/block.placement/create` |
 

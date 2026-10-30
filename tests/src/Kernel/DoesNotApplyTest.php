@@ -19,7 +19,7 @@ use Drupal\surface_resource_test\Structure\Broken\NarrowsAttachedStructure;
 use Drupal\surface_resource_test\Structure\Broken\UndeclaredDoesNotApplyStructure;
 use Drupal\surface_resource_test\Structure\Notice\NoticeBoardStructure;
 use Drupal\surface_resource_test\Structure\Notice\NoticeStructure;
-use Drupal\surface_tool\OperationInputs;
+use Drupal\surface\Tool\OperationInputs;
 use Drupal\Tests\surface\Traits\ContractValidationTrait;
 use Drupal\Tests\surface\Traits\StaticRefinerAgreementTrait;
 use Drupal\Tests\user\Traits\UserCreationTrait;
@@ -54,7 +54,6 @@ class DoesNotApplyTest extends SurfaceKernelTestBase {
     'serialization',
     'tool',
     'surface',
-    'surface_tool',
     'surface_resource_test',
   ];
 

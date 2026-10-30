@@ -10,7 +10,7 @@ use Drupal\Core\Session\AccountInterface;
 use Drupal\surface\Resource\Attribute\UsesStructure;
 use Drupal\surface_test\Plugin\Field\FieldType\SurfaceGatedItem;
 use Drupal\surface_test\Structure\GatedFieldSettingsStructure;
-use Drupal\surface_tool\OperationInputs;
+use Drupal\surface\Tool\OperationInputs;
 use Drupal\field\Entity\FieldConfig;
 use Drupal\field\Entity\FieldStorageConfig;
 use Drupal\tool\Tool\ToolManager;
@@ -32,10 +32,11 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * is callable from PHP with no check in front of it. And in the field
  * type's own host, which Field UI asks.
  *
- * The derived tools reach the field type's structure as the field
- * instance resource's settings variant, chosen by the field type the
- * operation knows; a variant its locked deciding key chose may
- * refuse its parent through its access class.
+ * The derived tools reach the field type's structure as the settings
+ * variant of the field instance resource, which surface_examples_field
+ * declares, chosen by the field type the operation knows; a variant its
+ * locked deciding key chose may refuse its parent through its access
+ * class.
  *
  * @see \Drupal\surface_test\Structure\GatedFieldSettingsStructure
  * @see \Drupal\surface_test\Access\GatedFieldSettingsAccess
@@ -65,7 +66,7 @@ class FieldToolsAccessTest extends SurfaceKernelTestBase {
     'tool',
     'surface',
     'surface_test',
-    'surface_tool',
+    'surface_examples_field',
   ];
 
   /**

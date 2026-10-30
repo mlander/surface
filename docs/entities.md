@@ -334,7 +334,7 @@ done about it.
     when a field or a display changes, and the tool plugin manager's
     cache did not, so a new field reached the `create` tool's static
     definition only at the next cache rebuild. Settled 2026-10-19:
-    `surface_tool` clears the tool definitions when a tag they were
+    the tool door clears the tool definitions when a tag they were
     derived from is invalidated
     (why: [decision](decisions.md#tool-definitions-after-a-field-changes)).
 14. **The entity's id is storage's.** The create operation knows `id` as

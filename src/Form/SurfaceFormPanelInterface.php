@@ -21,7 +21,7 @@ use Drupal\surface\ResourceBuild\OperationRoute;
  * returns is rendered, not read.
  *
  * @see \Drupal\surface\Form\SurfaceOperationForm
- * @see \Drupal\surface_tool\ContractPanel
+ * @see \Drupal\surface\Form\ContractPanel
  */
 interface SurfaceFormPanelInterface {
 

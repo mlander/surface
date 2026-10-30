@@ -16,7 +16,7 @@ use Drupal\surface\SurfaceBuilder;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\Pipeline\Violation;
 use Drupal\surface_examples\Resource\RegistrationStep3Resource;
-use Drupal\surface_tool\OperationInputs;
+use Drupal\surface\Tool\OperationInputs;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Group;
@@ -52,7 +52,6 @@ class RefinementIsolationTest extends SurfaceKernelTestBase {
     'serialization',
     'tool',
     'surface',
-    'surface_tool',
     'surface_examples',
     'surface_examples_compliance',
   ];

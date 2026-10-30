@@ -40,7 +40,6 @@ class VariantLabelsTest extends SurfaceKernelTestBase {
     'serialization',
     'tool',
     'surface',
-    'surface_tool',
     'surface_examples',
     'surface_resource_test',
   ];

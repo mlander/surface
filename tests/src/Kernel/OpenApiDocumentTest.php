@@ -488,7 +488,7 @@ class OpenApiDocumentTest extends SurfaceKernelTestBase {
    * @see docs/decisions.md#a-listing-is-a-read-only-operation-with-outputs-a-reorder-is-an-update-over-the-collection
    */
   public function testTheListingIsGetOnTheCollectionAndTheReorderIsPatch(): void {
-    $this->enableModules(['field', 'serialization', 'tool', 'surface_tool', 'surface_examples']);
+    $this->enableModules(['field', 'serialization', 'tool', 'surface_examples']);
     $this->installConfig(['surface_examples']);
     $this->container->get('router.builder')->rebuild();
     $paths = $this->decoded()['paths'];
@@ -538,7 +538,7 @@ class OpenApiDocumentTest extends SurfaceKernelTestBase {
    * @see docs/decisions.md#a-computed-key-is-a-pure-function-of-its-sources
    */
   public function testComputedKeyIsReadOnlyAndSentByNoExample(): void {
-    $this->enableModules(['field', 'serialization', 'tool', 'surface_tool', 'surface_examples']);
+    $this->enableModules(['field', 'serialization', 'tool', 'surface_examples']);
     $this->installConfig(['surface_examples']);
     $this->container->get('router.builder')->rebuild();
     $document = $this->decoded();
@@ -656,7 +656,7 @@ class OpenApiDocumentTest extends SurfaceKernelTestBase {
    * requiring nothing.
    */
   public function testPatchOnlyWhereNeeded(): void {
-    $this->enableModules(['field', 'serialization', 'tool', 'surface_tool', 'surface_examples']);
+    $this->enableModules(['field', 'serialization', 'tool', 'surface_examples']);
     $this->installConfig(['surface_examples']);
     $this->container->get('router.builder')->rebuild();
     $description = $this->description();

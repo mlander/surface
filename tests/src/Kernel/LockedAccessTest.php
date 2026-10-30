@@ -12,7 +12,7 @@ use Drupal\surface\ResourceBuild\Resources;
 use Drupal\surface\ResourceBuild\ResourcesInterface;
 use Drupal\surface_resource_test\Resource\Gallery\GalleryResource;
 use Drupal\surface_resource_test\Structure\Gallery\OilFinishStructure;
-use Drupal\surface_tool\OperationInputs;
+use Drupal\surface\Tool\OperationInputs;
 use Drupal\surface_tool_test\Resource\CabinetResource;
 use Drupal\surface_tool_test\Storage\CabinetStorage;
 use Drupal\Tests\user\Traits\UserCreationTrait;
@@ -56,7 +56,6 @@ class LockedAccessTest extends SurfaceKernelTestBase {
     'serialization',
     'tool',
     'surface',
-    'surface_tool',
     'surface_tool_test',
   ];
 

@@ -78,7 +78,7 @@ part of a resource or structure has one home:
 | Its parts | `attach()` and `attachVariants()` in `defineInputs()`, and `#[Variant]` on each variant |
 | Which version of its stored values it describes | `version:` on either attribute, 1 until a breaking change is made after values are stored ([Evolving a resource](evolution.md#the-version)) |
 
-`FieldInstanceResource` in `surface_tool` uses every row but the
+`FieldInstanceResource` in `surface_examples_field` uses every row but the
 version, which nothing raises yet, and outputs, which the demo formatter
 declares; the test module's `TestBlockStructure`, a structure, uses two.
 
@@ -841,7 +841,7 @@ This module's resources and structures follow that rule throughout, so
 a `setRequired()` anywhere in one is a `TRUE`. The one place the
 opposite is written down is a definition that did not start optional: the
 Tool API's `InputDefinition` defaults to *required*, so
-`surface_tool` turns the flag off explicitly when it derives one
+the tool door turns the flag off explicitly when it derives one
 from config schema, and there the call is saying something.
 
 What "required" means here is that the key must be *configured*, which is

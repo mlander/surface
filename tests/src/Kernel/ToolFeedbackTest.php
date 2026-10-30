@@ -9,7 +9,7 @@ use Drupal\Component\Render\PlainTextOutput;
 use Drupal\Component\Utility\NestedArray;
 use Drupal\surface\Pipeline\SurfacePipeline;
 use Drupal\surface_examples\ExampleCalls;
-use Drupal\surface_tool\OperationInputs;
+use Drupal\surface\Tool\OperationInputs;
 use Drupal\surface_tool_test\Resource\LogbookResource;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use Drupal\tool\TypedData\MapInputDefinition;
@@ -46,7 +46,6 @@ class ToolFeedbackTest extends SurfaceKernelTestBase {
     'serialization',
     'tool',
     'surface',
-    'surface_tool',
     'surface_examples',
     'surface_examples_compliance',
     'surface_resource_test',

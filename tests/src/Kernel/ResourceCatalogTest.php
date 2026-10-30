@@ -12,7 +12,7 @@ use Drupal\surface_examples_address\Resource\AddressFieldSettingsResource;
 use Drupal\surface_examples_plugins\Plugin\Field\FieldFormatter\ExampleFormatter;
 use Drupal\surface_examples_workflow\Alter\ProgramWorkflowAlter;
 use Drupal\surface\ResourceBuild\CatalogDocument;
-use Drupal\surface_tool\Resource\FieldInstanceResource;
+use Drupal\surface_examples_field\Resource\FieldInstanceResource;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
@@ -51,7 +51,7 @@ class ResourceCatalogTest extends SurfaceKernelTestBase {
     'surface_examples_plugins',
     'surface_examples_extras',
     'surface_examples_node_type',
-    'surface_tool',
+    'surface_examples_field',
     'surface_examples',
     'surface_examples_compliance',
     'surface_examples_workflow',

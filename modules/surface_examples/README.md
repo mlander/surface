@@ -1037,7 +1037,7 @@ of code, counted without blank lines or comments:
 `/surface-examples/5`
 
 Nothing to write. Example 3 names its storage and has an operation that needs
-nothing, so the Tool API bridge (`surface_tool`) derives a tool
+nothing, so the Tool API door derives a tool
 from it, `surface:registration.step3:configure`. It takes what
 example 3's form takes, refuses what it refuses, with the same messages,
 and can rehearse a write without making it. Beside it is a read tool,

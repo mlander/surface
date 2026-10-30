@@ -11,9 +11,9 @@ use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\surface\SurfaceBuilder;
-use Drupal\surface_tool\OperationInputs;
+use Drupal\surface\Tool\OperationInputs;
 use Drupal\surface_examples_address\Resource\AddressFieldSettingsResource;
-use Drupal\surface_tool\Resource\FieldInstanceResource;
+use Drupal\surface_examples_field\Resource\FieldInstanceResource;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\field\Entity\FieldConfig;
 use Drupal\field\Entity\FieldStorageConfig;
@@ -32,17 +32,16 @@ use PHPUnit\Framework\Attributes\Group;
 /**
  * Tests the field tools, derived from the field instance resource.
  *
- * `surface:field.instance:create`, `:reuse` and `:update`, one per
- * operation of FieldInstanceResource, replace the two hand-written tools
- * this module used to ship. What has to hold is what held for them: a
- * tool contributes nothing of its own to the settings. The field type's
+ * `surface:field.instance:create`, `:reuse` and `:update`, one per operation of
+ * FieldInstanceResource (surface_examples_field), replace the two hand-written
+ * tools the Tool API bridge used to ship. What has to hold is what held for
+ * them: a tool contributes nothing of its own to the settings. The field type's
  * settings resource says what the values may be, the pipeline accepts,
- * validates, prepares and commits them, and the tool is the caller. So a
- * valid payload reaches storage in the layout the field type reads back,
- * an invalid one is refused with the path that names it and leaves
- * nothing behind, and a partial edit changes only the keys it carries —
- * including clearing one by sending it as null, which is the thing a
- * null-stripping merge cannot express.
+ * validates, prepares and commits them, and the tool is the caller. So a valid
+ * payload reaches storage in the layout the field type reads back, an invalid
+ * one is refused with the path that names it and leaves nothing behind, and a
+ * partial edit changes only the keys it carries — including clearing one by
+ * sending it as null, which is the thing a null-stripping merge cannot express.
  */
 #[Group('surface')]
 #[RunTestsInSeparateProcesses]
@@ -86,7 +85,7 @@ class FieldToolsTest extends SurfaceKernelTestBase {
     'tool',
     'surface',
     'surface_examples_address',
-    'surface_tool',
+    'surface_examples_field',
   ];
 
   /**
@@ -828,7 +827,7 @@ class FieldToolsTest extends SurfaceKernelTestBase {
         ->setLabel(new TranslatableMarkup('Tags')));
     $surface = $builder->seal();
 
-    $outputs = $this->container->get('surface_tool.input_definitions')->outputsFromSurface($surface);
+    $outputs = $this->container->get('surface.input_definitions')->outputsFromSurface($surface);
 
     $this->assertSame(['text', 'note', 'meta', 'tags'], array_keys($outputs));
     foreach ($outputs as $definition) {

@@ -52,6 +52,7 @@ nav:
       - Widgets: widgets.md
       - Options and resolvers: options.md
       - The served contract: served-contract.md
+      - The Tool API door: tools.md
       - Evolving a resource: evolution.md
       - Testing a resource: testing-a-resource.md
       - 'Audit: never stricter': audit-never-stricter.md

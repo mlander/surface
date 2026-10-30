@@ -35,9 +35,9 @@ where the module that opens it is installed:
 | --- | --- | --- |
 | `form` | The path of each form route a module declares for the operation and the route's name, then in brackets what the route says of the operation's keys beside its two naming defaults: `/contact/support (example.support) [pins to: support; fixes department: 3; fills subject: Support request; starts message from ?message]`, each parameter a plain default pins, each key it fixes or fills with the value as written (a reference as `{name}`), and each key a link may start with the query parameter it reads. A route whose resource id holds a variable of its path is listed under every resource whose id it fills, its path filled for each. | any (`_surface_resource` on the route) |
 | `http` | The method and path that run it under contract 3: `PATCH /surface-api/first.store`, a listing's `GET` on the collection. | `surface_react` |
-| `tool` | The derived tool, `surface:<id>:<operation>`. | `surface_tool` |
-| `read tool` | The read tool beside it, for an operation that changes a thing that exists. | `surface_tool` |
-| `schema tool` | The narrowing tool beside it, `surface:<id>:<operation>:schema`, where its listing leaves a key's entries out: variants the site lists, or a map of keys from the site past the budget (why: [decision](decisions.md#a-budget-for-what-the-site-decides)). | `surface_tool` |
+| `tool` | The derived tool, `surface:<id>:<operation>`. | `surface`, with `tool` |
+| `read tool` | The read tool beside it, for an operation that changes a thing that exists. | `surface`, with `tool` |
+| `schema tool` | The narrowing tool beside it, `surface:<id>:<operation>:schema`, where its listing leaves a key's entries out: variants the site lists, or a map of keys from the site past the budget (why: [decision](decisions.md#a-budget-for-what-the-site-decides)). | `surface`, with `tool` |
 | `openapi` | The OpenAPI operation that runs it: `<id>:<operation>:write`, a listing's `:list`. | `surface_openapi` |
 | `react` | The React page its form mounts on, `/surface-react/<id>/<operation>`, then each page a module serves it at, a route whose controller is `ResourceReactPage::served()`, named as the `form` door names a route. | `surface_react` |
 

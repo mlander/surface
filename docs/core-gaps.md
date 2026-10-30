@@ -778,7 +778,7 @@ The contributed Tool API has gaps of its own: it reads `Choice` and
 `AllowedValues` by plugin id, so a subclass such as `LabeledChoice`
 does not reach its schema; a context definition carries no settings or
 examples; defaults reach its schema only for truthy scalars. They are
-listed in `modules/surface_tool/README.md` and belong to that
+listed in [The Tool API door](tools.md#notes-for-the-tool-api) and belong to that
 project, not core.
 
 Facts about core this page relies on, each checked against core 11.4:

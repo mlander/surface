@@ -13,7 +13,7 @@ use Drupal\surface\Form\SurfaceFormBuilderInterface;
 use Drupal\surface\Form\SurfaceOperationForm;
 use Drupal\surface\Form\Drawing;
 use Drupal\surface\Pipeline\Violation;
-use Drupal\surface_tool\OperationInputs;
+use Drupal\surface\Tool\OperationInputs;
 use Drupal\surface_examples\Resource\SpotlightResource;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use Drupal\user\Entity\Role;
@@ -50,7 +50,6 @@ class SpotlightFormTest extends SurfaceKernelTestBase {
     'serialization',
     'tool',
     'surface',
-    'surface_tool',
     'surface_examples',
     'surface_widget_test',
   ];

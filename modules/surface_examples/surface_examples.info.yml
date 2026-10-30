@@ -7,4 +7,4 @@ lifecycle_link: 'https://git.drupalcode.org/project/surface/-/blob/1.0.x/README.
 core_version_requirement: ^11.3 || ^12
 dependencies:
   - surface:surface
-  - surface:surface_tool
+  - tool:tool

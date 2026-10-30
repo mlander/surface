@@ -297,10 +297,10 @@ recipients, and Save marks the field, says what is wrong in the rule's
 own words ("This value should be between 1 and 10000."), and writes
 nothing.
 
-With the Tool API bridge enabled, the same resource is a tool:
+With the `tool` module installed, the same resource is a tool:
 
 ```bash
-drush pm:install surface_tool
+drush pm:install tool
 drush tool:info surface:first.newsletter:configure
 drush tool:run surface:first.newsletter:configure --uid=1 --input='{"values":{"sender_name":"Weekly news","sender_email":"news@example.com","frequency":"monthly"}}'
 drush tool:run surface:first.newsletter:configure:read --uid=1

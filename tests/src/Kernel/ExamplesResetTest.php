@@ -32,7 +32,6 @@ class ExamplesResetTest extends SurfaceKernelTestBase {
     'serialization',
     'tool',
     'surface',
-    'surface_tool',
     'surface_examples',
     'surface_examples_compliance',
     'surface_examples_keys',

@@ -77,7 +77,7 @@ final class ConfigSchemaPanel {
       '#title' => $this->t('Without a resource: what config schema can say'),
       // The contract panel's own class, for its spacing and type sizes.
       '#attributes' => ['class' => ['surface-contract-panel', 'surface-today-panel']],
-      '#attached' => ['library' => ['surface_tool/contract_panel']],
+      '#attached' => ['library' => ['surface/contract_panel']],
       'intro' => [
         '#markup' => '<p>' . $this->t('What a client could be told about these settings today, from the config schema of <code>@config</code> alone. Nothing here changes as the values change.', ['@config' => $config]) . '</p>',
       ],

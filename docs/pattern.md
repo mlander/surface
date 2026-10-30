@@ -35,7 +35,7 @@ surface, and [Decisions](decisions.md) lists the points the pattern left
 open and how the module settled them.
 
 The worked example throughout is the field: `FieldInstanceResource` in
-`surface_tool`, with its storage, `FieldStorageResource`, and the
+`surface_examples_field`, with its storage, `FieldStorageResource`, and the
 address module's `AddressFieldSettingsResource` filling its settings.
 
 ## Where things live
@@ -69,7 +69,7 @@ src/Resource/Attribute/               #[Resource], #[Structure], #[Operation],
                                       #[RefinesInput], #[Alters], #[Variant],
                                       #[UsesStructure], #[DerivesResources]
 
-modules/surface_tool/src/
+modules/surface_examples_field/src/
   Resource/FieldInstanceResource.php  the generic field resource
   Resource/FieldStorageResource.php   its storage, attached at `storage`
   Storage/FieldInstanceStorage.php    where its values go

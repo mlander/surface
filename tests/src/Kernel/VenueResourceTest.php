@@ -9,7 +9,7 @@ use Drupal\surface\Resource\OperationContext;
 use Drupal\surface_examples\Entity\EventVenue;
 use Drupal\surface_examples\Resource\RegistrationStep2Resource;
 use Drupal\surface_examples\Resource\VenueResource;
-use Drupal\surface_tool\OperationInputs;
+use Drupal\surface\Tool\OperationInputs;
 use Drupal\tool\Tool\ToolOperation;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
@@ -45,7 +45,6 @@ class VenueResourceTest extends SurfaceKernelTestBase {
     'serialization',
     'tool',
     'surface',
-    'surface_tool',
     'surface_examples',
   ];
 

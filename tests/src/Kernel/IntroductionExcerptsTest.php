@@ -17,7 +17,7 @@ use Drupal\surface_intro_test\OutsideDiscovery\LooseningBadgeAlter;
 use Drupal\surface_intro_test\OutsideDiscovery\TeaserBadgeAlter;
 use Drupal\surface_intro_test\Plugin\Block\TeaserBlock;
 use Drupal\surface_intro_test\Structure\TeaserBlockStructure;
-use Drupal\surface_tool\OperationInputs;
+use Drupal\surface\Tool\OperationInputs;
 use Drupal\Tests\surface\Traits\ServedControllerTrait;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
@@ -63,7 +63,6 @@ class IntroductionExcerptsTest extends SurfaceKernelTestBase {
     'serialization',
     'tool',
     'surface',
-    'surface_tool',
     'surface_react',
     'surface_examples_block',
     'surface_intro_test',

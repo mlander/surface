@@ -20,7 +20,7 @@ use Drupal\surface_resource_test\Resource\Relay\RelayResource;
 use Drupal\surface_resource_test\Storage\RelayHubStorage;
 use Drupal\surface_resource_test\Storage\RelayStorage;
 use Drupal\surface_resource_test\Structure\ThresholdStructure;
-use Drupal\surface_tool\OperationInputs;
+use Drupal\surface\Tool\OperationInputs;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -49,7 +49,6 @@ class ResolvedKeysTest extends SurfaceKernelTestBase {
     'serialization',
     'tool',
     'surface',
-    'surface_tool',
     'surface_resource_test',
   ];
 
